@@ -1920,12 +1920,14 @@
         "deleteAria": "Delete exercise {{index}}"
       },
       "linkedNews": {
+        "kicker": "Source article",
         "header": "Linked news",
-        "help": "Each situation can be linked to a source news article. The link surfaces to learners as background context.",
+        "help": "This scenario was generated from the following news item. Edits to the article don't auto-propagate.",
         "empty": "This situation is not linked to a news article.",
         "linkCta": "Link to article",
         "unlink": "Unlink",
-        "reDerive": "Re-derive from article"
+        "reDerive": "Re-derive from article",
+        "reDerivePending": "Re-derive not yet available"
       }
     }
   },

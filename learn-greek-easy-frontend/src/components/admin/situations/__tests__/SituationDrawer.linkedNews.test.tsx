@@ -1,8 +1,8 @@
 // src/components/admin/situations/__tests__/SituationDrawer.linkedNews.test.tsx
 //
-// SIT-07e: SituationDrawerLinkedNews — unit tests.
+// SAR2-26-17b: SituationDrawerLinkedNews — unit tests.
 // Covers: kicker + helper, empty state, disabled CTA + tooltip, disabled footer actions,
-// no linked-state branch, no tabNav.openIn invocation.
+// linked-news rich-card branch, active footer actions when linked, tabNav.openIn call.
 
 import React from 'react';
 
@@ -22,7 +22,7 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-// tabNav mock — openIn is a spy so we can assert it's never called
+// tabNav mock — openIn is a spy so we can assert calls
 const mockOpenIn = vi.fn();
 vi.mock('@/hooks/useAdminTabNav', () => ({
   useAdminTabNav: () => ({
@@ -30,6 +30,36 @@ vi.mock('@/hooks/useAdminTabNav', () => ({
     activeTab: 'situations',
     searchParams: new URLSearchParams(),
   }),
+}));
+
+// adminSituationStore mock — fetchSituationDetail + closeDrawer spies
+const mockFetchDetail = vi.fn().mockResolvedValue(undefined);
+const mockCloseDrawer = vi.fn();
+vi.mock('@/stores/adminSituationStore', () => ({
+  useAdminSituationStore: (
+    selector: (s: {
+      fetchSituationDetail: typeof mockFetchDetail;
+      closeDrawer: typeof mockCloseDrawer;
+    }) => unknown
+  ) => selector({ fetchSituationDetail: mockFetchDetail, closeDrawer: mockCloseDrawer }),
+}));
+
+// adminAPI mock
+const mockUnlinkSituationNews = vi.fn().mockResolvedValue(undefined);
+const mockReDeriveSituationFromNews = vi.fn().mockResolvedValue(undefined);
+vi.mock('@/services/adminAPI', () => ({
+  adminAPI: {
+    unlinkSituationNews: (...args: Parameters<typeof mockUnlinkSituationNews>) =>
+      mockUnlinkSituationNews(...args),
+    reDeriveSituationFromNews: (...args: Parameters<typeof mockReDeriveSituationFromNews>) =>
+      mockReDeriveSituationFromNews(...args),
+  },
+}));
+
+// toast mock
+const mockToast = vi.fn();
+vi.mock('@/hooks/use-toast', () => ({
+  toast: (...args: Parameters<typeof mockToast>) => mockToast(...args),
 }));
 
 // Tooltip: render children + content inline so tooltip text is queryable
@@ -45,7 +75,14 @@ vi.mock('@/components/ui/tooltip', () => ({
   ),
 }));
 
-// ── Fixture ────────────────────────────────────────────────────────────────────
+// ── Fixtures ────────────────────────────────────────────────────────────────────
+
+const LINKED_NEWS = {
+  id: 'news-1',
+  title_en: 'Supreme Court Rejects Appeal',
+  country: 'greece',
+  published_at: '2026-01-01T00:00:00Z',
+};
 
 function makeSituation(overrides: Partial<SituationDetailResponse> = {}): SituationDetailResponse {
   return {
@@ -54,29 +91,13 @@ function makeSituation(overrides: Partial<SituationDetailResponse> = {}): Situat
     scenario_en: 'Scenario',
     scenario_ru: 'Сценарий',
     status: 'draft',
-    level: 'B1',
-    image_url: null,
+    levels: [],
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
-    audio_url: null,
-    audio_generated_at: null,
-    audio_duration_seconds: null,
-    audio_file_size_bytes: null,
-    description_el: null,
-    description_en: null,
-    description_ru: null,
-    description_el_a2: null,
-    description_a2_audio_url: null,
-    description_a2_audio_generated_at: null,
-    description_a2_audio_duration_seconds: null,
-    description_a2_audio_file_size_bytes: null,
-    description_audio_url: null,
-    description_audio_generated_at: null,
-    description_audio_duration_seconds: null,
-    description_audio_file_size_bytes: null,
-    picture_prompt: null,
-    dialog: [],
-    exercises: [],
+    dialog: null,
+    description: null,
+    picture: null,
+    linked_news: null,
     ...overrides,
   } as unknown as SituationDetailResponse;
 }
@@ -98,17 +119,17 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-// ── Tests ──────────────────────────────────────────────────────────────────────
+// ── Tests: root container ──────────────────────────────────────────────────────
 
-describe('SituationDrawerLinkedNews — kicker + helper', () => {
+describe('SituationDrawerLinkedNews — root container', () => {
   it('renders the root container with data-testid', async () => {
     await renderComponent();
     expect(screen.getByTestId('situation-drawer-tab-linkedNews-content')).toBeInTheDocument();
   });
 
-  it('renders Kicker with situations.drawer.linkedNews.header key', async () => {
+  it('renders Kicker with situations.drawer.linkedNews.kicker key', async () => {
     await renderComponent();
-    expect(screen.getByText('situations.drawer.linkedNews.header')).toBeInTheDocument();
+    expect(screen.getByText('situations.drawer.linkedNews.kicker')).toBeInTheDocument();
   });
 
   it('renders helper text with situations.drawer.linkedNews.help key', async () => {
@@ -117,7 +138,9 @@ describe('SituationDrawerLinkedNews — kicker + helper', () => {
   });
 });
 
-describe('SituationDrawerLinkedNews — empty state body', () => {
+// ── Tests: empty state ─────────────────────────────────────────────────────────
+
+describe('SituationDrawerLinkedNews — empty state (linked_news = null)', () => {
   it('renders empty body text', async () => {
     await renderComponent();
     expect(screen.getByText('situations.drawer.linkedNews.empty')).toBeInTheDocument();
@@ -137,9 +160,21 @@ describe('SituationDrawerLinkedNews — empty state body', () => {
     const comingSoon = tooltips.filter((el) => el.textContent?.includes('comingSoon'));
     expect(comingSoon.length).toBeGreaterThanOrEqual(1);
   });
+
+  it('does not render a linked-news-card element', async () => {
+    await renderComponent();
+    expect(screen.queryByTestId('linked-news-card')).not.toBeInTheDocument();
+  });
+
+  it('does not render any anchor tag (no link to article)', async () => {
+    await renderComponent();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
 });
 
-describe('SituationDrawerLinkedNews — footer disabled actions', () => {
+// ── Tests: footer disabled (empty state) ────────────────────────────────────────
+
+describe('SituationDrawerLinkedNews — footer disabled actions (empty state)', () => {
   it('renders Unlink button with aria-disabled="true"', async () => {
     await renderComponent();
     const btn = screen.getByRole('button', {
@@ -165,19 +200,9 @@ describe('SituationDrawerLinkedNews — footer disabled actions', () => {
   });
 });
 
-describe('SituationDrawerLinkedNews — no linked-state branch', () => {
-  it('does not render a linked-news-card element', async () => {
-    await renderComponent();
-    expect(screen.queryByTestId('linked-news-card')).not.toBeInTheDocument();
-  });
+// ── Tests: openIn never called in empty state ──────────────────────────────────
 
-  it('does not render any anchor tag (no link to article)', async () => {
-    await renderComponent();
-    expect(screen.queryByRole('link')).not.toBeInTheDocument();
-  });
-});
-
-describe('SituationDrawerLinkedNews — useAdminTabNav imported but openIn never called', () => {
+describe('SituationDrawerLinkedNews — openIn not called in empty state', () => {
   it('does not call openIn on initial render', async () => {
     await renderComponent();
     expect(mockOpenIn).not.toHaveBeenCalled();
@@ -191,5 +216,74 @@ describe('SituationDrawerLinkedNews — useAdminTabNav imported but openIn never
     });
     await user.click(btn);
     expect(mockOpenIn).not.toHaveBeenCalled();
+  });
+});
+
+// ── Tests: linked state rich card ─────────────────────────────────────────────
+
+describe('SituationDrawerLinkedNews — linked state (linked_news set)', () => {
+  it('renders linked-news-card element', async () => {
+    await renderComponent(makeSituation({ linked_news: LINKED_NEWS }));
+    expect(screen.getByTestId('linked-news-card')).toBeInTheDocument();
+  });
+
+  it('renders news title in the card', async () => {
+    await renderComponent(makeSituation({ linked_news: LINKED_NEWS }));
+    expect(screen.getByText('Supreme Court Rejects Appeal')).toBeInTheDocument();
+  });
+
+  it('does not render empty state text', async () => {
+    await renderComponent(makeSituation({ linked_news: LINKED_NEWS }));
+    expect(screen.queryByText('situations.drawer.linkedNews.empty')).not.toBeInTheDocument();
+  });
+
+  it('does not render disabled Link to article button', async () => {
+    await renderComponent(makeSituation({ linked_news: LINKED_NEWS }));
+    expect(
+      screen.queryByRole('button', { name: 'situations.drawer.linkedNews.linkCta' })
+    ).not.toBeInTheDocument();
+  });
+});
+
+// ── Tests: linked state footer actions ────────────────────────────────────────
+
+describe('SituationDrawerLinkedNews — linked state footer actions', () => {
+  it('renders Unlink button without aria-disabled', async () => {
+    await renderComponent(makeSituation({ linked_news: LINKED_NEWS }));
+    const btn = screen.getByTestId('linked-news-unlink-btn');
+    expect(btn).not.toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('renders Re-derive button without aria-disabled', async () => {
+    await renderComponent(makeSituation({ linked_news: LINKED_NEWS }));
+    const btn = screen.getByTestId('linked-news-re-derive-btn');
+    expect(btn).not.toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('calls unlinkSituationNews + fetchSituationDetail when Unlink is clicked', async () => {
+    const user = userEvent.setup();
+    await renderComponent(makeSituation({ linked_news: LINKED_NEWS }));
+    await user.click(screen.getByTestId('linked-news-unlink-btn'));
+    expect(mockUnlinkSituationNews).toHaveBeenCalledWith('sit-1');
+    expect(mockFetchDetail).toHaveBeenCalledWith('sit-1');
+  });
+
+  it('calls reDeriveSituationFromNews when Re-derive is clicked', async () => {
+    const user = userEvent.setup();
+    await renderComponent(makeSituation({ linked_news: LINKED_NEWS }));
+    await user.click(screen.getByTestId('linked-news-re-derive-btn'));
+    expect(mockReDeriveSituationFromNews).toHaveBeenCalledWith('sit-1');
+  });
+});
+
+// ── Tests: card navigation ────────────────────────────────────────────────────
+
+describe('SituationDrawerLinkedNews — card click navigation', () => {
+  it('calls closeDrawer + openIn("news", { edit: newsId }) when card is clicked', async () => {
+    const user = userEvent.setup();
+    await renderComponent(makeSituation({ linked_news: LINKED_NEWS }));
+    await user.click(screen.getByTestId('linked-news-card'));
+    expect(mockCloseDrawer).toHaveBeenCalled();
+    expect(mockOpenIn).toHaveBeenCalledWith('news', { edit: 'news-1' });
   });
 });

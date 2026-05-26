@@ -1728,6 +1728,24 @@ export const adminAPI = {
   },
 
   /**
+   * Unlink a news article from a situation (SAR2-26-17b).
+   * DELETE /api/v1/admin/situations/{id}/link-news
+   * Returns 404 if no link exists.
+   */
+  unlinkSituationNews: async (situationId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/admin/situations/${situationId}/link-news`);
+  },
+
+  /**
+   * Re-derive situation content from the linked news article (SAR2-26-17b).
+   * POST /api/v1/admin/situations/{id}/re-derive
+   * Returns 501 stub until backend implements it.
+   */
+  reDeriveSituationFromNews: async (situationId: string): Promise<void> => {
+    return api.post<void>(`/api/v1/admin/situations/${situationId}/re-derive`, {});
+  },
+
+  /**
    * Trigger batch AI generation of exercises
    *
    * Schedules a batch of exercises for the given modality.
