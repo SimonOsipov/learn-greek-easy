@@ -202,6 +202,12 @@ export const SituationDrawer: React.FC = () => {
             <Badge className={SITUATION_STATUS_BADGE_CLASSES[status]}>
               {t(`situations.status.${status}`)}
             </Badge>
+            {detail?.levels &&
+              detail.levels.map((lvl) => (
+                <Badge key={lvl} tone="violet">
+                  {lvl}
+                </Badge>
+              ))}
             <Badge tone="violet">
               {t('situations.drawer.exercisesCount', { n: exercisesTotal })}
             </Badge>

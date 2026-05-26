@@ -276,6 +276,26 @@ describe('SituationDrawer — header rendering', () => {
     // list item has dialog=2 + description=1 + picture=0 = 3 exercises
     expect(screen.getByText('3 exercises')).toBeInTheDocument();
   });
+
+  it('renders one violet level badge per item in situation.levels', () => {
+    storeState.selectedSituation = makeDetail({ levels: ['B1', 'A2'] });
+    renderDrawer();
+    const meta = document.querySelector('.drawer-meta');
+    expect(meta).toBeInTheDocument();
+    // B1 and A2 badges should appear inside the meta row
+    expect(meta!.textContent).toContain('B1');
+    expect(meta!.textContent).toContain('A2');
+  });
+
+  it('renders no level badges when situation.levels is empty', () => {
+    storeState.selectedSituation = makeDetail({ levels: [] });
+    renderDrawer();
+    const meta = document.querySelector('.drawer-meta');
+    expect(meta).toBeInTheDocument();
+    // Only status + exercises badges — B1/A2 should not appear
+    expect(meta!.textContent).not.toContain('B1');
+    expect(meta!.textContent).not.toContain('A2');
+  });
 });
 
 describe('SituationDrawer — tab strip', () => {
