@@ -1593,6 +1593,10 @@
         "newest": "Newest first",
         "oldest": "Oldest first",
         "draftsFirst": "Drafts first"
+      },
+      "level": {
+        "label": "Уровень",
+        "all": "Все"
       }
     },
     "columns": {

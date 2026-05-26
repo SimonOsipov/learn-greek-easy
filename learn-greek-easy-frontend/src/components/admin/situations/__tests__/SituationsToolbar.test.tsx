@@ -1,14 +1,14 @@
 /**
- * SituationsToolbar Component Tests — SIT-03
+ * SituationsToolbar Component Tests — SIT-03 + SAR2-26-05
  *
  * Covers:
- * 1. Renders three controls (Status SegControl, search input, sort trigger)
+ * 1. Renders three controls (Status SegControl, Level SegControl, search input, sort trigger)
  * 2. Status SegControl wiring: Draft → statusFilter='draft' + URL; All → null + URL cleared
  * 3. Debounce: < 250 ms → store unchanged; after 250 ms → store updated + URL
- * 4. URL hydration on mount: ?q=hi&status=ready&sort=oldest
+ * 4. URL hydration on mount: ?q=hi&status=ready&sort=oldest&level=B1
  * 5. URL write-back on sort change; back to newest removes param
  * 6. Clear-X: hidden when empty; click → input cleared, store '' , q removed from URL
- * 7. No Level SegControl rendered (negative assertion)
+ * 7. Level SegControl: rendered with All/B1/A2; clicking B1 calls setLevelFilter
  */
 
 import React from 'react';
@@ -30,14 +30,17 @@ vi.mock('react-i18next', () => ({
 
 // Store mock — track calls to each setter
 const mockSetStatusFilter = vi.fn();
+const mockSetLevelFilter = vi.fn();
 const mockSetSearchQuery = vi.fn();
 const mockSetSortMode = vi.fn();
 
 const storeState = {
   statusFilter: null as string | null,
+  levelFilter: null as string | null,
   searchQuery: '',
   sortMode: 'newest' as string,
   setStatusFilter: mockSetStatusFilter,
+  setLevelFilter: mockSetLevelFilter,
   setSearchQuery: mockSetSearchQuery,
   setSortMode: mockSetSortMode,
 };
@@ -64,6 +67,7 @@ describe('SituationsToolbar — renders all controls', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     storeState.statusFilter = null;
+    storeState.levelFilter = null;
     storeState.searchQuery = '';
     storeState.sortMode = 'newest';
   });
@@ -77,10 +81,11 @@ describe('SituationsToolbar — renders all controls', () => {
 
   it('Status SegControl options are in order: All → Ready → Draft', () => {
     renderWithRouter();
-    // getAllByRole('button') returns buttons in DOM order; SegControl buttons have aria-pressed
-    const segBtns = screen
-      .getAllByRole('button')
-      .filter((btn) => btn.getAttribute('aria-pressed') !== null);
+    // The Status SegControl is aria-labelled by its label prop. Find the group element.
+    const statusGroup = screen.getByRole('group', {
+      name: 'situations.filters.status.label',
+    });
+    const segBtns = Array.from(statusGroup.querySelectorAll('button[aria-pressed]'));
     const labels = segBtns.map((btn) => btn.textContent);
     expect(labels).toEqual([
       'situations.filters.status.all',
@@ -110,6 +115,7 @@ describe('SituationsToolbar — Status SegControl wiring', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     storeState.statusFilter = null;
+    storeState.levelFilter = null;
     storeState.searchQuery = '';
     storeState.sortMode = 'newest';
   });
@@ -134,6 +140,7 @@ describe('SituationsToolbar — Search debounce', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     storeState.statusFilter = null;
+    storeState.levelFilter = null;
     storeState.searchQuery = '';
     storeState.sortMode = 'newest';
   });
@@ -170,15 +177,17 @@ describe('SituationsToolbar — URL hydration on mount', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     storeState.statusFilter = null;
+    storeState.levelFilter = null;
     storeState.searchQuery = '';
     storeState.sortMode = 'newest';
   });
 
-  it('hydrates status, search query, and sort from URL params', () => {
-    renderWithRouter('?q=hi&status=ready&sort=oldest');
+  it('hydrates status, search query, sort, and level from URL params', () => {
+    renderWithRouter('?q=hi&status=ready&sort=oldest&level=B1');
     expect(mockSetStatusFilter).toHaveBeenCalledWith('ready');
     expect(mockSetSearchQuery).toHaveBeenCalledWith('hi');
     expect(mockSetSortMode).toHaveBeenCalledWith('oldest');
+    expect(mockSetLevelFilter).toHaveBeenCalledWith('B1');
   });
 
   it('reflects search input value from URL ?q param', () => {
@@ -197,6 +206,7 @@ describe('SituationsToolbar — URL write-back on sort change', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     storeState.statusFilter = null;
+    storeState.levelFilter = null;
     storeState.searchQuery = '';
     storeState.sortMode = 'newest';
   });
@@ -222,6 +232,7 @@ describe('SituationsToolbar — Clear-X behaviour', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     storeState.statusFilter = null;
+    storeState.levelFilter = null;
     storeState.searchQuery = '';
     storeState.sortMode = 'newest';
   });
@@ -251,17 +262,41 @@ describe('SituationsToolbar — Clear-X behaviour', () => {
   });
 });
 
-describe('SituationsToolbar — No Level SegControl', () => {
+describe('SituationsToolbar — Level SegControl (SAR2-26-05)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     storeState.statusFilter = null;
+    storeState.levelFilter = null;
     storeState.searchQuery = '';
     storeState.sortMode = 'newest';
   });
 
-  it('does NOT render a Level filter', () => {
+  it('renders Level SegControl with All, B1, A2 options', () => {
     renderWithRouter();
-    // "Level" text should not appear anywhere in the toolbar
-    expect(screen.queryByText(/level/i)).not.toBeInTheDocument();
+    expect(screen.getByText('situations.filters.level.all')).toBeInTheDocument();
+    expect(screen.getByText('B1')).toBeInTheDocument();
+    expect(screen.getByText('A2')).toBeInTheDocument();
+  });
+
+  it('clicking B1 calls setLevelFilter("B1")', async () => {
+    const user = userEvent.setup();
+    renderWithRouter();
+    await user.click(screen.getByText('B1'));
+    expect(mockSetLevelFilter).toHaveBeenCalledWith('B1');
+  });
+
+  it('clicking A2 calls setLevelFilter("A2")', async () => {
+    const user = userEvent.setup();
+    renderWithRouter();
+    await user.click(screen.getByText('A2'));
+    expect(mockSetLevelFilter).toHaveBeenCalledWith('A2');
+  });
+
+  it('clicking All calls setLevelFilter(null)', async () => {
+    const user = userEvent.setup();
+    storeState.levelFilter = 'B1';
+    renderWithRouter();
+    await user.click(screen.getByText('situations.filters.level.all'));
+    expect(mockSetLevelFilter).toHaveBeenCalledWith(null);
   });
 });

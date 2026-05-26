@@ -5,14 +5,13 @@
  *
  * Filter bar for the admin situations tab. Composes:
  * - Status SegControl
+ * - Level SegControl (All / B1 / A2)
  * - Debounced search input (leading Search icon + trailing clear-X)
  * - Sort DropdownMenu
  *
  * Reads all filter state from adminSituationStore. On every change writes back
  * to the store AND to URL via setSearchParams. On mount hydrates the store from
  * URL params; empty/default values are omitted from the URL.
- *
- * No Level filter (deferred per spec — SituationListItem has no per-level signal).
  */
 
 import { useEffect, useState } from 'react';
@@ -53,12 +52,21 @@ function useDebounce<T>(value: T, delay: number): T {
 
 type StatusValue = 'all' | 'draft' | 'ready';
 type SortValue = 'newest' | 'oldest' | 'draftsFirst';
+type LevelValue = 'all' | 'B1' | 'A2';
 
 function statusToSeg(s: SituationStatus | null): StatusValue {
   return s ?? 'all';
 }
 
 function segToStatus(v: StatusValue): SituationStatus | null {
+  return v === 'all' ? null : v;
+}
+
+function levelToSeg(l: 'B1' | 'A2' | null): LevelValue {
+  return l ?? 'all';
+}
+
+function segToLevel(v: LevelValue): 'B1' | 'A2' | null {
   return v === 'all' ? null : v;
 }
 
@@ -70,13 +78,27 @@ export function SituationsToolbar() {
   const { t } = useTranslation('admin');
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const { statusFilter, searchQuery, sortMode, setStatusFilter, setSearchQuery, setSortMode } =
-    useAdminSituationStore();
+  const {
+    statusFilter,
+    levelFilter,
+    searchQuery,
+    sortMode,
+    setStatusFilter,
+    setLevelFilter,
+    setSearchQuery,
+    setSortMode,
+  } = useAdminSituationStore();
 
   const STATUS_OPTIONS: SegOption<StatusValue>[] = [
     { value: 'all', label: t('situations.filters.status.all') },
     { value: 'ready', label: t('situations.filters.status.ready') },
     { value: 'draft', label: t('situations.filters.status.draft') },
+  ];
+
+  const LEVEL_OPTIONS: SegOption<LevelValue>[] = [
+    { value: 'all', label: t('situations.filters.level.all') },
+    { value: 'B1', label: 'B1' },
+    { value: 'A2', label: 'A2' },
   ];
 
   const SORT_LABELS: Record<SortValue, string> = {
@@ -94,6 +116,7 @@ export function SituationsToolbar() {
     const status = searchParams.get('status') as StatusValue | null;
     const q = searchParams.get('q');
     const sort = searchParams.get('sort') as SortValue | null;
+    const level = searchParams.get('level') as LevelValue | null;
 
     if (status && STATUS_OPTIONS.some((o) => o.value === status)) {
       setStatusFilter(segToStatus(status));
@@ -104,6 +127,9 @@ export function SituationsToolbar() {
     }
     if (sort && (sort === 'newest' || sort === 'oldest' || sort === 'draftsFirst')) {
       setSortMode(sort);
+    }
+    if (level && (level === 'B1' || level === 'A2')) {
+      setLevelFilter(segToLevel(level));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -160,6 +186,23 @@ export function SituationsToolbar() {
     );
   }
 
+  // ── Level change ─────────────────────────────────────────────────────────
+  function handleLevelChange(value: LevelValue) {
+    setLevelFilter(segToLevel(value));
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (value === 'all') {
+          next.delete('level');
+        } else {
+          next.set('level', value);
+        }
+        return next;
+      },
+      { replace: true }
+    );
+  }
+
   // ── Clear search ─────────────────────────────────────────────────────────
   function handleClearSearch() {
     setSearchInput('');
@@ -182,6 +225,14 @@ export function SituationsToolbar() {
         value={statusToSeg(statusFilter)}
         onChange={handleStatusChange}
         label={t('situations.filters.status.label')}
+      />
+
+      {/* Level filter */}
+      <SegControl<LevelValue>
+        options={LEVEL_OPTIONS}
+        value={levelToSeg(levelFilter)}
+        onChange={handleLevelChange}
+        label={t('situations.filters.level.label')}
       />
 
       {/* Search input */}
