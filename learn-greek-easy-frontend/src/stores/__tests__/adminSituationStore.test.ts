@@ -89,7 +89,7 @@ const initialState = {
   statusFilter: null,
   searchQuery: '',
   statusCounts: {},
-  sortMode: 'newest' as const,
+  sortMode: 'draftsFirst' as const,
   drawerItemId: null,
 };
 
@@ -103,8 +103,8 @@ describe('adminSituationStore — SIT-02 extensions', () => {
   // 1. Initial state
   // ============================================================
   describe('Initial state', () => {
-    it('sortMode defaults to "newest"', () => {
-      expect(useAdminSituationStore.getState().sortMode).toBe('newest');
+    it('sortMode defaults to "draftsFirst"', () => {
+      expect(useAdminSituationStore.getState().sortMode).toBe('draftsFirst');
     });
 
     it('drawerItemId defaults to null', () => {
