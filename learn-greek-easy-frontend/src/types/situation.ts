@@ -95,6 +95,14 @@ export interface SituationListItem {
   dialog_exercises_count: number;
   description_exercises_count: number;
   picture_exercises_count: number;
+  // Fields added in ADMIN2-26 (PR 1 backend)
+  levels: string[];
+  dialog_lines_count: number;
+  roles: string[];
+  picture_image_url: string | null;
+  audio_duration_seconds: number | null;
+  source_title_en: string | null;
+  source_country: string | null;
 }
 
 // --- Response (matches SituationResponse) ---
@@ -107,6 +115,8 @@ export interface SituationResponse {
   status: SituationStatus;
   created_at: string;
   updated_at: string;
+  // Fields added in ADMIN2-26 (PR 1 backend)
+  levels: string[];
 }
 
 // --- Detail response (extends SituationResponse with nested children) ---
