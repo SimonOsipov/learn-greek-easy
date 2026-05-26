@@ -1773,7 +1773,11 @@
       "picEx": "Pic Ex"
     },
     "card": {
-      "linesCount": "{{count}} lines",
+      "linesCount_zero": "{{count}} строк",
+      "linesCount_one": "{{count}} строка",
+      "linesCount_few": "{{count}} строки",
+      "linesCount_many": "{{count}} строк",
+      "linesCount_other": "{{count}} строк",
       "fromNewsLabel": "ИЗ НОВОСТЕЙ"
     },
     "grid": {

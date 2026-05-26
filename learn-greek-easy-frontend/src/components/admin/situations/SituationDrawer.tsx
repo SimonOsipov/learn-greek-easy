@@ -221,7 +221,6 @@ export const SituationDrawer: React.FC = () => {
       closeAndClearUrl();
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
-      form.reset(undefined, { keepValues: true });
       toast({ title: t('situations.drawer.save.error'), description: msg, variant: 'destructive' });
     }
   });
