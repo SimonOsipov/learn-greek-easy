@@ -151,3 +151,36 @@ describe('SituationDrawerPicture — empty state when picture is null', () => {
     expect(screen.queryByTestId('mock-picture-prompt-form')).toBeNull();
   });
 });
+
+// ── SAR2-26-12b: gradient fallback when picture exists but image_url is null ──
+
+describe('SituationDrawerPicture — gradient fallback (SAR2-26-12b)', () => {
+  it('renders gradient div when picture exists but image_url is null', () => {
+    const pictureWithoutImage = { ...basePicture, image_url: null };
+    render(<SituationDrawerPicture situation={makeSituation({ picture: pictureWithoutImage })} />);
+    const gradient = screen.getByTestId('situation-picture-gradient');
+    expect(gradient).toBeInTheDocument();
+  });
+
+  it('gradient div has sit-thumb class', () => {
+    const pictureWithoutImage = { ...basePicture, image_url: null };
+    render(<SituationDrawerPicture situation={makeSituation({ picture: pictureWithoutImage })} />);
+    const gradient = screen.getByTestId('situation-picture-gradient');
+    expect(gradient.className).toContain('sit-thumb');
+  });
+
+  it('gradient div has tone-specific class derived from situation id', () => {
+    const pictureWithoutImage = { ...basePicture, image_url: null };
+    render(<SituationDrawerPicture situation={makeSituation({ picture: pictureWithoutImage })} />);
+    const gradient = screen.getByTestId('situation-picture-gradient');
+    // Should have one of the sit-thumb-{tone} classes
+    const hasToneClass = /sit-thumb-(blue|amber|violet|cyan|green|red)/.test(gradient.className);
+    expect(hasToneClass).toBe(true);
+  });
+
+  it('does not render gradient when picture has image_url', () => {
+    // basePicture already has image_url set
+    render(<SituationDrawerPicture situation={makeSituation()} />);
+    expect(screen.queryByTestId('situation-picture-gradient')).toBeNull();
+  });
+});

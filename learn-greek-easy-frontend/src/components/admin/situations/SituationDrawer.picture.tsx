@@ -6,6 +6,7 @@ import type { SituationDetailResponse } from '@/types/situation';
 
 import { PictureGenerationPanel } from './PictureGenerationPanel';
 import { PicturePromptForm } from './SituationPicturePromptForm';
+import { pickSitTone } from './thumbnails';
 
 interface Props {
   situation: SituationDetailResponse;
@@ -27,9 +28,18 @@ export function SituationDrawerPicture({ situation }: Props) {
     );
   }
 
+  const tone = pickSitTone(situation.id);
+
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2" data-testid="situation-drawer-picture">
       <div>
+        {/* When no image_url, render gradient fallback instead of empty space */}
+        {!situation.picture.image_url && (
+          <div
+            className={`sit-thumb sit-thumb-${tone} mb-3`}
+            data-testid="situation-picture-gradient"
+          />
+        )}
         <PictureGenerationPanel
           situationId={situation.id}
           picture={situation.picture}

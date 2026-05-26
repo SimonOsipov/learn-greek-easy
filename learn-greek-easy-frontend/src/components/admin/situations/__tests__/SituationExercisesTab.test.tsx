@@ -53,6 +53,12 @@ vi.mock('../../exercises/ExerciseItemPayload', () => ({
   ExerciseItemPayload: ({ payload }: { payload: unknown }) => (
     <div data-testid="exercise-item-payload">{JSON.stringify(payload)}</div>
   ),
+  elText: (val: unknown): string => {
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'object' && 'el' in (val as object))
+      return String((val as Record<string, unknown>).el);
+    return String(val);
+  },
 }));
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -135,14 +141,15 @@ describe('SituationExercisesTab — controlled mode (hideSourceFilter)', () => {
     mockGetSituationExercises.mockResolvedValue(makeFullResponse());
     render(<SituationExercisesTab situationId="sit-1" hideSourceFilter value="description" />);
 
+    // Controlled mode now renders a flat list — row testid is dr-ex-row-{id}
     await waitFor(() => {
-      expect(screen.getByTestId('situation-exercises-item-ex-desc1')).toBeInTheDocument();
+      expect(screen.getByTestId('dr-ex-row-ex-desc1')).toBeInTheDocument();
     });
-    // Dialog and picture group headers should NOT be present
+    // Dialog and picture group headers should NOT be present (uncontrolled accordion not rendered)
     expect(screen.queryByTestId('situation-exercises-group-dialog')).toBeNull();
     expect(screen.queryByTestId('situation-exercises-group-picture')).toBeNull();
     // Dialog exercise items should NOT be present
-    expect(screen.queryByTestId('situation-exercises-item-ex-d1')).toBeNull();
+    expect(screen.queryByTestId('dr-ex-row-ex-d1')).toBeNull();
   });
 
   it('renders null (not legacy empty) when controlled active group has 0 exercises', async () => {
@@ -229,5 +236,73 @@ describe('SituationExercisesTab — onDataLoaded callback', () => {
       expect(spy).toHaveBeenCalledTimes(2);
     });
     expect(spy).toHaveBeenNthCalledWith(2, response2);
+  });
+});
+
+// 6. Flat list — SAR2-26-13
+
+describe('SituationExercisesTab — flat list (SAR2-26-13)', () => {
+  it('renders ul.dr-ex-list in controlled mode', async () => {
+    mockGetSituationExercises.mockResolvedValue(makeFullResponse());
+    render(<SituationExercisesTab situationId="sit-1" hideSourceFilter value="dialog" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dr-ex-list')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('dr-ex-list').tagName).toBe('UL');
+  });
+
+  it('renders 2 li rows for dialog group (exercise_count=2)', async () => {
+    mockGetSituationExercises.mockResolvedValue(makeFullResponse());
+    render(<SituationExercisesTab situationId="sit-1" hideSourceFilter value="dialog" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dr-ex-list')).toBeInTheDocument();
+    });
+    const rows = screen.getAllByRole('listitem');
+    expect(rows).toHaveLength(2);
+  });
+
+  it('each row has edit and delete icon buttons (disabled, title=Coming soon)', async () => {
+    mockGetSituationExercises.mockResolvedValue(makeFullResponse());
+    render(<SituationExercisesTab situationId="sit-1" hideSourceFilter value="dialog" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dr-ex-row-ex-d1')).toBeInTheDocument();
+    });
+
+    const firstRow = screen.getByTestId('dr-ex-row-ex-d1');
+    const buttons = firstRow.querySelectorAll('button');
+    expect(buttons).toHaveLength(2);
+    buttons.forEach((btn) => {
+      expect(btn).toBeDisabled();
+    });
+  });
+
+  it('dialog rows show source pointer (← Turn N)', async () => {
+    mockGetSituationExercises.mockResolvedValue(makeFullResponse());
+    render(<SituationExercisesTab situationId="sit-1" hideSourceFilter value="dialog" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dr-ex-row-ex-d1')).toBeInTheDocument();
+    });
+
+    const firstRow = screen.getByTestId('dr-ex-row-ex-d1');
+    // Should contain a source pointer element
+    const sourceSpan = firstRow.querySelector('.dr-ex-source');
+    expect(sourceSpan).not.toBeNull();
+  });
+
+  it('non-dialog rows do not show source pointer', async () => {
+    mockGetSituationExercises.mockResolvedValue(makeFullResponse());
+    render(<SituationExercisesTab situationId="sit-1" hideSourceFilter value="description" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dr-ex-row-ex-desc1')).toBeInTheDocument();
+    });
+
+    const row = screen.getByTestId('dr-ex-row-ex-desc1');
+    const sourceSpan = row.querySelector('.dr-ex-source');
+    expect(sourceSpan).toBeNull();
   });
 });

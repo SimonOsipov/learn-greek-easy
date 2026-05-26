@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
@@ -15,7 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { useSSE } from '@/hooks/useSSE';
-import { getPictureGenerationStreamUrl } from '@/services/adminAPI';
+import { adminAPI, getPictureGenerationStreamUrl } from '@/services/adminAPI';
 import type { PictureNested } from '@/types/situation';
 
 interface PictureGenerationPanelProps {
@@ -36,6 +36,8 @@ export function PictureGenerationPanel({
   const [picSseEnabled, setPicSseEnabled] = useState(false);
   const [picStage, setPicStage] = useState<PicStage>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
 
   useSSE<{
     situation_id: string;
@@ -110,6 +112,26 @@ export function PictureGenerationPanel({
     }
   };
 
+  const handleUploadChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset so re-selecting the same file fires onChange again
+    e.target.value = '';
+    setIsUploading(true);
+    try {
+      await adminAPI.uploadSituationPicture(situationId, file);
+      onCompleted();
+      toast({ title: t('situations.detail.picture.uploadSuccess') });
+    } catch {
+      toast({
+        title: t('situations.detail.picture.uploadError'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <div className="space-y-3">
       {picture.image_url && (
@@ -120,14 +142,33 @@ export function PictureGenerationPanel({
         />
       )}
 
-      <Button
-        variant={picture.image_url ? 'outline' : 'default'}
-        size="sm"
-        disabled={picSseEnabled}
-        onClick={handleGenerateClick}
-      >
-        {buttonLabel()}
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          variant={picture.image_url ? 'outline' : 'default'}
+          size="sm"
+          disabled={picSseEnabled || isUploading}
+          onClick={handleGenerateClick}
+        >
+          {buttonLabel()}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={picSseEnabled || isUploading}
+          onClick={() => uploadInputRef.current?.click()}
+          data-testid="picture-upload-button"
+        >
+          {t('situations.detail.picture.upload')}
+        </Button>
+        <input
+          ref={uploadInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          data-testid="picture-upload-input"
+          onChange={(e) => void handleUploadChange(e)}
+        />
+      </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
