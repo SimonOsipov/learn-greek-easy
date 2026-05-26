@@ -79,7 +79,7 @@ export const useAdminSituationStore = create<AdminSituationState>()(
       statusFilter: null,
       searchQuery: '',
       statusCounts: {},
-      sortMode: 'newest' as 'newest' | 'oldest' | 'draftsFirst',
+      sortMode: 'draftsFirst' as 'newest' | 'oldest' | 'draftsFirst',
       drawerItemId: null,
 
       fetchSituations: async () => {

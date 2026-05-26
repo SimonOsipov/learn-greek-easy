@@ -149,7 +149,7 @@ export function SituationsToolbar() {
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
-        if (mode === 'newest') {
+        if (mode === 'draftsFirst') {
           next.delete('sort');
         } else {
           next.set('sort', mode);
