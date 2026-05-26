@@ -686,4 +686,14 @@ describe('AdminFeedbackSection', () => {
       expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
     });
   });
+
+  // ── news-seg-l regression (TBR2-25-14) ────────────────────────────────────
+
+  it('toolbar does not render visible SegControl group labels', () => {
+    buildMockState([]);
+
+    const { container } = renderSection();
+
+    expect(container.querySelectorAll('.news-seg-l')).toHaveLength(0);
+  });
 });

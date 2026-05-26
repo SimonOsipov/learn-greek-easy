@@ -676,4 +676,10 @@ describe('ChangelogTab', () => {
       expect(mockOpenEdit).toHaveBeenCalledWith('resolved-id');
     });
   });
+
+  // ── news-seg-l regression (TBR2-25-14) ─────────────────────────────────────
+  it('toolbar does not render visible SegControl group labels', () => {
+    const { container } = renderWithRouter();
+    expect(container.querySelectorAll('.news-seg-l')).toHaveLength(0);
+  });
 });
