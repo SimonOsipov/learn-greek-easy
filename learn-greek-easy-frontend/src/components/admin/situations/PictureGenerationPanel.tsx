@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { useSSE } from '@/hooks/useSSE';
+import { track } from '@/lib/analytics';
 import { adminAPI, getPictureGenerationStreamUrl } from '@/services/adminAPI';
 import type { PictureNested } from '@/types/situation';
 
@@ -72,6 +73,7 @@ export function PictureGenerationPanel({
         case 'picture:complete':
           setPicStage(null);
           setPicSseEnabled(false);
+          track('admin_situation_picture_regenerated', { situation_id: situationId });
           onCompleted();
           break;
         case 'picture:error':
@@ -120,6 +122,10 @@ export function PictureGenerationPanel({
     setIsUploading(true);
     try {
       await adminAPI.uploadSituationPicture(situationId, file);
+      track('admin_situation_picture_uploaded', {
+        situation_id: situationId,
+        file_size_kb: Math.round(file.size / 1024),
+      });
       onCompleted();
       toast({ title: t('situations.detail.picture.uploadSuccess') });
     } catch {

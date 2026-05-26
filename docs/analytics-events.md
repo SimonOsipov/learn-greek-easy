@@ -184,6 +184,49 @@ Fired after a successful DELETE of a card error report.
 - `report_id` (string) — UUID of the card error report.
 - `status_at_delete` (string) — the report's status at the time of deletion.
 
+## Admin Situation Events (ADMIN2-26)
+
+> **Note:** These admin-only events are an exception to the "DO NOT create events for admin panel actions" rule. They are scoped to the `admin_situation_` prefix and track editor publish/regenerate/upload/generate actions to measure editor throughput. Learner-facing situation events use the bare `situation_*` namespace.
+
+### `admin_situation_published`
+
+Fired after a **successful** Mark-as-Ready / Publish changes action.
+
+**Properties:**
+
+- `situation_id` (string) — UUID of the situation.
+- `from_status` (string) — status before publishing: `'draft'` or `'ready'`.
+- `to_status` (string) — always `'ready'`.
+- `time_in_draft_seconds` (number) — seconds since `created_at`.
+
+### `admin_situation_picture_uploaded`
+
+Fired after a **successful** manual picture upload via the Upload button.
+
+**Properties:**
+
+- `situation_id` (string) — UUID of the situation.
+- `file_size_kb` (number) — uploaded file size in kilobytes (rounded).
+
+### `admin_situation_picture_regenerated`
+
+Fired after a **successful** AI picture generation (`picture:complete` SSE event).
+
+**Properties:**
+
+- `situation_id` (string) — UUID of the situation.
+
+### `admin_situation_exercise_generated`
+
+Fired after a **successful** AI exercise generation for a given source. Wired now; no-op until the generate endpoint is implemented.
+
+**Properties:**
+
+- `situation_id` (string) — UUID of the situation.
+- `source` (string) — source type: `'dialog'`, `'description'`, or `'picture'`.
+
+---
+
 ## Admin Exercise Events (EXR-73 + EXR-81)
 
 > **Note:** These admin-only events are an exception to the "DO NOT create events for admin panel actions" rule. They are scoped to the `admin_exercise_` prefix and are used to track admin review workflows, particularly the cost-bearing regenerate action.
