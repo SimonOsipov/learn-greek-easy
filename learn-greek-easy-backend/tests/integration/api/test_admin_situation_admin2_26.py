@@ -136,7 +136,7 @@ class TestLinkNews:
             headers=superuser_auth_headers,
         )
         assert response.status_code == 409
-        assert "already has" in response.json()["detail"]
+        assert "already has" in response.json()["error"]["message"]
 
     @pytest.mark.asyncio
     async def test_link_404_situation_not_found(
@@ -225,7 +225,7 @@ class TestReDerive:
             headers=superuser_auth_headers,
         )
         assert response.status_code == 501
-        assert "not yet implemented" in response.json()["detail"].lower()
+        assert "not yet implemented" in response.json()["error"]["message"].lower()
 
 
 # ============================================================================
@@ -365,7 +365,7 @@ class TestSituationStatusTransition:
             headers=superuser_auth_headers,
         )
         assert response.status_code == 409
-        err = response.json()["detail"]["error"]
+        err = response.json()["error"]["message"]["error"]
         assert err["code"] == "STATUS_GUARD_FAILED"
         assert "description" in err["detail"]["missing"]
 
@@ -381,7 +381,7 @@ class TestSituationStatusTransition:
             headers=superuser_auth_headers,
         )
         assert response.status_code == 409
-        err = response.json()["detail"]["error"]
+        err = response.json()["error"]["message"]["error"]
         assert "description.text_el" in err["detail"]["missing"]
 
     @pytest.mark.asyncio
@@ -396,7 +396,7 @@ class TestSituationStatusTransition:
             headers=superuser_auth_headers,
         )
         assert response.status_code == 409
-        err = response.json()["detail"]["error"]
+        err = response.json()["error"]["message"]["error"]
         assert "dialog" in err["detail"]["missing"]
 
     @pytest.mark.asyncio
@@ -416,7 +416,7 @@ class TestSituationStatusTransition:
             headers=superuser_auth_headers,
         )
         assert response.status_code == 409
-        err = response.json()["detail"]["error"]
+        err = response.json()["error"]["message"]["error"]
         assert "dialog.lines" in err["detail"]["missing"]
 
     @pytest.mark.asyncio
