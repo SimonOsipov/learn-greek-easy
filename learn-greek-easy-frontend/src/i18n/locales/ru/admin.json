@@ -1822,6 +1822,8 @@
         "generatedElevenLabs": "Создано · ElevenLabs",
         "notGeneratedYet": "Ещё не создано",
         "regenerate": "Перегенерировать",
+        "referenceLabel": "Справочный — английский",
+        "referenceHint": "Только для внутреннего использования · помогает переводчикам",
         "playAria": "Воспроизвести нарратив {{level}}",
         "pauseAria": "Пауза нарратива {{level}}"
       },
