@@ -126,12 +126,23 @@ export interface SituationResponse {
   levels: string[];
 }
 
+// --- Linked news summary (from SAR2-26-17a backend) ---
+
+export interface LinkedNewsSummary {
+  id: string;
+  title_en: string;
+  country: string;
+  published_at: string;
+}
+
 // --- Detail response (extends SituationResponse with nested children) ---
 
 export interface SituationDetailResponse extends SituationResponse {
   dialog: DialogNested | null;
   description: DescriptionNested | null;
   picture: PictureNested | null;
+  /** Linked news article, populated by SAR2-26-17a backend */
+  linked_news: LinkedNewsSummary | null;
 }
 
 // --- Create payload (matches SituationCreate) ---
