@@ -106,4 +106,11 @@ describe('AnnouncementsToolbar', () => {
     await user.keyboard('{Escape}');
     expect(onQueryChange).toHaveBeenCalledWith('');
   });
+
+  it('toolbar does not render visible SegControl group labels', () => {
+    const { container } = render(
+      <AnnouncementsToolbar query="" onQueryChange={vi.fn()} sort="newest" onSortChange={vi.fn()} />
+    );
+    expect(container.querySelectorAll('.news-seg-l')).toHaveLength(0);
+  });
 });
