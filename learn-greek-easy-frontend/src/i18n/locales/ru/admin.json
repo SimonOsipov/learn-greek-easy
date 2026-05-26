@@ -1537,7 +1537,7 @@
     "unlinkTitle": "Удалить из колоды?"
   },
   "situations": {
-    "title": "Ситуации",
+    "title": "Разговорные ситуации",
     "description": "Управление разговорными ситуациями для упражнений",
     "breadcrumb": {
       "dashboard": "Админ",
@@ -1586,8 +1586,8 @@
         "ready": "Ready"
       },
       "search": {
-        "placeholder": "Search situations...",
-        "clear": "Clear search"
+        "placeholder": "Поиск ситуаций по названию (EN или EL)…",
+        "clear": "Очистить поиск"
       },
       "sort": {
         "newest": "Newest first",

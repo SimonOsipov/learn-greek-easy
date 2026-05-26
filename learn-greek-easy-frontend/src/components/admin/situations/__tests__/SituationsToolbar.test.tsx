@@ -68,11 +68,25 @@ describe('SituationsToolbar — renders all controls', () => {
     storeState.sortMode = 'newest';
   });
 
-  it('renders Status SegControl with All/Draft/Ready options', () => {
+  it('renders Status SegControl with All/Ready/Draft options', () => {
     renderWithRouter();
     expect(screen.getByText('situations.filters.status.all')).toBeInTheDocument();
     expect(screen.getByText('situations.filters.status.draft')).toBeInTheDocument();
     expect(screen.getByText('situations.filters.status.ready')).toBeInTheDocument();
+  });
+
+  it('Status SegControl options are in order: All → Ready → Draft', () => {
+    renderWithRouter();
+    // getAllByRole('button') returns buttons in DOM order; SegControl buttons have aria-pressed
+    const segBtns = screen
+      .getAllByRole('button')
+      .filter((btn) => btn.getAttribute('aria-pressed') !== null);
+    const labels = segBtns.map((btn) => btn.textContent);
+    expect(labels).toEqual([
+      'situations.filters.status.all',
+      'situations.filters.status.ready',
+      'situations.filters.status.draft',
+    ]);
   });
 
   it('renders search input with placeholder', () => {

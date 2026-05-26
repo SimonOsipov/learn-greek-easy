@@ -1599,7 +1599,7 @@
     "unlinkTitle": "Remove from deck?"
   },
   "situations": {
-    "title": "Situations",
+    "title": "Conversation situations",
     "description": "Manage conversation situations for practice exercises",
     "breadcrumb": {
       "dashboard": "Admin",
@@ -1648,7 +1648,7 @@
         "ready": "Ready"
       },
       "search": {
-        "placeholder": "Search situations...",
+        "placeholder": "Search situations by title (EN or EL)…",
         "clear": "Clear search"
       },
       "sort": {
