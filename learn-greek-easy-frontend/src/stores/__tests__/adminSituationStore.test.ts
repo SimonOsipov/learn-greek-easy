@@ -52,6 +52,13 @@ function makeSituation(
     dialog_exercises_count: number;
     description_exercises_count: number;
     picture_exercises_count: number;
+    levels: string[];
+    dialog_lines_count: number;
+    roles: string[];
+    picture_image_url: string | null;
+    audio_duration_seconds: number | null;
+    source_title_en: string | null;
+    source_country: string | null;
   }> = {}
 ) {
   return {
@@ -70,6 +77,13 @@ function makeSituation(
     dialog_exercises_count: overrides.dialog_exercises_count ?? 0,
     description_exercises_count: overrides.description_exercises_count ?? 0,
     picture_exercises_count: overrides.picture_exercises_count ?? 0,
+    levels: overrides.levels ?? [],
+    dialog_lines_count: overrides.dialog_lines_count ?? 0,
+    roles: overrides.roles ?? [],
+    picture_image_url: overrides.picture_image_url ?? null,
+    audio_duration_seconds: overrides.audio_duration_seconds ?? null,
+    source_title_en: overrides.source_title_en ?? null,
+    source_country: overrides.source_country ?? null,
   };
 }
 

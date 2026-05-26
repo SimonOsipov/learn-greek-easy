@@ -70,6 +70,13 @@ function _buildListItem() {
     dialog_exercises_count: 2,
     description_exercises_count: 1,
     picture_exercises_count: 0,
+    levels: [] as string[],
+    dialog_lines_count: 0,
+    roles: [] as string[],
+    picture_image_url: null as string | null,
+    audio_duration_seconds: null as number | null,
+    source_title_en: null as string | null,
+    source_country: null as string | null,
   };
 }
 
@@ -86,6 +93,7 @@ function _buildDetail() {
     status: 'draft' as const,
     created_at: '2025-01-10T10:00:00Z',
     updated_at: '2025-01-14T12:00:00Z',
+    levels: [] as string[],
     dialog: {
       id: 'dlg-1',
       status: 'draft' as const,

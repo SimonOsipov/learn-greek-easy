@@ -1756,7 +1756,8 @@
       "picEx": "Pic Ex"
     },
     "card": {
-      "linesCount": "{{count}} lines"
+      "linesCount": "{{count}} lines",
+      "fromNewsLabel": "ИЗ НОВОСТЕЙ"
     },
     "grid": {
       "noResults": "No results",
@@ -1871,7 +1872,9 @@
         "label": "С аудио",
         "subline": "{{count}} без аудио"
       },
-      "footer": { "catalogTotal": "Всего по каталогу" }
+      "footer": {
+        "catalogTotal": "Всего по каталогу"
+      }
     },
     "filters": {
       "source": {

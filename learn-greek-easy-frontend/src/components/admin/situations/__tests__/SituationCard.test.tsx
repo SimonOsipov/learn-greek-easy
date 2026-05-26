@@ -60,6 +60,13 @@ function makeItem(overrides: Partial<SituationListItem> = {}): SituationListItem
     dialog_exercises_count: 0,
     description_exercises_count: 0,
     picture_exercises_count: 0,
+    levels: [],
+    dialog_lines_count: 0,
+    roles: [],
+    picture_image_url: null,
+    audio_duration_seconds: null,
+    source_title_en: null,
+    source_country: null,
     ...overrides,
   };
 }
@@ -238,5 +245,110 @@ describe('SituationCard', () => {
     const card = screen.getByTestId('sit-card-sit-1');
     expect(card).toHaveAttribute('role', 'button');
     expect(card).toHaveAttribute('tabindex', '0');
+  });
+
+  // ── Test 11: real picture thumbnail ──────────────────────────────────────
+  it('renders <img> with sit-thumb-img class when picture_image_url is set', () => {
+    const { container } = renderWithRouter(
+      <SituationCard
+        item={makeItem({ picture_image_url: 'https://example.com/img.jpg' })}
+        onRequestDelete={vi.fn()}
+      />
+    );
+    const img = container.querySelector('img.sit-thumb-img') as HTMLImageElement;
+    expect(img).toBeInTheDocument();
+    expect(img.src).toBe('https://example.com/img.jpg');
+    // No gradient div when picture is present
+    const gradientDiv = container.querySelector(
+      '.sit-thumb-blue,.sit-thumb-amber,.sit-thumb-violet,.sit-thumb-cyan,.sit-thumb-green,.sit-thumb-red'
+    );
+    expect(gradientDiv).not.toBeInTheDocument();
+  });
+
+  it('renders gradient fallback when picture_image_url is null', () => {
+    const id = 'my-situation-456';
+    const expectedTone = pickSitTone(id);
+    const { container } = renderWithRouter(
+      <SituationCard item={makeItem({ id, picture_image_url: null })} onRequestDelete={vi.fn()} />
+    );
+    const thumb = container.querySelector(`.sit-thumb-${expectedTone}`);
+    expect(thumb).toBeInTheDocument();
+    const img = container.querySelector('img.sit-thumb-img');
+    expect(img).not.toBeInTheDocument();
+  });
+
+  // ── Test 12: thumbnail overlays — roles ───────────────────────────────────
+  it('renders role chips for each item in roles[]', () => {
+    renderWithRouter(
+      <SituationCard item={makeItem({ roles: ['Vet', 'Farmer'] })} onRequestDelete={vi.fn()} />
+    );
+    expect(screen.getByText('Vet')).toBeInTheDocument();
+    expect(screen.getByText('Farmer')).toBeInTheDocument();
+    expect(document.querySelectorAll('.sit-role-chip')).toHaveLength(2);
+  });
+
+  it('renders no role chips when roles is empty', () => {
+    renderWithRouter(<SituationCard item={makeItem({ roles: [] })} onRequestDelete={vi.fn()} />);
+    expect(document.querySelectorAll('.sit-role-chip')).toHaveLength(0);
+  });
+
+  // ── Test 13: thumbnail overlays — audio pill ─────────────────────────────
+  it('renders audio pill when audio_duration_seconds is set', () => {
+    const { container } = renderWithRouter(
+      <SituationCard
+        item={makeItem({ audio_duration_seconds: 125, dialog_lines_count: 8 })}
+        onRequestDelete={vi.fn()}
+      />
+    );
+    const pills = container.querySelectorAll('.sit-thumb-pill');
+    // First pill: lines count; second: duration
+    expect(pills).toHaveLength(2);
+    expect(pills[1].textContent).toContain('2:05');
+  });
+
+  it('omits audio pill when audio_duration_seconds is null', () => {
+    const { container } = renderWithRouter(
+      <SituationCard item={makeItem({ audio_duration_seconds: null })} onRequestDelete={vi.fn()} />
+    );
+    const pills = container.querySelectorAll('.sit-thumb-pill');
+    expect(pills).toHaveLength(1); // only lines pill
+  });
+
+  // ── Test 14: level badges ─────────────────────────────────────────────────
+  it('renders one violet badge per item in levels[]', () => {
+    const { container } = renderWithRouter(
+      <SituationCard item={makeItem({ levels: ['B1', 'A2'] })} onRequestDelete={vi.fn()} />
+    );
+    const levelBadges = container.querySelectorAll('.sit-levels .badge');
+    expect(levelBadges).toHaveLength(2);
+    expect(levelBadges[0].textContent).toBe('B1');
+    expect(levelBadges[1].textContent).toBe('A2');
+  });
+
+  it('renders no level badges when levels is empty', () => {
+    const { container } = renderWithRouter(
+      <SituationCard item={makeItem({ levels: [] })} onRequestDelete={vi.fn()} />
+    );
+    expect(container.querySelectorAll('.sit-levels')).toHaveLength(0);
+  });
+
+  // ── Test 15: FROM NEWS kicker ─────────────────────────────────────────────
+  it('renders FROM NEWS kicker when source_title_en is set', () => {
+    renderWithRouter(
+      <SituationCard
+        item={makeItem({ source_title_en: 'Kathimerini article' })}
+        onRequestDelete={vi.fn()}
+      />
+    );
+    const kicker = document.querySelector('.sit-from');
+    expect(kicker).toBeInTheDocument();
+    expect(kicker!.textContent).toContain('Kathimerini article');
+  });
+
+  it('hides FROM NEWS kicker when source_title_en is null', () => {
+    renderWithRouter(
+      <SituationCard item={makeItem({ source_title_en: null })} onRequestDelete={vi.fn()} />
+    );
+    expect(document.querySelector('.sit-from')).not.toBeInTheDocument();
   });
 });

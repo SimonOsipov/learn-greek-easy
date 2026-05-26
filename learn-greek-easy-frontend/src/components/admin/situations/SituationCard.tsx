@@ -2,28 +2,24 @@
 
 import React from 'react';
 
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Play, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
+import { Badge } from '@/components/ui/badge';
 import { CompletionPill } from '@/components/ui/completion-pill';
 import type { SituationListItem } from '@/types/situation';
 
 import { SITUATION_STATUS_BADGE_CLASSES } from './situationBadges';
+import { formatDuration, pickSitTone } from './thumbnails';
+
+// Re-export so tests/callers can still import from SituationCard if they want.
+export type { SitTone } from './thumbnails';
+export { pickSitTone } from './thumbnails';
 
 export interface SituationCardProps {
   item: SituationListItem;
   onRequestDelete: (item: { id: string; scenario_el: string }) => void;
-}
-
-// Deterministic tone: sum of charCodes → mod 6 → palette key.
-const SIT_TONES = ['blue', 'amber', 'violet', 'cyan', 'green', 'red'] as const;
-export type SitTone = (typeof SIT_TONES)[number];
-
-export function pickSitTone(id: string): SitTone {
-  let sum = 0;
-  for (let i = 0; i < id.length; i++) sum += id.charCodeAt(i);
-  return SIT_TONES[sum % SIT_TONES.length];
 }
 
 export const SituationCard: React.FC<SituationCardProps> = ({ item, onRequestDelete }) => {
@@ -79,13 +75,60 @@ export const SituationCard: React.FC<SituationCardProps> = ({ item, onRequestDel
       onKeyDown={handleKeyDown}
     >
       {/* Thumbnail */}
-      <div className={`sit-thumb sit-thumb-${tone}`}>
-        <div className="sit-thumb-meta">
-          <span className={SITUATION_STATUS_BADGE_CLASSES[item.status]}>
-            {t(`situations.status.${item.status}`)}
-          </span>
+      {item.picture_image_url ? (
+        <div className="sit-thumb">
+          <img className="sit-thumb-img" src={item.picture_image_url} alt="" loading="lazy" />
+          <div className="sit-thumb-meta">
+            <span className={SITUATION_STATUS_BADGE_CLASSES[item.status]}>
+              {t(`situations.status.${item.status}`)}
+            </span>
+          </div>
+          {item.roles && item.roles.length > 0 && (
+            <div className="sit-thumb-roles">
+              {item.roles.map((role) => (
+                <span key={role} className="sit-role-chip">
+                  {role}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="sit-thumb-foot">
+            <span className="sit-thumb-pill">{item.dialog_lines_count} lines</span>
+            {item.audio_duration_seconds != null && (
+              <span className="sit-thumb-pill">
+                <Play size={10} />
+                {formatDuration(item.audio_duration_seconds)}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className={`sit-thumb sit-thumb-${tone}`}>
+          <div className="sit-thumb-meta">
+            <span className={SITUATION_STATUS_BADGE_CLASSES[item.status]}>
+              {t(`situations.status.${item.status}`)}
+            </span>
+          </div>
+          {item.roles && item.roles.length > 0 && (
+            <div className="sit-thumb-roles">
+              {item.roles.map((role) => (
+                <span key={role} className="sit-role-chip">
+                  {role}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="sit-thumb-foot">
+            <span className="sit-thumb-pill">{item.dialog_lines_count} lines</span>
+            {item.audio_duration_seconds != null && (
+              <span className="sit-thumb-pill">
+                <Play size={10} />
+                {formatDuration(item.audio_duration_seconds)}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Body */}
       <div className="sit-body">
@@ -95,6 +138,24 @@ export const SituationCard: React.FC<SituationCardProps> = ({ item, onRequestDel
         <p className="sit-title-en" title={item.scenario_en}>
           {item.scenario_en}
         </p>
+
+        {/* Level badges */}
+        {item.levels && item.levels.length > 0 && (
+          <div className="sit-levels">
+            {item.levels.map((lvl) => (
+              <Badge key={lvl} tone="violet">
+                {lvl}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* FROM NEWS kicker */}
+        {item.source_title_en && (
+          <div className="sit-from">
+            {t('situations.card.fromNewsLabel')} · {item.source_title_en}
+          </div>
+        )}
 
         {/* Completion strip: 5 boolean pills + separator + 3 count pills */}
         <div className="sit-prog-strip">

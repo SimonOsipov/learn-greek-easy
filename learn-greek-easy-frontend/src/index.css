@@ -3099,6 +3099,85 @@
     opacity: 1;
   }
 
+  /* ── Sit-card: real picture thumbnail (SAR2-26-09a) ─────────────────────── */
+  .sit-thumb-img {
+    object-fit: cover;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    display: block;
+  }
+
+  /* ── Sit-card: thumbnail overlays (SAR2-26-09b) ─────────────────────────── */
+  /* Roles chips — top overlay */
+  .sit-thumb-roles {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-end;
+  }
+  .sit-role-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 9999px;
+    font-size: 10px;
+    font-weight: 600;
+    background: hsl(var(--card) / 0.82);
+    color: hsl(var(--fg));
+    border: 1px solid hsl(var(--line));
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  /* Footer pills — bottom overlay */
+  .sit-thumb-foot {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    right: 6px;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .sit-thumb-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 9999px;
+    font-size: 10px;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-weight: 500;
+    background: hsl(var(--card) / 0.82);
+    color: hsl(var(--fg-2));
+    border: 1px solid hsl(var(--line));
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  /* ── Sit-card: body extras (SAR2-26-09c) ────────────────────────────────── */
+  /* Level badge row */
+  .sit-levels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  /* FROM NEWS kicker */
+  .sit-from {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: hsl(var(--fg-2));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   @media (max-width: 640px) {
     .sit-card {
       grid-template-columns: 96px 1fr;
