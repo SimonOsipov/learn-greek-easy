@@ -219,24 +219,8 @@ export function SituationsToolbar() {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {/* Status filter */}
-      <SegControl<StatusValue>
-        options={STATUS_OPTIONS}
-        value={statusToSeg(statusFilter)}
-        onChange={handleStatusChange}
-        label={t('situations.filters.status.label')}
-      />
-
-      {/* Level filter */}
-      <SegControl<LevelValue>
-        options={LEVEL_OPTIONS}
-        value={levelToSeg(levelFilter)}
-        onChange={handleLevelChange}
-        label={t('situations.filters.level.label')}
-      />
-
       {/* Search input */}
-      <div className="relative flex-1">
+      <div className="relative min-w-[240px] flex-1 sm:max-w-md">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           className="pl-9 pr-8"
@@ -257,6 +241,22 @@ export function SituationsToolbar() {
           </button>
         )}
       </div>
+
+      {/* Status filter */}
+      <SegControl<StatusValue>
+        options={STATUS_OPTIONS}
+        value={statusToSeg(statusFilter)}
+        onChange={handleStatusChange}
+        ariaLabel={t('situations.filters.status.label')}
+      />
+
+      {/* Level filter */}
+      <SegControl<LevelValue>
+        options={LEVEL_OPTIONS}
+        value={levelToSeg(levelFilter)}
+        onChange={handleLevelChange}
+        ariaLabel={t('situations.filters.level.label')}
+      />
 
       {/* Sort dropdown */}
       <DropdownMenu>
