@@ -1884,6 +1884,8 @@
         "generatedElevenLabs": "Generated · ElevenLabs",
         "notGeneratedYet": "Not generated yet",
         "regenerate": "Regenerate",
+        "referenceLabel": "Reference — English",
+        "referenceHint": "Internal only · keeps translators aligned",
         "playAria": "Play {{level}} narration",
         "pauseAria": "Pause {{level}} narration"
       },
