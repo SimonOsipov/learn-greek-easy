@@ -12,6 +12,8 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { SegControl } from '@/components/ui/seg-control';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { track } from '@/lib/analytics';
+import { adminAPI } from '@/services/adminAPI';
 import type {
   ExerciseSourceType,
   SituationDetailResponse,
@@ -45,9 +47,27 @@ function getCount(
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function GenerateButton({ source }: { source: ExerciseSourceType }) {
+function GenerateButton({
+  source,
+  situationId,
+}: {
+  source: ExerciseSourceType;
+  situationId: string;
+}) {
   const { t } = useTranslation('admin');
-  // TODO(SIT-XX): wire to adminAPI.generateSituationExercises when endpoint lands
+
+  const handleGenerate = async () => {
+    try {
+      await adminAPI.generateSituationExercises(situationId, source);
+      track('admin_situation_exercise_generated', {
+        situation_id: situationId,
+        source,
+      });
+    } catch {
+      // Endpoint not yet implemented — no-op until it lands.
+    }
+  };
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -58,6 +78,7 @@ function GenerateButton({ source }: { source: ExerciseSourceType }) {
             disabled
             aria-label={t(GENERATE_KEY[source])}
             data-testid={`situation-drawer-exercises-generate-${source}`}
+            onClick={() => void handleGenerate()}
           >
             <Wand2 className="mr-2 h-4 w-4" />
             {t(GENERATE_KEY[source])}
@@ -133,7 +154,7 @@ export function SituationDrawerExercises({ situation }: Props) {
             value={activeSource}
             onChange={setActiveSource}
           />
-          <GenerateButton source={activeSource} />
+          <GenerateButton source={activeSource} situationId={situation.id} />
         </div>
 
         {/*
