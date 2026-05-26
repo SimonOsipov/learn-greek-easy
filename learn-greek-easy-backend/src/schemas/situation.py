@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
 
@@ -13,6 +13,7 @@ from src.db.models import (
     ExerciseSourceType,
     ExerciseStatus,
     ExerciseType,
+    NewsCountry,
     PictureStatus,
     SituationStatus,
 )
@@ -104,6 +105,13 @@ class SituationListItem(BaseModel):
     dialog_exercises_count: int = 0
     description_exercises_count: int = 0
     picture_exercises_count: int = 0
+    levels: list[str] = []
+    dialog_lines_count: int = 0
+    roles: list[str] = []
+    picture_image_url: str | None = None
+    audio_duration_seconds: float | None = None
+    source_title_en: str | None = None
+    source_country: NewsCountry | None = None
 
 
 class SituationListResponse(BaseModel):
@@ -124,6 +132,7 @@ class SituationResponse(BaseModel):
     status: SituationStatus
     created_at: datetime
     updated_at: datetime
+    levels: list[str] = []
 
 
 class DialogNested(BaseModel):
@@ -145,6 +154,7 @@ class DescriptionNested(BaseModel):
     id: UUID
     text_el: str
     text_el_a2: str | None
+    text_en: str = ""
     source_type: DescriptionSourceType
     status: DescriptionStatus
     audio_duration_seconds: float | None
@@ -170,10 +180,44 @@ class PictureNested(BaseModel):
     image_url: str | None = None
 
 
+class LinkedNewsSummary(BaseModel):
+    """Summary of a NewsItem linked to a Situation."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    title_en: str | None
+    country: NewsCountry | None
+    published_at: date
+
+
+class LinkNewsRequest(BaseModel):
+    """Body for POST /situations/{id}/link-news."""
+
+    news_item_id: UUID
+
+
+class DescriptionUpdate(BaseModel):
+    """Body for PATCH /situations/{id}/description."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    text_el: str | None = None
+    text_el_a2: str | None = None
+    text_en: str | None = None
+
+
+class StatusTransitionRequest(BaseModel):
+    """Body for PATCH /situations/{id}/status."""
+
+    status: SituationStatus
+
+
 class SituationDetailResponse(SituationResponse):
     dialog: DialogNested | None = None
     description: DescriptionNested | None = None
     picture: PictureNested | None = None
+    linked_news: LinkedNewsSummary | None = None
 
 
 class SituationExerciseItemResponse(BaseModel):

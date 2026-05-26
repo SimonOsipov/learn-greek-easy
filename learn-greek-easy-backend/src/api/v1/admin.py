@@ -72,6 +72,7 @@ from src.db.models import (
     FeedbackCategory,
     FeedbackStatus,
     ListeningDialog,
+    NewsItem,
     PartOfSpeech,
     PictureExercise,
     Situation,
@@ -153,8 +154,11 @@ from src.schemas.situation import (
     AdminExerciseListItem,
     AdminExerciseListResponse,
     AdminExerciseStatsResponse,
+    DescriptionUpdate,
     GenerateBatchRequest,
     GenerateBatchResponse,
+    LinkedNewsSummary,
+    LinkNewsRequest,
     PictureNested,
     PictureUpdate,
     SituationCreate,
@@ -167,6 +171,7 @@ from src.schemas.situation import (
     SituationListResponse,
     SituationResponse,
     SituationUpdate,
+    StatusTransitionRequest,
 )
 from src.schemas.word_entry import (
     AdminWordEntryCreateRequest,
@@ -4676,9 +4681,17 @@ async def list_situations(
         .correlate(Situation)
         .scalar_subquery()
     )
-
+    dialog_lines_count_sq = (
+        select(func.count(DialogLine.id))
+        .join(ListeningDialog, DialogLine.dialog_id == ListeningDialog.id)
+        .where(ListeningDialog.situation_id == Situation.id)
+        .correlate(Situation)
+        .scalar_subquery()
+    )
     data_query = (
-        select(Situation, dialog_ex_count_sq, desc_ex_count_sq, pic_ex_count_sq)
+        select(
+            Situation, dialog_ex_count_sq, desc_ex_count_sq, pic_ex_count_sq, dialog_lines_count_sq
+        )
         .options(
             selectinload(Situation.dialog),
             selectinload(Situation.description),
@@ -4696,32 +4709,63 @@ async def list_situations(
     result = await db.execute(data_query)
     rows = result.all()
 
-    items = [
-        SituationListItem(
-            id=s.id,
-            scenario_el=s.scenario_el,
-            scenario_en=s.scenario_en,
-            scenario_ru=s.scenario_ru,
-            status=s.status,
-            created_at=s.created_at,
-            has_dialog=s.dialog is not None,
-            has_description=s.description is not None,
-            has_picture=s.picture is not None and s.picture.image_s3_key is not None,
-            has_dialog_audio=s.dialog is not None and s.dialog.audio_s3_key is not None,
-            has_description_audio=s.description is not None
-            and s.description.audio_s3_key is not None,
-            description_timestamps_count=(
-                (1 if s.description.word_timestamps else 0)
-                + (1 if s.description.word_timestamps_a2 else 0)
-                if s.description is not None
-                else 0
-            ),
-            dialog_exercises_count=dlg_count,
-            description_exercises_count=dsc_count,
-            picture_exercises_count=pic_count,
+    # For presigned picture URLs, initialise S3 service once.
+    s3_svc = get_s3_service()
+
+    items = []
+    for s, dlg_count, dsc_count, pic_count, lines_count in rows:
+        # Roles: first two distinct speakers by earliest line index.
+        roles: list[str] = []
+        if s.dialog is not None:
+            # Execute per-situation roles subquery (small list; acceptable for admin).
+            roles_result = await db.execute(
+                select(
+                    DialogSpeaker.character_name,
+                )
+                .join(DialogLine, DialogLine.speaker_id == DialogSpeaker.id)
+                .where(DialogSpeaker.dialog_id == s.dialog.id)
+                .group_by(DialogSpeaker.id, DialogSpeaker.character_name)
+                .order_by(func.min(DialogLine.line_index))
+                .limit(2)
+            )
+            roles = [row[0] for row in roles_result.all()]
+
+        picture_image_url: str | None = None
+        if s.picture is not None and s.picture.image_s3_key:
+            picture_image_url = s3_svc.generate_presigned_url(s.picture.image_s3_key)
+
+        items.append(
+            SituationListItem(
+                id=s.id,
+                scenario_el=s.scenario_el,
+                scenario_en=s.scenario_en,
+                scenario_ru=s.scenario_ru,
+                status=s.status,
+                created_at=s.created_at,
+                has_dialog=s.dialog is not None,
+                has_description=s.description is not None,
+                has_picture=s.picture is not None and s.picture.image_s3_key is not None,
+                has_dialog_audio=s.dialog is not None and s.dialog.audio_s3_key is not None,
+                has_description_audio=s.description is not None
+                and s.description.audio_s3_key is not None,
+                description_timestamps_count=(
+                    (1 if s.description.word_timestamps else 0)
+                    + (1 if s.description.word_timestamps_a2 else 0)
+                    if s.description is not None
+                    else 0
+                ),
+                dialog_exercises_count=dlg_count,
+                description_exercises_count=dsc_count,
+                picture_exercises_count=pic_count,
+                levels=s.levels,
+                dialog_lines_count=lines_count,
+                roles=roles,
+                picture_image_url=picture_image_url,
+                audio_duration_seconds=s.dialog.audio_duration_seconds if s.dialog else None,
+                source_title_en=s.source_title_en,
+                source_country=s.description.country if s.description else None,
+            )
         )
-        for s, dlg_count, dsc_count, pic_count in rows
-    ]
     return SituationListResponse(
         items=items, total=total, page=page, page_size=page_size, status_counts=status_counts
     )
@@ -4766,6 +4810,266 @@ async def get_situation(
     if response.picture and situation.picture and situation.picture.image_s3_key:
         s3 = get_s3_service()
         response.picture.image_url = s3.generate_presigned_url(situation.picture.image_s3_key)
+    # Populate linked_news summary from the NewsItem whose situation_id matches.
+    news_result = await db.execute(select(NewsItem).where(NewsItem.situation_id == situation_id))
+    news_item = news_result.scalar_one_or_none()
+    if news_item is not None:
+        response.linked_news = LinkedNewsSummary(
+            id=news_item.id,
+            title_en=situation.source_title_en,
+            country=situation.description.country if situation.description else None,
+            published_at=news_item.publication_date,
+        )
+    return response
+
+
+@router.post(
+    "/situations/{situation_id}/link-news",
+    response_model=SituationDetailResponse,
+    status_code=200,
+)
+async def link_situation_news(
+    situation_id: UUID,
+    data: LinkNewsRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> SituationDetailResponse:
+    """Link an existing NewsItem to this situation.
+
+    The NewsItem.situation_id is updated to point at this situation.
+    409 if this situation already has a linked NewsItem, or if the target
+    NewsItem is already linked to a different situation.
+    """
+    # Verify the situation exists.
+    sit_result = await db.execute(
+        select(Situation)
+        .options(selectinload(Situation.description), selectinload(Situation.picture))
+        .where(Situation.id == situation_id)
+    )
+    situation = sit_result.scalar_one_or_none()
+    if situation is None:
+        raise HTTPException(status_code=404, detail="Situation not found")
+
+    # Fetch the target NewsItem.
+    target_result = await db.execute(select(NewsItem).where(NewsItem.id == data.news_item_id))
+    target_news = target_result.scalar_one_or_none()
+    if target_news is None:
+        raise HTTPException(status_code=404, detail="News item not found")
+
+    # Guard: this situation must not already have a DIFFERENT linked NewsItem.
+    existing_result = await db.execute(
+        select(NewsItem)
+        .where(NewsItem.situation_id == situation_id)
+        .where(NewsItem.id != data.news_item_id)
+    )
+    if existing_result.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="Situation already has a linked news item")
+
+    # Re-link (or no-op if already pointing here).
+    if target_news.situation_id != situation_id:
+        target_news.situation_id = situation_id
+        await db.commit()
+
+    return await _get_situation_detail(situation_id, db)
+
+
+@router.delete(
+    "/situations/{situation_id}/link-news",
+    status_code=200,
+    response_model=SituationDetailResponse,
+)
+async def unlink_situation_news(
+    situation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> SituationDetailResponse:
+    """Unlink (delete) the NewsItem linked to this situation.
+
+    404 if no linked NewsItem exists.
+    """
+    # Verify the situation exists.
+    sit_result = await db.execute(select(Situation.id).where(Situation.id == situation_id))
+    if sit_result.scalar_one_or_none() is None:
+        raise HTTPException(status_code=404, detail="Situation not found")
+
+    news_result = await db.execute(select(NewsItem).where(NewsItem.situation_id == situation_id))
+    news_item = news_result.scalar_one_or_none()
+    if news_item is None:
+        raise HTTPException(status_code=404, detail="No linked news item found")
+
+    await db.delete(news_item)
+    await db.commit()
+
+    return await _get_situation_detail(situation_id, db)
+
+
+@router.post(
+    "/situations/{situation_id}/re-derive",
+    status_code=501,
+)
+async def re_derive_situation(
+    situation_id: UUID,
+    current_user: User = Depends(get_current_superuser),
+) -> None:
+    """Stub: re-derive situation content from linked news item."""
+    raise HTTPException(status_code=501, detail="Re-derive not yet implemented")
+
+
+@router.patch(
+    "/situations/{situation_id}/description",
+    response_model=SituationDetailResponse,
+)
+async def patch_situation_description(
+    situation_id: UUID,
+    data: DescriptionUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> SituationDetailResponse:
+    """Partially update a situation's description fields.
+
+    Only supplied fields are modified; siblings are unchanged.
+    """
+    result = await db.execute(
+        select(Situation)
+        .options(selectinload(Situation.description))
+        .where(Situation.id == situation_id)
+    )
+    situation = result.scalar_one_or_none()
+    if situation is None:
+        raise HTTPException(status_code=404, detail="Situation not found")
+
+    description = situation.description
+    if description is None:
+        raise HTTPException(status_code=404, detail="Situation has no description")
+
+    if data.text_el is not None:
+        description.text_el = data.text_el
+    if data.text_el_a2 is not None:
+        description.text_el_a2 = data.text_el_a2
+    if data.text_en is not None:
+        description.text_en = data.text_en
+
+    await db.commit()
+
+    return await _get_situation_detail(situation_id, db)
+
+
+@router.patch(
+    "/situations/{situation_id}/status",
+    response_model=SituationDetailResponse,
+)
+async def transition_situation_status(
+    situation_id: UUID,
+    data: StatusTransitionRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> SituationDetailResponse:
+    """Transition a situation's status between draft and ready.
+
+    draft → ready requires: description with non-empty text_el AND dialog with lines.
+    ready → draft is always allowed.
+    Idempotent: if the requested status equals the current status, returns 200 no-op.
+    """
+    result = await db.execute(
+        select(Situation)
+        .options(
+            selectinload(Situation.description),
+            selectinload(Situation.dialog).selectinload(ListeningDialog.lines),
+        )
+        .where(Situation.id == situation_id)
+    )
+    situation = result.scalar_one_or_none()
+    if situation is None:
+        raise HTTPException(status_code=404, detail="Situation not found")
+
+    old_status = situation.status
+    new_status = data.status
+
+    # Idempotency: no-op if already at requested status.
+    if old_status == new_status:
+        return await _get_situation_detail(situation_id, db)
+
+    # Guard: draft → ready requires description + text_el + dialog lines.
+    if new_status == SituationStatus.READY:
+        missing: list[str] = []
+        if situation.description is None:
+            missing.append("description")
+        elif not situation.description.text_el.strip():
+            missing.append("description.text_el")
+        if situation.dialog is None:
+            missing.append("dialog")
+        elif len(situation.dialog.lines) == 0:
+            missing.append("dialog.lines")
+        if missing:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": {
+                        "code": "STATUS_GUARD_FAILED",
+                        "detail": {"missing": missing},
+                    }
+                },
+            )
+
+    situation.status = new_status
+    await db.commit()
+
+    logger.info(
+        "Situation status transitioned",
+        extra={
+            "situation_id": str(situation_id),
+            "actor_user_id": str(current_user.id),
+            "old_status": old_status.value,
+            "new_status": new_status.value,
+        },
+    )
+
+    return await _get_situation_detail(situation_id, db)
+
+
+async def _get_situation_detail(situation_id: UUID, db: AsyncSession) -> SituationDetailResponse:
+    """Shared helper: fetch a SituationDetailResponse including linked_news."""
+    result = await db.execute(
+        select(Situation)
+        .options(
+            selectinload(Situation.dialog).selectinload(ListeningDialog.speakers),
+            selectinload(Situation.dialog).selectinload(ListeningDialog.lines),
+            selectinload(Situation.description),
+            selectinload(Situation.picture),
+        )
+        .where(Situation.id == situation_id)
+    )
+    situation = result.scalar_one_or_none()
+    if situation is None:
+        raise HTTPException(status_code=404, detail="Situation not found")
+    if situation.dialog:
+        situation.dialog.speakers.sort(key=lambda s: s.speaker_index)
+        situation.dialog.lines.sort(key=lambda ln: ln.line_index)
+    response = SituationDetailResponse.model_validate(situation)
+    s3 = get_s3_service()
+    if response.dialog and situation.dialog and situation.dialog.audio_s3_key:
+        response.dialog.audio_url = s3.generate_presigned_url(situation.dialog.audio_s3_key)
+    if response.description and situation.description:
+        if situation.description.audio_s3_key:
+            response.description.audio_url = s3.generate_presigned_url(
+                situation.description.audio_s3_key
+            )
+        if situation.description.audio_a2_s3_key:
+            response.description.audio_a2_url = s3.generate_presigned_url(
+                situation.description.audio_a2_s3_key
+            )
+    if response.picture and situation.picture and situation.picture.image_s3_key:
+        response.picture.image_url = s3.generate_presigned_url(situation.picture.image_s3_key)
+    # Populate linked_news.
+    news_result = await db.execute(select(NewsItem).where(NewsItem.situation_id == situation_id))
+    news_item = news_result.scalar_one_or_none()
+    if news_item is not None:
+        response.linked_news = LinkedNewsSummary(
+            id=news_item.id,
+            title_en=situation.source_title_en,
+            country=situation.description.country if situation.description else None,
+            published_at=news_item.publication_date,
+        )
     return response
 
 

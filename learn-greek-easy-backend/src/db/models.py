@@ -2560,6 +2560,9 @@ class Situation(Base, TimestampMixin):
     source_title_el: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_title_ru: Mapped[str | None] = mapped_column(Text, nullable=True)
     scenario_el_a2: Mapped[str | None] = mapped_column(Text, nullable=True)
+    levels: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'[]'::jsonb")
+    )
 
     def __repr__(self) -> str:
         return f"<Situation id={self.id} status={self.status}>"
@@ -2576,6 +2579,7 @@ class SituationDescription(Base, TimestampMixin):
     )
     text_el: Mapped[str] = mapped_column(Text, nullable=False)
     text_el_a2: Mapped[str | None] = mapped_column(Text, nullable=True)
+    text_en: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("''"))
     source_type: Mapped[DescriptionSourceType] = mapped_column(
         SAEnum(
             DescriptionSourceType,
