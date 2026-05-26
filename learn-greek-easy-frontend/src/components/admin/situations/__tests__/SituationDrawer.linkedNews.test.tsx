@@ -237,11 +237,12 @@ describe('SituationDrawerLinkedNews — linked state (linked_news set)', () => {
     expect(screen.queryByText('situations.drawer.linkedNews.empty')).not.toBeInTheDocument();
   });
 
-  it('does not render disabled Link to article button', async () => {
+  it('renders disabled Link to article button (always shown, Coming soon)', async () => {
     await renderComponent(makeSituation({ linked_news: LINKED_NEWS }));
-    expect(
-      screen.queryByRole('button', { name: 'situations.drawer.linkedNews.linkCta' })
-    ).not.toBeInTheDocument();
+    const btn = screen.getByRole('button', {
+      name: 'situations.drawer.linkedNews.linkCta',
+    });
+    expect(btn).toHaveAttribute('aria-disabled', 'true');
   });
 });
 
