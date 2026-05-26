@@ -214,3 +214,131 @@ test.describe('ADMIN2-24 polish', () => {
     await expect(readingButton).toHaveAttribute('aria-pressed', 'true');
   });
 });
+
+// ── ADMIN2-25 toolbar unification — dedicated E2E coverage ───────────────────
+//
+// These four tests cover:
+//   TBR2-25-E2E-01: search debounce + URL hydration round-trip
+//   TBR2-25-E2E-02: multi-axis filter combination (status + level) + reload
+//   TBR2-25-E2E-03: empty-state on zero results + clear-X restores rows
+//   TBR2-25-E2E-04: pager Next/Previous round-trip via ?page= URL param
+//
+// Auth: admin storageState (shared with the smoke suite above).
+// Seeding: the preview environment is expected to have ≥262 exercises.
+
+test.describe('ADMIN2-25 flows', () => {
+  test.beforeEach(async ({ page }) => {
+    await navigateToAdminTab(page, 'exercises');
+    await expect(page.getByTestId('admin-exercises-list')).toBeVisible({ timeout: 15_000 });
+  });
+
+  // ── TBR2-25-E2E-01: search debounce + URL hydration round-trip ─────────────
+
+  test('TBR2-25-E2E-01: search debounce writes ?q= to URL and survives reload', async ({
+    page,
+  }) => {
+    const searchInput = page.getByTestId('admin-exercises-search');
+    await searchInput.fill('test');
+
+    // The store debounces qDebounced by 300ms before writing it to the URL.
+    // Playwright's default 5s toHaveURL retry absorbs the delay — no manual wait.
+    await expect(page).toHaveURL(/[?&]q=test(&|$)/);
+
+    // Reload and verify both the input value and URL param are restored via
+    // hydrateFromURL (store reads URL on mount and sets q + qDebounced directly).
+    await page.reload();
+    await expect(page.getByTestId('admin-exercises-list')).toBeVisible({ timeout: 15_000 });
+    await expect(searchInput).toHaveValue('test');
+    await expect(page).toHaveURL(/[?&]q=test(&|$)/);
+
+    // After hydration the view shows either matching rows or the empty state.
+    const rows = page.locator('[data-testid^="admin-exercise-item-"]').first();
+    const emptyState = page.getByTestId('admin-exercises-empty');
+    await expect(rows.or(emptyState)).toBeVisible({ timeout: 10_000 });
+  });
+
+  // ── TBR2-25-E2E-02: multi-axis filter combination + reload ─────────────────
+
+  test('TBR2-25-E2E-02: status=approved + level=B1 written to URL and chips survive reload', async ({
+    page,
+  }) => {
+    // The Status SegControl aria-label is "Status" (exercises.filters.status.label)
+    const statusGroup = page.getByRole('group', { name: /^status$/i });
+    await statusGroup.getByRole('button', { name: /^approved$/i }).click();
+
+    // The Level SegControl aria-label is "Level" (exercises.filters.level.label)
+    const levelGroup = page.getByRole('group', { name: /^level$/i });
+    await levelGroup.getByRole('button', { name: /^b1$/i }).click();
+
+    // Both params must appear in the URL (status lowercase, level uppercase).
+    await expect(page).toHaveURL(/[?&]status=approved(&|$)/);
+    await expect(page).toHaveURL(/[?&]level=B1(&|$)/);
+
+    // Reload and verify both chips are still pressed (store re-hydrated from URL).
+    await page.reload();
+    await expect(page.getByTestId('admin-exercises-list')).toBeVisible({ timeout: 15_000 });
+
+    await expect(
+      page.getByRole('group', { name: /^status$/i }).getByRole('button', { name: /^approved$/i })
+    ).toHaveAttribute('aria-pressed', 'true');
+    await expect(
+      page.getByRole('group', { name: /^level$/i }).getByRole('button', { name: /^b1$/i })
+    ).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  // ── TBR2-25-E2E-03: empty-state on zero results + clear-X restores rows ────
+
+  test('TBR2-25-E2E-03: sentinel search shows empty-state; clear-X restores rows', async ({
+    page,
+  }) => {
+    const searchInput = page.getByTestId('admin-exercises-search');
+    await searchInput.fill('ZZZZ_NOMATCH_XYZ');
+
+    // Empty state must appear once the debounced fetch completes.
+    await expect(page.getByTestId('admin-exercises-empty')).toBeVisible({ timeout: 10_000 });
+
+    // The clear-X button uses aria-label="Clear search"
+    // (exercises.search.clearAriaLabel translation key).
+    const clearButton = page.getByRole('button', { name: /^clear search$/i });
+    await clearButton.click();
+
+    // Input is empty, empty-state is gone, and at least one row is visible.
+    await expect(searchInput).toHaveValue('');
+    await expect(page.getByTestId('admin-exercises-empty')).not.toBeVisible();
+    await expect(
+      page.locator('[data-testid^="admin-exercise-item-"]').first()
+    ).toBeVisible({ timeout: 10_000 });
+  });
+
+  // ── TBR2-25-E2E-04: pager Next/Previous round-trip ─────────────────────────
+
+  test('TBR2-25-E2E-04: pager Next writes ?page=2 to URL; Previous removes it', async ({
+    page,
+  }) => {
+    // Page 1 is the default — the URL-sync logic deletes the param when page === 1.
+    await expect(page).not.toHaveURL(/[?&]page=/);
+
+    const pager = page.getByTestId('admin-exercises-pagination');
+    const nextButton = pager.getByRole('button', { name: /next/i });
+
+    // If there is only one page, skip rather than producing a spurious failure.
+    const isDisabled = await nextButton.getAttribute('aria-disabled');
+    if (isDisabled === 'true') {
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[TBR2-25-E2E-04] Skipped: only one page of exercises. ' +
+          'Ensure ≥21 exercises exist in the preview DB to activate this assertion.'
+      );
+      test.skip();
+      return;
+    }
+
+    await nextButton.click();
+    await expect(page).toHaveURL(/[?&]page=2(&|$)/, { timeout: 10_000 });
+
+    const prevButton = pager.getByRole('button', { name: /previous/i });
+    await prevButton.click();
+    // page=1 is omitted from the URL (AdminExercisesSection deletes it when page === 1).
+    await expect(page).not.toHaveURL(/[?&]page=/, { timeout: 10_000 });
+  });
+});
