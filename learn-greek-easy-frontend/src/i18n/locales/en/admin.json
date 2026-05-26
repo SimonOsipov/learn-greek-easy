@@ -1884,7 +1884,9 @@
           "description": "From description",
           "picture": "From picture"
         },
-        "generateFrom": "Generate from {{source}}",
+        "generateFromDialog": "Generate from dialog",
+        "generateFromDescription": "Generate from description",
+        "generateFromPicture": "Generate from picture",
         "empty": {
           "title": "No exercises yet",
           "cta": "Generate exercises"

@@ -18,14 +18,15 @@ import { SituationDrawerExercises } from '../SituationDrawer.exercises';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, opts?: Record<string, unknown>) => {
+    t: (key: string) => {
       if (key === 'comingSoon') return 'Coming soon';
       if (key === 'situations.drawer.exercises.source.dialog') return 'From dialog';
       if (key === 'situations.drawer.exercises.source.description') return 'From description';
       if (key === 'situations.drawer.exercises.source.picture') return 'From picture';
-      if (key === 'situations.drawer.exercises.generateFrom' && opts?.source) {
-        return `Generate from ${opts.source}`;
-      }
+      if (key === 'situations.drawer.exercises.generateFromDialog') return 'Generate from dialog';
+      if (key === 'situations.drawer.exercises.generateFromDescription')
+        return 'Generate from description';
+      if (key === 'situations.drawer.exercises.generateFromPicture') return 'Generate from picture';
       if (key === 'situations.drawer.exercises.empty.title') return 'No exercises yet';
       if (key === 'situations.drawer.exercises.empty.cta') return 'Generate exercises';
       // Pass through for situations.detail.* used in wrapped tab
@@ -270,6 +271,37 @@ describe('SituationDrawerExercises — Generate button', () => {
     const tooltips = screen.getAllByTestId('tooltip-content');
     const texts = tooltips.map((el) => el.textContent);
     expect(texts).toContain('Coming soon');
+  });
+});
+
+// 6. Generate button text matches per-source keys (no interpolation artifact)
+
+describe('SituationDrawerExercises — Generate button text per source', () => {
+  it.each([
+    ['dialog', 'Generate from dialog'],
+    ['description', 'Generate from description'],
+    ['picture', 'Generate from picture'],
+  ] as const)('shows "%s" button text when active source is %s', async (source, expectedText) => {
+    mockGetSituationExercises.mockResolvedValue(makeResponse());
+    const user = userEvent.setup();
+    render(<SituationDrawerExercises situation={makeSituation()} />);
+
+    if (source !== 'dialog') {
+      // Switch to the target source tab
+      const tabBtn = screen
+        .getAllByRole('button')
+        .find(
+          (btn) =>
+            btn.getAttribute('aria-pressed') !== null &&
+            btn.textContent?.toLowerCase().includes(source === 'picture' ? 'picture' : source)
+        );
+      expect(tabBtn).toBeDefined();
+      await user.click(tabBtn!);
+    }
+
+    const generateBtn = await screen.findByTestId(`situation-drawer-exercises-generate-${source}`);
+    expect(generateBtn.textContent).toMatch(/^Generate from (dialog|description|picture)$/);
+    expect(generateBtn.textContent).toBe(expectedText);
   });
 });
 

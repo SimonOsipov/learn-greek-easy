@@ -1822,7 +1822,9 @@
           "description": "Из описания",
           "picture": "Из картинки"
         },
-        "generateFrom": "Генерировать из {{source}}",
+        "generateFromDialog": "Генерировать из диалога",
+        "generateFromDescription": "Генерировать из описания",
+        "generateFromPicture": "Генерировать из картинки",
         "empty": {
           "title": "Упражнений пока нет",
           "cta": "Генерировать упражнения"
