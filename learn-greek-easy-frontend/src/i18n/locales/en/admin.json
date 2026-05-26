@@ -1746,7 +1746,10 @@
           "noExercises": "No exercises yet",
           "noExercisesInGroup": "No exercises in this group"
         },
-        "error": "Failed to load exercises"
+        "error": "Failed to load exercises",
+        "answerLabel": "ANSWER",
+        "turnLabel": "Turn {{n}}",
+        "dialogSource": "From dialog turn {{n}}"
       },
       "dialogEmpty": "No dialog created yet",
       "descriptionEmpty": "No description created yet",
@@ -1758,7 +1761,7 @@
           "scene_en": "Scene (EN)",
           "scene_el": "Scene (EL)",
           "scene_ru": "Scene (RU)",
-          "style_en": "Style (EN)"
+          "style_en": "Style prompt"
         },
         "placeholders": {
           "scene_en": "English scene description for image generation",
@@ -1769,7 +1772,10 @@
         "save": "Save",
         "cancel": "Cancel",
         "savedToast": "Picture prompt saved",
-        "trioRuleHint": "Provide all three scene fields (EN/EL/RU) or leave all three empty."
+        "trioRuleHint": "Provide all three scene fields (EN/EL/RU) or leave all three empty.",
+        "hints": {
+          "style_en": "Locked across the catalog · edit cautiously"
+        }
       },
       "picture": {
         "generate": "Generate",
@@ -1785,7 +1791,10 @@
           "generating": "Generating…",
           "uploading": "Uploading…",
           "persisting": "Saving…"
-        }
+        },
+        "upload": "Upload",
+        "uploadSuccess": "Picture uploaded",
+        "uploadError": "Upload failed"
       },
       "audioNotGenerated": "Audio not generated",
       "regenerate": "Regenerate",
@@ -1901,7 +1910,9 @@
         "empty": {
           "title": "No exercises yet",
           "cta": "Generate exercises"
-        }
+        },
+        "editAria": "Edit exercise {{index}}",
+        "deleteAria": "Delete exercise {{index}}"
       },
       "linkedNews": {
         "header": "Linked news",

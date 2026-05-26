@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/ui/side-panel';
@@ -13,7 +14,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { toast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/adminAPI';
 import { useAdminSituationStore } from '@/stores/adminSituationStore';
-import type { DescriptionUpdatePayload, SituationUpdatePayload } from '@/types/situation';
+import type {
+  DescriptionUpdatePayload,
+  PictureUpdatePayload,
+  SituationUpdatePayload,
+} from '@/types/situation';
 
 import { SITUATION_STATUS_BADGE_CLASSES } from './situationBadges';
 import { SituationDrawerDescription } from './SituationDrawer.description';
@@ -35,6 +40,12 @@ export interface SituationDrawerFormData {
     text_el_a2: string;
     text_en: string;
   };
+  picture: {
+    scene_en: string;
+    scene_el: string;
+    scene_ru: string;
+    style_en: string;
+  };
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────────
@@ -45,6 +56,12 @@ function toDefaults(
     scenario_en: string;
     scenario_ru: string;
     description?: { text_el: string; text_el_a2: string | null; text_en: string | null } | null;
+    picture?: {
+      scene_en: string | null;
+      scene_el: string | null;
+      scene_ru: string | null;
+      style_en: string | null;
+    } | null;
   } | null
 ): SituationDrawerFormData {
   return {
@@ -55,6 +72,12 @@ function toDefaults(
       text_el: detail?.description?.text_el ?? '',
       text_el_a2: detail?.description?.text_el_a2 ?? '',
       text_en: detail?.description?.text_en ?? '',
+    },
+    picture: {
+      scene_en: detail?.picture?.scene_en ?? '',
+      scene_el: detail?.picture?.scene_el ?? '',
+      scene_ru: detail?.picture?.scene_ru ?? '',
+      style_en: detail?.picture?.style_en ?? '',
     },
   };
 }
@@ -83,6 +106,7 @@ export const SituationDrawer: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<SituationDrawerTab>('dialog');
   const [dirtyDialogOpen, setDirtyDialogOpen] = useState<null | 'close' | 'cancel'>(null);
+  const [pictureTrioError, setPictureTrioError] = useState(false);
 
   const form = useForm<SituationDrawerFormData>({
     mode: 'onBlur',
@@ -142,10 +166,38 @@ export const SituationDrawer: React.FC = () => {
     if (descDirty.text_el_a2) descPayload.text_el_a2 = data.description.text_el_a2;
     if (descDirty.text_en) descPayload.text_en = data.description.text_en;
 
+    // Picture fields: trio validation + dirty diff
+    const picDirty = dirty.picture ?? {};
+    const hasPictureDirty =
+      picDirty.scene_en || picDirty.scene_el || picDirty.scene_ru || picDirty.style_en;
+    const picPayload: PictureUpdatePayload = {};
+
+    if (hasPictureDirty && selectedSituation.picture) {
+      const trioFilled = [
+        data.picture.scene_en.trim().length > 0,
+        data.picture.scene_el.trim().length > 0,
+        data.picture.scene_ru.trim().length > 0,
+      ];
+      const trioPartial = trioFilled.some(Boolean) && !trioFilled.every(Boolean);
+      if (trioPartial) {
+        setPictureTrioError(true);
+        setActiveTab('picture');
+        return;
+      }
+      setPictureTrioError(false);
+      if (picDirty.scene_en) picPayload.scene_en = data.picture.scene_en.trim() || null;
+      if (picDirty.scene_el) picPayload.scene_el = data.picture.scene_el.trim() || null;
+      if (picDirty.scene_ru) picPayload.scene_ru = data.picture.scene_ru.trim() || null;
+      if (picDirty.style_en) picPayload.style_en = data.picture.style_en.trim() || null;
+    } else {
+      setPictureTrioError(false);
+    }
+
     const hasSituationChanges = Object.keys(situationPayload).length > 0;
     const hasDescriptionChanges = Object.keys(descPayload).length > 0;
+    const hasPictureChanges = Object.keys(picPayload).length > 0;
 
-    if (!hasSituationChanges && !hasDescriptionChanges) {
+    if (!hasSituationChanges && !hasDescriptionChanges && !hasPictureChanges) {
       closeAndClearUrl();
       return;
     }
@@ -156,6 +208,9 @@ export const SituationDrawer: React.FC = () => {
       }
       if (hasDescriptionChanges) {
         await adminAPI.updateSituationDescription(selectedSituation.id, descPayload);
+      }
+      if (hasPictureChanges) {
+        await adminAPI.updateSituationPicture(selectedSituation.id, picPayload);
       }
       toast({ title: t('situations.drawer.save.success') });
       await fetchSituations();
@@ -286,7 +341,18 @@ export const SituationDrawer: React.FC = () => {
             <FormProvider {...form}>
               {activeTab === 'dialog' && <SituationDrawerDialog situation={detail} />}
               {activeTab === 'description' && <SituationDrawerDescription situation={detail} />}
-              {activeTab === 'picture' && <SituationDrawerPicture situation={detail} />}
+              {activeTab === 'picture' && (
+                <>
+                  {pictureTrioError && (
+                    <Alert variant="destructive" className="mb-4" data-testid="picture-trio-error">
+                      <AlertDescription>
+                        {t('situations.detail.picturePrompt.trioRuleHint')}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  <SituationDrawerPicture situation={detail} />
+                </>
+              )}
               {activeTab === 'exercises' && <SituationDrawerExercises situation={detail} />}
               {activeTab === 'linkedNews' && <SituationDrawerLinkedNews situation={detail} />}
             </FormProvider>

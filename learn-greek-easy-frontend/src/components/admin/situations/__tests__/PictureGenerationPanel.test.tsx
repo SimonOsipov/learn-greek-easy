@@ -22,10 +22,15 @@ vi.mock('@/hooks/use-toast', () => ({
   toast: (args: unknown) => mockToast(args),
 }));
 
+const mockUploadSituationPicture = vi.fn();
+
 vi.mock('@/services/adminAPI', () => ({
   getPictureGenerationStreamUrl: vi.fn(
     (id: string) => `/api/v1/situations/${id}/picture/generate/stream`
   ),
+  adminAPI: {
+    uploadSituationPicture: (...args: unknown[]) => mockUploadSituationPicture(...args),
+  },
 }));
 
 // Capture SSE callbacks so tests can fire events directly
@@ -241,5 +246,42 @@ describe('PictureGenerationPanel', () => {
 
     // Button re-enabled
     expect(screen.getByRole('button', { name: 'Generate' })).not.toBeDisabled();
+  });
+});
+
+// ── Upload button tests (SAR2-26-12a) ─────────────────────────────────────
+
+describe('PictureGenerationPanel — Upload button', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedOnEvent = undefined;
+    capturedOnError = undefined;
+  });
+
+  it('renders an Upload button', () => {
+    renderPanel({ imageUrl: null });
+    expect(screen.getByTestId('picture-upload-button')).toBeInTheDocument();
+  });
+
+  it('clicking Upload button triggers the hidden file input click', async () => {
+    const user = userEvent.setup();
+    renderPanel({ imageUrl: null });
+
+    const uploadInput = screen.getByTestId('picture-upload-input');
+    const clickSpy = vi.spyOn(uploadInput, 'click');
+
+    await user.click(screen.getByTestId('picture-upload-button'));
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('Upload button is disabled while SSE is in progress', async () => {
+    const user = userEvent.setup();
+    renderPanel({ imageUrl: null });
+
+    // Start generation SSE
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+
+    // Upload button should now be disabled
+    expect(screen.getByTestId('picture-upload-button')).toBeDisabled();
   });
 });

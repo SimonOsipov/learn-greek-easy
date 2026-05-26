@@ -64,6 +64,12 @@ vi.mock('@/services/adminAPI', () => ({
 
 vi.mock('../../exercises/ExerciseItemPayload', () => ({
   ExerciseItemPayload: () => <div data-testid="exercise-item-payload" />,
+  elText: (val: unknown): string => {
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'object' && 'el' in (val as object))
+      return String((val as Record<string, unknown>).el);
+    return String(val);
+  },
 }));
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────

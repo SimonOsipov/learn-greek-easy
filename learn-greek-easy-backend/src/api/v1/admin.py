@@ -4581,6 +4581,60 @@ async def update_situation_picture(
     return nested
 
 
+@router.post(
+    "/situations/{situation_id}/picture/upload",
+    response_model=PictureNested,
+    summary="Upload a picture image for a situation",
+    dependencies=[Depends(get_current_superuser)],
+)
+async def upload_situation_picture(
+    situation_id: UUID,
+    file: UploadFile,
+    db: AsyncSession = Depends(get_db),
+) -> PictureNested:
+    """Upload a PNG/JPEG/WebP image directly to replace the generated picture."""
+    if file.content_type not in ALLOWED_DECK_IMAGE_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid content type. Allowed: image/jpeg, image/png, image/webp",
+        )
+    data = await file.read()
+    if len(data) > MAX_DECK_IMAGE_SIZE_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail="File too large. Maximum size: 3MB",
+        )
+
+    result = await db.execute(
+        select(Situation)
+        .options(selectinload(Situation.picture))
+        .where(Situation.id == situation_id)
+    )
+    situation = result.scalar_one_or_none()
+    if situation is None:
+        raise HTTPException(status_code=404, detail="Situation not found")
+
+    picture = situation.picture
+    if picture is None:
+        raise HTTPException(status_code=404, detail="Picture not found")
+
+    s3 = get_s3_service()
+    ext = S3Service.get_extension_for_content_type(file.content_type) or "png"
+    s3_key = f"situation-pictures/{picture.id}.{ext}"
+
+    uploaded = await asyncio.to_thread(s3.upload_object, s3_key, data, file.content_type)
+    if not uploaded:
+        raise HTTPException(status_code=500, detail="Failed to upload picture")
+
+    picture.image_s3_key = s3_key
+    await db.commit()
+    await db.refresh(picture)
+
+    nested = PictureNested.model_validate(picture)
+    nested.image_url = s3.generate_presigned_url(s3_key)
+    return nested
+
+
 @router.delete(
     "/situations/{situation_id}",
     status_code=status.HTTP_204_NO_CONTENT,

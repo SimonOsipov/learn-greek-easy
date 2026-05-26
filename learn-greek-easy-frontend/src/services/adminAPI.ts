@@ -1690,6 +1690,19 @@ export const adminAPI = {
   },
 
   /**
+   * Upload a picture image for a situation (SAR2-26-12a).
+   * Sends as multipart/form-data. Returns updated PictureNested with presigned image_url.
+   */
+  uploadSituationPicture: async (situationId: string, file: File): Promise<PictureNested> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return postFormData<PictureNested>(
+      `/api/v1/admin/situations/${situationId}/picture/upload`,
+      formData
+    );
+  },
+
+  /**
    * Trigger batch AI generation of exercises
    *
    * Schedules a batch of exercises for the given modality.

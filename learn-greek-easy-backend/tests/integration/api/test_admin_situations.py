@@ -695,3 +695,53 @@ class TestGetSituationDetail:
         assert (
             data["picture"]["image_url"] == "https://s3.example.com/situation-pictures/test-pic.png"
         )
+
+
+class TestUploadSituationPicture:
+    """Tests for POST /api/v1/admin/situations/{id}/picture/upload (SAR2-26-12a backend)."""
+
+    @pytest.mark.asyncio
+    async def test_upload_happy_path_200(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        """Uploading a valid PNG sets image_s3_key and returns presigned image_url."""
+        mock_s3_service.upload_object.return_value = True
+        mock_s3_service.generate_presigned_url.side_effect = (
+            lambda key: f"https://s3.example.com/{key}"
+        )
+        mock_s3_service.get_extension_for_content_type = lambda ct: (
+            "png" if ct == "image/png" else "jpg"
+        )
+
+        situation = await SituationFactory.create()
+        picture = await SituationPictureFactory.create(situation_id=situation.id)
+
+        fake_png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
+
+        response = await client.post(
+            f"{BASE_URL}/{situation.id}/picture/upload",
+            headers=superuser_auth_headers,
+            files={"file": ("test.png", fake_png, "image/png")},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["image_url"].startswith("https://s3.example.com/situation-pictures/")
+        assert data["id"] == str(picture.id)
+
+    @pytest.mark.asyncio
+    async def test_upload_404_missing_situation(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """Returns 404 when the situation does not exist."""
+        fake_png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
+        response = await client.post(
+            f"{BASE_URL}/{uuid4()}/picture/upload",
+            headers=superuser_auth_headers,
+            files={"file": ("test.png", fake_png, "image/png")},
+        )
+        assert response.status_code == 404

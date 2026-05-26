@@ -17,10 +17,12 @@ vi.mock('@/hooks/use-toast', () => ({
 
 const mockUpdateSituation = vi.fn();
 const mockUpdateSituationDescription = vi.fn();
+const mockUpdateSituationPicture = vi.fn();
 vi.mock('@/services/adminAPI', () => ({
   adminAPI: {
     updateSituation: (...args: unknown[]) => mockUpdateSituation(...args),
     updateSituationDescription: (...args: unknown[]) => mockUpdateSituationDescription(...args),
+    updateSituationPicture: (...args: unknown[]) => mockUpdateSituationPicture(...args),
   },
 }));
 
@@ -159,6 +161,7 @@ beforeEach(async () => {
   mockFetchSituationDetail.mockResolvedValue(undefined);
   mockFetchSituations.mockResolvedValue(undefined);
   mockUpdateSituationDescription.mockResolvedValue(undefined);
+  mockUpdateSituationPicture.mockResolvedValue({ id: 'pic-1' });
   await loadDrawer();
 });
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { FileText, Image, ListChecks, Loader2, MessageSquare } from 'lucide-react';
+import { FileText, Image, ListChecks, Loader2, MessageSquare, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -19,7 +19,7 @@ import type {
   SituationExercisesResponse,
 } from '@/types/situation';
 
-import { ExerciseItemPayload } from '../exercises/ExerciseItemPayload';
+import { ExerciseItemPayload, elText } from '../exercises/ExerciseItemPayload';
 
 interface SituationExercisesTabProps {
   situationId: string;
@@ -41,6 +41,121 @@ const SOURCE_TYPE_ICONS: Record<string, React.ElementType> = {
   description: FileText,
   picture: Image,
 };
+
+// ── Flat-list row (controlled/drawer mode) ────────────────────────────────────
+
+function ExerciseFlatRow({
+  exercise,
+  index,
+  sourceType,
+}: {
+  exercise: SituationExerciseResponse;
+  index: number;
+  sourceType: string;
+}) {
+  const { t } = useTranslation('admin');
+
+  // Extract Greek question and answer from first item payload
+  const firstItem = exercise.items[0];
+  const payload = firstItem?.payload ?? {};
+  const questionEl = elText(
+    payload.prompt ?? payload.question_text ?? payload.question ?? payload.text
+  );
+  const options = Array.isArray(payload.options) ? payload.options : undefined;
+  const correctIndex =
+    typeof payload.correct_answer_index === 'number'
+      ? payload.correct_answer_index
+      : typeof payload.correct_option === 'number'
+        ? payload.correct_option - 1
+        : undefined;
+  const answerEl = options && correctIndex !== undefined ? elText(options[correctIndex]) : '';
+
+  return (
+    <li className="dr-ex-row" data-testid={`dr-ex-row-${exercise.id}`}>
+      <span className="dr-ex-index" aria-hidden="true">
+        {String(index + 1).padStart(2, '0')}
+      </span>
+      <div className="dr-ex-body">
+        <div className="dr-ex-badges">
+          <Badge variant="secondary" className="dr-ex-badge-type">
+            {t(`situations.detail.exercises.type.${exercise.exercise_type}`)}
+          </Badge>
+          {exercise.audio_level && (
+            <Badge tone="violet" className="dr-ex-badge-level">
+              {t(`situations.detail.exercises.audioLevel.${exercise.audio_level}`)}
+            </Badge>
+          )}
+          {sourceType === 'dialog' && (
+            <span
+              className="dr-ex-source"
+              aria-label={t('situations.detail.exercises.dialogSource', { n: index + 1 })}
+            >
+              ← {t('situations.detail.exercises.turnLabel', { n: index + 1 })}
+            </span>
+          )}
+        </div>
+        {questionEl && (
+          <p className="dr-ex-question" lang="el">
+            {questionEl}
+          </p>
+        )}
+        {answerEl && (
+          <div className="dr-ex-answer">
+            <span className="dr-ex-answer-label">
+              {t('situations.detail.exercises.answerLabel')}
+            </span>
+            <span className="dr-ex-answer-text" lang="el">
+              {answerEl}
+            </span>
+          </div>
+        )}
+      </div>
+      <div className="dr-ex-actions">
+        <button
+          type="button"
+          className="dr-ex-icon-btn"
+          disabled
+          title={t('comingSoon')}
+          aria-label={t('situations.drawer.exercises.editAria', { index: index + 1 })}
+        >
+          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          className="dr-ex-icon-btn"
+          disabled
+          title={t('comingSoon')}
+          aria-label={t('situations.drawer.exercises.deleteAria', { index: index + 1 })}
+        >
+          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </div>
+    </li>
+  );
+}
+
+function ExerciseFlatList({
+  exercises,
+  sourceType,
+}: {
+  exercises: SituationExerciseResponse[];
+  sourceType: string;
+}) {
+  return (
+    <ul className="dr-ex-list" role="list" data-testid="dr-ex-list">
+      {exercises.map((exercise, index) => (
+        <ExerciseFlatRow
+          key={exercise.id}
+          exercise={exercise}
+          index={index}
+          sourceType={sourceType}
+        />
+      ))}
+    </ul>
+  );
+}
+
+// ── Accordion items (uncontrolled / back-compat mode) ─────────────────────────
 
 function ExerciseAccordionItem({
   exercise,
@@ -211,15 +326,7 @@ export function SituationExercisesTab({
       return null;
     }
     return (
-      <Accordion type="single" collapsible className="w-full">
-        {activeGroup.exercises.map((exercise) => (
-          <ExerciseAccordionItem
-            key={exercise.id}
-            exercise={exercise}
-            sourceType={activeGroup.source_type}
-          />
-        ))}
-      </Accordion>
+      <ExerciseFlatList exercises={activeGroup.exercises} sourceType={activeGroup.source_type} />
     );
   }
 
