@@ -130,23 +130,27 @@ export function SituationDrawerLinkedNews({ situation }: Props) {
         /* ── Empty state ────────────────────────────────────────────────── */
         <div className="flex flex-col items-center gap-3 py-8">
           <p className="text-sm text-muted-foreground">{t('situations.drawer.linkedNews.empty')}</p>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span>
-                <Button
-                  variant="default"
-                  aria-disabled="true"
-                  className="cursor-not-allowed opacity-60"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  {t('situations.drawer.linkedNews.linkCta')}
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>{t('comingSoon')}</TooltipContent>
-          </Tooltip>
         </div>
       )}
+
+      {/* "Link to article" CTA — always disabled (Coming soon) regardless of linked state */}
+      <div className="flex justify-center">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span>
+              <Button
+                variant="default"
+                aria-disabled="true"
+                className="cursor-not-allowed opacity-60"
+                onClick={(e) => e.preventDefault()}
+              >
+                {t('situations.drawer.linkedNews.linkCta')}
+              </Button>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>{t('comingSoon')}</TooltipContent>
+        </Tooltip>
+      </div>
 
       {/* Footer actions — active when linked_news is set, disabled otherwise */}
       <div className="flex gap-2 border-t border-border pt-2">
