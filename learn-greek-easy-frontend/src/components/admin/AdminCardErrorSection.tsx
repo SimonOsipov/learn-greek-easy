@@ -270,7 +270,10 @@ export const AdminCardErrorSection: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={clearFilters}
+            onClick={() => {
+              clearFilters();
+              setSearchInput('');
+            }}
             data-testid="clear-card-error-filters-button"
           >
             {t('cardErrors.filters.clear')}
