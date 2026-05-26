@@ -1,12 +1,17 @@
 import { useEffect } from 'react';
 
+import { format } from 'date-fns';
 import { CheckCircle2, Clock, MessageSquare, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
 import { StatCard } from '@/components/ui/stat-card';
-import { useAdminSituationStore, selectStatsTotals } from '@/stores/adminSituationStore';
+import {
+  useAdminSituationStore,
+  selectStatsTotals,
+  selectFilteredSituations,
+} from '@/stores/adminSituationStore';
 
 import { SituationCreateModal } from './SituationCreateModal';
 import { SituationDrawer } from './SituationDrawer';
@@ -25,9 +30,9 @@ export function SituationsTab({ createOpen, onCreateOpenChange }: SituationsTabP
   const fetchSituations = useAdminSituationStore((s) => s.fetchSituations);
   const openDrawer = useAdminSituationStore((s) => s.openDrawer);
   const closeDrawer = useAdminSituationStore((s) => s.closeDrawer);
-  const { total, ready, draft, exercisesGenerated } = useAdminSituationStore(
-    useShallow(selectStatsTotals)
-  );
+  const { total, ready, draft, exercisesGenerated, totalLast30d, oldestDraftDate } =
+    useAdminSituationStore(useShallow(selectStatsTotals));
+  const filteredSituations = useAdminSituationStore(selectFilteredSituations);
 
   // ── Fetch on mount ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -45,6 +50,10 @@ export function SituationsTab({ createOpen, onCreateOpenChange }: SituationsTabP
 
   // ── Derived stats ─────────────────────────────────────────────────────────
   const readyPercent = total > 0 ? Math.round((ready / total) * 100) : 0;
+  const visibleReady = filteredSituations.filter((s) => s.status === 'ready').length;
+  const oldestDraftFormatted = oldestDraftDate
+    ? format(new Date(oldestDraftDate), 'd MMM yyyy')
+    : null;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -56,14 +65,19 @@ export function SituationsTab({ createOpen, onCreateOpenChange }: SituationsTabP
           n={total}
           icon={<MessageSquare />}
           tone="blue"
-          sub={t('situations.stats.totalSituations.sub', { total })}
+          sub={t('situations.stats.totalSituations.subRelative', { n: totalLast30d })}
+          footerLabel={t('situations.stats.footerCatalog')}
         />
         <StatCard
           title={t('situations.stats.readyToShip.title')}
           n={ready}
           icon={<CheckCircle2 />}
           tone="violet"
-          sub={t('situations.stats.readyToShip.sub', { percent: readyPercent, ready, total })}
+          sub={t('situations.stats.readyToShip.subView', {
+            pct: readyPercent,
+            visible: visibleReady,
+          })}
+          footerLabel={t('situations.stats.footerCatalog')}
         />
         <StatCard
           title={t('situations.stats.draftsToFinish.title')}
@@ -72,9 +86,12 @@ export function SituationsTab({ createOpen, onCreateOpenChange }: SituationsTabP
           tone={draft > 0 ? 'amber' : 'green'}
           sub={
             draft > 0
-              ? t('situations.stats.draftsToFinish.subPending', { draft })
+              ? oldestDraftFormatted
+                ? t('situations.stats.draftsToFinish.subOldest', { date: oldestDraftFormatted })
+                : t('situations.stats.draftsToFinish.subPending', { draft })
               : t('situations.stats.draftsToFinish.subDone')
           }
+          footerLabel={t('situations.stats.footerCatalog')}
         />
         <StatCard
           title={t('situations.stats.exercisesGenerated.title')}
@@ -82,6 +99,7 @@ export function SituationsTab({ createOpen, onCreateOpenChange }: SituationsTabP
           icon={<Sparkles />}
           tone="cyan"
           sub={t('situations.stats.exercisesGenerated.sub')}
+          footerLabel={t('situations.stats.footerCatalog')}
         />
       </div>
 

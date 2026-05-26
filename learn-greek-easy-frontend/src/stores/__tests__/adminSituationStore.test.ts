@@ -375,7 +375,14 @@ describe('adminSituationStore — SIT-02 extensions', () => {
     it('returns all zeros when situations is empty', () => {
       useAdminSituationStore.setState({ situations: [] });
       const result = selectStatsTotals(useAdminSituationStore.getState());
-      expect(result).toEqual({ total: 0, ready: 0, draft: 0, exercisesGenerated: 0 });
+      expect(result).toEqual({
+        total: 0,
+        ready: 0,
+        draft: 0,
+        exercisesGenerated: 0,
+        totalLast30d: 0,
+        oldestDraftDate: null,
+      });
     });
   });
 
@@ -410,11 +417,12 @@ describe('adminSituationStore — SIT-02 extensions', () => {
       useAdminSituationStore.setState({ situations: items as any });
 
       const result = selectStatsTotals(useAdminSituationStore.getState());
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         total: 3,
         ready: 1,
         draft: 2,
         exercisesGenerated: 13, // 2+3+1 + 0+4+0 + 1+0+2
+        // totalLast30d and oldestDraftDate depend on current date — verified in level filter tests
       });
     });
   });
