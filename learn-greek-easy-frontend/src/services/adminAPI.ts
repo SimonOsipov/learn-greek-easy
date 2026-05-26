@@ -32,6 +32,8 @@ import type {
   AdminExerciseListParams,
   AdminExerciseListResponse,
   AdminExerciseStatsResponse,
+  DescriptionNested,
+  DescriptionUpdatePayload,
   PictureNested,
   PictureUpdatePayload,
   SituationCreatePayload,
@@ -1668,6 +1670,16 @@ export const adminAPI = {
 
   getSituationExercises: async (id: string): Promise<SituationExercisesResponse> => {
     return api.get<SituationExercisesResponse>(`/api/v1/admin/situations/${id}/exercises`);
+  },
+
+  updateSituationDescription: async (
+    situationId: string,
+    data: DescriptionUpdatePayload
+  ): Promise<DescriptionNested> => {
+    return api.patch<DescriptionNested>(
+      `/api/v1/admin/situations/${situationId}/description`,
+      data
+    );
   },
 
   updateSituationPicture: async (

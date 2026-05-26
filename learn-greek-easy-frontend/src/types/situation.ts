@@ -46,6 +46,7 @@ export interface DescriptionNested {
   id: string;
   text_el: string;
   text_el_a2: string | null;
+  text_en: string | null;
   source_type: SituationDescriptionSourceType;
   status: SituationDescriptionStatus;
   audio_duration_seconds: number | null;
@@ -55,6 +56,12 @@ export interface DescriptionNested {
   word_timestamps: WordTimestamp[] | null;
   word_timestamps_a2: WordTimestamp[] | null;
   created_at: string;
+}
+
+export interface DescriptionUpdatePayload {
+  text_el?: string;
+  text_el_a2?: string;
+  text_en?: string;
 }
 
 export interface PictureNested {

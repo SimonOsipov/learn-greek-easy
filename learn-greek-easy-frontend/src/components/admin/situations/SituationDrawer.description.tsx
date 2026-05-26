@@ -1,12 +1,14 @@
 // src/components/admin/situations/SituationDrawer.description.tsx
 //
-// SIT-07b: Description tab — B1 + A2 readonly Greek textareas + dual audio rows.
-// One-at-a-time playback; pause-on-unmount covers tab-change (parent unmounts on switch).
-// No Save button. Both Regenerate buttons disabled with "Coming soon" tooltip.
+// SIT-07b: Description tab — B1 + A2 editable Greek textareas + Reference EN textarea
+// + dual audio rows. One-at-a-time playback; pause-on-unmount covers tab-change.
+// No Save button here — save is handled by the parent drawer footer.
+// Both Regenerate buttons disabled with "Coming soon" tooltip.
 
 import React, { useEffect, useRef, useState } from 'react';
 
 import { Pause, Play } from 'lucide-react';
+import { useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +17,8 @@ import { Kicker } from '@/components/ui/kicker';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { SituationDetailResponse } from '@/types/situation';
+
+import type { SituationDrawerFormData } from './SituationDrawer';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -65,6 +69,7 @@ interface Props {
 
 export function SituationDrawerDescription({ situation }: Props) {
   const { t } = useTranslation('admin');
+  const { register } = useFormContext<SituationDrawerFormData>();
 
   const [playing, setPlaying] = useState<Level | null>(null);
   const [rowState, setRowState] = useState<Record<Level, RowState>>({
@@ -248,25 +253,35 @@ export function SituationDrawerDescription({ situation }: Props) {
         <div className="dr-2col">
           <Field label={t('situations.drawer.description.b1Label')}>
             <Textarea
-              readOnly
               rows={6}
               lang="el"
               className="font-serif"
-              value={desc.text_el}
               data-testid="situation-drawer-description-b1-text"
+              {...register('description.text_el')}
             />
           </Field>
           <Field label={t('situations.drawer.description.a2Label')}>
             <Textarea
-              readOnly
               rows={6}
               lang="el"
               className="font-serif"
-              value={desc.text_el_a2 ?? ''}
               data-testid="situation-drawer-description-a2-text"
+              {...register('description.text_el_a2')}
             />
           </Field>
         </div>
+
+        <Field
+          label={t('situations.drawer.description.referenceLabel')}
+          hint={t('situations.drawer.description.referenceHint')}
+        >
+          <Textarea
+            rows={4}
+            lang="en"
+            data-testid="situation-drawer-description-en-text"
+            {...register('description.text_en')}
+          />
+        </Field>
 
         {/* Hidden audio elements — always rendered so refs are stable */}
         {desc.audio_url ? (

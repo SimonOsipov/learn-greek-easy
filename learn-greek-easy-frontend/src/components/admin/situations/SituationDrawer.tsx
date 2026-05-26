@@ -13,7 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { toast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/adminAPI';
 import { useAdminSituationStore } from '@/stores/adminSituationStore';
-import type { SituationUpdatePayload } from '@/types/situation';
+import type { DescriptionUpdatePayload, SituationUpdatePayload } from '@/types/situation';
 
 import { SITUATION_STATUS_BADGE_CLASSES } from './situationBadges';
 import { SituationDrawerDescription } from './SituationDrawer.description';
@@ -30,17 +30,32 @@ export interface SituationDrawerFormData {
   scenario_el: string;
   scenario_en: string;
   scenario_ru: string;
+  description: {
+    text_el: string;
+    text_el_a2: string;
+    text_en: string;
+  };
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────────
 
 function toDefaults(
-  detail: { scenario_el: string; scenario_en: string; scenario_ru: string } | null
+  detail: {
+    scenario_el: string;
+    scenario_en: string;
+    scenario_ru: string;
+    description?: { text_el: string; text_el_a2: string | null; text_en: string | null } | null;
+  } | null
 ): SituationDrawerFormData {
   return {
     scenario_el: detail?.scenario_el ?? '',
     scenario_en: detail?.scenario_en ?? '',
     scenario_ru: detail?.scenario_ru ?? '',
+    description: {
+      text_el: detail?.description?.text_el ?? '',
+      text_el_a2: detail?.description?.text_el_a2 ?? '',
+      text_en: detail?.description?.text_en ?? '',
+    },
   };
 }
 
@@ -115,21 +130,39 @@ export const SituationDrawer: React.FC = () => {
   const handleSave = form.handleSubmit(async (data) => {
     if (!selectedSituation) return;
     const dirty = form.formState.dirtyFields;
-    const payload: SituationUpdatePayload = {};
-    if (dirty.scenario_el) payload.scenario_el = data.scenario_el;
-    if (dirty.scenario_en) payload.scenario_en = data.scenario_en;
-    if (dirty.scenario_ru) payload.scenario_ru = data.scenario_ru;
-    if (Object.keys(payload).length === 0) {
+
+    const situationPayload: SituationUpdatePayload = {};
+    if (dirty.scenario_el) situationPayload.scenario_el = data.scenario_el;
+    if (dirty.scenario_en) situationPayload.scenario_en = data.scenario_en;
+    if (dirty.scenario_ru) situationPayload.scenario_ru = data.scenario_ru;
+
+    const descDirty = dirty.description ?? {};
+    const descPayload: DescriptionUpdatePayload = {};
+    if (descDirty.text_el) descPayload.text_el = data.description.text_el;
+    if (descDirty.text_el_a2) descPayload.text_el_a2 = data.description.text_el_a2;
+    if (descDirty.text_en) descPayload.text_en = data.description.text_en;
+
+    const hasSituationChanges = Object.keys(situationPayload).length > 0;
+    const hasDescriptionChanges = Object.keys(descPayload).length > 0;
+
+    if (!hasSituationChanges && !hasDescriptionChanges) {
       closeAndClearUrl();
       return;
     }
+
     try {
-      await adminAPI.updateSituation(selectedSituation.id, payload);
+      if (hasSituationChanges) {
+        await adminAPI.updateSituation(selectedSituation.id, situationPayload);
+      }
+      if (hasDescriptionChanges) {
+        await adminAPI.updateSituationDescription(selectedSituation.id, descPayload);
+      }
       toast({ title: t('situations.drawer.save.success') });
       await fetchSituations();
       closeAndClearUrl();
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
+      form.reset(undefined, { keepValues: true });
       toast({ title: t('situations.drawer.save.error'), description: msg, variant: 'destructive' });
     }
   });
