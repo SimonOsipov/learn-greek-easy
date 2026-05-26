@@ -32,7 +32,7 @@ export function SituationsTab({ createOpen, onCreateOpenChange }: SituationsTabP
   const closeDrawer = useAdminSituationStore((s) => s.closeDrawer);
   const { total, ready, draft, exercisesGenerated, totalLast30d, oldestDraftDate } =
     useAdminSituationStore(useShallow(selectStatsTotals));
-  const filteredSituations = useAdminSituationStore(selectFilteredSituations);
+  const filteredSituations = useAdminSituationStore(useShallow(selectFilteredSituations));
 
   // ── Fetch on mount ────────────────────────────────────────────────────────
   useEffect(() => {

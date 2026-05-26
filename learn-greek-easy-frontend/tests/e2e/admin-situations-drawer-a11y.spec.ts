@@ -28,7 +28,7 @@ async function openFirstSituationDrawer(page: import('@playwright/test').Page) {
   await navigateToAdminTab(page, 'situations');
   await expect(page.getByTestId('situations-tab')).toBeVisible({ timeout: 15_000 });
 
-  const firstCard = page.locator('[data-testid="situation-card"]').first();
+  const firstCard = page.locator('[data-testid^="sit-card-"]').first();
   const hasCard = await firstCard.isVisible({ timeout: 8_000 }).catch(() => false);
   return { firstCard, hasCard };
 }
