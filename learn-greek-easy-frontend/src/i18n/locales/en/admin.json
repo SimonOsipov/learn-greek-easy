@@ -1818,7 +1818,8 @@
       "picEx": "Pic Ex"
     },
     "card": {
-      "linesCount": "{{count}} lines"
+      "linesCount": "{{count}} lines",
+      "fromNewsLabel": "FROM NEWS"
     },
     "grid": {
       "noResults": "No results",
@@ -1919,19 +1920,58 @@
         "subline_one": "across 1 exercise type",
         "subline_other": "across {{count}} exercise types"
       },
-      "approved": { "label": "Approved", "subline": "{{pct}}% of catalog · ready to ship" },
-      "awaitingReview": { "label": "Awaiting review", "subline": "{{count}} also still in draft" },
-      "withAudio": { "label": "With audio", "subline": "{{count}} missing audio" },
-      "footer": { "catalogTotal": "Catalog total" }
+      "approved": {
+        "label": "Approved",
+        "subline": "{{pct}}% of catalog · ready to ship"
+      },
+      "awaitingReview": {
+        "label": "Awaiting review",
+        "subline": "{{count}} also still in draft"
+      },
+      "withAudio": {
+        "label": "With audio",
+        "subline": "{{count}} missing audio"
+      },
+      "footer": {
+        "catalogTotal": "Catalog total"
+      }
     },
     "filters": {
-      "source": { "label": "Source", "all": "All", "description": "Description", "dialog": "Dialog", "picture": "Picture" },
-      "type": { "label": "Type", "all": "All" },
-      "level": { "label": "Level", "all": "All", "a1": "A1", "a2": "A2", "b1": "B1", "b2": "B2", "c1": "C1", "c2": "C2" },
-      "status": { "label": "Status", "all": "All" }
+      "source": {
+        "label": "Source",
+        "all": "All",
+        "description": "Description",
+        "dialog": "Dialog",
+        "picture": "Picture"
+      },
+      "type": {
+        "label": "Type",
+        "all": "All"
+      },
+      "level": {
+        "label": "Level",
+        "all": "All",
+        "a1": "A1",
+        "a2": "A2",
+        "b1": "B1",
+        "b2": "B2",
+        "c1": "C1",
+        "c2": "C2"
+      },
+      "status": {
+        "label": "Status",
+        "all": "All"
+      }
     },
-    "modality": { "listening": "Listening", "reading": "Reading", "ariaLabel": "Modality" },
-    "search": { "placeholder": "Search by source title or question…", "clearAriaLabel": "Clear search" },
+    "modality": {
+      "listening": "Listening",
+      "reading": "Reading",
+      "ariaLabel": "Modality"
+    },
+    "search": {
+      "placeholder": "Search by source title or question…",
+      "clearAriaLabel": "Clear search"
+    },
     "types": {
       "select_correct_answer": "Select correct answer",
       "fill_gaps": "Fill in the blank",
@@ -1942,7 +1982,11 @@
       "picture_match": "Picture match",
       "word_order": "Word order"
     },
-    "statuses": { "draft": "Draft", "approved": "Approved", "pending": "Pending" },
+    "statuses": {
+      "draft": "Draft",
+      "approved": "Approved",
+      "pending": "Pending"
+    },
     "row": {
       "itemCount_one": "{{count}} item",
       "itemCount_other": "{{count}} items",
@@ -1961,9 +2005,18 @@
       "moveDown": "Move down",
       "movedTo": "Moved to position {{position}}"
     },
-    "audio": { "playLabel": "Play audio", "pauseLabel": "Pause audio", "unavailable": "Audio unavailable" },
-    "picture": { "optionAlt": "Picture option {{position}}", "noDistractor": "Distractor unavailable" },
-    "payloadError": { "malformed": "This exercise's data is incomplete or malformed." },
+    "audio": {
+      "playLabel": "Play audio",
+      "pauseLabel": "Pause audio",
+      "unavailable": "Audio unavailable"
+    },
+    "picture": {
+      "optionAlt": "Picture option {{position}}",
+      "noDistractor": "Distractor unavailable"
+    },
+    "payloadError": {
+      "malformed": "This exercise's data is incomplete or malformed."
+    },
     "empty": {
       "heading": "No exercises match your filters",
       "hint": "Try widening the source, type, level or status filter.",
@@ -1978,7 +2031,10 @@
       "next": "Next ›",
       "pageOf": "Page {{page}} of {{totalPages}}"
     },
-    "errorBanner": { "title": "Couldn't load exercises", "retry": "Retry" }
+    "errorBanner": {
+      "title": "Couldn't load exercises",
+      "retry": "Retry"
+    }
   },
   "decks": {
     "breadcrumb": {
