@@ -433,4 +433,80 @@ describe('adminSituationStore — SIT-02 extensions', () => {
       expect(selectDrawerItemId(useAdminSituationStore.getState())).toBe('sit-99');
     });
   });
+
+  // ============================================================
+  // 14. setLevelFilter + selectFilteredSituations level predicate (SAR2-26-05)
+  // ============================================================
+  describe('setLevelFilter', () => {
+    it('defaults to null', () => {
+      expect(useAdminSituationStore.getState().levelFilter).toBeNull();
+    });
+
+    it('setLevelFilter("B1") sets levelFilter to "B1" and resets page to 1', () => {
+      act(() => {
+        useAdminSituationStore.getState().setLevelFilter('B1');
+      });
+      expect(useAdminSituationStore.getState().levelFilter).toBe('B1');
+      expect(useAdminSituationStore.getState().page).toBe(1);
+    });
+
+    it('setLevelFilter(null) clears levelFilter', () => {
+      act(() => {
+        useAdminSituationStore.getState().setLevelFilter('A2');
+        useAdminSituationStore.getState().setLevelFilter(null);
+      });
+      expect(useAdminSituationStore.getState().levelFilter).toBeNull();
+    });
+  });
+
+  describe('selectFilteredSituations — levelFilter predicate', () => {
+    it('returns all items when levelFilter is null', () => {
+      const items = [
+        makeSituation({ id: 'a', levels: ['B1'] }),
+        makeSituation({ id: 'b', levels: ['A2'] }),
+        makeSituation({ id: 'c', levels: [] }),
+      ];
+      useAdminSituationStore.setState({
+        situations: items as any,
+        levelFilter: null,
+        searchQuery: '',
+        sortMode: 'newest',
+      });
+      const result = selectFilteredSituations(useAdminSituationStore.getState());
+      expect(result).toHaveLength(3);
+    });
+
+    it('filters to items whose levels include "B1" when levelFilter="B1"', () => {
+      const items = [
+        makeSituation({ id: 'a', levels: ['B1'] }),
+        makeSituation({ id: 'b', levels: ['A2'] }),
+        makeSituation({ id: 'c', levels: ['B1', 'A2'] }),
+        makeSituation({ id: 'd', levels: [] }),
+      ];
+      useAdminSituationStore.setState({
+        situations: items as any,
+        levelFilter: 'B1',
+        searchQuery: '',
+        sortMode: 'newest',
+      });
+      const result = selectFilteredSituations(useAdminSituationStore.getState());
+      expect(result.map((i) => i.id)).toEqual(expect.arrayContaining(['a', 'c']));
+      expect(result).toHaveLength(2);
+    });
+
+    it('filters to items whose levels include "A2" when levelFilter="A2"', () => {
+      const items = [
+        makeSituation({ id: 'a', levels: ['B1'] }),
+        makeSituation({ id: 'b', levels: ['A2'] }),
+      ];
+      useAdminSituationStore.setState({
+        situations: items as any,
+        levelFilter: 'A2',
+        searchQuery: '',
+        sortMode: 'newest',
+      });
+      const result = selectFilteredSituations(useAdminSituationStore.getState());
+      expect(result.map((i) => i.id)).toEqual(['b']);
+    });
+  });
 });

@@ -35,6 +35,7 @@ interface AdminSituationState {
 
   // Filters
   statusFilter: SituationStatus | null;
+  levelFilter: 'B1' | 'A2' | null;
   searchQuery: string;
   statusCounts: Record<string, number>;
   sortMode: 'newest' | 'oldest' | 'draftsFirst';
@@ -49,6 +50,7 @@ interface AdminSituationState {
   fetchSituationDetail: (id: string) => Promise<void>;
   setPage: (page: number) => void;
   setStatusFilter: (status: SituationStatus | null) => void;
+  setLevelFilter: (level: 'B1' | 'A2' | null) => void;
   setSearchQuery: (query: string) => void;
   setSortMode: (mode: 'newest' | 'oldest' | 'draftsFirst') => void;
   openDrawer: (id: string) => void;
@@ -77,6 +79,7 @@ export const useAdminSituationStore = create<AdminSituationState>()(
       error: null,
       detailError: null,
       statusFilter: null,
+      levelFilter: null,
       searchQuery: '',
       statusCounts: {},
       sortMode: 'draftsFirst' as 'newest' | 'oldest' | 'draftsFirst',
@@ -160,6 +163,10 @@ export const useAdminSituationStore = create<AdminSituationState>()(
         get().fetchSituations();
       },
 
+      setLevelFilter: (level: 'B1' | 'A2' | null) => {
+        set({ levelFilter: level, page: 1 });
+      },
+
       setSearchQuery: (query: string) => {
         set({ searchQuery: query, page: 1 });
       },
@@ -207,6 +214,7 @@ export const selectPageSize = (state: AdminSituationState) => state.pageSize;
 export const selectTotal = (state: AdminSituationState) => state.total;
 export const selectTotalPages = (state: AdminSituationState) => state.totalPages;
 export const selectStatusFilter = (state: AdminSituationState) => state.statusFilter;
+export const selectLevelFilter = (state: AdminSituationState) => state.levelFilter;
 export const selectSearchQuery = (state: AdminSituationState) => state.searchQuery;
 export const selectStatusCounts = (state: AdminSituationState) => state.statusCounts;
 export const selectSortMode = (state: AdminSituationState) => state.sortMode;
@@ -224,6 +232,12 @@ export const selectFilteredSituations = (state: AdminSituationState): SituationL
         s.scenario_en.toLowerCase().includes(q) ||
         s.scenario_ru.toLowerCase().includes(q)
     );
+  }
+
+  // 2. Level filter (client-side — levels[] is available on SituationListItem)
+  if (state.levelFilter !== null) {
+    const lf = state.levelFilter;
+    items = items.filter((s) => s.levels.includes(lf));
   }
 
   // NOTE: statusFilter is NOT applied here — it is server-side via fetchSituations.

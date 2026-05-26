@@ -1655,6 +1655,10 @@
         "newest": "Newest first",
         "oldest": "Oldest first",
         "draftsFirst": "Drafts first"
+      },
+      "level": {
+        "label": "Level",
+        "all": "All"
       }
     },
     "columns": {
