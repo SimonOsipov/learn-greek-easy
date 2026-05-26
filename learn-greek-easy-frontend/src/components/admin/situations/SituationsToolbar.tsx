@@ -75,8 +75,8 @@ export function SituationsToolbar() {
 
   const STATUS_OPTIONS: SegOption<StatusValue>[] = [
     { value: 'all', label: t('situations.filters.status.all') },
-    { value: 'draft', label: t('situations.filters.status.draft') },
     { value: 'ready', label: t('situations.filters.status.ready') },
+    { value: 'draft', label: t('situations.filters.status.draft') },
   ];
 
   const SORT_LABELS: Record<SortValue, string> = {
