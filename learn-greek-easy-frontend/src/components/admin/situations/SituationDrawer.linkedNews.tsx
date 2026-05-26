@@ -30,8 +30,9 @@ const COUNTRY_FLAG: Record<string, string> = {
   world: '🌍',
 };
 
-function countryFlag(country: string): string {
-  return COUNTRY_FLAG[country.toLowerCase()] ?? '';
+function countryFlag(country: string | null): string {
+  if (!country) return '🌍';
+  return COUNTRY_FLAG[country.toLowerCase()] ?? '🌍';
 }
 
 interface Props {
@@ -117,7 +118,9 @@ export function SituationDrawerLinkedNews({ situation }: Props) {
               </p>
 
               {/* Title */}
-              <p className="truncate text-sm font-medium leading-snug">{linkedNews.title_en}</p>
+              <p className="truncate text-sm font-medium leading-snug">
+                {linkedNews.title_en ?? '—'}
+              </p>
             </div>
 
             <ArrowRight

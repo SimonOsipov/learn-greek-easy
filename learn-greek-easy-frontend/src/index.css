@@ -3531,7 +3531,7 @@ html.theme-transition *::after {
 }
 
 .dr-ex-question {
-  font-family: 'Noto Serif', 'Georgia', serif;
+  font-family: 'Noto Serif', Georgia, serif;
   font-size: 15px;
   color: hsl(var(--fg));
   margin: 0;
@@ -3555,7 +3555,7 @@ html.theme-transition *::after {
 }
 
 .dr-ex-answer-text {
-  font-family: 'Noto Serif', 'Georgia', serif;
+  font-family: 'Noto Serif', Georgia, serif;
   font-size: 0.875rem;
   color: hsl(var(--fg-2));
 }

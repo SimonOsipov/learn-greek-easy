@@ -1835,7 +1835,8 @@
       "picEx": "Pic Ex"
     },
     "card": {
-      "linesCount": "{{count}} lines",
+      "linesCount_one": "{{count}} line",
+      "linesCount_other": "{{count}} lines",
       "fromNewsLabel": "FROM NEWS"
     },
     "grid": {

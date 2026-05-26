@@ -130,8 +130,8 @@ export interface SituationResponse {
 
 export interface LinkedNewsSummary {
   id: string;
-  title_en: string;
-  country: string;
+  title_en: string | null;
+  country: string | null;
   published_at: string;
 }
 

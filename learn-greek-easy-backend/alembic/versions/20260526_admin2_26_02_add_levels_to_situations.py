@@ -45,7 +45,7 @@ def upgrade() -> None:
             UPDATE situations s
             SET levels =
                 CASE
-                    WHEN sd.text_el_a2 IS NOT NULL THEN '["B1","A2"]'::jsonb
+                    WHEN sd.text_el_a2 IS NOT NULL AND btrim(sd.text_el_a2) <> '' THEN '["B1","A2"]'::jsonb
                     ELSE '["B1"]'::jsonb
                 END
             FROM situation_descriptions sd

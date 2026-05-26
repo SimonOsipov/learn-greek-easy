@@ -206,6 +206,12 @@ class DescriptionUpdate(BaseModel):
     text_el_a2: str | None = None
     text_en: str | None = None
 
+    @model_validator(mode="after")
+    def at_least_one_field(self) -> "DescriptionUpdate":
+        if self.text_el is None and self.text_el_a2 is None and self.text_en is None:
+            raise ValueError("At least one field must be provided")
+        return self
+
 
 class StatusTransitionRequest(BaseModel):
     """Body for PATCH /situations/{id}/status."""

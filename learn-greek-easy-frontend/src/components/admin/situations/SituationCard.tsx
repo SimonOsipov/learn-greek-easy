@@ -93,7 +93,9 @@ export const SituationCard: React.FC<SituationCardProps> = ({ item, onRequestDel
             </div>
           )}
           <div className="sit-thumb-foot">
-            <span className="sit-thumb-pill">{item.dialog_lines_count} lines</span>
+            <span className="sit-thumb-pill">
+              {t('situations.card.linesCount', { count: item.dialog_lines_count })}
+            </span>
             {item.audio_duration_seconds != null && (
               <span className="sit-thumb-pill">
                 <Play size={10} />
@@ -119,7 +121,9 @@ export const SituationCard: React.FC<SituationCardProps> = ({ item, onRequestDel
             </div>
           )}
           <div className="sit-thumb-foot">
-            <span className="sit-thumb-pill">{item.dialog_lines_count} lines</span>
+            <span className="sit-thumb-pill">
+              {t('situations.card.linesCount', { count: item.dialog_lines_count })}
+            </span>
             {item.audio_duration_seconds != null && (
               <span className="sit-thumb-pill">
                 <Play size={10} />

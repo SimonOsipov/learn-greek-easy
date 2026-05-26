@@ -29,7 +29,7 @@ async function openFirstSituationDrawer(page: import('@playwright/test').Page) {
   await expect(page.getByTestId('situations-tab')).toBeVisible({ timeout: 15_000 });
 
   const firstCard = page.locator('[data-testid^="sit-card-"]').first();
-  const hasCard = await firstCard.isVisible({ timeout: 8_000 }).catch(() => false);
+  const hasCard = await firstCard.waitFor({ state: 'visible', timeout: 8_000 }).then(() => true).catch(() => false);
   return { firstCard, hasCard };
 }
 
