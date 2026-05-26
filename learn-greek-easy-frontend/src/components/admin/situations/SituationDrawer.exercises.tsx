@@ -30,6 +30,12 @@ interface Props {
 
 const SOURCE_TYPES: ExerciseSourceType[] = ['dialog', 'description', 'picture'];
 
+const GENERATE_KEY: Record<ExerciseSourceType, string> = {
+  dialog: 'situations.drawer.exercises.generateFromDialog',
+  description: 'situations.drawer.exercises.generateFromDescription',
+  picture: 'situations.drawer.exercises.generateFromPicture',
+};
+
 function getCount(
   exercisesData: SituationExercisesResponse | null,
   src: ExerciseSourceType
@@ -50,12 +56,11 @@ function GenerateButton({ source }: { source: ExerciseSourceType }) {
           <Button
             variant="default"
             disabled
+            aria-label={t(GENERATE_KEY[source])}
             data-testid={`situation-drawer-exercises-generate-${source}`}
           >
             <Wand2 className="mr-2 h-4 w-4" />
-            {t('situations.drawer.exercises.generateFrom', {
-              source: t(`situations.drawer.exercises.source.${source}`),
-            })}
+            {t(GENERATE_KEY[source])}
           </Button>
         </span>
       </TooltipTrigger>
