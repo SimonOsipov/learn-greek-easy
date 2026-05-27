@@ -145,9 +145,22 @@ const NEWS_MOCK_ITEM = {
   audio_a2_file_size_bytes: null,
   has_a2_content: false,
   source_image_url: null,
+  alt_text: null,
+  photo_credit: null,
+  status: 'draft' as const,
+  linked_situation: null,
 };
 
-const NEWS_MOCK_LIST = { items: [NEWS_MOCK_ITEM], total: 1, page: 1, page_size: 20 };
+const NEWS_MOCK_LIST = {
+  items: [NEWS_MOCK_ITEM],
+  total: 1,
+  page: 1,
+  page_size: 20,
+  country_counts: { cyprus: 0, greece: 1, world: 0 },
+  audio_count: 0,
+  b1_audio_count: 0,
+  b1_pending_regen_count: 0,
+};
 const ADMIN_STATS_MOCK = { total_decks: 0, total_cards: 0, total_vocabulary_decks: 0, total_vocabulary_cards: 0, total_culture_decks: 0, total_culture_questions: 0 };
 const TAB_COUNTS_MOCK = { inbox: 0, decks: 0, news: 1, situations: 0, exercises: 0, errors: 0, feedback: 0, changelog: 0, announcements: 0 };
 

@@ -44,6 +44,27 @@ const mockNewsItem = {
   audio_a2_file_size_bytes: null,
   has_a2_content: false,
   source_image_url: null,
+  alt_text: null,
+  photo_credit: null,
+  status: 'draft' as const,
+  linked_situation: null,
+};
+
+const mockNewsItemWithLinked = {
+  ...mockNewsItem,
+  linked_situation: {
+    id: 'sit-linked-001',
+    title_en: 'At the coffee shop',
+    title_el: 'Στον καφέ',
+    status: 'published',
+    levels: ['B2', 'A2'],
+    country: 'greece',
+    role_count: 2,
+    role_names: ['Customer', 'Barista'],
+    turn_count: 8,
+    exercise_count: 3,
+    audio_seconds: 45,
+  },
 };
 
 const mockNewsList = {
@@ -51,6 +72,10 @@ const mockNewsList = {
   total: 1,
   page: 1,
   page_size: 20,
+  country_counts: { cyprus: 0, greece: 1, world: 0 },
+  audio_count: 0,
+  b1_audio_count: 0,
+  b1_pending_regen_count: 0,
 };
 
 const mockStats = {
@@ -110,6 +135,17 @@ test.describe('Admin News Drawer — Linked tab', () => {
   });
 
   test.skip('Linked tab — with linked news items', async ({ page }, testInfo) => {
+    await page.route('**/api/v1/admin/news*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...mockNewsList,
+          items: [mockNewsItemWithLinked],
+        }),
+      });
+    });
+
     await page.goto(`/admin?tab=news&edit=${NEWS_ITEM_ID}`);
     await waitForPageReady(page, '[data-testid="admin-page"]');
     await page.waitForSelector('[data-testid="news-edit-drawer"]');

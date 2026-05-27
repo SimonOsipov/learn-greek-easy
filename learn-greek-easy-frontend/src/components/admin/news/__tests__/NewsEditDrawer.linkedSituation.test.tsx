@@ -555,7 +555,7 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
     );
     const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.unlink/i });
     await user.click(btn);
-    expect(mockToast).toHaveBeenCalledWith({ title: 'Coming soon — backend in progress' });
+    expect(mockToast).toHaveBeenCalledWith({ title: 'comingSoon' });
   });
 
   it('clicking Regenerate calls toast with "Coming soon — backend in progress"', async () => {
@@ -568,7 +568,7 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
     );
     const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.regenerate/i });
     await user.click(btn);
-    expect(mockToast).toHaveBeenCalledWith({ title: 'Coming soon — backend in progress' });
+    expect(mockToast).toHaveBeenCalledWith({ title: 'comingSoon' });
   });
 });
 

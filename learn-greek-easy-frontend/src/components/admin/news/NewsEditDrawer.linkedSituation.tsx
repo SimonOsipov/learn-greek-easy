@@ -143,17 +143,11 @@ export const NewsEditDrawerLinkedSituation: React.FC<Props> = ({
         style={{ borderTop: '1px dashed hsl(var(--fg) / 0.1)' }}
         data-testid="news-drawer-linked-situation-footer"
       >
-        <button
-          className="btn-glass btn-sm"
-          onClick={() => toast({ title: 'Coming soon — backend in progress' })}
-        >
+        <button className="btn-glass btn-sm" onClick={() => toast({ title: t('comingSoon') })}>
           <X size={14} aria-hidden="true" />
           {t('news.drawer.linkedSituation.unlink')}
         </button>
-        <button
-          className="btn-glass btn-sm"
-          onClick={() => toast({ title: 'Coming soon — backend in progress' })}
-        >
+        <button className="btn-glass btn-sm" onClick={() => toast({ title: t('comingSoon') })}>
           <Wand2 size={14} aria-hidden="true" />
           {t('news.drawer.linkedSituation.regenerate')}
         </button>

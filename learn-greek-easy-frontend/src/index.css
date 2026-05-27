@@ -1687,7 +1687,7 @@
   /* Left-edge drop shadow for the full-screen news drawer handoff (NADM-09 / ADMIN2-27-31).
      Applied via .drawer-shadow-handoff on the content element when size="full". */
   .drawer-shadow-handoff {
-    box-shadow: -30px 0 60px rgba(0, 0, 0, 0.3);
+    box-shadow: -30px 0 60px hsl(var(--fg) / 0.3);
   }
 
   /* ==========================================================================
@@ -2929,7 +2929,7 @@
     left: 6px;
     font-size: 10px;
     font-family: ui-monospace, monospace;
-    background: rgba(0, 0, 0, 0.45);
+    background: hsl(var(--fg) / 0.45);
     color: hsl(var(--bg));
     padding: 2px 6px;
     border-radius: 4px;
@@ -2969,8 +2969,8 @@
     padding: 0 6px;
     height: 18px;
     border-radius: 4px;
-    background: hsl(270 60% 50% / 0.15);
-    color: hsl(270 60% 60%);
+    background: hsl(var(--accent) / 0.15);
+    color: hsl(var(--accent));
     font-family: ui-monospace, monospace;
     font-size: 10px;
     font-weight: 600;

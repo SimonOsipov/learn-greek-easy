@@ -2,6 +2,12 @@
 //
 // Deterministic gradient palette for news card thumbnails.
 // Used as a fallback when a news item has no image_url.
+//
+// NOTE: This module intentionally uses raw hex gradient values copied verbatim
+// from the design handoff (prototype.jsx:370-380). They are decorative thumbnails
+// applied as inline `background` styles, not theme-bound colors. Migrating to
+// HSL tokens would diverge from the handoff palette and add no theming value
+// since these are fallback decorations for missing news images.
 
 export const NEWS_THUMB_GRADIENTS: readonly string[] = [
   'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',

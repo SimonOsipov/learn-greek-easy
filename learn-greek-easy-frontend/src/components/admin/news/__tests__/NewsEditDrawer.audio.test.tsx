@@ -315,8 +315,9 @@ describe('NewsEditDrawerAudio — NADM-19 chrome: audio-play class', () => {
   it('B1 play button does NOT have class audio-play (keeps disabled glass treatment)', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
     const b1Row = document.querySelectorAll('.audio-row')[2];
-    const disabledPlayBtn = b1Row.querySelector('button[aria-disabled="true"].btn-glass');
+    const disabledPlayBtn = b1Row.querySelector('button[aria-label="Play B1 narration"]');
     expect(disabledPlayBtn).toBeTruthy();
+    expect(disabledPlayBtn).toHaveAttribute('aria-disabled', 'true');
     expect(disabledPlayBtn).not.toHaveClass('audio-play');
   });
 });

@@ -51,6 +51,10 @@ const mockNewsItem = {
   audio_a2_file_size_bytes: null,
   has_a2_content: false,
   source_image_url: null,
+  alt_text: null,
+  photo_credit: null,
+  status: 'draft' as const,
+  linked_situation: null,
 };
 
 const mockNewsList = {
@@ -58,6 +62,10 @@ const mockNewsList = {
   total: 1,
   page: 1,
   page_size: 20,
+  country_counts: { cyprus: 0, greece: 1, world: 0 },
+  audio_count: 0,
+  b1_audio_count: 0,
+  b1_pending_regen_count: 0,
 };
 
 const mockStats = {
