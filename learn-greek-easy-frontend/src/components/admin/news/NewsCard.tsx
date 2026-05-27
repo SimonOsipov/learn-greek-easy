@@ -7,7 +7,6 @@ import { Edit, Play, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
-import { Badge } from '@/components/ui/badge';
 import type { NewsItemResponse } from '@/services/adminAPI';
 
 import { pickNewsThumb } from './newsThumbs';
@@ -91,7 +90,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onRequestDelete }) => 
       onClick={handleClick}
       onKeyDown={handleKeyDown}
     >
-      {/* Thumbnail */}
+      {/* Column 1 — Thumbnail (96×72px fixed) */}
       <div className="news-thumb">
         {item.image_url ? (
           <img src={item.image_url} alt={title ?? ''} />
@@ -102,18 +101,18 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onRequestDelete }) => 
         <span className="news-thumb-date">{formattedDate}</span>
       </div>
 
-      {/* Body */}
+      {/* Column 2 — Body */}
       <div className="news-body">
         <h3 className="news-title" title={title ?? ''}>
           {title}
         </h3>
 
         <div className="news-meta">
-          {/* Level chips */}
+          {/* Level pills — using .news-level mono utility */}
           {(hasB2 || hasA2) && (
             <span className="news-levels">
-              {hasB2 && <Badge tone="violet">B2</Badge>}
-              {hasA2 && <Badge tone="violet">A2</Badge>}
+              {hasB2 && <span className="news-level">B2</span>}
+              {hasA2 && <span className="news-level">A2</span>}
             </span>
           )}
 
@@ -135,7 +134,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onRequestDelete }) => 
         </div>
       </div>
 
-      {/* Hover-revealed actions */}
+      {/* Column 3 — Hover-revealed actions */}
       <div className="news-actions">
         <button
           type="button"

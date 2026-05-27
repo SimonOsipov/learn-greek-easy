@@ -2848,7 +2848,7 @@
     color: hsl(var(--fg));
   }
 
-  /* ── News Card Surface ──────────────────────────────────── */
+  /* ── News Card Surface (NADM-16) ───────────────────────── */
   .news-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2861,26 +2861,36 @@
     }
   }
 
+  /* Horizontal 3-column card: thumb | body | actions */
   .news-card {
-    position: relative;
-    border-radius: var(--radius-lg, 22px);
-    overflow: hidden;
-    background: hsl(var(--card));
-    border: 1px solid hsl(var(--fg) / 0.08);
+    display: grid;
+    grid-template-columns: 96px 1fr auto;
+    gap: 16px;
+    padding: 14px;
+    align-items: center;
+    border-radius: 14px;
+    border: 1px solid hsl(var(--border) / 0.06);
+    background: hsl(var(--bg) / 0.5);
     transition:
-      transform 0.15s,
-      box-shadow 0.15s;
+      transform 200ms ease,
+      background 200ms ease,
+      border-color 200ms ease;
     cursor: pointer;
   }
 
   .news-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-2);
+    transform: translateY(-1px);
+    border-color: hsl(var(--primary) / 0.4);
+    background: hsl(var(--bg) / 0.7);
   }
 
+  /* Thumb — fixed 96×72px, overlays inside */
   .news-thumb {
     position: relative;
-    aspect-ratio: 16 / 9;
+    width: 96px;
+    height: 72px;
+    flex: none;
+    border-radius: 8px;
     overflow: hidden;
   }
 
@@ -2893,37 +2903,43 @@
   .news-thumb-fallback {
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, hsl(var(--accent-2)) 0%, hsl(var(--primary)) 100%);
   }
 
+  /* Flag overlay — top-left */
   .news-thumb-flag {
     position: absolute;
-    top: 8px;
-    left: 8px;
-    font-size: 18px;
-    background: hsl(var(--card) / 0.85);
-    padding: 4px 8px;
-    border-radius: 8px;
-    line-height: 1;
+    top: 6px;
+    left: 6px;
+    font-size: 14px;
+    background: hsl(var(--bg) / 0.75);
+    backdrop-filter: blur(4px);
+    padding: 0 6px;
+    height: 18px;
+    border-radius: 4px;
+    line-height: 18px;
   }
 
+  /* Date overlay — bottom-left, monospace */
   .news-thumb-date {
     position: absolute;
-    top: 8px;
-    right: 8px;
-    font-size: 12px;
-    background: hsl(var(--card) / 0.85);
-    padding: 4px 8px;
-    border-radius: 8px;
-    color: hsl(var(--fg-2));
+    bottom: 6px;
+    left: 6px;
+    font-size: 10px;
+    font-family: ui-monospace, monospace;
+    background: rgba(0, 0, 0, 0.45);
+    color: hsl(var(--bg));
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
   }
 
+  /* Body */
   .news-body {
-    padding: 12px 14px;
+    min-width: 0;
   }
 
   .news-title {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     line-height: 1.35;
     color: hsl(var(--fg));
@@ -2937,10 +2953,25 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-top: 8px;
+    margin-top: 6px;
     font-size: 12px;
     color: hsl(var(--fg-2));
     flex-wrap: wrap;
+  }
+
+  /* Level pill — reusable mono utility (B2, A2, B1, …) */
+  .news-level {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 6px;
+    height: 18px;
+    border-radius: 4px;
+    background: hsl(270 60% 50% / 0.15);
+    color: hsl(270 60% 60%);
+    font-family: ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
   }
 
   .news-levels {
@@ -2958,14 +2989,12 @@
     /* inherits from .news-meta */
   }
 
+  /* Actions — 3rd grid column; hidden at rest, visible on hover / focus-within */
   .news-actions {
-    position: absolute;
-    bottom: 8px;
-    right: 8px;
     display: flex;
     gap: 6px;
     opacity: 0;
-    transition: opacity 0.15s;
+    transition: opacity 150ms;
   }
 
   .news-card:hover .news-actions,
