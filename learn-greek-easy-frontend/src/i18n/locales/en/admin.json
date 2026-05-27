@@ -458,7 +458,7 @@
     },
     "actions": {
       "importRss": "Import RSS",
-      "new": "+ New article"
+      "new": "New article"
     },
     "create": {
       "title": "Create News Item",

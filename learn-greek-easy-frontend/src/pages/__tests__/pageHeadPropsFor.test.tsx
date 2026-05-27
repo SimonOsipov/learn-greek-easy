@@ -33,7 +33,7 @@ const STRINGS: Record<string, string> = {
   'news.breadcrumb.dashboard': 'Admin',
   'news.breadcrumb.current': 'News',
   'news.actions.importRss': 'Import RSS',
-  'news.actions.new': '+ New article',
+  'news.actions.new': 'New article',
   comingSoon: 'Coming soon',
   // situations
   'situations.title': 'Situations',
