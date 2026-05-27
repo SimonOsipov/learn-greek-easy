@@ -483,7 +483,7 @@ export type AnnouncementDetailResponse = AnnouncementItem;
 /**
  * Country classification for news items
  */
-export type NewsCountry = 'cyprus' | 'greece' | 'world';
+export type NewsCountry = 'cyprus' | 'greece' | 'world' | 'es';
 
 export interface MultilingualField {
   el: string;

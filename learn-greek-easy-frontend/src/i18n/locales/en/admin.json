@@ -447,18 +447,16 @@
       "current": "News"
     },
     "stats": {
-      "total": "Total articles",
-      "withAudio": "With B2+A2 audio",
+      "total": "Total News",
+      "withAudio": "With Audio",
       "b1Coverage": "B1 coverage",
       "countries": "Countries",
       "allTime": "All time",
-      "recentThisWeek": "+{{count}} this week",
-      "audioCoverage": "100% coverage · {{count}}/{{total}}",
-      "countrySub": "Greece & Spain on roadmap"
+      "recentThisWeek": "+{{count}} this week"
     },
     "actions": {
       "importRss": "Import RSS",
-      "new": "New article"
+      "new": "+ New article"
     },
     "create": {
       "title": "Create News Item",
@@ -576,7 +574,6 @@
       "published": "Published",
       "publishedOn": "Published {{date}}",
       "linkedSituationLabel": "Linked situation",
-      "linkedSituationPill": "Linked situation",
       "dirty": {
         "title": "Unsaved changes",
         "body": "You have unsaved changes. Save before leaving?",
@@ -636,7 +633,7 @@
       "deleteLabel": "Delete"
     },
     "toolbar": {
-      "searchPlaceholder": "Search news..."
+      "searchPlaceholder": "Search by title, body, or person…"
     }
   },
   "feedback": {

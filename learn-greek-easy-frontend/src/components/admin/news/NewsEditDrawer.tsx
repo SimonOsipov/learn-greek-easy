@@ -149,7 +149,8 @@ export const NewsEditDrawer: React.FC = () => {
 
   const titleInLang = pickTitle(item, i18n.language);
   const countryLabel = t(`news.drawer.country.${item.country}`);
-  const countryFlag = ({ cyprus: '🇨🇾', greece: '🇬🇷', world: '🌍' } as const)[item.country] ?? '🌍';
+  const countryFlag =
+    ({ cyprus: '🇨🇾', greece: '🇬🇷', world: '🌍', es: '🇪🇸' } as const)[item.country] ?? '🌍';
 
   return (
     <TooltipProvider>

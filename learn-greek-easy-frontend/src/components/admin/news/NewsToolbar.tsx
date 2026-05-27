@@ -20,7 +20,6 @@ import { ChevronDown, Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,7 +48,7 @@ function useDebounce<T>(value: T, delay: number): T {
 // Option definitions
 // ---------------------------------------------------------------------------
 
-type CountryValue = 'all' | 'cyprus' | 'greece' | 'world';
+type CountryValue = 'all' | 'cyprus' | 'greece' | 'es';
 type LevelValue = 'all' | 'B2' | 'A2' | 'B1';
 type SortValue = 'newest' | 'oldest' | 'updated';
 
@@ -57,7 +56,7 @@ const COUNTRY_OPTIONS: SegOption<CountryValue>[] = [
   { value: 'all', label: 'All' },
   { value: 'cyprus', label: '🇨🇾 CY' },
   { value: 'greece', label: '🇬🇷 GR' },
-  { value: 'world', label: '🌍 World' },
+  { value: 'es', label: '🇪🇸 ES' },
 ];
 
 const LEVEL_OPTIONS: SegOption<LevelValue>[] = [
@@ -67,7 +66,11 @@ const LEVEL_OPTIONS: SegOption<LevelValue>[] = [
   { value: 'B1', label: 'B1' },
 ];
 
-// SORT_LABELS moved to inline t() calls below — keys: news.toolbar.sortNewest/sortOldest/sortUpdated
+const SORT_LABELS: Record<SortValue, string> = {
+  newest: 'Newest first',
+  oldest: 'Oldest first',
+  updated: 'Recently updated',
+};
 
 // ---------------------------------------------------------------------------
 // Component
@@ -199,25 +202,9 @@ export function NewsToolbar() {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {/* Country filter */}
-      <SegControl<CountryValue>
-        options={COUNTRY_OPTIONS}
-        value={countryFilter as CountryValue}
-        onChange={handleCountryChange}
-        label={t('news.toolbar.countryLabel')}
-      />
-
-      {/* Level filter */}
-      <SegControl<LevelValue>
-        options={LEVEL_OPTIONS}
-        value={levelFilter}
-        onChange={handleLevelChange}
-        label={t('news.toolbar.levelLabel')}
-      />
-
+    <div className="flex flex-wrap items-center gap-4">
       {/* Search input */}
-      <div className="relative flex-1">
+      <div className="relative min-w-[280px] flex-1">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           className="pl-9 pr-8"
@@ -229,7 +216,7 @@ export function NewsToolbar() {
         {searchInput !== '' && (
           <button
             type="button"
-            aria-label={t('news.toolbar.clearSearch')}
+            aria-label="Clear search"
             className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             onClick={handleClearSearch}
             data-testid="news-toolbar-search-clear"
@@ -239,29 +226,35 @@ export function NewsToolbar() {
         )}
       </div>
 
+      {/* Country filter */}
+      <SegControl<CountryValue>
+        options={COUNTRY_OPTIONS}
+        value={countryFilter as CountryValue}
+        onChange={handleCountryChange}
+        label="Country"
+      />
+
+      {/* Level filter */}
+      <SegControl<LevelValue>
+        options={LEVEL_OPTIONS}
+        value={levelFilter}
+        onChange={handleLevelChange}
+        label="Level"
+      />
+
       {/* Sort dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" data-testid="news-toolbar-sort-trigger">
-            {sortMode === 'newest'
-              ? t('news.toolbar.sortNewest')
-              : sortMode === 'oldest'
-                ? t('news.toolbar.sortOldest')
-                : t('news.toolbar.sortUpdated')}
+          <button className="btn-glass btn-sm" data-testid="news-toolbar-sort-trigger">
+            {SORT_LABELS[sortMode]}
             <ChevronDown className="ml-1 h-4 w-4" />
-          </Button>
+          </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuRadioGroup value={sortMode} onValueChange={handleSortChange}>
-            <DropdownMenuRadioItem value="newest">
-              {t('news.toolbar.sortNewest')}
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="oldest">
-              {t('news.toolbar.sortOldest')}
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="updated">
-              {t('news.toolbar.sortUpdated')}
-            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="newest">Newest first</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="oldest">Oldest first</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="updated">Recently updated</DropdownMenuRadioItem>
           </DropdownMenuRadioGroup>
         </DropdownMenuContent>
       </DropdownMenu>
