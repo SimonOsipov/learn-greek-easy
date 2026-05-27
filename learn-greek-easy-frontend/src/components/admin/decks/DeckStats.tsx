@@ -9,43 +9,67 @@ import { StatCard } from '@/components/ui/stat-card';
 
 export interface DeckStatsProps {
   totalDecks: number;
+  totalCards: number;
   vocabularyCount: number;
+  totalVocabularyCards: number;
   cultureCount: number;
+  totalCultureQuestions: number;
   /** Pre-rounded integer from the caller; rendered as-is. */
   avgCardsPerDeck: number;
+  onCardClick?: (filter: 'all' | 'vocabulary' | 'culture') => void;
 }
 
 export function DeckStats({
   totalDecks,
+  totalCards,
   vocabularyCount,
+  totalVocabularyCards,
   cultureCount,
+  totalCultureQuestions,
   avgCardsPerDeck,
+  onCardClick,
 }: DeckStatsProps) {
   return (
     <div className="stat-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard
         title="Total decks"
+        sub={`${totalCards} cards across all decks`}
         n={totalDecks}
         icon={<Layers className="h-4 w-4" />}
         tone="blue"
+        bars={[4, 6, 8, 5, 7, 9, 6, 8, 10]}
+        barsTestId="sparkline-total-decks"
+        onClick={() => onCardClick?.('all')}
       />
       <StatCard
         title="Vocabulary"
+        sub={`${totalVocabularyCards} words · A1–B2`}
         n={vocabularyCount}
         icon={<BookOpen className="h-4 w-4" />}
         tone="violet"
+        bars={[3, 5, 7, 4, 6, 8, 5, 7, 9]}
+        barsTestId="sparkline-vocabulary"
+        onClick={() => onCardClick?.('vocabulary')}
       />
       <StatCard
         title="Culture"
+        sub={`${totalCultureQuestions} questions · ${cultureCount} active`}
         n={cultureCount}
         icon={<Compass className="h-4 w-4" />}
         tone="cyan"
+        bars={[2, 4, 3, 5, 4, 6, 5, 7, 6]}
+        barsTestId="sparkline-culture"
+        onClick={() => onCardClick?.('culture')}
       />
       <StatCard
         title="Avg cards / deck"
+        sub="+0 vs last month"
         n={avgCardsPerDeck}
         icon={<TrendingUp className="h-4 w-4" />}
         tone="green"
+        bars={[5, 6, 5, 7, 6, 8, 7, 8, 9]}
+        barsTestId="sparkline-avg-cards"
+        onClick={() => onCardClick?.('all')}
       />
     </div>
   );
