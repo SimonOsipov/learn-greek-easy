@@ -130,6 +130,17 @@ beforeEach(async () => {
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
+describe('NewsEditDrawer — full-screen drawer chrome (NADM-09)', () => {
+  it('renders SidePanel with data-size="full" (full-screen variant)', () => {
+    const item = makeItem();
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+    renderDrawer();
+    const sheet = screen.getByTestId('news-edit-drawer');
+    expect(sheet).toHaveAttribute('data-size', 'full');
+  });
+});
+
 describe('NewsEditDrawer — null guard', () => {
   it('returns null when drawerItemId is null', () => {
     storeState.drawerItemId = null;

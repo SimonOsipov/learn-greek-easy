@@ -157,7 +157,7 @@ export const NewsEditDrawer: React.FC = () => {
         onOpenChange={(o) => {
           if (!o) requestClose();
         }}
-        size="default"
+        size="full"
         data-testid="news-edit-drawer"
         title="Edit news article"
       >

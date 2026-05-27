@@ -275,6 +275,17 @@ Reach for these *before* composing new ones.
 
 **PR delta (ADMIN2-16 / ANDD-03):** The `.drawer-head-content` JSX wrapper is currently only applied in `AnnouncementDetailsDrawer.tsx`. The 5 other drawer consumers (`AnnouncementComposeDrawer`, `ChangelogEditorDrawer`, `DeckDrawer`, `NewsEditDrawer`, `SituationDrawer`) reference these classes but lack the wrapper; a sweep is queued as a follow-up to keep this PR's blast radius small.
 
+### Full-screen drawer variant (`size="full"`)
+
+**PR delta (NADM-09 / ADMIN2-27):** `SidePanel size="full"` renders the drawer at `100vw / 100vh` (class `h-screen w-screen !max-w-none`). Two CSS rules in `@layer components` scope the visual polish to this variant only:
+
+| Class / selector | Role |
+|---|---|
+| `.drawer-wrap[data-size='full']` | Overrides slide animation to `250ms cubic-bezier(0.4,0,0.2,1)` for open and close. |
+| `.drawer-shadow-handoff` | Left-edge drop shadow: `box-shadow: -30px 0 60px rgba(0,0,0,0.3)`. Applied by `side-panel.tsx` via `contentClass` when `size === 'full'`. |
+
+The `bg-black/50` overlay (no `backdrop-blur`) is already wired in `side-panel.tsx` for `size === 'full'` (distinct from the `bg-background/80 backdrop-blur-sm` used by default/wide/half sizes).
+
 ---
 
 ## Component primitives (`src/components/ui/*`)

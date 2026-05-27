@@ -1674,6 +1674,19 @@
     max-width: 720px;
   }
 
+  /* SidePanel size="full" — tuned slide animation (NADM-09 / ADMIN2-27-29).
+     Overrides the default duration-300/500 pair with a uniform 250ms ease. */
+  .drawer-wrap[data-size='full'] {
+    transition-duration: 250ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Left-edge drop shadow for the full-screen news drawer handoff (NADM-09 / ADMIN2-27-31).
+     Applied via .drawer-shadow-handoff on the content element when size="full". */
+  .drawer-shadow-handoff {
+    box-shadow: -30px 0 60px rgba(0, 0, 0, 0.3);
+  }
+
   /* ==========================================================================
      ANND-01 — Announcements drawer (ADMIN2-04) CSS foundation
      Ported from design_handoff_admin_redesign/prototype.css (announcements section)
