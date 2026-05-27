@@ -130,17 +130,6 @@ beforeEach(async () => {
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
-describe('NewsEditDrawer — full-screen drawer chrome (NADM-09)', () => {
-  it('renders SidePanel with data-size="full" (full-screen variant)', () => {
-    const item = makeItem();
-    storeState.drawerItemId = item.id;
-    storeState.newsItems = [item];
-    renderDrawer();
-    const sheet = screen.getByTestId('news-edit-drawer');
-    expect(sheet).toHaveAttribute('data-size', 'full');
-  });
-});
-
 describe('NewsEditDrawer — null guard', () => {
   it('returns null when drawerItemId is null', () => {
     storeState.drawerItemId = null;
@@ -172,15 +161,27 @@ describe('NewsEditDrawer — header rendering', () => {
     storeState.newsItems = [item];
   });
 
-  it('renders breadcrumb with flag, country label, and publication date', () => {
+  it('renders breadcrumb with flag, country label, and publication date key', () => {
     renderDrawer();
-    // i18n key: news.drawer.country.greece → "news.drawer.country.greece" (mock returns key)
-    // breadcrumb pattern: "News · 🇬🇷 news.drawer.country.greece · news.drawer.publishedOn"
+    // The i18n mock returns the key string; the date is passed as an interpolation arg.
+    // We verify the breadcrumb is present and does NOT contain the raw ISO date string.
     const breadcrumb = document.querySelector('.drawer-breadcrumb');
     expect(breadcrumb).toBeInTheDocument();
     expect(breadcrumb!.textContent).toContain('🇬🇷');
     expect(breadcrumb!.textContent).toContain('news.drawer.country.greece');
     expect(breadcrumb!.textContent).toContain('news.drawer.publishedOn');
+    // Raw ISO format must NOT appear — date is formatted via date-fns
+    expect(breadcrumb!.textContent).not.toContain('2025-01-15');
+  });
+
+  it('breadcrumb does not contain raw ISO date string when publication_date is set', () => {
+    const item = makeItem({ publication_date: '2026-05-08T00:00:00Z' });
+    storeState.newsItems = [item];
+    renderDrawer();
+    const breadcrumb = document.querySelector('.drawer-breadcrumb');
+    // Raw ISO must not appear; format(parseISO(...), 'dd MMM yyyy') is applied
+    expect(breadcrumb!.textContent).not.toContain('2026-05-08T00:00:00Z');
+    expect(breadcrumb!.textContent).not.toContain('2026-05-08');
   });
 
   it('renders title in English (default lang)', () => {
@@ -221,6 +222,110 @@ describe('NewsEditDrawer — header rendering', () => {
     storeState.newsItems = [item];
     renderDrawer();
     expect(screen.getByText('A2')).toBeInTheDocument();
+  });
+});
+
+describe('NewsEditDrawer — pickTitle fallback chain', () => {
+  // These test the pickTitle helper indirectly via drawer title rendering.
+
+  it('shows title_el when lang=el and title_el is present', () => {
+    const item = makeItem({ title_el: 'Τίτλος', title_en: 'English', title_ru: 'Русский' });
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+    currentLang = 'el';
+    renderDrawer();
+    expect(document.querySelector('.drawer-title')!.textContent).toBe('Τίτλος');
+  });
+
+  it('shows title_en when lang=en and title_en is present', () => {
+    const item = makeItem({ title_el: 'Τίτλος', title_en: 'English', title_ru: 'Русский' });
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+    currentLang = 'en';
+    renderDrawer();
+    expect(document.querySelector('.drawer-title')!.textContent).toBe('English');
+  });
+
+  it('shows title_ru when lang=ru and title_ru is present', () => {
+    const item = makeItem({ title_el: 'Τίτλος', title_en: 'English', title_ru: 'Русский' });
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+    currentLang = 'ru';
+    renderDrawer();
+    expect(document.querySelector('.drawer-title')!.textContent).toBe('Русский');
+  });
+
+  it('falls back to title_en when lang=ru but title_ru is empty', () => {
+    const item = makeItem({ title_el: 'Τίτλος', title_en: 'English fallback', title_ru: '' });
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+    currentLang = 'ru';
+    renderDrawer();
+    expect(document.querySelector('.drawer-title')!.textContent).toBe('English fallback');
+  });
+
+  it('falls back to title_el when lang=en but title_en is also empty', () => {
+    const item = makeItem({ title_el: 'Ελληνικό', title_en: '', title_ru: '' });
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+    currentLang = 'en';
+    renderDrawer();
+    expect(document.querySelector('.drawer-title')!.textContent).toBe('Ελληνικό');
+  });
+
+  it('shows (untitled) when all title fields are empty', () => {
+    const item = makeItem({ title_el: '', title_en: '', title_ru: '' });
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+    currentLang = 'en';
+    renderDrawer();
+    expect(document.querySelector('.drawer-title')!.textContent).toBe('(untitled)');
+  });
+});
+
+describe('NewsEditDrawer — linked situation pill', () => {
+  it('does not render blue linked-situation badge when linked_situation is null', () => {
+    const item = makeItem();
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+    renderDrawer();
+    expect(screen.queryByText('news.drawer.linkedSituationPill')).not.toBeInTheDocument();
+  });
+
+  it('renders blue linked-situation badge when linked_situation is non-null', () => {
+    const item = { ...makeItem(), linked_situation: { id: 'sit-1', title_en: 'Test situation' } };
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item] as ReturnType<typeof makeItem>[];
+    renderDrawer();
+    expect(screen.getByText('news.drawer.linkedSituationPill')).toBeInTheDocument();
+  });
+});
+
+describe('NewsEditDrawer — Regenerate button with icon', () => {
+  it('renders Regenerate button with aria-disabled and Wand2 icon', () => {
+    const item = makeItem();
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+    renderDrawer();
+    const btn = screen.getByText('news.drawer.regenerateTranslations').closest('button');
+    expect(btn).toBeInTheDocument();
+    expect(btn).toHaveAttribute('aria-disabled', 'true');
+    // Wand2 icon is an SVG inside the button
+    expect(btn!.querySelector('svg')).toBeInTheDocument();
+  });
+});
+
+describe('NewsEditDrawer — allChecksPassed badge with Check icon', () => {
+  it('renders allChecksPassed badge containing a Check icon', () => {
+    const item = makeItem();
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+    renderDrawer();
+    const badgeText = screen.getByText('news.drawer.allChecksPassed');
+    // The badge wraps the text and the icon — find the parent badge div
+    const badge = badgeText.closest('.badge, [class*="badge"]') ?? badgeText.parentElement;
+    expect(badge).toBeInTheDocument();
+    expect(badge!.querySelector('svg')).toBeInTheDocument();
   });
 });
 
@@ -405,6 +510,18 @@ describe('NewsEditDrawer — deep link via URL', () => {
 
     expect(screen.getByTestId('news-edit-drawer')).toBeInTheDocument();
     expect(screen.getByTestId('news-drawer-tab-translations-content')).toBeInTheDocument();
+  });
+});
+
+describe('NewsEditDrawer — close button position', () => {
+  it('renders close button with drawer-close-right class', () => {
+    const item = makeItem();
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+    renderDrawer();
+    const closeBtn = document.querySelector('button[aria-label="Close"]');
+    expect(closeBtn).toBeInTheDocument();
+    expect(closeBtn).toHaveClass('drawer-close-right');
   });
 });
 

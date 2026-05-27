@@ -574,6 +574,7 @@
       "published": "Published",
       "publishedOn": "Published {{date}}",
       "linkedSituationLabel": "Linked situation",
+      "linkedSituationPill": "Linked situation",
       "dirty": {
         "title": "Unsaved changes",
         "body": "You have unsaved changes. Save before leaving?",
@@ -630,25 +631,10 @@
     },
     "card": {
       "editLabel": "Edit",
-      "deleteLabel": "Delete",
-      "publishedLabel": "Published"
+      "deleteLabel": "Delete"
     },
     "toolbar": {
-      "searchPlaceholder": "Search news...",
-      "countryLabel": "Country",
-      "levelLabel": "Level",
-      "clearSearch": "Clear search",
-      "sortNewest": "Newest first",
-      "sortOldest": "Oldest first",
-      "sortUpdated": "Recently updated"
-    },
-    "list": {
-      "emptyTitle": "No results",
-      "emptyBody": "No articles match these filters.",
-      "clearFilters": "Clear filters",
-      "pagerShowing": "Showing {{from}}–{{to}} of {{total}}",
-      "pagerPrevious": "Previous",
-      "pagerNext": "Next"
+      "searchPlaceholder": "Search news..."
     }
   },
   "feedback": {

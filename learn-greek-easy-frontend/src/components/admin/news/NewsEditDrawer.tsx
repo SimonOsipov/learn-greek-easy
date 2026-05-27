@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, parseISO } from 'date-fns';
+import { Check, Wand2 } from 'lucide-react';
 import { FormProvider, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -146,7 +147,7 @@ export const NewsEditDrawer: React.FC = () => {
 
   if (!item) return null;
 
-  const titleInLang = pickByLang(item, i18n.language);
+  const titleInLang = pickTitle(item, i18n.language);
   const countryLabel = t(`news.drawer.country.${item.country}`);
   const countryFlag = ({ cyprus: '🇨🇾', greece: '🇬🇷', world: '🌍' } as const)[item.country] ?? '🌍';
 
@@ -157,18 +158,21 @@ export const NewsEditDrawer: React.FC = () => {
         onOpenChange={(o) => {
           if (!o) requestClose();
         }}
-        size="full"
+        size="default"
         data-testid="news-edit-drawer"
         title="Edit news article"
       >
-        <SidePanel.CloseButton onClick={requestClose} />
+        <SidePanel.CloseButton position="right" onClick={requestClose} />
         <SidePanel.Header>
-          <div className="drawer-breadcrumb">{`News · ${countryFlag} ${countryLabel} · ${t('news.drawer.publishedOn', { date: item.publication_date })}`}</div>
+          <div className="drawer-breadcrumb">{`News · ${countryFlag} ${countryLabel} · ${t('news.drawer.publishedOn', { date: item.publication_date ? format(parseISO(item.publication_date), 'dd MMM yyyy') : '' })}`}</div>
           <h2 className="drawer-title">{titleInLang}</h2>
           <div className="drawer-meta">
             <Badge tone="green">{t('news.drawer.published')}</Badge>
             {item.description_el ? <Badge tone="violet">B2</Badge> : null}
             {item.description_el_a2 ? <Badge tone="violet">A2</Badge> : null}
+            {Boolean((item as NewsItemResponseWithLinkedSituation).linked_situation) && (
+              <Badge tone="blue">{t('news.drawer.linkedSituationPill')}</Badge>
+            )}
           </div>
         </SidePanel.Header>
 
@@ -194,9 +198,10 @@ export const NewsEditDrawer: React.FC = () => {
                 <button
                   type="button"
                   aria-disabled="true"
-                  className="btn-glass cursor-not-allowed opacity-60"
+                  className="btn-glass inline-flex cursor-not-allowed items-center gap-1 opacity-60"
                   onClick={(e) => e.preventDefault()}
                 >
+                  <Wand2 className="size-3" />
                   {t('news.drawer.regenerateTranslations')}
                 </button>
               </TooltipTrigger>
@@ -220,7 +225,10 @@ export const NewsEditDrawer: React.FC = () => {
         <SidePanel.Footer>
           <div className="flex w-full items-center justify-between">
             <div className="flex items-center gap-2 text-sm">
-              <Badge tone="green">{t('news.drawer.allChecksPassed')}</Badge>
+              <Badge tone="green">
+                <Check className="mr-1 size-3" />
+                {t('news.drawer.allChecksPassed')}
+              </Badge>
               <span className="text-muted-foreground">
                 {t('news.drawer.updatedRelative', {
                   relative: formatDistanceToNow(new Date(item.updated_at), { addSuffix: true }),
@@ -298,8 +306,13 @@ function toDefaults(item: NewsItemResponse | null): NewsDrawerFormData {
   };
 }
 
-function pickByLang(item: NewsItemResponse, lang: string): string {
-  if (lang === 'el') return item.title_el;
-  if (lang === 'ru') return item.title_ru;
-  return item.title_en;
+/** Temporary shim: NADM-08 added linked_situation on the backend but
+ *  frontend types won't be regenerated until NADM-22. */
+interface NewsItemResponseWithLinkedSituation extends NewsItemResponse {
+  linked_situation?: unknown;
+}
+
+function pickTitle(item: NewsItemResponse, lang: string): string {
+  const byLang = lang === 'el' ? item.title_el : lang === 'ru' ? item.title_ru : item.title_en;
+  return byLang || item.title_en || item.title_el || '(untitled)';
 }
