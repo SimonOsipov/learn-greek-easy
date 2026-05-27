@@ -67,6 +67,24 @@ vi.mock('@/stores/adminNewsStore', () => ({
     mockUseAdminNewsStore(...(args as [(s: typeof storeState) => unknown])),
 }));
 
+// Field primitive — render label (with htmlFor when provided) + children.
+vi.mock('@/components/ui/field', () => ({
+  Field: ({
+    label,
+    children,
+    htmlFor,
+  }: {
+    label: React.ReactNode;
+    children: React.ReactNode;
+    htmlFor?: string;
+  }) => (
+    <div>
+      {htmlFor ? <label htmlFor={htmlFor}>{label}</label> : <div>{label}</div>}
+      {children}
+    </div>
+  ),
+}));
+
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
@@ -117,7 +135,11 @@ async function loadModules() {
 
 function Wrapper({ item }: { item: NewsItemResponse }) {
   const methods = useForm({
-    defaultValues: { source_image_url: item.image_url ?? '', alt_text: '', photo_credit: '' },
+    defaultValues: {
+      source_image_url: item.image_url ?? '',
+      alt_text: item.alt_text ?? '',
+      photo_credit: item.photo_credit ?? '',
+    },
   });
   return (
     <FormProvider {...methods}>
@@ -191,6 +213,12 @@ describe('NewsEditDrawerImage — source URL input', () => {
     expect(input.value).toBe('https://cdn.example.com/photo.jpg');
   });
 
+  it('opens empty when item.image_url is null', () => {
+    render(<Wrapper item={makeItem({ image_url: null })} />);
+    const input = screen.getByTestId('news-drawer-image-url-input') as HTMLInputElement;
+    expect(input.value).toBe('');
+  });
+
   it('is a url-type input', () => {
     render(<Wrapper item={makeItem()} />);
     const input = screen.getByTestId('news-drawer-image-url-input') as HTMLInputElement;
@@ -218,6 +246,20 @@ describe('NewsEditDrawerImage — enabled fields (NADM-21)', () => {
     const creditInput = screen.getByTestId('news-drawer-image-credit-input');
     expect(creditInput).not.toBeDisabled();
     expect(creditInput).not.toHaveAttribute('aria-disabled', 'true');
+  });
+});
+
+describe('NewsEditDrawerImage — 2-col grid layout', () => {
+  it('root element has dr-image-tab class', () => {
+    render(<Wrapper item={makeItem()} />);
+    const root = screen.getByTestId('news-drawer-tab-image-content');
+    expect(root).toHaveClass('dr-image-tab');
+  });
+
+  it('dr-image-box is present', () => {
+    render(<Wrapper item={makeItem({ image_url: 'https://cdn.example.com/photo.jpg' })} />);
+    const box = document.querySelector('.dr-image-box');
+    expect(box).toBeInTheDocument();
   });
 });
 

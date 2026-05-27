@@ -244,6 +244,34 @@ describe('NewsTab — basic rendering', () => {
   });
 });
 
+describe('NewsTab — B1 coverage card (#3)', () => {
+  it('renders real b1_audio_count value (not "—")', () => {
+    storeState.b1AudioCount = 63;
+    storeState.b1PendingRegenCount = 4;
+    storeState.total = 67;
+    renderWithRouter();
+    // stat-n for B1 card shows the b1AudioCount number
+    expect(screen.getByText('63')).toBeInTheDocument();
+  });
+
+  it('renders a <b> element in card #3 sub wrapping the awaiting count', () => {
+    storeState.b1AudioCount = 63;
+    storeState.b1PendingRegenCount = 4;
+    storeState.total = 67;
+    renderWithRouter();
+    // The <b> element should contain the pending regen count
+    const boldEls = document.querySelectorAll('.stat-sub b');
+    const b1Bold = Array.from(boldEls).find((el) => el.textContent === '4');
+    expect(b1Bold).toBeTruthy();
+  });
+
+  it('renders sparkline with 9 bars for card #3', () => {
+    renderWithRouter();
+    const sparkline = screen.getByTestId('stat-bars-b1');
+    expect(sparkline.querySelectorAll('span')).toHaveLength(9);
+  });
+});
+
 // Note: Import RSS and "+ New article" action buttons are now in AdminPage's
 // pageHeadPropsFor (ADMIN2-HEAD). NewsTab receives createOpen as a controlled prop.
 

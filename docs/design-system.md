@@ -246,7 +246,7 @@ Reach for these *before* composing new ones.
 | `.glass` | Translucent + blur, default ambient surface |
 | `.glass-strong` | Card-on-card, default for dashboard widgets |
 | `.glass-fine` | Subtle vertical gradient, content blocks |
-| `.kicker` | Small uppercase mono label with primary dot prefix |
+| `.kicker` | Small uppercase mono label with primary dot prefix. `<Kicker dot="…">` accepts tones: `primary` (default), `blue` (`--primary`), `cyan` (`--accent-2`), `violet` (`--accent`), `amber` (`--warning`), `green`/`success` (`--success`), `red` (`--danger`), `gray`. |
 | `.pill-nav` | Top-level segmented nav (also tabs variant) |
 | `.btn` / `.btn-primary` / `.btn-glass` / `.btn-ghost` / `.btn-sm` / `.btn-lg` | Button system |
 | `.chip` / `.chip-tinted` | Inline pills (filters, meta) |

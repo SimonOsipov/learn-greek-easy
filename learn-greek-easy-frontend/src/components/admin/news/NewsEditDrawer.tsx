@@ -105,17 +105,19 @@ export const NewsEditDrawer: React.FC = () => {
     if (dirty.title_el_a2 !== undefined) payload.scenario_el_a2 = data.title_el_a2 || null;
     if (dirty.description_el_a2 !== undefined) payload.text_el_a2 = data.description_el_a2 || null;
     const trimmedImageUrl = (data.source_image_url || '').trim();
-    if (trimmedImageUrl !== '') {
-      try {
-        new URL(trimmedImageUrl);
-      } catch {
-        toast({ title: t('news.drawer.image.invalidUrl'), variant: 'destructive' });
-        return;
+    if (dirty.source_image_url) {
+      if (trimmedImageUrl !== '') {
+        try {
+          new URL(trimmedImageUrl);
+        } catch {
+          toast({ title: t('news.drawer.image.invalidUrl'), variant: 'destructive' });
+          return;
+        }
+        payload.source_image_url = trimmedImageUrl;
       }
-      payload.source_image_url = trimmedImageUrl;
     }
-    if (dirty.alt_text) payload.alt_text = data.alt_text || null;
-    if (dirty.photo_credit) payload.photo_credit = data.photo_credit || null;
+    if (dirty.alt_text) payload.alt_text = data.alt_text.trim() || null;
+    if (dirty.photo_credit) payload.photo_credit = data.photo_credit.trim() || null;
     if (Object.keys(payload).length === 0) {
       closeAndClearUrl();
       return;
