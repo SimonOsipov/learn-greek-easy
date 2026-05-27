@@ -3,6 +3,7 @@
 // NEWS-07c: NewsEditDrawerAudio — unit tests.
 // Covers: row rendering, 60 static bars, heights, play/pause control,
 // one-at-a-time enforcement, B1 disabled, cleanup on unmount.
+// NADM-19: chrome tests — audio-play class, RefreshCw icon, Upload icon, primary colors.
 
 import React from 'react';
 
@@ -291,6 +292,69 @@ describe('NewsEditDrawerAudio — Regenerate + Upload buttons', () => {
       const uploadBtn = row.querySelector('button.icon-btn[aria-disabled="true"]');
       expect(uploadBtn).toBeTruthy();
     });
+  });
+});
+
+describe('NewsEditDrawerAudio — NADM-19 chrome: audio-play class', () => {
+  it('B2 play button has class audio-play', () => {
+    render(<NewsEditDrawerAudio item={makeItem()} />);
+    const b2Row = document.querySelectorAll('.audio-row')[0];
+    const playBtn = b2Row.querySelector('button[aria-label="Play B2 narration"]');
+    expect(playBtn).toBeTruthy();
+    expect(playBtn).toHaveClass('audio-play');
+  });
+
+  it('A2 play button has class audio-play', () => {
+    render(<NewsEditDrawerAudio item={makeItem()} />);
+    const a2Row = document.querySelectorAll('.audio-row')[1];
+    const playBtn = a2Row.querySelector('button[aria-label="Play A2 narration"]');
+    expect(playBtn).toBeTruthy();
+    expect(playBtn).toHaveClass('audio-play');
+  });
+
+  it('B1 play button does NOT have class audio-play (keeps disabled glass treatment)', () => {
+    render(<NewsEditDrawerAudio item={makeItem()} />);
+    const b1Row = document.querySelectorAll('.audio-row')[2];
+    const disabledPlayBtn = b1Row.querySelector('button[aria-disabled="true"].btn-glass');
+    expect(disabledPlayBtn).toBeTruthy();
+    expect(disabledPlayBtn).not.toHaveClass('audio-play');
+  });
+});
+
+describe('NewsEditDrawerAudio — NADM-19 chrome: Regenerate + Upload icons', () => {
+  it('each Regenerate button contains a RefreshCw SVG icon', () => {
+    render(<NewsEditDrawerAudio item={makeItem()} />);
+    const regenBtns = screen.getAllByText('news.drawer.audio.regenerate');
+    expect(regenBtns).toHaveLength(3);
+    regenBtns.forEach((textNode) => {
+      const btn = textNode.closest('button');
+      expect(btn).toBeTruthy();
+      expect(btn?.querySelector('svg')).toBeTruthy();
+    });
+  });
+
+  it('each Upload button contains an Upload SVG icon', () => {
+    render(<NewsEditDrawerAudio item={makeItem()} />);
+    const rows = document.querySelectorAll('.audio-row');
+    rows.forEach((row) => {
+      const uploadBtn = row.querySelector('button.icon-btn[aria-disabled="true"]');
+      expect(uploadBtn).toBeTruthy();
+      expect(uploadBtn?.querySelector('svg')).toBeTruthy();
+    });
+  });
+});
+
+describe('NewsEditDrawerAudio — NADM-19 chrome: waveform color tokens', () => {
+  it('audio-wave spans exist (primary color applied via CSS class)', () => {
+    render(<NewsEditDrawerAudio item={makeItem()} />);
+    const bars = document.querySelectorAll('.audio-wave');
+    expect(bars.length).toBeGreaterThan(0);
+  });
+
+  it('audio-progress spans exist (primary color applied via CSS class)', () => {
+    render(<NewsEditDrawerAudio item={makeItem()} />);
+    const progressBars = document.querySelectorAll('.audio-progress');
+    expect(progressBars.length).toBeGreaterThan(0);
   });
 });
 

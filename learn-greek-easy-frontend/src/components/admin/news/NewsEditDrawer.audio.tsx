@@ -5,7 +5,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 
-import { Pause, Play, Upload } from 'lucide-react';
+import { Pause, Play, RefreshCw, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
@@ -165,7 +165,7 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
     return (
       <button
         type="button"
-        className="icon-btn"
+        className="audio-play"
         aria-label={label}
         onClick={() => handleToggle(level)}
       >
@@ -218,6 +218,7 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
                 className="btn-glass cursor-not-allowed opacity-60"
                 onClick={(e) => e.preventDefault()}
               >
+                <RefreshCw size={14} />
                 {t('news.drawer.audio.regenerate')}
               </button>
             </TooltipTrigger>
