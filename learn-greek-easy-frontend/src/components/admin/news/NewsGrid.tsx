@@ -47,10 +47,10 @@ export const NewsGrid: React.FC<NewsGridProps> = ({ onRequestDelete }) => {
     <div>
       {items.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-16 text-center">
-          <Kicker dot="amber">No results</Kicker>
-          <p className="text-sm text-muted-foreground">No articles match these filters.</p>
+          <Kicker dot="amber">{t('news.list.emptyTitle')}</Kicker>
+          <p className="text-sm text-muted-foreground">{t('news.list.emptyBody')}</p>
           <Button variant="outline" size="sm" onClick={handleClearFilters}>
-            Clear filters
+            {t('news.list.clearFilters')}
           </Button>
         </div>
       ) : (
@@ -68,7 +68,7 @@ export const NewsGrid: React.FC<NewsGridProps> = ({ onRequestDelete }) => {
           data-testid="news-grid-pagination"
         >
           <p className="text-sm text-muted-foreground">
-            Showing {from}–{to} of {total}
+            {t('news.list.pagerShowing', { from, to, total })}
           </p>
           <div className="flex items-center gap-2">
             <Button
@@ -80,7 +80,7 @@ export const NewsGrid: React.FC<NewsGridProps> = ({ onRequestDelete }) => {
               data-testid="news-grid-prev"
             >
               <ChevronLeft className="h-4 w-4" />
-              Previous
+              {t('news.list.pagerPrevious')}
             </Button>
             <span className="text-sm text-muted-foreground">
               {page} / {totalPages}
@@ -93,7 +93,7 @@ export const NewsGrid: React.FC<NewsGridProps> = ({ onRequestDelete }) => {
               aria-label={t('shell.pagination.nextLabel')}
               data-testid="news-grid-next"
             >
-              Next
+              {t('news.list.pagerNext')}
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>

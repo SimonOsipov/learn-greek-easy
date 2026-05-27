@@ -630,10 +630,25 @@
     },
     "card": {
       "editLabel": "Edit",
-      "deleteLabel": "Delete"
+      "deleteLabel": "Delete",
+      "publishedLabel": "Published"
     },
     "toolbar": {
-      "searchPlaceholder": "Search news..."
+      "searchPlaceholder": "Search news...",
+      "countryLabel": "Country",
+      "levelLabel": "Level",
+      "clearSearch": "Clear search",
+      "sortNewest": "Newest first",
+      "sortOldest": "Oldest first",
+      "sortUpdated": "Recently updated"
+    },
+    "list": {
+      "emptyTitle": "No results",
+      "emptyBody": "No articles match these filters.",
+      "clearFilters": "Clear filters",
+      "pagerShowing": "Showing {{from}}–{{to}} of {{total}}",
+      "pagerPrevious": "Previous",
+      "pagerNext": "Next"
     }
   },
   "feedback": {

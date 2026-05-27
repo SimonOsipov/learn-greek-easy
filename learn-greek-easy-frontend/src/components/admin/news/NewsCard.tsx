@@ -127,7 +127,9 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onRequestDelete }) => 
           {(hasB2 || hasA2 || hasAudio) && <span aria-hidden="true">·</span>}
 
           {/* Published date */}
-          <span className="news-pub">Published {formattedDate}</span>
+          <span className="news-pub">
+            {t('news.card.publishedLabel')} {formattedDate}
+          </span>
         </div>
       </div>
 

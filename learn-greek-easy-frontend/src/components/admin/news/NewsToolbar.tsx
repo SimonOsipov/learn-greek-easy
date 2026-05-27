@@ -67,11 +67,7 @@ const LEVEL_OPTIONS: SegOption<LevelValue>[] = [
   { value: 'B1', label: 'B1' },
 ];
 
-const SORT_LABELS: Record<SortValue, string> = {
-  newest: 'Newest first',
-  oldest: 'Oldest first',
-  updated: 'Recently updated',
-};
+// SORT_LABELS moved to inline t() calls below — keys: news.toolbar.sortNewest/sortOldest/sortUpdated
 
 // ---------------------------------------------------------------------------
 // Component
@@ -209,7 +205,7 @@ export function NewsToolbar() {
         options={COUNTRY_OPTIONS}
         value={countryFilter as CountryValue}
         onChange={handleCountryChange}
-        label="Country"
+        label={t('news.toolbar.countryLabel')}
       />
 
       {/* Level filter */}
@@ -217,7 +213,7 @@ export function NewsToolbar() {
         options={LEVEL_OPTIONS}
         value={levelFilter}
         onChange={handleLevelChange}
-        label="Level"
+        label={t('news.toolbar.levelLabel')}
       />
 
       {/* Search input */}
@@ -233,7 +229,7 @@ export function NewsToolbar() {
         {searchInput !== '' && (
           <button
             type="button"
-            aria-label="Clear search"
+            aria-label={t('news.toolbar.clearSearch')}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             onClick={handleClearSearch}
             data-testid="news-toolbar-search-clear"
@@ -247,15 +243,25 @@ export function NewsToolbar() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" data-testid="news-toolbar-sort-trigger">
-            {SORT_LABELS[sortMode]}
+            {sortMode === 'newest'
+              ? t('news.toolbar.sortNewest')
+              : sortMode === 'oldest'
+                ? t('news.toolbar.sortOldest')
+                : t('news.toolbar.sortUpdated')}
             <ChevronDown className="ml-1 h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuRadioGroup value={sortMode} onValueChange={handleSortChange}>
-            <DropdownMenuRadioItem value="newest">Newest first</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="oldest">Oldest first</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="updated">Recently updated</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="newest">
+              {t('news.toolbar.sortNewest')}
+            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="oldest">
+              {t('news.toolbar.sortOldest')}
+            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="updated">
+              {t('news.toolbar.sortUpdated')}
+            </DropdownMenuRadioItem>
           </DropdownMenuRadioGroup>
         </DropdownMenuContent>
       </DropdownMenu>

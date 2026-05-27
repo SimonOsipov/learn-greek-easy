@@ -99,15 +99,15 @@ describe('NewsGrid', () => {
   it('shows empty state when filtered items list is empty', () => {
     storeState.items = [];
     render(<NewsGrid onRequestDelete={vi.fn()} />);
-    expect(screen.getByText('No articles match these filters.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
+    expect(screen.getByText('news.list.emptyBody')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'news.list.clearFilters' })).toBeInTheDocument();
   });
 
   it('empty state "Clear filters" button resets all four filters', async () => {
     storeState.items = [];
     const user = userEvent.setup();
     render(<NewsGrid onRequestDelete={vi.fn()} />);
-    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    await user.click(screen.getByRole('button', { name: 'news.list.clearFilters' }));
     expect(mockSetCountryFilter).toHaveBeenCalledWith('all');
     expect(mockSetLevelFilter).toHaveBeenCalledWith('all');
     expect(mockSetSearchQuery).toHaveBeenCalledWith('');
@@ -130,7 +130,7 @@ describe('NewsGrid', () => {
     storeState.items = [];
     render(<NewsGrid onRequestDelete={vi.fn()} />);
     expect(screen.getByTestId('news-grid-pagination')).toBeInTheDocument();
-    expect(screen.getByText('Showing 1–10 of 30')).toBeInTheDocument();
+    expect(screen.getByText('news.list.pagerShowing')).toBeInTheDocument();
   });
 
   it('calls setPage with decremented value when Previous is clicked', async () => {

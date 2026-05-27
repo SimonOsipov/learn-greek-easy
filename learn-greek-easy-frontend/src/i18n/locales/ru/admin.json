@@ -566,10 +566,25 @@
     },
     "card": {
       "editLabel": "Редактировать новость",
-      "deleteLabel": "Удалить новость"
+      "deleteLabel": "Удалить новость",
+      "publishedLabel": "Опубликовано"
     },
     "toolbar": {
-      "searchPlaceholder": "Поиск новостей..."
+      "searchPlaceholder": "Поиск новостей...",
+      "countryLabel": "Страна",
+      "levelLabel": "Уровень",
+      "clearSearch": "Очистить поиск",
+      "sortNewest": "Сначала новые",
+      "sortOldest": "Сначала старые",
+      "sortUpdated": "Недавно обновлённые"
+    },
+    "list": {
+      "emptyTitle": "Нет результатов",
+      "emptyBody": "Нет статей, соответствующих этим фильтрам.",
+      "clearFilters": "Сбросить фильтры",
+      "pagerShowing": "Показано {{from}}–{{to}} из {{total}}",
+      "pagerPrevious": "Назад",
+      "pagerNext": "Далее"
     }
   },
   "feedback": {
