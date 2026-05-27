@@ -2,9 +2,11 @@
 //
 // NEWS-07d: NewsEditDrawerImage — unit tests.
 // Covers: preview (img / fallback), overlay Kicker + helper text,
-//         source URL input opens empty, alt text + photo credit are disabled,
+//         source URL input pre-filled from item.image_url,
+//         alt text + photo credit are enabled and bound,
 //         handleSave paths: empty input omits field, invalid URL blocks save,
-//         valid URL is included in payload.
+//         valid URL is included in payload,
+//         alt_text + photo_credit included in payload when dirty.
 
 import React from 'react';
 
@@ -65,19 +67,6 @@ vi.mock('@/stores/adminNewsStore', () => ({
     mockUseAdminNewsStore(...(args as [(s: typeof storeState) => unknown])),
 }));
 
-// Tooltip: render children + content inline.
-vi.mock('@/components/ui/tooltip', () => ({
-  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  TooltipTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => {
-    if (asChild) return <>{children}</>;
-    return <span>{children}</span>;
-  },
-  TooltipContent: ({ children }: { children: React.ReactNode }) => (
-    <span data-testid="tooltip-content">{children}</span>
-  ),
-}));
-
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
@@ -106,6 +95,8 @@ function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
     audio_a2_generated_at: null,
     audio_a2_file_size_bytes: null,
     has_a2_content: false,
+    alt_text: null,
+    photo_credit: null,
     ...overrides,
   };
 }
@@ -125,7 +116,9 @@ async function loadModules() {
 // ── Wrapper for isolated component tests ──────────────────────────────────────
 
 function Wrapper({ item }: { item: NewsItemResponse }) {
-  const methods = useForm({ defaultValues: { source_image_url: '' } });
+  const methods = useForm({
+    defaultValues: { source_image_url: item.image_url ?? '', alt_text: '', photo_credit: '' },
+  });
   return (
     <FormProvider {...methods}>
       <NewsEditDrawerImage item={item} />
@@ -181,11 +174,21 @@ describe('NewsEditDrawerImage — preview block', () => {
   });
 });
 
+describe('NewsEditDrawerImage — layout', () => {
+  it('root element has dr-image-tab class (2-col grid)', () => {
+    render(<Wrapper item={makeItem()} />);
+    const root = screen.getByTestId('news-drawer-tab-image-content');
+    expect(root.classList.contains('dr-image-tab')).toBe(true);
+  });
+});
+
 describe('NewsEditDrawerImage — source URL input', () => {
-  it('opens with empty value on every mount', () => {
-    render(<Wrapper item={makeItem({ image_url: 'https://example.com/img.jpg' })} />);
+  it('pre-fills source_image_url from item.image_url', () => {
+    const item = makeItem({ image_url: 'https://cdn.example.com/photo.jpg' });
+    // Wrapper passes item.image_url as source_image_url default, matching toDefaults behaviour
+    render(<Wrapper item={item} />);
     const input = screen.getByTestId('news-drawer-image-url-input') as HTMLInputElement;
-    expect(input.value).toBe('');
+    expect(input.value).toBe('https://cdn.example.com/photo.jpg');
   });
 
   it('is a url-type input', () => {
@@ -202,26 +205,19 @@ describe('NewsEditDrawerImage — source URL input', () => {
   });
 });
 
-describe('NewsEditDrawerImage — disabled fields', () => {
-  it('alt text input is disabled with aria-disabled="true"', () => {
+describe('NewsEditDrawerImage — enabled fields (NADM-21)', () => {
+  it('alt text input is enabled (no disabled attribute)', () => {
     render(<Wrapper item={makeItem()} />);
     const altInput = screen.getByTestId('news-drawer-image-alt-input');
-    expect(altInput).toBeDisabled();
-    expect(altInput).toHaveAttribute('aria-disabled', 'true');
+    expect(altInput).not.toBeDisabled();
+    expect(altInput).not.toHaveAttribute('aria-disabled', 'true');
   });
 
-  it('photo credit input is disabled with aria-disabled="true"', () => {
+  it('photo credit input is enabled (no disabled attribute)', () => {
     render(<Wrapper item={makeItem()} />);
     const creditInput = screen.getByTestId('news-drawer-image-credit-input');
-    expect(creditInput).toBeDisabled();
-    expect(creditInput).toHaveAttribute('aria-disabled', 'true');
-  });
-
-  it('shows "Coming soon" tooltip content for disabled fields', () => {
-    render(<Wrapper item={makeItem()} />);
-    const tooltips = screen.getAllByTestId('tooltip-content');
-    const comingSoonTooltips = tooltips.filter((el) => el.textContent?.includes('comingSoon'));
-    expect(comingSoonTooltips.length).toBeGreaterThanOrEqual(2);
+    expect(creditInput).not.toBeDisabled();
+    expect(creditInput).not.toHaveAttribute('aria-disabled', 'true');
   });
 });
 
@@ -293,6 +289,52 @@ describe('NewsEditDrawerImage — handleSave paths (via full drawer)', () => {
       expect(mockUpdateNewsItem).toHaveBeenCalledWith(
         item.id,
         expect.objectContaining({ source_image_url: validUrl })
+      );
+    });
+  });
+
+  it('alt_text typed — API called with alt_text in payload', async () => {
+    const user = userEvent.setup();
+    const item = makeItem();
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+
+    renderDrawer();
+    await navigateToImageTab(user);
+
+    const altInput = screen.getByTestId('news-drawer-image-alt-input');
+    await user.clear(altInput);
+    await user.type(altInput, 'A photograph of Athens');
+
+    await user.click(screen.getByTestId('news-drawer-save'));
+
+    await waitFor(() => {
+      expect(mockUpdateNewsItem).toHaveBeenCalledWith(
+        item.id,
+        expect.objectContaining({ alt_text: 'A photograph of Athens' })
+      );
+    });
+  });
+
+  it('photo_credit typed — API called with photo_credit in payload', async () => {
+    const user = userEvent.setup();
+    const item = makeItem();
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+
+    renderDrawer();
+    await navigateToImageTab(user);
+
+    const creditInput = screen.getByTestId('news-drawer-image-credit-input');
+    await user.clear(creditInput);
+    await user.type(creditInput, 'Reuters / Jane Doe');
+
+    await user.click(screen.getByTestId('news-drawer-save'));
+
+    await waitFor(() => {
+      expect(mockUpdateNewsItem).toHaveBeenCalledWith(
+        item.id,
+        expect.objectContaining({ photo_credit: 'Reuters / Jane Doe' })
       );
     });
   });

@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Kicker } from '@/components/ui/kicker';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { NewsItemResponse } from '@/services/adminAPI';
 
 import type { NewsDrawerFormData } from './NewsEditDrawer';
@@ -20,8 +19,8 @@ export const NewsEditDrawerImage: React.FC<Props> = ({ item }) => {
   const { register } = useFormContext<NewsDrawerFormData>();
 
   return (
-    <div className="space-y-4" data-testid="news-drawer-tab-image-content">
-      {/* 16:9 preview + overlay */}
+    <div className="dr-image-tab" data-testid="news-drawer-tab-image-content">
+      {/* Left: 4:3 preview + bottom-aligned overlay */}
       <div className="dr-image-preview">
         <div className="dr-image-box">
           {item.image_url ? (
@@ -36,48 +35,37 @@ export const NewsEditDrawerImage: React.FC<Props> = ({ item }) => {
         </div>
       </div>
 
-      {/* Source image URL */}
-      <Field label={t('news.drawer.image.sourceUrl')} htmlFor="news-image-url">
-        <Input
-          id="news-image-url"
-          type="url"
-          {...register('source_image_url')}
-          placeholder="https://…"
-          data-testid="news-drawer-image-url-input"
-        />
-      </Field>
+      {/* Right: stacked Field inputs */}
+      <div className="space-y-4">
+        {/* Source image URL */}
+        <Field label={t('news.drawer.image.sourceUrl')} htmlFor="news-image-url">
+          <Input
+            id="news-image-url"
+            type="url"
+            {...register('source_image_url')}
+            placeholder="https://…"
+            data-testid="news-drawer-image-url-input"
+          />
+        </Field>
 
-      {/* Alt text — disabled */}
-      <Field label={t('news.drawer.image.altText')} htmlFor="news-image-alt">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Input
-              id="news-image-alt"
-              disabled
-              aria-disabled="true"
-              data-testid="news-drawer-image-alt-input"
-              className="cursor-not-allowed opacity-60"
-            />
-          </TooltipTrigger>
-          <TooltipContent>{t('comingSoon')}</TooltipContent>
-        </Tooltip>
-      </Field>
+        {/* Alt text */}
+        <Field label={t('news.drawer.image.altText')} htmlFor="news-image-alt">
+          <Input
+            id="news-image-alt"
+            {...register('alt_text')}
+            data-testid="news-drawer-image-alt-input"
+          />
+        </Field>
 
-      {/* Photo credit — disabled */}
-      <Field label={t('news.drawer.image.photoCredit')} htmlFor="news-image-credit">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Input
-              id="news-image-credit"
-              disabled
-              aria-disabled="true"
-              data-testid="news-drawer-image-credit-input"
-              className="cursor-not-allowed opacity-60"
-            />
-          </TooltipTrigger>
-          <TooltipContent>{t('comingSoon')}</TooltipContent>
-        </Tooltip>
-      </Field>
+        {/* Photo credit */}
+        <Field label={t('news.drawer.image.photoCredit')} htmlFor="news-image-credit">
+          <Input
+            id="news-image-credit"
+            {...register('photo_credit')}
+            data-testid="news-drawer-image-credit-input"
+          />
+        </Field>
+      </div>
     </div>
   );
 };

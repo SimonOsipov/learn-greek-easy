@@ -32,6 +32,8 @@ export interface NewsDrawerFormData {
   title_el_a2: string | null;
   description_el_a2: string | null;
   source_image_url: string;
+  alt_text: string;
+  photo_credit: string;
 }
 
 export const NewsEditDrawer: React.FC = () => {
@@ -101,6 +103,8 @@ export const NewsEditDrawer: React.FC = () => {
       }
       payload.source_image_url = trimmedImageUrl;
     }
+    if (dirty.alt_text) payload.alt_text = data.alt_text || null;
+    if (dirty.photo_credit) payload.photo_credit = data.photo_credit || null;
     if (Object.keys(payload).length === 0) {
       closeAndClearUrl();
       return;
@@ -303,7 +307,9 @@ function toDefaults(item: NewsItemResponse | null): NewsDrawerFormData {
     description_el: item?.description_el ?? '',
     title_el_a2: item?.title_el_a2 ?? null,
     description_el_a2: item?.description_el_a2 ?? null,
-    source_image_url: '',
+    source_image_url: item?.image_url ?? '',
+    alt_text: item?.alt_text ?? '',
+    photo_credit: item?.photo_credit ?? '',
   };
 }
 

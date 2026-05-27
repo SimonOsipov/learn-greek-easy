@@ -3319,6 +3319,12 @@
     gap: 6px;
     align-items: center;
   }
+  .dr-image-tab {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
   .dr-image-preview {
     position: relative;
     border-radius: var(--radius-md, 12px);
@@ -3326,7 +3332,7 @@
   }
   .dr-image-box {
     position: relative;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 4 / 3;
     overflow: hidden;
     background: hsl(var(--bg-2));
   }

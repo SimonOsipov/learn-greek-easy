@@ -549,6 +549,8 @@ export interface NewsItemUpdate {
   publication_date?: string;
   original_article_url?: string;
   source_image_url?: string;
+  alt_text?: string | null;
+  photo_credit?: string | null;
   country?: NewsCountry;
   scenario_el_a2?: string | null;
   text_el_a2?: string | null;
@@ -583,6 +585,8 @@ export interface NewsItemResponse {
   audio_a2_generated_at: string | null;
   audio_a2_file_size_bytes: number | null;
   has_a2_content: boolean;
+  alt_text: string | null;
+  photo_credit: string | null;
 }
 
 /**
