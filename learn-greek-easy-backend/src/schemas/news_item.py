@@ -187,6 +187,22 @@ class NewsItemListResponse(BaseModel):
         default_factory=CountryCounts, description="Count of news items per country"
     )
     audio_count: int = Field(0, ge=0, description="Total number of news items with audio")
+    b1_audio_count: int = Field(
+        0,
+        ge=0,
+        description=(
+            "Number of news items whose linked Situation has 'B1' in levels "
+            "AND SituationDescription.audio_s3_key is non-null (B1 audio generated)."
+        ),
+    )
+    b1_pending_regen_count: int = Field(
+        0,
+        ge=0,
+        description=(
+            "Number of news items whose linked Situation has 'B1' in levels "
+            "BUT SituationDescription.audio_s3_key is null (B1 audio not yet generated)."
+        ),
+    )
 
 
 # ============================================================================

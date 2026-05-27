@@ -210,6 +210,8 @@ class NewsItemService:
         total = await self.repo.count_all(country=country)
         audio_count = await self.repo.count_with_audio(country=country)
         country_counts = await self.repo.count_by_country()
+        b1_audio_count = await self.repo.count_with_b1_audio()
+        b1_pending_regen_count = await self.repo.count_b1_pending_regen()
 
         return NewsItemListResponse(
             total=total,
@@ -218,6 +220,8 @@ class NewsItemService:
             items=[self._to_response(row[0], row[1], row[2]) for row in rows],
             country_counts=country_counts,
             audio_count=audio_count,
+            b1_audio_count=b1_audio_count,
+            b1_pending_regen_count=b1_pending_regen_count,
         )
 
     async def update(self, news_item_id: UUID, data: NewsItemUpdate) -> NewsItemResponse:

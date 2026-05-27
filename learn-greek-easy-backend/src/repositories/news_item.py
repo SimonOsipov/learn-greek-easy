@@ -2,7 +2,8 @@
 
 from uuid import UUID
 
-from sqlalchemy import desc, func, select
+from sqlalchemy import cast, desc, func, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -98,6 +99,40 @@ class NewsItemRepository(BaseRepository[NewsItem]):
         )
         if country is not None:
             query = query.where(SituationDescription.country == country)
+        result = await self.db.execute(query)
+        return result.scalar_one()
+
+    async def count_with_b1_audio(self) -> int:
+        """Count news items where Situation.levels contains 'B1' AND audio_s3_key is non-null.
+
+        Returns:
+            Number of B1 news items with audio generated
+        """
+        query = (
+            select(func.count())
+            .select_from(NewsItem)
+            .join(Situation, Situation.id == NewsItem.situation_id)
+            .join(SituationDescription, SituationDescription.situation_id == Situation.id)
+            .where(Situation.levels.contains(cast(["B1"], JSONB)))
+            .where(SituationDescription.audio_s3_key.isnot(None))
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one()
+
+    async def count_b1_pending_regen(self) -> int:
+        """Count news items where Situation.levels contains 'B1' BUT audio_s3_key is null.
+
+        Returns:
+            Number of B1 news items awaiting audio generation
+        """
+        query = (
+            select(func.count())
+            .select_from(NewsItem)
+            .join(Situation, Situation.id == NewsItem.situation_id)
+            .join(SituationDescription, SituationDescription.situation_id == Situation.id)
+            .where(Situation.levels.contains(cast(["B1"], JSONB)))
+            .where(SituationDescription.audio_s3_key.is_(None))
+        )
         result = await self.db.execute(query)
         return result.scalar_one()
 
