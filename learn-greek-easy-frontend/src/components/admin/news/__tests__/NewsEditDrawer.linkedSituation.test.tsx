@@ -123,6 +123,9 @@ const FIXTURE_SITUATION = {
   id: 'sit-abc',
   titleEn: 'At the Pharmacy',
   titleEl: 'Στο φαρμακείο',
+  status: 'ready',
+  levels: ['B1', 'A2'],
+  country: 'GR',
   roleCount: 2,
   names: 'Maria, Nikos',
   turnCount: 12,
@@ -299,7 +302,8 @@ describe('NewsEditDrawerLinkedSituation — linked card render', () => {
     expect(meta!.textContent).toContain('Maria, Nikos');
     expect(meta!.textContent).toContain('12 turns');
     expect(meta!.textContent).toContain('3 exercises');
-    expect(meta!.textContent).toContain('45s audio');
+    // Duration formatted as m:ss — 45.3s → 0:45
+    expect(meta!.textContent).toContain('0:45');
   });
 
   it('click on card calls onRequestQuickJump with situationId', async () => {
@@ -355,6 +359,109 @@ describe('NewsEditDrawerLinkedSituation — linked card render', () => {
     card.focus();
     await user.keyboard(' ');
     expect(onRequestQuickJump).toHaveBeenCalledWith('sit-abc');
+  });
+});
+
+// ── NADM-23: handoff fidelity assertions ─────────────────────────────────────
+
+describe('NewsEditDrawerLinkedSituation — NADM-23 handoff fidelity', () => {
+  it('thumb has dr-sit-thumb class (160px width via CSS)', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} linkedSituation={FIXTURE_SITUATION} />
+      </MemoryRouter>
+    );
+    const thumb = document.querySelector('.dr-sit-thumb');
+    expect(thumb).toBeInTheDocument();
+  });
+
+  it('title has dr-sit-title class (18px/600 via CSS)', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} linkedSituation={FIXTURE_SITUATION} />
+      </MemoryRouter>
+    );
+    const title = document.querySelector('.dr-sit-title');
+    expect(title).toBeInTheDocument();
+    expect(title!.tagName).toBe('H3');
+    expect(title!.textContent).toBe('At the Pharmacy');
+  });
+
+  it('status badge reflects linked_situation.status', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} linkedSituation={FIXTURE_SITUATION} />
+      </MemoryRouter>
+    );
+    // status=ready → renders i18n key 'situations.status.ready' (stub returns the key itself)
+    const badge = screen.getByTestId('dr-sit-status-badge');
+    expect(badge).toBeInTheDocument();
+    expect(badge.textContent).toContain('situations.status.ready');
+  });
+
+  it('status badge reflects non-ready status text verbatim', () => {
+    const item = makeItem();
+    const sit = { ...FIXTURE_SITUATION, status: 'draft' };
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} linkedSituation={sit} />
+      </MemoryRouter>
+    );
+    const badge = screen.getByTestId('dr-sit-status-badge');
+    expect(badge.textContent).toContain('draft');
+  });
+
+  it('level pills render for each level entry with news-level class', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} linkedSituation={FIXTURE_SITUATION} />
+      </MemoryRouter>
+    );
+    // FIXTURE_SITUATION.levels = ['B1', 'A2']
+    const pills = document.querySelectorAll('.news-level');
+    expect(pills).toHaveLength(2);
+    expect(pills[0].textContent).toBe('B1');
+    expect(pills[1].textContent).toBe('A2');
+  });
+
+  it('country flag matches linked_situation.country — GR → 🇬🇷', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} linkedSituation={FIXTURE_SITUATION} />
+      </MemoryRouter>
+    );
+    const flag = document.querySelector('.dr-sit-flag');
+    expect(flag).toBeInTheDocument();
+    expect(flag!.textContent).toBe('🇬🇷');
+  });
+
+  it('country flag — CY → 🇨🇾', () => {
+    const item = makeItem();
+    const sit = { ...FIXTURE_SITUATION, country: 'CY' };
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} linkedSituation={sit} />
+      </MemoryRouter>
+    );
+    const flag = document.querySelector('.dr-sit-flag');
+    expect(flag!.textContent).toBe('🇨🇾');
+  });
+
+  it('audio duration formatted as m:ss — 125s → 2:05', () => {
+    const item = makeItem();
+    const sit = { ...FIXTURE_SITUATION, audioDurationSeconds: 125 };
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} linkedSituation={sit} />
+      </MemoryRouter>
+    );
+    const meta = document.querySelector('.dr-sit-meta');
+    expect(meta!.textContent).toContain('2:05');
   });
 });
 

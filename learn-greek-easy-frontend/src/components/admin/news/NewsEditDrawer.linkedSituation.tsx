@@ -1,18 +1,46 @@
 import React from 'react';
 
-import { ArrowRight } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Kicker } from '@/components/ui/kicker';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { NewsItemResponse } from '@/services/adminAPI';
+
+// Country code → flag emoji lookup (ISO 3166-1 alpha-2 and common backend string values).
+const COUNTRY_FLAGS: Record<string, string> = {
+  GR: '🇬🇷',
+  gr: '🇬🇷',
+  greece: '🇬🇷',
+  CY: '🇨🇾',
+  cy: '🇨🇾',
+  cyprus: '🇨🇾',
+  ES: '🇪🇸',
+  es: '🇪🇸',
+  spain: '🇪🇸',
+};
+
+export function countryToFlag(country: string): string {
+  return COUNTRY_FLAGS[country] ?? '🌍';
+}
+
+function formatDurationMSS(seconds: number): string {
+  const totalSecs = Math.floor(seconds);
+  const mins = Math.floor(totalSecs / 60);
+  const secs = String(totalSecs % 60).padStart(2, '0');
+  return `${mins}:${secs}`;
+}
 
 // Future MVP+: this prop is wired but never non-null until backend ships the filter.
 export interface LinkedSituationSummary {
   id: string;
   titleEn: string;
   titleEl: string;
+  status: string;
+  levels: string[];
+  country: string;
   // counts and meta:
   roleCount: number;
   names: string;
@@ -76,9 +104,22 @@ export const NewsEditDrawerLinkedSituation: React.FC<Props> = ({
           data-testid="news-drawer-linked-situation-card"
         >
           <div className="dr-sit-thumb">
-            <span className="dr-sit-flag">🇨🇾</span>
+            <span className="dr-sit-flag">{countryToFlag(linkedSituation.country)}</span>
           </div>
           <div className="dr-sit-body">
+            {/* Status + level badges */}
+            <div className="dr-sit-badges">
+              <span className="dr-sit-status" data-testid="dr-sit-status-badge">
+                {linkedSituation.status === 'ready'
+                  ? t('situations.status.ready')
+                  : linkedSituation.status}
+              </span>
+              {linkedSituation.levels.map((level) => (
+                <Badge key={level} tone="violet" className="news-level">
+                  {level}
+                </Badge>
+              ))}
+            </div>
             <h3 className="dr-sit-title">{linkedSituation.titleEn}</h3>
             <p className="dr-sit-title-el" lang="el">
               {linkedSituation.titleEl}
@@ -86,10 +127,12 @@ export const NewsEditDrawerLinkedSituation: React.FC<Props> = ({
             <p className="dr-sit-meta">
               {linkedSituation.roleCount} roles · {linkedSituation.names} ·{' '}
               {linkedSituation.turnCount} turns · {linkedSituation.exerciseCount} exercises ·{' '}
-              {Math.round(linkedSituation.audioDurationSeconds)}s audio
+              <span className="dr-sit-audio">
+                <Play size={10} aria-hidden="true" />
+                {formatDurationMSS(linkedSituation.audioDurationSeconds)}
+              </span>
             </p>
           </div>
-          <ArrowRight className="dr-sit-go" />
         </div>
       )}
 
