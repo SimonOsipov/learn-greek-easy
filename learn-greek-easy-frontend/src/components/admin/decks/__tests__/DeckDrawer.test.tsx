@@ -407,7 +407,40 @@ describe('DeckDrawer', () => {
     expect(screen.queryByText('Premium')).not.toBeInTheDocument();
   });
 
-  // ── 11. Dirty-cancel → discard dialog; "Keep editing" preserves dirty state ──
+  // ── 11. Default footer on Words tab ─────────────────────────────────────────
+
+  it('shows default footer with 3 buttons on Words tab (not Settings)', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
+
+    renderDrawer('/admin?tab=decks&edit=deck-vocab-1');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    const footer = screen.getByTestId('deck-drawer-footer');
+    expect(footer).toBeInTheDocument();
+    expect(screen.getByText('All cards complete')).toBeInTheDocument();
+    expect(screen.getByText('Cancel')).toBeInTheDocument();
+    expect(screen.getByText('Save & close')).toBeInTheDocument();
+    expect(screen.getByText('Save changes')).toBeInTheDocument();
+  });
+
+  // ── 12. Footer hidden in detail view ───────────────────────────────────────
+
+  it('hides footer when ?item= is present (detail view)', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
+
+    renderDrawer('/admin?tab=decks&edit=deck-vocab-1&item=some-word-id');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('deck-drawer-footer')).not.toBeInTheDocument();
+  });
+
+  // ── 13. Dirty-cancel → discard dialog; "Keep editing" preserves dirty state ──
   // Regression guard for PM Decision #9: dirty-cancel must show discard dialog;
   // "Keep editing" must dismiss dialog without resetting the form.
 

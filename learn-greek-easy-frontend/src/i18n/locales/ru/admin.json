@@ -2089,7 +2089,10 @@
     "culture": {
       "editQuestionLabel": "Редактировать вопрос",
       "deleteQuestionLabel": "Удалить вопрос"
-    }
+    },
+    "allComplete": "Все карточки заполнены",
+    "saveAndClose": "Сохранить и закрыть",
+    "saveChanges": "Сохранить изменения"
   },
   "inbox": {
     "breadcrumb": {

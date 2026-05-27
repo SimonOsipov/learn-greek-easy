@@ -2145,7 +2145,10 @@
     "culture": {
       "editQuestionLabel": "Edit question",
       "deleteQuestionLabel": "Delete question"
-    }
+    },
+    "allComplete": "All cards complete",
+    "saveAndClose": "Save & close",
+    "saveChanges": "Save changes"
   },
   "inbox": {
     "breadcrumb": {
