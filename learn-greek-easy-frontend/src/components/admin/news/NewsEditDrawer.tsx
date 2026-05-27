@@ -161,7 +161,7 @@ export const NewsEditDrawer: React.FC = () => {
         data-testid="news-edit-drawer"
         title="Edit news article"
       >
-        <SidePanel.CloseButton onClick={requestClose} />
+        <SidePanel.CloseButton position="right" onClick={requestClose} />
         <SidePanel.Header>
           <div className="drawer-breadcrumb">{`News · ${countryFlag} ${countryLabel} · ${t('news.drawer.publishedOn', { date: item.publication_date })}`}</div>
           <h2 className="drawer-title">{titleInLang}</h2>

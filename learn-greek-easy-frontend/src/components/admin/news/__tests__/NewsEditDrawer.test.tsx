@@ -397,6 +397,18 @@ describe('NewsEditDrawer — deep link via URL', () => {
   });
 });
 
+describe('NewsEditDrawer — close button position', () => {
+  it('renders close button with drawer-close-right class', () => {
+    const item = makeItem();
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+    renderDrawer();
+    const closeBtn = document.querySelector('button[aria-label="Close"]');
+    expect(closeBtn).toBeInTheDocument();
+    expect(closeBtn).toHaveClass('drawer-close-right');
+  });
+});
+
 describe('NewsEditDrawer — country flags', () => {
   it('shows 🇨🇾 for cyprus', () => {
     const item = makeItem({ country: 'cyprus' });
