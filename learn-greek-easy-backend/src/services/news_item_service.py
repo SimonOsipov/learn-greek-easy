@@ -9,6 +9,7 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 import httpx
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import NewsItemNotFoundException
@@ -173,7 +174,7 @@ class NewsItemService:
         self.db.add(news_item)
         await self.db.flush()
 
-        return self._to_response(news_item, situation, description)
+        return self._to_response(news_item, situation, description, picture)
 
     async def get_by_id(self, news_item_id: UUID) -> NewsItemResponse:
         """Get a news item by ID.
@@ -190,7 +191,7 @@ class NewsItemService:
         row = await self.repo.get_by_id_with_joins(news_item_id)
         if row is None:
             raise NewsItemNotFoundException(news_item_id=str(news_item_id))
-        return self._to_response(row[0], row[1], row[2])
+        return self._to_response(row[0], row[1], row[2], row[3])
 
     async def get_list(
         self, *, page: int = 1, page_size: int = 20, country: NewsCountry | None = None
@@ -217,7 +218,7 @@ class NewsItemService:
             total=total,
             page=page,
             page_size=page_size,
-            items=[self._to_response(row[0], row[1], row[2]) for row in rows],
+            items=[self._to_response(row[0], row[1], row[2], row[3]) for row in rows],
             country_counts=country_counts,
             audio_count=audio_count,
             b1_audio_count=b1_audio_count,
@@ -237,16 +238,37 @@ class NewsItemService:
         if row is None:
             raise NewsItemNotFoundException(str(news_item_id))
 
-        news_item, situation, description = row
+        news_item, situation, description, _picture = row
 
         if data.source_image_url is not None:
             await self._replace_image(situation, str(data.source_image_url))
         self._patch_situation(situation, data)
         self._patch_description(description, data)
         self._patch_news_item(news_item, description, data)
+        await self._patch_picture(situation.id, data)
 
         await self.db.flush()
-        return self._to_response(news_item, situation, description)
+        # Re-fetch to pick up the updated picture row for the response.
+        updated_row = await self.repo.get_by_id_with_joins(news_item.id)
+        assert updated_row is not None
+        return self._to_response(updated_row[0], updated_row[1], updated_row[2], updated_row[3])
+
+    async def _patch_picture(self, situation_id: UUID, data: NewsItemUpdate) -> None:
+        """Apply alt_text / photo_credit updates to the linked SituationPicture (if any)."""
+        has_alt = "alt_text" in data.model_fields_set
+        has_credit = "photo_credit" in data.model_fields_set
+        if not (has_alt or has_credit):
+            return
+        result = await self.db.execute(
+            select(SituationPicture).where(SituationPicture.situation_id == situation_id)
+        )
+        picture = result.scalar_one_or_none()
+        if picture is None:
+            return
+        if has_alt:
+            picture.alt_text = data.alt_text
+        if has_credit:
+            picture.photo_credit = data.photo_credit
 
     async def _replace_image(self, situation: Situation, image_url: str) -> None:
         """Download a new image, upload to S3, and replace the existing one."""
@@ -347,7 +369,11 @@ class NewsItemService:
         return s3_key
 
     def _to_response(
-        self, news_item: NewsItem, situation: Situation, description: SituationDescription
+        self,
+        news_item: NewsItem,
+        situation: Situation,
+        description: SituationDescription,
+        picture: SituationPicture | None = None,
     ) -> NewsItemResponse:
         """Assemble NewsItemResponse from JOIN data."""
         image_url = self.s3_service.generate_presigned_url(situation.source_image_s3_key)
@@ -378,6 +404,8 @@ class NewsItemService:
             audio_a2_generated_at=None,
             audio_a2_duration_seconds=description.audio_a2_duration_seconds,
             audio_a2_file_size_bytes=None,
+            alt_text=picture.alt_text if picture else None,
+            photo_credit=picture.photo_credit if picture else None,
             created_at=news_item.created_at,
             updated_at=news_item.updated_at,
         )

@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import NewsCountry, NewsItem, Situation, SituationDescription
+from src.db.models import NewsCountry, NewsItem, Situation, SituationDescription, SituationPicture
 from src.repositories.base import BaseRepository
 
 
@@ -30,11 +30,12 @@ class NewsItemRepository(BaseRepository[NewsItem]):
     async def get_list(
         self, *, skip: int = 0, limit: int = 20, country: NewsCountry | None = None
     ) -> list[Row]:
-        """Get news items with situation/description via JOIN, ordered by publication_date DESC."""
+        """Get news items with situation/description/picture via JOIN, ordered by publication_date DESC."""
         query = (
-            select(NewsItem, Situation, SituationDescription)
+            select(NewsItem, Situation, SituationDescription, SituationPicture)
             .join(Situation, Situation.id == NewsItem.situation_id)
             .join(SituationDescription, SituationDescription.situation_id == Situation.id)
+            .outerjoin(SituationPicture, SituationPicture.situation_id == Situation.id)
         )
         if country is not None:
             query = query.where(SituationDescription.country == country)
@@ -161,11 +162,12 @@ class NewsItemRepository(BaseRepository[NewsItem]):
         return counts
 
     async def get_by_id_with_joins(self, news_item_id: UUID) -> Row | None:
-        """Fetch a single NewsItem with its Situation and SituationDescription via JOIN."""
+        """Fetch a single NewsItem with its Situation, SituationDescription, and SituationPicture via JOIN."""
         query = (
-            select(NewsItem, Situation, SituationDescription)
+            select(NewsItem, Situation, SituationDescription, SituationPicture)
             .join(Situation, Situation.id == NewsItem.situation_id)
             .join(SituationDescription, SituationDescription.situation_id == Situation.id)
+            .outerjoin(SituationPicture, SituationPicture.situation_id == Situation.id)
             .where(NewsItem.id == news_item_id)
         )
         result = await self.db.execute(query)

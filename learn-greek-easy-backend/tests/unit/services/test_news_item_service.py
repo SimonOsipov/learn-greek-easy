@@ -817,3 +817,60 @@ class TestSourceFieldMirroring:
         ).scalar_one()
 
         assert situation.source_title_ru == "Обновлённый русский заголовок"
+
+
+# =============================================================================
+# Test alt_text + photo_credit round-trip (NADM-07)
+# =============================================================================
+
+
+class TestAltTextPhotoCredit:
+    """Tests for alt_text / photo_credit round-trip through NewsItemUpdate."""
+
+    @pytest.mark.asyncio
+    async def test_update_alt_text_and_photo_credit_non_null(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item,
+    ):
+        """update() writes non-null alt_text + photo_credit; get_by_id reads them back."""
+        from src.schemas.news_item import NewsItemUpdate
+
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        update_data = NewsItemUpdate(
+            alt_text="A busy Greek street market",
+            photo_credit="AP Photo / Nikos Economopoulos",
+        )
+
+        await service.update(sample_news_item.id, update_data)
+        result = await service.get_by_id(sample_news_item.id)
+
+        assert result.alt_text == "A busy Greek street market"
+        assert result.photo_credit == "AP Photo / Nikos Economopoulos"
+
+    @pytest.mark.asyncio
+    async def test_update_alt_text_and_photo_credit_null(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item,
+    ):
+        """update() with explicit None leaves alt_text + photo_credit as None."""
+        from src.schemas.news_item import NewsItemUpdate
+
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        # First write non-null values...
+        await service.update(
+            sample_news_item.id,
+            NewsItemUpdate(alt_text="Initial alt", photo_credit="Initial credit"),
+        )
+        # ...then clear them.
+        await service.update(
+            sample_news_item.id,
+            NewsItemUpdate(alt_text=None, photo_credit=None),
+        )
+        result = await service.get_by_id(sample_news_item.id)
+
+        assert result.alt_text is None
+        assert result.photo_credit is None

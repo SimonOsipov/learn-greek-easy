@@ -63,6 +63,8 @@ class PictureUpdate(BaseModel):
     scene_el: Optional[str] = Field(default=None)
     scene_ru: Optional[str] = Field(default=None)
     style_en: Optional[str] = Field(default=None)
+    alt_text: Optional[str] = Field(default=None, max_length=280)
+    photo_credit: Optional[str] = Field(default=None, max_length=200)
 
     @model_validator(mode="after")
     def check_at_least_one_field(self) -> "PictureUpdate":
@@ -179,6 +181,8 @@ class PictureNested(BaseModel):
     scene_el: str | None = None
     scene_ru: str | None = None
     style_en: str | None = None
+    alt_text: str | None = None
+    photo_credit: str | None = None
     image_url: str | None = None
 
 

@@ -120,6 +120,12 @@ class NewsItemUpdate(BaseModel):
     source_image_url: Optional[HttpUrl] = Field(
         None, description="New image URL to download (replaces existing)"
     )
+    alt_text: Optional[str] = Field(
+        None, max_length=280, description="Alt text for the situation picture"
+    )
+    photo_credit: Optional[str] = Field(
+        None, max_length=200, description="Photo credit for the situation picture"
+    )
 
 
 class NewsItemResponse(BaseModel):
@@ -153,6 +159,10 @@ class NewsItemResponse(BaseModel):
 
     # Dedicated Greek identity title (NADM-06); None until backfill applied
     situation_title_el: Optional[str] = None
+
+    # Picture metadata (NADM-07)
+    alt_text: Optional[str] = None
+    photo_credit: Optional[str] = None
 
     # A2 text content
     title_el_a2: Optional[str] = None

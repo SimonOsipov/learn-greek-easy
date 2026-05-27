@@ -2751,6 +2751,8 @@ class SituationPicture(Base, TimestampMixin):
     scene_el: Mapped[str | None] = mapped_column(Text, nullable=True)
     scene_ru: Mapped[str | None] = mapped_column(Text, nullable=True)
     style_en: Mapped[str | None] = mapped_column(Text, nullable=True)
+    alt_text: Mapped[str | None] = mapped_column(String(280), nullable=True)
+    photo_credit: Mapped[str | None] = mapped_column(String(200), nullable=True)
     image_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[PictureStatus] = mapped_column(
         SAEnum(

@@ -4558,7 +4558,7 @@ async def update_situation_picture(
     if picture is None:
         raise HTTPException(status_code=404, detail="Picture not found")
 
-    PATCHABLE = {"scene_el", "scene_en", "scene_ru", "style_en"}
+    PATCHABLE = {"scene_el", "scene_en", "scene_ru", "style_en", "alt_text", "photo_credit"}
     fields_set = data.model_fields_set & PATCHABLE
     update_data = data.model_dump(include=fields_set, exclude_unset=True)
 
