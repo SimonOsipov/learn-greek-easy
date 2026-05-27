@@ -41,8 +41,16 @@ export const NewsTab: React.FC<NewsTabProps> = ({ createOpen, onCreateOpenChange
   const { t } = useTranslation('admin');
 
   // ── Store ─────────────────────────────────────────────────────────────────
-  const { newsItems, total, audioCount, fetchNewsItems, openDrawer, closeDrawer } =
-    useAdminNewsStore();
+  const {
+    newsItems,
+    total,
+    audioCount,
+    b1AudioCount,
+    b1PendingRegenCount,
+    fetchNewsItems,
+    openDrawer,
+    closeDrawer,
+  } = useAdminNewsStore();
 
   // ── Fetch on mount ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -90,13 +98,19 @@ export const NewsTab: React.FC<NewsTabProps> = ({ createOpen, onCreateOpenChange
           bars={[10, 12, 11, 12, 13, 12, 12, 13, 12]}
           barsTestId="stat-bars-audio"
         />
-        {/* Card #3 — B1 coverage — NADM-13 scope, do not touch */}
+        {/* Card #3 — B1 coverage */}
         <StatCard
           title={t('news.stats.b1Coverage')}
-          n="—"
+          n={b1AudioCount}
+          sub={
+            <>
+              <b>{b1PendingRegenCount}</b> awaiting regen · {b1AudioCount}/{total}
+            </>
+          }
           icon={<RefreshCcw />}
           tone="amber"
-          footerLabel={t('comingSoon')}
+          bars={[8, 9, 10, 11, 10, 11, 12, 12, 11]}
+          barsTestId="stat-bars-b1"
         />
         {/* Card #4 — Country (Cyprus only for now)
             TODO(NADM-multi-country): replace literal "CY" and flat bars with

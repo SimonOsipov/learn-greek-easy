@@ -34,6 +34,8 @@ interface AdminNewsState {
   total: number;
   totalPages: number;
   audioCount: number;
+  b1AudioCount: number;
+  b1PendingRegenCount: number;
 
   // Loading states
   isLoading: boolean;
@@ -83,6 +85,8 @@ export const useAdminNewsStore = create<AdminNewsState>()(
       total: 0,
       totalPages: 0,
       audioCount: 0,
+      b1AudioCount: 0,
+      b1PendingRegenCount: 0,
       isLoading: false,
       isCreating: false,
       isUpdating: false,
@@ -113,6 +117,8 @@ export const useAdminNewsStore = create<AdminNewsState>()(
             total: response.total,
             totalPages: Math.ceil(response.total / response.page_size),
             audioCount: response.audio_count,
+            b1AudioCount: response.b1_audio_count,
+            b1PendingRegenCount: response.b1_pending_regen_count,
             isLoading: false,
             selectedItem: state.selectedItem
               ? (response.items.find((item) => item.id === state.selectedItem?.id) ?? null)

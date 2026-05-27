@@ -53,6 +53,8 @@ const storeState = {
   totalPages: 1,
   isLoading: false,
   audioCount: 0,
+  b1AudioCount: 0,
+  b1PendingRegenCount: 0,
   countryFilter: 'all' as string,
   levelFilter: 'all' as string,
   searchQuery: '',
@@ -132,6 +134,8 @@ beforeEach(async () => {
   storeState.newsItems = [];
   storeState.total = 0;
   storeState.audioCount = 0;
+  storeState.b1AudioCount = 0;
+  storeState.b1PendingRegenCount = 0;
   storeState.drawerItemId = null;
   await loadNewsTab();
 });
@@ -198,10 +202,29 @@ describe('NewsTab — basic rendering', () => {
     expect(screen.getByText('news.stats.countrySub')).toBeInTheDocument();
   });
 
-  it('card #3 (B1) does not have a sparkline', () => {
+  it('card #3 (B1) renders real b1_audio_count value (not "—")', () => {
+    storeState.b1AudioCount = 63;
+    storeState.b1PendingRegenCount = 4;
+    storeState.total = 67;
     renderWithRouter();
-    // B1 card has no bars — stat-bars-b1 testid should not exist
-    expect(screen.queryByTestId('stat-bars-b1')).not.toBeInTheDocument();
+    expect(screen.getByText('63')).toBeInTheDocument();
+  });
+
+  it('card #3 (B1) renders a <b> element in sub wrapping the awaiting regen count', () => {
+    storeState.b1AudioCount = 63;
+    storeState.b1PendingRegenCount = 4;
+    storeState.total = 67;
+    renderWithRouter();
+    const boldEls = document.querySelectorAll('.stat-sub b');
+    const b1Bold = Array.from(boldEls).find((el) => el.textContent === '4');
+    expect(b1Bold).toBeTruthy();
+  });
+
+  it('card #3 (B1) renders sparkline with 9 bars', () => {
+    renderWithRouter();
+    const barsEl = screen.getByTestId('stat-bars-b1');
+    expect(barsEl).toBeInTheDocument();
+    expect(barsEl.querySelectorAll('span')).toHaveLength(9);
   });
 
   it('renders NewsToolbar (via search input sentinel)', () => {

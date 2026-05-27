@@ -595,6 +595,10 @@ export interface NewsItemListResponse {
   items: NewsItemResponse[];
   country_counts: { cyprus: number; greece: number; world: number };
   audio_count: number;
+  /** Number of items with B1-level audio generated (NADM-05) */
+  b1_audio_count: number;
+  /** Number of B1 items queued for audio re-generation (NADM-05) */
+  b1_pending_regen_count: number;
 }
 
 /**
