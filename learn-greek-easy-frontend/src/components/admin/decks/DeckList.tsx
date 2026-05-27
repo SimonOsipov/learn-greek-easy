@@ -8,6 +8,14 @@
 import { useTranslation } from 'react-i18next';
 
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import type { UnifiedDeckItem } from '@/services/adminAPI';
 
 import { DeckRow } from './DeckRow';
@@ -20,41 +28,85 @@ export interface DeckListProps {
   onDelete: (deck: UnifiedDeckItem) => void;
 }
 
-function SkeletonList() {
-  const { t } = useTranslation('admin');
+function TableSkeleton() {
   return (
-    <div className="space-y-2" aria-label={t('decks.loadingLabel')}>
+    <>
       {[1, 2, 3, 4, 5].map((i) => (
-        <Skeleton key={i} className="h-14 w-full" />
+        <TableRow key={i}>
+          <TableCell>
+            <Skeleton className="h-4 w-48" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-4 w-16" />
+          </TableCell>
+          <TableCell className="hidden sm:table-cell">
+            <Skeleton className="h-4 w-24" />
+          </TableCell>
+          <TableCell className="hidden md:table-cell">
+            <Skeleton className="h-4 w-20" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-4 w-16" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="ml-auto h-8 w-16" />
+          </TableCell>
+        </TableRow>
       ))}
-    </div>
+    </>
   );
 }
 
-function EmptyDecks() {
-  return <p className="py-4 text-center text-muted-foreground">No decks found.</p>;
+function EmptyRow() {
+  return (
+    <TableRow>
+      <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+        No decks found.
+      </TableCell>
+    </TableRow>
+  );
 }
 
 export function DeckList({ decks, isLoading, locale, onOpenDrawer, onDelete }: DeckListProps) {
-  if (isLoading) {
-    return <SkeletonList />;
-  }
-
-  if (decks.length === 0) {
-    return <EmptyDecks />;
-  }
+  const { t } = useTranslation('admin');
 
   return (
-    <div className="space-y-2" data-testid="deck-list">
-      {decks.map((deck) => (
-        <DeckRow
-          key={deck.id}
-          deck={deck}
-          locale={locale}
-          onOpenDrawer={onOpenDrawer}
-          onDelete={onDelete}
-        />
-      ))}
+    <div
+      className="rounded-md border"
+      data-testid={isLoading ? undefined : 'deck-list'}
+      aria-label={isLoading ? t('decks.loadingLabel') : undefined}
+    >
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[35%]">{t('decks.table.deck')}</TableHead>
+            <TableHead className="w-[10%]">{t('decks.table.type')}</TableHead>
+            <TableHead className="hidden w-[15%] sm:table-cell">{t('decks.table.owner')}</TableHead>
+            <TableHead className="hidden w-[15%] md:table-cell">
+              {t('decks.table.lastEdit')}
+            </TableHead>
+            <TableHead className="w-[10%]">{t('decks.table.cards')}</TableHead>
+            <TableHead className="w-[15%] text-right"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {isLoading ? (
+            <TableSkeleton />
+          ) : decks.length === 0 ? (
+            <EmptyRow />
+          ) : (
+            decks.map((deck) => (
+              <DeckRow
+                key={deck.id}
+                deck={deck}
+                locale={locale}
+                onOpenDrawer={onOpenDrawer}
+                onDelete={onDelete}
+              />
+            ))
+          )}
+        </TableBody>
+      </Table>
     </div>
   );
 }

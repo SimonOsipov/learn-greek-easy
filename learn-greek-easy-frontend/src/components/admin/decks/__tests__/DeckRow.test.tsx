@@ -1,6 +1,6 @@
 // src/components/admin/decks/__tests__/DeckRow.test.tsx
 //
-// Vitest + RTL unit tests for DeckRow (ADMIN2-09 / DKDR-04).
+// Vitest + RTL unit tests for DeckRow (ADMIN2-09 / DKDR-04 / DADM-05).
 
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -25,21 +25,32 @@ const makeDeck = (overrides: Partial<UnifiedDeckItem> = {}): UnifiedDeckItem => 
   ...overrides,
 });
 
+/** Wrap DeckRow in a valid table context since <tr> requires <tbody> parent. */
+function renderRow(props: React.ComponentProps<typeof DeckRow>) {
+  return render(
+    <table>
+      <tbody>
+        <DeckRow {...props} />
+      </tbody>
+    </table>
+  );
+}
+
 describe('DeckRow', () => {
   // ── testid presence ──────────────────────────────────────────────────────
 
   it('renders data-testid="deck-row" on the row element', () => {
-    render(<DeckRow deck={makeDeck()} locale="en" onOpenDrawer={vi.fn()} onDelete={vi.fn()} />);
+    renderRow({ deck: makeDeck(), locale: 'en', onOpenDrawer: vi.fn(), onDelete: vi.fn() });
     expect(screen.getByTestId('deck-row')).toBeInTheDocument();
   });
 
   it('renders data-testid="deck-row-mark" for the DeckMark slot', () => {
-    render(<DeckRow deck={makeDeck()} locale="en" onOpenDrawer={vi.fn()} onDelete={vi.fn()} />);
+    renderRow({ deck: makeDeck(), locale: 'en', onOpenDrawer: vi.fn(), onDelete: vi.fn() });
     expect(screen.getByTestId('deck-row-mark')).toBeInTheDocument();
   });
 
   it('renders data-testid="deck-row-actions" for the hover actions group', () => {
-    render(<DeckRow deck={makeDeck()} locale="en" onOpenDrawer={vi.fn()} onDelete={vi.fn()} />);
+    renderRow({ deck: makeDeck(), locale: 'en', onOpenDrawer: vi.fn(), onDelete: vi.fn() });
     expect(screen.getByTestId('deck-row-actions')).toBeInTheDocument();
   });
 
@@ -48,7 +59,7 @@ describe('DeckRow', () => {
   it('row body click calls onOpenDrawer(deck)', () => {
     const deck = makeDeck();
     const onOpenDrawer = vi.fn();
-    render(<DeckRow deck={deck} locale="en" onOpenDrawer={onOpenDrawer} onDelete={vi.fn()} />);
+    renderRow({ deck, locale: 'en', onOpenDrawer, onDelete: vi.fn() });
     fireEvent.click(screen.getByTestId('deck-row'));
     expect(onOpenDrawer).toHaveBeenCalledTimes(1);
     expect(onOpenDrawer).toHaveBeenCalledWith(deck);
@@ -57,7 +68,7 @@ describe('DeckRow', () => {
   it('pencil click calls onOpenDrawer(deck) and does NOT trigger extra calls from row', () => {
     const deck = makeDeck();
     const onOpenDrawer = vi.fn();
-    render(<DeckRow deck={deck} locale="en" onOpenDrawer={onOpenDrawer} onDelete={vi.fn()} />);
+    renderRow({ deck, locale: 'en', onOpenDrawer, onDelete: vi.fn() });
     const pencilBtn = screen.getByRole('button', { name: /edit deck/i });
     fireEvent.click(pencilBtn);
     // stopPropagation prevents the row onClick from firing a second time
@@ -69,7 +80,7 @@ describe('DeckRow', () => {
     const deck = makeDeck();
     const onOpenDrawer = vi.fn();
     const onDelete = vi.fn();
-    render(<DeckRow deck={deck} locale="en" onOpenDrawer={onOpenDrawer} onDelete={onDelete} />);
+    renderRow({ deck, locale: 'en', onOpenDrawer, onDelete });
     const trashBtn = screen.getByRole('button', { name: /delete deck/i });
     fireEvent.click(trashBtn);
     expect(onDelete).toHaveBeenCalledTimes(1);
@@ -80,38 +91,32 @@ describe('DeckRow', () => {
   // ── owner label ─────────────────────────────────────────────────────────
 
   it('displays "System" when is_system_deck === true', () => {
-    render(
-      <DeckRow
-        deck={makeDeck({ is_system_deck: true, owner_name: 'Someone' })}
-        locale="en"
-        onOpenDrawer={vi.fn()}
-        onDelete={vi.fn()}
-      />
-    );
+    renderRow({
+      deck: makeDeck({ is_system_deck: true, owner_name: 'Someone' }),
+      locale: 'en',
+      onOpenDrawer: vi.fn(),
+      onDelete: vi.fn(),
+    });
     expect(screen.getByText('System')).toBeInTheDocument();
   });
 
   it('displays owner_name when is_system_deck is false', () => {
-    render(
-      <DeckRow
-        deck={makeDeck({ is_system_deck: false, owner_name: 'Bob' })}
-        locale="en"
-        onOpenDrawer={vi.fn()}
-        onDelete={vi.fn()}
-      />
-    );
+    renderRow({
+      deck: makeDeck({ is_system_deck: false, owner_name: 'Bob' }),
+      locale: 'en',
+      onOpenDrawer: vi.fn(),
+      onDelete: vi.fn(),
+    });
     expect(screen.getByText('Bob')).toBeInTheDocument();
   });
 
   it('displays "—" when owner_name is null and not a system deck', () => {
-    render(
-      <DeckRow
-        deck={makeDeck({ is_system_deck: false, owner_name: null })}
-        locale="en"
-        onOpenDrawer={vi.fn()}
-        onDelete={vi.fn()}
-      />
-    );
+    renderRow({
+      deck: makeDeck({ is_system_deck: false, owner_name: null }),
+      locale: 'en',
+      onOpenDrawer: vi.fn(),
+      onDelete: vi.fn(),
+    });
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 });

@@ -2129,6 +2129,13 @@
     "loadingLabel": "Loading decks",
     "editLabel": "Edit deck",
     "deleteLabel": "Delete deck",
+    "table": {
+      "deck": "Deck",
+      "type": "Type",
+      "owner": "Owner",
+      "lastEdit": "Last edit",
+      "cards": "Cards"
+    },
     "vocab": {
       "editWordLabel": "Edit word",
       "deleteWordLabel": "Delete word"

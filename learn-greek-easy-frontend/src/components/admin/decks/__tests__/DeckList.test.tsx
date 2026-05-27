@@ -1,6 +1,6 @@
 // src/components/admin/decks/__tests__/DeckList.test.tsx
 //
-// Vitest + RTL unit tests for DeckList (ADMIN2-09 / DKDR-04).
+// Vitest + RTL unit tests for DeckList (ADMIN2-09 / DKDR-04 / DADM-05).
 
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -44,11 +44,17 @@ describe('DeckList', () => {
     expect(screen.getByTestId('deck-list')).toBeInTheDocument();
   });
 
+  it('renders 6 table header columns', () => {
+    render(<DeckList decks={[makeDeck('x')]} isLoading={false} {...defaultProps} />);
+    const headers = screen.getAllByRole('columnheader');
+    expect(headers).toHaveLength(6);
+  });
+
   it('renders empty state when decks is empty and not loading', () => {
     render(<DeckList decks={[]} isLoading={false} {...defaultProps} />);
     // No deck-rows present
     expect(screen.queryAllByTestId('deck-row')).toHaveLength(0);
-    // Some text indicating no decks
+    // Some text indicating no decks (inside a td colSpan={6})
     expect(screen.getByText(/no decks found/i)).toBeInTheDocument();
   });
 
@@ -56,11 +62,11 @@ describe('DeckList', () => {
     render(<DeckList decks={[]} isLoading={true} {...defaultProps} />);
     // No actual deck rows when loading
     expect(screen.queryAllByTestId('deck-row')).toHaveLength(0);
-    // Skeleton container has aria-label
+    // Outer wrapper has aria-label when loading
     expect(screen.getByLabelText(/loading decks/i)).toBeInTheDocument();
   });
 
-  it('does not render deck-list container when isLoading', () => {
+  it('does not render deck-list testid when isLoading', () => {
     render(<DeckList decks={[makeDeck('y')]} isLoading={true} {...defaultProps} />);
     expect(screen.queryByTestId('deck-list')).not.toBeInTheDocument();
   });
