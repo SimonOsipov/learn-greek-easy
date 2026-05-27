@@ -20,7 +20,7 @@ from pydantic import (
     model_validator,
 )
 
-from src.db.models import NewsCountry
+from src.db.models import NewsCountry, NewsItemStatus
 from src.schemas.exercise_payload import MultilingualField, SelectCorrectAnswerPayload
 
 
@@ -151,6 +151,11 @@ class NewsItemUpdate(BaseModel):
     photo_credit: Optional[str] = Field(
         None, max_length=200, description="Photo credit for the situation picture"
     )
+    status: Optional[NewsItemStatus] = Field(
+        None,
+        description="Publication status: draft (hidden from learners) or published (visible). "
+        "Transition from draft→published requires publication_date to be set.",
+    )
 
 
 class NewsItemResponse(BaseModel):
@@ -205,6 +210,9 @@ class NewsItemResponse(BaseModel):
         None, description="Size of A2 audio file in bytes"
     )
 
+    # Publication status (NADM-25)
+    status: NewsItemStatus
+
     # Linked situation summary — non-optional (every NewsItem has a Situation via NOT NULL FK).
     # On the detail endpoint this is fully populated (role/turn/exercise/audio aggregates).
     # On the list endpoint the same field is present with zero aggregates (dialog not loaded).
@@ -258,6 +266,7 @@ __all__ = [
     "ExerciseDraft",
     "LinkedSituationSummary",
     "NewsItemCreate",
+    "NewsItemStatus",
     "NewsItemUpdate",
     "NewsItemResponse",
     "NewsItemListResponse",

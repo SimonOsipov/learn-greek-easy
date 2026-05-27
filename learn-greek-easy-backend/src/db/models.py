@@ -263,6 +263,13 @@ class SituationStatus(str, enum.Enum):
     READY = "ready"
 
 
+class NewsItemStatus(str, enum.Enum):
+    """Publication status of a news item (NADM-25 / Path A)."""
+
+    DRAFT = "draft"
+    PUBLISHED = "published"
+
+
 class DescriptionStatus(str, enum.Enum):
     """Status of a situation description."""
 
@@ -2185,6 +2192,19 @@ class NewsItem(Base, TimestampMixin):
         comment="URL of the original source article",
     )
 
+    # Publication status (NADM-25)
+    status: Mapped[NewsItemStatus] = mapped_column(
+        SAEnum(
+            NewsItemStatus,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="newsitemstatus",
+            create_type=False,
+        ),
+        nullable=False,
+        server_default=text("'draft'"),
+        comment="Publication status: draft (hidden) or published (visible)",
+    )
+
     # Link to Situation (required)
     situation_id: Mapped[UUID] = mapped_column(
         ForeignKey("situations.id", ondelete="CASCADE"),
@@ -2196,7 +2216,7 @@ class NewsItem(Base, TimestampMixin):
     situation: Mapped["Situation"] = relationship(lazy="raise")
 
     def __repr__(self) -> str:
-        return f"<NewsItem(id={self.id}, situation_id={self.situation_id}, publication_date={self.publication_date})>"
+        return f"<NewsItem(id={self.id}, situation_id={self.situation_id}, publication_date={self.publication_date}, status={self.status})>"
 
 
 # ============================================================================

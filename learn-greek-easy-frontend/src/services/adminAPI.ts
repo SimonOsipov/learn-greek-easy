@@ -554,6 +554,8 @@ export interface NewsItemUpdate {
   country?: NewsCountry;
   scenario_el_a2?: string | null;
   text_el_a2?: string | null;
+  /** Publication status (NADM-25): draft = hidden, published = visible to learners */
+  status?: 'draft' | 'published';
 }
 
 /**
@@ -605,6 +607,8 @@ export interface NewsItemResponse {
   has_a2_content: boolean;
   alt_text: string | null;
   photo_credit: string | null;
+  /** Publication status (NADM-25): draft = hidden, published = visible to learners */
+  status: 'draft' | 'published';
   linked_situation: LinkedSituationSummary | null;
 }
 

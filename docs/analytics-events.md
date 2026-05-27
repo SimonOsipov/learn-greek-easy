@@ -227,6 +227,20 @@ Fired after a **successful** AI exercise generation for a given source. Wired no
 
 ---
 
+## Admin News Events (ADMIN2-27 / NADM-25)
+
+> **Note:** These admin-only events are an exception to the "DO NOT create events for admin panel actions" rule. They are scoped to the `admin_news_` prefix and track editor publish actions to measure news content throughput. Learner-facing news events use the bare `news_*` namespace.
+
+### `admin_news_published`
+
+Fired after a **successful** Mark as Published / Publish changes action on a news article.
+
+**Properties:**
+
+- `news_item_id` (string) — UUID of the news item.
+
+---
+
 ## Admin Exercise Events (EXR-73 + EXR-81)
 
 > **Note:** These admin-only events are an exception to the "DO NOT create events for admin panel actions" rule. They are scoped to the `admin_exercise_` prefix and are used to track admin review workflows, particularly the cost-bearing regenerate action.

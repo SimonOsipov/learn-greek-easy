@@ -572,7 +572,13 @@
       "allChecksPassed": "All checks passed",
       "updatedRelative": "Updated {{relative}}",
       "published": "Published",
+      "publishedPill": "Published",
+      "draftPill": "Draft — not visible",
       "publishedOn": "Published {{date}}",
+      "publishCta": "Mark as Published",
+      "publishChangesCta": "Publish changes",
+      "saveFirst": "Save changes first",
+      "publishGuardFailed": "Cannot publish without a publication date",
       "linkedSituationLabel": "Linked situation",
       "dirty": {
         "title": "Unsaved changes",

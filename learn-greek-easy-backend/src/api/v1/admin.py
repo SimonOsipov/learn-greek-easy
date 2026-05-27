@@ -1331,6 +1331,7 @@ async def create_news_item(
         200: {"description": "News item updated successfully"},
         400: {"description": "Invalid request (image download failed, etc.)"},
         404: {"description": "News item not found"},
+        409: {"description": "Publish guard violation (publication_date required)"},
     },
 )
 async def update_news_item(

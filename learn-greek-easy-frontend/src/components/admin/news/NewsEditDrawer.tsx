@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { format, formatDistanceToNow, parseISO } from 'date-fns';
-import { Check, Wand2 } from 'lucide-react';
+import { Check, Pencil, Wand2 } from 'lucide-react';
 import { FormProvider, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -13,12 +13,14 @@ import { SidePanel } from '@/components/ui/side-panel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
 import { useAdminTabNav } from '@/hooks/useAdminTabNav';
+import { track } from '@/lib/analytics';
 import {
   adminAPI,
   type LinkedSituationSummary,
   type NewsItemResponse,
   type NewsItemUpdate,
 } from '@/services/adminAPI';
+import { APIRequestError } from '@/services/api';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
 
 import { NewsEditDrawerAudio } from './NewsEditDrawer.audio';
@@ -55,6 +57,7 @@ export const NewsEditDrawer: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<NewsDrawerTab>('translations');
   const [dirtyDialogOpen, setDirtyDialogOpen] = useState<null | 'close' | 'cancel'>(null);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [pendingQuickJumpSituationId, setPendingQuickJumpSituationId] = useState<string | null>(
     null
   );
@@ -157,6 +160,31 @@ export const NewsEditDrawer: React.FC = () => {
     [form.formState.isDirty, performQuickJump]
   );
 
+  const handlePublish = useCallback(async () => {
+    if (!item) return;
+    setIsPublishing(true);
+    try {
+      const targetStatus = item.status === 'draft' ? 'published' : 'published';
+      await adminAPI.updateNewsItem(item.id, { status: targetStatus });
+      track('admin_news_published', { news_item_id: item.id });
+      toast({ title: t('news.edit.success') });
+      await useAdminNewsStore.getState().fetchNewsItems();
+      closeAndClearUrl();
+    } catch (e) {
+      if (e instanceof APIRequestError && e.status === 409) {
+        toast({
+          title: t('news.drawer.publishGuardFailed'),
+          variant: 'destructive',
+        });
+      } else {
+        const msg = e instanceof Error ? e.message : 'Unknown error';
+        toast({ title: t('news.edit.error'), description: msg, variant: 'destructive' });
+      }
+    } finally {
+      setIsPublishing(false);
+    }
+  }, [item, t, closeAndClearUrl]);
+
   if (!item) return null;
 
   const titleInLang = pickTitle(item, i18n.language);
@@ -180,7 +208,17 @@ export const NewsEditDrawer: React.FC = () => {
           <div className="drawer-breadcrumb">{`News · ${countryFlag} ${countryLabel} · ${t('news.drawer.publishedOn', { date: item.publication_date ? format(parseISO(item.publication_date), 'dd MMM yyyy') : '' })}`}</div>
           <h2 className="drawer-title">{titleInLang}</h2>
           <div className="drawer-meta">
-            <Badge tone="green">{t('news.drawer.published')}</Badge>
+            {item.status === 'draft' ? (
+              <Badge tone="amber" data-testid="news-drawer-status-pill">
+                <Pencil className="mr-1 h-3 w-3" />
+                {t('news.drawer.draftPill')}
+              </Badge>
+            ) : (
+              <Badge tone="green" data-testid="news-drawer-status-pill">
+                <Check className="mr-1 h-3 w-3" />
+                {t('news.drawer.publishedPill')}
+              </Badge>
+            )}
             {item.description_el ? <Badge tone="violet">B2</Badge> : null}
             {item.description_el_a2 ? <Badge tone="violet">A2</Badge> : null}
             {item.linked_situation !== null && (
@@ -266,6 +304,28 @@ export const NewsEditDrawer: React.FC = () => {
               >
                 {form.formState.isSubmitting ? t('news.drawer.saving') : t('news.drawer.save')}
               </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      variant="default"
+                      onClick={() => void handlePublish()}
+                      disabled={
+                        isPublishing || form.formState.isDirty || form.formState.isSubmitting
+                      }
+                      data-testid="news-drawer-publish"
+                    >
+                      <Check className="mr-2 h-4 w-4" />
+                      {item.status === 'draft'
+                        ? t('news.drawer.publishCta')
+                        : t('news.drawer.publishChangesCta')}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {form.formState.isDirty && (
+                  <TooltipContent>{t('news.drawer.saveFirst')}</TooltipContent>
+                )}
+              </Tooltip>
             </div>
           </div>
         </SidePanel.Footer>

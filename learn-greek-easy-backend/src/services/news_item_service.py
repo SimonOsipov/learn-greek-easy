@@ -9,6 +9,8 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 import httpx
+from fastapi import HTTPException
+from fastapi import status as http_status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +27,7 @@ from src.db.models import (
     ListeningDialog,
     NewsCountry,
     NewsItem,
+    NewsItemStatus,
     PictureStatus,
     Situation,
     SituationDescription,
@@ -247,6 +250,17 @@ class NewsItemService:
 
         news_item, situation, description, _picture = row
 
+        # Publish guard: draft→published requires publication_date to be set.
+        if (
+            data.status == NewsItemStatus.PUBLISHED
+            and news_item.status == NewsItemStatus.DRAFT
+            and news_item.publication_date is None
+        ):
+            raise HTTPException(
+                status_code=http_status.HTTP_409_CONFLICT,
+                detail="Cannot publish without a publication_date",
+            )
+
         if data.source_image_url is not None:
             await self._replace_image(situation, str(data.source_image_url))
         self._patch_situation(situation, data)
@@ -319,13 +333,15 @@ class NewsItemService:
     def _patch_news_item(
         news_item: NewsItem, description: SituationDescription, data: NewsItemUpdate
     ) -> None:
-        """Apply URL and date field updates to a NewsItem (and linked description)."""
+        """Apply URL, date, and status field updates to a NewsItem (and linked description)."""
         if data.original_article_url is not None:
             url_str = str(data.original_article_url)
             description.source_url = url_str
             news_item.original_article_url = url_str
         if data.publication_date is not None:
             news_item.publication_date = data.publication_date
+        if data.status is not None:
+            news_item.status = data.status
 
     async def delete(self, news_item_id: UUID) -> None:
         """Delete a news item by ID.
@@ -498,6 +514,7 @@ class NewsItemService:
             audio_a2_file_size_bytes=None,
             alt_text=picture.alt_text if picture else None,
             photo_credit=picture.photo_credit if picture else None,
+            status=news_item.status,
             linked_situation=linked_situation,
             created_at=news_item.created_at,
             updated_at=news_item.updated_at,

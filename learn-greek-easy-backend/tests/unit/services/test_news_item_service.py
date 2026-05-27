@@ -13,15 +13,17 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import NewsItemNotFoundException
 from src.db.models import ExerciseStatus, ExerciseType, NewsCountry
 from src.db.models import NewsItem as NewsItemModel
+from src.db.models import NewsItemStatus
 from src.db.models import Situation as SituationModel
 from src.db.models import SituationStatus
-from src.schemas.news_item import LinkedSituationSummary, NewsItemCreate
+from src.schemas.news_item import LinkedSituationSummary, NewsItemCreate, NewsItemUpdate
 from src.services.news_item_service import NewsItemService
 from tests.factories.news import NewsItemFactory
 
@@ -1101,3 +1103,88 @@ class TestGetByIdLinkedSituation:
         assert linked.turn_count == 0
         assert linked.exercise_count == 0
         assert linked.audio_seconds == 0.0
+
+
+# =============================================================================
+# NADM-25: NewsItem publish status tests
+# =============================================================================
+
+
+class TestNewsItemStatusFactory:
+    """Tests for NewsItemFactory default status."""
+
+    @pytest.mark.integration
+    async def test_factory_default_status_is_draft(self, db_session: AsyncSession):
+        """NewsItemFactory creates items with DRAFT status by default."""
+        news_item = await NewsItemFactory.create(session=db_session)
+        assert news_item.status == NewsItemStatus.DRAFT
+
+    @pytest.mark.integration
+    async def test_factory_published_trait(self, db_session: AsyncSession):
+        """NewsItemFactory.published trait sets status to PUBLISHED."""
+        news_item = await NewsItemFactory.create(session=db_session, published=True)
+        assert news_item.status == NewsItemStatus.PUBLISHED
+
+
+class TestNewsItemPublishGuard:
+    """Tests for publish guard: draft→published requires publication_date."""
+
+    @pytest.mark.integration
+    async def test_publish_guard_raises_409_when_no_publication_date(
+        self, db_session: AsyncSession, mock_s3_service
+    ):
+        """Attempting to publish a draft without publication_date raises 409."""
+        # Create a news item with a publication_date (factory sets one), then manually
+        # clear it to simulate missing date.
+        news_item = await NewsItemFactory.create(session=db_session)
+        # Clear publication_date via direct ORM update to simulate missing date
+        news_item.publication_date = None  # type: ignore[assignment]
+        await db_session.flush()
+
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        with pytest.raises(HTTPException) as exc_info:
+            await service.update(
+                news_item.id,
+                NewsItemUpdate(status=NewsItemStatus.PUBLISHED),
+            )
+        assert exc_info.value.status_code == 409
+        assert "publication_date" in exc_info.value.detail
+
+    @pytest.mark.integration
+    async def test_publish_happy_path_draft_to_published(
+        self, db_session: AsyncSession, mock_s3_service
+    ):
+        """Draft news item with publication_date can be published successfully."""
+        news_item = await NewsItemFactory.create(session=db_session)
+        assert news_item.publication_date is not None
+        assert news_item.status == NewsItemStatus.DRAFT
+
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        result = await service.update(
+            news_item.id,
+            NewsItemUpdate(status=NewsItemStatus.PUBLISHED),
+        )
+        assert result.status == NewsItemStatus.PUBLISHED
+
+    @pytest.mark.integration
+    async def test_unpublish_published_to_draft_no_guard(
+        self, db_session: AsyncSession, mock_s3_service
+    ):
+        """Published news item can be set back to draft without any guard."""
+        news_item = await NewsItemFactory.create(session=db_session, published=True)
+        assert news_item.status == NewsItemStatus.PUBLISHED
+
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        result = await service.update(
+            news_item.id,
+            NewsItemUpdate(status=NewsItemStatus.DRAFT),
+        )
+        assert result.status == NewsItemStatus.DRAFT
+
+    @pytest.mark.integration
+    async def test_response_includes_status_field(self, db_session: AsyncSession, mock_s3_service):
+        """NewsItemResponse always includes the status field."""
+        news_item = await NewsItemFactory.create(session=db_session)
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        result = await service.get_by_id(news_item.id)
+        assert result.status == NewsItemStatus.DRAFT
