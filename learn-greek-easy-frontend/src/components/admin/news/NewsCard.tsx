@@ -10,6 +10,8 @@ import { useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import type { NewsItemResponse } from '@/services/adminAPI';
 
+import { pickNewsThumb } from './newsThumbs';
+
 const COUNTRY_FLAG: Record<string, string> = {
   cyprus: '🇨🇾',
   greece: '🇬🇷',
@@ -94,7 +96,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onRequestDelete }) => 
         {item.image_url ? (
           <img src={item.image_url} alt={title ?? ''} />
         ) : (
-          <div className="news-thumb-fallback" />
+          <div className="news-thumb-fallback" style={{ background: pickNewsThumb(item.id) }} />
         )}
         <span className="news-thumb-flag">{flag}</span>
         <span className="news-thumb-date">{formattedDate}</span>
