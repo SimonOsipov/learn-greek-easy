@@ -85,3 +85,38 @@ describe('Field — ReactNode label', () => {
     expect(labelNode.closest('.dr-field-l')).not.toBeNull();
   });
 });
+
+describe('Field — htmlFor prop', () => {
+  it('renders a <label> element with matching for attribute when htmlFor is provided', () => {
+    render(
+      <Field label="Password" htmlFor="pw-input">
+        <input id="pw-input" />
+      </Field>
+    );
+
+    const labelEl = document.querySelector('label.dr-field-l');
+    expect(labelEl).not.toBeNull();
+    expect(labelEl!.getAttribute('for')).toBe('pw-input');
+  });
+
+  it('getByLabelText resolves the child input when htmlFor matches input id', () => {
+    render(
+      <Field label="Username" htmlFor="user-input">
+        <input id="user-input" />
+      </Field>
+    );
+
+    expect(screen.getByLabelText('Username')).toBeInTheDocument();
+  });
+
+  it('renders a <div> (not a <label>) when htmlFor is omitted', () => {
+    const { container } = render(
+      <Field label="No link">
+        <input />
+      </Field>
+    );
+
+    expect(container.querySelector('label')).toBeNull();
+    expect(container.querySelector('div.dr-field-l')).not.toBeNull();
+  });
+});

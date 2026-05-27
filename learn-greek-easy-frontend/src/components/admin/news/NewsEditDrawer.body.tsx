@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { Field } from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
 import type { NewsItemResponse } from '@/services/adminAPI';
 
@@ -48,10 +49,7 @@ export const NewsEditDrawerBody: React.FC<Props> = () => {
   return (
     <div className="space-y-4" data-testid="news-drawer-tab-body-content">
       {/* Greek body */}
-      <div>
-        <label htmlFor="news-body-description-el" className="text-sm font-medium">
-          {t('news.drawer.body.greekBody')}
-        </label>
+      <Field label={t('news.drawer.body.greekBody')} htmlFor="news-body-description-el">
         <Textarea
           id="news-body-description-el"
           rows={10}
@@ -60,14 +58,15 @@ export const NewsEditDrawerBody: React.FC<Props> = () => {
           {...register('description_el')}
           data-testid="news-drawer-body-description-el"
         />
-      </div>
+      </Field>
 
       {/* 2-col row: Title B2 + Scenario A2 */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <label htmlFor="news-body-title-el" className="text-sm font-medium">
-            {t('news.drawer.body.titleB2')}
-          </label>
+        <Field
+          label={t('news.drawer.body.titleB2')}
+          hint={t('news.drawer.body.titleB2Hint')}
+          htmlFor="news-body-title-el"
+        >
           <Textarea
             id="news-body-title-el"
             rows={2}
@@ -76,12 +75,8 @@ export const NewsEditDrawerBody: React.FC<Props> = () => {
             {...register('title_el')}
             data-testid="news-drawer-body-title-el"
           />
-          <p className="dr-field-h">{t('news.drawer.body.titleB2Hint')}</p>
-        </div>
-        <div>
-          <label htmlFor="news-body-description-el-a2" className="text-sm font-medium">
-            {t('news.drawer.body.scenarioA2')}
-          </label>
+        </Field>
+        <Field label={t('news.drawer.body.scenarioA2')} htmlFor="news-body-description-el-a2">
           <Textarea
             id="news-body-description-el-a2"
             rows={5}
@@ -95,7 +90,7 @@ export const NewsEditDrawerBody: React.FC<Props> = () => {
               {a2Error}
             </p>
           ) : null}
-        </div>
+        </Field>
       </div>
     </div>
   );

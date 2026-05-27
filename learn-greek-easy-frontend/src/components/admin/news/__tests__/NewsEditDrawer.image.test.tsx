@@ -193,6 +193,13 @@ describe('NewsEditDrawerImage — source URL input', () => {
     const input = screen.getByTestId('news-drawer-image-url-input') as HTMLInputElement;
     expect(input.type).toBe('url');
   });
+
+  it('every input is reachable via getByLabelText (a11y contract)', () => {
+    render(<Wrapper item={makeItem()} />);
+    expect(screen.getByLabelText('news.drawer.image.sourceUrl')).toBeInTheDocument();
+    expect(screen.getByLabelText('news.drawer.image.altText')).toBeInTheDocument();
+    expect(screen.getByLabelText('news.drawer.image.photoCredit')).toBeInTheDocument();
+  });
 });
 
 describe('NewsEditDrawerImage — disabled fields', () => {

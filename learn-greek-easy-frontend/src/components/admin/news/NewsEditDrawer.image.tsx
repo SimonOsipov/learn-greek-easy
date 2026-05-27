@@ -3,6 +3,7 @@ import React from 'react';
 import { useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Kicker } from '@/components/ui/kicker';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -36,10 +37,7 @@ export const NewsEditDrawerImage: React.FC<Props> = ({ item }) => {
       </div>
 
       {/* Source image URL */}
-      <div>
-        <label htmlFor="news-image-url" className="text-sm font-medium">
-          {t('news.drawer.image.sourceUrl')}
-        </label>
+      <Field label={t('news.drawer.image.sourceUrl')} htmlFor="news-image-url">
         <Input
           id="news-image-url"
           type="url"
@@ -47,13 +45,10 @@ export const NewsEditDrawerImage: React.FC<Props> = ({ item }) => {
           placeholder="https://…"
           data-testid="news-drawer-image-url-input"
         />
-      </div>
+      </Field>
 
       {/* Alt text — disabled */}
-      <div>
-        <label htmlFor="news-image-alt" className="text-sm font-medium opacity-60">
-          {t('news.drawer.image.altText')}
-        </label>
+      <Field label={t('news.drawer.image.altText')} htmlFor="news-image-alt">
         <Tooltip>
           <TooltipTrigger asChild>
             <Input
@@ -66,13 +61,10 @@ export const NewsEditDrawerImage: React.FC<Props> = ({ item }) => {
           </TooltipTrigger>
           <TooltipContent>{t('comingSoon')}</TooltipContent>
         </Tooltip>
-      </div>
+      </Field>
 
       {/* Photo credit — disabled */}
-      <div>
-        <label htmlFor="news-image-credit" className="text-sm font-medium opacity-60">
-          {t('news.drawer.image.photoCredit')}
-        </label>
+      <Field label={t('news.drawer.image.photoCredit')} htmlFor="news-image-credit">
         <Tooltip>
           <TooltipTrigger asChild>
             <Input
@@ -85,7 +77,7 @@ export const NewsEditDrawerImage: React.FC<Props> = ({ item }) => {
           </TooltipTrigger>
           <TooltipContent>{t('comingSoon')}</TooltipContent>
         </Tooltip>
-      </div>
+      </Field>
     </div>
   );
 };

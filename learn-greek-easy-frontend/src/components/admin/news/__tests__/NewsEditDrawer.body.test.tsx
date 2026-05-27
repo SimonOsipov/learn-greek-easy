@@ -124,6 +124,13 @@ describe('NewsEditDrawerBody — structure', () => {
     expect(screen.getByTestId('news-drawer-body-title-el')).toHaveAttribute('lang', 'el');
     expect(screen.getByTestId('news-drawer-body-description-el-a2')).toHaveAttribute('lang', 'el');
   });
+
+  it('every input is reachable via getByLabelText (a11y contract)', () => {
+    render(<Harness />);
+    expect(screen.getByLabelText('news.drawer.body.greekBody')).toBeInTheDocument();
+    expect(screen.getByLabelText('news.drawer.body.titleB2')).toBeInTheDocument();
+    expect(screen.getByLabelText('news.drawer.body.scenarioA2')).toBeInTheDocument();
+  });
 });
 
 // ── Tests: hint text ──────────────────────────────────────────────────────────
