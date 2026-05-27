@@ -119,4 +119,47 @@ describe('DeckRow', () => {
     });
     expect(screen.getByText('—')).toBeInTheDocument();
   });
+
+  // ── absolute date format ─────────────────────────────────────────────────
+
+  it('renders created_at in absolute date format (e.g. "Jan 15, 2026")', () => {
+    renderRow({
+      deck: makeDeck({ created_at: '2026-01-15T00:00:00Z' }),
+      locale: 'en',
+      onOpenDrawer: vi.fn(),
+      onDelete: vi.fn(),
+    });
+    expect(screen.getByText('Jan 15, 2026')).toBeInTheDocument();
+  });
+
+  // ── deck type meta line ──────────────────────────────────────────────────
+
+  it('renders "vocabulary" meta line for vocabulary deck type', () => {
+    renderRow({
+      deck: makeDeck({ type: 'vocabulary' }),
+      locale: 'en',
+      onOpenDrawer: vi.fn(),
+      onDelete: vi.fn(),
+    });
+    expect(screen.getByText('vocabulary')).toBeInTheDocument();
+  });
+
+  it('renders "culture" meta line for culture deck type', () => {
+    renderRow({
+      deck: makeDeck({ type: 'culture' }),
+      locale: 'en',
+      onOpenDrawer: vi.fn(),
+      onDelete: vi.fn(),
+    });
+    expect(screen.getByText('culture')).toBeInTheDocument();
+  });
+
+  // ── hover-reveal actions class ───────────────────────────────────────────
+
+  it('actions container has opacity-0 and group-hover:opacity-100 classes', () => {
+    renderRow({ deck: makeDeck(), locale: 'en', onOpenDrawer: vi.fn(), onDelete: vi.fn() });
+    const actions = screen.getByTestId('deck-row-actions');
+    expect(actions.className).toContain('opacity-0');
+    expect(actions.className).toContain('group-hover:opacity-100');
+  });
 });

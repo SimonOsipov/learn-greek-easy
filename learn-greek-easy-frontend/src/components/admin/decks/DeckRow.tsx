@@ -6,7 +6,7 @@
 
 import React from 'react';
 
-import { formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -46,7 +46,7 @@ export function DeckRow({ deck, locale, onOpenDrawer, onDelete }: DeckRowProps) 
     name_ru: deck.name_ru ?? multiName?.ru,
   };
   const localizedName = getLocalizedDeckName(normalizedDeck, locale);
-  const relativeDate = formatDistanceToNow(new Date(deck.created_at), { addSuffix: true });
+  const absoluteDate = format(new Date(deck.created_at), 'MMM d, yyyy');
   const itemLabel =
     deck.type === 'culture' ? `${deck.item_count} questions` : `${deck.item_count} cards`;
 
@@ -87,7 +87,12 @@ export function DeckRow({ deck, locale, onOpenDrawer, onDelete }: DeckRowProps) 
           <span data-testid="deck-row-mark" className="shrink-0">
             <DeckMark name={localizedName} type={deck.type} isSystem={isSystem} />
           </span>
-          <span className="min-w-0 truncate font-medium">{localizedName}</span>
+          <div className="flex min-w-0 flex-col">
+            <span className="truncate font-medium">{localizedName}</span>
+            <span className="truncate text-xs text-muted-foreground">
+              {deck.type === 'vocabulary' ? 'vocabulary' : 'culture'}
+            </span>
+          </div>
           {deck.level && (
             <Badge variant="secondary" className="shrink-0 text-xs">
               {deck.level}
@@ -119,7 +124,7 @@ export function DeckRow({ deck, locale, onOpenDrawer, onDelete }: DeckRowProps) 
 
       {/* Col 4: Last edit (hidden on sm and below) */}
       <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
-        <time dateTime={deck.created_at}>{relativeDate}</time>
+        <time dateTime={deck.created_at}>{absoluteDate}</time>
       </TableCell>
 
       {/* Col 5: Card / question count */}

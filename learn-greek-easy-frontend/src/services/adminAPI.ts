@@ -881,6 +881,16 @@ export const adminAPI = {
   },
 
   /**
+   * Fetch a single deck by ID from the admin unified endpoint.
+   *
+   * Throws (404) if the deck does not exist.
+   * Requires superuser authentication.
+   */
+  getDeck: async (deckId: string): Promise<UnifiedDeckItem> => {
+    return api.get<UnifiedDeckItem>(`/api/v1/admin/decks/${deckId}`);
+  },
+
+  /**
    * Update a vocabulary deck's metadata
    *
    * Updates deck name, description, level, or active status.

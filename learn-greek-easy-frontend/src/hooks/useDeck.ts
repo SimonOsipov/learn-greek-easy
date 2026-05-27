@@ -1,35 +1,28 @@
 // src/hooks/useDeck.ts
 //
-// Fetches a single deck by ID using the unified admin list endpoint.
-// No single-deck endpoint exists in adminAPI, so we resolve via listDecks
-// with page_size=1 and pick the first result whose id matches.
+// Fetches a single deck by ID using the dedicated admin single-deck endpoint.
 
 import { useQuery } from '@tanstack/react-query';
 
 import { adminAPI, type UnifiedDeckItem } from '@/services/adminAPI';
 
-async function fetchDeckById(deckId: string): Promise<UnifiedDeckItem | null> {
-  // listDecks supports full-text search but not exact-ID filter.
-  // Fetch a small page; the deck list is typically <500 rows so
-  // a fallback full-list fetch is acceptable for admin use.
-  const response = await adminAPI.listDecks({ page_size: 200 });
-  return response.decks.find((d) => d.id === deckId) ?? null;
+async function fetchDeckById(deckId: string): Promise<UnifiedDeckItem> {
+  return adminAPI.getDeck(deckId);
 }
 
 export interface UseDeckResult {
-  deck: UnifiedDeckItem | null | undefined;
+  deck: UnifiedDeckItem | undefined;
   isLoading: boolean;
   isError: boolean;
 }
 
 /**
- * Resolves a single deck from the admin unified list by ID.
+ * Fetches a single deck from the admin dedicated endpoint by ID.
  *
  * Returns:
- * - `deck: undefined`      while loading
- * - `deck: UnifiedDeckItem` when found
- * - `deck: null`            when the query succeeded but no deck matched (not-found)
- * - `isError: true`        when the network request failed
+ * - `deck: undefined`       while loading or on error
+ * - `deck: UnifiedDeckItem` when successfully fetched
+ * - `isError: true`         when the request fails (e.g. 404 not found)
  *
  * Enabled only when `deckId` is a non-empty string.
  */
