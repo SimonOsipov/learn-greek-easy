@@ -1,12 +1,13 @@
 import React from 'react';
 
-import { Play } from 'lucide-react';
+import { Play, Wand2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Kicker } from '@/components/ui/kicker';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { toast } from '@/hooks/use-toast';
 import type { NewsItemResponse } from '@/services/adminAPI';
 
 // Country code → flag emoji lookup (ISO 3166-1 alpha-2 and common backend string values).
@@ -136,38 +137,26 @@ export const NewsEditDrawerLinkedSituation: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Footer actions — always disabled in MVP */}
+      {/* Footer actions */}
       <div
         className="flex gap-2 pt-2"
         style={{ borderTop: '1px dashed hsl(var(--fg) / 0.1)' }}
         data-testid="news-drawer-linked-situation-footer"
       >
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              aria-disabled="true"
-              className="cursor-not-allowed opacity-60"
-              onClick={(e) => e.preventDefault()}
-            >
-              {t('news.drawer.linkedSituation.unlink')}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{t('comingSoon')}</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              aria-disabled="true"
-              className="cursor-not-allowed opacity-60"
-              onClick={(e) => e.preventDefault()}
-            >
-              {t('news.drawer.linkedSituation.regenerate')}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{t('comingSoon')}</TooltipContent>
-        </Tooltip>
+        <button
+          className="btn-glass btn-sm"
+          onClick={() => toast({ title: 'Coming soon — backend in progress' })}
+        >
+          <X size={14} aria-hidden="true" />
+          {t('news.drawer.linkedSituation.unlink')}
+        </button>
+        <button
+          className="btn-glass btn-sm"
+          onClick={() => toast({ title: 'Coming soon — backend in progress' })}
+        >
+          <Wand2 size={14} aria-hidden="true" />
+          {t('news.drawer.linkedSituation.regenerate')}
+        </button>
       </div>
     </div>
   );

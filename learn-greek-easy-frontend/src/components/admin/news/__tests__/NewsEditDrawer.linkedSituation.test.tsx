@@ -465,7 +465,7 @@ describe('NewsEditDrawerLinkedSituation — NADM-23 handoff fidelity', () => {
   });
 });
 
-describe('NewsEditDrawerLinkedSituation — footer buttons disabled', () => {
+describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
   it('footer has dashed border-top inline style', () => {
     const item = makeItem();
     render(
@@ -478,39 +478,97 @@ describe('NewsEditDrawerLinkedSituation — footer buttons disabled', () => {
     expect(footer).toHaveStyle({ borderTop: '1px dashed hsl(var(--fg) / 0.1)' });
   });
 
-  it('Unlink button has aria-disabled="true"', () => {
+  it('Unlink button is enabled (no aria-disabled)', () => {
     const item = makeItem();
     render(
       <MemoryRouter>
         <NewsEditDrawerLinkedSituation item={item} />
       </MemoryRouter>
     );
-    const btn = screen.getByRole('button', { name: 'news.drawer.linkedSituation.unlink' });
-    expect(btn).toHaveAttribute('aria-disabled', 'true');
+    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.unlink/i });
+    expect(btn).not.toHaveAttribute('aria-disabled');
   });
 
-  it('Regenerate button has aria-disabled="true"', () => {
+  it('Unlink button has btn-glass class', () => {
     const item = makeItem();
     render(
       <MemoryRouter>
         <NewsEditDrawerLinkedSituation item={item} />
       </MemoryRouter>
     );
-    const btn = screen.getByRole('button', { name: 'news.drawer.linkedSituation.regenerate' });
-    expect(btn).toHaveAttribute('aria-disabled', 'true');
+    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.unlink/i });
+    expect(btn.classList.contains('btn-glass')).toBe(true);
   });
 
-  it('shows Coming soon tooltip for footer buttons', () => {
+  it('Unlink button contains X icon (lucide-react)', () => {
     const item = makeItem();
     render(
       <MemoryRouter>
         <NewsEditDrawerLinkedSituation item={item} />
       </MemoryRouter>
     );
-    const tooltips = screen.getAllByTestId('tooltip-content');
-    const comingSoon = tooltips.filter((el) => el.textContent?.includes('comingSoon'));
-    // Unlink + Regenerate = 2 at minimum
-    expect(comingSoon.length).toBeGreaterThanOrEqual(2);
+    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.unlink/i });
+    // X icon renders an SVG
+    expect(btn.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('Regenerate button is enabled (no aria-disabled)', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} />
+      </MemoryRouter>
+    );
+    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.regenerate/i });
+    expect(btn).not.toHaveAttribute('aria-disabled');
+  });
+
+  it('Regenerate button has btn-glass class', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} />
+      </MemoryRouter>
+    );
+    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.regenerate/i });
+    expect(btn.classList.contains('btn-glass')).toBe(true);
+  });
+
+  it('Regenerate button contains Wand2 icon (lucide-react)', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} />
+      </MemoryRouter>
+    );
+    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.regenerate/i });
+    expect(btn.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('clicking Unlink calls toast with "Coming soon — backend in progress"', async () => {
+    const user = userEvent.setup();
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} />
+      </MemoryRouter>
+    );
+    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.unlink/i });
+    await user.click(btn);
+    expect(mockToast).toHaveBeenCalledWith({ title: 'Coming soon — backend in progress' });
+  });
+
+  it('clicking Regenerate calls toast with "Coming soon — backend in progress"', async () => {
+    const user = userEvent.setup();
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} />
+      </MemoryRouter>
+    );
+    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.regenerate/i });
+    await user.click(btn);
+    expect(mockToast).toHaveBeenCalledWith({ title: 'Coming soon — backend in progress' });
   });
 });
 
