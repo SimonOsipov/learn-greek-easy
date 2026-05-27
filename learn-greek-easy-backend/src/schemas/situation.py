@@ -32,6 +32,7 @@ class SituationUpdate(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     scenario_el: Optional[str] = Field(default=None, min_length=1, max_length=500)
+    title_el: Optional[str] = Field(default=None, min_length=1, max_length=500)
     scenario_en: Optional[str] = Field(default=None, min_length=1, max_length=500)
     scenario_ru: Optional[str] = Field(default=None, min_length=1, max_length=500)
 
@@ -62,6 +63,8 @@ class PictureUpdate(BaseModel):
     scene_el: Optional[str] = Field(default=None)
     scene_ru: Optional[str] = Field(default=None)
     style_en: Optional[str] = Field(default=None)
+    alt_text: Optional[str] = Field(default=None, max_length=280)
+    photo_credit: Optional[str] = Field(default=None, max_length=200)
 
     @model_validator(mode="after")
     def check_at_least_one_field(self) -> "PictureUpdate":
@@ -127,6 +130,7 @@ class SituationResponse(BaseModel):
 
     id: UUID
     scenario_el: str
+    title_el: str | None = None
     scenario_en: str
     scenario_ru: str
     status: SituationStatus
@@ -177,6 +181,8 @@ class PictureNested(BaseModel):
     scene_el: str | None = None
     scene_ru: str | None = None
     style_en: str | None = None
+    alt_text: str | None = None
+    photo_credit: str | None = None
     image_url: str | None = None
 
 

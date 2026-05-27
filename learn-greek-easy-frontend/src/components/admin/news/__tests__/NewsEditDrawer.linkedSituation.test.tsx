@@ -112,6 +112,9 @@ function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
     audio_a2_generated_at: null,
     audio_a2_file_size_bytes: null,
     has_a2_content: false,
+    alt_text: null,
+    photo_credit: null,
+    linked_situation: null,
     ...overrides,
   };
 }
@@ -120,6 +123,9 @@ const FIXTURE_SITUATION = {
   id: 'sit-abc',
   titleEn: 'At the Pharmacy',
   titleEl: 'Στο φαρμακείο',
+  status: 'ready',
+  levels: ['B1', 'A2'],
+  country: 'GR',
   roleCount: 2,
   names: 'Maria, Nikos',
   turnCount: 12,
@@ -165,6 +171,18 @@ describe('NewsEditDrawerLinkedSituation — kicker + helper', () => {
       </MemoryRouter>
     );
     expect(screen.getByText('news.drawer.linkedSituation.kicker')).toBeInTheDocument();
+  });
+
+  it('kicker dot has data-tone="blue"', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} />
+      </MemoryRouter>
+    );
+    const dot = document.querySelector('.kicker-dot');
+    expect(dot).toBeInTheDocument();
+    expect(dot).toHaveAttribute('data-tone', 'blue');
   });
 
   it('renders helper paragraph with news.drawer.linkedSituation.helper key', () => {
@@ -284,7 +302,8 @@ describe('NewsEditDrawerLinkedSituation — linked card render', () => {
     expect(meta!.textContent).toContain('Maria, Nikos');
     expect(meta!.textContent).toContain('12 turns');
     expect(meta!.textContent).toContain('3 exercises');
-    expect(meta!.textContent).toContain('45s audio');
+    // Duration formatted as m:ss — 45.3s → 0:45
+    expect(meta!.textContent).toContain('0:45');
   });
 
   it('click on card calls onRequestQuickJump with situationId', async () => {
@@ -343,40 +362,213 @@ describe('NewsEditDrawerLinkedSituation — linked card render', () => {
   });
 });
 
-describe('NewsEditDrawerLinkedSituation — footer buttons disabled', () => {
-  it('Unlink button has aria-disabled="true"', () => {
+// ── NADM-23: handoff fidelity assertions ─────────────────────────────────────
+
+describe('NewsEditDrawerLinkedSituation — NADM-23 handoff fidelity', () => {
+  it('thumb has dr-sit-thumb class (160px width via CSS)', () => {
     const item = makeItem();
     render(
       <MemoryRouter>
-        <NewsEditDrawerLinkedSituation item={item} />
+        <NewsEditDrawerLinkedSituation item={item} linkedSituation={FIXTURE_SITUATION} />
       </MemoryRouter>
     );
-    const btn = screen.getByRole('button', { name: 'news.drawer.linkedSituation.unlink' });
-    expect(btn).toHaveAttribute('aria-disabled', 'true');
+    const thumb = document.querySelector('.dr-sit-thumb');
+    expect(thumb).toBeInTheDocument();
   });
 
-  it('Regenerate button has aria-disabled="true"', () => {
+  it('title has dr-sit-title class (18px/600 via CSS)', () => {
     const item = makeItem();
     render(
       <MemoryRouter>
-        <NewsEditDrawerLinkedSituation item={item} />
+        <NewsEditDrawerLinkedSituation item={item} linkedSituation={FIXTURE_SITUATION} />
       </MemoryRouter>
     );
-    const btn = screen.getByRole('button', { name: 'news.drawer.linkedSituation.regenerate' });
-    expect(btn).toHaveAttribute('aria-disabled', 'true');
+    const title = document.querySelector('.dr-sit-title');
+    expect(title).toBeInTheDocument();
+    expect(title!.tagName).toBe('H3');
+    expect(title!.textContent).toBe('At the Pharmacy');
   });
 
-  it('shows Coming soon tooltip for footer buttons', () => {
+  it('status badge reflects linked_situation.status', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} linkedSituation={FIXTURE_SITUATION} />
+      </MemoryRouter>
+    );
+    // status=ready → renders i18n key 'situations.status.ready' (stub returns the key itself)
+    const badge = screen.getByTestId('dr-sit-status-badge');
+    expect(badge).toBeInTheDocument();
+    expect(badge.textContent).toContain('situations.status.ready');
+  });
+
+  it('status badge reflects non-ready status text verbatim', () => {
+    const item = makeItem();
+    const sit = { ...FIXTURE_SITUATION, status: 'draft' };
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} linkedSituation={sit} />
+      </MemoryRouter>
+    );
+    const badge = screen.getByTestId('dr-sit-status-badge');
+    expect(badge.textContent).toContain('draft');
+  });
+
+  it('level pills render for each level entry with news-level class', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} linkedSituation={FIXTURE_SITUATION} />
+      </MemoryRouter>
+    );
+    // FIXTURE_SITUATION.levels = ['B1', 'A2']
+    const pills = document.querySelectorAll('.news-level');
+    expect(pills).toHaveLength(2);
+    expect(pills[0].textContent).toBe('B1');
+    expect(pills[1].textContent).toBe('A2');
+  });
+
+  it('country flag matches linked_situation.country — GR → 🇬🇷', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} linkedSituation={FIXTURE_SITUATION} />
+      </MemoryRouter>
+    );
+    const flag = document.querySelector('.dr-sit-flag');
+    expect(flag).toBeInTheDocument();
+    expect(flag!.textContent).toBe('🇬🇷');
+  });
+
+  it('country flag — CY → 🇨🇾', () => {
+    const item = makeItem();
+    const sit = { ...FIXTURE_SITUATION, country: 'CY' };
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} linkedSituation={sit} />
+      </MemoryRouter>
+    );
+    const flag = document.querySelector('.dr-sit-flag');
+    expect(flag!.textContent).toBe('🇨🇾');
+  });
+
+  it('audio duration formatted as m:ss — 125s → 2:05', () => {
+    const item = makeItem();
+    const sit = { ...FIXTURE_SITUATION, audioDurationSeconds: 125 };
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} linkedSituation={sit} />
+      </MemoryRouter>
+    );
+    const meta = document.querySelector('.dr-sit-meta');
+    expect(meta!.textContent).toContain('2:05');
+  });
+});
+
+describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
+  it('footer has dashed border-top inline style', () => {
     const item = makeItem();
     render(
       <MemoryRouter>
         <NewsEditDrawerLinkedSituation item={item} />
       </MemoryRouter>
     );
-    const tooltips = screen.getAllByTestId('tooltip-content');
-    const comingSoon = tooltips.filter((el) => el.textContent?.includes('comingSoon'));
-    // Unlink + Regenerate = 2 at minimum
-    expect(comingSoon.length).toBeGreaterThanOrEqual(2);
+    const footer = screen.getByTestId('news-drawer-linked-situation-footer');
+    expect(footer).toBeInTheDocument();
+    expect(footer).toHaveStyle({ borderTop: '1px dashed hsl(var(--fg) / 0.1)' });
+  });
+
+  it('Unlink button is enabled (no aria-disabled)', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} />
+      </MemoryRouter>
+    );
+    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.unlink/i });
+    expect(btn).not.toHaveAttribute('aria-disabled');
+  });
+
+  it('Unlink button has btn-glass class', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} />
+      </MemoryRouter>
+    );
+    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.unlink/i });
+    expect(btn.classList.contains('btn-glass')).toBe(true);
+  });
+
+  it('Unlink button contains X icon (lucide-react)', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} />
+      </MemoryRouter>
+    );
+    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.unlink/i });
+    // X icon renders an SVG
+    expect(btn.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('Regenerate button is enabled (no aria-disabled)', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} />
+      </MemoryRouter>
+    );
+    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.regenerate/i });
+    expect(btn).not.toHaveAttribute('aria-disabled');
+  });
+
+  it('Regenerate button has btn-glass class', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} />
+      </MemoryRouter>
+    );
+    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.regenerate/i });
+    expect(btn.classList.contains('btn-glass')).toBe(true);
+  });
+
+  it('Regenerate button contains Wand2 icon (lucide-react)', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} />
+      </MemoryRouter>
+    );
+    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.regenerate/i });
+    expect(btn.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('clicking Unlink calls toast with "Coming soon — backend in progress"', async () => {
+    const user = userEvent.setup();
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} />
+      </MemoryRouter>
+    );
+    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.unlink/i });
+    await user.click(btn);
+    expect(mockToast).toHaveBeenCalledWith({ title: 'comingSoon' });
+  });
+
+  it('clicking Regenerate calls toast with "Coming soon — backend in progress"', async () => {
+    const user = userEvent.setup();
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} />
+      </MemoryRouter>
+    );
+    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.regenerate/i });
+    await user.click(btn);
+    expect(mockToast).toHaveBeenCalledWith({ title: 'comingSoon' });
   });
 });
 
@@ -463,5 +655,38 @@ describe('NewsEditDrawer — quick-jump second ConfirmDialog', () => {
     // Both dirtyDialogOpen and pendingQuickJumpSituationId start as null
     const allDirtyTitles = screen.queryAllByText('news.drawer.dirty.title');
     expect(allDirtyTitles).toHaveLength(0);
+  });
+});
+
+// ── NADM-22: populated linked_situation renders card (not empty state) ────────
+
+describe('NewsEditDrawer — linked situation populated card path', () => {
+  it('renders linked-situation card when item.linked_situation is non-null', async () => {
+    const user = userEvent.setup();
+    const item = makeItem({
+      linked_situation: {
+        id: 'sit-xyz',
+        title_en: 'At the Pharmacy',
+        title_el: 'Στο φαρμακείο',
+        status: 'published',
+        levels: ['A2'],
+        country: 'cyprus',
+        role_count: 2,
+        role_names: ['Maria', 'Nikos'],
+        turn_count: 12,
+        exercise_count: 3,
+        audio_seconds: 45.3,
+      },
+    });
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+
+    renderDrawer();
+    await navigateToLinkedSituationTab(user);
+
+    // Card should be visible — not the empty state
+    expect(screen.getByTestId('news-drawer-linked-situation-card')).toBeInTheDocument();
+    expect(screen.getByText('At the Pharmacy')).toBeInTheDocument();
+    expect(screen.queryByText('news.drawer.linkedSituation.emptyText')).not.toBeInTheDocument();
   });
 });

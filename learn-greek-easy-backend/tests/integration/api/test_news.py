@@ -233,3 +233,85 @@ class TestGetNewsItemEndpoint:
         assert "audio_generated_at" in data
         assert "audio_duration_seconds" in data
         assert "audio_file_size_bytes" in data
+
+    @pytest.mark.asyncio
+    async def test_get_news_item_linked_situation_present(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+    ):
+        """Detail response must include linked_situation as a non-null nested object."""
+        news_item = await NewsItemFactory.create()
+
+        response = await client.get(f"/api/v1/news/{news_item.id}")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "linked_situation" in data
+        assert data["linked_situation"] is not None
+
+    @pytest.mark.asyncio
+    async def test_get_news_item_linked_situation_shape(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+    ):
+        """linked_situation contains all 11 required fields with correct types."""
+        news_item = await NewsItemFactory.create()
+
+        response = await client.get(f"/api/v1/news/{news_item.id}")
+
+        assert response.status_code == 200
+        linked = response.json()["linked_situation"]
+
+        assert "id" in linked
+        assert "title_en" in linked
+        assert "title_el" in linked
+        assert "status" in linked
+        assert "levels" in linked
+        assert "country" in linked
+        assert "role_count" in linked
+        assert "role_names" in linked
+        assert "turn_count" in linked
+        assert "exercise_count" in linked
+        assert "audio_seconds" in linked
+
+        assert isinstance(linked["role_count"], int)
+        assert isinstance(linked["role_names"], list)
+        assert isinstance(linked["turn_count"], int)
+        assert isinstance(linked["exercise_count"], int)
+        assert isinstance(linked["audio_seconds"], float)
+        assert isinstance(linked["levels"], list)
+
+    @pytest.mark.asyncio
+    async def test_get_news_item_linked_situation_id_matches(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+    ):
+        """linked_situation.id matches the situation_id on the news item."""
+        news_item = await NewsItemFactory.create()
+
+        response = await client.get(f"/api/v1/news/{news_item.id}")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["linked_situation"]["id"] == str(news_item.situation_id)
+
+    @pytest.mark.asyncio
+    async def test_list_news_items_linked_situation_present(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+    ):
+        """List response items must also include linked_situation (zero aggregates)."""
+        await NewsItemFactory.create()
+
+        response = await client.get("/api/v1/news")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["items"]) >= 1
+        item = data["items"][0]
+        assert "linked_situation" in item
+        assert item["linked_situation"] is not None

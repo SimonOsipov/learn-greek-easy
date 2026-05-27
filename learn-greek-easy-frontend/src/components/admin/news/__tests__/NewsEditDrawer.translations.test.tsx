@@ -69,6 +69,13 @@ describe('NewsEditDrawerTranslations — structure', () => {
     expect(screen.getByText('news.drawer.translations.titleRu')).toBeInTheDocument();
   });
 
+  it('every input is reachable via getByLabelText (a11y contract)', () => {
+    render(<Harness />);
+    expect(screen.getByLabelText('news.drawer.translations.titleEn')).toBeInTheDocument();
+    expect(screen.getByLabelText('news.drawer.translations.titleEl')).toBeInTheDocument();
+    expect(screen.getByLabelText('news.drawer.translations.titleRu')).toBeInTheDocument();
+  });
+
   it('renders hint paragraphs for each field using i18n keys', () => {
     render(<Harness />);
     expect(screen.getByText('news.drawer.translations.hintEn')).toBeInTheDocument();

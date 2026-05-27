@@ -9,6 +9,7 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 import httpx
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import NewsItemNotFoundException
@@ -21,6 +22,7 @@ from src.db.models import (
     ExerciseModality,
     ExerciseStatus,
     ExerciseType,
+    ListeningDialog,
     NewsCountry,
     NewsItem,
     PictureStatus,
@@ -31,6 +33,7 @@ from src.db.models import (
 from src.repositories.exercise import ExerciseRepository
 from src.repositories.news_item import NewsItemRepository
 from src.schemas.news_item import (
+    LinkedSituationSummary,
     NewsItemCreate,
     NewsItemListResponse,
     NewsItemResponse,
@@ -173,24 +176,29 @@ class NewsItemService:
         self.db.add(news_item)
         await self.db.flush()
 
-        return self._to_response(news_item, situation, description)
+        return self._to_response(news_item, situation, description, picture)
 
     async def get_by_id(self, news_item_id: UUID) -> NewsItemResponse:
-        """Get a news item by ID.
+        """Get a news item by ID with full linked situation summary.
+
+        Uses the detail query which eager-loads the dialog graph
+        (speakers, lines, exercises) to compute aggregate counts without N+1.
 
         Args:
             news_item_id: UUID of the news item
 
         Returns:
-            NewsItemResponse with presigned image URL
+            NewsItemResponse with presigned image URL and linked_situation
 
         Raises:
             NewsItemNotFoundException: If news item doesn't exist
         """
-        row = await self.repo.get_by_id_with_joins(news_item_id)
+        row = await self.repo.get_by_id_for_detail(news_item_id)
         if row is None:
             raise NewsItemNotFoundException(news_item_id=str(news_item_id))
-        return self._to_response(row[0], row[1], row[2])
+        news_item, situation, description, picture = row
+        linked_situation = self._build_linked_situation_summary(situation, description)
+        return self._to_response(news_item, situation, description, picture, linked_situation)
 
     async def get_list(
         self, *, page: int = 1, page_size: int = 20, country: NewsCountry | None = None
@@ -210,14 +218,18 @@ class NewsItemService:
         total = await self.repo.count_all(country=country)
         audio_count = await self.repo.count_with_audio(country=country)
         country_counts = await self.repo.count_by_country()
+        b1_audio_count = await self.repo.count_with_b1_audio()
+        b1_pending_regen_count = await self.repo.count_b1_pending_regen()
 
         return NewsItemListResponse(
             total=total,
             page=page,
             page_size=page_size,
-            items=[self._to_response(row[0], row[1], row[2]) for row in rows],
+            items=[self._to_response(row[0], row[1], row[2], row[3]) for row in rows],
             country_counts=country_counts,
             audio_count=audio_count,
+            b1_audio_count=b1_audio_count,
+            b1_pending_regen_count=b1_pending_regen_count,
         )
 
     async def update(self, news_item_id: UUID, data: NewsItemUpdate) -> NewsItemResponse:
@@ -233,16 +245,37 @@ class NewsItemService:
         if row is None:
             raise NewsItemNotFoundException(str(news_item_id))
 
-        news_item, situation, description = row
+        news_item, situation, description, _picture = row
 
         if data.source_image_url is not None:
             await self._replace_image(situation, str(data.source_image_url))
         self._patch_situation(situation, data)
         self._patch_description(description, data)
         self._patch_news_item(news_item, description, data)
+        await self._patch_picture(situation.id, data)
 
         await self.db.flush()
-        return self._to_response(news_item, situation, description)
+        # Re-fetch to pick up the updated picture row for the response.
+        updated_row = await self.repo.get_by_id_with_joins(news_item.id)
+        assert updated_row is not None
+        return self._to_response(updated_row[0], updated_row[1], updated_row[2], updated_row[3])
+
+    async def _patch_picture(self, situation_id: UUID, data: NewsItemUpdate) -> None:
+        """Apply alt_text / photo_credit updates to the linked SituationPicture (if any)."""
+        has_alt = "alt_text" in data.model_fields_set
+        has_credit = "photo_credit" in data.model_fields_set
+        if not (has_alt or has_credit):
+            return
+        result = await self.db.execute(
+            select(SituationPicture).where(SituationPicture.situation_id == situation_id)
+        )
+        picture = result.scalar_one_or_none()
+        if picture is None:
+            return
+        if has_alt:
+            picture.alt_text = data.alt_text
+        if has_credit:
+            picture.photo_credit = data.photo_credit
 
     async def _replace_image(self, situation: Situation, image_url: str) -> None:
         """Download a new image, upload to S3, and replace the existing one."""
@@ -259,6 +292,8 @@ class NewsItemService:
         if data.scenario_el is not None:
             situation.scenario_el = data.scenario_el
             situation.source_title_el = data.scenario_el
+        if data.title_el is not None:
+            situation.title_el = data.title_el
         if data.scenario_en is not None:
             situation.scenario_en = data.scenario_en
             situation.source_title_en = data.scenario_en
@@ -284,13 +319,15 @@ class NewsItemService:
     def _patch_news_item(
         news_item: NewsItem, description: SituationDescription, data: NewsItemUpdate
     ) -> None:
-        """Apply URL and date field updates to a NewsItem (and linked description)."""
+        """Apply URL, date, and status field updates to a NewsItem (and linked description)."""
         if data.original_article_url is not None:
             url_str = str(data.original_article_url)
             description.source_url = url_str
             news_item.original_article_url = url_str
         if data.publication_date is not None:
             news_item.publication_date = data.publication_date
+        if data.status is not None:
+            news_item.status = data.status
 
     async def delete(self, news_item_id: UUID) -> None:
         """Delete a news item by ID.
@@ -340,18 +377,108 @@ class NewsItemService:
             raise ValueError("Failed to upload image to S3")
         return s3_key
 
+    @staticmethod
+    def _build_linked_situation_summary(
+        situation: Situation,
+        description: SituationDescription,
+    ) -> LinkedSituationSummary:
+        """Compute a LinkedSituationSummary from an eager-loaded Situation graph.
+
+        Requires that situation.dialog (when not None) has speakers, lines, and
+        exercises already loaded via selectinload. Null dialog, empty speakers,
+        and null audio_duration_seconds are all handled safely.
+
+        Args:
+            situation: Eager-loaded Situation with optional dialog sub-graph.
+            description: Loaded SituationDescription (for country).
+
+        Returns:
+            LinkedSituationSummary with computed aggregate fields.
+        """
+        dialog: ListeningDialog | None = situation.dialog
+
+        if dialog is not None:
+            speakers = dialog.speakers or []
+            role_count = len(speakers)
+            role_names = [s.character_name for s in speakers]
+            turn_count = len(dialog.lines or [])
+            exercise_count = len(dialog.exercises or [])
+            audio_seconds = float(dialog.audio_duration_seconds or 0.0)
+        else:
+            role_count = 0
+            role_names = []
+            turn_count = 0
+            exercise_count = 0
+            audio_seconds = 0.0
+
+        country_str = description.country.value if description.country else "cyprus"
+        # Prefer the dedicated title_el (NADM-06) over scenario_el, fall back to source_title_el.
+        title_el = situation.title_el or situation.scenario_el or situation.source_title_el or ""
+        title_en = situation.scenario_en or situation.source_title_en or ""
+
+        return LinkedSituationSummary(
+            id=situation.id,
+            title_en=title_en,
+            title_el=title_el,
+            status=situation.status.value,
+            levels=list(situation.levels or []),
+            country=country_str,
+            role_count=role_count,
+            role_names=role_names,
+            turn_count=turn_count,
+            exercise_count=exercise_count,
+            audio_seconds=audio_seconds,
+        )
+
     def _to_response(
-        self, news_item: NewsItem, situation: Situation, description: SituationDescription
+        self,
+        news_item: NewsItem,
+        situation: Situation,
+        description: SituationDescription,
+        picture: SituationPicture | None = None,
+        linked_situation: LinkedSituationSummary | None = None,
     ) -> NewsItemResponse:
-        """Assemble NewsItemResponse from JOIN data."""
+        """Assemble NewsItemResponse from JOIN data.
+
+        Args:
+            news_item: The NewsItem ORM object.
+            situation: The linked Situation ORM object.
+            description: The linked SituationDescription ORM object.
+            picture: The linked SituationPicture ORM object (may be None).
+            linked_situation: Pre-computed LinkedSituationSummary. When None,
+                a zero-aggregate summary is built from the available objects
+                (covers create/update/list paths where the dialog graph is not loaded).
+        """
         image_url = self.s3_service.generate_presigned_url(situation.source_image_s3_key)
         audio_url = self.s3_service.generate_presigned_url(description.audio_s3_key)
         audio_a2_url = self.s3_service.generate_presigned_url(description.audio_a2_s3_key)
+
+        if linked_situation is None:
+            # create/update/list path: dialog not loaded, build a zero-aggregate summary.
+            # Accessing situation.dialog would trigger lazy="raise", so construct directly.
+            country_str = description.country.value if description.country else "cyprus"
+            linked_situation = LinkedSituationSummary(
+                id=situation.id,
+                title_en=situation.scenario_en or situation.source_title_en or "",
+                title_el=situation.title_el
+                or situation.scenario_el
+                or situation.source_title_el
+                or "",
+                status=situation.status.value,
+                levels=list(situation.levels or []),
+                country=country_str,
+                role_count=0,
+                role_names=[],
+                turn_count=0,
+                exercise_count=0,
+                audio_seconds=0.0,
+            )
 
         return NewsItemResponse(
             id=news_item.id,
             situation_id=news_item.situation_id,
             title_el=situation.scenario_el or "",
+            situation_title_el=situation.title_el,
             title_en=situation.scenario_en or "",
             title_ru=situation.scenario_ru or "",
             title_el_a2=situation.scenario_el_a2,
@@ -371,6 +498,10 @@ class NewsItemService:
             audio_a2_generated_at=None,
             audio_a2_duration_seconds=description.audio_a2_duration_seconds,
             audio_a2_file_size_bytes=None,
+            alt_text=picture.alt_text if picture else None,
+            photo_credit=picture.photo_credit if picture else None,
+            status=news_item.status,
+            linked_situation=linked_situation,
             created_at=news_item.created_at,
             updated_at=news_item.updated_at,
         )

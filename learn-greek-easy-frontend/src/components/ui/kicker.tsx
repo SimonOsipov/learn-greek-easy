@@ -2,7 +2,15 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
-export type KickerTone = 'primary' | 'amber' | 'violet' | 'cyan' | 'green' | 'red' | 'gray';
+export type KickerTone =
+  | 'primary'
+  | 'blue'
+  | 'amber'
+  | 'violet'
+  | 'cyan'
+  | 'green'
+  | 'red'
+  | 'gray';
 
 export interface KickerProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Color of the leading dot. Defaults to 'primary'. */

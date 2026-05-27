@@ -100,21 +100,22 @@ test.describe('Admin News — drawer happy paths (NEWS-10)', () => {
     await expect(b1Row.locator('button[aria-disabled="true"]').first()).toBeVisible();
   });
 
-  test('6. Linked situation tab: Generate button disabled with Tooltip "Coming soon"', async ({
+  test('6. Linked situation tab: action button fires Coming soon toast', async ({
     page,
   }) => {
     await navigateToAdminTab(page, 'news');
     await page.locator('.news-card').first().click();
     await expect(page.locator('[data-testid="news-edit-drawer"]')).toBeVisible();
     await page.locator('[data-testid="news-drawer-tab-linkedSituation"]').click();
-    await expect(
-      page.locator('[data-testid="news-drawer-tab-linkedSituation-content"]'),
-    ).toBeVisible();
-    const generateBtn = page.getByRole('button', { name: /Generate situation/ });
-    await expect(generateBtn).toHaveAttribute('aria-disabled', 'true');
-    // Hover to reveal tooltip
-    await generateBtn.hover();
-    await expect(page.getByText('Coming soon').first()).toBeVisible();
+    const tabContent = page.locator('[data-testid="news-drawer-tab-linkedSituation-content"]');
+    await expect(tabContent).toBeVisible();
+    // The empty-state path shows a disabled "Generate situation" button (Coming soon tooltip).
+    // The populated-state path (after NADM-22/-23/-24) shows enabled "Unlink" + "Regenerate from this article"
+    // buttons that fire a toast on click. Seeded news items have a linked situation, so the populated state renders.
+    const actionBtn = tabContent.getByRole('button', { name: /Regenerate from this article/i });
+    await expect(actionBtn).toBeEnabled();
+    await actionBtn.click();
+    await expect(page.getByText('Coming soon').first()).toBeVisible({ timeout: 5_000 });
   });
 
   test('7. Edit EN title then Cancel → dirty Dialog → Discard & continue clears ?edit=', async ({

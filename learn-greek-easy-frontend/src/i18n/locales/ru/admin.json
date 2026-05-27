@@ -569,9 +569,23 @@
       "deleteLabel": "Удалить новость"
     },
     "toolbar": {
-      "searchPlaceholder": "Поиск новостей..."
+      "searchPlaceholder": "Поиск по заголовку, тексту или персонажу…"
+    },
+    "list": {
+      "emptyTitle": "Нет результатов",
+      "emptyBody": "Нет новостей, соответствующих текущим фильтрам.",
+      "clearFilters": "Сбросить фильтры",
+      "pagerShowing": "Показано {{from}}–{{to}} из {{total}}",
+      "pagerPrevious": "Назад",
+      "pagerNext": "Вперёд"
     },
     "drawer": {
+      "publishedPill": "Опубликовано",
+      "draftPill": "Черновик — не виден",
+      "publishCta": "Опубликовать",
+      "publishChangesCta": "Опубликовать изменения",
+      "saveFirst": "Сначала сохраните изменения",
+      "publishGuardFailed": "Невозможно опубликовать без даты публикации",
       "body": {
         "greekBody": "Греческий текст",
         "greekBodyHelper": "Полная статья — для уровня B2; учащиеся с более низким уровнем читают упрощённый сценарий",

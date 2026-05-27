@@ -18,10 +18,11 @@ from uuid import uuid4
 
 import factory
 
-from src.db.models import DescriptionSourceType, NewsItem
+from src.db.models import DescriptionSourceType, NewsItem, NewsItemStatus
 from tests.factories.base import BaseFactory
 from tests.factories.situation import SituationFactory
 from tests.factories.situation_description import SituationDescriptionFactory
+from tests.factories.situation_picture import SituationPictureFactory
 
 
 class NewsItemFactory(BaseFactory):
@@ -46,11 +47,13 @@ class NewsItemFactory(BaseFactory):
     original_article_url = factory.LazyAttribute(
         lambda o: f"https://example.com/article-{uuid4().hex[:8]}"
     )
+    status = NewsItemStatus.DRAFT
 
     class Params:
         old = factory.Trait(
             publication_date=factory.LazyFunction(lambda: date.today() - timedelta(days=30))
         )
+        published = factory.Trait(status=NewsItemStatus.PUBLISHED)
 
     @classmethod
     async def create(cls, session=None, **kwargs):
@@ -64,6 +67,10 @@ class NewsItemFactory(BaseFactory):
                 situation_id=situation.id,
                 source_type=DescriptionSourceType.NEWS,
                 source_url=kwargs["original_article_url"],
+            )
+            await SituationPictureFactory.create(
+                session=session,
+                situation_id=situation.id,
             )
         else:
             # Caller provided a situation_id — ensure a SituationDescription exists for it

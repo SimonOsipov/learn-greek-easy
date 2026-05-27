@@ -20,8 +20,33 @@ from pydantic import (
     model_validator,
 )
 
-from src.db.models import NewsCountry
+from src.db.models import NewsCountry, NewsItemStatus
 from src.schemas.exercise_payload import MultilingualField, SelectCorrectAnswerPayload
+
+
+class LinkedSituationSummary(BaseModel):
+    """Aggregated summary of the Situation linked to a NewsItem.
+
+    Populated on the detail endpoint with dialog graph aggregates.
+    On the list endpoint the same field is present but with zero aggregates
+    (dialog graph is not loaded for list queries).
+    All counts are zero-safe: null dialog, empty speakers, null audio
+    all produce 0 / 0.0 rather than raising.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    title_en: str
+    title_el: str
+    status: str
+    levels: list[str]
+    country: str
+    role_count: int
+    role_names: list[str]
+    turn_count: int
+    exercise_count: int
+    audio_seconds: float
 
 
 class ExerciseDraft(SelectCorrectAnswerPayload):
@@ -106,6 +131,7 @@ class NewsItemUpdate(BaseModel):
     """
 
     scenario_el: Optional[str] = Field(None, min_length=1, max_length=500)
+    title_el: Optional[str] = Field(None, min_length=1, max_length=500)
     scenario_en: Optional[str] = Field(None, min_length=1, max_length=500)
     scenario_ru: Optional[str] = Field(None, min_length=1, max_length=500)
     scenario_el_a2: Optional[str] = Field(None, max_length=500)
@@ -118,6 +144,17 @@ class NewsItemUpdate(BaseModel):
     original_article_url: Optional[HttpUrl] = Field(None, max_length=500)
     source_image_url: Optional[HttpUrl] = Field(
         None, description="New image URL to download (replaces existing)"
+    )
+    alt_text: Optional[str] = Field(
+        None, max_length=280, description="Alt text for the situation picture"
+    )
+    photo_credit: Optional[str] = Field(
+        None, max_length=200, description="Photo credit for the situation picture"
+    )
+    status: Optional[NewsItemStatus] = Field(
+        None,
+        description="Publication status: draft (hidden from learners) or published (visible). "
+        "Transition from draft→published requires publication_date to be set.",
     )
 
 
@@ -150,6 +187,13 @@ class NewsItemResponse(BaseModel):
     )
     audio_file_size_bytes: Optional[int] = Field(None, description="Size of audio file in bytes")
 
+    # Dedicated Greek identity title (NADM-06); None until backfill applied
+    situation_title_el: Optional[str] = None
+
+    # Picture metadata (NADM-07)
+    alt_text: Optional[str] = None
+    photo_credit: Optional[str] = None
+
     # A2 text content
     title_el_a2: Optional[str] = None
     description_el_a2: Optional[str] = None
@@ -165,6 +209,14 @@ class NewsItemResponse(BaseModel):
     audio_a2_file_size_bytes: Optional[int] = Field(
         None, description="Size of A2 audio file in bytes"
     )
+
+    # Publication status (NADM-25)
+    status: NewsItemStatus
+
+    # Linked situation summary — non-optional (every NewsItem has a Situation via NOT NULL FK).
+    # On the detail endpoint this is fully populated (role/turn/exercise/audio aggregates).
+    # On the list endpoint the same field is present with zero aggregates (dialog not loaded).
+    linked_situation: "LinkedSituationSummary"
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -187,6 +239,22 @@ class NewsItemListResponse(BaseModel):
         default_factory=CountryCounts, description="Count of news items per country"
     )
     audio_count: int = Field(0, ge=0, description="Total number of news items with audio")
+    b1_audio_count: int = Field(
+        0,
+        ge=0,
+        description=(
+            "Number of news items whose linked Situation has 'B1' in levels "
+            "AND SituationDescription.audio_s3_key is non-null (B1 audio generated)."
+        ),
+    )
+    b1_pending_regen_count: int = Field(
+        0,
+        ge=0,
+        description=(
+            "Number of news items whose linked Situation has 'B1' in levels "
+            "BUT SituationDescription.audio_s3_key is null (B1 audio not yet generated)."
+        ),
+    )
 
 
 # ============================================================================
@@ -196,7 +264,9 @@ class NewsItemListResponse(BaseModel):
 __all__ = [
     "CountryCounts",
     "ExerciseDraft",
+    "LinkedSituationSummary",
     "NewsItemCreate",
+    "NewsItemStatus",
     "NewsItemUpdate",
     "NewsItemResponse",
     "NewsItemListResponse",

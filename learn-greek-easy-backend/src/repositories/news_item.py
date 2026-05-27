@@ -2,11 +2,20 @@
 
 from uuid import UUID
 
-from sqlalchemy import desc, func, select
+from sqlalchemy import cast, desc, func, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from src.db.models import NewsCountry, NewsItem, Situation, SituationDescription
+from src.db.models import (
+    ListeningDialog,
+    NewsCountry,
+    NewsItem,
+    Situation,
+    SituationDescription,
+    SituationPicture,
+)
 from src.repositories.base import BaseRepository
 
 
@@ -29,11 +38,12 @@ class NewsItemRepository(BaseRepository[NewsItem]):
     async def get_list(
         self, *, skip: int = 0, limit: int = 20, country: NewsCountry | None = None
     ) -> list[Row]:
-        """Get news items with situation/description via JOIN, ordered by publication_date DESC."""
+        """Get news items with situation/description/picture via JOIN, ordered by publication_date DESC."""
         query = (
-            select(NewsItem, Situation, SituationDescription)
+            select(NewsItem, Situation, SituationDescription, SituationPicture)
             .join(Situation, Situation.id == NewsItem.situation_id)
             .join(SituationDescription, SituationDescription.situation_id == Situation.id)
+            .outerjoin(SituationPicture, SituationPicture.situation_id == Situation.id)
         )
         if country is not None:
             query = query.where(SituationDescription.country == country)
@@ -101,6 +111,40 @@ class NewsItemRepository(BaseRepository[NewsItem]):
         result = await self.db.execute(query)
         return result.scalar_one()
 
+    async def count_with_b1_audio(self) -> int:
+        """Count news items where Situation.levels contains 'B1' AND audio_s3_key is non-null.
+
+        Returns:
+            Number of B1 news items with audio generated
+        """
+        query = (
+            select(func.count())
+            .select_from(NewsItem)
+            .join(Situation, Situation.id == NewsItem.situation_id)
+            .join(SituationDescription, SituationDescription.situation_id == Situation.id)
+            .where(Situation.levels.contains(cast(["B1"], JSONB)))
+            .where(SituationDescription.audio_s3_key.isnot(None))
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one()
+
+    async def count_b1_pending_regen(self) -> int:
+        """Count news items where Situation.levels contains 'B1' BUT audio_s3_key is null.
+
+        Returns:
+            Number of B1 news items awaiting audio generation
+        """
+        query = (
+            select(func.count())
+            .select_from(NewsItem)
+            .join(Situation, Situation.id == NewsItem.situation_id)
+            .join(SituationDescription, SituationDescription.situation_id == Situation.id)
+            .where(Situation.levels.contains(cast(["B1"], JSONB)))
+            .where(SituationDescription.audio_s3_key.is_(None))
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one()
+
     async def count_by_country(self) -> dict[str, int]:
         """Count news items grouped by SituationDescription.country.
 
@@ -126,15 +170,65 @@ class NewsItemRepository(BaseRepository[NewsItem]):
         return counts
 
     async def get_by_id_with_joins(self, news_item_id: UUID) -> Row | None:
-        """Fetch a single NewsItem with its Situation and SituationDescription via JOIN."""
+        """Fetch a single NewsItem with its Situation, SituationDescription, and SituationPicture via JOIN."""
         query = (
-            select(NewsItem, Situation, SituationDescription)
+            select(NewsItem, Situation, SituationDescription, SituationPicture)
             .join(Situation, Situation.id == NewsItem.situation_id)
             .join(SituationDescription, SituationDescription.situation_id == Situation.id)
+            .outerjoin(SituationPicture, SituationPicture.situation_id == Situation.id)
             .where(NewsItem.id == news_item_id)
         )
         result = await self.db.execute(query)
         return result.first()
+
+    async def get_by_id_for_detail(
+        self, news_item_id: UUID
+    ) -> tuple[NewsItem, Situation, SituationDescription, SituationPicture] | Row | None:
+        """Fetch a single NewsItem for the admin detail view with full Situation graph.
+
+        Returns the same (NewsItem, Situation, SituationDescription, SituationPicture)
+        tuple shape as get_by_id_with_joins, but additionally eager-loads the Situation
+        dialog graph (speakers, lines, exercises) so aggregate fields can be computed
+        without N+1 queries.
+
+        Args:
+            news_item_id: UUID of the news item to fetch.
+
+        Returns:
+            4-tuple (NewsItem, Situation, SituationDescription, SituationPicture) where
+            Situation.dialog (if not None) has speakers/lines/exercises pre-loaded,
+            or None if the news item does not exist.
+        """
+        base_row = await self.get_by_id_with_joins(news_item_id)
+        if base_row is None:
+            return None
+
+        # Separately eager-load NewsItem → Situation → dialog graph.
+        query = (
+            select(NewsItem)
+            .where(NewsItem.id == news_item_id)
+            .options(
+                selectinload(NewsItem.situation).options(
+                    selectinload(Situation.dialog).options(
+                        selectinload(ListeningDialog.speakers),
+                        selectinload(ListeningDialog.lines),
+                        selectinload(ListeningDialog.exercises),
+                    ),
+                )
+            )
+        )
+        result = await self.db.execute(query)
+        news_item_with_graph = result.scalar_one_or_none()
+        if news_item_with_graph is None:
+            return None
+
+        # Return the same 4-tuple shape; swap in the graph-loaded Situation.
+        return (
+            news_item_with_graph,
+            news_item_with_graph.situation,
+            base_row[2],  # SituationDescription from original JOIN
+            base_row[3],  # SituationPicture from original JOIN
+        )
 
 
 # ============================================================================

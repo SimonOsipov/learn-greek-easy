@@ -145,6 +145,7 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
           <TooltipTrigger asChild>
             <button
               type="button"
+              aria-label={t('news.drawer.audio.playLabel', { level: 'B1' })}
               aria-disabled="true"
               className="btn-glass cursor-not-allowed opacity-60"
               onClick={(e) => e.preventDefault()}

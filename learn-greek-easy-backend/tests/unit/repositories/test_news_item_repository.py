@@ -4,6 +4,8 @@ This module tests:
 - get_list: Get news items with pagination ordered by date (INNER JOIN)
 - exists_by_url: Check for duplicate article URLs
 - count_all: Count news items (excludes orphans via INNER JOIN)
+- count_with_b1_audio: B1 audio count aggregate
+- count_b1_pending_regen: B1 pending regen count aggregate
 
 Tests use real database fixtures to verify SQL queries work correctly.
 """
@@ -14,9 +16,11 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import NewsItem
+from src.db.models import DescriptionSourceType, NewsItem
 from src.repositories.news_item import NewsItemRepository
 from tests.factories.news import NewsItemFactory
+from tests.factories.situation import SituationFactory
+from tests.factories.situation_description import SituationDescriptionFactory
 
 # =============================================================================
 # Test Fixtures
@@ -248,3 +252,127 @@ class TestCountAll:
         result = await repo.count_all()
 
         assert result == 0
+
+
+# =============================================================================
+# Test count_with_b1_audio
+# =============================================================================
+
+
+async def _make_news_item_with_b1(
+    db_session: AsyncSession,
+    *,
+    has_b1: bool,
+    has_audio: bool,
+) -> NewsItem:
+    """Helper: create a NewsItem whose Situation.levels optionally contains 'B1'
+    and whose SituationDescription.audio_s3_key is optionally set."""
+    levels = ["B1"] if has_b1 else []
+    situation = await SituationFactory.create(session=db_session, ready=True)
+    situation.levels = levels
+    await db_session.flush()
+
+    url = f"https://example.com/b1-article-{uuid4().hex[:8]}"
+    desc = await SituationDescriptionFactory.create(
+        session=db_session,
+        situation_id=situation.id,
+        source_type=DescriptionSourceType.NEWS,
+        source_url=url,
+    )
+    if has_audio:
+        desc.audio_s3_key = f"audio/{uuid4().hex}.mp3"
+        await db_session.flush()
+
+    news_item = NewsItem(
+        situation_id=situation.id,
+        publication_date=date.today(),
+        original_article_url=url,
+    )
+    db_session.add(news_item)
+    await db_session.flush()
+    return news_item
+
+
+class TestCountWithB1Audio:
+    """Tests for count_with_b1_audio method — three fixture states."""
+
+    @pytest.mark.asyncio
+    async def test_all_absent_returns_zero(self, db_session: AsyncSession):
+        """No B1 items at all → b1_audio_count == 0."""
+        # Create an item with B1 levels but NO audio
+        await _make_news_item_with_b1(db_session, has_b1=True, has_audio=False)
+        # Create an item with audio but NOT B1
+        await _make_news_item_with_b1(db_session, has_b1=False, has_audio=True)
+
+        repo = NewsItemRepository(db_session)
+        result = await repo.count_with_b1_audio()
+
+        assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_all_present_returns_correct_count(self, db_session: AsyncSession):
+        """All three items have B1 + audio → b1_audio_count == 3."""
+        for _ in range(3):
+            await _make_news_item_with_b1(db_session, has_b1=True, has_audio=True)
+
+        repo = NewsItemRepository(db_session)
+        result = await repo.count_with_b1_audio()
+
+        assert result == 3
+
+    @pytest.mark.asyncio
+    async def test_mixed_returns_partial_count(self, db_session: AsyncSession):
+        """2 with B1+audio, 1 with B1 but no audio → b1_audio_count == 2."""
+        await _make_news_item_with_b1(db_session, has_b1=True, has_audio=True)
+        await _make_news_item_with_b1(db_session, has_b1=True, has_audio=True)
+        await _make_news_item_with_b1(db_session, has_b1=True, has_audio=False)
+
+        repo = NewsItemRepository(db_session)
+        result = await repo.count_with_b1_audio()
+
+        assert result == 2
+
+
+# =============================================================================
+# Test count_b1_pending_regen
+# =============================================================================
+
+
+class TestCountB1PendingRegen:
+    """Tests for count_b1_pending_regen method — three fixture states."""
+
+    @pytest.mark.asyncio
+    async def test_all_absent_returns_zero(self, db_session: AsyncSession):
+        """No B1 items at all → b1_pending_regen_count == 0."""
+        # Non-B1 item with no audio — should NOT count
+        await _make_news_item_with_b1(db_session, has_b1=False, has_audio=False)
+        # B1 item with audio already generated — should NOT count as pending
+        await _make_news_item_with_b1(db_session, has_b1=True, has_audio=True)
+
+        repo = NewsItemRepository(db_session)
+        result = await repo.count_b1_pending_regen()
+
+        assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_all_present_returns_correct_count(self, db_session: AsyncSession):
+        """Three B1 items without audio → b1_pending_regen_count == 3."""
+        for _ in range(3):
+            await _make_news_item_with_b1(db_session, has_b1=True, has_audio=False)
+
+        repo = NewsItemRepository(db_session)
+        result = await repo.count_b1_pending_regen()
+
+        assert result == 3
+
+    @pytest.mark.asyncio
+    async def test_mixed_returns_partial_count(self, db_session: AsyncSession):
+        """1 B1 with audio (done) + 2 B1 without audio (pending) → pending == 2."""
+        await _make_news_item_with_b1(db_session, has_b1=True, has_audio=True)
+        await _make_news_item_with_b1(db_session, has_b1=True, has_audio=False)
+        await _make_news_item_with_b1(db_session, has_b1=True, has_audio=False)
+
+        repo = NewsItemRepository(db_session)
+        result = await repo.count_b1_pending_regen()
+
+        assert result == 2

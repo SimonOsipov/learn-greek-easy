@@ -3,6 +3,7 @@ import React from 'react';
 import { useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { Field } from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
 import type { NewsItemResponse } from '@/services/adminAPI';
 
@@ -19,48 +20,48 @@ export const NewsEditDrawerTranslations: React.FC<Props> = () => {
   return (
     <div className="space-y-4" data-testid="news-drawer-tab-translations-content">
       {/* Title — English (source) */}
-      <div>
-        <label htmlFor="news-title-en" className="text-sm font-medium">
-          {t('news.drawer.translations.titleEn')}
-        </label>
+      <Field
+        label={t('news.drawer.translations.titleEn')}
+        hint={t('news.drawer.translations.hintEn')}
+        htmlFor="news-translations-title-en"
+      >
         <Textarea
-          id="news-title-en"
+          id="news-translations-title-en"
           rows={2}
           {...register('title_en')}
           data-testid="news-drawer-translations-title-en"
         />
-        <p className="dr-field-h">{t('news.drawer.translations.hintEn')}</p>
-      </div>
+      </Field>
 
       {/* Τίτλος — Ελληνικά */}
-      <div>
-        <label htmlFor="news-title-el" className="text-sm font-medium">
-          {t('news.drawer.translations.titleEl')}
-        </label>
+      <Field
+        label={t('news.drawer.translations.titleEl')}
+        hint={t('news.drawer.translations.hintEl')}
+        htmlFor="news-translations-title-el"
+      >
         <Textarea
-          id="news-title-el"
+          id="news-translations-title-el"
           rows={2}
           lang="el"
           className="serif"
           {...register('title_el')}
           data-testid="news-drawer-translations-title-el"
         />
-        <p className="dr-field-h">{t('news.drawer.translations.hintEl')}</p>
-      </div>
+      </Field>
 
       {/* Заголовок — Русский */}
-      <div>
-        <label htmlFor="news-title-ru" className="text-sm font-medium">
-          {t('news.drawer.translations.titleRu')}
-        </label>
+      <Field
+        label={t('news.drawer.translations.titleRu')}
+        hint={t('news.drawer.translations.hintRu')}
+        htmlFor="news-translations-title-ru"
+      >
         <Textarea
-          id="news-title-ru"
+          id="news-translations-title-ru"
           rows={2}
           {...register('title_ru')}
           data-testid="news-drawer-translations-title-ru"
         />
-        <p className="dr-field-h">{t('news.drawer.translations.hintRu')}</p>
-      </div>
+      </Field>
     </div>
   );
 };

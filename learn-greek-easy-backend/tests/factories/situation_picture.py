@@ -22,6 +22,8 @@ class SituationPictureFactory(BaseFactory):
 
     image_prompt = factory.Sequence(lambda n: f"Εικόνα κατάστασης {n}")
     status = PictureStatus.DRAFT
+    alt_text = None
+    photo_credit = None
 
     class Params:
         generated = factory.Trait(

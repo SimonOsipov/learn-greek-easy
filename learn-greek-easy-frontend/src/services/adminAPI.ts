@@ -483,7 +483,7 @@ export type AnnouncementDetailResponse = AnnouncementItem;
 /**
  * Country classification for news items
  */
-export type NewsCountry = 'cyprus' | 'greece' | 'world';
+export type NewsCountry = 'cyprus' | 'greece' | 'world' | 'es';
 
 export interface MultilingualField {
   el: string;
@@ -549,11 +549,31 @@ export interface NewsItemUpdate {
   publication_date?: string;
   original_article_url?: string;
   source_image_url?: string;
+  alt_text?: string | null;
+  photo_credit?: string | null;
   country?: NewsCountry;
   scenario_el_a2?: string | null;
   text_el_a2?: string | null;
-  alt_text?: string | null;
-  photo_credit?: string | null;
+  /** Publication status (NADM-25): draft = hidden, published = visible to learners */
+  status?: 'draft' | 'published';
+}
+
+/**
+ * Linked situation summary returned inside a NewsItemResponse (NADM-08).
+ * Snake_case mirrors the Pydantic backend shape.
+ */
+export interface LinkedSituationSummary {
+  id: string;
+  title_en: string;
+  title_el: string;
+  status: string;
+  levels: string[];
+  country: string;
+  role_count: number;
+  role_names: string[];
+  turn_count: number;
+  exercise_count: number;
+  audio_seconds: number;
 }
 
 /**
@@ -587,6 +607,9 @@ export interface NewsItemResponse {
   has_a2_content: boolean;
   alt_text: string | null;
   photo_credit: string | null;
+  /** Publication status (NADM-25): draft = hidden, published = visible to learners */
+  status: 'draft' | 'published';
+  linked_situation: LinkedSituationSummary | null;
 }
 
 /**
@@ -599,7 +622,9 @@ export interface NewsItemListResponse {
   items: NewsItemResponse[];
   country_counts: { cyprus: number; greece: number; world: number };
   audio_count: number;
+  /** Number of items with B1-level audio generated (NADM-05) */
   b1_audio_count: number;
+  /** Number of B1 items queued for audio re-generation (NADM-05) */
   b1_pending_regen_count: number;
 }
 

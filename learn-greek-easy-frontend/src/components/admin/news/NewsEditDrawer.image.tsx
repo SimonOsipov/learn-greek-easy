@@ -20,7 +20,7 @@ export const NewsEditDrawerImage: React.FC<Props> = ({ item }) => {
 
   return (
     <div className="dr-image-tab" data-testid="news-drawer-tab-image-content">
-      {/* Left column: preview box + overlay */}
+      {/* Left: 4:3 preview + bottom-aligned overlay */}
       <div className="dr-image-preview">
         <div className="dr-image-box">
           {item.image_url ? (
@@ -35,15 +35,10 @@ export const NewsEditDrawerImage: React.FC<Props> = ({ item }) => {
         </div>
       </div>
 
-      {/* Right column: stacked fields */}
+      {/* Right: stacked Field inputs */}
       <div className="space-y-4">
-        <Field
-          label={
-            <label htmlFor="news-image-url" className="text-sm font-medium">
-              {t('news.drawer.image.sourceUrl')}
-            </label>
-          }
-        >
+        {/* Source image URL */}
+        <Field label={t('news.drawer.image.sourceUrl')} htmlFor="news-image-url">
           <Input
             id="news-image-url"
             type="url"
@@ -53,13 +48,8 @@ export const NewsEditDrawerImage: React.FC<Props> = ({ item }) => {
           />
         </Field>
 
-        <Field
-          label={
-            <label htmlFor="news-image-alt" className="text-sm font-medium">
-              {t('news.drawer.image.altText')}
-            </label>
-          }
-        >
+        {/* Alt text */}
+        <Field label={t('news.drawer.image.altText')} htmlFor="news-image-alt">
           <Input
             id="news-image-alt"
             {...register('alt_text')}
@@ -67,13 +57,8 @@ export const NewsEditDrawerImage: React.FC<Props> = ({ item }) => {
           />
         </Field>
 
-        <Field
-          label={
-            <label htmlFor="news-image-credit" className="text-sm font-medium">
-              {t('news.drawer.image.photoCredit')}
-            </label>
-          }
-        >
+        {/* Photo credit */}
+        <Field label={t('news.drawer.image.photoCredit')} htmlFor="news-image-credit">
           <Input
             id="news-image-credit"
             {...register('photo_credit')}

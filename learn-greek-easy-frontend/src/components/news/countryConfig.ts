@@ -9,4 +9,5 @@ export const COUNTRY_CONFIG: Record<NewsCountry, { flag: string; labelKey: strin
   cyprus: { flag: '🇨🇾', labelKey: 'news.country.cyprus' },
   greece: { flag: '🇬🇷', labelKey: 'news.country.greece' },
   world: { flag: '🌍', labelKey: 'news.country.world' },
+  es: { flag: '🇪🇸', labelKey: 'news.country.es' },
 };

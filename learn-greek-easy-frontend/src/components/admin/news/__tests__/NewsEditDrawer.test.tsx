@@ -37,6 +37,23 @@ vi.mock('@/hooks/use-toast', () => ({
   toast: vi.fn(),
 }));
 
+const mockTrack = vi.fn();
+vi.mock('@/lib/analytics', () => ({
+  track: (...args: unknown[]) => mockTrack(...args),
+}));
+
+vi.mock('@/services/api', () => ({
+  APIRequestError: class APIRequestError extends Error {
+    status: number;
+    detail: unknown;
+    constructor(message: string, status: number, detail?: unknown) {
+      super(message);
+      this.status = status;
+      this.detail = detail;
+    }
+  },
+}));
+
 const mockUpdateNewsItem = vi.fn();
 vi.mock('@/services/adminAPI', () => ({
   adminAPI: {
@@ -99,6 +116,10 @@ function _buildItem() {
     audio_a2_generated_at: null,
     audio_a2_file_size_bytes: null,
     has_a2_content: false,
+    alt_text: null,
+    photo_credit: null,
+    status: 'published' as 'draft' | 'published',
+    linked_situation: null as import('@/services/adminAPI').LinkedSituationSummary | null,
   };
 }
 
@@ -125,6 +146,7 @@ beforeEach(async () => {
   storeState.drawerItemId = null;
   storeState.newsItems = [];
   mockFetchNewsItems.mockResolvedValue(undefined);
+  mockUpdateNewsItem.mockResolvedValue(undefined);
   await loadDrawer();
 });
 
@@ -202,9 +224,19 @@ describe('NewsEditDrawer — header rendering', () => {
     expect(document.querySelector('.drawer-title')!.textContent).toBe('Русский заголовок');
   });
 
-  it('renders Published badge', () => {
+  it('renders Published status pill when status is published', () => {
     renderDrawer();
-    expect(screen.getByText('news.drawer.published')).toBeInTheDocument();
+    expect(screen.getByTestId('news-drawer-status-pill')).toBeInTheDocument();
+    expect(screen.getByText('news.drawer.publishedPill')).toBeInTheDocument();
+  });
+
+  it('renders Draft status pill when status is draft', () => {
+    const item = makeItem({ status: 'draft' });
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+    renderDrawer();
+    expect(screen.getByTestId('news-drawer-status-pill')).toBeInTheDocument();
+    expect(screen.getByText('news.drawer.draftPill')).toBeInTheDocument();
   });
 
   it('renders B2 badge when description_el is present', () => {
@@ -293,9 +325,23 @@ describe('NewsEditDrawer — linked situation pill', () => {
   });
 
   it('renders blue linked-situation badge when linked_situation is non-null', () => {
-    const item = { ...makeItem(), linked_situation: { id: 'sit-1', title_en: 'Test situation' } };
+    const item = makeItem({
+      linked_situation: {
+        id: 'sit-1',
+        title_en: 'Test situation',
+        title_el: 'Δοκιμαστική κατάσταση',
+        status: 'published',
+        levels: ['A2'],
+        country: 'greece',
+        role_count: 2,
+        role_names: ['Maria', 'Nikos'],
+        turn_count: 8,
+        exercise_count: 2,
+        audio_seconds: 30,
+      },
+    });
     storeState.drawerItemId = item.id;
-    storeState.newsItems = [item] as ReturnType<typeof makeItem>[];
+    storeState.newsItems = [item];
     renderDrawer();
     expect(screen.getByText('news.drawer.linkedSituationPill')).toBeInTheDocument();
   });
@@ -540,5 +586,62 @@ describe('NewsEditDrawer — country flags', () => {
     storeState.newsItems = [item];
     renderDrawer();
     expect(document.querySelector('.drawer-breadcrumb')!.textContent).toContain('🌍');
+  });
+});
+
+describe('NewsEditDrawer — Publish CTA (NADM-25)', () => {
+  beforeEach(() => {
+    const item = makeItem({ status: 'draft' });
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+  });
+
+  it('renders publish button when status is draft', () => {
+    renderDrawer();
+    expect(screen.getByTestId('news-drawer-publish')).toBeInTheDocument();
+  });
+
+  it('shows "Mark as Published" label when status is draft', () => {
+    renderDrawer();
+    expect(screen.getByText('news.drawer.publishCta')).toBeInTheDocument();
+  });
+
+  it('shows "Publish changes" label when status is published', () => {
+    const item = makeItem({ status: 'published' });
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+    renderDrawer();
+    expect(screen.getByText('news.drawer.publishChangesCta')).toBeInTheDocument();
+  });
+
+  it('publish button is enabled when form is pristine', () => {
+    renderDrawer();
+    expect(screen.getByTestId('news-drawer-publish')).not.toBeDisabled();
+  });
+
+  it('clicking publish button calls updateNewsItem with status published', async () => {
+    const user = userEvent.setup();
+    mockUpdateNewsItem.mockResolvedValue(undefined);
+    renderDrawer();
+    await user.click(screen.getByTestId('news-drawer-publish'));
+    await waitFor(() => {
+      expect(mockUpdateNewsItem).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ status: 'published' })
+      );
+    });
+  });
+
+  it('fires track("admin_news_published") on successful publish', async () => {
+    const user = userEvent.setup();
+    mockUpdateNewsItem.mockResolvedValue(undefined);
+    renderDrawer();
+    await user.click(screen.getByTestId('news-drawer-publish'));
+    await waitFor(() => {
+      expect(mockTrack).toHaveBeenCalledWith(
+        'admin_news_published',
+        expect.objectContaining({ news_item_id: 'item-1' })
+      );
+    });
   });
 });

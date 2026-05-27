@@ -49,7 +49,11 @@ export const NewsEditDrawerBody: React.FC<Props> = () => {
   return (
     <div className="space-y-4" data-testid="news-drawer-tab-body-content">
       {/* Greek body */}
-      <Field label={t('news.drawer.body.greekBody')} hint={t('news.drawer.body.greekBodyHelper')}>
+      <Field
+        label={t('news.drawer.body.greekBody')}
+        hint={t('news.drawer.body.greekBodyHelper')}
+        htmlFor="news-body-description-el"
+      >
         <Textarea
           id="news-body-description-el"
           rows={10}
@@ -66,6 +70,7 @@ export const NewsEditDrawerBody: React.FC<Props> = () => {
         <Field
           label={t('news.drawer.body.scenarioB2')}
           hint={t('news.drawer.body.scenarioB2Helper')}
+          htmlFor="news-body-scenario-el"
         >
           <Textarea
             id="news-body-scenario-el"
@@ -79,7 +84,7 @@ export const NewsEditDrawerBody: React.FC<Props> = () => {
 
         {/* Right: A2 pair — Title A2 + Scenario A2 */}
         <div className="dr-field">
-          <Field label={t('news.drawer.body.titleA2')}>
+          <Field label={t('news.drawer.body.titleA2')} htmlFor="news-body-title-el-a2">
             <Textarea
               id="news-body-title-el-a2"
               rows={2}
@@ -89,7 +94,7 @@ export const NewsEditDrawerBody: React.FC<Props> = () => {
               data-testid="news-drawer-body-title-el-a2"
             />
           </Field>
-          <Field label={t('news.drawer.body.scenarioA2')}>
+          <Field label={t('news.drawer.body.scenarioA2')} htmlFor="news-body-description-el-a2">
             <Textarea
               id="news-body-description-el-a2"
               rows={5}

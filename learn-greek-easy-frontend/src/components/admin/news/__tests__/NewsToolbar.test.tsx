@@ -70,13 +70,14 @@ describe('NewsToolbar — renders all controls', () => {
     storeState.sortMode = 'newest';
   });
 
-  it('renders Country SegControl with All/CY/GR/World options', () => {
+  it('renders Country SegControl with All/CY/GR/ES options (World removed)', () => {
     renderWithRouter();
     // Both SegControls have an "All" button — use getAllByText
     expect(screen.getAllByText('All').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('🇨🇾 CY')).toBeInTheDocument();
     expect(screen.getByText('🇬🇷 GR')).toBeInTheDocument();
-    expect(screen.getByText('🌍 World')).toBeInTheDocument();
+    expect(screen.getByText('🇪🇸 ES')).toBeInTheDocument();
+    expect(screen.queryByText('🌍 World')).not.toBeInTheDocument();
   });
 
   it('renders Level SegControl with B2/A2/B1 options', () => {
@@ -257,5 +258,78 @@ describe('NewsToolbar — Clear-X behaviour', () => {
     await user.type(screen.getByTestId('news-toolbar-search'), 'abc');
     await user.click(screen.getByTestId('news-toolbar-search-clear'));
     expect(screen.queryByTestId('news-toolbar-search-clear')).not.toBeInTheDocument();
+  });
+});
+
+// ── NADM-15: Layout, country options, sort chrome, placeholder ─────────────────
+
+describe('NewsToolbar — NADM-15 layout and chrome', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    storeState.countryFilter = 'all';
+    storeState.levelFilter = 'all';
+    storeState.searchQuery = '';
+    storeState.sortMode = 'newest';
+  });
+
+  it('toolbar root element has gap-4 class', () => {
+    const { container } = renderWithRouter();
+    const toolbar = container.firstChild as HTMLElement;
+    expect(toolbar.classList.contains('gap-4')).toBe(true);
+  });
+
+  it('search input is the first child of the toolbar', () => {
+    const { container } = renderWithRouter();
+    const toolbar = container.firstChild as HTMLElement;
+    const firstChild = toolbar.firstElementChild as HTMLElement;
+    // The search wrapper contains the search input
+    expect(firstChild.querySelector('[data-testid="news-toolbar-search"]')).not.toBeNull();
+  });
+
+  it('sort trigger appears after the level SegControl in DOM order', () => {
+    renderWithRouter();
+    const sortTrigger = screen.getByTestId('news-toolbar-sort-trigger');
+    const searchInput = screen.getByTestId('news-toolbar-search');
+    // compareDocumentPosition: 4 = DOCUMENT_POSITION_FOLLOWING (sort comes after search)
+    expect(
+      searchInput.compareDocumentPosition(sortTrigger) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it('search wrapper has flex-1 and min-w-[280px] classes', () => {
+    const { container } = renderWithRouter();
+    const toolbar = container.firstChild as HTMLElement;
+    const searchWrapper = toolbar.firstElementChild as HTMLElement;
+    expect(searchWrapper.classList.contains('flex-1')).toBe(true);
+    expect(searchWrapper.classList.contains('min-w-[280px]')).toBe(true);
+  });
+
+  it('sort trigger has btn-glass class', () => {
+    renderWithRouter();
+    const sortTrigger = screen.getByTestId('news-toolbar-sort-trigger');
+    expect(sortTrigger.classList.contains('btn-glass')).toBe(true);
+  });
+
+  it('sort trigger has btn-sm class', () => {
+    renderWithRouter();
+    const sortTrigger = screen.getByTestId('news-toolbar-sort-trigger');
+    expect(sortTrigger.classList.contains('btn-sm')).toBe(true);
+  });
+
+  it('ES country option is present', () => {
+    renderWithRouter();
+    expect(screen.getByText('🇪🇸 ES')).toBeInTheDocument();
+  });
+
+  it('World country option is absent', () => {
+    renderWithRouter();
+    expect(screen.queryByText('🌍 World')).not.toBeInTheDocument();
+  });
+
+  it('search input placeholder matches i18n key', () => {
+    renderWithRouter();
+    // The mock returns the key itself: t(k) => k
+    const input = screen.getByTestId('news-toolbar-search');
+    expect(input).toHaveAttribute('placeholder', 'news.toolbar.searchPlaceholder');
   });
 });

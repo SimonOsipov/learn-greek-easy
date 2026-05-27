@@ -572,7 +572,13 @@
       "allChecksPassed": "All checks passed",
       "updatedRelative": "Updated {{relative}}",
       "published": "Published",
+      "publishedPill": "Published",
+      "draftPill": "Draft — not visible",
       "publishedOn": "Published {{date}}",
+      "publishCta": "Mark as Published",
+      "publishChangesCta": "Publish changes",
+      "saveFirst": "Save changes first",
+      "publishGuardFailed": "Cannot publish without a publication date",
       "linkedSituationLabel": "Linked situation",
       "dirty": {
         "title": "Unsaved changes",
@@ -635,7 +641,15 @@
       "deleteLabel": "Delete"
     },
     "toolbar": {
-      "searchPlaceholder": "Search news..."
+      "searchPlaceholder": "Search by title, body, or person…"
+    },
+    "list": {
+      "emptyTitle": "No results",
+      "emptyBody": "No news articles match the current filters.",
+      "clearFilters": "Clear filters",
+      "pagerShowing": "Showing {{from}}–{{to}} of {{total}}",
+      "pagerPrevious": "Previous",
+      "pagerNext": "Next"
     }
   },
   "feedback": {
