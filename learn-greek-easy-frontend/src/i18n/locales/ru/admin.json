@@ -463,8 +463,14 @@
       "new": "+ Новая статья"
     },
     "stats": {
-      "total": "Всего новостей",
-      "withAudio": "С аудио"
+      "total": "Всего статей",
+      "withAudio": "С аудио B2+A2",
+      "audioCoverage": "100% охват · {{count}}/{{total}}",
+      "countrySub": "Греция и Испания — скоро",
+      "b1Coverage": "Охват B1",
+      "countries": "Страны",
+      "allTime": "За всё время",
+      "recentThisWeek": "+{{count}} на этой неделе"
     },
     "create": {
       "title": "Создать новость",

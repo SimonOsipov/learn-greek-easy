@@ -447,12 +447,14 @@
       "current": "News"
     },
     "stats": {
-      "total": "Total News",
-      "withAudio": "With Audio",
+      "total": "Total articles",
+      "withAudio": "With B2+A2 audio",
       "b1Coverage": "B1 coverage",
       "countries": "Countries",
       "allTime": "All time",
-      "recentThisWeek": "+{{count}} this week"
+      "recentThisWeek": "+{{count}} this week",
+      "audioCoverage": "100% coverage · {{count}}/{{total}}",
+      "countrySub": "Greece & Spain on roadmap"
     },
     "actions": {
       "importRss": "Import RSS",

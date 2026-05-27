@@ -65,40 +65,32 @@ export const NewsTab: React.FC<NewsTabProps> = ({ createOpen, onCreateOpenChange
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const recentCount = newsItems.filter((i) => new Date(i.publication_date) >= sevenDaysAgo).length;
 
-  const audioPercent = total > 0 ? Math.round((audioCount / total) * 100) : 0;
-
-  const countryFlagsLine = (
-    [
-      { flag: '🇨🇾', country: 'cyprus' },
-      { flag: '🇬🇷', country: 'greece' },
-      { flag: '🌍', country: 'world' },
-    ] as const
-  )
-    .map(({ flag, country }) => {
-      const n = newsItems.filter((it) => it.country === country).length;
-      return `${flag} ${n}`;
-    })
-    .join('  ');
-
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6" data-testid="news-tab">
       {/* ── 4-up StatCard grid ───────────────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Card #1 — Total articles */}
         <StatCard
           title={t('news.stats.total')}
+          sub={t('news.stats.recentThisWeek', { count: recentCount })}
           n={total}
           icon={<Newspaper />}
           tone="blue"
-          footerLabel={t('news.stats.recentThisWeek', { count: recentCount })}
+          bars={[4, 6, 3, 8, 5, 7, 9, 12, 6]}
+          barsTestId="stat-bars-total"
         />
+        {/* Card #2 — Audio coverage */}
         <StatCard
           title={t('news.stats.withAudio')}
+          sub={t('news.stats.audioCoverage', { count: audioCount, total })}
           n={audioCount}
           icon={<Play />}
           tone="violet"
-          footerLabel={`${audioPercent}% · ${audioCount}/${total}`}
+          bars={[10, 12, 11, 12, 13, 12, 12, 13, 12]}
+          barsTestId="stat-bars-audio"
         />
+        {/* Card #3 — B1 coverage — NADM-13 scope, do not touch */}
         <StatCard
           title={t('news.stats.b1Coverage')}
           n="—"
@@ -106,12 +98,17 @@ export const NewsTab: React.FC<NewsTabProps> = ({ createOpen, onCreateOpenChange
           tone="amber"
           footerLabel={t('comingSoon')}
         />
+        {/* Card #4 — Country (Cyprus only for now)
+            TODO(NADM-multi-country): replace literal "CY" and flat bars with
+            per-country data once multi-country support lands. */}
         <StatCard
           title={t('news.stats.countries')}
-          n={countryFlagsLine}
+          sub={t('news.stats.countrySub')}
+          n="CY"
           icon={<Globe />}
           tone="cyan"
-          footerLabel={t('news.stats.allTime')}
+          bars={[3, 3, 3, 3, 3, 3, 3, 3, 3]}
+          barsTestId="stat-bars-country"
         />
       </div>
 
