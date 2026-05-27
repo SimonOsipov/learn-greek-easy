@@ -12,6 +12,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
+from src.db.models import NewsItemStatus
 from src.schemas.news_item import LinkedSituationSummary, NewsItemResponse, NewsItemUpdate
 from src.schemas.situation import SituationResponse, SituationUpdate
 
@@ -164,6 +165,7 @@ class TestNewsItemResponseSituationTitleEl:
             publication_date=date.today(),
             original_article_url="https://example.com/article",
             country="cyprus",
+            status=NewsItemStatus.DRAFT,
             created_at=datetime.now(),
             updated_at=datetime.now(),
             linked_situation=_minimal_linked_situation(),
@@ -186,6 +188,7 @@ class TestNewsItemResponseSituationTitleEl:
             publication_date=date.today(),
             original_article_url="https://example.com/article",
             country="cyprus",
+            status=NewsItemStatus.DRAFT,
             created_at=datetime.now(),
             updated_at=datetime.now(),
             linked_situation=_minimal_linked_situation(),

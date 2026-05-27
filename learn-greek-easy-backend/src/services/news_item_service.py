@@ -9,8 +9,6 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 import httpx
-from fastapi import HTTPException
-from fastapi import status as http_status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,7 +25,6 @@ from src.db.models import (
     ListeningDialog,
     NewsCountry,
     NewsItem,
-    NewsItemStatus,
     PictureStatus,
     Situation,
     SituationDescription,
@@ -249,17 +246,6 @@ class NewsItemService:
             raise NewsItemNotFoundException(str(news_item_id))
 
         news_item, situation, description, _picture = row
-
-        # Publish guard: draft→published requires publication_date to be set.
-        if (
-            data.status == NewsItemStatus.PUBLISHED
-            and news_item.status == NewsItemStatus.DRAFT
-            and news_item.publication_date is None
-        ):
-            raise HTTPException(
-                status_code=http_status.HTTP_409_CONFLICT,
-                detail="Cannot publish without a publication_date",
-            )
 
         if data.source_image_url is not None:
             await self._replace_image(situation, str(data.source_image_url))

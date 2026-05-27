@@ -100,7 +100,7 @@ test.describe('Admin News — drawer happy paths (NEWS-10)', () => {
     await expect(b1Row.locator('button[aria-disabled="true"]').first()).toBeVisible();
   });
 
-  test('6. Linked situation tab: Generate button disabled with Tooltip "Coming soon"', async ({
+  test('6. Linked situation tab: Generate fires Coming soon toast', async ({
     page,
   }) => {
     await navigateToAdminTab(page, 'news');
@@ -111,10 +111,10 @@ test.describe('Admin News — drawer happy paths (NEWS-10)', () => {
       page.locator('[data-testid="news-drawer-tab-linkedSituation-content"]'),
     ).toBeVisible();
     const generateBtn = page.getByRole('button', { name: /Generate situation/ });
-    await expect(generateBtn).toHaveAttribute('aria-disabled', 'true');
-    // Hover to reveal tooltip
-    await generateBtn.hover();
-    await expect(page.getByText('Coming soon').first()).toBeVisible();
+    await expect(generateBtn).toBeEnabled();
+    // Click fires a "Coming soon" toast
+    await generateBtn.click();
+    await expect(page.getByText('Coming soon').first()).toBeVisible({ timeout: 5_000 });
   });
 
   test('7. Edit EN title then Cancel → dirty Dialog → Discard & continue clears ?edit=', async ({
