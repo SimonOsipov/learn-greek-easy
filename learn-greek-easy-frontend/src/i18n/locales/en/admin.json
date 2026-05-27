@@ -607,8 +607,10 @@
       },
       "body": {
         "greekBody": "Greek body",
-        "titleB2": "Title — B2 (Greek)",
-        "titleB2Hint": "This title doubles as the B2 scenario summary today. A dedicated scenario field is on the roadmap.",
+        "greekBodyHelper": "Full article — shown to B2 learners; lower levels read a simplified scenario",
+        "scenarioB2": "Scenario — B2 (Greek)",
+        "scenarioB2Helper": "Visible to B2 learners as the article body",
+        "titleA2": "Title — A2 (Greek)",
         "scenarioA2": "Scenario — A2 (Greek)"
       },
       "image": {

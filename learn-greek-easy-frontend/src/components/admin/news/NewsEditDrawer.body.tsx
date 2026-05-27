@@ -49,7 +49,11 @@ export const NewsEditDrawerBody: React.FC<Props> = () => {
   return (
     <div className="space-y-4" data-testid="news-drawer-tab-body-content">
       {/* Greek body */}
-      <Field label={t('news.drawer.body.greekBody')} htmlFor="news-body-description-el">
+      <Field
+        label={t('news.drawer.body.greekBody')}
+        hint={t('news.drawer.body.greekBodyHelper')}
+        htmlFor="news-body-description-el"
+      >
         <Textarea
           id="news-body-description-el"
           rows={10}
@@ -60,37 +64,52 @@ export const NewsEditDrawerBody: React.FC<Props> = () => {
         />
       </Field>
 
-      {/* 2-col row: Title B2 + Scenario A2 */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {/* 2-col row: Scenario B2 (left) + A2 pair (right) */}
+      <div className="dr-2col">
+        {/* Left: Scenario — B2 (Greek) — replaces the old Title B2 duplicate */}
         <Field
-          label={t('news.drawer.body.titleB2')}
-          hint={t('news.drawer.body.titleB2Hint')}
-          htmlFor="news-body-title-el"
+          label={t('news.drawer.body.scenarioB2')}
+          hint={t('news.drawer.body.scenarioB2Helper')}
+          htmlFor="news-body-scenario-el"
         >
           <Textarea
-            id="news-body-title-el"
-            rows={2}
-            lang="el"
-            className="serif"
-            {...register('title_el')}
-            data-testid="news-drawer-body-title-el"
-          />
-        </Field>
-        <Field label={t('news.drawer.body.scenarioA2')} htmlFor="news-body-description-el-a2">
-          <Textarea
-            id="news-body-description-el-a2"
+            id="news-body-scenario-el"
             rows={5}
             lang="el"
             className="serif"
-            {...register('description_el_a2')}
-            data-testid="news-drawer-body-description-el-a2"
+            {...register('title_el')}
+            data-testid="news-drawer-body-scenario-el"
           />
+        </Field>
+
+        {/* Right: A2 pair — Title A2 + Scenario A2 */}
+        <div className="dr-field">
+          <Field label={t('news.drawer.body.titleA2')} htmlFor="news-body-title-el-a2">
+            <Textarea
+              id="news-body-title-el-a2"
+              rows={2}
+              lang="el"
+              className="serif"
+              {...register('title_el_a2')}
+              data-testid="news-drawer-body-title-el-a2"
+            />
+          </Field>
+          <Field label={t('news.drawer.body.scenarioA2')} htmlFor="news-body-description-el-a2">
+            <Textarea
+              id="news-body-description-el-a2"
+              rows={5}
+              lang="el"
+              className="serif"
+              {...register('description_el_a2')}
+              data-testid="news-drawer-body-description-el-a2"
+            />
+          </Field>
           {a2Error ? (
             <p className="dr-field-err" data-testid="news-drawer-body-a2-error">
               {a2Error}
             </p>
           ) : null}
-        </Field>
+        </div>
       </div>
     </div>
   );
