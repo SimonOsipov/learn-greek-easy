@@ -99,6 +99,9 @@ function _buildItem() {
     audio_a2_generated_at: null,
     audio_a2_file_size_bytes: null,
     has_a2_content: false,
+    alt_text: null,
+    photo_credit: null,
+    linked_situation: null as import('@/services/adminAPI').LinkedSituationSummary | null,
   };
 }
 
@@ -293,9 +296,23 @@ describe('NewsEditDrawer — linked situation pill', () => {
   });
 
   it('renders blue linked-situation badge when linked_situation is non-null', () => {
-    const item = { ...makeItem(), linked_situation: { id: 'sit-1', title_en: 'Test situation' } };
+    const item = makeItem({
+      linked_situation: {
+        id: 'sit-1',
+        title_en: 'Test situation',
+        title_el: 'Δοκιμαστική κατάσταση',
+        status: 'published',
+        levels: ['A2'],
+        country: 'greece',
+        role_count: 2,
+        role_names: ['Maria', 'Nikos'],
+        turn_count: 8,
+        exercise_count: 2,
+        audio_seconds: 30,
+      },
+    });
     storeState.drawerItemId = item.id;
-    storeState.newsItems = [item] as ReturnType<typeof makeItem>[];
+    storeState.newsItems = [item];
     renderDrawer();
     expect(screen.getByText('news.drawer.linkedSituationPill')).toBeInTheDocument();
   });

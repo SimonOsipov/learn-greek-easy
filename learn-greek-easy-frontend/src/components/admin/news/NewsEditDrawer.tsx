@@ -13,13 +13,21 @@ import { SidePanel } from '@/components/ui/side-panel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
 import { useAdminTabNav } from '@/hooks/useAdminTabNav';
-import { adminAPI, type NewsItemResponse, type NewsItemUpdate } from '@/services/adminAPI';
+import {
+  adminAPI,
+  type LinkedSituationSummary,
+  type NewsItemResponse,
+  type NewsItemUpdate,
+} from '@/services/adminAPI';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
 
 import { NewsEditDrawerAudio } from './NewsEditDrawer.audio';
 import { NewsEditDrawerBody } from './NewsEditDrawer.body';
 import { NewsEditDrawerImage } from './NewsEditDrawer.image';
-import { NewsEditDrawerLinkedSituation } from './NewsEditDrawer.linkedSituation';
+import {
+  NewsEditDrawerLinkedSituation,
+  type LinkedSituationSummary as LinkedSituationSummaryProp,
+} from './NewsEditDrawer.linkedSituation';
 import { NewsEditDrawerTranslations } from './NewsEditDrawer.translations';
 
 export type NewsDrawerTab = 'translations' | 'body' | 'audio' | 'image' | 'linkedSituation';
@@ -175,7 +183,7 @@ export const NewsEditDrawer: React.FC = () => {
             <Badge tone="green">{t('news.drawer.published')}</Badge>
             {item.description_el ? <Badge tone="violet">B2</Badge> : null}
             {item.description_el_a2 ? <Badge tone="violet">A2</Badge> : null}
-            {Boolean((item as NewsItemResponseWithLinkedSituation).linked_situation) && (
+            {item.linked_situation !== null && (
               <Badge tone="blue">{t('news.drawer.linkedSituationPill')}</Badge>
             )}
           </div>
@@ -222,7 +230,11 @@ export const NewsEditDrawer: React.FC = () => {
             {activeTab === 'audio' && <NewsEditDrawerAudio item={item} />}
             {activeTab === 'image' && <NewsEditDrawerImage item={item} />}
             {activeTab === 'linkedSituation' && (
-              <NewsEditDrawerLinkedSituation item={item} onRequestQuickJump={requestQuickJump} />
+              <NewsEditDrawerLinkedSituation
+                item={item}
+                linkedSituation={toLinkedSituationSummaryProp(item.linked_situation)}
+                onRequestQuickJump={requestQuickJump}
+              />
             )}
           </FormProvider>
         </SidePanel.Body>
@@ -313,10 +325,21 @@ function toDefaults(item: NewsItemResponse | null): NewsDrawerFormData {
   };
 }
 
-/** Temporary shim: NADM-08 added linked_situation on the backend but
- *  frontend types won't be regenerated until NADM-22. */
-interface NewsItemResponseWithLinkedSituation extends NewsItemResponse {
-  linked_situation?: unknown;
+/** Map snake_case API shape → camelCase prop expected by NewsEditDrawerLinkedSituation. */
+function toLinkedSituationSummaryProp(
+  raw: LinkedSituationSummary | null
+): LinkedSituationSummaryProp | null {
+  if (raw === null) return null;
+  return {
+    id: raw.id,
+    titleEn: raw.title_en,
+    titleEl: raw.title_el,
+    roleCount: raw.role_count,
+    names: raw.role_names.join(', '),
+    turnCount: raw.turn_count,
+    exerciseCount: raw.exercise_count,
+    audioDurationSeconds: raw.audio_seconds,
+  };
 }
 
 function pickTitle(item: NewsItemResponse, lang: string): string {

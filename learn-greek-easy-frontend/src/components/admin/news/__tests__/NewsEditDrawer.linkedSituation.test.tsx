@@ -112,6 +112,9 @@ function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
     audio_a2_generated_at: null,
     audio_a2_file_size_bytes: null,
     has_a2_content: false,
+    alt_text: null,
+    photo_credit: null,
+    linked_situation: null,
     ...overrides,
   };
 }
@@ -487,5 +490,38 @@ describe('NewsEditDrawer — quick-jump second ConfirmDialog', () => {
     // Both dirtyDialogOpen and pendingQuickJumpSituationId start as null
     const allDirtyTitles = screen.queryAllByText('news.drawer.dirty.title');
     expect(allDirtyTitles).toHaveLength(0);
+  });
+});
+
+// ── NADM-22: populated linked_situation renders card (not empty state) ────────
+
+describe('NewsEditDrawer — linked situation populated card path', () => {
+  it('renders linked-situation card when item.linked_situation is non-null', async () => {
+    const user = userEvent.setup();
+    const item = makeItem({
+      linked_situation: {
+        id: 'sit-xyz',
+        title_en: 'At the Pharmacy',
+        title_el: 'Στο φαρμακείο',
+        status: 'published',
+        levels: ['A2'],
+        country: 'cyprus',
+        role_count: 2,
+        role_names: ['Maria', 'Nikos'],
+        turn_count: 12,
+        exercise_count: 3,
+        audio_seconds: 45.3,
+      },
+    });
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+
+    renderDrawer();
+    await navigateToLinkedSituationTab(user);
+
+    // Card should be visible — not the empty state
+    expect(screen.getByTestId('news-drawer-linked-situation-card')).toBeInTheDocument();
+    expect(screen.getByText('At the Pharmacy')).toBeInTheDocument();
+    expect(screen.queryByText('news.drawer.linkedSituation.emptyText')).not.toBeInTheDocument();
   });
 });

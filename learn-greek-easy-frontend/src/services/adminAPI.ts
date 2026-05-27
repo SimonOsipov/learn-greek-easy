@@ -557,6 +557,24 @@ export interface NewsItemUpdate {
 }
 
 /**
+ * Linked situation summary returned inside a NewsItemResponse (NADM-08).
+ * Snake_case mirrors the Pydantic backend shape.
+ */
+export interface LinkedSituationSummary {
+  id: string;
+  title_en: string;
+  title_el: string;
+  status: string;
+  levels: string[];
+  country: string;
+  role_count: number;
+  role_names: string[];
+  turn_count: number;
+  exercise_count: number;
+  audio_seconds: number;
+}
+
+/**
  * Response from news item API endpoints (extended with card info)
  */
 export interface NewsItemResponse {
@@ -587,6 +605,7 @@ export interface NewsItemResponse {
   has_a2_content: boolean;
   alt_text: string | null;
   photo_credit: string | null;
+  linked_situation: LinkedSituationSummary | null;
 }
 
 /**
