@@ -2524,6 +2524,7 @@ class Situation(Base, TimestampMixin):
 
     id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
     scenario_el: Mapped[str] = mapped_column(Text, nullable=False)
+    title_el: Mapped[str | None] = mapped_column(Text, nullable=True)
     scenario_en: Mapped[str] = mapped_column(Text, nullable=False)
     scenario_ru: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[SituationStatus] = mapped_column(

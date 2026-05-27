@@ -263,6 +263,8 @@ class NewsItemService:
         if data.scenario_el is not None:
             situation.scenario_el = data.scenario_el
             situation.source_title_el = data.scenario_el
+        if data.title_el is not None:
+            situation.title_el = data.title_el
         if data.scenario_en is not None:
             situation.scenario_en = data.scenario_en
             situation.source_title_en = data.scenario_en
@@ -356,6 +358,7 @@ class NewsItemService:
             id=news_item.id,
             situation_id=news_item.situation_id,
             title_el=situation.scenario_el or "",
+            situation_title_el=situation.title_el,
             title_en=situation.scenario_en or "",
             title_ru=situation.scenario_ru or "",
             title_el_a2=situation.scenario_el_a2,

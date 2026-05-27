@@ -106,6 +106,7 @@ class NewsItemUpdate(BaseModel):
     """
 
     scenario_el: Optional[str] = Field(None, min_length=1, max_length=500)
+    title_el: Optional[str] = Field(None, min_length=1, max_length=500)
     scenario_en: Optional[str] = Field(None, min_length=1, max_length=500)
     scenario_ru: Optional[str] = Field(None, min_length=1, max_length=500)
     scenario_el_a2: Optional[str] = Field(None, max_length=500)
@@ -149,6 +150,9 @@ class NewsItemResponse(BaseModel):
         None, description="Duration of audio narration in seconds"
     )
     audio_file_size_bytes: Optional[int] = Field(None, description="Size of audio file in bytes")
+
+    # Dedicated Greek identity title (NADM-06); None until backfill applied
+    situation_title_el: Optional[str] = None
 
     # A2 text content
     title_el_a2: Optional[str] = None

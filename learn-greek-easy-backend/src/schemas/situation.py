@@ -32,6 +32,7 @@ class SituationUpdate(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     scenario_el: Optional[str] = Field(default=None, min_length=1, max_length=500)
+    title_el: Optional[str] = Field(default=None, min_length=1, max_length=500)
     scenario_en: Optional[str] = Field(default=None, min_length=1, max_length=500)
     scenario_ru: Optional[str] = Field(default=None, min_length=1, max_length=500)
 
@@ -127,6 +128,7 @@ class SituationResponse(BaseModel):
 
     id: UUID
     scenario_el: str
+    title_el: str | None = None
     scenario_en: str
     scenario_ru: str
     status: SituationStatus
