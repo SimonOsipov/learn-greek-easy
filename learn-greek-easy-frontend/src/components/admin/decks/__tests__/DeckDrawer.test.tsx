@@ -351,7 +351,63 @@ describe('DeckDrawer', () => {
     expect(skeleton).toHaveAttribute('data-variant', 'list');
   });
 
-  // ── 9. Dirty-cancel → discard dialog; "Keep editing" preserves dirty state ──
+  // ── 9. Breadcrumb shows deck type segment ──────────────────────────────────
+
+  it('breadcrumb contains deck type "Vocabulary" for vocab deck', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
+
+    renderDrawer('/admin?tab=decks&edit=deck-vocab-1');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    const breadcrumb = document.querySelector('.drawer-breadcrumb');
+    expect(breadcrumb).toBeInTheDocument();
+    expect(breadcrumb?.textContent).toContain('Vocabulary');
+  });
+
+  it('breadcrumb contains deck type "Culture" for culture deck', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeCultureDeck());
+
+    renderDrawer('/admin?tab=decks&edit=deck-culture-1');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    const breadcrumb = document.querySelector('.drawer-breadcrumb');
+    expect(breadcrumb).toBeInTheDocument();
+    expect(breadcrumb?.textContent).toContain('Culture');
+  });
+
+  // ── 10. Premium badge ──────────────────────────────────────────────────────
+
+  it('renders Premium badge when deck.is_premium is true', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck({ is_premium: true }));
+
+    renderDrawer('/admin?tab=decks&edit=deck-vocab-1');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Premium')).toBeInTheDocument();
+  });
+
+  it('does not render Premium badge when deck.is_premium is false', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck({ is_premium: false }));
+
+    renderDrawer('/admin?tab=decks&edit=deck-vocab-1');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Premium')).not.toBeInTheDocument();
+  });
+
+  // ── 11. Dirty-cancel → discard dialog; "Keep editing" preserves dirty state ──
   // Regression guard for PM Decision #9: dirty-cancel must show discard dialog;
   // "Keep editing" must dismiss dialog without resetting the form.
 

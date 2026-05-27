@@ -20,7 +20,7 @@ type DeckMarkProps = {
  * - Uppercase via toLocaleUpperCase('el-GR') so Greek deck names are
  *   cased correctly (e.g. lowercase sigma → uppercase Sigma).
  */
-function deriveCode(name: string): string {
+export function deriveCode(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   if (words.length >= 3) {
     return words

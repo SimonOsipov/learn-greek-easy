@@ -23,6 +23,7 @@ import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { CultureDrawerBody } from './CultureDrawerBody';
 import { CultureQuestionDetail } from './CultureQuestionDetail';
 import { DeckDrawerSkeleton } from './DeckDrawerSkeleton';
+import { deriveCode } from './DeckMark';
 import { DeckSettingsTab } from './DeckSettingsTab';
 import { VocabDrawerBody } from './VocabDrawerBody';
 import { VocabWordDetail } from './VocabWordDetail';
@@ -143,6 +144,10 @@ export function DeckDrawer() {
   const deckName = deckNameNormalized
     ? getLocalizedDeckName(deckNameNormalized, i18n.language)
     : '';
+
+  // 3-letter code for breadcrumb (derived from the localized deck name).
+  const deckCode = deckName ? deriveCode(deckName) : '';
+
   const itemCount = deck?.item_count ?? 0;
 
   // Loading: editId is set but query hasn't resolved yet.
@@ -211,7 +216,11 @@ export function DeckDrawer() {
                 className="drawer-breadcrumb mb-1 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
               >
                 <ChevronLeft className="size-4" aria-hidden="true" />
-                {t('decks.allDecks', { defaultValue: 'All decks' })}
+                {t('decks.breadcrumb.decks', { defaultValue: 'Decks' })} ·{' '}
+                {isCulture
+                  ? t('decks.typeCulture', { defaultValue: 'Culture' })
+                  : t('decks.typeVocabulary', { defaultValue: 'Vocabulary' })}{' '}
+                · {deckCode}
               </button>
 
               {/* Deck title */}
@@ -232,6 +241,12 @@ export function DeckDrawer() {
                     ? t('decks.statusActive', { defaultValue: 'Active' })
                     : t('decks.statusInactive', { defaultValue: 'Inactive' })}
                 </Badge>
+
+                {deck.is_premium && (
+                  <Badge tone="amber">
+                    {t('decks.statusPremium', { defaultValue: 'Premium' })}
+                  </Badge>
+                )}
 
                 <span className="text-sm text-muted-foreground">
                   {itemCount}{' '}

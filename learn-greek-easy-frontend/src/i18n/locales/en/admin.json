@@ -2084,7 +2084,8 @@
   "decks": {
     "breadcrumb": {
       "dashboard": "Admin",
-      "current": "Decks"
+      "current": "Decks",
+      "decks": "Decks"
     },
     "kicker": "Admin · Decks",
     "title": "All decks",
@@ -2100,6 +2101,7 @@
         "activity": "Activity"
       }
     },
+    "statusPremium": "Premium",
     "settings": {
       "identity": "Identity",
       "access": "Access",
