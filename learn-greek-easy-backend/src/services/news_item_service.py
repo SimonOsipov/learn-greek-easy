@@ -22,6 +22,7 @@ from src.db.models import (
     ExerciseModality,
     ExerciseStatus,
     ExerciseType,
+    ListeningDialog,
     NewsCountry,
     NewsItem,
     PictureStatus,
@@ -32,6 +33,7 @@ from src.db.models import (
 from src.repositories.exercise import ExerciseRepository
 from src.repositories.news_item import NewsItemRepository
 from src.schemas.news_item import (
+    LinkedSituationSummary,
     NewsItemCreate,
     NewsItemListResponse,
     NewsItemResponse,
@@ -177,21 +179,26 @@ class NewsItemService:
         return self._to_response(news_item, situation, description, picture)
 
     async def get_by_id(self, news_item_id: UUID) -> NewsItemResponse:
-        """Get a news item by ID.
+        """Get a news item by ID with full linked situation summary.
+
+        Uses the detail query which eager-loads the dialog graph
+        (speakers, lines, exercises) to compute aggregate counts without N+1.
 
         Args:
             news_item_id: UUID of the news item
 
         Returns:
-            NewsItemResponse with presigned image URL
+            NewsItemResponse with presigned image URL and linked_situation
 
         Raises:
             NewsItemNotFoundException: If news item doesn't exist
         """
-        row = await self.repo.get_by_id_with_joins(news_item_id)
+        row = await self.repo.get_by_id_for_detail(news_item_id)
         if row is None:
             raise NewsItemNotFoundException(news_item_id=str(news_item_id))
-        return self._to_response(row[0], row[1], row[2], row[3])
+        news_item, situation, description, picture = row
+        linked_situation = self._build_linked_situation_summary(situation, description)
+        return self._to_response(news_item, situation, description, picture, linked_situation)
 
     async def get_list(
         self, *, page: int = 1, page_size: int = 20, country: NewsCountry | None = None
@@ -368,17 +375,102 @@ class NewsItemService:
             raise ValueError("Failed to upload image to S3")
         return s3_key
 
+    @staticmethod
+    def _build_linked_situation_summary(
+        situation: Situation,
+        description: SituationDescription,
+    ) -> LinkedSituationSummary:
+        """Compute a LinkedSituationSummary from an eager-loaded Situation graph.
+
+        Requires that situation.dialog (when not None) has speakers, lines, and
+        exercises already loaded via selectinload. Null dialog, empty speakers,
+        and null audio_duration_seconds are all handled safely.
+
+        Args:
+            situation: Eager-loaded Situation with optional dialog sub-graph.
+            description: Loaded SituationDescription (for country).
+
+        Returns:
+            LinkedSituationSummary with computed aggregate fields.
+        """
+        dialog: ListeningDialog | None = situation.dialog
+
+        if dialog is not None:
+            speakers = dialog.speakers or []
+            role_count = len(speakers)
+            role_names = [s.character_name for s in speakers]
+            turn_count = len(dialog.lines or [])
+            exercise_count = len(dialog.exercises or [])
+            audio_seconds = float(dialog.audio_duration_seconds or 0.0)
+        else:
+            role_count = 0
+            role_names = []
+            turn_count = 0
+            exercise_count = 0
+            audio_seconds = 0.0
+
+        country_str = description.country.value if description.country else "cyprus"
+        # Prefer the dedicated title_el (NADM-06) over scenario_el, fall back to source_title_el.
+        title_el = situation.title_el or situation.scenario_el or situation.source_title_el or ""
+        title_en = situation.scenario_en or situation.source_title_en or ""
+
+        return LinkedSituationSummary(
+            id=situation.id,
+            title_en=title_en,
+            title_el=title_el,
+            status=situation.status.value,
+            levels=list(situation.levels or []),
+            country=country_str,
+            role_count=role_count,
+            role_names=role_names,
+            turn_count=turn_count,
+            exercise_count=exercise_count,
+            audio_seconds=audio_seconds,
+        )
+
     def _to_response(
         self,
         news_item: NewsItem,
         situation: Situation,
         description: SituationDescription,
         picture: SituationPicture | None = None,
+        linked_situation: LinkedSituationSummary | None = None,
     ) -> NewsItemResponse:
-        """Assemble NewsItemResponse from JOIN data."""
+        """Assemble NewsItemResponse from JOIN data.
+
+        Args:
+            news_item: The NewsItem ORM object.
+            situation: The linked Situation ORM object.
+            description: The linked SituationDescription ORM object.
+            picture: The linked SituationPicture ORM object (may be None).
+            linked_situation: Pre-computed LinkedSituationSummary. When None,
+                a zero-aggregate summary is built from the available objects
+                (covers create/update/list paths where the dialog graph is not loaded).
+        """
         image_url = self.s3_service.generate_presigned_url(situation.source_image_s3_key)
         audio_url = self.s3_service.generate_presigned_url(description.audio_s3_key)
         audio_a2_url = self.s3_service.generate_presigned_url(description.audio_a2_s3_key)
+
+        if linked_situation is None:
+            # create/update/list path: dialog not loaded, build a zero-aggregate summary.
+            # Accessing situation.dialog would trigger lazy="raise", so construct directly.
+            country_str = description.country.value if description.country else "cyprus"
+            linked_situation = LinkedSituationSummary(
+                id=situation.id,
+                title_en=situation.scenario_en or situation.source_title_en or "",
+                title_el=situation.title_el
+                or situation.scenario_el
+                or situation.source_title_el
+                or "",
+                status=situation.status.value,
+                levels=list(situation.levels or []),
+                country=country_str,
+                role_count=0,
+                role_names=[],
+                turn_count=0,
+                exercise_count=0,
+                audio_seconds=0.0,
+            )
 
         return NewsItemResponse(
             id=news_item.id,
@@ -406,6 +498,7 @@ class NewsItemService:
             audio_a2_file_size_bytes=None,
             alt_text=picture.alt_text if picture else None,
             photo_credit=picture.photo_credit if picture else None,
+            linked_situation=linked_situation,
             created_at=news_item.created_at,
             updated_at=news_item.updated_at,
         )

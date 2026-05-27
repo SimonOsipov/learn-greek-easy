@@ -24,6 +24,31 @@ from src.db.models import NewsCountry
 from src.schemas.exercise_payload import MultilingualField, SelectCorrectAnswerPayload
 
 
+class LinkedSituationSummary(BaseModel):
+    """Aggregated summary of the Situation linked to a NewsItem.
+
+    Populated on the detail endpoint with dialog graph aggregates.
+    On the list endpoint the same field is present but with zero aggregates
+    (dialog graph is not loaded for list queries).
+    All counts are zero-safe: null dialog, empty speakers, null audio
+    all produce 0 / 0.0 rather than raising.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    title_en: str
+    title_el: str
+    status: str
+    levels: list[str]
+    country: str
+    role_count: int
+    role_names: list[str]
+    turn_count: int
+    exercise_count: int
+    audio_seconds: float
+
+
 class ExerciseDraft(SelectCorrectAnswerPayload):
     """News-ingest exercise payload.
 
@@ -180,6 +205,11 @@ class NewsItemResponse(BaseModel):
         None, description="Size of A2 audio file in bytes"
     )
 
+    # Linked situation summary — non-optional (every NewsItem has a Situation via NOT NULL FK).
+    # On the detail endpoint this is fully populated (role/turn/exercise/audio aggregates).
+    # On the list endpoint the same field is present with zero aggregates (dialog not loaded).
+    linked_situation: "LinkedSituationSummary"
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def has_a2_content(self) -> bool:
@@ -226,6 +256,7 @@ class NewsItemListResponse(BaseModel):
 __all__ = [
     "CountryCounts",
     "ExerciseDraft",
+    "LinkedSituationSummary",
     "NewsItemCreate",
     "NewsItemUpdate",
     "NewsItemResponse",

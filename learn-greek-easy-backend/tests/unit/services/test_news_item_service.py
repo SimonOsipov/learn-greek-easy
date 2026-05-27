@@ -8,6 +8,7 @@ Tests use mocked S3 and real DB session.
 """
 
 from datetime import date, timedelta
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 from uuid import uuid4
 
@@ -16,9 +17,11 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import NewsItemNotFoundException
+from src.db.models import ExerciseStatus, ExerciseType, NewsCountry
 from src.db.models import NewsItem as NewsItemModel
 from src.db.models import Situation as SituationModel
-from src.schemas.news_item import NewsItemCreate
+from src.db.models import SituationStatus
+from src.schemas.news_item import LinkedSituationSummary, NewsItemCreate
 from src.services.news_item_service import NewsItemService
 from tests.factories.news import NewsItemFactory
 
@@ -874,3 +877,227 @@ class TestAltTextPhotoCredit:
 
         assert result.alt_text is None
         assert result.photo_credit is None
+
+
+# =============================================================================
+# Test _build_linked_situation_summary (pure unit — no DB)
+# =============================================================================
+
+
+def _make_situation(dialog=None):
+    """Build a minimal SimpleNamespace mirroring Situation fields."""
+    return SimpleNamespace(
+        id=uuid4(),
+        scenario_el="Ελληνικό σενάριο",
+        scenario_en="English scenario",
+        title_el="Ελληνικός τίτλος",
+        source_title_el=None,
+        source_title_en=None,
+        status=SituationStatus.DRAFT,
+        levels=["B1"],
+        dialog=dialog,
+    )
+
+
+def _make_description(country=NewsCountry.CYPRUS):
+    """Build a minimal SimpleNamespace mirroring SituationDescription fields."""
+    return SimpleNamespace(country=country)
+
+
+def _make_dialog(
+    speakers=None,
+    lines=None,
+    exercises=None,
+    audio_duration_seconds=None,
+):
+    """Build a minimal SimpleNamespace mirroring ListeningDialog fields."""
+    return SimpleNamespace(
+        id=uuid4(),
+        speakers=speakers or [],
+        lines=lines or [],
+        exercises=exercises or [],
+        audio_duration_seconds=audio_duration_seconds,
+    )
+
+
+def _make_speaker(name):
+    return SimpleNamespace(id=uuid4(), character_name=name, speaker_index=0, voice_id="voice-id")
+
+
+def _make_line():
+    return SimpleNamespace(id=uuid4(), text="Γεια σου", line_index=0)
+
+
+def _make_exercise():
+    return SimpleNamespace(
+        id=uuid4(),
+        exercise_type=ExerciseType.SELECT_CORRECT_ANSWER,
+        status=ExerciseStatus.DRAFT,
+    )
+
+
+class TestBuildLinkedSituationSummary:
+    """Unit tests for NewsItemService._build_linked_situation_summary.
+
+    These tests use SimpleNamespace objects — no DB required.
+    """
+
+    def test_happy_path_with_dialog(self):
+        """With two speakers, three lines, one exercise, and audio returns correct aggregates."""
+        speakers = [_make_speaker("Νίκος"), _make_speaker("Μαρία")]
+        lines = [_make_line(), _make_line(), _make_line()]
+        exercises = [_make_exercise()]
+        dialog = _make_dialog(
+            speakers=speakers,
+            lines=lines,
+            exercises=exercises,
+            audio_duration_seconds=42.5,
+        )
+        situation = _make_situation(dialog=dialog)
+        description = _make_description(country=NewsCountry.GREECE)
+
+        result = NewsItemService._build_linked_situation_summary(situation, description)
+
+        assert result.id == situation.id
+        assert result.title_el == "Ελληνικός τίτλος"  # prefers title_el over scenario_el
+        assert result.title_en == "English scenario"
+        assert result.status == "draft"
+        assert result.levels == ["B1"]
+        assert result.country == "greece"
+        assert result.role_count == 2
+        assert result.role_names == ["Νίκος", "Μαρία"]
+        assert result.turn_count == 3
+        assert result.exercise_count == 1
+        assert result.audio_seconds == 42.5
+
+    def test_null_dialog_yields_zeros(self):
+        """When situation.dialog is None, all counts and audio are zero."""
+        situation = _make_situation(dialog=None)
+        description = _make_description()
+
+        result = NewsItemService._build_linked_situation_summary(situation, description)
+
+        assert result.role_count == 0
+        assert result.role_names == []
+        assert result.turn_count == 0
+        assert result.exercise_count == 0
+        assert result.audio_seconds == 0.0
+
+    def test_dialog_with_zero_exercises(self):
+        """Dialog exists but has no exercises → exercise_count=0."""
+        dialog = _make_dialog(
+            speakers=[_make_speaker("Νίκος")],
+            lines=[_make_line()],
+            exercises=[],
+            audio_duration_seconds=10.0,
+        )
+        situation = _make_situation(dialog=dialog)
+        description = _make_description()
+
+        result = NewsItemService._build_linked_situation_summary(situation, description)
+
+        assert result.exercise_count == 0
+        assert result.role_count == 1
+        assert result.turn_count == 1
+
+    def test_null_audio_duration_becomes_zero(self):
+        """Dialog with audio_duration_seconds=None → audio_seconds=0.0 (no exception)."""
+        dialog = _make_dialog(audio_duration_seconds=None)
+        situation = _make_situation(dialog=dialog)
+        description = _make_description()
+
+        result = NewsItemService._build_linked_situation_summary(situation, description)
+
+        assert result.audio_seconds == 0.0
+
+    def test_returns_linked_situation_summary_type(self):
+        """Return type is LinkedSituationSummary."""
+        situation = _make_situation(dialog=None)
+        description = _make_description()
+
+        result = NewsItemService._build_linked_situation_summary(situation, description)
+
+        assert isinstance(result, LinkedSituationSummary)
+
+    def test_title_el_prefers_dedicated_field_over_scenario(self):
+        """title_el is taken from title_el first, scenario_el as fallback."""
+        situation = _make_situation()
+        situation.title_el = "Αποκλειστικός τίτλος"
+        situation.scenario_el = "Σενάριο"
+        description = _make_description()
+
+        result = NewsItemService._build_linked_situation_summary(situation, description)
+
+        assert result.title_el == "Αποκλειστικός τίτλος"
+
+    def test_title_el_falls_back_to_scenario_el_when_title_el_none(self):
+        """When title_el is None, scenario_el is used for title_el."""
+        situation = _make_situation()
+        situation.title_el = None
+        situation.scenario_el = "Σενάριο fallback"
+        description = _make_description()
+
+        result = NewsItemService._build_linked_situation_summary(situation, description)
+
+        assert result.title_el == "Σενάριο fallback"
+
+
+# =============================================================================
+# Test get_by_id returns linked_situation (DB-backed)
+# =============================================================================
+
+
+class TestGetByIdLinkedSituation:
+    """Tests that get_by_id returns a populated linked_situation on the response."""
+
+    @pytest.mark.asyncio
+    async def test_get_by_id_has_linked_situation_field(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item,
+    ):
+        """get_by_id must return a response with linked_situation present and non-null."""
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        result = await service.get_by_id(sample_news_item.id)
+
+        assert result.linked_situation is not None
+        assert result.linked_situation.id == sample_news_item.situation_id
+
+    @pytest.mark.asyncio
+    async def test_get_by_id_linked_situation_correct_titles(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item,
+    ):
+        """linked_situation.title_el and title_en come from Situation scenario/title fields."""
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        result = await service.get_by_id(sample_news_item.id)
+        linked = result.linked_situation
+
+        # Both title fields must be non-empty strings
+        assert isinstance(linked.title_en, str) and linked.title_en
+        assert isinstance(linked.title_el, str) and linked.title_el
+
+    @pytest.mark.asyncio
+    async def test_get_by_id_linked_situation_no_dialog_zeros(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item,
+    ):
+        """When Situation has no dialog, all aggregate counts are zero."""
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        result = await service.get_by_id(sample_news_item.id)
+        linked = result.linked_situation
+
+        # SituationFactory creates situations without a dialog by default.
+        assert linked.role_count == 0
+        assert linked.role_names == []
+        assert linked.turn_count == 0
+        assert linked.exercise_count == 0
+        assert linked.audio_seconds == 0.0

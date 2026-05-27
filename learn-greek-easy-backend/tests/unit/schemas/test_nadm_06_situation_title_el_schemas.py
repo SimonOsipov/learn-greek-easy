@@ -7,11 +7,30 @@ Tests verify:
 - NewsItemResponse exposes situation_title_el
 """
 
+from uuid import uuid4
+
 import pytest
 from pydantic import ValidationError
 
-from src.schemas.news_item import NewsItemResponse, NewsItemUpdate
+from src.schemas.news_item import LinkedSituationSummary, NewsItemResponse, NewsItemUpdate
 from src.schemas.situation import SituationResponse, SituationUpdate
+
+
+def _minimal_linked_situation() -> LinkedSituationSummary:
+    """Build a zero-aggregate LinkedSituationSummary for use in NewsItemResponse tests."""
+    return LinkedSituationSummary(
+        id=uuid4(),
+        title_en="English title",
+        title_el="Ελληνικός τίτλος",
+        status="draft",
+        levels=["B1"],
+        country="cyprus",
+        role_count=0,
+        role_names=[],
+        turn_count=0,
+        exercise_count=0,
+        audio_seconds=0.0,
+    )
 
 
 class TestSituationUpdateTitleEl:
@@ -147,6 +166,7 @@ class TestNewsItemResponseSituationTitleEl:
             country="cyprus",
             created_at=datetime.now(),
             updated_at=datetime.now(),
+            linked_situation=_minimal_linked_situation(),
         )
         assert response.situation_title_el is None
 
@@ -168,5 +188,6 @@ class TestNewsItemResponseSituationTitleEl:
             country="cyprus",
             created_at=datetime.now(),
             updated_at=datetime.now(),
+            linked_situation=_minimal_linked_situation(),
         )
         assert response.situation_title_el == "Ανεξάρτητος τίτλος"

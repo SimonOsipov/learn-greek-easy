@@ -6,8 +6,16 @@ from sqlalchemy import cast, desc, func, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from src.db.models import NewsCountry, NewsItem, Situation, SituationDescription, SituationPicture
+from src.db.models import (
+    ListeningDialog,
+    NewsCountry,
+    NewsItem,
+    Situation,
+    SituationDescription,
+    SituationPicture,
+)
 from src.repositories.base import BaseRepository
 
 
@@ -172,6 +180,55 @@ class NewsItemRepository(BaseRepository[NewsItem]):
         )
         result = await self.db.execute(query)
         return result.first()
+
+    async def get_by_id_for_detail(
+        self, news_item_id: UUID
+    ) -> tuple[NewsItem, Situation, SituationDescription, SituationPicture] | Row | None:
+        """Fetch a single NewsItem for the admin detail view with full Situation graph.
+
+        Returns the same (NewsItem, Situation, SituationDescription, SituationPicture)
+        tuple shape as get_by_id_with_joins, but additionally eager-loads the Situation
+        dialog graph (speakers, lines, exercises) so aggregate fields can be computed
+        without N+1 queries.
+
+        Args:
+            news_item_id: UUID of the news item to fetch.
+
+        Returns:
+            4-tuple (NewsItem, Situation, SituationDescription, SituationPicture) where
+            Situation.dialog (if not None) has speakers/lines/exercises pre-loaded,
+            or None if the news item does not exist.
+        """
+        base_row = await self.get_by_id_with_joins(news_item_id)
+        if base_row is None:
+            return None
+
+        # Separately eager-load NewsItem → Situation → dialog graph.
+        query = (
+            select(NewsItem)
+            .where(NewsItem.id == news_item_id)
+            .options(
+                selectinload(NewsItem.situation).options(
+                    selectinload(Situation.dialog).options(
+                        selectinload(ListeningDialog.speakers),
+                        selectinload(ListeningDialog.lines),
+                        selectinload(ListeningDialog.exercises),
+                    ),
+                )
+            )
+        )
+        result = await self.db.execute(query)
+        news_item_with_graph = result.scalar_one_or_none()
+        if news_item_with_graph is None:
+            return None
+
+        # Return the same 4-tuple shape; swap in the graph-loaded Situation.
+        return (
+            news_item_with_graph,
+            news_item_with_graph.situation,
+            base_row[2],  # SituationDescription from original JOIN
+            base_row[3],  # SituationPicture from original JOIN
+        )
 
 
 # ============================================================================
