@@ -167,6 +167,18 @@ describe('NewsEditDrawerLinkedSituation — kicker + helper', () => {
     expect(screen.getByText('news.drawer.linkedSituation.kicker')).toBeInTheDocument();
   });
 
+  it('kicker dot has data-tone="blue"', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} />
+      </MemoryRouter>
+    );
+    const dot = document.querySelector('.kicker-dot');
+    expect(dot).toBeInTheDocument();
+    expect(dot).toHaveAttribute('data-tone', 'blue');
+  });
+
   it('renders helper paragraph with news.drawer.linkedSituation.helper key', () => {
     const item = makeItem();
     render(
@@ -344,6 +356,18 @@ describe('NewsEditDrawerLinkedSituation — linked card render', () => {
 });
 
 describe('NewsEditDrawerLinkedSituation — footer buttons disabled', () => {
+  it('footer has dashed border-top inline style', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} />
+      </MemoryRouter>
+    );
+    const footer = screen.getByTestId('news-drawer-linked-situation-footer');
+    expect(footer).toBeInTheDocument();
+    expect(footer).toHaveStyle({ borderTop: '1px dashed hsl(var(--fg) / 0.1)' });
+  });
+
   it('Unlink button has aria-disabled="true"', () => {
     const item = makeItem();
     render(

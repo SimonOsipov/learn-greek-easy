@@ -36,7 +36,7 @@ export const NewsEditDrawerLinkedSituation: React.FC<Props> = ({
   return (
     <div className="space-y-4" data-testid="news-drawer-tab-linkedSituation-content">
       <div>
-        <Kicker dot="cyan">{t('news.drawer.linkedSituation.kicker')}</Kicker>
+        <Kicker dot="blue">{t('news.drawer.linkedSituation.kicker')}</Kicker>
         <p className="mt-1 text-sm text-muted-foreground">
           {t('news.drawer.linkedSituation.helper')}
         </p>
@@ -94,7 +94,11 @@ export const NewsEditDrawerLinkedSituation: React.FC<Props> = ({
       )}
 
       {/* Footer actions — always disabled in MVP */}
-      <div className="flex gap-2 border-t border-border pt-2">
+      <div
+        className="flex gap-2 pt-2"
+        style={{ borderTop: '1px dashed hsl(var(--fg) / 0.1)' }}
+        data-testid="news-drawer-linked-situation-footer"
+      >
         <Tooltip>
           <TooltipTrigger asChild>
             <Button

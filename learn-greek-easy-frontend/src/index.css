@@ -902,6 +902,9 @@
     border-radius: 999px;
     background: hsl(var(--primary));
   }
+  .kicker-dot[data-tone='blue'] {
+    background: hsl(var(--primary));
+  }
   .kicker-dot[data-tone='violet'] {
     background: hsl(var(--accent));
   }
