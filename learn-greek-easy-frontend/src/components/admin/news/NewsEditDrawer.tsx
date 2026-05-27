@@ -31,6 +31,8 @@ export interface NewsDrawerFormData {
   title_el_a2: string | null;
   description_el_a2: string | null;
   source_image_url: string;
+  alt_text: string;
+  photo_credit: string;
 }
 
 export const NewsEditDrawer: React.FC = () => {
@@ -91,15 +93,19 @@ export const NewsEditDrawer: React.FC = () => {
     if (dirty.title_el_a2 !== undefined) payload.scenario_el_a2 = data.title_el_a2 || null;
     if (dirty.description_el_a2 !== undefined) payload.text_el_a2 = data.description_el_a2 || null;
     const trimmedImageUrl = (data.source_image_url || '').trim();
-    if (trimmedImageUrl !== '') {
-      try {
-        new URL(trimmedImageUrl);
-      } catch {
-        toast({ title: t('news.drawer.image.invalidUrl'), variant: 'destructive' });
-        return;
+    if (dirty.source_image_url) {
+      if (trimmedImageUrl !== '') {
+        try {
+          new URL(trimmedImageUrl);
+        } catch {
+          toast({ title: t('news.drawer.image.invalidUrl'), variant: 'destructive' });
+          return;
+        }
+        payload.source_image_url = trimmedImageUrl;
       }
-      payload.source_image_url = trimmedImageUrl;
     }
+    if (dirty.alt_text) payload.alt_text = data.alt_text.trim() || null;
+    if (dirty.photo_credit) payload.photo_credit = data.photo_credit.trim() || null;
     if (Object.keys(payload).length === 0) {
       closeAndClearUrl();
       return;
@@ -294,7 +300,9 @@ function toDefaults(item: NewsItemResponse | null): NewsDrawerFormData {
     description_el: item?.description_el ?? '',
     title_el_a2: item?.title_el_a2 ?? null,
     description_el_a2: item?.description_el_a2 ?? null,
-    source_image_url: '',
+    source_image_url: item?.image_url ?? '',
+    alt_text: item?.alt_text ?? '',
+    photo_credit: item?.photo_credit ?? '',
   };
 }
 

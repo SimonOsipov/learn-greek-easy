@@ -552,6 +552,8 @@ export interface NewsItemUpdate {
   country?: NewsCountry;
   scenario_el_a2?: string | null;
   text_el_a2?: string | null;
+  alt_text?: string | null;
+  photo_credit?: string | null;
 }
 
 /**
@@ -583,6 +585,8 @@ export interface NewsItemResponse {
   audio_a2_generated_at: string | null;
   audio_a2_file_size_bytes: number | null;
   has_a2_content: boolean;
+  alt_text: string | null;
+  photo_credit: string | null;
 }
 
 /**
@@ -595,6 +599,8 @@ export interface NewsItemListResponse {
   items: NewsItemResponse[];
   country_counts: { cyprus: number; greece: number; world: number };
   audio_count: number;
+  b1_audio_count: number;
+  b1_pending_regen_count: number;
 }
 
 /**

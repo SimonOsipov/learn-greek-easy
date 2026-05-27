@@ -65,16 +65,13 @@ vi.mock('@/stores/adminNewsStore', () => ({
     mockUseAdminNewsStore(...(args as [(s: typeof storeState) => unknown])),
 }));
 
-// Tooltip: render children + content inline.
-vi.mock('@/components/ui/tooltip', () => ({
-  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  TooltipTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => {
-    if (asChild) return <>{children}</>;
-    return <span>{children}</span>;
-  },
-  TooltipContent: ({ children }: { children: React.ReactNode }) => (
-    <span data-testid="tooltip-content">{children}</span>
+// Field primitive — render label + children.
+vi.mock('@/components/ui/field', () => ({
+  Field: ({ label, children }: { label: React.ReactNode; children: React.ReactNode }) => (
+    <div>
+      {label}
+      {children}
+    </div>
   ),
 }));
 
@@ -106,6 +103,8 @@ function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
     audio_a2_generated_at: null,
     audio_a2_file_size_bytes: null,
     has_a2_content: false,
+    alt_text: null,
+    photo_credit: null,
     ...overrides,
   };
 }
@@ -125,7 +124,13 @@ async function loadModules() {
 // ── Wrapper for isolated component tests ──────────────────────────────────────
 
 function Wrapper({ item }: { item: NewsItemResponse }) {
-  const methods = useForm({ defaultValues: { source_image_url: '' } });
+  const methods = useForm({
+    defaultValues: {
+      source_image_url: item.image_url ?? '',
+      alt_text: item.alt_text ?? '',
+      photo_credit: item.photo_credit ?? '',
+    },
+  });
   return (
     <FormProvider {...methods}>
       <NewsEditDrawerImage item={item} />
@@ -182,8 +187,14 @@ describe('NewsEditDrawerImage — preview block', () => {
 });
 
 describe('NewsEditDrawerImage — source URL input', () => {
-  it('opens with empty value on every mount', () => {
+  it('pre-fills with item.image_url when present', () => {
     render(<Wrapper item={makeItem({ image_url: 'https://example.com/img.jpg' })} />);
+    const input = screen.getByTestId('news-drawer-image-url-input') as HTMLInputElement;
+    expect(input.value).toBe('https://example.com/img.jpg');
+  });
+
+  it('opens empty when item.image_url is null', () => {
+    render(<Wrapper item={makeItem({ image_url: null })} />);
     const input = screen.getByTestId('news-drawer-image-url-input') as HTMLInputElement;
     expect(input.value).toBe('');
   });
@@ -195,26 +206,31 @@ describe('NewsEditDrawerImage — source URL input', () => {
   });
 });
 
-describe('NewsEditDrawerImage — disabled fields', () => {
-  it('alt text input is disabled with aria-disabled="true"', () => {
+describe('NewsEditDrawerImage — enabled alt/credit fields', () => {
+  it('alt text input is not disabled', () => {
     render(<Wrapper item={makeItem()} />);
     const altInput = screen.getByTestId('news-drawer-image-alt-input');
-    expect(altInput).toBeDisabled();
-    expect(altInput).toHaveAttribute('aria-disabled', 'true');
+    expect(altInput).not.toBeDisabled();
   });
 
-  it('photo credit input is disabled with aria-disabled="true"', () => {
+  it('photo credit input is not disabled', () => {
     render(<Wrapper item={makeItem()} />);
     const creditInput = screen.getByTestId('news-drawer-image-credit-input');
-    expect(creditInput).toBeDisabled();
-    expect(creditInput).toHaveAttribute('aria-disabled', 'true');
+    expect(creditInput).not.toBeDisabled();
+  });
+});
+
+describe('NewsEditDrawerImage — 2-col grid layout', () => {
+  it('root element has dr-image-tab class', () => {
+    render(<Wrapper item={makeItem()} />);
+    const root = screen.getByTestId('news-drawer-tab-image-content');
+    expect(root).toHaveClass('dr-image-tab');
   });
 
-  it('shows "Coming soon" tooltip content for disabled fields', () => {
-    render(<Wrapper item={makeItem()} />);
-    const tooltips = screen.getAllByTestId('tooltip-content');
-    const comingSoonTooltips = tooltips.filter((el) => el.textContent?.includes('comingSoon'));
-    expect(comingSoonTooltips.length).toBeGreaterThanOrEqual(2);
+  it('dr-image-box has 4:3 aspect ratio class', () => {
+    render(<Wrapper item={makeItem({ image_url: 'https://cdn.example.com/photo.jpg' })} />);
+    const box = document.querySelector('.dr-image-box');
+    expect(box).toBeInTheDocument();
   });
 });
 

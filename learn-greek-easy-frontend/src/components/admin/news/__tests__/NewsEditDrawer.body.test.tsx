@@ -1,6 +1,6 @@
 // src/components/admin/news/__tests__/NewsEditDrawer.body.test.tsx
 //
-// NEWS-07b: NewsEditDrawerBody — unit tests.
+// NEWS-07b / NADM-20: NewsEditDrawerBody — unit tests.
 
 import React from 'react';
 
@@ -16,13 +16,13 @@ import { NewsEditDrawerBody } from '../NewsEditDrawer.body';
 
 // ── Module mocks ───────────────────────────────────────────────────────────────
 
-// Default i18n mock: returns the key as-is, except for the hint key which
-// returns the exact English string so the hint text assertion can pass.
+// i18n mock: returns the key as-is, except for keys where the exact English
+// text is needed to assert on rendered content.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => {
-      if (key === 'news.drawer.body.titleB2Hint') {
-        return 'This title doubles as the B2 scenario summary today. A dedicated scenario field is on the roadmap.';
+      if (key === 'news.drawer.body.greekBodyHelper') {
+        return 'Full article — shown to B2 learners; lower levels read a simplified scenario';
       }
       return key;
     },
@@ -66,8 +66,8 @@ function Harness({ defaults = {} }: HarnessProps) {
   );
 }
 
-/** Harness that mounts ONLY Body but also exposes a watched value div.
- *  Verifies that title_el in Body is wired to the shared form state.
+/** Harness that mounts Body and exposes a watched value div.
+ *  Verifies that title_el in Body (Scenario B2 field) is wired to shared form state.
  */
 function HarnessBoth({ defaults = {} }: HarnessProps) {
   const form = useForm<NewsDrawerFormData>({
@@ -108,9 +108,18 @@ describe('NewsEditDrawerBody — structure', () => {
     expect(textarea).toHaveAttribute('rows', '10');
   });
 
-  it('renders the Title B2 textarea', () => {
+  it('renders the Scenario B2 textarea (5 rows)', () => {
     render(<Harness />);
-    expect(screen.getByTestId('news-drawer-body-title-el')).toBeInTheDocument();
+    const textarea = screen.getByTestId('news-drawer-body-scenario-el');
+    expect(textarea).toBeInTheDocument();
+    expect(textarea).toHaveAttribute('rows', '5');
+  });
+
+  it('renders the Title A2 textarea (2 rows)', () => {
+    render(<Harness />);
+    const textarea = screen.getByTestId('news-drawer-body-title-el-a2');
+    expect(textarea).toBeInTheDocument();
+    expect(textarea).toHaveAttribute('rows', '2');
   });
 
   it('renders the Scenario A2 textarea', () => {
@@ -118,22 +127,34 @@ describe('NewsEditDrawerBody — structure', () => {
     expect(screen.getByTestId('news-drawer-body-description-el-a2')).toBeInTheDocument();
   });
 
-  it('all 3 Greek textareas have lang="el"', () => {
+  it('all Greek textareas have lang="el"', () => {
     render(<Harness />);
     expect(screen.getByTestId('news-drawer-body-description-el')).toHaveAttribute('lang', 'el');
-    expect(screen.getByTestId('news-drawer-body-title-el')).toHaveAttribute('lang', 'el');
+    expect(screen.getByTestId('news-drawer-body-scenario-el')).toHaveAttribute('lang', 'el');
+    expect(screen.getByTestId('news-drawer-body-title-el-a2')).toHaveAttribute('lang', 'el');
     expect(screen.getByTestId('news-drawer-body-description-el-a2')).toHaveAttribute('lang', 'el');
+  });
+
+  it('Scenario B2 label renders via i18n key', () => {
+    render(<Harness />);
+    // The i18n mock returns the key as-is — assert the label text matches the key
+    expect(screen.getByText('news.drawer.body.scenarioB2')).toBeInTheDocument();
+  });
+
+  it('Title A2 label renders via i18n key', () => {
+    render(<Harness />);
+    expect(screen.getByText('news.drawer.body.titleA2')).toBeInTheDocument();
   });
 });
 
-// ── Tests: hint text ──────────────────────────────────────────────────────────
+// ── Tests: helper text ────────────────────────────────────────────────────────
 
-describe('NewsEditDrawerBody — hint text', () => {
-  it('renders the Title B2 hint with exact text', () => {
+describe('NewsEditDrawerBody — helper text', () => {
+  it('renders the Greek body helper text with exact English string', () => {
     render(<Harness />);
     expect(
       screen.getByText(
-        'This title doubles as the B2 scenario summary today. A dedicated scenario field is on the roadmap.'
+        'Full article — shown to B2 learners; lower levels read a simplified scenario'
       )
     ).toBeInTheDocument();
   });
@@ -142,20 +163,33 @@ describe('NewsEditDrawerBody — hint text', () => {
 // ── Tests: shared FormProvider sync ──────────────────────────────────────────
 
 describe('NewsEditDrawerBody — shared FormProvider sync with Translations tab', () => {
-  it('title_el typed in Body tab updates the shared RHF form state', async () => {
+  it('Scenario B2 field (title_el) typed in Body tab updates the shared RHF form state', async () => {
     const user = userEvent.setup();
     render(<HarnessBoth defaults={{ title_el: '' }} />);
 
-    const bodyTitleEl = screen.getByTestId('news-drawer-body-title-el');
+    const scenarioB2 = screen.getByTestId('news-drawer-body-scenario-el');
 
-    await user.type(bodyTitleEl, 'Κείμενο');
+    await user.type(scenarioB2, 'Κείμενο');
 
-    // The form-title-el-value display reads from form.watch('title_el'),
-    // which reflects the same key used by the Translations tab.
-    // This proves Body's title_el textarea is wired to the shared form state.
+    // form-title-el-value reads from form.watch('title_el') — same field used by Translations tab.
+    // This proves the Scenario B2 textarea is wired to the shared title_el form state.
     await waitFor(() => {
       expect(screen.getByTestId('form-title-el-value')).toHaveTextContent('Κείμενο');
     });
+  });
+});
+
+// ── Tests: Title A2 editability ───────────────────────────────────────────────
+
+describe('NewsEditDrawerBody — Title A2 input', () => {
+  it('Title A2 textarea is editable', async () => {
+    const user = userEvent.setup();
+    render(<Harness defaults={{ title_el_a2: null }} />);
+
+    const titleA2 = screen.getByTestId('news-drawer-body-title-el-a2');
+    await user.type(titleA2, 'Απλός τίτλος');
+
+    expect(titleA2).toHaveValue('Απλός τίτλος');
   });
 });
 
@@ -182,15 +216,15 @@ describe('NewsEditDrawerBody — A2 pair validation', () => {
   });
 
   it('shows inline error when title_el_a2 is set but description_el_a2 is empty', async () => {
-    // title_el_a2 has no dedicated testid so we pre-fill it via defaults and leave
-    // description_el_a2 empty — the validation effect fires on mount.
+    // Pre-fill title_el_a2 via defaults, leave description_el_a2 empty —
+    // the validation effect fires on mount.
     render(<Harness defaults={{ title_el_a2: 'Σενάριο', description_el_a2: null }} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('news-drawer-body-a2-error')).toBeInTheDocument();
     });
 
-    // The error message key is returned as-is by i18n mock
+    // The error message key is returned as-is by the i18n mock
     expect(screen.getByTestId('news-drawer-body-a2-error')).toHaveTextContent(
       'news.validation.a2FieldsPaired'
     );

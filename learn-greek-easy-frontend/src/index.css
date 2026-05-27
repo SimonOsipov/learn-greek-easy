@@ -3189,7 +3189,7 @@
   /* ── Audio tab rows (NEWS-07c) ─────────────────────────────────────────── */
   .audio-row {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: 200px 1fr auto;
     gap: 12px;
     align-items: center;
     padding: 10px;
@@ -3222,10 +3222,26 @@
     gap: 8px;
     flex: 1;
   }
+  .audio-play {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .audio-play:hover {
+    opacity: 0.9;
+  }
   .audio-track {
     position: relative;
     flex: 1;
-    height: 28px;
+    height: 30px;
     display: flex;
     align-items: center;
     gap: 1px;
@@ -3236,13 +3252,13 @@
     top: 0;
     left: 0;
     bottom: 0;
-    background: hsl(var(--accent-2) / 0.18);
+    background: hsl(var(--primary) / 0.18);
     pointer-events: none;
   }
   .audio-wave {
     display: inline-block;
     width: 2px;
-    background: hsl(var(--accent-2));
+    background: hsl(var(--primary));
     border-radius: 1px;
     flex-shrink: 0;
   }
@@ -3258,6 +3274,12 @@
     gap: 6px;
     align-items: center;
   }
+  .dr-image-tab {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
   .dr-image-preview {
     position: relative;
     border-radius: var(--radius-md, 12px);
@@ -3265,7 +3287,7 @@
   }
   .dr-image-box {
     position: relative;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 4 / 3;
     overflow: hidden;
     background: hsl(var(--bg-2));
   }

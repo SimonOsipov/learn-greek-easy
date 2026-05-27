@@ -53,6 +53,8 @@ const storeState = {
   totalPages: 1,
   isLoading: false,
   audioCount: 0,
+  b1AudioCount: 0,
+  b1PendingRegenCount: 0,
   countryFilter: 'all' as string,
   levelFilter: 'all' as string,
   searchQuery: '',
@@ -132,6 +134,8 @@ beforeEach(async () => {
   storeState.newsItems = [];
   storeState.total = 0;
   storeState.audioCount = 0;
+  storeState.b1AudioCount = 0;
+  storeState.b1PendingRegenCount = 0;
   storeState.drawerItemId = null;
   await loadNewsTab();
 });
@@ -167,6 +171,34 @@ describe('NewsTab — basic rendering', () => {
   it('calls fetchNewsItems on mount', () => {
     renderWithRouter();
     expect(mockFetchNewsItems).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('NewsTab — B1 coverage card (#3)', () => {
+  it('renders real b1_audio_count value (not "—")', () => {
+    storeState.b1AudioCount = 63;
+    storeState.b1PendingRegenCount = 4;
+    storeState.total = 67;
+    renderWithRouter();
+    // stat-n for B1 card shows the b1AudioCount number
+    expect(screen.getByText('63')).toBeInTheDocument();
+  });
+
+  it('renders a <b> element in card #3 sub wrapping the awaiting count', () => {
+    storeState.b1AudioCount = 63;
+    storeState.b1PendingRegenCount = 4;
+    storeState.total = 67;
+    renderWithRouter();
+    // The <b> element should contain the pending regen count
+    const boldEls = document.querySelectorAll('.stat-sub b');
+    const b1Bold = Array.from(boldEls).find((el) => el.textContent === '4');
+    expect(b1Bold).toBeTruthy();
+  });
+
+  it('renders sparkline with 9 bars for card #3', () => {
+    renderWithRouter();
+    const sparkline = screen.getByTestId('stat-bars-b1');
+    expect(sparkline.querySelectorAll('span')).toHaveLength(9);
   });
 });
 

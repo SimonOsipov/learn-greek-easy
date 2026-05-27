@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { Field } from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
 import type { NewsItemResponse } from '@/services/adminAPI';
 
@@ -48,10 +49,7 @@ export const NewsEditDrawerBody: React.FC<Props> = () => {
   return (
     <div className="space-y-4" data-testid="news-drawer-tab-body-content">
       {/* Greek body */}
-      <div>
-        <label htmlFor="news-body-description-el" className="text-sm font-medium">
-          {t('news.drawer.body.greekBody')}
-        </label>
+      <Field label={t('news.drawer.body.greekBody')} hint={t('news.drawer.body.greekBodyHelper')}>
         <Textarea
           id="news-body-description-el"
           rows={10}
@@ -60,36 +58,47 @@ export const NewsEditDrawerBody: React.FC<Props> = () => {
           {...register('description_el')}
           data-testid="news-drawer-body-description-el"
         />
-      </div>
+      </Field>
 
-      {/* 2-col row: Title B2 + Scenario A2 */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <label htmlFor="news-body-title-el" className="text-sm font-medium">
-            {t('news.drawer.body.titleB2')}
-          </label>
+      {/* 2-col row: Scenario B2 (left) + A2 pair (right) */}
+      <div className="dr-2col">
+        {/* Left: Scenario — B2 (Greek) — replaces the old Title B2 duplicate */}
+        <Field
+          label={t('news.drawer.body.scenarioB2')}
+          hint={t('news.drawer.body.scenarioB2Helper')}
+        >
           <Textarea
-            id="news-body-title-el"
-            rows={2}
-            lang="el"
-            className="serif"
-            {...register('title_el')}
-            data-testid="news-drawer-body-title-el"
-          />
-          <p className="dr-field-h">{t('news.drawer.body.titleB2Hint')}</p>
-        </div>
-        <div>
-          <label htmlFor="news-body-description-el-a2" className="text-sm font-medium">
-            {t('news.drawer.body.scenarioA2')}
-          </label>
-          <Textarea
-            id="news-body-description-el-a2"
+            id="news-body-scenario-el"
             rows={5}
             lang="el"
             className="serif"
-            {...register('description_el_a2')}
-            data-testid="news-drawer-body-description-el-a2"
+            {...register('title_el')}
+            data-testid="news-drawer-body-scenario-el"
           />
+        </Field>
+
+        {/* Right: A2 pair — Title A2 + Scenario A2 */}
+        <div className="dr-field">
+          <Field label={t('news.drawer.body.titleA2')}>
+            <Textarea
+              id="news-body-title-el-a2"
+              rows={2}
+              lang="el"
+              className="serif"
+              {...register('title_el_a2')}
+              data-testid="news-drawer-body-title-el-a2"
+            />
+          </Field>
+          <Field label={t('news.drawer.body.scenarioA2')}>
+            <Textarea
+              id="news-body-description-el-a2"
+              rows={5}
+              lang="el"
+              className="serif"
+              {...register('description_el_a2')}
+              data-testid="news-drawer-body-description-el-a2"
+            />
+          </Field>
           {a2Error ? (
             <p className="dr-field-err" data-testid="news-drawer-body-a2-error">
               {a2Error}

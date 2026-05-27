@@ -41,8 +41,16 @@ export const NewsTab: React.FC<NewsTabProps> = ({ createOpen, onCreateOpenChange
   const { t } = useTranslation('admin');
 
   // ── Store ─────────────────────────────────────────────────────────────────
-  const { newsItems, total, audioCount, fetchNewsItems, openDrawer, closeDrawer } =
-    useAdminNewsStore();
+  const {
+    newsItems,
+    total,
+    audioCount,
+    b1AudioCount,
+    b1PendingRegenCount,
+    fetchNewsItems,
+    openDrawer,
+    closeDrawer,
+  } = useAdminNewsStore();
 
   // ── Fetch on mount ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -101,10 +109,16 @@ export const NewsTab: React.FC<NewsTabProps> = ({ createOpen, onCreateOpenChange
         />
         <StatCard
           title={t('news.stats.b1Coverage')}
-          n="—"
+          n={b1AudioCount}
+          sub={
+            <>
+              <b>{b1PendingRegenCount}</b> awaiting regen · {b1AudioCount}/{total}
+            </>
+          }
           icon={<RefreshCcw />}
           tone="amber"
-          footerLabel={t('comingSoon')}
+          bars={[8, 9, 10, 11, 10, 11, 12, 12, 11]}
+          barsTestId="stat-bars-b1"
         />
         <StatCard
           title={t('news.stats.countries')}
