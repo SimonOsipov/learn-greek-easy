@@ -21,8 +21,8 @@ const STRINGS: Record<string, string> = {
   'dashboard.breadcrumb.dashboard': 'Admin',
   'dashboard.breadcrumb.current': 'Dashboard',
   // decks
-  'decks.title': 'Decks',
-  'decks.sub': 'Vocabulary and culture decks — search, create, and manage.',
+  'decks.title': 'All decks',
+  'decks.sub': '{{deckTotal}} decks · {{cardTotal}} cards · vocabulary + culture exam sets',
   'decks.kicker': 'Admin · Decks',
   'decks.breadcrumb.dashboard': 'Admin',
   'decks.breadcrumb.current': 'Decks',
@@ -107,9 +107,17 @@ describe('pageHeadPropsFor — inbox branch', () => {
 
 describe('pageHeadPropsFor — decks branch', () => {
   it('returns decks-specific shape with breadcrumb, kicker, actions', () => {
-    const r = pageHeadPropsFor('decks', mockT);
-    expect(r.title).toBe('Decks');
-    expect(r.sub).toBe('Vocabulary and culture decks — search, create, and manage.');
+    const r = pageHeadPropsFor('decks', mockT, undefined, {
+      newsTotal: 0,
+      newsAudio: 0,
+      situationsTotal: 0,
+      situationsDraft: 0,
+      situationsReady: 0,
+      deckTotal: 12,
+      cardTotal: 340,
+    });
+    expect(r.title).toBe('All decks');
+    expect(r.sub).toBe('12 decks · 340 cards · vocabulary + culture exam sets');
     expect(r.breadcrumb).toHaveLength(2);
     expect(r.breadcrumb![0].label).toBe('Admin');
     expect(r.breadcrumb![1].label).toBe('Decks');
@@ -161,6 +169,8 @@ describe('pageHeadPropsFor — news branch', () => {
       situationsTotal: 0,
       situationsDraft: 0,
       situationsReady: 0,
+      deckTotal: 0,
+      cardTotal: 0,
     });
     expect(r.title).toBe('News');
     expect(r.breadcrumb![0].label).toBe('Admin');
@@ -177,6 +187,8 @@ describe('pageHeadPropsFor — situations branch', () => {
       situationsTotal: 5,
       situationsDraft: 2,
       situationsReady: 3,
+      deckTotal: 0,
+      cardTotal: 0,
     });
     expect(r.title).toBe('Situations');
     expect(r.actions).toBeDefined();

@@ -459,6 +459,8 @@ export interface PageHeadCounts {
   situationsTotal: number;
   situationsDraft: number;
   situationsReady: number;
+  deckTotal: number;
+  cardTotal: number;
 }
 
 export function pageHeadPropsFor(
@@ -483,6 +485,8 @@ export function pageHeadPropsFor(
     situationsTotal: 0,
     situationsDraft: 0,
     situationsReady: 0,
+    deckTotal: 0,
+    cardTotal: 0,
   };
 
   switch (tab) {
@@ -520,7 +524,10 @@ export function pageHeadPropsFor(
         ],
         kicker: <Kicker dot="primary">{t('decks.kicker')}</Kicker>,
         title: t('decks.title'),
-        sub: t('decks.sub'),
+        sub: (t as (key: string, opts: Record<string, unknown>) => string)('decks.sub', {
+          deckTotal: _counts.deckTotal,
+          cardTotal: _counts.cardTotal,
+        }),
         actions: (
           <Button
             variant="default"
@@ -951,6 +958,8 @@ const AdminPage: React.FC = () => {
     situationsTotal,
     situationsDraft,
     situationsReady,
+    deckTotal: stats?.total_decks ?? 0,
+    cardTotal: stats?.total_cards ?? 0,
   };
 
   // Show loading skeleton while fetching

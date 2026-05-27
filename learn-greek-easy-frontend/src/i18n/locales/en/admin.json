@@ -2087,8 +2087,8 @@
       "current": "Decks"
     },
     "kicker": "Admin · Decks",
-    "title": "Decks",
-    "sub": "Vocabulary and culture decks — search, create, and manage.",
+    "title": "All decks",
+    "sub": "{{deckTotal}} decks · {{cardTotal}} cards · vocabulary + culture exam sets",
     "actions": {
       "createDeck": "Create Deck"
     },
