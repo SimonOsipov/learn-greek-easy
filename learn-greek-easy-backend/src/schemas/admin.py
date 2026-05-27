@@ -107,6 +107,9 @@ class UnifiedDeckItem(BaseModel):
     owner_name: Optional[str] = Field(
         None, description="Owner display name (None for system decks)"
     )
+    is_system_deck: Optional[bool] = Field(
+        None, description="True if deck is a system deck (no owner)"
+    )
     # Trilingual fields for edit forms
     name_el: Optional[str] = Field(None, description="Greek deck name")
     name_en: Optional[str] = Field(None, description="English deck name")

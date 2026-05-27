@@ -533,6 +533,7 @@ async def list_decks(
                     created_at=row.created_at,
                     owner_id=row.owner_id,
                     owner_name=row.owner_name,
+                    is_system_deck=row.owner_id is None,
                     # Trilingual fields for edit forms
                     name_el=row.name_el,
                     name_en=row.name_en,
@@ -619,6 +620,7 @@ async def list_decks(
                     created_at=row.created_at,
                     owner_id=None,
                     owner_name=None,
+                    is_system_deck=True,
                     # Trilingual fields for edit forms
                     name_el=row.name_el,
                     name_en=row.name_en,
@@ -646,6 +648,158 @@ async def list_decks(
         page=page,
         page_size=page_size,
     )
+
+
+@router.get(
+    "/decks/{deck_id}",
+    response_model=UnifiedDeckItem,
+    summary="Get a single deck by ID",
+    responses={200: {"description": "Deck details"}, 404: {"description": "Deck not found"}},
+)
+async def get_deck(
+    deck_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> UnifiedDeckItem:
+    """Get a single deck (vocabulary or culture) by ID.
+
+    Tries vocabulary decks first, then culture decks.
+
+    Raises:
+        401: If not authenticated
+        403: If authenticated but not superuser
+        404: If deck not found
+    """
+    s3 = get_s3_service()
+
+    # ---- Try vocabulary deck first ----
+    v2_word_count_subquery = (
+        select(DeckWordEntry.deck_id, func.count(WordEntry.id).label("word_count"))
+        .join(WordEntry, WordEntry.id == DeckWordEntry.word_entry_id)
+        .where(WordEntry.is_active.is_(True))
+        .group_by(DeckWordEntry.deck_id)
+        .subquery()
+    )
+
+    vocab_query = (
+        select(
+            Deck.id,
+            Deck.name_en.label("name"),
+            Deck.level,
+            Deck.is_active,
+            Deck.is_premium,
+            Deck.created_at,
+            Deck.owner_id,
+            Deck.cover_image_s3_key,
+            User.full_name.label("owner_name"),
+            func.coalesce(v2_word_count_subquery.c.word_count, 0).label("item_count"),
+            Deck.name_el,
+            Deck.name_en,
+            Deck.name_ru,
+            Deck.description_el,
+            Deck.description_en,
+            Deck.description_ru,
+        )
+        .outerjoin(v2_word_count_subquery, Deck.id == v2_word_count_subquery.c.deck_id)
+        .outerjoin(User, Deck.owner_id == User.id)
+        .where(Deck.id == deck_id)
+    )
+
+    vocab_result = await db.execute(vocab_query)
+    row = vocab_result.one_or_none()
+
+    if row is not None:
+        return UnifiedDeckItem(
+            id=row.id,
+            name=row.name,
+            type="vocabulary",
+            level=row.level,
+            category=None,
+            item_count=row.item_count,
+            is_active=row.is_active,
+            is_premium=row.is_premium,
+            created_at=row.created_at,
+            owner_id=row.owner_id,
+            owner_name=row.owner_name,
+            is_system_deck=row.owner_id is None,
+            name_el=row.name_el,
+            name_en=row.name_en,
+            name_ru=row.name_ru,
+            description_el=row.description_el,
+            description_en=row.description_en,
+            description_ru=row.description_ru,
+            cover_image_url=(
+                s3.generate_presigned_url(row.cover_image_s3_key)
+                if row.cover_image_s3_key
+                else None
+            ),
+        )
+
+    # ---- Try culture deck ----
+    culture_question_count_subquery = (
+        select(
+            CultureQuestion.deck_id,
+            func.count(CultureQuestion.id).label("question_count"),
+        )
+        .group_by(CultureQuestion.deck_id)
+        .subquery()
+    )
+
+    culture_query = (
+        select(
+            CultureDeck.id,
+            CultureDeck.name_en.label("name"),
+            CultureDeck.category,
+            CultureDeck.is_active,
+            CultureDeck.is_premium,
+            CultureDeck.created_at,
+            func.coalesce(culture_question_count_subquery.c.question_count, 0).label("item_count"),
+            CultureDeck.name_el,
+            CultureDeck.name_en,
+            CultureDeck.name_ru,
+            CultureDeck.description_el,
+            CultureDeck.description_en,
+            CultureDeck.description_ru,
+            CultureDeck.cover_image_s3_key,
+        )
+        .outerjoin(
+            culture_question_count_subquery,
+            CultureDeck.id == culture_question_count_subquery.c.deck_id,
+        )
+        .where(CultureDeck.id == deck_id)
+    )
+
+    culture_result = await db.execute(culture_query)
+    culture_row = culture_result.one_or_none()
+
+    if culture_row is not None:
+        return UnifiedDeckItem(
+            id=culture_row.id,
+            name=culture_row.name,
+            type="culture",
+            level=None,
+            category=culture_row.category,
+            item_count=culture_row.item_count,
+            is_active=culture_row.is_active,
+            is_premium=culture_row.is_premium,
+            created_at=culture_row.created_at,
+            owner_id=None,
+            owner_name=None,
+            is_system_deck=True,
+            name_el=culture_row.name_el,
+            name_en=culture_row.name_en,
+            name_ru=culture_row.name_ru,
+            description_el=culture_row.description_el,
+            description_en=culture_row.description_en,
+            description_ru=culture_row.description_ru,
+            cover_image_url=(
+                s3.generate_presigned_url(culture_row.cover_image_s3_key)
+                if culture_row.cover_image_s3_key
+                else None
+            ),
+        )
+
+    raise NotFoundException(resource="Deck", detail=f"Deck with ID '{deck_id}' not found")
 
 
 @router.post(
