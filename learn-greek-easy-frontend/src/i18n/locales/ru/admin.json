@@ -570,6 +570,14 @@
     },
     "toolbar": {
       "searchPlaceholder": "Поиск по заголовку, тексту или персонажу…"
+    },
+    "list": {
+      "emptyTitle": "Нет результатов",
+      "emptyBody": "Нет новостей, соответствующих текущим фильтрам.",
+      "clearFilters": "Сбросить фильтры",
+      "pagerShowing": "Показано {{from}}–{{to}} из {{total}}",
+      "pagerPrevious": "Назад",
+      "pagerNext": "Вперёд"
     }
   },
   "feedback": {

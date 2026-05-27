@@ -154,4 +154,52 @@ describe('NewsGrid', () => {
     await user.click(screen.getByTestId('news-grid-next'));
     expect(mockSetPage).toHaveBeenCalledWith(3);
   });
+
+  // ── NADM-17: Empty-state i18n keys ────────────────────────────────────
+
+  it('empty state renders all three i18n keys via t()', () => {
+    storeState.items = [];
+    render(<NewsGrid onRequestDelete={vi.fn()} />);
+    // Kicker uses emptyTitle key
+    expect(screen.getByText('news.list.emptyTitle')).toBeInTheDocument();
+    // Muted paragraph uses emptyBody key
+    expect(screen.getByText('news.list.emptyBody')).toBeInTheDocument();
+    // Button uses clearFilters key
+    expect(screen.getByRole('button', { name: 'news.list.clearFilters' })).toBeInTheDocument();
+  });
+
+  // ── NADM-17: Chevron icons in pagination buttons ───────────────────────
+
+  it('Previous button contains a ChevronLeft SVG icon', () => {
+    storeState.totalPages = 3;
+    storeState.page = 2;
+    storeState.total = 30;
+    storeState.items = [];
+    render(<NewsGrid onRequestDelete={vi.fn()} />);
+    const prevBtn = screen.getByTestId('news-grid-prev');
+    // lucide-react icons render as <svg> elements inside the button
+    expect(prevBtn.querySelector('svg')).not.toBeNull();
+  });
+
+  it('Next button contains a ChevronRight SVG icon', () => {
+    storeState.totalPages = 3;
+    storeState.page = 2;
+    storeState.total = 30;
+    storeState.items = [];
+    render(<NewsGrid onRequestDelete={vi.fn()} />);
+    const nextBtn = screen.getByTestId('news-grid-next');
+    expect(nextBtn.querySelector('svg')).not.toBeNull();
+  });
+
+  // ── NADM-17: pagerShowing i18n key rendered ────────────────────────────
+
+  it('pagination footer renders pagerShowing i18n key', () => {
+    storeState.totalPages = 3;
+    storeState.page = 1;
+    storeState.total = 30;
+    storeState.items = [];
+    render(<NewsGrid onRequestDelete={vi.fn()} />);
+    // t mock returns key as-is; i18n key should appear in document
+    expect(screen.getByText('news.list.pagerShowing')).toBeInTheDocument();
+  });
 });
