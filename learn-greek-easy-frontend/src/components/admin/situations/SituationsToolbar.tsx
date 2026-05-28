@@ -16,20 +16,19 @@
 
 import { useEffect, useState } from 'react';
 
-import { ChevronDown, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { SegControl, type SegOption } from '@/components/ui/seg-control';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useAdminSituationStore } from '@/stores/adminSituationStore';
 import type { SituationStatus } from '@/types/situation';
 
@@ -100,12 +99,6 @@ export function SituationsToolbar() {
     { value: 'B1', label: 'B1' },
     { value: 'A2', label: 'A2' },
   ];
-
-  const SORT_LABELS: Record<SortValue, string> = {
-    newest: t('situations.filters.sort.newest'),
-    oldest: t('situations.filters.sort.oldest'),
-    draftsFirst: t('situations.filters.sort.draftsFirst'),
-  };
 
   // Local immediate value for the search input (debounced before writing to store/URL)
   const [searchInput, setSearchInput] = useState(searchQuery);
@@ -258,28 +251,21 @@ export function SituationsToolbar() {
         ariaLabel={t('situations.filters.level.label')}
       />
 
-      {/* Sort dropdown */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" data-testid="situations-toolbar-sort-trigger">
-            {SORT_LABELS[sortMode as SortValue]}
-            <ChevronDown className="ml-1 h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuRadioGroup value={sortMode} onValueChange={handleSortChange}>
-            <DropdownMenuRadioItem value="newest">
-              {t('situations.filters.sort.newest')}
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="oldest">
-              {t('situations.filters.sort.oldest')}
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="draftsFirst">
-              {t('situations.filters.sort.draftsFirst')}
-            </DropdownMenuRadioItem>
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {/* Sort select */}
+      <Select value={sortMode} onValueChange={handleSortChange}>
+        <SelectTrigger
+          className="w-[180px]"
+          data-testid="situations-toolbar-sort-trigger"
+          aria-label={t('situations.filters.sort.label')}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="newest">{t('situations.filters.sort.newest')}</SelectItem>
+          <SelectItem value="oldest">{t('situations.filters.sort.oldest')}</SelectItem>
+          <SelectItem value="draftsFirst">{t('situations.filters.sort.draftsFirst')}</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }

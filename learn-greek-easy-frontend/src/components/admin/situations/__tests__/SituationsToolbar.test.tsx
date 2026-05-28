@@ -14,7 +14,7 @@
 import React from 'react';
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
@@ -27,6 +27,37 @@ vi.mock('react-i18next', () => ({
     t: (k: string) => k,
   }),
 }));
+
+// ── Radix Select shim ─────────────────────────────────────────────────────────
+// Radix UI's <Select> does not work in jsdom (no pointer events, no hidden native
+// <select> outside a <form>). Replace with a lightweight native <select> shim so
+// the sort tests can drive sort changes via fireEvent.change.
+vi.mock('@/components/ui/select', () => {
+  const ReactMod = require('react');
+  const Select: React.FC<{
+    value?: string;
+    onValueChange?: (v: string) => void;
+    children?: React.ReactNode;
+  }> = ({ value, onValueChange, children }) =>
+    ReactMod.createElement(
+      'select',
+      {
+        value,
+        onChange: (e: React.ChangeEvent<HTMLSelectElement>) => onValueChange?.(e.target.value),
+        'data-testid': 'situations-toolbar-sort-trigger',
+      },
+      children
+    );
+  const SelectTrigger: React.FC<{ children?: React.ReactNode; [k: string]: unknown }> = () => null;
+  const SelectValue: React.FC<{ [k: string]: unknown }> = () => null;
+  const SelectContent: React.FC<{ children?: React.ReactNode }> = ({ children }) =>
+    ReactMod.createElement(ReactMod.Fragment, null, children);
+  const SelectItem: React.FC<{ value: string; children?: React.ReactNode }> = ({
+    value,
+    children,
+  }) => ReactMod.createElement('option', { value }, children);
+  return { Select, SelectTrigger, SelectValue, SelectContent, SelectItem };
+});
 
 // Store mock — track calls to each setter
 const mockSetStatusFilter = vi.fn();
@@ -211,19 +242,19 @@ describe('SituationsToolbar — URL write-back on sort change', () => {
     storeState.sortMode = 'newest';
   });
 
-  it('calls setSortMode("oldest") when Oldest first is selected', async () => {
-    const user = userEvent.setup();
+  it('calls setSortMode("oldest") when Oldest first is selected', () => {
     renderWithRouter();
-    await user.click(screen.getByTestId('situations-toolbar-sort-trigger'));
-    await user.click(screen.getByText('situations.filters.sort.oldest'));
+    fireEvent.change(screen.getByTestId('situations-toolbar-sort-trigger'), {
+      target: { value: 'oldest' },
+    });
     expect(mockSetSortMode).toHaveBeenCalledWith('oldest');
   });
 
-  it('calls setSortMode("draftsFirst") when Drafts first is selected', async () => {
-    const user = userEvent.setup();
+  it('calls setSortMode("draftsFirst") when Drafts first is selected', () => {
     renderWithRouter();
-    await user.click(screen.getByTestId('situations-toolbar-sort-trigger'));
-    await user.click(screen.getByText('situations.filters.sort.draftsFirst'));
+    fireEvent.change(screen.getByTestId('situations-toolbar-sort-trigger'), {
+      target: { value: 'draftsFirst' },
+    });
     expect(mockSetSortMode).toHaveBeenCalledWith('draftsFirst');
   });
 });
