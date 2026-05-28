@@ -368,17 +368,16 @@ describe('ChangelogTab', () => {
 
   // ── Tag SegControl (AC #6) ──────────────────────────────────────────────────
   describe('Tag SegControl', () => {
-    it('shows All option with total count', () => {
+    it('shows All option', () => {
       mockItems = [
         makeEntry({ id: '1', tag: 'new_feature' }),
         makeEntry({ id: '2', tag: 'bug_fix' }),
       ];
       renderWithRouter();
-      // "All" button should be present with count 2
+      // "All" button should be present (no count badge)
       expect(screen.getByText('All')).toBeInTheDocument();
-      // Count spans rendered as .cl-tag-n
       const allBtn = screen.getByText('All').closest('button');
-      expect(allBtn?.querySelector('.cl-tag-n')?.textContent).toBe('2');
+      expect(allBtn?.querySelector('.cl-tag-n')).toBeNull();
     });
 
     it('shows only tags present in data', () => {
@@ -392,19 +391,17 @@ describe('ChangelogTab', () => {
       expect(screen.queryByText('Announcement')).not.toBeInTheDocument();
     });
 
-    it('shows count per tag', () => {
+    it('renders a pill per tag present in data without count badges', () => {
       mockItems = [
         makeEntry({ id: '1', tag: 'new_feature' }),
         makeEntry({ id: '2', tag: 'new_feature' }),
         makeEntry({ id: '3', tag: 'bug_fix' }),
       ];
       renderWithRouter();
-      // New Feature button should show count 2
       const nfBtn = screen.getByText('New Feature').closest('button');
-      expect(nfBtn?.querySelector('.cl-tag-n')?.textContent).toBe('2');
-      // Bug Fix button should show count 1
+      expect(nfBtn?.querySelector('.cl-tag-n')).toBeNull();
       const bfBtn = screen.getByText('Bug Fix').closest('button');
-      expect(bfBtn?.querySelector('.cl-tag-n')?.textContent).toBe('1');
+      expect(bfBtn?.querySelector('.cl-tag-n')).toBeNull();
     });
 
     it('filters timeline by selected tag', async () => {
@@ -562,19 +559,18 @@ describe('ChangelogTab', () => {
     });
   });
 
-  // ── Tag SegControl count-badge format (TBR2-25-04) ──────────────────────────
+  // ── Tag SegControl renders without count badges (TBR2-25-04) ────────────────
   describe('Tag SegControl count-badge format', () => {
-    it('renders All option button with numeric count suffix', () => {
+    it('renders filter pills without count badges', () => {
       mockItems = [
         makeEntry({ id: '1', tag: 'new_feature' }),
         makeEntry({ id: '2', tag: 'bug_fix' }),
         makeEntry({ id: '3', tag: 'new_feature' }),
       ];
       renderWithRouter();
-      // "All" button should have a .cl-tag-n span with the total count
       const allBtn = screen.getByText('All').closest('button');
       expect(allBtn).toBeInTheDocument();
-      expect(allBtn?.querySelector('.cl-tag-n')?.textContent).toMatch(/^\d+$/);
+      expect(allBtn?.querySelector('.cl-tag-n')).toBeNull();
     });
   });
 

@@ -173,12 +173,11 @@ export function ChangelogTab() {
 
   // ── Tag SegControl options ────────────────────────────────────────────────
   const tagOptions: SegOption<'all' | ChangelogTag>[] = [
-    { value: 'all', label: t('admin:changelog.filter.all'), count: filteredBySearch.length },
+    { value: 'all', label: t('admin:changelog.filter.all') },
     ...CHANGELOG_TAG_OPTIONS.filter((tag) => filteredBySearch.some((e) => e.tag === tag)).map(
       (tag) => ({
         value: tag as 'all' | ChangelogTag,
         label: t(CHANGELOG_TAG_CONFIG[tag].labelKey),
-        count: filteredBySearch.filter((e) => e.tag === tag).length,
       })
     ),
   ];
