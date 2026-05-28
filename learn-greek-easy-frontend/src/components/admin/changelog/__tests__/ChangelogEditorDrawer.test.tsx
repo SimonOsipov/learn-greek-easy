@@ -1052,9 +1052,13 @@ describe('ChangelogEditorDrawer', () => {
     expect(screen.getByTestId('changelog-editor-title-en')).toHaveValue('Entry B title');
   });
 
-  // ── CLLP-10: Header meta row ─────────────────────────────────────────────
+  // ── Header meta row ──────────────────────────────────────────────────────
+  // The redundant header subtitle (tag badge + "Posted <date>") was removed:
+  // the tag is editable via the form pills / preview, and the post date is
+  // already shown in the "Created:" id-meta row below. Compose vs edit mode is
+  // still covered by the id-meta-row presence assertions elsewhere.
 
-  it('header meta row (edit mode): testid resolves, contains cl-preview-v and Posted date', () => {
+  it('header subtitle (drawer-meta) is not rendered (deduplicated)', () => {
     render(
       <ChangelogEditorDrawer
         open={true}
@@ -1067,27 +1071,7 @@ describe('ChangelogEditorDrawer', () => {
       />
     );
 
-    const meta = screen.getByTestId('changelog-drawer-meta');
-    expect(meta).toBeInTheDocument();
-    // Version chip must be present inside meta (drawer renders in Radix Portal — use document)
-    expect(
-      document.querySelector('[data-testid="changelog-drawer-meta"] .cl-preview-v')
-    ).not.toBeNull();
-    // Posted date visible
-    expect(meta).toHaveTextContent(/Posted.*2026/);
-  });
-
-  it('header meta row (compose mode): testid resolves, no Posted text, no version chip', () => {
-    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
-
-    const meta = screen.getByTestId('changelog-drawer-meta');
-    expect(meta).toBeInTheDocument();
-    // No posted date in compose mode
-    expect(screen.queryByText(/Posted/)).toBeNull();
-    // No version chip (version is empty string by default — drawer uses document)
-    expect(
-      document.querySelector('[data-testid="changelog-drawer-meta"] .cl-preview-v')
-    ).toBeNull();
+    expect(screen.queryByTestId('changelog-drawer-meta')).toBeNull();
   });
 
   // ── CLLP-10: Drawer-tabs row structure ───────────────────────────────────

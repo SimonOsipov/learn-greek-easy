@@ -271,17 +271,6 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
           <div className="drawer-head-row">
             <h2 className="drawer-title">{title}</h2>
           </div>
-          <div className="drawer-meta" data-testid="changelog-drawer-meta">
-            <Badge tone={TAG_TONE[form.tag]}>
-              {t(CHANGELOG_TAG_CONFIG[form.tag].labelKey as Parameters<typeof t>[0])}
-            </Badge>
-            {form.version && <span className="cl-preview-v">{form.version}</span>}
-            {entry && (
-              <span className="va-dim">
-                {t('admin:changelog.editor.posted', { date: formatDate(entry.created_at) })}
-              </span>
-            )}
-          </div>
           {entry && (
             <div
               className="cl-drawer-id-row va-dim font-mono"
@@ -407,9 +396,8 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
                   </span>
                 </div>
               )}
-              <textarea
-                className="cl-json-textarea font-mono"
-                rows={20}
+              <Textarea
+                className="cl-json-textarea min-h-[460px] resize-y font-mono leading-relaxed"
                 value={jsonText}
                 onChange={(e) => setJsonText(e.target.value)}
                 data-testid="changelog-editor-json-textarea"
