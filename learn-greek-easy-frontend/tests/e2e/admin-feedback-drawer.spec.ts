@@ -76,10 +76,12 @@ test.describe('Admin Feedback Drawer (FBDR-11)', () => {
     // Drawer should close
     await expect(drawer).toBeHidden({ timeout: 8_000 });
 
-    // Success toast: shadcn/radix toaster uses role="status" (or li with role toast)
-    // "Reply saved" is the toast title in ReplyTab.handleSave
-    const toast = page.locator('[role="status"]').filter({ hasText: /reply saved/i });
-    await expect(toast).toBeVisible({ timeout: 5_000 });
+    // Success toast: "Reply saved" is the toast title in ReplyTab.handleSave.
+    // Use the visible ToastTitle's data-testid (renders immediately) rather than
+    // Radix's internal ToastAnnounce [role="status"] element which is rendered
+    // via a useEffect ref-callback cycle and can lag on webkit.
+    const toastTitle = page.getByTestId('toast-title').filter({ hasText: /reply saved/i });
+    await expect(toastTitle).toBeVisible({ timeout: 5_000 });
 
     // AC #7 — list refetches; the saved card should now show the admin response quote
     // The blockquote renders when admin_response is non-empty (data-testid="admin-feedback-response")

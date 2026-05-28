@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -952,28 +953,42 @@ const AdminPage: React.FC = () => {
   };
 
   // ── Centralised PageHead handlers and counts ─────────────────────────────
-  const pageHandlers: PageHeadHandlers = {
-    onCreateDeck: handleOpenCreateModal,
-    onNewsNew: () => setNewsCreateOpen(true),
-    onSituationsNew: () => setSituationsCreateOpen(true),
-    onChangelogNew: openCompose,
-    onAnnouncementsNew: () =>
-      setSearchParams((prev) => {
-        prev.set('compose', '1');
-        return prev;
-      }),
-    onExerciseNew: openExerciseCompose,
-  };
+  const pageHandlers: PageHeadHandlers = useMemo(
+    () => ({
+      onCreateDeck: handleOpenCreateModal,
+      onNewsNew: () => setNewsCreateOpen(true),
+      onSituationsNew: () => setSituationsCreateOpen(true),
+      onChangelogNew: openCompose,
+      onAnnouncementsNew: () =>
+        setSearchParams((prev) => {
+          prev.set('compose', '1');
+          return prev;
+        }),
+      onExerciseNew: openExerciseCompose,
+    }),
+    [handleOpenCreateModal, openCompose, openExerciseCompose, setSearchParams]
+  );
 
-  const pageCounts: PageHeadCounts = {
-    newsTotal,
-    newsAudio,
-    situationsTotal,
-    situationsDraft,
-    situationsReady,
-    deckTotal: stats?.total_decks ?? 0,
-    cardTotal: stats?.total_cards ?? 0,
-  };
+  const pageCounts: PageHeadCounts = useMemo(
+    () => ({
+      newsTotal,
+      newsAudio,
+      situationsTotal,
+      situationsDraft,
+      situationsReady,
+      deckTotal: stats?.total_decks ?? 0,
+      cardTotal: stats?.total_cards ?? 0,
+    }),
+    [
+      newsTotal,
+      newsAudio,
+      situationsTotal,
+      situationsDraft,
+      situationsReady,
+      stats?.total_decks,
+      stats?.total_cards,
+    ]
+  );
 
   // Show loading skeleton while fetching
   if (isLoading) {
