@@ -937,8 +937,8 @@
   .stat-card {
     padding: 18px 20px;
     border-radius: 16px;
-    background: hsl(var(--bg-2));
-    border: 1px solid hsl(var(--fg) / 0.06);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--fg) / 0.08);
     cursor: default;
     transition: all 0.18s;
     position: relative;
@@ -1065,8 +1065,8 @@
 
   /* ── Attention card / inbox panel (ADMIN2) ── */
   .attention-card {
-    background: hsl(var(--bg-2));
-    border: 1px solid hsl(var(--fg) / 0.06);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--fg) / 0.08);
     border-radius: 18px;
     padding: 22px;
     margin-bottom: 28px;
@@ -1350,89 +1350,19 @@
   }
 
   /* ── Changelog timeline entry (ADMIN2) ── */
+  /* Each changelog entry is a white .admin-card (timeline spine + dots
+     removed); category colour is conveyed by the in-card Badge. The card
+     skin (bg / border / hover lift) comes from the .admin-card class applied
+     alongside .cl-entry on the entry element. */
   .cl-entry {
-    display: grid;
-    grid-template-columns: 28px 1fr;
-    gap: 0;
-    padding: 4px 0;
+    padding: 14px 18px 16px;
     cursor: default;
   }
   .cl-entry.is-clickable {
     cursor: pointer;
   }
-  .cl-entry-rail {
-    display: flex;
-    justify-content: center;
-    position: relative;
-    padding-top: 18px;
-  }
-  .cl-entry-rail::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: -20px;
-    left: 50%;
-    width: 2px;
-    margin-left: -1px;
-    background: hsl(var(--fg) / 0.08);
-  }
-  .cl-month .cl-entry:last-child .cl-entry-rail::before {
-    bottom: 12px;
-  }
-  .cl-entry-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: hsl(var(--primary));
-    position: relative;
-    z-index: 1;
-    box-shadow: 0 0 0 4px hsl(var(--bg-2));
-  }
-  .cl-entry-dot.tone-green {
-    background: hsl(var(--success));
-    box-shadow:
-      0 0 0 4px hsl(var(--bg-2)),
-      0 0 0 6px hsl(var(--success) / 0.16);
-  }
-  .cl-entry-dot.tone-blue {
-    background: hsl(var(--primary));
-    box-shadow:
-      0 0 0 4px hsl(var(--bg-2)),
-      0 0 0 6px hsl(var(--primary) / 0.16);
-  }
-  .cl-entry-dot.tone-amber {
-    background: hsl(var(--warning));
-    box-shadow:
-      0 0 0 4px hsl(var(--bg-2)),
-      0 0 0 6px hsl(var(--warning) / 0.16);
-  }
-  .cl-entry-dot.tone-cyan {
-    background: hsl(var(--accent-2));
-    box-shadow:
-      0 0 0 4px hsl(var(--bg-2)),
-      0 0 0 6px hsl(var(--accent-2) / 0.16);
-  }
-  .cl-entry-dot.tone-violet {
-    background: hsl(var(--accent));
-    box-shadow:
-      0 0 0 4px hsl(var(--bg-2)),
-      0 0 0 6px hsl(var(--accent) / 0.16);
-  }
-  .cl-entry-dot.tone-red {
-    background: hsl(var(--danger));
-    box-shadow:
-      0 0 0 4px hsl(var(--bg-2)),
-      0 0 0 6px hsl(var(--danger) / 0.16);
-  }
   .cl-entry-body {
-    padding: 12px 16px 18px;
-    margin-left: 4px;
-    border-left: 0;
-    border-radius: 12px;
-    transition: background 0.12s;
-  }
-  .cl-entry:hover .cl-entry-body {
-    background: hsl(var(--bg) / 0.5);
+    min-width: 0;
   }
   .cl-entry-head {
     display: flex;
@@ -1700,37 +1630,27 @@
   .an-table {
     display: flex;
     flex-direction: column;
+    gap: 12px;
   }
 
-  .an-row,
-  .an-row-head {
+  /* Each announcement is a white .admin-card (card-per-item, no table head). */
+  .an-row {
     display: grid;
     grid-template-columns: 120px minmax(280px, 1.8fr) 90px 90px 180px 80px;
     gap: 14px;
     align-items: center;
     padding: 14px 16px;
-    border-bottom: 1px solid hsl(var(--fg) / 0.04);
-  }
-  .an-row-head {
-    font-size: 11px;
-    font-weight: 600;
-    color: hsl(var(--fg-3));
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    background: hsl(var(--fg) / 0.02);
-    border-top: 1px solid hsl(var(--fg) / 0.06);
-    border-bottom: 1px solid hsl(var(--fg) / 0.06);
-    padding: 10px 16px;
-  }
-  .an-row {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--fg) / 0.08);
+    border-radius: var(--radius-lg, 22px);
     cursor: pointer;
-    transition: background 0.12s;
+    transition:
+      transform 0.15s,
+      box-shadow 0.15s;
   }
-  .an-row:not(.an-row-head):hover {
-    background: hsl(var(--primary) / 0.04);
-  }
-  .an-row:last-child {
-    border-bottom: none;
+  .an-row:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-2);
   }
 
   .an-date-d {
@@ -1838,10 +1758,11 @@
   }
 
   /* ── VA panel wrapper (DS-21) ───────────────────────────────────────────── */
+  /* Transparent grouping wrapper — list items inside carry their own white
+     .admin-card surface, so the panel itself no longer paints a gray fill. */
   .va-panel {
-    background: hsl(var(--bg-2));
+    background: transparent;
     border-radius: 18px;
-    overflow: hidden;
   }
 
   /* ── Full-size side-panel animation speed (DS-25) ───────────────────────── */
@@ -2155,16 +2076,15 @@
     gap: 12px;
     padding: 16px;
     background: hsl(var(--card));
-    border: 1px solid hsl(var(--line));
+    border: 1px solid hsl(var(--fg) / 0.08);
     border-radius: var(--radius);
-    box-shadow: var(--shadow-1);
     transition:
-      box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1),
-      border-color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      transform 0.15s,
+      box-shadow 0.15s;
   }
   .fb-card:hover {
+    transform: translateY(-2px);
     box-shadow: var(--shadow-2);
-    border-color: hsl(var(--line-2));
   }
   .fb-card-left {
     display: flex;
@@ -2617,6 +2537,7 @@
   .cl-month {
     display: flex;
     flex-direction: column;
+    gap: 12px;
   }
   .cl-month-head {
     display: flex;
@@ -2872,19 +2793,17 @@
     padding: 14px;
     align-items: center;
     border-radius: 14px;
-    border: 1px solid hsl(var(--border) / 0.06);
-    background: hsl(var(--bg) / 0.5);
+    border: 1px solid hsl(var(--fg) / 0.08);
+    background: hsl(var(--card));
     transition:
-      transform 200ms ease,
-      background 200ms ease,
-      border-color 200ms ease;
+      transform 0.15s,
+      box-shadow 0.15s;
     cursor: pointer;
   }
 
   .news-card:hover {
-    transform: translateY(-1px);
-    border-color: hsl(var(--primary) / 0.4);
-    background: hsl(var(--bg) / 0.7);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-2);
   }
 
   /* Thumb — fixed 96×72px, overlays inside */
@@ -3010,6 +2929,29 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+
+  /* ── Canonical admin list-item surface ──────────────────────────────────
+     The single source of truth for every admin list/row/card "skin": a white
+     card on the page canvas with a hairline border and a hover lift. Compose
+     it with a component-specific layout class for grid/padding (see .sit-card,
+     .an-row, .news-card, .cl-card, exercise rows). Modelled on the original
+     Situations card. */
+  .admin-card {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--fg) / 0.08);
+    border-radius: var(--radius-lg, 22px);
+    transition:
+      transform 0.15s,
+      box-shadow 0.15s;
+  }
+  .admin-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-2);
+  }
+  .admin-card:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
   }
 
   .sit-card {

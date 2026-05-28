@@ -262,7 +262,7 @@ export function AdminExercisesSection({ refreshKey = 0 }: AdminExercisesSectionP
               <div
                 key={exercise.id}
                 className={cn(
-                  'rounded-lg border transition-colors',
+                  'rounded-lg border bg-card transition-colors',
                   isOpen ? 'border-primary/50' : 'border-border hover:border-primary/35'
                 )}
               >

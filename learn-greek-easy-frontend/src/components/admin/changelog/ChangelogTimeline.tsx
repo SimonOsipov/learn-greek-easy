@@ -151,7 +151,6 @@ export function ChangelogTimeline({
             return (
               <TimelineEntry
                 key={entry.id}
-                tone={TONE_BY_TAG[entry.tag]}
                 title={title}
                 subtitle={undefined}
                 body={truncate(body, 240)}
