@@ -48,7 +48,9 @@ export function DeckRow({ deck, locale, onOpenDrawer, onDelete }: DeckRowProps) 
   const localizedName = getLocalizedDeckName(normalizedDeck, locale);
   const absoluteDate = format(new Date(deck.created_at), 'MMM d, yyyy');
   const itemLabel =
-    deck.type === 'culture' ? `${deck.item_count} questions` : `${deck.item_count} cards`;
+    deck.type === 'culture'
+      ? t('decks.row.itemCountQuestions', { count: deck.item_count })
+      : t('decks.row.itemCountCards', { count: deck.item_count });
 
   const isSystem = deck.is_system_deck === true;
 
@@ -90,7 +92,9 @@ export function DeckRow({ deck, locale, onOpenDrawer, onDelete }: DeckRowProps) 
           <div className="flex min-w-0 flex-col">
             <span className="truncate font-medium">{localizedName}</span>
             <span className="truncate text-xs text-muted-foreground">
-              {deck.type === 'vocabulary' ? 'vocabulary' : 'culture'}
+              {deck.type === 'vocabulary'
+                ? t('decks.row.typeVocabulary')
+                : t('decks.row.typeCulture')}
             </span>
           </div>
           {deck.level && (
@@ -104,14 +108,16 @@ export function DeckRow({ deck, locale, onOpenDrawer, onDelete }: DeckRowProps) 
       {/* Col 2: Type */}
       <TableCell>
         <Badge variant="outline" className="text-xs">
-          {deck.type === 'vocabulary' ? 'Vocab' : 'Culture'}
+          {deck.type === 'vocabulary'
+            ? t('decks.row.typeVocabBadge')
+            : t('decks.row.typeCultureBadge')}
         </Badge>
       </TableCell>
 
       {/* Col 3: Owner (hidden on xs) */}
       <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">
         {isSystem ? (
-          <span>System</span>
+          <span>{t('decks.row.systemOwner')}</span>
         ) : deck.owner_name ? (
           <div className="flex items-center gap-2">
             <AdminAvatar initials={getInitials(deck.owner_name)} size="sm" />

@@ -58,10 +58,11 @@ function TableSkeleton() {
 }
 
 function EmptyRow() {
+  const { t } = useTranslation('admin');
   return (
     <TableRow>
       <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-        No decks found.
+        {t('decks.list.empty')}
       </TableCell>
     </TableRow>
   );

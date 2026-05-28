@@ -4,6 +4,7 @@
 // No data fetching — caller computes all numbers and passes them as props.
 
 import { BookOpen, Compass, Layers, TrendingUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { StatCard } from '@/components/ui/stat-card';
 
@@ -29,11 +30,12 @@ export function DeckStats({
   avgCardsPerDeck,
   onCardClick,
 }: DeckStatsProps) {
+  const { t } = useTranslation('admin');
   return (
     <div className="stat-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard
-        title="Total decks"
-        sub={`${totalCards} cards across all decks`}
+        title={t('decks.stats.totalDecks')}
+        sub={t('decks.stats.totalCardsSub', { totalCards })}
         n={totalDecks}
         icon={<Layers className="h-4 w-4" />}
         tone="blue"
@@ -42,8 +44,8 @@ export function DeckStats({
         onClick={() => onCardClick?.('all')}
       />
       <StatCard
-        title="Vocabulary"
-        sub={`${totalVocabularyCards} words · A1–B2`}
+        title={t('decks.stats.vocabulary')}
+        sub={t('decks.stats.vocabularySub', { totalVocabularyCards })}
         n={vocabularyCount}
         icon={<BookOpen className="h-4 w-4" />}
         tone="violet"
@@ -52,8 +54,8 @@ export function DeckStats({
         onClick={() => onCardClick?.('vocabulary')}
       />
       <StatCard
-        title="Culture"
-        sub={`${totalCultureQuestions} questions · ${cultureCount} active`}
+        title={t('decks.stats.culture')}
+        sub={t('decks.stats.cultureSub', { totalCultureQuestions, cultureCount })}
         n={cultureCount}
         icon={<Compass className="h-4 w-4" />}
         tone="cyan"
@@ -62,8 +64,8 @@ export function DeckStats({
         onClick={() => onCardClick?.('culture')}
       />
       <StatCard
-        title="Avg cards / deck"
-        sub="+0 vs last month"
+        title={t('decks.stats.avgCardsPerDeck')}
+        sub={t('decks.stats.avgCardsPerDeckSub')}
         n={avgCardsPerDeck}
         icon={<TrendingUp className="h-4 w-4" />}
         tone="green"

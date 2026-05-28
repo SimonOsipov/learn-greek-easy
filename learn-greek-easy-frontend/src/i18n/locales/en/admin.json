@@ -2148,7 +2148,37 @@
     },
     "allComplete": "All cards complete",
     "saveAndClose": "Save & close",
-    "saveChanges": "Save changes"
+    "saveChanges": "Save changes",
+    "typeCulture": "Culture",
+    "typeVocabulary": "Vocabulary",
+    "statusActive": "Active",
+    "statusInactive": "Inactive",
+    "questions": "questions",
+    "words": "words",
+    "stats": {
+      "totalDecks": "Total decks",
+      "vocabulary": "Vocabulary",
+      "culture": "Culture",
+      "avgCardsPerDeck": "Avg cards / deck",
+      "totalCardsSub": "{{totalCards}} cards across all decks",
+      "vocabularySub": "{{totalVocabularyCards}} words · A1–B2",
+      "cultureSub": "{{totalCultureQuestions}} questions · {{cultureCount}} active",
+      "avgCardsPerDeckSub": "+0 vs last month"
+    },
+    "row": {
+      "typeVocabulary": "vocabulary",
+      "typeCulture": "culture",
+      "typeVocabBadge": "Vocab",
+      "typeCultureBadge": "Culture",
+      "systemOwner": "System",
+      "itemCountCards_one": "{{count}} card",
+      "itemCountCards_other": "{{count}} cards",
+      "itemCountQuestions_one": "{{count}} question",
+      "itemCountQuestions_other": "{{count}} questions"
+    },
+    "list": {
+      "empty": "No decks found."
+    }
   },
   "inbox": {
     "breadcrumb": {
