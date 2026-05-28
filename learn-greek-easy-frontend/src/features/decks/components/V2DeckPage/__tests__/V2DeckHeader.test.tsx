@@ -5,6 +5,7 @@
  * - Filter pill selection (default "All", single-select)
  * - Study Now navigation without card type filter
  * - Study Now navigation with card type filter (Translation -> meaning)
+ * - DX-12: total_study_time_seconds and cards_due surfaced in progress props
  */
 
 import React from 'react';
@@ -18,7 +19,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import i18n from '@/i18n';
 import { progressAPI } from '@/services/progressAPI';
-import type { Deck } from '@/types/deck';
+import type { Deck, DeckProgress } from '@/types/deck';
 
 import { V2DeckHeader } from '../V2DeckHeader';
 
@@ -39,6 +40,16 @@ vi.mock('react-router-dom', async () => {
 vi.mock('@/services/progressAPI', () => ({
   progressAPI: {
     getDeckProgressDetail: vi.fn(),
+  },
+}));
+
+// Capture progress props passed to DeckProgressBar
+let capturedProgress: DeckProgress | null = null;
+
+vi.mock('@/components/decks/DeckProgressBar', () => ({
+  DeckProgressBar: ({ progress }: { progress: DeckProgress }) => {
+    capturedProgress = progress;
+    return null;
   },
 }));
 
@@ -85,6 +96,7 @@ function renderV2DeckHeader() {
 describe('V2DeckHeader', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    capturedProgress = null;
   });
 
   it('renders Study Now button with correct data-testid', () => {
@@ -176,5 +188,48 @@ describe('V2DeckHeader', () => {
     await waitFor(() => {
       expect(screen.getByText(/50%/)).toBeInTheDocument();
     });
+  });
+
+  it('DX-12: surfaces total_study_time_seconds as raw seconds and cards_due; streak/accuracy remain 0', async () => {
+    (progressAPI.getDeckProgressDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      progress: {
+        total_cards: 20,
+        cards_mastered: 0,
+        cards_new: 15,
+        cards_learning: 0,
+        cards_review: 0,
+        cards_due: 5,
+        cards_studied: 5,
+        mastery_percentage: 0,
+        completion_percentage: 0,
+      },
+      statistics: {
+        total_reviews: 10,
+        total_study_time_seconds: 3600,
+        average_quality: 3,
+        average_easiness_factor: 2.5,
+        average_interval_days: 1,
+      },
+      timeline: {
+        first_studied_at: null,
+        last_studied_at: null,
+        days_active: 0,
+        estimated_completion_days: null,
+      },
+    });
+
+    renderV2DeckHeader();
+
+    await waitFor(() => {
+      // Wait until the async query resolves and re-renders with actual API data
+      expect(capturedProgress?.totalTimeSpent).toBe(3600);
+    });
+
+    // DX-12: time is raw seconds (DX-06 formats to minutes); cards_due wired
+    expect(capturedProgress!.totalTimeSpent).toBe(3600);
+    expect(capturedProgress!.dueToday).toBe(5);
+    // Placeholders — DX-06 will fill these
+    expect(capturedProgress!.streak).toBe(0);
+    expect(capturedProgress!.accuracy).toBe(0);
   });
 });

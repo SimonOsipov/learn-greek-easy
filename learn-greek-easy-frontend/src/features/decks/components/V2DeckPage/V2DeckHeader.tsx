@@ -149,7 +149,7 @@ export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
                 cardsMastered: progressData?.progress.cards_mastered ?? 0,
                 dueToday: progressData?.progress.cards_due ?? 0,
                 streak: 0,
-                totalTimeSpent: 0,
+                totalTimeSpent: progressData?.statistics?.total_study_time_seconds ?? 0, // raw seconds — DX-06 formats to minutes
                 accuracy: 0,
               }}
               showLegend={true}
