@@ -367,7 +367,7 @@ export const AdminFeedbackSection: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* ── 3-up StatCard grid ─────────────────────────────────────────────── */}
-      <div className="stat-grid">
+      <div className="stat-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title={t('feedback.v2.statCards.total.label')}
           n={total}
