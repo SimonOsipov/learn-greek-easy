@@ -10,19 +10,22 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 
-import { ChevronLeft } from 'lucide-react';
+import { Check, ChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useDeck } from '@/hooks/useDeck';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
+import type { UnifiedDeckItem } from '@/services/adminAPI';
 
 import { CultureDrawerBody } from './CultureDrawerBody';
 import { CultureQuestionDetail } from './CultureQuestionDetail';
 import { DeckDrawerSkeleton } from './DeckDrawerSkeleton';
+import { deriveCode } from './DeckMark';
 import { DeckSettingsTab } from './DeckSettingsTab';
 import { VocabDrawerBody } from './VocabDrawerBody';
 import { VocabWordDetail } from './VocabWordDetail';
@@ -30,6 +33,41 @@ import { VocabWordDetail } from './VocabWordDetail';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type DeckTab = 'words' | 'questions' | 'settings' | 'activity';
+
+// ── DefaultDrawerFooter ───────────────────────────────────────────────────────
+
+/**
+ * Footer rendered on all tabs that don't inject their own footer via context
+ * (i.e. Words, Questions, Activity). DeckSettingsTab overrides this via setFooter.
+ */
+function DefaultDrawerFooter({
+  deck: _deck,
+  onClose,
+}: {
+  deck: UnifiedDeckItem;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation('admin');
+  return (
+    <div className="flex items-center justify-between gap-2 border-t px-4 py-3">
+      <div className="flex items-center gap-2">
+        <Badge tone="green">
+          <Check className="size-3" />
+          {t('decks.allComplete', { defaultValue: 'All cards complete' })}
+        </Badge>
+      </div>
+      <div className="flex gap-2">
+        <Button variant="ghost" size="sm" onClick={onClose}>
+          {t('deckEdit.cancel', { defaultValue: 'Cancel' })}
+        </Button>
+        <Button variant="outline" size="sm" onClick={onClose}>
+          {t('decks.saveAndClose', { defaultValue: 'Save & close' })}
+        </Button>
+        <Button size="sm">{t('decks.saveChanges', { defaultValue: 'Save changes' })}</Button>
+      </div>
+    </div>
+  );
+}
 
 // ── DeckDrawer Context ────────────────────────────────────────────────────────
 
@@ -143,6 +181,10 @@ export function DeckDrawer() {
   const deckName = deckNameNormalized
     ? getLocalizedDeckName(deckNameNormalized, i18n.language)
     : '';
+
+  // 3-letter code for breadcrumb (derived from the localized deck name).
+  const deckCode = deckName ? deriveCode(deckName) : '';
+
   const itemCount = deck?.item_count ?? 0;
 
   // Loading: editId is set but query hasn't resolved yet.
@@ -211,7 +253,11 @@ export function DeckDrawer() {
                 className="drawer-breadcrumb mb-1 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
               >
                 <ChevronLeft className="size-4" aria-hidden="true" />
-                {t('decks.allDecks', { defaultValue: 'All decks' })}
+                {t('decks.breadcrumb.decks', { defaultValue: 'Decks' })} ·{' '}
+                {isCulture
+                  ? t('decks.typeCulture', { defaultValue: 'Culture' })
+                  : t('decks.typeVocabulary', { defaultValue: 'Vocabulary' })}{' '}
+                · {deckCode}
               </button>
 
               {/* Deck title */}
@@ -232,6 +278,12 @@ export function DeckDrawer() {
                     ? t('decks.statusActive', { defaultValue: 'Active' })
                     : t('decks.statusInactive', { defaultValue: 'Inactive' })}
                 </Badge>
+
+                {deck.is_premium && (
+                  <Badge tone="amber">
+                    {t('decks.statusPremium', { defaultValue: 'Premium' })}
+                  </Badge>
+                )}
 
                 <span className="text-sm text-muted-foreground">
                   {itemCount}{' '}
@@ -303,11 +355,13 @@ export function DeckDrawer() {
               </TabsContent>
             </SidePanel.Body>
 
-            {/* Footer slot — populated by DeckSettingsTab via context.
-                Hidden while a word/question detail is pushed (?item= present). */}
-            {footer && !itemId && (
+            {/* Footer slot — shows DefaultDrawerFooter unless a child (e.g. DeckSettingsTab)
+                has injected custom footer content via context. Hidden in detail view. */}
+            {!itemId && (
               <div data-testid="deck-drawer-footer" className="flex-none">
-                {footer}
+                {footer ?? (
+                  <DefaultDrawerFooter deck={deck} onClose={() => handleOpenChange(false)} />
+                )}
               </div>
             )}
           </Tabs>

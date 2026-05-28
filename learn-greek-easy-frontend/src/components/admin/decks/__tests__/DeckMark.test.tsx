@@ -7,7 +7,25 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { DeckMark } from '../DeckMark';
+import { DeckMark, deriveCode } from '../DeckMark';
+
+describe('deriveCode (exported)', () => {
+  it('returns first-letter initials for 3+ word names', () => {
+    expect(deriveCode('Alpha Beta Gamma')).toBe('ABG');
+  });
+
+  it('returns first 3 chars of single word', () => {
+    expect(deriveCode('Verbs')).toBe('VER');
+  });
+
+  it('handles two-word names by using first 3 chars of first word', () => {
+    expect(deriveCode('Hello World')).toBe('HEL');
+  });
+
+  it('uppercases Greek names correctly via el-GR locale', () => {
+    expect(deriveCode('Καθημερινά Ρήματα Α')).toBe('ΚΡΑ');
+  });
+});
 
 describe('DeckMark', () => {
   // ── Code derivation ──────────────────────────────────────────────────────

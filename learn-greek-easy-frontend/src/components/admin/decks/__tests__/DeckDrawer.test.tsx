@@ -18,6 +18,7 @@ import { DeckDrawer } from '../DeckDrawer';
 
 vi.mock('@/services/adminAPI', () => ({
   adminAPI: {
+    getDeck: vi.fn(),
     listDecks: vi.fn(),
     listWordEntries: vi
       .fn()
@@ -113,12 +114,7 @@ describe('DeckDrawer', () => {
   // ── 1. Vocab deck — drawer mounts + correct 3 tabs ─────────────────────────
 
   it('opens for vocab deck and renders 3 tab triggers (words, settings, activity)', async () => {
-    (adminAPI.listDecks as Mock).mockResolvedValue({
-      decks: [makeVocabDeck()],
-      total: 1,
-      page: 1,
-      page_size: 200,
-    });
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
 
     renderDrawer('/admin?tab=decks&edit=deck-vocab-1');
 
@@ -140,12 +136,7 @@ describe('DeckDrawer', () => {
   // ── 2. Culture deck — correct 3 tabs (questions, settings, activity) ───────
 
   it('opens for culture deck and renders 3 tab triggers (questions, settings, activity)', async () => {
-    (adminAPI.listDecks as Mock).mockResolvedValue({
-      decks: [makeCultureDeck()],
-      total: 1,
-      page: 1,
-      page_size: 200,
-    });
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeCultureDeck());
 
     renderDrawer('/admin?tab=decks&edit=deck-culture-1');
 
@@ -167,12 +158,7 @@ describe('DeckDrawer', () => {
   it('close button removes edit, item, and subtab from search params', async () => {
     const user = userEvent.setup();
 
-    (adminAPI.listDecks as Mock).mockResolvedValue({
-      decks: [makeVocabDeck()],
-      total: 1,
-      page: 1,
-      page_size: 200,
-    });
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
 
     let currentSearch = '';
 
@@ -228,7 +214,7 @@ describe('DeckDrawer', () => {
   // ── 4. Not-found: isError → deck-drawer-not-found, ?edit= preserved ────────
 
   it('shows not-found state when deck query errors and keeps ?edit= in URL', async () => {
-    (adminAPI.listDecks as Mock).mockRejectedValue(new Error('Network error'));
+    (adminAPI.getDeck as Mock).mockRejectedValue(new Error('Network error'));
 
     let capturedSearch = '';
 
@@ -269,16 +255,13 @@ describe('DeckDrawer', () => {
     expect(capturedSearch).toContain('edit=deck-unknown');
   });
 
-  // ── 5. Not-found: null data (deck not in list) keeps ?edit= ────────────────
+  // ── 5. Not-found: 404 from getDeck keeps ?edit= ────────────────────────────
 
-  it('shows not-found state when deck is not in list result', async () => {
-    // listDecks returns empty — no match for the given ID
-    (adminAPI.listDecks as Mock).mockResolvedValue({
-      decks: [],
-      total: 0,
-      page: 1,
-      page_size: 200,
-    });
+  it('shows not-found state when deck is not found (404) and keeps ?edit= in URL', async () => {
+    // getDeck throws 404 — deck does not exist
+    (adminAPI.getDeck as Mock).mockRejectedValue(
+      Object.assign(new Error('Not Found'), { status: 404 })
+    );
 
     let capturedSearch = '';
 
@@ -323,12 +306,7 @@ describe('DeckDrawer', () => {
   it('activity tab shows activityPlaceholder text', async () => {
     const user = userEvent.setup();
 
-    (adminAPI.listDecks as Mock).mockResolvedValue({
-      decks: [makeVocabDeck()],
-      total: 1,
-      page: 1,
-      page_size: 200,
-    });
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
 
     renderDrawer('/admin?edit=deck-vocab-1&subtab=words');
 
@@ -352,7 +330,7 @@ describe('DeckDrawer', () => {
 
   it('shows detail-variant skeleton when ?item= is present during load', () => {
     // Use a never-resolving promise to stay in loading state
-    (adminAPI.listDecks as Mock).mockReturnValue(new Promise(() => {}));
+    (adminAPI.getDeck as Mock).mockReturnValue(new Promise(() => {}));
 
     renderDrawer('/admin?edit=deck-vocab-1&item=word-99');
 
@@ -364,7 +342,7 @@ describe('DeckDrawer', () => {
   // ── 8. Deep-link without ?item= → list skeleton variant ────────────────────
 
   it('shows list-variant skeleton when no ?item= param during load', () => {
-    (adminAPI.listDecks as Mock).mockReturnValue(new Promise(() => {}));
+    (adminAPI.getDeck as Mock).mockReturnValue(new Promise(() => {}));
 
     renderDrawer('/admin?edit=deck-vocab-1');
 
@@ -373,19 +351,105 @@ describe('DeckDrawer', () => {
     expect(skeleton).toHaveAttribute('data-variant', 'list');
   });
 
-  // ── 9. Dirty-cancel → discard dialog; "Keep editing" preserves dirty state ──
+  // ── 9. Breadcrumb shows deck type segment ──────────────────────────────────
+
+  it('breadcrumb contains deck type "Vocabulary" for vocab deck', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
+
+    renderDrawer('/admin?tab=decks&edit=deck-vocab-1');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    const breadcrumb = document.querySelector('.drawer-breadcrumb');
+    expect(breadcrumb).toBeInTheDocument();
+    expect(breadcrumb?.textContent).toContain('Vocabulary');
+  });
+
+  it('breadcrumb contains deck type "Culture" for culture deck', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeCultureDeck());
+
+    renderDrawer('/admin?tab=decks&edit=deck-culture-1');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    const breadcrumb = document.querySelector('.drawer-breadcrumb');
+    expect(breadcrumb).toBeInTheDocument();
+    expect(breadcrumb?.textContent).toContain('Culture');
+  });
+
+  // ── 10. Premium badge ──────────────────────────────────────────────────────
+
+  it('renders Premium badge when deck.is_premium is true', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck({ is_premium: true }));
+
+    renderDrawer('/admin?tab=decks&edit=deck-vocab-1');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Premium')).toBeInTheDocument();
+  });
+
+  it('does not render Premium badge when deck.is_premium is false', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck({ is_premium: false }));
+
+    renderDrawer('/admin?tab=decks&edit=deck-vocab-1');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Premium')).not.toBeInTheDocument();
+  });
+
+  // ── 11. Default footer on Words tab ─────────────────────────────────────────
+
+  it('shows default footer with 3 buttons on Words tab (not Settings)', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
+
+    renderDrawer('/admin?tab=decks&edit=deck-vocab-1');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    const footer = screen.getByTestId('deck-drawer-footer');
+    expect(footer).toBeInTheDocument();
+    expect(screen.getByText('All cards complete')).toBeInTheDocument();
+    expect(screen.getByText('Cancel')).toBeInTheDocument();
+    expect(screen.getByText('Save & close')).toBeInTheDocument();
+    expect(screen.getByText('Save changes')).toBeInTheDocument();
+  });
+
+  // ── 12. Footer hidden in detail view ───────────────────────────────────────
+
+  it('hides footer when ?item= is present (detail view)', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
+
+    renderDrawer('/admin?tab=decks&edit=deck-vocab-1&item=some-word-id');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('deck-drawer-footer')).not.toBeInTheDocument();
+  });
+
+  // ── 13. Dirty-cancel → discard dialog; "Keep editing" preserves dirty state ──
   // Regression guard for PM Decision #9: dirty-cancel must show discard dialog;
   // "Keep editing" must dismiss dialog without resetting the form.
 
   it('dirty-cancel triggers discard dialog; Keep editing dismisses it and preserves dirty state', async () => {
     const user = userEvent.setup();
 
-    (adminAPI.listDecks as Mock).mockResolvedValue({
-      decks: [makeVocabDeck({ name_en: 'Original Name', name_ru: 'Original RU' })],
-      total: 1,
-      page: 1,
-      page_size: 200,
-    });
+    (adminAPI.getDeck as Mock).mockResolvedValue(
+      makeVocabDeck({ name_en: 'Original Name', name_ru: 'Original RU' })
+    );
 
     // Start on settings subtab so DeckSettingsTab renders immediately
     renderDrawer('/admin?edit=deck-vocab-1&subtab=settings');

@@ -107,7 +107,7 @@
     "culture": "Culture"
   },
   "search": {
-    "placeholder": "Search decks..."
+    "placeholder": "Search decks, words, or codes…"
   },
   "filter": {
     "type": "Filter by type",
@@ -2084,11 +2084,12 @@
   "decks": {
     "breadcrumb": {
       "dashboard": "Admin",
-      "current": "Decks"
+      "current": "Decks",
+      "decks": "Decks"
     },
     "kicker": "Admin · Decks",
-    "title": "Decks",
-    "sub": "Vocabulary and culture decks — search, create, and manage.",
+    "title": "All decks",
+    "sub": "{{deckTotal}} decks · {{cardTotal}} cards · vocabulary + culture exam sets",
     "actions": {
       "createDeck": "Create Deck"
     },
@@ -2100,6 +2101,7 @@
         "activity": "Activity"
       }
     },
+    "statusPremium": "Premium",
     "settings": {
       "identity": "Identity",
       "access": "Access",
@@ -2129,6 +2131,13 @@
     "loadingLabel": "Loading decks",
     "editLabel": "Edit deck",
     "deleteLabel": "Delete deck",
+    "table": {
+      "deck": "Deck",
+      "type": "Type",
+      "owner": "Owner",
+      "lastEdit": "Last edit",
+      "cards": "Cards"
+    },
     "vocab": {
       "editWordLabel": "Edit word",
       "deleteWordLabel": "Delete word"
@@ -2136,7 +2145,41 @@
     "culture": {
       "editQuestionLabel": "Edit question",
       "deleteQuestionLabel": "Delete question"
-    }
+    },
+    "allComplete": "All cards complete",
+    "saveAndClose": "Save & close",
+    "saveChanges": "Save changes",
+    "typeCulture": "Culture",
+    "typeVocabulary": "Vocabulary",
+    "statusActive": "Active",
+    "statusInactive": "Inactive",
+    "questions": "questions",
+    "words": "words",
+    "stats": {
+      "totalDecks": "Total decks",
+      "vocabulary": "Vocabulary",
+      "culture": "Culture",
+      "avgCardsPerDeck": "Avg cards / deck",
+      "totalCardsSub": "{{totalCards}} cards across all decks",
+      "vocabularySub": "{{totalVocabularyCards}} words · A1–B2",
+      "cultureSub": "{{totalCultureQuestions}} questions · {{cultureCount}} active",
+      "avgCardsPerDeckSub": "+0 vs last month"
+    },
+    "row": {
+      "typeVocabulary": "vocabulary",
+      "typeCulture": "culture",
+      "typeVocabBadge": "Vocab",
+      "typeCultureBadge": "Culture",
+      "systemOwner": "System",
+      "itemCountCards_one": "{{count}} card",
+      "itemCountCards_other": "{{count}} cards",
+      "itemCountQuestions_one": "{{count}} question",
+      "itemCountQuestions_other": "{{count}} questions"
+    },
+    "list": {
+      "empty": "No decks found."
+    },
+    "emptyPageMessage": "No decks yet. Click 'Add deck' to create your first."
   },
   "inbox": {
     "breadcrumb": {

@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -179,262 +180,272 @@ function useDebounce<T>(value: T, delay: number): T {
 interface AllDecksListProps {
   t: (key: string, options?: Record<string, unknown>) => string;
   locale: string;
+  typeFilter: 'all' | 'vocabulary' | 'culture';
+  onTypeFilterChange: (value: 'all' | 'vocabulary' | 'culture') => void;
 }
 
 export interface AllDecksListHandle {
   refresh: () => void;
 }
 
-const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(({ t, locale }, ref) => {
-  const [, setSearchParams] = useSearchParams();
-  const [deckList, setDeckList] = useState<DeckListResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchInput, setSearchInput] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'vocabulary' | 'culture'>('all');
-  const [hideDeactivated, setHideDeactivated] = useState<boolean>(
-    () => localStorage.getItem('admin.deckList.hideDeactivated') === 'true'
-  );
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
+const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
+  ({ t, locale, typeFilter, onTypeFilterChange }, ref) => {
+    const [, setSearchParams] = useSearchParams();
+    const [deckList, setDeckList] = useState<DeckListResponse | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [searchInput, setSearchInput] = useState('');
+    const [hideDeactivated, setHideDeactivated] = useState<boolean>(
+      () => localStorage.getItem('admin.deckList.hideDeactivated') === 'true'
+    );
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
 
-  const debouncedSearch = useDebounce(searchInput, 300);
+    const debouncedSearch = useDebounce(searchInput, 300);
 
-  const handleHideDeactivatedChange = (checked: boolean) => {
-    setHideDeactivated(checked);
-    localStorage.setItem('admin.deckList.hideDeactivated', checked.toString());
-  };
+    const handleHideDeactivatedChange = (checked: boolean) => {
+      setHideDeactivated(checked);
+      localStorage.setItem('admin.deckList.hideDeactivated', checked.toString());
+    };
 
-  // Seam for DKDR-06: writes ?edit=<id> to URL so the drawer can mount.
-  const onOpenDrawer = (deck: UnifiedDeckItem) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.set('edit', deck.id);
-      return next;
-    });
-  };
+    // Seam for DKDR-06: writes ?edit=<id> to URL so the drawer can mount.
+    const onOpenDrawer = (deck: UnifiedDeckItem) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('edit', deck.id);
+        return next;
+      });
+    };
 
-  const [deckToDelete, setDeckToDelete] = useState<UnifiedDeckItem | null>(null);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+    const [deckToDelete, setDeckToDelete] = useState<UnifiedDeckItem | null>(null);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchDecks = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const params: {
-        page: number;
-        page_size: number;
-        search?: string;
-        type?: 'vocabulary' | 'culture';
-      } = {
-        page,
-        page_size: pageSize,
-      };
+    const fetchDecks = useCallback(async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const params: {
+          page: number;
+          page_size: number;
+          search?: string;
+          type?: 'vocabulary' | 'culture';
+        } = {
+          page,
+          page_size: pageSize,
+        };
 
-      if (debouncedSearch) {
-        params.search = debouncedSearch;
+        if (debouncedSearch) {
+          params.search = debouncedSearch;
+        }
+        if (typeFilter !== 'all') {
+          params.type = typeFilter;
+        }
+
+        const data = await adminAPI.listDecks(params);
+        setDeckList(data);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : t('errors.failed');
+        setError(message);
+      } finally {
+        setIsLoading(false);
       }
-      if (typeFilter !== 'all') {
-        params.type = typeFilter;
-      }
+    }, [page, debouncedSearch, typeFilter, t]);
 
-      const data = await adminAPI.listDecks(params);
-      setDeckList(data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : t('errors.failed');
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, debouncedSearch, typeFilter, t]);
-
-  const handleDeleteConfirm = async () => {
-    if (!deckToDelete) return;
-    setIsDeleting(true);
-    try {
-      if (deckToDelete.type === 'vocabulary') {
-        await adminAPI.deleteVocabularyDeck(deckToDelete.id);
-      } else {
-        await adminAPI.deleteCultureDeck(deckToDelete.id);
+    const handleDeleteConfirm = async () => {
+      if (!deckToDelete) return;
+      setIsDeleting(true);
+      try {
+        if (deckToDelete.type === 'vocabulary') {
+          await adminAPI.deleteVocabularyDeck(deckToDelete.id);
+        } else {
+          await adminAPI.deleteCultureDeck(deckToDelete.id);
+        }
+        setDeleteModalOpen(false);
+        setDeckToDelete(null);
+        fetchDecks();
+        void useAdminTabCountsStore.getState().fetchCounts();
+      } catch (_err) {
+        // Error handling minimal here; toast patterns will land in a later subtask.
+      } finally {
+        setIsDeleting(false);
       }
-      setDeleteModalOpen(false);
-      setDeckToDelete(null);
+    };
+
+    useEffect(() => {
       fetchDecks();
-      void useAdminTabCountsStore.getState().fetchCounts();
-    } catch (_err) {
-      // Error handling minimal here; toast patterns will land in a later subtask.
-    } finally {
-      setIsDeleting(false);
-    }
-  };
+    }, [fetchDecks]);
 
-  useEffect(() => {
-    fetchDecks();
-  }, [fetchDecks]);
+    // Expose refresh method via ref
+    useImperativeHandle(
+      ref,
+      () => ({
+        refresh: fetchDecks,
+      }),
+      [fetchDecks]
+    );
 
-  // Expose refresh method via ref
-  useImperativeHandle(
-    ref,
-    () => ({
-      refresh: fetchDecks,
-    }),
-    [fetchDecks]
-  );
+    // Reset to page 1 when search or filter changes
+    useEffect(() => {
+      setPage(1);
+    }, [debouncedSearch, typeFilter]);
 
-  // Reset to page 1 when search or filter changes
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch, typeFilter]);
+    const totalPages = deckList ? Math.ceil(deckList.total / pageSize) : 0;
 
-  const totalPages = deckList ? Math.ceil(deckList.total / pageSize) : 0;
+    const handlePreviousPage = () => {
+      if (page > 1) {
+        setPage(page - 1);
+      }
+    };
 
-  const handlePreviousPage = () => {
-    if (page > 1) {
-      setPage(page - 1);
-    }
-  };
+    const handleNextPage = () => {
+      if (page < totalPages) {
+        setPage(page + 1);
+      }
+    };
 
-  const handleNextPage = () => {
-    if (page < totalPages) {
-      setPage(page + 1);
-    }
-  };
+    const displayDecks = deckList
+      ? hideDeactivated
+        ? deckList.decks.filter((d) => d.is_active)
+        : deckList.decks
+      : [];
 
-  const displayDecks = deckList
-    ? hideDeactivated
-      ? deckList.decks.filter((d) => d.is_active)
-      : deckList.decks
-    : [];
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle data-testid="all-decks-title">{t('sections.allDecks')}</CardTitle>
-        <CardDescription data-testid="all-decks-description">
-          {t('sections.allDecksDescription')}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {/* Search and Filter Controls */}
-        <div className="mb-4 flex flex-col gap-4 sm:flex-row">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder={t('search.placeholder')}
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="pl-9"
-              data-testid="deck-search-input"
-            />
-          </div>
-          <Select
-            value={typeFilter}
-            onValueChange={(value: 'all' | 'vocabulary' | 'culture') => setTypeFilter(value)}
-          >
-            <SelectTrigger className="w-full sm:w-[180px]" data-testid="type-filter-select">
-              <SelectValue placeholder={t('filter.type')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('filter.allTypes')}</SelectItem>
-              <SelectItem value="vocabulary">{t('filter.vocabulary')}</SelectItem>
-              <SelectItem value="culture">{t('filter.culture')}</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="flex items-center gap-2">
-            <Switch
-              id="hide-deactivated"
-              checked={hideDeactivated}
-              onCheckedChange={handleHideDeactivatedChange}
-              data-testid="hide-deactivated-toggle"
-            />
-            <Label htmlFor="hide-deactivated" className="cursor-pointer whitespace-nowrap text-sm">
-              {t('deckList.hideDeactivated')}
-            </Label>
-          </div>
-        </div>
-
-        {/* Error State */}
-        {error && !isLoading && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>{t('errors.loadingDecks')}</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* Page-level empty state: no decks at all (unfiltered) — AC #8 */}
-        {!isLoading && !error && deckList?.total === 0 && !searchInput && typeFilter === 'all' && (
-          <div className="placeholder-box" data-testid="deck-empty-page">
-            No decks yet. Click &apos;Add deck&apos; to create your first.
-          </div>
-        )}
-
-        {/* Deck List — loading + empty states owned by DeckList */}
-        {!error && (
-          <DeckList
-            decks={displayDecks}
-            isLoading={isLoading}
-            locale={locale}
-            onOpenDrawer={onOpenDrawer}
-            onDelete={(d) => {
-              setDeckToDelete(d);
-              setDeleteModalOpen(true);
-            }}
-          />
-        )}
-
-        {/* Pagination */}
-        {!isLoading && !error && deckList && deckList.total > 0 && (
-          <div className="mt-4 flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              {t('pagination.showing', {
-                from: (page - 1) * pageSize + 1,
-                to: Math.min(page * pageSize, deckList.total),
-                total: deckList.total,
-              })}
-            </p>
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle data-testid="all-decks-title">{t('sections.allDecks')}</CardTitle>
+          <CardDescription data-testid="all-decks-description">
+            {t('sections.allDecksDescription')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Search and Filter Controls */}
+          <div className="mb-4 flex flex-col gap-4 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder={t('search.placeholder')}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="pl-9"
+                data-testid="deck-search-input"
+              />
+            </div>
+            <Select
+              value={typeFilter}
+              onValueChange={(value: 'all' | 'vocabulary' | 'culture') => onTypeFilterChange(value)}
+            >
+              <SelectTrigger className="w-full sm:w-[180px]" data-testid="type-filter-select">
+                <SelectValue placeholder={t('filter.type')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('filter.allTypes')}</SelectItem>
+                <SelectItem value="vocabulary">{t('filter.vocabulary')}</SelectItem>
+                <SelectItem value="culture">{t('filter.culture')}</SelectItem>
+              </SelectContent>
+            </Select>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePreviousPage}
-                disabled={page === 1}
-                data-testid="pagination-prev"
+              <Switch
+                id="hide-deactivated"
+                checked={hideDeactivated}
+                onCheckedChange={handleHideDeactivatedChange}
+                data-testid="hide-deactivated-toggle"
+              />
+              <Label
+                htmlFor="hide-deactivated"
+                className="cursor-pointer whitespace-nowrap text-sm"
               >
-                <ChevronLeft className="h-4 w-4" />
-                {t('pagination.previous')}
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                {t('pagination.pageOf', { page, totalPages })}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleNextPage}
-                disabled={page >= totalPages}
-                data-testid="pagination-next"
-              >
-                {t('pagination.next')}
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+                {t('deckList.hideDeactivated')}
+              </Label>
             </div>
           </div>
-        )}
 
-        {/* Delete confirmation dialog — mounted here so DeckList can stay presentational */}
-        <DeckDeleteDialog
-          open={deleteModalOpen}
-          onOpenChange={setDeleteModalOpen}
-          deck={deckToDelete}
-          onConfirm={handleDeleteConfirm}
-          isDeleting={isDeleting}
-        />
-      </CardContent>
-    </Card>
-  );
-});
+          {/* Error State */}
+          {error && !isLoading && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>{t('errors.loadingDecks')}</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Page-level empty state: no decks at all (unfiltered) — AC #8 */}
+          {!isLoading &&
+            !error &&
+            deckList?.total === 0 &&
+            !searchInput &&
+            typeFilter === 'all' && (
+              <div className="placeholder-box" data-testid="deck-empty-page">
+                {t('decks.emptyPageMessage')}
+              </div>
+            )}
+
+          {/* Deck List — loading + empty states owned by DeckList */}
+          {!error && (
+            <DeckList
+              decks={displayDecks}
+              isLoading={isLoading}
+              locale={locale}
+              onOpenDrawer={onOpenDrawer}
+              onDelete={(d) => {
+                setDeckToDelete(d);
+                setDeleteModalOpen(true);
+              }}
+            />
+          )}
+
+          {/* Pagination */}
+          {!isLoading && !error && deckList && deckList.total > 0 && (
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                {t('pagination.showing', {
+                  from: (page - 1) * pageSize + 1,
+                  to: Math.min(page * pageSize, deckList.total),
+                  total: deckList.total,
+                })}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviousPage}
+                  disabled={page === 1}
+                  data-testid="pagination-prev"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  {t('pagination.previous')}
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  {t('pagination.pageOf', { page, totalPages })}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={page >= totalPages}
+                  data-testid="pagination-next"
+                >
+                  {t('pagination.next')}
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Delete confirmation dialog — mounted here so DeckList can stay presentational */}
+          <DeckDeleteDialog
+            open={deleteModalOpen}
+            onOpenChange={setDeleteModalOpen}
+            deck={deckToDelete}
+            onConfirm={handleDeleteConfirm}
+            isDeleting={isDeleting}
+          />
+        </CardContent>
+      </Card>
+    );
+  }
+);
 
 AllDecksList.displayName = 'AllDecksList';
 
@@ -459,6 +470,8 @@ export interface PageHeadCounts {
   situationsTotal: number;
   situationsDraft: number;
   situationsReady: number;
+  deckTotal: number;
+  cardTotal: number;
 }
 
 export function pageHeadPropsFor(
@@ -483,6 +496,8 @@ export function pageHeadPropsFor(
     situationsTotal: 0,
     situationsDraft: 0,
     situationsReady: 0,
+    deckTotal: 0,
+    cardTotal: 0,
   };
 
   switch (tab) {
@@ -520,7 +535,10 @@ export function pageHeadPropsFor(
         ],
         kicker: <Kicker dot="primary">{t('decks.kicker')}</Kicker>,
         title: t('decks.title'),
-        sub: t('decks.sub'),
+        sub: (t as (key: string, opts: Record<string, unknown>) => string)('decks.sub', {
+          deckTotal: _counts.deckTotal,
+          cardTotal: _counts.cardTotal,
+        }),
         actions: (
           <Button
             variant="default"
@@ -793,6 +811,9 @@ const AdminPage: React.FC = () => {
   // Ref for refreshing the deck list
   const allDecksListRef = useRef<AllDecksListHandle>(null);
 
+  // Deck type filter — lifted here so DeckStats click-to-filter can drive AllDecksList.
+  const [typeFilter, setTypeFilter] = useState<'all' | 'vocabulary' | 'culture'>('all');
+
   const locale = i18n.language;
 
   // Tab configuration for SectionTabs.
@@ -932,26 +953,42 @@ const AdminPage: React.FC = () => {
   };
 
   // ── Centralised PageHead handlers and counts ─────────────────────────────
-  const pageHandlers: PageHeadHandlers = {
-    onCreateDeck: handleOpenCreateModal,
-    onNewsNew: () => setNewsCreateOpen(true),
-    onSituationsNew: () => setSituationsCreateOpen(true),
-    onChangelogNew: openCompose,
-    onAnnouncementsNew: () =>
-      setSearchParams((prev) => {
-        prev.set('compose', '1');
-        return prev;
-      }),
-    onExerciseNew: openExerciseCompose,
-  };
+  const pageHandlers: PageHeadHandlers = useMemo(
+    () => ({
+      onCreateDeck: handleOpenCreateModal,
+      onNewsNew: () => setNewsCreateOpen(true),
+      onSituationsNew: () => setSituationsCreateOpen(true),
+      onChangelogNew: openCompose,
+      onAnnouncementsNew: () =>
+        setSearchParams((prev) => {
+          prev.set('compose', '1');
+          return prev;
+        }),
+      onExerciseNew: openExerciseCompose,
+    }),
+    [handleOpenCreateModal, openCompose, openExerciseCompose, setSearchParams]
+  );
 
-  const pageCounts: PageHeadCounts = {
-    newsTotal,
-    newsAudio,
-    situationsTotal,
-    situationsDraft,
-    situationsReady,
-  };
+  const pageCounts: PageHeadCounts = useMemo(
+    () => ({
+      newsTotal,
+      newsAudio,
+      situationsTotal,
+      situationsDraft,
+      situationsReady,
+      deckTotal: stats?.total_decks ?? 0,
+      cardTotal: stats?.total_cards ?? 0,
+    }),
+    [
+      newsTotal,
+      newsAudio,
+      situationsTotal,
+      situationsDraft,
+      situationsReady,
+      stats?.total_decks,
+      stats?.total_cards,
+    ]
+  );
 
   // Show loading skeleton while fetching
   if (isLoading) {
@@ -1001,16 +1038,26 @@ const AdminPage: React.FC = () => {
           {/* Deck Stats 4-up grid */}
           <DeckStats
             totalDecks={stats?.total_decks ?? 0}
+            totalCards={stats?.total_cards ?? 0}
             vocabularyCount={stats?.total_vocabulary_decks ?? 0}
+            totalVocabularyCards={stats?.total_vocabulary_cards ?? 0}
             cultureCount={stats?.total_culture_decks ?? 0}
+            totalCultureQuestions={stats?.total_culture_questions ?? 0}
             avgCardsPerDeck={
               stats && stats.total_decks > 0 ? Math.round(stats.total_cards / stats.total_decks) : 0
             }
+            onCardClick={setTypeFilter}
           />
 
           {/* All Decks List with Search and Pagination */}
           <section aria-label={t('decks.title')}>
-            <AllDecksList ref={allDecksListRef} t={t} locale={locale} />
+            <AllDecksList
+              ref={allDecksListRef}
+              t={t}
+              locale={locale}
+              typeFilter={typeFilter}
+              onTypeFilterChange={setTypeFilter}
+            />
           </section>
 
           {/* Deck Drawer — URL-driven, self-controlled */}

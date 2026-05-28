@@ -2089,7 +2089,45 @@
     "culture": {
       "editQuestionLabel": "Редактировать вопрос",
       "deleteQuestionLabel": "Удалить вопрос"
-    }
+    },
+    "allComplete": "Все карточки заполнены",
+    "saveAndClose": "Сохранить и закрыть",
+    "saveChanges": "Сохранить изменения",
+    "typeCulture": "Культура",
+    "typeVocabulary": "Словарный запас",
+    "statusActive": "Активно",
+    "statusInactive": "Неактивно",
+    "questions": "вопросов",
+    "words": "слов",
+    "stats": {
+      "totalDecks": "Всего колод",
+      "vocabulary": "Словарные",
+      "culture": "Культурные",
+      "avgCardsPerDeck": "Карточек / колода",
+      "totalCardsSub": "{{totalCards}} карточек во всех колодах",
+      "vocabularySub": "{{totalVocabularyCards}} слов · A1–B2",
+      "cultureSub": "{{totalCultureQuestions}} вопросов · {{cultureCount}} активных",
+      "avgCardsPerDeckSub": "+0 к прошлому месяцу"
+    },
+    "row": {
+      "typeVocabulary": "словарный",
+      "typeCulture": "культура",
+      "typeVocabBadge": "Словарный",
+      "typeCultureBadge": "Культура",
+      "systemOwner": "Система",
+      "itemCountCards_one": "{{count}} карточка",
+      "itemCountCards_few": "{{count}} карточки",
+      "itemCountCards_many": "{{count}} карточек",
+      "itemCountCards_other": "{{count}} карточек",
+      "itemCountQuestions_one": "{{count}} вопрос",
+      "itemCountQuestions_few": "{{count}} вопроса",
+      "itemCountQuestions_many": "{{count}} вопросов",
+      "itemCountQuestions_other": "{{count}} вопросов"
+    },
+    "list": {
+      "empty": "Колоды не найдены."
+    },
+    "emptyPageMessage": "Пока нет колод. Нажмите «Добавить колоду», чтобы создать первую."
   },
   "inbox": {
     "breadcrumb": {
