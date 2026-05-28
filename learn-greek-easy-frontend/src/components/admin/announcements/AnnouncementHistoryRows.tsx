@@ -3,8 +3,8 @@
 /**
  * AnnouncementHistoryRows
  *
- * Presentational component: renders announcements as CSS-grid rows using the
- * `.an-table` / `.an-row` / `.an-row-head` class family from ANND-01.
+ * Presentational component: renders announcements as white card-per-item rows
+ * using the `.an-table` / `.an-row` class family from ANND-01.
  * No store or API calls live here — those are owned by the parent tab (ANND-07).
  */
 
@@ -163,18 +163,8 @@ export const AnnouncementHistoryRows: React.FC<AnnouncementHistoryRowsProps> = (
 
   return (
     <div>
-      {/* ── Grid ── */}
+      {/* ── Card list (card-per-item, no table header) ── */}
       <div className="an-table">
-        {/* Header row */}
-        <div className="an-row-head">
-          <span>{t('announcements.v2.history.colDate')}</span>
-          <span>{t('announcements.v2.history.colTitle')}</span>
-          <span style={{ textAlign: 'right' }}>{t('announcements.v2.history.colReach')}</span>
-          <span style={{ textAlign: 'right' }}>{t('announcements.v2.history.colRead')}</span>
-          <span style={{ textAlign: 'right' }}>{t('announcements.v2.history.colRate')}</span>
-          <span />
-        </div>
-
         {/* Loading skeletons */}
         {isLoading ? (
           <SkeletonRows />

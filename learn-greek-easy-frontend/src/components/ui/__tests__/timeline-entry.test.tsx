@@ -7,16 +7,18 @@ import { render, screen, fireEvent } from '@/lib/test-utils';
 // --- 7. Type exports ---
 // Satisfy TypeScript — verifies that TimelineEntryProps and TimelineTone are exported
 const _typeCheck: TimelineEntryProps = {
-  tone: 'green' satisfies TimelineTone,
   title: 'Hello',
   body: 'world',
 };
 void _typeCheck;
+// TimelineTone is still exported for category-tone mapping in consumers (e.g. Badge tone).
+const _toneCheck: TimelineTone = 'green';
+void _toneCheck;
 
 describe('TimelineEntry — markdown rendering', () => {
   it('renders **bold** as <b>, *italic* as <i>, and passes plain text through', () => {
     const { container } = render(
-      <TimelineEntry tone="green" title="T" body="Adds **bold** and *italic* and plain" />
+      <TimelineEntry title="T" body="Adds **bold** and *italic* and plain" />
     );
 
     const content = container.querySelector('.cl-entry-content')!;
@@ -28,9 +30,7 @@ describe('TimelineEntry — markdown rendering', () => {
 
 describe('TimelineEntry — XSS escape', () => {
   it('does not inject a <script> element when body contains raw HTML', () => {
-    const { container } = render(
-      <TimelineEntry tone="red" title="T" body="<script>alert(1)</script> safe" />
-    );
+    const { container } = render(<TimelineEntry title="T" body="<script>alert(1)</script> safe" />);
 
     const content = container.querySelector('.cl-entry-content')!;
     // No script element should exist
@@ -45,7 +45,6 @@ describe('TimelineEntry — actions propagation stop', () => {
     const spy = vi.fn();
     render(
       <TimelineEntry
-        tone="blue"
         title="T"
         body="body"
         onClick={spy}
@@ -61,7 +60,6 @@ describe('TimelineEntry — actions propagation stop', () => {
     const spy = vi.fn();
     render(
       <TimelineEntry
-        tone="blue"
         title="T"
         body="body"
         onClick={spy}
@@ -74,27 +72,27 @@ describe('TimelineEntry — actions propagation stop', () => {
   });
 });
 
-describe('TimelineEntry — tone class', () => {
-  it('applies tone-{tone} to .cl-entry-dot', () => {
-    const { container } = render(<TimelineEntry tone="amber" title="T" body="body" />);
+describe('TimelineEntry — card surface', () => {
+  it('renders the entry as a white .admin-card (no timeline dot)', () => {
+    const { container } = render(<TimelineEntry title="T" body="body" />);
 
-    const dot = container.querySelector('.cl-entry-dot');
-    expect(dot).not.toBeNull();
-    expect(dot).toHaveClass('tone-amber');
+    const root = container.firstChild as HTMLElement;
+    expect(root).toHaveClass('cl-entry');
+    expect(root).toHaveClass('admin-card');
+    // The legacy left-rail dot is gone.
+    expect(container.querySelector('.cl-entry-dot')).toBeNull();
   });
 });
 
 describe('TimelineEntry — subtitle conditional', () => {
   it('does not render .cl-entry-title-ru when subtitle is omitted', () => {
-    const { container } = render(<TimelineEntry tone="cyan" title="T" body="body" />);
+    const { container } = render(<TimelineEntry title="T" body="body" />);
 
     expect(container.querySelector('.cl-entry-title-ru')).toBeNull();
   });
 
   it('renders .cl-entry-title-ru with text when subtitle is provided', () => {
-    const { container } = render(
-      <TimelineEntry tone="cyan" title="T" subtitle="Subtitle text" body="body" />
-    );
+    const { container } = render(<TimelineEntry title="T" subtitle="Subtitle text" body="body" />);
 
     const ru = container.querySelector('.cl-entry-title-ru');
     expect(ru).not.toBeNull();
@@ -105,9 +103,7 @@ describe('TimelineEntry — subtitle conditional', () => {
 describe('TimelineEntry — interactive aria + keyboard', () => {
   it('has role="button" and tabIndex=0 when onClick is set', () => {
     const spy = vi.fn();
-    const { container } = render(
-      <TimelineEntry tone="violet" title="T" body="body" onClick={spy} />
-    );
+    const { container } = render(<TimelineEntry title="T" body="body" onClick={spy} />);
 
     const root = container.firstChild as HTMLElement;
     expect(root.getAttribute('role')).toBe('button');
@@ -116,9 +112,7 @@ describe('TimelineEntry — interactive aria + keyboard', () => {
 
   it('fires onClick on Enter key', () => {
     const spy = vi.fn();
-    const { container } = render(
-      <TimelineEntry tone="violet" title="T" body="body" onClick={spy} />
-    );
+    const { container } = render(<TimelineEntry title="T" body="body" onClick={spy} />);
 
     const root = container.firstChild as HTMLElement;
     fireEvent.keyDown(root, { key: 'Enter' });
@@ -127,9 +121,7 @@ describe('TimelineEntry — interactive aria + keyboard', () => {
 
   it('fires onClick on Space key', () => {
     const spy = vi.fn();
-    const { container } = render(
-      <TimelineEntry tone="violet" title="T" body="body" onClick={spy} />
-    );
+    const { container } = render(<TimelineEntry title="T" body="body" onClick={spy} />);
 
     const root = container.firstChild as HTMLElement;
     fireEvent.keyDown(root, { key: ' ' });
@@ -137,7 +129,7 @@ describe('TimelineEntry — interactive aria + keyboard', () => {
   });
 
   it('does not have role or tabIndex when onClick is absent', () => {
-    const { container } = render(<TimelineEntry tone="green" title="T" body="body" />);
+    const { container } = render(<TimelineEntry title="T" body="body" />);
 
     const root = container.firstChild as HTMLElement;
     expect(root.getAttribute('role')).toBeNull();
@@ -146,16 +138,14 @@ describe('TimelineEntry — interactive aria + keyboard', () => {
 
   it('adds is-clickable class to root article when onClick is set', () => {
     const spy = vi.fn();
-    const { container } = render(
-      <TimelineEntry tone="violet" title="T" body="body" onClick={spy} />
-    );
+    const { container } = render(<TimelineEntry title="T" body="body" onClick={spy} />);
 
     const root = container.firstChild as HTMLElement;
     expect(root).toHaveClass('is-clickable');
   });
 
   it('does not add is-clickable class when onClick is absent', () => {
-    const { container } = render(<TimelineEntry tone="green" title="T" body="body" />);
+    const { container } = render(<TimelineEntry title="T" body="body" />);
 
     const root = container.firstChild as HTMLElement;
     expect(root).not.toHaveClass('is-clickable');

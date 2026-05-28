@@ -76,7 +76,7 @@ describe('AnnouncementHistoryRows', () => {
     render(<AnnouncementHistoryRows {...defaultProps} announcements={items} />);
 
     const rows = document.querySelectorAll('.an-row');
-    // 3 data rows + 1 header row (an-row-head, not an-row)
+    // 3 data rows (card-per-item; no table header row)
     expect(rows).toHaveLength(3);
   });
 

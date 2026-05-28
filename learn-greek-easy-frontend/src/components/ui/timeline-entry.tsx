@@ -10,8 +10,6 @@ import { cn } from '@/lib/utils';
 export type TimelineTone = 'blue' | 'green' | 'amber' | 'cyan' | 'violet' | 'red';
 
 export interface TimelineEntryProps extends Omit<React.HTMLAttributes<HTMLElement>, 'title'> {
-  /** Dot colour variant — must match one of the six ATOM-01 CSS tones. */
-  tone: TimelineTone;
   /** Primary heading of the entry. */
   title: React.ReactNode;
   /** Optional secondary / translated title (renders in `.cl-entry-title-ru`). */
@@ -33,12 +31,13 @@ export interface TimelineEntryProps extends Omit<React.HTMLAttributes<HTMLElemen
 /**
  * Changelog row atom (ATOM-09).
  *
- * Renders a left-rail coloured dot, a header row with optional meta + action
- * slots, a title/subtitle pair, and an inline-markdown body. Matches the
- * `.cl-entry` family shipped in ATOM-01.
+ * Renders each entry as a white card (`.cl-entry` + `.admin-card`) with a
+ * header row (optional meta + action slots), a title/subtitle pair, and an
+ * inline-markdown body. The category is conveyed by a Badge in the header
+ * slot, so there is no left-rail dot/spine.
  */
 const TimelineEntry = React.forwardRef<HTMLElement, TimelineEntryProps>(
-  ({ tone, title, subtitle, body, header, actions, onClick, className, ...rest }, ref) => {
+  ({ title, subtitle, body, header, actions, onClick, className, ...rest }, ref) => {
     const handleKeyDown = React.useCallback(
       (e: React.KeyboardEvent<HTMLElement>) => {
         if (!onClick) return;
@@ -62,13 +61,10 @@ const TimelineEntry = React.forwardRef<HTMLElement, TimelineEntryProps>(
     return (
       <article
         ref={ref}
-        className={cn('cl-entry', onClick && 'is-clickable', className)}
+        className={cn('cl-entry admin-card', onClick && 'is-clickable', className)}
         {...interactiveProps}
         {...rest}
       >
-        <div className="cl-entry-rail">
-          <span className={cn('cl-entry-dot', `tone-${tone}`)} />
-        </div>
         <div className="cl-entry-body">
           <div className="cl-entry-head">
             <div className="cl-entry-l">{header}</div>
