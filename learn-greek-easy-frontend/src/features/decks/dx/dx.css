@@ -227,3 +227,57 @@
 .dx-unwired-dot-marker[data-tone='amber'] {
   background: hsl(var(--warning));
 }
+
+/* ── DxCover — gradient cover primitive ─────────────────────────────────── */
+/*
+ * The host element is position:relative so the scrim/sheen pseudo-elements
+ * stack correctly above the gradient background.
+ *
+ * Scrim   (::before): linear dark overlay — text legibility
+ * Sheen   (::after):  radial highlight — top-right corner gloss
+ *
+ * The gradient itself is applied via a CSS custom property set inline by the
+ * DxCover React component. No <img>, no coverImageUrl reads.
+ */
+.dx-cover-host {
+  position: relative;
+  /* Gradient is set via var(--dx-grad) / var(--dx-cover-grad) etc. inline */
+  background: var(
+    --dx-grad,
+    var(
+      --dx-cover-grad,
+      var(
+        --dx-cover-grad-1,
+        var(--dx-cover-grad-2, linear-gradient(135deg, hsl(210 70% 50%), hsl(198 60% 36%)))
+      )
+    )
+  );
+  overflow: hidden;
+}
+
+/* Scrim: dark top-to-bottom overlay for text legibility */
+.dx-cover-host::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(140deg, hsl(0 0% 0% / 0.1), hsl(0 0% 0% / 0.55));
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Sheen: radial top-right gloss highlight */
+.dx-cover-host::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 100% at 100% 0%, hsl(0 0% 100% / 0.2), transparent 55%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* All direct children sit above the scrim + sheen layers */
+.dx-cover-host > * {
+  position: relative;
+  z-index: 3;
+  color: hsl(0 0% 100% / 0.95);
+}
