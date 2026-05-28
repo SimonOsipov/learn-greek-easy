@@ -376,7 +376,7 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
             !searchInput &&
             typeFilter === 'all' && (
               <div className="placeholder-box" data-testid="deck-empty-page">
-                No decks yet. Click &apos;Add deck&apos; to create your first.
+                {t('decks.emptyPageMessage')}
               </div>
             )}
 

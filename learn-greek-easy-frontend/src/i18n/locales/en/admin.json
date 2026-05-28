@@ -2178,7 +2178,8 @@
     },
     "list": {
       "empty": "No decks found."
-    }
+    },
+    "emptyPageMessage": "No decks yet. Click 'Add deck' to create your first."
   },
   "inbox": {
     "breadcrumb": {
