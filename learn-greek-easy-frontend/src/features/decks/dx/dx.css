@@ -1229,3 +1229,29 @@
   align-items: center;
   gap: 18px;
 }
+.dx-w-speed-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: hsl(var(--fg) / 0.06);
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 999px;
+}
+.dx-w-speed-btn {
+  padding: 4px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: hsl(var(--fg-2));
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.dx-w-speed-btn.is-active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}

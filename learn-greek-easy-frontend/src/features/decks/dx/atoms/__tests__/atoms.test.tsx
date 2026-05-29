@@ -145,12 +145,23 @@ describe('WeekHeat', () => {
 // ─── UnwiredDot ──────────────────────────────────────────────────────────────
 
 describe('UnwiredDot', () => {
-  it('has the exact aria-label', () => {
+  it('has the exact default aria-label when none passed', () => {
     const { container } = render(<UnwiredDot />);
     const wrapper = container.querySelector('.dx-unwired-dot');
     expect(wrapper).toHaveAttribute(
       'aria-label',
       'Placeholder — not yet connected to backend data.'
+    );
+  });
+
+  it('forwards a custom aria-label when provided', () => {
+    const { container } = render(
+      <UnwiredDot aria-label="Practice heatmap — placeholder, not yet connected to backend data." />
+    );
+    const wrapper = container.querySelector('.dx-unwired-dot');
+    expect(wrapper).toHaveAttribute(
+      'aria-label',
+      'Practice heatmap — placeholder, not yet connected to backend data.'
     );
   });
 
