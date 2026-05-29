@@ -19,7 +19,7 @@ export function UnwiredDot({
   'aria-label': ariaLabel = 'Placeholder — not yet connected to backend data.',
 }: UnwiredDotProps) {
   return (
-    <span className="dx-unwired-dot" aria-label={ariaLabel}>
+    <span className="dx-unwired-dot" aria-label={ariaLabel} data-testid="unwired-dot">
       {children}
       <span
         className="dx-unwired-dot-marker"
