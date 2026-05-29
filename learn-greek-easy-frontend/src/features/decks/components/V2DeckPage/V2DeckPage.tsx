@@ -10,6 +10,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+// Import dx.css directly in this route module so the dx-* styles load on deck
+// detail deep-links. (A shared-barrel import lands in the common DxCover chunk,
+// whose CSS Vite does not reliably inject for static-import routes.)
+import '@/features/decks/dx/dx.css';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { useDeckStore } from '@/stores/deckStore';
 
