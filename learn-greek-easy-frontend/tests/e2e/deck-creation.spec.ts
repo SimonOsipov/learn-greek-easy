@@ -18,11 +18,13 @@
 
 import { test, expect, type Locator } from '@playwright/test';
 
-/** Click a card action button reliably: center it in the viewport first so the sticky header can't intercept the click. */
+/** Click a card action button reliably: dispatch the click directly so the sticky header can't intercept. */
 async function clickCardActionButton(button: Locator) {
+  // The deck-card action buttons are hover-revealed at the card's top edge and can sit under the
+  // sticky top-0 header after Playwright's auto-scroll, which intercepts a normal .click().
+  // Dispatch the click directly to the element so the handler fires regardless of the header overlay.
   await button.scrollIntoViewIfNeeded();
-  await button.evaluate((el) => el.scrollIntoView({ block: 'center', inline: 'nearest' }));
-  await button.click();
+  await button.dispatchEvent('click');
 }
 
 // Storage state paths
