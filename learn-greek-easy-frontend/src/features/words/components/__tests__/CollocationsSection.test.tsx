@@ -9,10 +9,20 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { CollocationsSection } from '../CollocationsSection';
 
-// Mock UnwiredDot
+// Mock UnwiredDot — renders children so the section title text is present in DOM
 vi.mock('@/features/decks/dx', () => ({
-  UnwiredDot: ({ tone, 'aria-label': ariaLabel }: { tone?: string; 'aria-label'?: string }) => (
-    <span data-testid="unwired-dot" data-tone={tone} aria-label={ariaLabel} />
+  UnwiredDot: ({
+    tone,
+    'aria-label': ariaLabel,
+    children,
+  }: {
+    tone?: string;
+    'aria-label'?: string;
+    children?: React.ReactNode;
+  }) => (
+    <span data-testid="unwired-dot" data-tone={tone} aria-label={ariaLabel}>
+      {children}
+    </span>
   ),
 }));
 
@@ -36,6 +46,12 @@ describe('CollocationsSection', () => {
     const label = dot.getAttribute('aria-label') ?? '';
     expect(label.length).toBeGreaterThan(0);
     expect(label).not.toBe('Placeholder — not yet connected to backend data.');
+  });
+
+  it('section title text is rendered inside the dot wrapper', () => {
+    render(<CollocationsSection lemma="σπίτι" />);
+    const dot = screen.getByTestId('unwired-dot');
+    expect(dot.textContent).toBeTruthy();
   });
 
   it('renders the collocations grid', () => {

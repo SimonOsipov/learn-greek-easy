@@ -34,7 +34,7 @@ export function WeekHeat({
             .filter(Boolean)
             .join(' ')}
           data-h={h}
-          title={`${DAY_LABELS[i]} · ${heat[i] ?? 0} session${(heat[i] ?? 0) === 1 ? '' : 's'}`}
+          title={`${DAY_LABELS[i]} · ${h} session${h === 1 ? '' : 's'}`}
           aria-label={`${DAY_LABELS[i]}: ${h} sessions${i === todayIdx ? ' (today)' : ''}`}
         />
       ))}

@@ -191,7 +191,7 @@ export const WordCard: React.FC<WordCardProps> = ({
   typeProgress,
   gender,
 }) => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation('deck');
   const { lemma, pronunciation, translation_en, translation_ru } = wordEntry;
   const displayTranslation = getLocalizedTranslation(translation_en, translation_ru, i18n.language);
 
@@ -232,8 +232,9 @@ export const WordCard: React.FC<WordCardProps> = ({
                 className="dx-word-card-kicker"
                 data-gender={gender}
                 data-testid="word-card-gender-kicker"
+                aria-label={t(`wordReference.gender.${gender}`)}
               >
-                {gender}
+                {t(`wordReference.gender.${gender}`)}
               </span>
             )}
             {/* POS badge */}

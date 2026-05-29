@@ -11,7 +11,9 @@
     "badgeNew": "Новая",
     "badgeInProgress": "В процессе",
     "badgeComplete": "Завершена",
-    "cardMeta": "{{cards}} карточек · {{mastered}} освоено"
+    "cardMeta": "{{cards}} карточек · {{mastered}} освоено",
+    "deckCardAriaLabel": "{{name}} колода, уровень {{level}}, {{pct}}% завершено",
+    "deckCardAriaLabelLocked": "{{name}} колода, уровень {{level}}, {{pct}}% завершено, заблокировано"
   },
   "filters": {
     "searchPlaceholder": "Поиск колод по названию...",

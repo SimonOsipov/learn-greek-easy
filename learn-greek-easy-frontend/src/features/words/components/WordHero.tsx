@@ -126,7 +126,7 @@ export function WordHero({
                       part_of_speech: wordEntry.part_of_speech ?? null,
                       context: 'reference',
                       deck_id: deckId,
-                      playback_speed: 1,
+                      playback_speed: audioSpeed,
                     })
                   }
                 />

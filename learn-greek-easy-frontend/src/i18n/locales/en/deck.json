@@ -11,7 +11,9 @@
     "badgeNew": "New",
     "badgeInProgress": "In progress",
     "badgeComplete": "Complete",
-    "cardMeta": "{{cards}} cards · {{mastered}} mastered"
+    "cardMeta": "{{cards}} cards · {{mastered}} mastered",
+    "deckCardAriaLabel": "{{name}} deck, {{level}} level, {{pct}}% completed",
+    "deckCardAriaLabelLocked": "{{name}} deck, {{level}} level, {{pct}}% completed, locked"
   },
   "filters": {
     "searchPlaceholder": "Search decks by name...",

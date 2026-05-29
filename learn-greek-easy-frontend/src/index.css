@@ -349,6 +349,17 @@
       transform: scale(1);
     }
   }
+
+  /* DX audio button pulse — referenced by .dx-w-audio.is-playing in dx.css */
+  @keyframes dxPulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.5);
+    }
+    50% {
+      box-shadow: 0 0 0 8px hsl(var(--primary) / 0);
+    }
+  }
 }
 
 /* Smooth scrolling for the entire app */

@@ -97,7 +97,11 @@ export const DeckCard: React.FC<DeckCardProps> = ({
               }
             : undefined
         }
-        aria-label={`${localizedName} deck, ${level} level, ${pct}% completed${isLocked ? ', locked' : ''}`}
+        aria-label={t(isLocked ? 'list.deckCardAriaLabelLocked' : 'list.deckCardAriaLabel', {
+          name: localizedName,
+          level,
+          pct: Math.round(pct),
+        })}
       >
         {/* Action buttons (edit/delete) - visible on hover */}
         {showActions && (
@@ -190,7 +194,11 @@ export const DeckCard: React.FC<DeckCardProps> = ({
             }
           : undefined
       }
-      aria-label={`${localizedName} deck, ${level} level, ${pct}% completed${isLocked ? ', locked' : ''}`}
+      aria-label={t(isLocked ? 'list.deckCardAriaLabelLocked' : 'list.deckCardAriaLabel', {
+        name: localizedName,
+        level,
+        pct: Math.round(pct),
+      })}
     >
       <DxCover deck={deck} variant="card">
         <div className="dx-deck-card-inner">

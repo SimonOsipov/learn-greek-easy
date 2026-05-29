@@ -14,6 +14,50 @@ function masteryToState(status: MasteryStatus): '' | 'learning' | 'mastered' {
   return '';
 }
 
+/**
+ * Prompt translation map for RU locale — mirrors MiniFlipCard.translatePrompt logic.
+ */
+const PROMPT_TRANSLATIONS_RU: Record<string, string> = {
+  'What is the plural form?': 'Какая форма множественного числа?',
+  'What is the singular form?': 'Какая форма единственного числа?',
+  'What is the plural?': 'Какое множественное число?',
+  'What is the singular?': 'Какое единственное число?',
+  'Translate this sentence': 'Переведите это предложение',
+  'Translate to Greek': 'Переведите на греческий',
+  'What is the genitive singular?': 'Какой родительный падеж ед. числа?',
+  'What is the genitive plural?': 'Какой родительный падеж мн. числа?',
+  'What is the accusative singular?': 'Какой винительный падеж ед. числа?',
+  'What is the accusative plural?': 'Какой винительный падеж мн. числа?',
+  'What is the vocative singular?': 'Какое звательное ед. числа?',
+  'What is the vocative plural?': 'Какое звательное мн. числа?',
+};
+
+const CARD_TYPE_PROMPTS_RU: Record<string, string> = {
+  meaning_el_to_en: 'Что это значит?',
+  meaning_en_to_el: 'Как это сказать по-гречески?',
+  article: 'Какой артикль?',
+};
+
+function asString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function resolvePrompt(front: Record<string, unknown>, cardType: string, lang: string): string {
+  const englishPrompt = asString(front.prompt);
+  if (lang !== 'ru') return englishPrompt;
+  // Card-type-level overrides first
+  if (cardType in CARD_TYPE_PROMPTS_RU) return CARD_TYPE_PROMPTS_RU[cardType];
+  // Fall back to word-level translation map
+  return PROMPT_TRANSLATIONS_RU[englishPrompt] ?? englishPrompt;
+}
+
+function resolveAnswer(back: Record<string, unknown>, lang: string): string {
+  if (lang === 'ru') {
+    return asString(back.answer_ru) || asString(back.answer);
+  }
+  return asString(back.answer);
+}
+
 export interface CardRowProps {
   card: CardMasteryItem;
 }
@@ -21,18 +65,21 @@ export interface CardRowProps {
 /**
  * CardRow — dense single-line card representation for list view.
  * Columns: mastery dot · type label · prompt · answer · due (always "—")
+ *
+ * Locale-aware: when i18n language is "ru", uses answer_ru (fallback answer)
+ * and translates the English prompt via the same map as MiniFlipCard.
  */
 export function CardRow({ card }: CardRowProps) {
-  const { t } = useTranslation('deck');
+  const { t, i18n } = useTranslation('deck');
   const dotState = masteryToState(card.mastery_status);
+  const lang = i18n.language?.split('-')[0] ?? 'en';
 
-  // Determine if the answer side is Greek (el) or English (en)
   const front = card.front_content;
   const back = card.back_content;
-  const prompt = typeof front.prompt === 'string' ? front.prompt : '';
-  const answer = typeof back.answer === 'string' ? back.answer : '';
+  const prompt = resolvePrompt(front, card.card_type, lang);
+  const answer = resolveAnswer(back, lang);
 
-  // Greek-answer card types
+  // Determine if the answer side is Greek (el) or English (en)
   const elAnswerTypes = new Set([
     'meaning_en_to_el',
     'plural_form',

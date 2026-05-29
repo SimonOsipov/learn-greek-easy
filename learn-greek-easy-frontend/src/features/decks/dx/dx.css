@@ -1167,15 +1167,7 @@
   border-color: hsl(var(--primary));
   animation: dxPulse 1.4s ease-in-out infinite;
 }
-@keyframes dxPulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.5);
-  }
-  50% {
-    box-shadow: 0 0 0 8px hsl(var(--primary) / 0);
-  }
-}
+/* @keyframes dxPulse — moved to src/index.css per design-system.md rule (keyframes in index.css) */
 @media (prefers-reduced-motion: reduce) {
   .dx-w-audio.is-playing {
     animation-duration: 0.01ms;

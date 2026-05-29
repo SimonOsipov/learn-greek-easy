@@ -31,8 +31,9 @@ export function CollocationsSection({ lemma: _lemma }: CollocationsSectionProps)
     <div className="dx-section" data-testid="collocations-section">
       <div className="dx-section-head">
         <h3 className="dx-section-h">
-          <UnwiredDot tone="danger" aria-label={t('dx.unwiredCollocations')} />
-          {t('wordReference.sectionCollocations')}
+          <UnwiredDot tone="danger" aria-label={t('dx.unwiredCollocations')}>
+            {t('wordReference.sectionCollocations')}
+          </UnwiredDot>
         </h3>
       </div>
       <div className="dx-colloc" data-testid="collocations-grid">

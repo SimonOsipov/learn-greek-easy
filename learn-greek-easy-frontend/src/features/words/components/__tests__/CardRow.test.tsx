@@ -1,8 +1,11 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { CardRow } from '../CardRow';
 import type { CardMasteryItem } from '../../hooks';
+
+// Mutable language reference — tests can switch locale without re-mocking
+let mockLanguage = 'en';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -10,19 +13,24 @@ vi.mock('react-i18next', () => ({
       if (opts?.defaultValue) return opts.defaultValue as string;
       return key;
     },
+    i18n: { language: mockLanguage },
   }),
 }));
 
 function makeCard(
   card_type: string,
   mastery_status: 'none' | 'studied' | 'mastered' = 'none',
-  id = 'c1'
+  id = 'c1',
+  overrides: Partial<{
+    front_content: Record<string, unknown>;
+    back_content: Record<string, unknown>;
+  }> = {}
 ): CardMasteryItem {
   return {
     id,
     card_type: card_type as CardMasteryItem['card_type'],
-    front_content: { prompt: 'Test prompt?' },
-    back_content: { answer: 'Test answer' },
+    front_content: overrides.front_content ?? { prompt: 'Test prompt?' },
+    back_content: overrides.back_content ?? { answer: 'Test answer' },
     mastery_status,
   };
 }
@@ -74,13 +82,66 @@ describe('CardRow', () => {
     expect(screen.getByTestId('card-row-due')).toHaveTextContent('—');
   });
 
-  it('prompt shows front_content.prompt', () => {
+  it('prompt shows front_content.prompt (EN locale)', () => {
     render(<CardRow card={makeCard('meaning_el_to_en')} />);
     expect(screen.getByTestId('card-row-prompt')).toHaveTextContent('Test prompt?');
   });
 
-  it('answer shows back_content.answer', () => {
+  it('answer shows back_content.answer (EN locale)', () => {
     render(<CardRow card={makeCard('meaning_el_to_en')} />);
     expect(screen.getByTestId('card-row-answer')).toHaveTextContent('Test answer');
+  });
+});
+
+describe('CardRow — RU locale', () => {
+  beforeEach(() => {
+    mockLanguage = 'ru';
+  });
+
+  afterEach(() => {
+    mockLanguage = 'en';
+  });
+
+  it('shows answer_ru when locale is "ru" and answer_ru is present', () => {
+    const card = makeCard('meaning_el_to_en', 'none', 'ru1', {
+      back_content: { answer: 'English answer', answer_ru: 'Русский ответ' },
+    });
+    render(<CardRow card={card} />);
+    expect(screen.getByTestId('card-row-answer')).toHaveTextContent('Русский ответ');
+  });
+
+  it('falls back to answer when locale is "ru" but answer_ru is absent', () => {
+    const card = makeCard('meaning_el_to_en', 'none', 'ru2', {
+      back_content: { answer: 'English answer' },
+    });
+    render(<CardRow card={card} />);
+    expect(screen.getByTestId('card-row-answer')).toHaveTextContent('English answer');
+  });
+
+  it('translates prompt for meaning_el_to_en card type in RU locale', () => {
+    const card = makeCard('meaning_el_to_en', 'none', 'ru3', {
+      front_content: { prompt: 'What does this mean?' },
+      back_content: { answer: 'answer' },
+    });
+    render(<CardRow card={card} />);
+    expect(screen.getByTestId('card-row-prompt')).toHaveTextContent('Что это значит?');
+  });
+
+  it('translates prompt for meaning_en_to_el card type in RU locale', () => {
+    const card = makeCard('meaning_en_to_el', 'none', 'ru4', {
+      front_content: { prompt: 'Translate to Greek' },
+      back_content: { answer: 'answer' },
+    });
+    render(<CardRow card={card} />);
+    expect(screen.getByTestId('card-row-prompt')).toHaveTextContent('Как это сказать по-гречески?');
+  });
+
+  it('falls back to English prompt when no RU translation exists', () => {
+    const card = makeCard('cloze', 'none', 'ru5', {
+      front_content: { prompt: 'Unknown prompt type' },
+      back_content: { answer: 'answer' },
+    });
+    render(<CardRow card={card} />);
+    expect(screen.getByTestId('card-row-prompt')).toHaveTextContent('Unknown prompt type');
   });
 });
