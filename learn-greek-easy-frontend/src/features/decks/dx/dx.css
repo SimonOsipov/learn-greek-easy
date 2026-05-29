@@ -1165,9 +1165,9 @@
   background: hsl(var(--primary));
   color: hsl(0 0% 100% / 0.95);
   border-color: hsl(var(--primary));
-  animation: dxPulse 1.4s ease-in-out infinite;
+  animation: dx-pulse 1.4s ease-in-out infinite;
 }
-/* @keyframes dxPulse — moved to src/index.css per design-system.md rule (keyframes in index.css) */
+/* @keyframes dx-pulse — moved to src/index.css per design-system.md rule (keyframes in index.css) */
 @media (prefers-reduced-motion: reduce) {
   .dx-w-audio.is-playing {
     animation-duration: 0.01ms;
@@ -1655,7 +1655,7 @@
    DX-14: a global prefers-reduced-motion: reduce guard already exists in
    src/index.css (applies animation-duration/iteration/transition to all *).
    This block is intentionally scoped to the dx- class families as a belt-and-
-   suspenders measure for the dxPulse animation specifically, and to neutralise
+   suspenders measure for the dx-pulse animation specifically, and to neutralise
    any dx- transitions that could feel jarring at narrow duration.
    ────────────────────────────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {

@@ -88,7 +88,11 @@ export function CardRow({ card }: CardRowProps) {
     'conjugation',
     'cloze',
   ]);
-  const answerLang = elAnswerTypes.has(card.card_type) ? 'el' : 'en';
+  const cardTypeLang = elAnswerTypes.has(card.card_type) ? 'el' : 'en';
+  // When the RU locale is active and a Russian answer is shown, the element
+  // must be labelled lang="ru" for screen readers.
+  const answerIsRu = lang === 'ru' && asString(back.answer_ru).length > 0;
+  const answerLang = answerIsRu ? 'ru' : cardTypeLang;
 
   const typeLabel = t(`wordReference.cardType.${card.card_type}`, {
     defaultValue: card.card_type,

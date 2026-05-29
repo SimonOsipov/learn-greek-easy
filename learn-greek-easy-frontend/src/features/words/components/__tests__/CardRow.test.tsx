@@ -107,7 +107,9 @@ describe('CardRow — RU locale', () => {
       back_content: { answer: 'English answer', answer_ru: 'Русский ответ' },
     });
     render(<CardRow card={card} />);
-    expect(screen.getByTestId('card-row-answer')).toHaveTextContent('Русский ответ');
+    const answerEl = screen.getByTestId('card-row-answer');
+    expect(answerEl).toHaveTextContent('Русский ответ');
+    expect(answerEl).toHaveAttribute('lang', 'ru');
   });
 
   it('falls back to answer when locale is "ru" but answer_ru is absent', () => {
