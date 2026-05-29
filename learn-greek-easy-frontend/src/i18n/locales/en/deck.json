@@ -108,7 +108,17 @@
     },
     "actionEyebrow": "Pick what to practice",
     "actionYourProgress": "Your progress · {{pct}}%",
-    "actionCounts": "{{new}} new · {{learning}} learning · {{mastered}} mastered"
+    "actionCounts": "{{new}} new · {{learning}} learning · {{mastered}} mastered",
+    "metricDueToday": "Due today",
+    "metricStreakDeck": "Streak · this deck",
+    "metricMastered": "Mastered",
+    "metricTimeOnDeck": "Time on deck",
+    "metricMasteredValue": "{{mastered}}/{{total}}",
+    "metricDueTodayTrend": "ready to practice",
+    "metricDueAllCaughtUp": "all caught up",
+    "metricStreakLabel": "day streak",
+    "metricTimeMin": "min",
+    "metricPctOfDeck": "{{pct}}% of deck"
   },
   "card": {
     "viewDetails": "View Details",

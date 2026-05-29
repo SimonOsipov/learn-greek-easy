@@ -6,6 +6,8 @@
  * - Study Now navigation without card type filter
  * - Study Now navigation with card type filter (Translation -> meaning)
  * - DX-07: DxActionPanel is rendered (delegates progress + practice to DxActionPanel)
+ * - DX-06: DxMetricStrip is rendered
+ * - DX-12: statistics.total_study_time_seconds flows into Time metric (not hardcoded 0)
  */
 
 import React from 'react';
@@ -175,5 +177,42 @@ describe('V2DeckHeader', () => {
   it('renders DxActionPanel (dx-action-panel testid present)', () => {
     renderV2DeckHeader();
     expect(screen.getByTestId('dx-action-panel')).toBeInTheDocument();
+  });
+
+  // ── DX-06: DxMetricStrip ────────────────────────────────────────────────
+
+  it('renders DxMetricStrip (dx-metric-strip testid present)', () => {
+    renderV2DeckHeader();
+    expect(screen.getByTestId('dx-metric-strip')).toBeInTheDocument();
+  });
+
+  // ── DX-12: total_study_time_seconds flows into Time metric ───────────────
+
+  it('DX-12: Time metric shows 60 min when total_study_time_seconds=3600', async () => {
+    (progressAPI.getDeckProgressDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      progress: {
+        total_cards: 20,
+        cards_mastered: 5,
+        cards_new: 5,
+        cards_learning: 5,
+        cards_review: 5,
+        cards_due: 3,
+        cards_studied: 10,
+        mastery_percentage: 25,
+        completion_percentage: 50,
+      },
+      statistics: {
+        total_reviews: 80,
+        total_study_time_seconds: 3600,
+        average_quality: 3.2,
+        average_easiness_factor: 2.5,
+        average_interval_days: 5,
+      },
+    });
+    renderV2DeckHeader();
+    await waitFor(() => {
+      const timeValue = screen.getByTestId('dx-metric-time-value');
+      expect(timeValue.textContent).toContain('60');
+    });
   });
 });

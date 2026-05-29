@@ -108,7 +108,17 @@
     },
     "actionEyebrow": "Выберите, что практиковать",
     "actionYourProgress": "Ваш прогресс · {{pct}}%",
-    "actionCounts": "{{new}} новых · {{learning}} изучается · {{mastered}} освоено"
+    "actionCounts": "{{new}} новых · {{learning}} изучается · {{mastered}} освоено",
+    "metricDueToday": "На сегодня",
+    "metricStreakDeck": "Серия · эта колода",
+    "metricMastered": "Освоено",
+    "metricTimeOnDeck": "Время на колоде",
+    "metricMasteredValue": "{{mastered}}/{{total}}",
+    "metricDueTodayTrend": "готово к практике",
+    "metricDueAllCaughtUp": "всё повторено",
+    "metricStreakLabel": "дней серии",
+    "metricTimeMin": "мин",
+    "metricPctOfDeck": "{{pct}}% колоды"
   },
   "card": {
     "viewDetails": "Подробнее",
