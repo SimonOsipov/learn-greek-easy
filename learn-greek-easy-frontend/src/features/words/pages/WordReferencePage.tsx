@@ -4,7 +4,8 @@
  * Word Reference Page - displays detailed linguistic data for a word entry.
  *
  * Includes:
- * - Gradient header with word, pronunciation, translations
+ * - DX-09 WordHero: radial gradient header with word, pronunciation, translations,
+ *   audio pulse, DonutRing mastery, WeekHeat placeholder
  * - Grammar tables (conjugation for verbs, declension for nouns/adjectives)
  * - Usage examples
  * - Notes section (if available)
@@ -17,21 +18,17 @@ import { ChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 
-import { ReportErrorButton, ReportErrorModal } from '@/components/card-errors';
-import { GenderBadge, PartOfSpeechBadge } from '@/components/review/grammar';
+import { ReportErrorModal } from '@/components/card-errors';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AudioSpeedToggle } from '@/components/ui/AudioSpeedToggle';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { SpeakerButton } from '@/components/ui/SpeakerButton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { track } from '@/lib/analytics';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
-import type { AdjectiveData, AdverbData, NounDataAny, NounGender, VerbData } from '@/types/grammar';
-import { getPersistedAudioSpeed, setPersistedAudioSpeed } from '@/utils/audioSpeed';
+import type { AdjectiveData, AdverbData, NounDataAny, VerbData } from '@/types/grammar';
 import type { AudioSpeed } from '@/utils/audioSpeed';
+import { getPersistedAudioSpeed, setPersistedAudioSpeed } from '@/utils/audioSpeed';
 
 import {
   AdjectiveDeclensionTable,
@@ -40,8 +37,10 @@ import {
   ConjugationTable,
   ExamplesSection,
   NounDeclensionTable,
+  WordHero,
 } from '../components';
 import { groupCards } from '../components/cardGrouping';
+import { GENDER_ARTICLE_MAP } from '../components/WordHero';
 import { useWordEntry, useWordMastery } from '../hooks';
 
 import type { CardMasteryItem } from '../hooks';
@@ -177,12 +176,6 @@ function AdverbFormsCard({ grammarData }: AdverbFormsCardProps) {
 // Main Component
 // ============================================
 
-const GENDER_ARTICLE_MAP: Record<string, string> = {
-  masculine: 'ο',
-  feminine: 'η',
-  neuter: 'το',
-};
-
 export function WordReferencePage() {
   const { t, i18n } = useTranslation(['deck', 'review']);
   const { deckId, wordId } = useParams<{ deckId: string; wordId: string }>();
@@ -281,88 +274,18 @@ export function WordReferencePage() {
 
   return (
     <div className="space-y-6" data-testid="word-reference-page">
-      {/* Gradient Header */}
-      <div className="relative rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 p-6 pb-12">
-        {/* Top navigation row */}
-        <div className="mb-4 flex items-center justify-between">
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="hover:bg-transparent"
-            data-testid="back-button"
-          >
-            <Link to={`/decks/${deckId}`}>
-              <ChevronLeft className="mr-1 h-4 w-4" />
-              {t('deck:detail.goBack')}
-            </Link>
-          </Button>
-
-          <ReportErrorButton
-            onClick={() => setIsReportModalOpen(true)}
-            data-testid="report-error-button"
-          />
-        </div>
-
-        {/* Type badges */}
-        <div className="mb-4 flex flex-wrap gap-2">
-          <PartOfSpeechBadge partOfSpeech={partOfSpeech} />
-          {partOfSpeech === 'verb' && grammarData && 'voice' in grammarData && (
-            <Badge variant="outline" className="capitalize">
-              {t(`review:grammar.verbConjugation.voice.${grammarData.voice as string}`)}
-            </Badge>
-          )}
-          {partOfSpeech === 'noun' && grammarData && 'gender' in grammarData && article && (
-            <GenderBadge gender={grammarData.gender as NounGender} />
-          )}
-        </div>
-
-        {/* Greek word (lemma) */}
-        <div className="flex items-center gap-3">
-          <h1 className="text-4xl font-bold text-foreground sm:text-5xl">
-            {article && (
-              <>
-                <span className="mr-2 font-normal text-muted-foreground">{article}</span>{' '}
-              </>
-            )}
-            {wordEntry.lemma}
-          </h1>
-          {wordEntry.audio_url && (
-            <SpeakerButton
-              audioUrl={wordEntry.audio_url}
-              speed={audioSpeed}
-              className="hover:bg-transparent [&_svg]:size-8"
-              onPlay={() =>
-                track('word_audio_played', {
-                  word_entry_id: wordEntry.id,
-                  lemma: wordEntry.lemma,
-                  part_of_speech: wordEntry.part_of_speech ?? null,
-                  context: 'reference',
-                  deck_id: deckId ?? '',
-                  playback_speed: 1,
-                })
-              }
-            />
-          )}
-        </div>
-
-        {/* Pronunciation */}
-        {wordEntry.pronunciation && (
-          <p className="mt-2 text-lg text-muted-foreground">{wordEntry.pronunciation}</p>
-        )}
-
-        {/* Translation - single locale-appropriate value */}
-        <p className="mt-4 text-[1.15em] font-bold text-foreground">{displayTranslation}</p>
-
-        {wordEntry.audio_url && (
-          <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground">
-              {t('deck:wordReference.voiceSpeed')}:
-            </span>
-            <AudioSpeedToggle speed={audioSpeed} onSpeedChange={handleSpeedChange} />
-          </div>
-        )}
-      </div>
+      {/* DX-09 Word Hero — radial panel header */}
+      <WordHero
+        wordEntry={wordEntry}
+        deckId={deckId ?? ''}
+        displayTranslation={displayTranslation}
+        article={article}
+        masteredCards={masteredCards}
+        totalCards={totalCards}
+        audioSpeed={audioSpeed}
+        onSpeedChange={handleSpeedChange}
+        onReportError={() => setIsReportModalOpen(true)}
+      />
 
       {/* Tabs */}
       <Tabs

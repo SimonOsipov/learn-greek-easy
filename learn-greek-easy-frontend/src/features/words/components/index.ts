@@ -20,3 +20,6 @@ export { groupCards } from './cardGrouping';
 export type { CardGroupKey, GroupedCards, CardGroupDefinition } from './cardGrouping';
 export { MiniFlipCard } from './MiniFlipCard';
 export type { MiniFlipCardProps } from './MiniFlipCard';
+
+export { WordHero } from './WordHero';
+export type { WordHeroProps } from './WordHero';
