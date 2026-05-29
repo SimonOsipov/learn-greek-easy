@@ -14,7 +14,7 @@ import json
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import (
     APIRouter,
@@ -188,6 +188,7 @@ from src.services.changelog_service import ChangelogService
 from src.services.cross_ai_verification_service import get_cross_ai_verification_service
 from src.services.description_audio_service import (
     DescriptionAudioError,
+    _versioned_description_key,
     generate_description_audio,
     load_description_text,
     persist_description_audio,
@@ -4238,6 +4239,7 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 return
 
             # Extract all data before session closes (ORM objects become detached)
+            prior_audio_key = dialog.audio_s3_key
             dialog_data = {"id": str(dialog.id), "status": dialog.status}
             lines_data = [
                 {
@@ -4274,7 +4276,7 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
         try:
             audio_result = await audio_service.generate_dialog(
                 inputs=dialog_inputs,
-                s3_key=f"dialog-audio/{dialog_id}.mp3",
+                s3_key=f"dialog-audio/{dialog_id}/{uuid4().hex}.mp3",
             )
         except Exception as e:
             yield format_sse_event(
@@ -4331,6 +4333,16 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                         end_time_ms=end_ms,
                         word_timestamps=audio_result.word_timestamps_map.get(i),
                     )
+                )
+
+        # Best-effort deletion of the prior audio object now that persist succeeded.
+        if prior_audio_key and prior_audio_key != audio_result.s3_key:
+            try:
+                get_s3_service().delete_object(prior_audio_key)
+            except Exception:
+                logger.warning(
+                    "Failed to delete prior dialog audio from S3",
+                    extra={"prior_key": prior_audio_key, "dialog_id": str(dialog_id)},
                 )
 
         yield format_sse_event(
@@ -4402,11 +4414,20 @@ async def _description_audio_sse_pipeline(
             level,  # type: ignore[arg-type]
             factory,
         )
-        s3_key = (
-            f"situation-description-audio/{description_id}.mp3"
+        s3_key = _versioned_description_key(description_id, level)  # type: ignore[arg-type]
+
+        # Capture prior audio key for this level before persist so we can delete it afterward.
+        # Only read the column for the level being regenerated — never touch the sibling level.
+        prior_key_col = (
+            SituationDescription.audio_s3_key
             if level == "b1"
-            else f"situation-description-audio/a2/{description_id}.mp3"
+            else SituationDescription.audio_a2_s3_key
         )
+        async with factory.begin() as _prior_session:
+            prior_key_row = await _prior_session.execute(
+                select(prior_key_col).where(SituationDescription.id == description_id)
+            )
+            prior_description_key: str | None = prior_key_row.scalar_one_or_none()
 
         yield format_sse_event(
             {"situation_id": str(situation_id), "level": level},
@@ -4453,6 +4474,21 @@ async def _description_audio_sse_pipeline(
             audio_result,
             factory,
         )
+
+        # Best-effort deletion of the prior audio object now that persist succeeded.
+        # b1 and a2 are independent — only ever delete the level being regenerated.
+        if prior_description_key and prior_description_key != s3_key:
+            try:
+                get_s3_service().delete_object(prior_description_key)
+            except Exception:
+                logger.warning(
+                    "Failed to delete prior description audio from S3",
+                    extra={
+                        "prior_key": prior_description_key,
+                        "situation_id": str(situation_id),
+                        "level": level,
+                    },
+                )
 
         audio_url = audio_service.generate_presigned_url(s3_key)
 

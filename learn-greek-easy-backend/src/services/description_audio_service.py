@@ -21,7 +21,7 @@ BG-task wrapper (SITAUDO-02):
 from __future__ import annotations
 
 from typing import Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -194,6 +194,30 @@ async def persist_description_audio(
 
 
 # ---------------------------------------------------------------------------
+# Key helpers
+# ---------------------------------------------------------------------------
+
+
+def _versioned_description_key(description_id: UUID, level: Literal["b1", "a2"]) -> str:
+    """Build a per-generation versioned S3 key for description audio.
+
+    Uses a uuid4 token so each regeneration produces a distinct key, busting
+    any CDN/browser cache even when the text content is unchanged.
+
+    Key shapes:
+    - b1: situation-description-audio/{description_id}/{token}.mp3
+    - a2: situation-description-audio/a2/{description_id}/{token}.mp3
+    """
+    token = uuid4().hex
+    base = "situation-description-audio"
+    return (
+        f"{base}/a2/{description_id}/{token}.mp3"
+        if level == "a2"
+        else f"{base}/{description_id}/{token}.mp3"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Orchestrator
 # ---------------------------------------------------------------------------
 
@@ -216,11 +240,7 @@ async def run_description_audio_pipeline(
     """
     description_id, text = await load_description_text(situation_id, level, factory)
 
-    s3_key = (
-        f"situation-description-audio/{description_id}.mp3"
-        if level == "b1"
-        else f"situation-description-audio/a2/{description_id}.mp3"
-    )
+    s3_key = _versioned_description_key(description_id, level)
 
     result = await generate_description_audio(text, s3_key, audio_service)
 
