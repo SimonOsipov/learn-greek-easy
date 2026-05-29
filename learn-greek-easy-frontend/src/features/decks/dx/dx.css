@@ -504,3 +504,192 @@
   width: 14px;
   height: 14px;
 }
+
+/* ── Resume hero (.dx-hero-resume) ──────────────────────────────────────── */
+/* DX-05: radial panel with gradient background — covers deck detail header  */
+.dx-hero-resume {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  padding: 28px 32px;
+  min-height: 280px;
+  background:
+    radial-gradient(120% 90% at 100% 0%, hsl(var(--primary) / 0.18), transparent 55%),
+    radial-gradient(80% 80% at 0% 100%, hsl(var(--accent) / 0.12), transparent 55%),
+    hsl(var(--bg-2));
+  border: 1px solid hsl(var(--primary) / 0.28);
+}
+.dx-hero-resume-grid {
+  display: grid;
+  grid-template-columns: 1fr minmax(280px, 360px);
+  gap: 32px;
+  align-items: stretch;
+  position: relative;
+  z-index: 1;
+  min-height: 224px;
+}
+.dx-hero-resume-l {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.dx-hero-resume-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dx-hero-resume-h {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: clamp(28px, 2.6vw, 38px);
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.05;
+  margin: 0;
+  color: hsl(var(--fg));
+}
+.dx-hero-resume-el {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 18px;
+  font-style: normal;
+  color: hsl(var(--fg-2));
+  margin: 4px 0 0;
+}
+.dx-hero-resume-desc {
+  font-size: 14px;
+  color: hsl(var(--fg-2));
+  line-height: 1.55;
+  margin: 0;
+  max-width: 460px;
+}
+.dx-hero-resume-stats {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 28px;
+  margin-top: auto;
+  padding-top: 10px;
+  justify-content: start;
+}
+.dx-hero-resume-stat {
+  display: flex;
+  flex-direction: column;
+}
+.dx-hero-resume-stat b {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: hsl(var(--fg));
+}
+.dx-hero-resume-stat span {
+  font-size: 11px;
+  color: hsl(var(--fg-3));
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Cover stack (.dx-cover-stack) ─────────────────────────────────────── */
+/* DX-05: fanned sibling covers on the right side of the resume hero         */
+.dx-cover-stack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+}
+.dx-cover {
+  position: absolute;
+  width: 200px;
+  height: 250px;
+  border-radius: 18px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    0 1px 0 hsl(0 0% 100% / 0.18) inset,
+    0 20px 50px -20px hsl(var(--primary) / 0.6),
+    0 8px 16px -6px hsl(0 0% 0% / 0.3);
+  transform-origin: bottom center;
+}
+.dx-cover-1 {
+  transform: rotate(-6deg) translateX(-50px);
+  opacity: 0.5;
+}
+.dx-cover-2 {
+  transform: rotate(4deg) translateX(50px);
+  opacity: 0.65;
+}
+.dx-cover-3 {
+  transform: rotate(0deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dx-cover-1,
+  .dx-cover-2,
+  .dx-cover-3 {
+    transition: none;
+  }
+}
+.dx-cover-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  color: hsl(0 0% 100% / 0.9);
+}
+.dx-cover-title {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.018em;
+  line-height: 1.15;
+  margin-top: 8px;
+  color: hsl(0 0% 100% / 0.95);
+}
+.dx-cover-el {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-style: normal;
+  font-size: 14px;
+  margin-top: 4px;
+  opacity: 0.9;
+  color: hsl(0 0% 100% / 0.9);
+}
+.dx-cover-foot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.dx-cover-pct {
+  font-weight: 700;
+  font-size: 14px;
+  font-family: 'Inter Tight', sans-serif;
+  color: hsl(0 0% 100% / 0.95);
+}
+.dx-cover-bar {
+  width: 60px;
+  height: 4px;
+  background: hsl(0 0% 100% / 0.25);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.dx-cover-bar span {
+  display: block;
+  height: 100%;
+  background: hsl(0 0% 100% / 0.95);
+}
+@media (max-width: 1100px) {
+  .dx-hero-resume-grid {
+    grid-template-columns: 1fr;
+  }
+  .dx-cover-stack {
+    display: none;
+  }
+}

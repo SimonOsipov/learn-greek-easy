@@ -186,7 +186,8 @@ describe('V2DeckHeader', () => {
     });
     renderV2DeckHeader();
     await waitFor(() => {
-      expect(screen.getByText(/50%/)).toBeInTheDocument();
+      // DX-05: 50% now appears in both the resume hero stats and the progress card
+      expect(screen.getAllByText(/50%/).length).toBeGreaterThanOrEqual(1);
     });
   });
 

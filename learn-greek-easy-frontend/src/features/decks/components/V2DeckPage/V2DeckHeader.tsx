@@ -7,14 +7,13 @@ import { BookOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
-import { DeckBadge } from '@/components/decks/DeckBadge';
 import { DeckProgressBar } from '@/components/decks/DeckProgressBar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { getDeckBackgroundStyle } from '@/lib/deckBackground';
-import { getLocalizedDeckName, getLocalizedDeckDescription } from '@/lib/deckLocale';
+import { Card, CardContent } from '@/components/ui/card';
 import { progressAPI } from '@/services/progressAPI';
 import type { Deck } from '@/types/deck';
+
+import { DxResumeHeroConnected } from './DxResumeHero';
 
 /**
  * Card type filter options for practice session.
@@ -38,20 +37,15 @@ interface V2DeckHeaderProps {
  * V2DeckHeader Component
  *
  * Displays the header section for V2 decks with:
- * - Deck title (Greek primary, English secondary)
- * - Category and level badges
- * - Description
- * - Progress bar (all cards shown as "new")
+ * - DX-05 resume hero (DxResumeHeroConnected) replacing the old cover-image card
+ * - Progress bar
  * - Card type filter pills
  * - Enabled "Study Now" button navigating to /decks/:id/practice
  */
 export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
-  const { t, i18n } = useTranslation('deck');
+  const { t } = useTranslation('deck');
   const navigate = useNavigate();
   const [selectedCardType, setSelectedCardType] = useState<string>('all');
-
-  const localizedName = getLocalizedDeckName(deck, i18n.language);
-  const localizedDescription = getLocalizedDeckDescription(deck, i18n.language);
 
   // Use cardCount as the word count (for V2 decks, this represents word entries)
   const wordCount = deck.cardCount;
@@ -78,49 +72,10 @@ export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
 
   return (
     <div className="space-y-4">
-      <Card style={getDeckBackgroundStyle(deck.coverImageUrl)}>
-        <CardHeader>
-          {/* Title Row */}
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              {/* Localized Title */}
-              <h1 className="mb-1 text-2xl font-semibold text-foreground md:text-3xl">
-                {localizedName}
-              </h1>
-            </div>
+      {/* DX-05: Resume hero replaces the old cover-image card */}
+      <DxResumeHeroConnected deck={deck} progress={progressData?.progress} />
 
-            {/* Badges */}
-            <div className="flex flex-shrink-0 items-center gap-2">
-              {deck.category !== 'culture' && (
-                <DeckBadge
-                  type="category"
-                  category={deck.category}
-                  className={deck.coverImageUrl ? 'on-photo' : ''}
-                />
-              )}
-              <DeckBadge
-                type="level"
-                level={deck.level}
-                className={deck.coverImageUrl ? 'on-photo' : ''}
-              />
-            </div>
-          </div>
-
-          {/* Category and metadata */}
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-            <span>{t(`card.categories.${deck.category}`)}</span>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          {/* Description */}
-          <p className="leading-relaxed text-foreground">
-            {localizedDescription || deck.description}
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Progress & Action — below the cover image */}
+      {/* Progress & Action — below the resume hero */}
       <Card>
         <CardContent className="pt-6">
           {/* Progress Bar - All New for V2 */}
