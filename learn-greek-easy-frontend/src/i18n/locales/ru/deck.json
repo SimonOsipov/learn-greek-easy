@@ -290,7 +290,8 @@
     "masteryDotsLegend": "Правильные ответы для освоения — нужно 4, чтобы освоить карточку.",
     "masteryDotsInfo": "Информация о точках мастерства",
     "loadMore": "Загрузить ещё",
-    "loadingMore": "Загрузка..."
+    "loadingMore": "Загрузка...",
+    "kicker": "Слова в этой колоде"
   },
   "wordReference": {
     "backToDeck": "Назад к колоде",

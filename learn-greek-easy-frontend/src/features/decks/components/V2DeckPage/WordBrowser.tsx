@@ -15,6 +15,7 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { MasteryDotsLegend } from '@/components/shared/MasteryDotsLegend';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Kicker } from '@/features/decks/dx';
 import { debounce } from '@/lib/utils';
 import { progressAPI, type WordMasteryItem } from '@/services/progressAPI';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
@@ -123,7 +124,7 @@ function FilterPills({ activeFilter, counts, onFilterChange }: FilterPillsProps)
   const { t } = useTranslation('deck');
 
   return (
-    <div className="flex flex-wrap gap-2" role="group" aria-label={t('wordBrowser.filterGroup')}>
+    <div className="dx-word-status" role="group" aria-label={t('wordBrowser.filterGroup')}>
       {FILTER_OPTIONS.map(({ value, labelKey }) => {
         const count = counts[value];
         const isActive = activeFilter === value;
@@ -131,17 +132,15 @@ function FilterPills({ activeFilter, counts, onFilterChange }: FilterPillsProps)
         const isDisabled = count === 0 && value !== 'all';
 
         return (
-          <Button
+          <button
             key={value}
-            variant={isActive ? 'default' : 'outline'}
-            size="sm"
+            className="dx-word-stat"
             onClick={() => onFilterChange(value)}
             disabled={isDisabled}
             aria-pressed={isActive}
-            className="min-w-[80px]"
           >
             {t(labelKey)} ({count})
-          </Button>
+          </button>
         );
       })}
     </div>
@@ -260,8 +259,13 @@ export const WordBrowser: React.FC<WordBrowserProps> = ({ deckId, className }) =
 
   return (
     <div className={className} data-testid="word-browser">
+      {/* Kicker eyebrow */}
+      <Kicker tone="violet" className="mb-4">
+        {t('wordBrowser.kicker')}
+      </Kicker>
+
       {/* Search and Filters */}
-      <div className="mb-6 space-y-4">
+      <div className="dx-word-toolbar mb-6">
         {/* Search Input */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -293,7 +297,7 @@ export const WordBrowser: React.FC<WordBrowserProps> = ({ deckId, className }) =
         />
 
         {/* Results Count */}
-        <p className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+        <p className="dx-word-meta">
           {t('wordBrowser.showing', {
             count: filteredEntries.length,
             total,

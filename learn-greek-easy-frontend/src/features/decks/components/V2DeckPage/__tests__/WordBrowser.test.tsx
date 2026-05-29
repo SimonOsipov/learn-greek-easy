@@ -888,3 +888,62 @@ describe('WordBrowser Component', () => {
     });
   });
 });
+
+// ============================================================
+// DX-08: WordBrowser kicker + toolbar tests
+// ============================================================
+
+describe('WordBrowser — DX-08 kicker', () => {
+  it('renders the violet kicker "Words in this deck" above the search bar', async () => {
+    vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
+      deck_id: 'deck-1',
+      total: 0,
+      page: 1,
+      page_size: 40,
+      word_entries: [],
+    });
+
+    render(<WordBrowser deckId="deck-1" />, { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('word-browser')).toBeInTheDocument();
+    });
+
+    // The kicker text must be present
+    expect(screen.getByText('Words in this deck')).toBeInTheDocument();
+  });
+
+  it('"Showing X of Y words" reflects filtered vs total', async () => {
+    vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
+      deck_id: 'deck-1',
+      total: 3,
+      page: 1,
+      page_size: 40,
+      word_entries: mockWordEntries,
+    });
+
+    render(<WordBrowser deckId="deck-1" />, { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Showing 3 of 3 words/i)).toBeInTheDocument();
+    });
+  });
+
+  it('does not render any UnwiredDot elements', async () => {
+    vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
+      deck_id: 'deck-1',
+      total: 3,
+      page: 1,
+      page_size: 40,
+      word_entries: mockWordEntries,
+    });
+
+    render(<WordBrowser deckId="deck-1" />, { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('word-browser')).toBeInTheDocument();
+    });
+
+    expect(document.querySelector('.dx-unwired-dot')).not.toBeInTheDocument();
+  });
+});

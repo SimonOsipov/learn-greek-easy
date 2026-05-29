@@ -929,3 +929,92 @@
 .dx-metric-trend.is-flat {
   color: hsl(var(--fg-3));
 }
+
+/* ── Word toolbar (.dx-word-toolbar) ─────────────────────────────────────────
+   DX-08: re-skin of the WordBrowser search/filter bar.
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-word-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dx-word-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.dx-word-stat {
+  padding: 7px 14px;
+  background: transparent;
+  border: 1px solid hsl(var(--fg) / 0.08);
+  border-radius: 999px;
+  color: hsl(var(--fg-2));
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dx-word-stat:hover {
+  color: hsl(var(--fg));
+  border-color: hsl(var(--fg) / 0.16);
+}
+.dx-word-stat[aria-pressed='true'] {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+.dx-word-stat:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.dx-word-meta {
+  font-size: 12.5px;
+  color: hsl(var(--fg-3));
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Word card — gender kicker (.dx-word-card-head / .dx-word-card-kicker) ──
+   DX-08: head row inside each WordCard; kicker dot is gender-coloured.
+
+   Deviation Justification: literal gender HSLs (masc/fem); neuter uses --warning
+   token; gender is a 3-value taxonomy not worth 2 global tokens — see
+   docs/design-system.md:151 precedent
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-word-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.dx-word-card-kicker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: hsl(var(--fg-3));
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dx-word-card-kicker::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: hsl(var(--warning));
+}
+/* Deviation Justification: literal gender HSLs (masc/fem); neuter uses --warning token;
+   gender is a 3-value taxonomy not worth 2 global tokens — see docs/design-system.md:151 precedent */
+.dx-word-card-kicker[data-gender='masculine']::before {
+  background: hsl(210 80% 55%);
+}
+.dx-word-card-kicker[data-gender='feminine']::before {
+  background: hsl(330 80% 60%);
+}
+.dx-word-card-kicker[data-gender='neuter']::before {
+  background: hsl(var(--warning));
+}

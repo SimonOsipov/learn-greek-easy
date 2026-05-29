@@ -290,7 +290,8 @@
     "masteryDotsLegend": "Correct answers toward mastery — 4 needed to master a card.",
     "masteryDotsInfo": "Mastery dots info",
     "loadMore": "Load More",
-    "loadingMore": "Loading..."
+    "loadingMore": "Loading...",
+    "kicker": "Words in this deck"
   },
   "wordReference": {
     "backToDeck": "Back to Deck",
