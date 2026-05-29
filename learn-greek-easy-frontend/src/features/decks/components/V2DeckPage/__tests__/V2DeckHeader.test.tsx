@@ -2,10 +2,10 @@
  * V2DeckHeader Component Tests
  *
  * Covers:
- * - Filter pill selection (default "All", single-select)
+ * - Filter pill selection (default "All", single-select) — now in DxActionPanel
  * - Study Now navigation without card type filter
  * - Study Now navigation with card type filter (Translation -> meaning)
- * - DX-12: total_study_time_seconds and cards_due surfaced in progress props
+ * - DX-07: DxActionPanel is rendered (delegates progress + practice to DxActionPanel)
  */
 
 import React from 'react';
@@ -19,7 +19,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import i18n from '@/i18n';
 import { progressAPI } from '@/services/progressAPI';
-import type { Deck, DeckProgress } from '@/types/deck';
+import type { Deck } from '@/types/deck';
 
 import { V2DeckHeader } from '../V2DeckHeader';
 
@@ -40,16 +40,6 @@ vi.mock('react-router-dom', async () => {
 vi.mock('@/services/progressAPI', () => ({
   progressAPI: {
     getDeckProgressDetail: vi.fn(),
-  },
-}));
-
-// Capture progress props passed to DeckProgressBar
-let capturedProgress: DeckProgress | null = null;
-
-vi.mock('@/components/decks/DeckProgressBar', () => ({
-  DeckProgressBar: ({ progress }: { progress: DeckProgress }) => {
-    capturedProgress = progress;
-    return null;
   },
 }));
 
@@ -96,27 +86,22 @@ function renderV2DeckHeader() {
 describe('V2DeckHeader', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    capturedProgress = null;
   });
 
-  it('renders Study Now button with correct data-testid', () => {
+  it('renders Start Review button with correct data-testid', () => {
     renderV2DeckHeader();
     expect(screen.getByTestId('start-review-button')).toBeInTheDocument();
   });
 
   it('renders all five filter pills', () => {
     renderV2DeckHeader();
-    // All pills should be present - check by aria-pressed
     const allPressedButtons = screen.getAllByRole('button');
-    // Filter pills: All, Translation, Plural Form, Article, Declension
-    // Look for aria-pressed attribute
     const pills = allPressedButtons.filter((btn) => btn.getAttribute('aria-pressed') !== null);
     expect(pills.length).toBe(5);
   });
 
   it('has "All" selected by default', () => {
     renderV2DeckHeader();
-    // Find pill with aria-pressed="true" - should be "All"
     const pressedPills = screen
       .getAllByRole('button')
       .filter((btn) => btn.getAttribute('aria-pressed') === 'true');
@@ -128,7 +113,6 @@ describe('V2DeckHeader', () => {
     const user = userEvent.setup();
     renderV2DeckHeader();
 
-    // Find all pill buttons by aria-pressed
     const buttons = screen.getAllByRole('button');
     const pills = buttons.filter((btn) => btn.getAttribute('aria-pressed') !== null);
 
@@ -139,7 +123,6 @@ describe('V2DeckHeader', () => {
     // Click second pill (Translation)
     await user.click(pills[1]);
 
-    // Now Translation should be selected and All should not
     const updatedButtons = screen.getAllByRole('button');
     const updatedPills = updatedButtons.filter((btn) => btn.getAttribute('aria-pressed') !== null);
     expect(updatedPills[0]).toHaveAttribute('aria-pressed', 'false');
@@ -159,18 +142,16 @@ describe('V2DeckHeader', () => {
     const user = userEvent.setup();
     renderV2DeckHeader();
 
-    // Click Translation pill (2nd pill, aria-pressed=false)
     const buttons = screen.getAllByRole('button');
     const pills = buttons.filter((btn) => btn.getAttribute('aria-pressed') !== null);
     await user.click(pills[1]); // Translation pill
 
-    // Click Study Now
     await user.click(screen.getByTestId('start-review-button'));
 
     expect(mockNavigate).toHaveBeenCalledWith('/decks/deck-abc/practice?cardType=meaning');
   });
 
-  it('renders completion percentage from API data', async () => {
+  it('renders completion percentage from API data in action panel bar', async () => {
     (progressAPI.getDeckProgressDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       progress: {
         total_cards: 10,
@@ -186,51 +167,13 @@ describe('V2DeckHeader', () => {
     });
     renderV2DeckHeader();
     await waitFor(() => {
-      // DX-05: 50% now appears in both the resume hero stats and the progress card
-      expect(screen.getAllByText(/50%/).length).toBeGreaterThanOrEqual(1);
+      const barFill = screen.getByTestId('dx-action-bar-fill');
+      expect(barFill).toHaveStyle({ width: '50%' });
     });
   });
 
-  it('DX-12: surfaces total_study_time_seconds as raw seconds and cards_due; streak/accuracy remain 0', async () => {
-    (progressAPI.getDeckProgressDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      progress: {
-        total_cards: 20,
-        cards_mastered: 0,
-        cards_new: 15,
-        cards_learning: 0,
-        cards_review: 0,
-        cards_due: 5,
-        cards_studied: 5,
-        mastery_percentage: 0,
-        completion_percentage: 0,
-      },
-      statistics: {
-        total_reviews: 10,
-        total_study_time_seconds: 3600,
-        average_quality: 3,
-        average_easiness_factor: 2.5,
-        average_interval_days: 1,
-      },
-      timeline: {
-        first_studied_at: null,
-        last_studied_at: null,
-        days_active: 0,
-        estimated_completion_days: null,
-      },
-    });
-
+  it('renders DxActionPanel (dx-action-panel testid present)', () => {
     renderV2DeckHeader();
-
-    await waitFor(() => {
-      // Wait until the async query resolves and re-renders with actual API data
-      expect(capturedProgress?.totalTimeSpent).toBe(3600);
-    });
-
-    // DX-12: time is raw seconds (DX-06 formats to minutes); cards_due wired
-    expect(capturedProgress!.totalTimeSpent).toBe(3600);
-    expect(capturedProgress!.dueToday).toBe(5);
-    // Placeholders — DX-06 will fill these
-    expect(capturedProgress!.streak).toBe(0);
-    expect(capturedProgress!.accuracy).toBe(0);
+    expect(screen.getByTestId('dx-action-panel')).toBeInTheDocument();
   });
 });

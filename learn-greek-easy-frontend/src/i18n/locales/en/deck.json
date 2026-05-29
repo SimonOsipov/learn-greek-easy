@@ -105,7 +105,10 @@
       "title": "Demo: Test progress tracking",
       "simulateSession": "Simulate Study Session",
       "simulating": "Simulating..."
-    }
+    },
+    "actionEyebrow": "Pick what to practice",
+    "actionYourProgress": "Your progress · {{pct}}%",
+    "actionCounts": "{{new}} new · {{learning}} learning · {{mastered}} mastered"
   },
   "card": {
     "viewDetails": "View Details",
