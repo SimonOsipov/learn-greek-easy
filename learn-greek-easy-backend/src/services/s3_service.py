@@ -224,8 +224,8 @@ class S3Service:
             # floored datetime so SigV4Auth stamps X-Amz-Date with the window boundary.
             # Lock ensures the process-global rebind/restore is atomic across threads.
             with _SIGN_LOCK:
-                _orig_get_current_datetime = botocore.auth.get_current_datetime
-                botocore.auth.get_current_datetime = lambda: frozen_dt
+                _orig_get_current_datetime = getattr(botocore.auth, "get_current_datetime")
+                setattr(botocore.auth, "get_current_datetime", lambda: frozen_dt)
                 try:
                     url: str = client.generate_presigned_url(
                         "get_object",
@@ -236,7 +236,7 @@ class S3Service:
                         ExpiresIn=expiry,
                     )
                 finally:
-                    botocore.auth.get_current_datetime = _orig_get_current_datetime
+                    setattr(botocore.auth, "get_current_datetime", _orig_get_current_datetime)
 
             # Cache the URL: valid until expiry minus buffer
             cache_ttl = max(expiry - _PRESIGNED_URL_CACHE_BUFFER, 60)
