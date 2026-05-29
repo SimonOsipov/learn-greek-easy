@@ -401,8 +401,6 @@
     "unwiredStreak": "Streak — not yet connected to backend data.",
     "unwiredWeekHeat": "Weekly heatmap — not yet connected to backend data.",
     "premiumContent": "Premium content",
-    "viewGrid": "Grid view",
-    "viewList": "List view",
     "masteryStatus": "Mastery: {{status}}"
   }
 }

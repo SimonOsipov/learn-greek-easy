@@ -137,7 +137,7 @@ export function WordHero({
 
         {/* IPA / pronunciation */}
         {wordEntry.pronunciation && (
-          <div className="dx-w-ipa" data-testid="word-ipa">
+          <div className="dx-w-ipa" lang="el-Latn" data-testid="word-ipa">
             {wordEntry.pronunciation}
           </div>
         )}

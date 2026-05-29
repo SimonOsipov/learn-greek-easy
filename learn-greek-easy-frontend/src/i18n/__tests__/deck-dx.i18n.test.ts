@@ -98,8 +98,6 @@ describe('deck.dx — DX-13 new keys present in both locales', () => {
     'dx.unwiredWeekHeat',
     'dx.premiumContent',
     'dx.masteryStatus',
-    'dx.viewGrid',
-    'dx.viewList',
     'wordReference.extraGlossPlaceholder',
   ];
 

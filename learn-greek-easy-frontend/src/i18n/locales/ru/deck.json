@@ -401,8 +401,6 @@
     "unwiredStreak": "Серия — данные ещё не подключены.",
     "unwiredWeekHeat": "Недельная тепловая карта — данные ещё не подключены.",
     "premiumContent": "Премиум контент",
-    "viewGrid": "Сетка",
-    "viewList": "Список",
     "masteryStatus": "Статус: {{status}}"
   }
 }

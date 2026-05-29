@@ -1641,3 +1641,43 @@
 .dx-card-mast-dot[data-state='mastered'] {
   background: hsl(var(--success));
 }
+
+/* ── Focus-visible rings — visible keyboard focus on all dx- interactive elements ──
+   DX-14: uses --primary outline so focus is always visible and on-brand.
+   Uses :focus-visible so mouse users don't see the ring.
+   ────────────────────────────────────────────────────────────────────────────── */
+.dx-deck-card:focus-visible,
+.dx-chip:focus-visible,
+.dx-action-want-chip:focus-visible,
+.dx-w-speed-btn:focus-visible,
+.dx-action-cta:focus-visible,
+.dx-w-back:focus-visible,
+.dx-w-audio:focus-visible,
+.dx-word-stat:focus-visible,
+.dx-card-row:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* ── Reduced-motion — scoped to dx- animation families ──────────────────────
+   DX-14: a global prefers-reduced-motion: reduce guard already exists in
+   src/index.css (applies animation-duration/iteration/transition to all *).
+   This block is intentionally scoped to the dx- class families as a belt-and-
+   suspenders measure for the dxPulse animation specifically, and to neutralise
+   any dx- transitions that could feel jarring at narrow duration.
+   ────────────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .dx-deck-card,
+  .dx-chip,
+  .dx-action-want-chip,
+  .dx-action-cta,
+  .dx-w-audio,
+  .dx-ring-fill,
+  .dx-card-row {
+    transition-duration: 0.01ms !important;
+  }
+  .dx-w-audio.is-playing {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
