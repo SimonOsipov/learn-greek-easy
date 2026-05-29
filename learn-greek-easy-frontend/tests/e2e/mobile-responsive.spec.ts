@@ -145,20 +145,26 @@ test.describe('Tablet Responsive (768px)', () => {
     await expect(page.getByRole('heading').first()).toBeVisible();
   });
 
-  test('Deck cards should be 2-column grid on tablet', async ({ page }) => {
+  test('Deck cards should be 1-column grid on tablet', async ({ page }) => {
     await page.goto('/decks');
 
     const deckCards = page.locator('[data-testid="deck-card"]');
     // Wait for cards to load from API (increased timeout for CI)
     await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
 
-    // Cards should NOT be full width (2 per row)
-    const firstCard = deckCards.first();
-    const cardWidth = await firstCard.evaluate((el) => el.offsetWidth);
-
-    // Expect card to be roughly half viewport width (with gap)
-    expect(cardWidth).toBeLessThan(768 * 0.6);
-    expect(cardWidth).toBeGreaterThan(768 * 0.4);
+    // DX-04: .dx-deck-grid is 1-col at <=880px — cards fill the available width
+    const grid = page.locator('.dx-deck-grid').first();
+    if (await grid.count() > 0) {
+      const cols = await grid.evaluate((el) =>
+        getComputedStyle(el).gridTemplateColumns.split(' ').filter((s) => s.trim() !== '').length
+      );
+      expect(cols).toBe(1);
+    } else {
+      // Fallback: card should be near-full width
+      const firstCard = deckCards.first();
+      const cardWidth = await firstCard.evaluate((el) => el.offsetWidth);
+      expect(cardWidth).toBeGreaterThan(768 * 0.6);
+    }
   });
 });
 
@@ -180,18 +186,26 @@ test.describe('Desktop Responsive (1024px)', () => {
     expect(viewportSize?.width).toBe(1024);
   });
 
-  test('Deck cards should be 3-column grid on desktop', async ({ page }) => {
+  test('Deck cards should be 2-column grid on desktop', async ({ page }) => {
     await page.goto('/decks');
 
     const deckCards = page.locator('[data-testid="deck-card"]');
     // Wait for cards to load from API (increased timeout for CI)
     await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
 
-    // Cards should be roughly 1/3 viewport width
-    const firstCard = deckCards.first();
-    const cardWidth = await firstCard.evaluate((el) => el.offsetWidth);
-
-    expect(cardWidth).toBeLessThan(1024 * 0.4);
-    expect(cardWidth).toBeGreaterThan(1024 * 0.25);
+    // DX-04: .dx-deck-grid is 2-col at 1024px — cards take roughly half the available width
+    const grid = page.locator('.dx-deck-grid').first();
+    if (await grid.count() > 0) {
+      const cols = await grid.evaluate((el) =>
+        getComputedStyle(el).gridTemplateColumns.split(' ').filter((s) => s.trim() !== '').length
+      );
+      expect(cols).toBe(2);
+    } else {
+      // Fallback: card should be roughly half viewport width
+      const firstCard = deckCards.first();
+      const cardWidth = await firstCard.evaluate((el) => el.offsetWidth);
+      expect(cardWidth).toBeGreaterThan(1024 * 0.3);
+      expect(cardWidth).toBeLessThan(1024 * 0.6);
+    }
   });
 });

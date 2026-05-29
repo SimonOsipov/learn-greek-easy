@@ -42,10 +42,13 @@ vi.mock('@/components/ui/SpeakerButton', () => ({
   },
 }));
 
-// Mock UnwiredDot — renders marker span for assertions
+// Mock UnwiredDot — renders marker span with children for assertions
 vi.mock('@/features/decks/dx', () => ({
-  UnwiredDot: ({ tone, 'aria-label': ariaLabel }: { tone?: string; 'aria-label'?: string }) => (
-    <span data-testid="unwired-dot" data-tone={tone} aria-label={ariaLabel} />
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  UnwiredDot: ({ tone, 'aria-label': ariaLabel, children }: any) => (
+    <span data-testid="unwired-dot" data-tone={tone} aria-label={ariaLabel}>
+      {children}
+    </span>
   ),
 }));
 

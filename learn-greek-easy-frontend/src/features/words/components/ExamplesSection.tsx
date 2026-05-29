@@ -95,10 +95,12 @@ export function ExamplesSection({ examples, wordEntryId, deckId, speed }: Exampl
           return (
             <div key={index} className="dx-example">
               <div className="dx-example-head">
-                {/* Type tag with R5 amber UnwiredDot */}
+                {/* Type tag with R5 amber UnwiredDot — tag text is children so the
+                    wrapper has a natural bounding box and Playwright can see it */}
                 <span className="dx-example-tag" data-testid="example-tag">
-                  <UnwiredDot tone="amber" aria-label={t('deck:dx.unwiredExampleTag')} />
-                  {tag}
+                  <UnwiredDot tone="amber" aria-label={t('deck:dx.unwiredExampleTag')}>
+                    {tag}
+                  </UnwiredDot>
                 </span>
                 {/* Audio speaker */}
                 {example.audio_url && (

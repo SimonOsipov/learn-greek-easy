@@ -301,10 +301,12 @@ export const DeckCard: React.FC<DeckCardProps> = ({
         </div>
       )}
 
-      {/* Legacy badge container for test compatibility — blur if locked */}
-      <div className={`hidden ${isLocked ? 'blur-sm' : ''}`} data-testid="deck-card-badges">
-        {isPremium && <span className="badge b-violet on-photo">{t('card.premium')}</span>}
-      </div>
+      {/* Premium overlay badge — visible on cover when deck is premium */}
+      {isPremium && (
+        <div className="absolute left-3 top-3 z-20" data-testid="deck-card-badges">
+          <span className="badge b-violet on-photo">{t('card.premium')}</span>
+        </div>
+      )}
     </article>
   );
 };
