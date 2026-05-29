@@ -148,12 +148,9 @@ export function WordHero({
         </div>
 
         {/* Extra gloss — absent from API → placeholder with R4 UnwiredDot (danger) */}
-        <UnwiredDot
-          tone="danger"
-          aria-label="Extra gloss — placeholder, not yet connected to backend data."
-        >
+        <UnwiredDot tone="danger" aria-label={t('deck:dx.unwiredExtraGloss')}>
           <p className="dx-w-en-extra" data-testid="word-en-extra">
-            {t('deck:wordReference.extraGlossPlaceholder', 'Additional usage notes coming soon.')}
+            {t('deck:wordReference.extraGlossPlaceholder')}
           </p>
         </UnwiredDot>
 
@@ -181,15 +178,16 @@ export function WordHero({
           {/* Stats: WeekHeat (R3, placeholder) + DonutRing (real) */}
           <div className="dx-w-hero-stats">
             {/* R3 — per-word practice heatmap not yet in backend */}
-            <UnwiredDot
-              tone="danger"
-              aria-label="Practice heatmap — placeholder, not yet connected to backend data."
-            >
-              <WeekHeat heat={[1, 2, 0, 3, 1, 0, 0]} label="Practice · this wk" />
+            <UnwiredDot tone="danger" aria-label={t('deck:dx.unwiredHeatmap')}>
+              <WeekHeat heat={[1, 2, 0, 3, 1, 0, 0]} label={t('deck:dx.weekHeatLabel')} />
             </UnwiredDot>
 
             {/* Real mastery data — NO UnwiredDot */}
-            <DonutRing done={masteredCards} total={totalCards} label="cards mastered" />
+            <DonutRing
+              done={masteredCards}
+              total={totalCards}
+              label={t('deck:dx.donutRingLabel')}
+            />
           </div>
         </div>
       </div>

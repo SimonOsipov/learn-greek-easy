@@ -34,7 +34,7 @@ export interface DxResumeHeroProps {
 // ────────────────────────────────────────────────────────────────────────────
 
 export function DxResumeHero({ deck, progress, siblings }: DxResumeHeroProps) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation('deck');
 
   const localizedName = getLocalizedDeckName(deck, i18n.language);
   // Greek subtitle: titleGreek field stores the Greek deck name
@@ -53,7 +53,7 @@ export function DxResumeHero({ deck, progress, siblings }: DxResumeHeroProps) {
       <div className="dx-hero-resume-grid">
         {/* ── Left column ─────────────────────────────────────────── */}
         <div className="dx-hero-resume-l">
-          <Kicker tone="primary">Vocabulary · {deck.level}</Kicker>
+          <Kicker tone="primary">{t('dx.vocabularyKicker', { level: deck.level })}</Kicker>
 
           <div>
             <h1 className="dx-hero-resume-h">{localizedName}</h1>
@@ -69,15 +69,15 @@ export function DxResumeHero({ deck, progress, siblings }: DxResumeHeroProps) {
           <div className="dx-hero-resume-stats">
             <div className="dx-hero-resume-stat">
               <b>{totalCards}</b>
-              <span>Total cards</span>
+              <span>{t('dx.resumeStatTotalCards')}</span>
             </div>
             <div className="dx-hero-resume-stat">
               <b>{mastered}</b>
-              <span>Mastered</span>
+              <span>{t('dx.resumeStatMastered')}</span>
             </div>
             <div className="dx-hero-resume-stat">
               <b>{pct}%</b>
-              <span>Complete</span>
+              <span>{t('dx.resumeStatComplete')}</span>
             </div>
           </div>
         </div>
@@ -87,7 +87,9 @@ export function DxResumeHero({ deck, progress, siblings }: DxResumeHeroProps) {
           <div className="dx-cover-stack">
             {/* Behind sibling 1 — rotated −6°, opacity ~.5 */}
             <DxCover deck={siblings[0]} variant="stack-1" className="dx-cover dx-cover-1">
-              <span className="dx-cover-tag">{siblings[0].level} · Vocabulary</span>
+              <span className="dx-cover-tag">
+                {t('dx.coverTagVocabulary', { level: siblings[0].level })}
+              </span>
               <div className="dx-cover-title">
                 {getLocalizedDeckName(siblings[0], i18n.language)}
               </div>
@@ -95,7 +97,9 @@ export function DxResumeHero({ deck, progress, siblings }: DxResumeHeroProps) {
 
             {/* Behind sibling 2 — rotated +4°, opacity ~.65 */}
             <DxCover deck={siblings[1]} variant="stack-2" className="dx-cover dx-cover-2">
-              <span className="dx-cover-tag">{siblings[1].level} · Vocabulary</span>
+              <span className="dx-cover-tag">
+                {t('dx.coverTagVocabulary', { level: siblings[1].level })}
+              </span>
               <div className="dx-cover-title">
                 {getLocalizedDeckName(siblings[1], i18n.language)}
               </div>
@@ -103,7 +107,9 @@ export function DxResumeHero({ deck, progress, siblings }: DxResumeHeroProps) {
 
             {/* Front cover — this deck, with progress foot */}
             <DxCover deck={deck} variant="stack-front" className="dx-cover dx-cover-3">
-              <span className="dx-cover-tag">{deck.level} · Vocabulary</span>
+              <span className="dx-cover-tag">
+                {t('dx.coverTagVocabulary', { level: deck.level })}
+              </span>
               <div className="dx-cover-title">{localizedName}</div>
               {greekSubtitle && (
                 <div className="dx-cover-el" lang="el">

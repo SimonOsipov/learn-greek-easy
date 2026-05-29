@@ -31,10 +31,7 @@ export function RelatedWordsSection({ lemma: _lemma }: RelatedWordsSectionProps)
     <div className="dx-section" data-testid="related-words-section">
       <div className="dx-section-head">
         <h3 className="dx-section-h">
-          <UnwiredDot
-            tone="danger"
-            aria-label="Related words — not yet connected to backend data"
-          />
+          <UnwiredDot tone="danger" aria-label={t('dx.unwiredRelated')} />
           {t('wordReference.sectionRelatedWords')}
         </h3>
       </div>

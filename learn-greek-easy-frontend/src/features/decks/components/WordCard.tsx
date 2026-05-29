@@ -122,11 +122,12 @@ interface MasteryIndicatorProps {
  * Color reflects mastery status: gray (new), blue (learning), green (mastered).
  */
 const MasteryIndicator: React.FC<MasteryIndicatorProps> = ({ status = 'new' }) => {
+  const { t } = useTranslation('deck');
   return (
     <div
       data-testid="word-card-mastery-indicator"
       className={cn('h-2.5 w-2.5 rounded-full', STATUS_DOT_CLASS[status])}
-      aria-label={`Mastery: ${status}`}
+      aria-label={t('dx.masteryStatus', { status })}
     />
   );
 };

@@ -64,10 +64,8 @@ export function CardTypeGroup({
           )}
           {isPlaceholder ? (
             /* Audio group: UnwiredDot wraps the chip; dot uses danger tone (R8) */
-            <UnwiredDot tone="danger" aria-label="Audio cards — not yet available">
-              <TypeChip tone={tone}>
-                {t('wordReference.groupAudio', { defaultValue: 'Audio' })}
-              </TypeChip>
+            <UnwiredDot tone="danger" aria-label={t('dx.unwiredAudioGroup')}>
+              <TypeChip tone={tone}>{t('wordReference.groupAudio')}</TypeChip>
             </UnwiredDot>
           ) : (
             <TypeChip tone={tone}>

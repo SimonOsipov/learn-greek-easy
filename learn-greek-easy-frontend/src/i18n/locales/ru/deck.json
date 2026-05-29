@@ -354,7 +354,8 @@
     "groupCardCount": "{{n}} карточек",
     "cardsViewToggleLabel": "Вид карточек",
     "cardsViewGrid": "Сетка",
-    "cardsViewList": "Список"
+    "cardsViewList": "Список",
+    "extraGlossPlaceholder": "Дополнительные примеры использования скоро появятся."
   },
   "practice": {
     "title": "Практика",
@@ -381,5 +382,27 @@
   },
   "skeleton": {
     "loadingCard": "Загрузка карточки"
+  },
+  "dx": {
+    "vocabularyKicker": "Словарь · {{level}}",
+    "resumeStatTotalCards": "Всего карточек",
+    "resumeStatMastered": "Освоено",
+    "resumeStatComplete": "Завершено",
+    "coverTagVocabulary": "{{level}} · Словарь",
+    "weekHeatLabel": "Практика · эта неделя",
+    "donutRingLabel": "карточек освоено",
+    "unwiredTooltip": "Заглушка — данные ещё не подключены.",
+    "unwiredExtraGloss": "Дополнительный глосс — заглушка, данные ещё не подключены.",
+    "unwiredHeatmap": "Тепловая карта практики — заглушка, данные ещё не подключены.",
+    "unwiredExampleTag": "Тип примера — заглушка, таксономия ещё не подключена.",
+    "unwiredCollocations": "Словосочетания — данные ещё не подключены.",
+    "unwiredRelated": "Похожие слова — данные ещё не подключены.",
+    "unwiredAudioGroup": "Аудиокарточки — ещё не доступны.",
+    "unwiredStreak": "Серия — данные ещё не подключены.",
+    "unwiredWeekHeat": "Недельная тепловая карта — данные ещё не подключены.",
+    "premiumContent": "Премиум контент",
+    "viewGrid": "Сетка",
+    "viewList": "Список",
+    "masteryStatus": "Статус: {{status}}"
   }
 }

@@ -140,7 +140,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
             </div>
             {isLocked && (
               <div className="flex-shrink-0">
-                <Crown className="h-4 w-4 text-warning" aria-label="Premium content" />
+                <Crown className="h-4 w-4 text-warning" aria-label={t('dx.premiumContent')} />
               </div>
             )}
           </div>
@@ -297,7 +297,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
       {/* Premium crown icon (top-right) */}
       {isLocked && (
         <div className="absolute right-3 top-3 z-20">
-          <Crown className="h-4 w-4 text-warning" aria-label="Premium content" />
+          <Crown className="h-4 w-4 text-warning" aria-label={t('dx.premiumContent')} />
         </div>
       )}
 

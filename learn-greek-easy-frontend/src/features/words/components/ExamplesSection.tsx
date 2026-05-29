@@ -64,7 +64,7 @@ export function mapContextToTag(context?: string | null): {
 // ============================================
 
 export function ExamplesSection({ examples, wordEntryId, deckId, speed }: ExamplesSectionProps) {
-  const { t, i18n } = useTranslation('review');
+  const { t, i18n } = useTranslation(['review', 'deck']);
 
   // Handle empty/null examples
   if (!examples || examples.length === 0) {
@@ -97,10 +97,7 @@ export function ExamplesSection({ examples, wordEntryId, deckId, speed }: Exampl
               <div className="dx-example-head">
                 {/* Type tag with R5 amber UnwiredDot */}
                 <span className="dx-example-tag" data-testid="example-tag">
-                  <UnwiredDot
-                    tone="amber"
-                    aria-label="Example type — placeholder, not yet connected to backend tag taxonomy"
-                  />
+                  <UnwiredDot tone="amber" aria-label={t('deck:dx.unwiredExampleTag')} />
                   {tag}
                 </span>
                 {/* Audio speaker */}

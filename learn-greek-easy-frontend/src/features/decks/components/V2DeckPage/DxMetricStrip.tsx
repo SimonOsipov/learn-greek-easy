@@ -78,7 +78,9 @@ export function DxMetricStrip({ progress, statistics }: DxMetricStripProps) {
         <div className="dx-metric-body">
           <div className="dx-metric-l">{t('detail.metricStreakDeck')}</div>
           <div className="dx-metric-v" data-testid="dx-metric-streak-value">
-            <UnwiredDot tone="danger">{STREAK_PLACEHOLDER}</UnwiredDot>
+            <UnwiredDot tone="danger" aria-label={t('dx.unwiredStreak')}>
+              {STREAK_PLACEHOLDER}
+            </UnwiredDot>
             <small>{t('detail.metricStreakLabel')}</small>
           </div>
         </div>
@@ -110,7 +112,7 @@ export function DxMetricStrip({ progress, statistics }: DxMetricStripProps) {
             <small>{t('detail.metricTimeMin')}</small>
           </div>
           {/* WeekHeat carries its own UnwiredDot (R2) — no per-deck 7-day histogram backend */}
-          <UnwiredDot tone="danger">
+          <UnwiredDot tone="danger" aria-label={t('dx.unwiredWeekHeat')}>
             <WeekHeat heat={WEEK_HEAT_PLACEHOLDER} todayIdx={todayIdx} />
           </UnwiredDot>
         </div>
