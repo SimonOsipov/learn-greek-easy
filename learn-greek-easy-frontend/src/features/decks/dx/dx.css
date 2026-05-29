@@ -316,21 +316,19 @@
   z-index: 1;
 }
 
-/* Photo covers need a stronger scrim: the title/kicker/meta live in the left
- * column and the progress bar spans the bottom, but a photo is far busier than
- * a flat gradient. Darken the left column and the bottom edge, leaving the
- * top-right (only the pill-backed status badge) showing the image. Applied only
- * when a cover image is present so gradient-only cards keep their lighter scrim. */
+/* Photo covers need a stronger scrim: all text (kicker, title, meta, progress)
+ * lives in the left column, but a photo is far busier than a flat gradient.
+ * Darken the left column, leaving the right side — including the now image-only
+ * bottom-right — showing the artwork. Applied only when a cover image is present
+ * so gradient-only cards keep their lighter scrim. */
 .dx-cover-host.has-cover::before {
-  background:
-    linear-gradient(
-      90deg,
-      hsl(0 0% 0% / 0.7) 0%,
-      hsl(0 0% 0% / 0.38) 36%,
-      hsl(0 0% 0% / 0.06) 66%,
-      transparent 100%
-    ),
-    linear-gradient(0deg, hsl(0 0% 0% / 0.42) 0%, hsl(0 0% 0% / 0.08) 28%, transparent 50%);
+  background: linear-gradient(
+    90deg,
+    hsl(0 0% 0% / 0.7) 0%,
+    hsl(0 0% 0% / 0.38) 36%,
+    hsl(0 0% 0% / 0.06) 66%,
+    transparent 100%
+  );
 }
 
 /* Sheen: radial top-right gloss highlight */
@@ -469,11 +467,13 @@
   margin: 4px 0 0;
 }
 
+/* Stack meta over progress, left-aligned, so both sit in the dark left column
+ * (the scrim leaves the right side light to show the cover image). */
 .dx-deck-card-bottom {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
 }
 
 /* Meta line: "N cards · M mastered" */
