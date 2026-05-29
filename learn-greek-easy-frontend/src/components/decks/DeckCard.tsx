@@ -213,7 +213,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
                 size="sm"
                 onClick={handleEditClick}
                 data-testid={`edit-deck-${deck.id}`}
-                className="h-8 w-8 rounded-full bg-background/80 p-0 hover:bg-background"
+                className="h-8 w-8 scroll-mt-20 rounded-full bg-background/80 p-0 hover:bg-background"
                 aria-label={t('myDecks.editDeck')}
               >
                 <Pencil className="h-4 w-4" />
@@ -223,7 +223,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
                 size="sm"
                 onClick={handleDeleteClick}
                 data-testid={`delete-deck-${deck.id}`}
-                className="h-8 w-8 rounded-full bg-background/80 p-0 text-destructive hover:bg-background hover:text-destructive"
+                className="h-8 w-8 scroll-mt-20 rounded-full bg-background/80 p-0 text-destructive hover:bg-background hover:text-destructive"
                 aria-label={t('myDecks.deleteDeck')}
               >
                 <Trash2 className="h-4 w-4" />

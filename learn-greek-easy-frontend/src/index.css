@@ -3509,6 +3509,11 @@
   border-color: hsl(var(--warning) / 0.35);
 }
 
+/* Sticky-header scroll clearance — keeps scrolled-to elements below the h-16 (64px) header */
+html {
+  scroll-padding-top: 5rem;
+}
+
 /* Theme transition animation */
 html.theme-transition,
 html.theme-transition *,
