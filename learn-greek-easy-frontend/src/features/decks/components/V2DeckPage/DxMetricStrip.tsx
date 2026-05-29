@@ -110,7 +110,7 @@ export function DxMetricStrip({ progress, statistics }: DxMetricStripProps) {
             <small>{t('detail.metricTimeMin')}</small>
           </div>
           {/* WeekHeat carries its own UnwiredDot (R2) — no per-deck 7-day histogram backend */}
-          <UnwiredDot tone="amber">
+          <UnwiredDot tone="danger">
             <WeekHeat heat={WEEK_HEAT_PLACEHOLDER} todayIdx={todayIdx} />
           </UnwiredDot>
         </div>

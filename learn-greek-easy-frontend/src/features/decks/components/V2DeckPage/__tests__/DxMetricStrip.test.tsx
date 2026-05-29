@@ -162,6 +162,14 @@ describe('DxMetricStrip', () => {
     expect(unwiredInTime?.length).toBeGreaterThanOrEqual(1);
   });
 
+  it('WeekHeat UnwiredDot (R2) uses danger tone, not amber', () => {
+    const { container } = renderStrip(mockProgress, mockStatistics);
+    const timeCard = container.querySelector('[data-testid="dx-metric-time"]');
+    const marker = timeCard?.querySelector('.dx-unwired-dot-marker');
+    // danger tone: no data-tone attribute (default), same as R1
+    expect(marker?.getAttribute('data-tone')).toBeNull();
+  });
+
   it('WeekHeat in Time card renders exactly 7 cells', () => {
     const { container } = renderStrip(mockProgress, mockStatistics);
     const timeCard = container.querySelector('[data-testid="dx-metric-time"]');
