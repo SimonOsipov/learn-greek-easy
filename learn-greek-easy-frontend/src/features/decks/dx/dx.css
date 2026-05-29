@@ -332,3 +332,175 @@
   z-index: 3;
   color: hsl(0 0% 100% / 0.95);
 }
+
+/* ── Deck grid (2-col, 1-col ≤880px) ─────────────────────────────────────── */
+.dx-deck-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 8px;
+}
+@media (max-width: 880px) {
+  .dx-deck-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Deck card — gradient cover card (180px) ──────────────────────────────── */
+.dx-deck-card {
+  position: relative;
+  height: 180px;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid hsl(var(--fg) / 0.06);
+  transition:
+    transform 0.18s var(--ease-smooth),
+    border-color 0.18s,
+    box-shadow 0.18s;
+}
+.dx-deck-card:hover {
+  transform: translateY(-2px);
+  border-color: hsl(var(--primary) / 0.55);
+  box-shadow:
+    0 16px 36px -16px hsl(var(--primary) / 0.35),
+    0 0 0 1px hsl(var(--primary) / 0.4);
+}
+.dx-deck-card.is-active {
+  border-color: hsl(var(--primary));
+  box-shadow:
+    0 0 0 1px hsl(var(--primary)),
+    0 16px 36px -16px hsl(var(--primary) / 0.45);
+}
+
+/* Cover fills the card fully */
+.dx-deck-card .dx-cover-host {
+  height: 100%;
+  width: 100%;
+}
+
+/* ── Card inner layout ─────────────────────────────────────────────────────── */
+.dx-deck-card-inner {
+  position: relative;
+  height: 100%;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.dx-deck-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Status badge: frosted glass pill */
+.dx-deck-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: hsl(0 0% 0% / 0.3);
+  backdrop-filter: blur(6px);
+  border: 1px solid hsl(0 0% 100% / 0.18);
+  border-radius: 999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: hsl(0 0% 100% / 0.95);
+  text-transform: uppercase;
+}
+.dx-deck-card-badge.is-primary {
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+  color: hsl(0 0% 100% / 0.95);
+}
+
+/* Title */
+.dx-deck-card-h {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.1;
+  margin: 0;
+  text-shadow: 0 1px 2px hsl(0 0% 0% / 0.3);
+  color: hsl(0 0% 100% / 0.95);
+}
+
+/* Greek subtitle — Noto Serif, never italic */
+.dx-deck-card-el {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 15px;
+  font-style: normal;
+  color: hsl(0 0% 100% / 0.86);
+  margin: 4px 0 0;
+}
+
+.dx-deck-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Meta line: "N cards · M mastered" */
+.dx-deck-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(0 0% 100% / 0.86);
+  letter-spacing: 0.02em;
+}
+.dx-deck-card-meta .dx-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: hsl(0 0% 100% / 0.5);
+}
+
+/* Progress bar */
+.dx-deck-card-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dx-deck-card-progress-bar {
+  width: 88px;
+  height: 4px;
+  border-radius: 999px;
+  background: hsl(0 0% 100% / 0.22);
+  overflow: hidden;
+}
+.dx-deck-card-progress-bar span {
+  display: block;
+  height: 100%;
+  background: hsl(0 0% 100% / 0.95);
+  border-radius: 999px;
+}
+.dx-deck-card-progress-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: hsl(0 0% 100% / 0.95);
+}
+
+/* Complete state */
+.dx-deck-card-complete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: hsl(140 75% 75%);
+}
+.dx-deck-card-complete svg {
+  width: 14px;
+  height: 14px;
+}

@@ -7,7 +7,11 @@
     "noDecksFound": "No Decks Found",
     "noDecksDescription": "No decks match your current filters. Try adjusting your search or clearing filters.",
     "clearFilters": "Clear All Filters",
-    "kicker": "Browse · Public decks"
+    "kicker": "Browse · Public decks",
+    "badgeNew": "New",
+    "badgeInProgress": "In progress",
+    "badgeComplete": "Complete",
+    "cardMeta": "{{cards}} cards · {{mastered}} mastered"
   },
   "filters": {
     "searchPlaceholder": "Search decks by name...",

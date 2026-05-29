@@ -7,7 +7,11 @@
     "noDecksFound": "Колоды не найдены",
     "noDecksDescription": "Нет колод, соответствующих вашим фильтрам. Попробуйте изменить поиск или сбросить фильтры.",
     "clearFilters": "Сбросить все фильтры",
-    "kicker": "Обзор · Публичные колоды"
+    "kicker": "Обзор · Публичные колоды",
+    "badgeNew": "Новая",
+    "badgeInProgress": "В процессе",
+    "badgeComplete": "Завершена",
+    "cardMeta": "{{cards}} карточек · {{mastered}} освоено"
   },
   "filters": {
     "searchPlaceholder": "Поиск колод по названию...",

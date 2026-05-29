@@ -66,12 +66,8 @@ export const DecksGrid: React.FC<DecksGridProps> = ({
   };
 
   return (
-    <div
-      className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
-      role="list"
-      aria-label={ariaLabel ?? t('list.title')}
-    >
-      {decks.map((deck) => {
+    <div className="dx-deck-grid" role="list" aria-label={ariaLabel ?? t('list.title')}>
+      {decks.map((deck, index) => {
         // Check if this is a culture deck
         const isCultureDeck = deck.category === 'culture';
         // Extract culture category from deck tags or use a default
@@ -95,6 +91,8 @@ export const DecksGrid: React.FC<DecksGridProps> = ({
               showActions={showActions}
               onEditClick={onEditDeck ? () => onEditDeck(deck) : undefined}
               onDeleteClick={onDeleteDeck ? () => onDeleteDeck(deck) : undefined}
+              active={index === 0}
+              index={index}
             />
           </div>
         );
