@@ -2,19 +2,23 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { AlertCircle, BookOpen, GraduationCap } from 'lucide-react';
+import { AlertCircle, BookOpen, Flame, Target, Clock, CheckSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 
+import { CultureHero } from '@/components/culture/redesign/CultureHero';
+import { CultureMetricStrip } from '@/components/culture/redesign/CultureMetricStrip';
 import { DecksGrid } from '@/components/decks/DecksGrid';
 import { EmptyState } from '@/components/feedback';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Kicker } from '@/features/decks/dx';
+import '@/features/decks/dx/dx.css';
 import { transformCultureDeckResponse } from '@/lib/cultureDeckTransform';
 import { reportAPIError } from '@/lib/errorReporting';
 import { cultureDeckAPI } from '@/services/cultureDeckAPI';
+import type { CultureReadinessResponse } from '@/services/cultureDeckAPI';
 import type { Deck } from '@/types/deck';
 
 export const CulturePage: React.FC = () => {
@@ -24,14 +28,18 @@ export const CulturePage: React.FC = () => {
   const [decks, setDecks] = useState<Deck[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [readiness, setReadiness] = useState<CultureReadinessResponse | null>(null);
 
   const loadDecks = React.useCallback(() => {
     setError(null);
     setIsLoading(true);
-    cultureDeckAPI
-      .getList()
-      .then((res) => {
+    Promise.all([
+      cultureDeckAPI.getList(),
+      cultureDeckAPI.getReadiness().catch(() => null), // readiness is non-critical
+    ])
+      .then(([res, readinessData]) => {
         setDecks(res.decks.map(transformCultureDeckResponse));
+        setReadiness(readinessData);
       })
       .catch((err: unknown) => {
         reportAPIError(err, { operation: 'fetchCultureDecks', endpoint: '/api/v1/culture/decks' });
@@ -46,47 +54,112 @@ export const CulturePage: React.FC = () => {
     loadDecks();
   }, [location.key, loadDecks]); // refetch on nav-back, mirroring DecksPage
 
+  // ── Derived deck sections ──────────────────────────────────────────────────
+  // deck.tags[0] holds the original API category (history, geography, politics, culture, traditions)
+  const examDecks = decks.filter((d) => d.tags?.[0] === 'culture');
+  const crossCuttingDecks = decks.filter((d) => d.tags?.[0] !== 'culture');
+
+  // ── Resume deck: first in-progress culture deck ────────────────────────────
+  const resumeDeck =
+    decks.find(
+      (d) =>
+        d.progress &&
+        d.progress.cardsMastered > 0 &&
+        d.progress.cardsMastered < (d.progress.cardsTotal ?? d.cardCount)
+    ) ?? decks[0];
+
+  const resumePct =
+    resumeDeck?.progress && resumeDeck.progress.cardsTotal > 0
+      ? Math.round((resumeDeck.progress.cardsMastered / resumeDeck.progress.cardsTotal) * 100)
+      : 0;
+
+  const resumeStats = resumeDeck
+    ? [
+        {
+          label: t('deck.questions', 'Questions'),
+          value: String(resumeDeck.progress?.cardsTotal ?? resumeDeck.cardCount),
+        },
+        {
+          label: t('deck.filterLearning', 'In review'),
+          value: String(resumeDeck.progress?.cardsLearning ?? 0),
+        },
+        {
+          label: t('list.complete', 'Complete %'),
+          value: `${resumePct}%`,
+        },
+      ]
+    : [];
+
+  // Sibling covers for the hero stack (up to 2 decks that are NOT the resume deck)
+  const siblingDecks = decks
+    .filter((d) => d.id !== resumeDeck?.id)
+    .slice(0, 2)
+    .map((d) => ({ ...d, title: d.title }));
+
+  // ── Readiness metric values ────────────────────────────────────────────────
+  const readinessPct = readiness?.readiness_percentage ?? 0;
+  const questionsLearned = readiness?.questions_learned ?? 0;
+  const questionsTotal = readiness?.questions_total ?? decks.reduce((s, d) => s + d.cardCount, 0);
+
+  const metrics = [
+    {
+      icon: <Target size={18} aria-hidden />,
+      label: t('hub.metricReadiness', 'Exam readiness'),
+      value: `${readinessPct}%`,
+      trend: t('hub.metricReadinessTrend', 'Need 60% to pass'),
+      trendFlat: true,
+      tone: 'primary' as const,
+    },
+    {
+      icon: <CheckSquare size={18} aria-hidden />,
+      label: t('hub.metricLearned', 'Questions learned'),
+      value: `${questionsLearned}`,
+      sub: `/ ${questionsTotal}`,
+      trend:
+        questionsTotal > 0
+          ? t('hub.metricLearnedTrend', '{{pct}}% of total', {
+              pct: Math.round((questionsLearned / questionsTotal) * 100),
+            })
+          : '',
+      trendFlat: true,
+      tone: 'green' as const,
+    },
+    {
+      icon: <Flame size={18} aria-hidden />,
+      label: t('hub.metricStreak', 'Streak'),
+      value: '0',
+      sub: t('hub.days', 'days'),
+      tone: 'amber' as const,
+      unwired: true,
+      unwiredLabel: 'Streak — not yet connected to backend data.',
+    },
+    {
+      icon: <Clock size={18} aria-hidden />,
+      label: t('hub.metricWeek', 'This week'),
+      value: '0',
+      sub: t('hub.minutes', 'min'),
+      trend: t('hub.metricWeekTrend', 'No culture source yet'),
+      trendFlat: true,
+      tone: 'violet' as const,
+      unwired: true,
+      unwiredLabel: 'This week minutes — not yet connected to backend data.',
+    },
+  ];
+
   return (
     <div className="space-y-6 pb-20 lg:pb-8">
-      {/* Page Header */}
-      <div>
-        <h1
-          className="text-2xl font-semibold text-foreground md:text-3xl"
-          data-testid="culture-title"
-        >
+      {/* ── Page header ─────────────────────────────────────────────────────── */}
+      <div className="dx-index-head">
+        <Kicker tone="primary">{t('hub.kicker', 'Browse · Cyprus culture & exam prep')}</Kicker>
+        <h1 className="dx-index-h" data-testid="culture-title">
           {t('list.title')}
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground md:text-base">{t('list.subtitle')}</p>
+        <p className="text-sm text-fg2 md:text-base">{t('list.subtitle')}</p>
       </div>
 
-      {/* Mock-exam CTA — renders unconditionally above the deck grid */}
-      <Card className="mb-6 sm:mb-8" data-testid="culture-mock-exam-cta">
-        <CardHeader className="sm:flex-row sm:items-start sm:justify-between sm:gap-6 sm:space-y-0">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-              <GraduationCap className="h-5 w-5 text-primary" aria-hidden="true" />
-            </div>
-            <div className="space-y-1">
-              <CardTitle className="text-lg sm:text-xl">
-                {t('page.mockExamCta.title', 'Take the mock exam')}
-              </CardTitle>
-              <CardDescription>
-                {t(
-                  'page.mockExamCta.description',
-                  'Test yourself across all culture decks in one timed mock exam.'
-                )}
-              </CardDescription>
-            </div>
-          </div>
-          <Button asChild size="lg" className="w-full sm:w-auto sm:shrink-0">
-            <Link to="/practice/culture-exam">{t('page.mockExamCta.cta', 'Take mock exam')}</Link>
-          </Button>
-        </CardHeader>
-      </Card>
-
-      {/* Error State */}
+      {/* ── Error State ─────────────────────────────────────────────────────── */}
       {error && (
-        <Alert variant="destructive" className="mb-6">
+        <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>{t('list.errorLoading')}</AlertTitle>
           <AlertDescription>
@@ -98,21 +171,125 @@ export const CulturePage: React.FC = () => {
         </Alert>
       )}
 
-      {/* Loading State */}
+      {/* ── Loading State ────────────────────────────────────────────────────── */}
       {isLoading && !error && <DeckGridSkeleton />}
 
-      {/* Decks Grid */}
-      {!isLoading && !error && decks.length > 0 && (
-        <DecksGrid decks={decks} ariaLabel={t('list.ariaLabel')} />
-      )}
+      {/* ── Loaded content ──────────────────────────────────────────────────── */}
+      {!isLoading && !error && (
+        <>
+          {/* Resume hero + mock-exam CTA */}
+          {resumeDeck && (
+            <CultureHero
+              kicker={t('hub.heroKicker', 'Continue where you left off')}
+              kickerTone="primary"
+              title={resumeDeck.title}
+              description={resumeDeck.description}
+              stats={resumeStats}
+              ctas={[
+                {
+                  label: t('practice.continuePractice', 'Continue'),
+                  to: `/culture/${resumeDeck.id}/practice`,
+                  primary: true,
+                },
+                {
+                  label: t('page.mockExamCta.cta', 'Take mock exam'),
+                  to: '/practice/culture-exam',
+                  primary: false,
+                  testId: 'culture-mock-exam-cta',
+                },
+              ]}
+              coverDeck={resumeDeck}
+              siblingDecks={siblingDecks}
+              coverFootPct={resumePct}
+            />
+          )}
 
-      {/* Empty State */}
-      {!isLoading && !error && decks.length === 0 && (
-        <EmptyState
-          icon={BookOpen}
-          title={t('list.empty.title')}
-          description={t('list.empty.description')}
-        />
+          {/* Mock-exam CTA card (when no resume deck so there's always a CTA) */}
+          {!resumeDeck && (
+            <div data-testid="culture-mock-exam-cta">
+              <Link to="/practice/culture-exam" className="cx-cta-ghost">
+                {t('page.mockExamCta.cta', 'Take mock exam')}
+              </Link>
+            </div>
+          )}
+
+          {/* What's-new strip */}
+          {decks.length > 0 && (
+            <div className="cx-whatsnew">
+              <span className="cx-whatsnew-chip">
+                {t('hub.chipsExamDecks', '{{n}} cultural exam decks', { n: examDecks.length })}
+              </span>
+              <span className="cx-whatsnew-sep" aria-hidden />
+              <span className="cx-whatsnew-chip">
+                {t('hub.chipsQuestions', '{{n}} questions', { n: questionsTotal })}
+              </span>
+              <span className="cx-whatsnew-sep" aria-hidden />
+              <span className="cx-whatsnew-chip">
+                {t('hub.chipsCategories', '{{n}} categories', {
+                  n:
+                    new Set(crossCuttingDecks.map((d) => d.tags?.[0])).size ||
+                    crossCuttingDecks.length,
+                })}
+              </span>
+              <Link to="/culture/readiness" className="cx-whatsnew-cta">
+                {t('hub.checkReadiness', 'Check readiness →')}
+              </Link>
+            </div>
+          )}
+
+          {/* Metric strip */}
+          <CultureMetricStrip metrics={metrics} />
+
+          {/* Section 1: Cultural exam decks */}
+          {examDecks.length > 0 && (
+            <section aria-label={t('hub.sectionExamLabel', 'Cultural exam decks')}>
+              <div className="cx-section-head">
+                <Kicker tone="violet">{t('hub.sectionExamKicker', 'Exam papers')}</Kicker>
+                <h2 className="cx-section-h">
+                  {t('hub.sectionExamTitle', 'Cultural exam decks')}
+                  <span className="cx-section-meta">{examDecks.length}</span>
+                </h2>
+              </div>
+              <DecksGrid
+                decks={examDecks}
+                ariaLabel={t('hub.sectionExamLabel', 'Cultural exam decks')}
+                gridLayout="cx"
+              />
+            </section>
+          )}
+
+          {/* Section 2: Cross-cutting study decks */}
+          {crossCuttingDecks.length > 0 && (
+            <section aria-label={t('hub.sectionCrossLabel', 'Cross-cutting study decks')}>
+              <div className="cx-section-head">
+                <Kicker tone="cyan">{t('hub.sectionCrossKicker', 'Topic decks')}</Kicker>
+                <h2 className="cx-section-h">
+                  {t('hub.sectionCrossTitle', 'Cross-cutting study decks')}
+                  <span className="cx-section-meta">{crossCuttingDecks.length}</span>
+                </h2>
+              </div>
+              <DecksGrid
+                decks={crossCuttingDecks}
+                ariaLabel={t('hub.sectionCrossLabel', 'Cross-cutting study decks')}
+                gridLayout="cx"
+              />
+            </section>
+          )}
+
+          {/* Fallback: show all decks together when no sectioning (e.g. during tests) */}
+          {examDecks.length === 0 && crossCuttingDecks.length === 0 && decks.length > 0 && (
+            <DecksGrid decks={decks} ariaLabel={t('list.ariaLabel')} />
+          )}
+
+          {/* Empty state */}
+          {decks.length === 0 && (
+            <EmptyState
+              icon={BookOpen}
+              title={t('list.empty.title')}
+              description={t('list.empty.description')}
+            />
+          )}
+        </>
       )}
     </div>
   );

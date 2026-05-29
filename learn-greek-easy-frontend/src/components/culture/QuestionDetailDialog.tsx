@@ -5,15 +5,8 @@ import { Check, ExternalLink, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-import { QuestionLanguageSelector } from '@/components/shared/QuestionLanguageSelector';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
@@ -50,6 +43,12 @@ function getLocalizedText(text: { el: string; en: string; ru: string }, language
   }
   return localized;
 }
+
+const LANG_OPTIONS: { code: CultureLanguage; label: string; ariaLabel: string }[] = [
+  { code: 'el', label: 'EL', ariaLabel: 'Greek' },
+  { code: 'en', label: 'EN', ariaLabel: 'English' },
+  { code: 'ru', label: 'RU', ariaLabel: 'Russian' },
+];
 
 // ============================================
 // QuestionDetailDialog Component
@@ -92,25 +91,22 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
     <Dialog open={!!questionId} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         className={cn(
-          'max-h-[85vh] overflow-y-auto sm:max-w-lg',
-          'max-sm:h-full max-sm:max-h-full max-sm:rounded-none max-sm:border-0'
+          'max-h-[85vh] overflow-y-auto sm:max-w-[580px]',
+          'max-sm:h-full max-sm:max-h-full max-sm:rounded-none max-sm:border-0',
+          'flex flex-col gap-[18px] p-[26px_28px]'
         )}
       >
-        {/* Header */}
-        <DialogHeader>
-          <div className="flex items-center gap-2">
-            {data && (
-              <span className="text-sm font-medium text-muted-foreground">
-                #{data.order_index + 1}
-              </span>
-            )}
-            {category && <CultureBadge category={category} showLabel />}
-          </div>
-          <DialogTitle>{t('questionDetail.title')}</DialogTitle>
-          <DialogDescription className="sr-only">{t('questionDetail.title')}</DialogDescription>
-        </DialogHeader>
+        {/* ── Modal top: #id + category kicker ── */}
+        <div className="cx-modal-top">
+          {data && <span>#{data.order_index + 1}</span>}
+          {category && <CultureBadge category={category} showLabel />}
+        </div>
 
-        {/* Content */}
+        {/* ── Title (DialogTitle for a11y) ── */}
+        <DialogTitle className="cx-modal-h">{t('questionDetail.title')}</DialogTitle>
+        <DialogDescription className="sr-only">{t('questionDetail.title')}</DialogDescription>
+
+        {/* ── Loading skeleton ── */}
         {isLoading && (
           <div data-testid="question-detail-skeleton" className="space-y-4">
             <Skeleton className="h-6 w-full" />
@@ -122,6 +118,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
           </div>
         )}
 
+        {/* ── Error state ── */}
         {error && (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <AlertCircle className="h-8 w-8 text-destructive" />
@@ -139,6 +136,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
           </div>
         )}
 
+        {/* ── Loaded content ── */}
         {data &&
           (() => {
             const showLevelToggle = !!(data.audio_url || data.audio_a2_url);
@@ -146,46 +144,47 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
               newsLevel === 'a2' && data.audio_a2_url
                 ? data.audio_a2_url
                 : (data.audio_url ?? data.audio_a2_url ?? null);
+
             return (
-              <div className="space-y-4">
-                {/* Toolbar: level toggle + language selector */}
-                <div className="flex items-center gap-2">
+              <>
+                {/* Tag row: A2/B2 toggles + separator + language pills */}
+                <div className="cx-modal-tags">
                   {showLevelToggle && (
                     <>
-                      <div
-                        className="flex items-center gap-1"
-                        aria-label={t('common:news.level.label', 'Content level')}
-                      >
-                        <Button
-                          variant={newsLevel === 'a2' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => handleLevelChange('a2')}
-                          data-testid="detail-level-toggle-a2"
+                      {(['a2', 'b2'] as NewsLevel[]).map((lv) => (
+                        <button
+                          key={lv}
+                          type="button"
+                          className={cn('cx-modal-tag', newsLevel === lv && 'is-active')}
+                          onClick={() => handleLevelChange(lv)}
+                          data-testid={`detail-level-toggle-${lv}`}
                         >
-                          A2
-                        </Button>
-                        <Button
-                          variant={newsLevel === 'b2' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => handleLevelChange('b2')}
-                          data-testid="detail-level-toggle-b2"
-                        >
-                          B2
-                        </Button>
-                      </div>
-                      <div className="h-6 w-px bg-border" />
+                          {lv.toUpperCase()}
+                        </button>
+                      ))}
+                      <span className="cx-modal-tags-sep" aria-hidden="true" />
                     </>
                   )}
-                  <QuestionLanguageSelector
-                    value={lang}
-                    onChange={setLang}
-                    variant="pill"
-                    size="sm"
-                  />
+                  {LANG_OPTIONS.map(({ code, label, ariaLabel }) => (
+                    <button
+                      key={code}
+                      type="button"
+                      className={cn('cx-modal-tag', lang === code && 'is-active')}
+                      onClick={() => setLang(code)}
+                      aria-pressed={lang === code}
+                      aria-label={ariaLabel}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
 
-                {/* Question Text */}
-                <p className="text-base font-medium" data-testid="question-detail-text">
+                {/* Question text */}
+                <p
+                  className="cx-modal-q"
+                  lang={lang === 'el' ? 'el' : undefined}
+                  data-testid="question-detail-text"
+                >
                   {getLocalizedText(data.question_text, lang)}
                 </p>
 
@@ -199,15 +198,15 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                   </div>
                 )}
 
-                {/* Audio */}
+                {/* Audio — real WaveformPlayer kept as-is */}
                 {effectiveAudioUrl && (
                   <div data-testid="question-detail-audio">
                     <WaveformPlayer audioUrl={effectiveAudioUrl} />
                   </div>
                 )}
 
-                {/* Answer Options */}
-                <div className="space-y-2">
+                {/* Answer options */}
+                <div className="cx-modal-options">
                   {data.options.map((option, index) => {
                     const isCorrect = index === data.correct_option - 1;
                     const letter = String.fromCharCode(65 + index); // A, B, C, D
@@ -217,25 +216,25 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                         key={index}
                         data-testid={`option-${index}`}
                         className={cn(
-                          'flex items-center gap-2 rounded-lg border p-3 text-sm',
+                          'cx-modal-option',
                           isCorrect
-                            ? 'border-practice-correct bg-practice-correct-soft'
-                            : 'border-border'
+                            ? 'is-correct border-practice-correct bg-practice-correct-soft'
+                            : ''
                         )}
                       >
-                        <span className="flex-shrink-0 font-medium text-muted-foreground">
-                          {letter}.
-                        </span>
-                        <span className="flex-1">{getLocalizedText(option, lang)}</span>
+                        <span className="cx-modal-option-k">{letter}.</span>
+                        <span>{getLocalizedText(option, lang)}</span>
                         {isCorrect && (
-                          <Check className="h-4 w-4 flex-shrink-0 text-practice-correct" />
+                          <span className="cx-modal-option-check" aria-hidden="true">
+                            <Check className="h-[18px] w-[18px]" />
+                          </span>
                         )}
                       </div>
                     );
                   })}
                 </div>
 
-                {/* News Source Link */}
+                {/* News source link */}
                 {data.original_article_url && (
                   <a
                     href={data.original_article_url}
@@ -249,26 +248,24 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                   </a>
                 )}
 
-                {/* Also In Decks */}
+                {/* Also in decks */}
                 {data.also_in_decks.length > 0 && (
-                  <div data-testid="question-detail-also-in-decks" className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      {t('questionDetail.alsoInDecks')}:
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
+                  <div data-testid="question-detail-also-in-decks" className="cx-modal-alsoin">
+                    <span className="cx-modal-alsoin-l">{t('questionDetail.alsoInDecks')}:</span>
+                    <span className="cx-modal-alsoin-chips">
                       {data.also_in_decks.map((deck) => (
                         <Link
                           key={deck.id}
                           to={`/culture/decks/${deck.id}`}
-                          className="inline-flex rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+                          className="cx-modal-alsoin-chip"
                         >
                           {deck.name}
                         </Link>
                       ))}
-                    </div>
+                    </span>
                   </div>
                 )}
-              </div>
+              </>
             );
           })()}
       </DialogContent>
