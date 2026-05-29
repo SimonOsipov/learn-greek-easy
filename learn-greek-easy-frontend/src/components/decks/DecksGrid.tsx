@@ -22,6 +22,12 @@ export interface DecksGridProps {
   onDeleteDeck?: (deck: Deck) => void;
   /** Override the accessible list label (defaults to t('list.title') from deck namespace) */
   ariaLabel?: string;
+  /**
+   * Grid layout variant.
+   * 'default' (default) — original responsive 3-col grid (grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3).
+   * 'dx' — DX-04 2-col grid (.dx-deck-grid), used by the learner /decks page only.
+   */
+  gridLayout?: 'default' | 'dx';
 }
 
 export const DecksGrid: React.FC<DecksGridProps> = ({
@@ -31,6 +37,7 @@ export const DecksGrid: React.FC<DecksGridProps> = ({
   onEditDeck,
   onDeleteDeck,
   ariaLabel,
+  gridLayout = 'default',
 }) => {
   const { t } = useTranslation('deck');
   const navigate = useNavigate();
@@ -65,13 +72,12 @@ export const DecksGrid: React.FC<DecksGridProps> = ({
     }
   };
 
+  const gridClassName =
+    gridLayout === 'dx' ? 'dx-deck-grid' : 'grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3';
+
   return (
-    <div
-      className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
-      role="list"
-      aria-label={ariaLabel ?? t('list.title')}
-    >
-      {decks.map((deck) => {
+    <div className={gridClassName} role="list" aria-label={ariaLabel ?? t('list.title')}>
+      {decks.map((deck, index) => {
         // Check if this is a culture deck
         const isCultureDeck = deck.category === 'culture';
         // Extract culture category from deck tags or use a default
@@ -95,6 +101,8 @@ export const DecksGrid: React.FC<DecksGridProps> = ({
               showActions={showActions}
               onEditClick={onEditDeck ? () => onEditDeck(deck) : undefined}
               onDeleteClick={onDeleteDeck ? () => onDeleteDeck(deck) : undefined}
+              active={index === 0}
+              index={index}
             />
           </div>
         );

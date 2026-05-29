@@ -142,4 +142,58 @@ describe('SpeakerButton', () => {
     const button = screen.getByRole('button');
     expect(button.className).toContain('h-9');
   });
+
+  it('14. fires onPlayStateChange(true) when isPlaying transitions false→true', () => {
+    const onPlayStateChange = vi.fn();
+    vi.mocked(useAudioPlayer).mockReturnValue({ ...mockDefaultReturn, isPlaying: false });
+
+    const { rerender } = render(
+      <SpeakerButton
+        audioUrl="https://example.com/audio.mp3"
+        onPlayStateChange={onPlayStateChange}
+      />
+    );
+    expect(onPlayStateChange).not.toHaveBeenCalled();
+
+    vi.mocked(useAudioPlayer).mockReturnValue({ ...mockDefaultReturn, isPlaying: true });
+    rerender(
+      <SpeakerButton
+        audioUrl="https://example.com/audio.mp3"
+        onPlayStateChange={onPlayStateChange}
+      />
+    );
+
+    expect(onPlayStateChange).toHaveBeenCalledWith(true);
+  });
+
+  it('15. fires onPlayStateChange(false) when isPlaying transitions true→false', () => {
+    const onPlayStateChange = vi.fn();
+    vi.mocked(useAudioPlayer).mockReturnValue({ ...mockDefaultReturn, isPlaying: true });
+
+    const { rerender } = render(
+      <SpeakerButton
+        audioUrl="https://example.com/audio.mp3"
+        onPlayStateChange={onPlayStateChange}
+      />
+    );
+    // Reset the mock call that fired on initial render
+    onPlayStateChange.mockClear();
+
+    vi.mocked(useAudioPlayer).mockReturnValue({ ...mockDefaultReturn, isPlaying: false });
+    rerender(
+      <SpeakerButton
+        audioUrl="https://example.com/audio.mp3"
+        onPlayStateChange={onPlayStateChange}
+      />
+    );
+
+    expect(onPlayStateChange).toHaveBeenCalledWith(false);
+  });
+
+  it('16. onPlayStateChange is optional — existing callers not broken', () => {
+    // Rendering without onPlayStateChange must not throw
+    expect(() => {
+      render(<SpeakerButton audioUrl="https://example.com/audio.mp3" />);
+    }).not.toThrow();
+  });
 });

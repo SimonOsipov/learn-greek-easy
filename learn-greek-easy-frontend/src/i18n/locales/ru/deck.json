@@ -6,7 +6,14 @@
     "tryAgain": "Попробовать снова",
     "noDecksFound": "Колоды не найдены",
     "noDecksDescription": "Нет колод, соответствующих вашим фильтрам. Попробуйте изменить поиск или сбросить фильтры.",
-    "clearFilters": "Сбросить все фильтры"
+    "clearFilters": "Сбросить все фильтры",
+    "kicker": "Обзор · Публичные колоды",
+    "badgeNew": "Новая",
+    "badgeInProgress": "В процессе",
+    "badgeComplete": "Завершена",
+    "cardMeta": "{{cards}} карточек · {{mastered}} освоено",
+    "deckCardAriaLabel": "{{name}} колода, уровень {{level}}, {{pct}}% завершено",
+    "deckCardAriaLabelLocked": "{{name}} колода, уровень {{level}}, {{pct}}% завершено, заблокировано"
   },
   "filters": {
     "searchPlaceholder": "Поиск колод по названию...",
@@ -100,7 +107,20 @@
       "title": "Демо: Тест отслеживания прогресса",
       "simulateSession": "Симулировать сессию",
       "simulating": "Симуляция..."
-    }
+    },
+    "actionEyebrow": "Выберите, что практиковать",
+    "actionYourProgress": "Ваш прогресс · {{pct}}%",
+    "actionCounts": "{{new}} новых · {{learning}} изучается · {{mastered}} освоено",
+    "metricDueToday": "На сегодня",
+    "metricStreakDeck": "Серия · эта колода",
+    "metricMastered": "Освоено",
+    "metricTimeOnDeck": "Время на колоде",
+    "metricMasteredValue": "{{mastered}}/{{total}}",
+    "metricDueTodayTrend": "готово к практике",
+    "metricDueAllCaughtUp": "всё повторено",
+    "metricStreakLabel": "дней серии",
+    "metricTimeMin": "мин",
+    "metricPctOfDeck": "{{pct}}% колоды"
   },
   "card": {
     "viewDetails": "Подробнее",
@@ -272,7 +292,8 @@
     "masteryDotsLegend": "Правильные ответы для освоения — нужно 4, чтобы освоить карточку.",
     "masteryDotsInfo": "Информация о точках мастерства",
     "loadMore": "Загрузить ещё",
-    "loadingMore": "Загрузка..."
+    "loadingMore": "Загрузка...",
+    "kicker": "Слова в этой колоде"
   },
   "wordReference": {
     "backToDeck": "Назад к колоде",
@@ -328,7 +349,15 @@
     "promptMeaningReverse": "Как это сказать по-гречески?",
     "promptArticle": "Какой артикль?",
     "promptPlural": "Как будет множественное число?",
-    "promptSentence": "Переведите предложение"
+    "promptSentence": "Переведите предложение",
+    "sectionCollocations": "Словосочетания",
+    "sectionRelatedWords": "Похожие слова",
+    "groupAudio": "Аудио",
+    "groupCardCount": "{{n}} карточек",
+    "cardsViewToggleLabel": "Вид карточек",
+    "cardsViewGrid": "Сетка",
+    "cardsViewList": "Список",
+    "extraGlossPlaceholder": "Дополнительные примеры использования скоро появятся."
   },
   "practice": {
     "title": "Практика",
@@ -355,5 +384,25 @@
   },
   "skeleton": {
     "loadingCard": "Загрузка карточки"
+  },
+  "dx": {
+    "vocabularyKicker": "Словарь · {{level}}",
+    "resumeStatTotalCards": "Всего карточек",
+    "resumeStatMastered": "Освоено",
+    "resumeStatComplete": "Завершено",
+    "coverTagVocabulary": "{{level}} · Словарь",
+    "weekHeatLabel": "Практика · эта неделя",
+    "donutRingLabel": "карточек освоено",
+    "unwiredTooltip": "Заглушка — данные ещё не подключены.",
+    "unwiredExtraGloss": "Дополнительный глосс — заглушка, данные ещё не подключены.",
+    "unwiredHeatmap": "Тепловая карта практики — заглушка, данные ещё не подключены.",
+    "unwiredExampleTag": "Тип примера — заглушка, таксономия ещё не подключена.",
+    "unwiredCollocations": "Словосочетания — данные ещё не подключены.",
+    "unwiredRelated": "Похожие слова — данные ещё не подключены.",
+    "unwiredAudioGroup": "Аудиокарточки — ещё не доступны.",
+    "unwiredStreak": "Серия — данные ещё не подключены.",
+    "unwiredWeekHeat": "Недельная тепловая карта — данные ещё не подключены.",
+    "premiumContent": "Премиум контент",
+    "masteryStatus": "Статус: {{status}}"
   }
 }

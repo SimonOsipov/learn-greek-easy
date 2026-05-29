@@ -18,7 +18,7 @@
     /* ── Brand & status ── */
     --primary: 221 83% 53%;
     --primary-2: 221 83% 65%;
-    --accent: 262 83% 58%; /* violet — design-handoff canonical */
+    --accent: 262 83% 58%; /* Deviation from handoff (280 92% 62%): 262 is the established app-wide accent already shipped across non-decks surfaces; matching handoff would fork the accent & force a global re-theme. Decks 'violet' tone uses its own data-tone mapping, so the deviation is scoped. */
     --accent-2: 188 95% 50%; /* cyan */
     --accent-3: 32 100% 60%; /* burnt orange */
 
@@ -347,6 +347,17 @@
     }
     100% {
       transform: scale(1);
+    }
+  }
+
+  /* DX audio button pulse — referenced by .dx-w-audio.is-playing in dx.css */
+  @keyframes dx-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.5);
+    }
+    50% {
+      box-shadow: 0 0 0 8px hsl(var(--primary) / 0);
     }
   }
 }
@@ -3496,6 +3507,11 @@
 /* CER-16: Warning-tinted border on open rows (pending | reviewed) */
 [data-testid='admin-card-error-card'][data-state='open'] {
   border-color: hsl(var(--warning) / 0.35);
+}
+
+/* Sticky-header scroll clearance — keeps scrolled-to elements below the h-16 (64px) header */
+html {
+  scroll-padding-top: 5rem;
 }
 
 /* Theme transition animation */

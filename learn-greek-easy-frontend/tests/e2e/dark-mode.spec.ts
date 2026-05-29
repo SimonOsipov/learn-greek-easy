@@ -342,11 +342,8 @@ test.describe('Dark Mode - Theme Persists on Logout', () => {
   });
 
   test('DM-13: should keep light theme after logout if set to light', async ({ page }) => {
-    // Clear theme at the start
+    // Navigate to dashboard and authenticate
     await page.goto('/dashboard');
-    await verifyAuthSucceeded(page, '/dashboard');
-    await page.evaluate(() => localStorage.removeItem('theme'));
-    await page.reload();
     await verifyAuthSucceeded(page, '/dashboard');
 
     // Wait for dashboard to load
@@ -354,13 +351,22 @@ test.describe('Dark Mode - Theme Persists on Logout', () => {
       timeout: 15000,
     });
 
-    // Start in dark mode
-    await page.getByTestId('theme-switcher').click();
-    await expect(page.locator('html')).toHaveClass(/dark/);
+    const html = page.locator('html');
 
-    // Switch back to light mode
+    // The account may carry a persisted dark theme (backend), so normalize to light
+    // deterministically — without navigating away (a remount reapplies backend theme).
+    if (await html.evaluate((el) => el.classList.contains('dark'))) {
+      await page.getByTestId('theme-switcher').click();
+      await expect(html).not.toHaveClass(/dark/);
+    }
+
+    // Now in a known light state. Toggle to dark:
     await page.getByTestId('theme-switcher').click();
-    await expect(page.locator('html')).not.toHaveClass(/dark/);
+    await expect(html).toHaveClass(/dark/);
+
+    // Back to light:
+    await page.getByTestId('theme-switcher').click();
+    await expect(html).not.toHaveClass(/dark/);
 
     // Logout via UI
     await logoutViaUI(page);

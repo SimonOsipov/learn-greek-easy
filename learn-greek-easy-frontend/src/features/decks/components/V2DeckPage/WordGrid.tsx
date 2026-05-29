@@ -16,6 +16,23 @@ import type { WordEntryResponse } from '@/services/wordEntryAPI';
 import { WordCard } from '../WordCard';
 
 // ============================================
+// Gender Utilities
+// ============================================
+
+export type WordGender = 'masculine' | 'feminine' | 'neuter';
+
+/**
+ * Derives grammatical gender from grammar_data.
+ * Returns undefined when gender is absent or not one of the valid three values.
+ */
+export function getWordGender(entry: WordEntryResponse): WordGender | undefined {
+  const g = (entry.grammar_data as Record<string, unknown> | null)?.gender;
+  return typeof g === 'string' && ['masculine', 'feminine', 'neuter'].includes(g)
+    ? (g as WordGender)
+    : undefined;
+}
+
+// ============================================
 // Utilities
 // ============================================
 
@@ -84,6 +101,7 @@ export function WordGrid({ entries, masteryMap }: WordGridProps) {
               masteryStatus={masteryStatus}
               masteryFilled={masteryFilled}
               typeProgress={m?.type_progress}
+              gender={getWordGender(entry)}
             />
           </div>
         );

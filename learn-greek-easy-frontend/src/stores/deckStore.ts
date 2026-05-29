@@ -72,6 +72,15 @@ function filterDecks(rawDecks: Deck[], filters: DeckStoreFilters): Deck[] {
     decks = decks.filter((deck) => filters.status.includes(deck.progress?.status ?? 'not-started'));
   }
 
+  // Search — client-side refinement: OR-match across title, nameEn, nameRu, titleGreek.
+  // This catches Greek-only substrings that the backend transliteration search may miss.
+  if (filters.search) {
+    const q = filters.search.toLowerCase();
+    decks = decks.filter((d) =>
+      [d.title, d.nameEn, d.nameRu, d.titleGreek].some((v) => v?.toLowerCase().includes(q))
+    );
+  }
+
   return decks;
 }
 

@@ -2,9 +2,12 @@
  * V2DeckHeader Component Tests
  *
  * Covers:
- * - Filter pill selection (default "All", single-select)
+ * - Filter pill selection (default "All", single-select) — now in DxActionPanel
  * - Study Now navigation without card type filter
  * - Study Now navigation with card type filter (Translation -> meaning)
+ * - DX-07: DxActionPanel is rendered (delegates progress + practice to DxActionPanel)
+ * - DX-06: DxMetricStrip is rendered
+ * - DX-12: statistics.total_study_time_seconds flows into Time metric (not hardcoded 0)
  */
 
 import React from 'react';
@@ -87,24 +90,20 @@ describe('V2DeckHeader', () => {
     vi.clearAllMocks();
   });
 
-  it('renders Study Now button with correct data-testid', () => {
+  it('renders Start Review button with correct data-testid', () => {
     renderV2DeckHeader();
     expect(screen.getByTestId('start-review-button')).toBeInTheDocument();
   });
 
   it('renders all five filter pills', () => {
     renderV2DeckHeader();
-    // All pills should be present - check by aria-pressed
     const allPressedButtons = screen.getAllByRole('button');
-    // Filter pills: All, Translation, Plural Form, Article, Declension
-    // Look for aria-pressed attribute
     const pills = allPressedButtons.filter((btn) => btn.getAttribute('aria-pressed') !== null);
     expect(pills.length).toBe(5);
   });
 
   it('has "All" selected by default', () => {
     renderV2DeckHeader();
-    // Find pill with aria-pressed="true" - should be "All"
     const pressedPills = screen
       .getAllByRole('button')
       .filter((btn) => btn.getAttribute('aria-pressed') === 'true');
@@ -116,7 +115,6 @@ describe('V2DeckHeader', () => {
     const user = userEvent.setup();
     renderV2DeckHeader();
 
-    // Find all pill buttons by aria-pressed
     const buttons = screen.getAllByRole('button');
     const pills = buttons.filter((btn) => btn.getAttribute('aria-pressed') !== null);
 
@@ -127,7 +125,6 @@ describe('V2DeckHeader', () => {
     // Click second pill (Translation)
     await user.click(pills[1]);
 
-    // Now Translation should be selected and All should not
     const updatedButtons = screen.getAllByRole('button');
     const updatedPills = updatedButtons.filter((btn) => btn.getAttribute('aria-pressed') !== null);
     expect(updatedPills[0]).toHaveAttribute('aria-pressed', 'false');
@@ -147,18 +144,16 @@ describe('V2DeckHeader', () => {
     const user = userEvent.setup();
     renderV2DeckHeader();
 
-    // Click Translation pill (2nd pill, aria-pressed=false)
     const buttons = screen.getAllByRole('button');
     const pills = buttons.filter((btn) => btn.getAttribute('aria-pressed') !== null);
     await user.click(pills[1]); // Translation pill
 
-    // Click Study Now
     await user.click(screen.getByTestId('start-review-button'));
 
     expect(mockNavigate).toHaveBeenCalledWith('/decks/deck-abc/practice?cardType=meaning');
   });
 
-  it('renders completion percentage from API data', async () => {
+  it('renders completion percentage from API data in action panel bar', async () => {
     (progressAPI.getDeckProgressDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       progress: {
         total_cards: 10,
@@ -174,7 +169,50 @@ describe('V2DeckHeader', () => {
     });
     renderV2DeckHeader();
     await waitFor(() => {
-      expect(screen.getByText(/50%/)).toBeInTheDocument();
+      const barFill = screen.getByTestId('dx-action-bar-fill');
+      expect(barFill).toHaveStyle({ width: '50%' });
+    });
+  });
+
+  it('renders DxActionPanel (dx-action-panel testid present)', () => {
+    renderV2DeckHeader();
+    expect(screen.getByTestId('dx-action-panel')).toBeInTheDocument();
+  });
+
+  // ── DX-06: DxMetricStrip ────────────────────────────────────────────────
+
+  it('renders DxMetricStrip (dx-metric-strip testid present)', () => {
+    renderV2DeckHeader();
+    expect(screen.getByTestId('dx-metric-strip')).toBeInTheDocument();
+  });
+
+  // ── DX-12: total_study_time_seconds flows into Time metric ───────────────
+
+  it('DX-12: Time metric shows 60 min when total_study_time_seconds=3600', async () => {
+    (progressAPI.getDeckProgressDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      progress: {
+        total_cards: 20,
+        cards_mastered: 5,
+        cards_new: 5,
+        cards_learning: 5,
+        cards_review: 5,
+        cards_due: 3,
+        cards_studied: 10,
+        mastery_percentage: 25,
+        completion_percentage: 50,
+      },
+      statistics: {
+        total_reviews: 80,
+        total_study_time_seconds: 3600,
+        average_quality: 3.2,
+        average_easiness_factor: 2.5,
+        average_interval_days: 5,
+      },
+    });
+    renderV2DeckHeader();
+    await waitFor(() => {
+      const timeValue = screen.getByTestId('dx-metric-time-value');
+      expect(timeValue.textContent).toContain('60');
     });
   });
 });

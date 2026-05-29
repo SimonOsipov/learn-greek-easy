@@ -6,7 +6,14 @@
     "tryAgain": "Try Again",
     "noDecksFound": "No Decks Found",
     "noDecksDescription": "No decks match your current filters. Try adjusting your search or clearing filters.",
-    "clearFilters": "Clear All Filters"
+    "clearFilters": "Clear All Filters",
+    "kicker": "Browse · Public decks",
+    "badgeNew": "New",
+    "badgeInProgress": "In progress",
+    "badgeComplete": "Complete",
+    "cardMeta": "{{cards}} cards · {{mastered}} mastered",
+    "deckCardAriaLabel": "{{name}} deck, {{level}} level, {{pct}}% completed",
+    "deckCardAriaLabelLocked": "{{name}} deck, {{level}} level, {{pct}}% completed, locked"
   },
   "filters": {
     "searchPlaceholder": "Search decks by name...",
@@ -100,7 +107,20 @@
       "title": "Demo: Test progress tracking",
       "simulateSession": "Simulate Study Session",
       "simulating": "Simulating..."
-    }
+    },
+    "actionEyebrow": "Pick what to practice",
+    "actionYourProgress": "Your progress · {{pct}}%",
+    "actionCounts": "{{new}} new · {{learning}} learning · {{mastered}} mastered",
+    "metricDueToday": "Due today",
+    "metricStreakDeck": "Streak · this deck",
+    "metricMastered": "Mastered",
+    "metricTimeOnDeck": "Time on deck",
+    "metricMasteredValue": "{{mastered}}/{{total}}",
+    "metricDueTodayTrend": "ready to practice",
+    "metricDueAllCaughtUp": "all caught up",
+    "metricStreakLabel": "day streak",
+    "metricTimeMin": "min",
+    "metricPctOfDeck": "{{pct}}% of deck"
   },
   "card": {
     "viewDetails": "View Details",
@@ -272,7 +292,8 @@
     "masteryDotsLegend": "Correct answers toward mastery — 4 needed to master a card.",
     "masteryDotsInfo": "Mastery dots info",
     "loadMore": "Load More",
-    "loadingMore": "Loading..."
+    "loadingMore": "Loading...",
+    "kicker": "Words in this deck"
   },
   "wordReference": {
     "backToDeck": "Back to Deck",
@@ -328,7 +349,15 @@
     "promptMeaningReverse": "How do you say this in Greek?",
     "promptArticle": "What is the article?",
     "promptPlural": "What is the plural?",
-    "promptSentence": "Translate this sentence"
+    "promptSentence": "Translate this sentence",
+    "sectionCollocations": "Collocations",
+    "sectionRelatedWords": "Related Words",
+    "groupAudio": "Audio",
+    "groupCardCount": "{{n}} cards",
+    "cardsViewToggleLabel": "Cards view",
+    "cardsViewGrid": "Grid view",
+    "cardsViewList": "List view",
+    "extraGlossPlaceholder": "Additional usage notes coming soon."
   },
   "practice": {
     "title": "Practice",
@@ -355,5 +384,25 @@
   },
   "skeleton": {
     "loadingCard": "Loading deck card"
+  },
+  "dx": {
+    "vocabularyKicker": "Vocabulary · {{level}}",
+    "resumeStatTotalCards": "Total cards",
+    "resumeStatMastered": "Mastered",
+    "resumeStatComplete": "Complete",
+    "coverTagVocabulary": "{{level}} · Vocabulary",
+    "weekHeatLabel": "Practice · this wk",
+    "donutRingLabel": "cards mastered",
+    "unwiredTooltip": "Placeholder — not yet connected to backend data.",
+    "unwiredExtraGloss": "Extra gloss — placeholder, not yet connected to backend data.",
+    "unwiredHeatmap": "Practice heatmap — placeholder, not yet connected to backend data.",
+    "unwiredExampleTag": "Example type — placeholder, not yet connected to backend tag taxonomy.",
+    "unwiredCollocations": "Collocations — not yet connected to backend data.",
+    "unwiredRelated": "Related words — not yet connected to backend data.",
+    "unwiredAudioGroup": "Audio cards — not yet available.",
+    "unwiredStreak": "Streak — not yet connected to backend data.",
+    "unwiredWeekHeat": "Weekly heatmap — not yet connected to backend data.",
+    "premiumContent": "Premium content",
+    "masteryStatus": "Mastery: {{status}}"
   }
 }

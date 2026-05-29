@@ -1,0 +1,1675 @@
+/* =========================================================================
+   Decks experience — dx-* utility classes
+   All dx-* rules live here; zero dx-* classes in src/index.css.
+   Imported once at the decks route root.
+   ========================================================================= */
+
+/* ── Breadcrumb ─────────────────────────────────────────────────────────── */
+.dx-bcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: hsl(var(--fg-3));
+  font-family: 'Inter Tight', sans-serif;
+  font-weight: 500;
+  margin-bottom: -8px;
+}
+.dx-bcrumb a {
+  cursor: pointer;
+  color: hsl(var(--fg-3));
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.dx-bcrumb a:hover {
+  color: hsl(var(--primary));
+}
+.dx-bcrumb a svg {
+  width: 12px;
+  height: 12px;
+}
+.dx-bcrumb .dx-bcrumb-sep {
+  color: hsl(var(--fg) / 0.3);
+}
+.dx-bcrumb .dx-bcrumb-cur {
+  color: hsl(var(--fg));
+  font-weight: 600;
+}
+
+/* ── Kicker atom ────────────────────────────────────────────────────────── */
+.dx-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: hsl(var(--fg-3));
+}
+.dx-kicker::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: hsl(var(--primary));
+}
+.dx-kicker[data-tone='violet']::before {
+  background: hsl(var(--accent));
+}
+.dx-kicker[data-tone='cyan']::before {
+  background: hsl(var(--accent-2));
+}
+.dx-kicker[data-tone='amber']::before {
+  background: hsl(var(--warning));
+}
+.dx-kicker[data-tone='green']::before {
+  background: hsl(var(--success));
+}
+.dx-kicker[data-tone='white'] {
+  color: hsl(0 0% 100% / 0.85);
+}
+.dx-kicker[data-tone='white']::before {
+  background: hsl(0 0% 100% / 0.85);
+}
+
+/* ── Type chip ──────────────────────────────────────────────────────────── */
+.dx-type-chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: hsl(var(--fg) / 0.06);
+  color: hsl(var(--fg-3));
+}
+.dx-type-chip[data-tone='primary'] {
+  background: hsl(var(--primary) / 0.14);
+  color: hsl(var(--primary));
+}
+.dx-type-chip[data-tone='violet'] {
+  background: hsl(var(--accent) / 0.14);
+  color: hsl(var(--accent));
+}
+.dx-type-chip[data-tone='cyan'] {
+  background: hsl(var(--accent-2) / 0.14);
+  color: hsl(var(--accent-2));
+}
+.dx-type-chip[data-tone='amber'] {
+  background: hsl(var(--warning) / 0.16);
+  color: hsl(
+    38 80% 55%
+  ); /* Deviation Justification: amber text uses lightened channel (38 80% 55%) vs raw --warning (38 92% 50%) for WCAG AA contrast on tinted bg (see docs/design-system.md) */
+}
+.dx-type-chip[data-tone='green'] {
+  background: hsl(var(--success) / 0.16);
+  color: hsl(var(--success));
+}
+
+/* ── Section eyebrow ────────────────────────────────────────────────────── */
+.dx-section-eyebrow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ── Week heat strip ────────────────────────────────────────────────────── */
+.dx-week {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dx-week-l {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(var(--fg-3));
+  margin-right: 4px;
+}
+.dx-week-cell {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: hsl(var(--fg) / 0.06);
+  border: 1px solid hsl(var(--fg) / 0.04);
+}
+.dx-week-cell[data-h='1'] {
+  background: hsl(var(--primary) / 0.22);
+}
+.dx-week-cell[data-h='2'] {
+  background: hsl(var(--primary) / 0.38);
+}
+.dx-week-cell[data-h='3'] {
+  background: hsl(var(--primary) / 0.55);
+}
+.dx-week-cell[data-h='4'] {
+  background: hsl(var(--primary) / 0.78);
+}
+.dx-week-cell[data-h='5'] {
+  background: hsl(var(--primary));
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.18);
+}
+.dx-week-today {
+  outline: 2px solid hsl(var(--fg));
+  outline-offset: 2px;
+}
+
+/* ── Donut ring ─────────────────────────────────────────────────────────── */
+.dx-ring {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.dx-ring-svg {
+  width: 84px;
+  height: 84px;
+  flex-shrink: 0;
+  transform: rotate(-90deg);
+}
+.dx-ring-track {
+  fill: none;
+  stroke: hsl(var(--fg) / 0.08);
+  stroke-width: 8;
+}
+.dx-ring-fill {
+  fill: none;
+  stroke: url(#dxringGrad);
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.4s var(--ease-smooth);
+}
+.dx-ring-center {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: 'Inter Tight', sans-serif;
+  line-height: 1;
+}
+.dx-ring-center b {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.dx-ring-center small {
+  font-size: 13px;
+  color: hsl(var(--fg-3));
+  font-weight: 500;
+  margin-left: 2px;
+}
+.dx-ring-center span {
+  font-size: 11px;
+  color: hsl(var(--fg-3));
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── UnwiredDot — placeholder indicator (not yet wired to backend) ──────── */
+.dx-unwired-dot {
+  position: relative;
+  display: inline-block;
+}
+.dx-unwired-dot-marker {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: hsl(var(--danger));
+}
+.dx-unwired-dot-marker[data-tone='amber'] {
+  background: hsl(var(--warning));
+}
+
+/* ── Index header ───────────────────────────────────────────────────────── */
+.dx-index-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+.dx-index-h {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: clamp(32px, 3.4vw, 44px);
+  font-weight: 700;
+  letter-spacing: -0.028em;
+  line-height: 1.05;
+  margin: 0;
+}
+
+/* ── Filter chips ───────────────────────────────────────────────────────── */
+.dx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  background: transparent;
+  border: 1px solid hsl(var(--fg) / 0.12);
+  border-radius: 999px;
+  color: hsl(var(--fg-2));
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+.dx-chip:hover {
+  border-color: hsl(var(--fg) / 0.22);
+  color: hsl(var(--fg));
+}
+.dx-chip[aria-pressed='true'] {
+  background: hsl(var(--fg));
+  color: hsl(var(--bg));
+  border-color: hsl(var(--fg));
+}
+.dx-chip-sep {
+  width: 1px;
+  height: 22px;
+  background: hsl(var(--fg) / 0.1);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* ── DxCover — gradient cover primitive ─────────────────────────────────────── */
+/*
+ * The host element is position:relative so the scrim/sheen pseudo-elements
+ * stack correctly above the gradient background.
+ *
+ * Scrim   (::before): linear dark overlay — text legibility
+ * Sheen   (::after):  radial highlight — top-right corner gloss
+ *
+ * The gradient itself is applied via a CSS custom property set inline by the
+ * DxCover React component. No <img>, no coverImageUrl reads.
+ */
+.dx-cover-host {
+  position: relative;
+  /* Gradient is set via var(--dx-grad) / var(--dx-cover-grad) etc. inline */
+  background: var(
+    --dx-grad,
+    var(
+      --dx-cover-grad,
+      var(
+        --dx-cover-grad-1,
+        var(--dx-cover-grad-2, linear-gradient(135deg, hsl(210 70% 50%), hsl(198 60% 36%)))
+      )
+    )
+  );
+  overflow: hidden;
+}
+
+/* Scrim: dark top-to-bottom overlay for text legibility */
+.dx-cover-host::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(140deg, hsl(0 0% 0% / 0.1), hsl(0 0% 0% / 0.55));
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Sheen: radial top-right gloss highlight */
+.dx-cover-host::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 100% at 100% 0%, hsl(0 0% 100% / 0.2), transparent 55%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* All direct children sit above the scrim + sheen layers */
+.dx-cover-host > * {
+  position: relative;
+  z-index: 3;
+  color: hsl(0 0% 100% / 0.95);
+}
+
+/* ── Deck grid (2-col, 1-col ≤880px) ─────────────────────────────────────── */
+.dx-deck-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 8px;
+}
+@media (max-width: 880px) {
+  .dx-deck-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Deck card — gradient cover card (180px) ──────────────────────────────── */
+.dx-deck-card {
+  position: relative;
+  height: 180px;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid hsl(var(--fg) / 0.06);
+  transition:
+    transform 0.18s var(--ease-smooth),
+    border-color 0.18s,
+    box-shadow 0.18s;
+}
+.dx-deck-card:hover {
+  transform: translateY(-2px);
+  border-color: hsl(var(--primary) / 0.55);
+  box-shadow:
+    0 16px 36px -16px hsl(var(--primary) / 0.35),
+    0 0 0 1px hsl(var(--primary) / 0.4);
+}
+.dx-deck-card.is-active {
+  border-color: hsl(var(--primary));
+  box-shadow:
+    0 0 0 1px hsl(var(--primary)),
+    0 16px 36px -16px hsl(var(--primary) / 0.45);
+}
+
+/* Cover fills the card fully */
+.dx-deck-card .dx-cover-host {
+  height: 100%;
+  width: 100%;
+}
+
+/* ── Card inner layout ─────────────────────────────────────────────────────── */
+.dx-deck-card-inner {
+  position: relative;
+  height: 100%;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.dx-deck-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Status badge: frosted glass pill */
+.dx-deck-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: hsl(0 0% 0% / 0.3);
+  backdrop-filter: blur(6px);
+  border: 1px solid hsl(0 0% 100% / 0.18);
+  border-radius: 999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: hsl(0 0% 100% / 0.95);
+  text-transform: uppercase;
+}
+.dx-deck-card-badge.is-primary {
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+  color: hsl(0 0% 100% / 0.95);
+}
+
+/* Title */
+.dx-deck-card-h {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.1;
+  margin: 0;
+  text-shadow: 0 1px 2px hsl(0 0% 0% / 0.3);
+  color: hsl(0 0% 100% / 0.95);
+}
+
+/* Greek subtitle — Noto Serif, never italic */
+.dx-deck-card-el {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 15px;
+  font-style: normal;
+  color: hsl(0 0% 100% / 0.86);
+  margin: 4px 0 0;
+}
+
+.dx-deck-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Meta line: "N cards · M mastered" */
+.dx-deck-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(0 0% 100% / 0.86);
+  letter-spacing: 0.02em;
+}
+.dx-deck-card-meta .dx-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: hsl(0 0% 100% / 0.5);
+}
+
+/* Progress bar */
+.dx-deck-card-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dx-deck-card-progress-bar {
+  width: 88px;
+  height: 4px;
+  border-radius: 999px;
+  background: hsl(0 0% 100% / 0.22);
+  overflow: hidden;
+}
+.dx-deck-card-progress-bar span {
+  display: block;
+  height: 100%;
+  background: hsl(0 0% 100% / 0.95);
+  border-radius: 999px;
+}
+.dx-deck-card-progress-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: hsl(0 0% 100% / 0.95);
+}
+
+/* Complete state */
+.dx-deck-card-complete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: hsl(140 75% 75%);
+}
+.dx-deck-card-complete svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ── Resume hero (.dx-hero-resume) ──────────────────────────────────────── */
+/* DX-05: radial panel with gradient background — covers deck detail header  */
+.dx-hero-resume {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  padding: 28px 32px;
+  min-height: 280px;
+  background:
+    radial-gradient(120% 90% at 100% 0%, hsl(var(--primary) / 0.18), transparent 55%),
+    radial-gradient(80% 80% at 0% 100%, hsl(var(--accent) / 0.12), transparent 55%),
+    hsl(var(--bg-2));
+  border: 1px solid hsl(var(--primary) / 0.28);
+}
+.dx-hero-resume-grid {
+  display: grid;
+  grid-template-columns: 1fr minmax(280px, 360px);
+  gap: 32px;
+  align-items: stretch;
+  position: relative;
+  z-index: 1;
+  min-height: 224px;
+}
+.dx-hero-resume-l {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.dx-hero-resume-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dx-hero-resume-h {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: clamp(28px, 2.6vw, 38px);
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.05;
+  margin: 0;
+  color: hsl(var(--fg));
+}
+.dx-hero-resume-el {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 18px;
+  font-style: normal;
+  color: hsl(var(--fg-2));
+  margin: 4px 0 0;
+}
+.dx-hero-resume-desc {
+  font-size: 14px;
+  color: hsl(var(--fg-2));
+  line-height: 1.55;
+  margin: 0;
+  max-width: 460px;
+}
+.dx-hero-resume-stats {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 28px;
+  margin-top: auto;
+  padding-top: 10px;
+  justify-content: start;
+}
+.dx-hero-resume-stat {
+  display: flex;
+  flex-direction: column;
+}
+.dx-hero-resume-stat b {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: hsl(var(--fg));
+}
+.dx-hero-resume-stat span {
+  font-size: 11px;
+  color: hsl(var(--fg-3));
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Cover stack (.dx-cover-stack) ─────────────────────────────────────── */
+/* DX-05: fanned sibling covers on the right side of the resume hero         */
+.dx-cover-stack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+}
+.dx-cover {
+  position: absolute;
+  width: 200px;
+  height: 250px;
+  border-radius: 18px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    0 1px 0 hsl(0 0% 100% / 0.18) inset,
+    0 20px 50px -20px hsl(var(--primary) / 0.6),
+    0 8px 16px -6px hsl(0 0% 0% / 0.3);
+  transform-origin: bottom center;
+}
+.dx-cover-1 {
+  transform: rotate(-6deg) translateX(-50px);
+  opacity: 0.5;
+}
+.dx-cover-2 {
+  transform: rotate(4deg) translateX(50px);
+  opacity: 0.65;
+}
+.dx-cover-3 {
+  transform: rotate(0deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dx-cover-1,
+  .dx-cover-2,
+  .dx-cover-3 {
+    transition: none;
+  }
+}
+.dx-cover-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  color: hsl(0 0% 100% / 0.9);
+}
+.dx-cover-title {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.018em;
+  line-height: 1.15;
+  margin-top: 8px;
+  color: hsl(0 0% 100% / 0.95);
+}
+.dx-cover-el {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-style: normal;
+  font-size: 14px;
+  margin-top: 4px;
+  opacity: 0.9;
+  color: hsl(0 0% 100% / 0.9);
+}
+.dx-cover-foot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.dx-cover-pct {
+  font-weight: 700;
+  font-size: 14px;
+  font-family: 'Inter Tight', sans-serif;
+  color: hsl(0 0% 100% / 0.95);
+}
+.dx-cover-bar {
+  width: 60px;
+  height: 4px;
+  background: hsl(0 0% 100% / 0.25);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.dx-cover-bar span {
+  display: block;
+  height: 100%;
+  background: hsl(0 0% 100% / 0.95);
+}
+@media (max-width: 1100px) {
+  .dx-hero-resume-grid {
+    grid-template-columns: 1fr;
+  }
+  .dx-cover-stack {
+    display: none;
+  }
+}
+
+/* ── Action / practice panel (.dx-action*) ──────────────────────────────────
+   DX-07: re-skin of the progress + practice block in V2DeckHeader.
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-action {
+  padding: 22px 26px;
+  background: hsl(var(--bg-2));
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow:
+    0 1px 0 hsl(255 100% 100% / 0.02) inset,
+    0 30px 60px -40px hsl(var(--primary) / 0.45);
+}
+.dx-action-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.dx-action-h {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  margin: 0;
+  color: hsl(var(--fg));
+}
+.dx-action-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: hsl(var(--fg-3));
+}
+.dx-action-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: hsl(var(--fg) / 0.08);
+  overflow: hidden;
+}
+.dx-action-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)));
+  border-radius: 999px;
+}
+.dx-action-legend {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 12.5px;
+  color: hsl(var(--fg-3));
+  flex-wrap: wrap;
+}
+.dx-action-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dx-action-legend-item::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--legend-color, hsl(var(--fg) / 0.3));
+}
+.dx-action-legend-item[data-tone='todo'] {
+  --legend-color: hsl(var(--fg) / 0.3);
+}
+.dx-action-legend-item[data-tone='learn'] {
+  --legend-color: hsl(var(--primary));
+}
+.dx-action-legend-item[data-tone='master'] {
+  --legend-color: hsl(var(--success));
+}
+.dx-action-want {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dx-action-want-l {
+  font-size: 14px;
+  font-weight: 500;
+  color: hsl(var(--fg));
+}
+.dx-action-want-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.dx-action-want-chip {
+  padding: 9px 18px;
+  background: hsl(var(--fg) / 0.06);
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: hsl(var(--fg));
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.dx-action-want-chip:hover {
+  border-color: hsl(var(--primary) / 0.4);
+}
+.dx-action-want-chip[aria-pressed='true'] {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+  box-shadow: 0 4px 12px -4px hsl(var(--primary) / 0.4);
+}
+.dx-action-cta {
+  width: 100%;
+  padding: 16px 24px;
+  background: hsl(var(--primary));
+  border: none;
+  border-radius: 12px;
+  color: hsl(var(--primary-foreground));
+  font-size: 15px;
+  font-weight: 700;
+  font-family: 'Inter Tight', sans-serif;
+  letter-spacing: -0.005em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow:
+    0 1px 0 hsl(255 100% 100% / 0.18) inset,
+    0 8px 20px -6px hsl(var(--primary) / 0.5);
+  transition:
+    background 0.15s,
+    transform 0.12s;
+}
+.dx-action-cta:hover {
+  background: hsl(var(--primary) / 0.92);
+}
+.dx-action-cta:active {
+  transform: translateY(1px);
+}
+.dx-action-cta svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Metric strip (.dx-metrics*) ─────────────────────────────────────────────
+   DX-06: 4-up card grid — Due / Streak / Mastered / Time on deck
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+@media (max-width: 900px) {
+  .dx-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 500px) {
+  .dx-metrics {
+    grid-template-columns: 1fr;
+  }
+}
+.dx-metric {
+  padding: 16px 18px;
+  background: hsl(var(--bg-2));
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.dx-metric-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: hsl(var(--primary) / 0.16);
+  color: hsl(var(--primary));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.dx-metric-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.dx-metric[data-tone='amber'] .dx-metric-icon {
+  background: hsl(var(--warning) / 0.16);
+  color: hsl(var(--warning));
+}
+.dx-metric[data-tone='green'] .dx-metric-icon {
+  background: hsl(var(--success) / 0.16);
+  color: hsl(var(--success));
+}
+.dx-metric[data-tone='violet'] .dx-metric-icon {
+  background: hsl(var(--accent) / 0.16);
+  color: hsl(var(--accent));
+}
+.dx-metric-body {
+  min-width: 0;
+  flex: 1;
+}
+.dx-metric-l {
+  font-size: 12px;
+  color: hsl(var(--fg-3));
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dx-metric-v {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.dx-metric-v small {
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(var(--fg-3));
+  font-family: 'JetBrains Mono', monospace;
+}
+.dx-metric-trend {
+  font-size: 11px;
+  color: hsl(var(--success));
+  margin-top: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.dx-metric-trend.is-flat {
+  color: hsl(var(--fg-3));
+}
+
+/* ── Word toolbar (.dx-word-toolbar) ─────────────────────────────────────────
+   DX-08: re-skin of the WordBrowser search/filter bar.
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-word-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dx-word-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.dx-word-stat {
+  padding: 7px 14px;
+  background: transparent;
+  border: 1px solid hsl(var(--fg) / 0.08);
+  border-radius: 999px;
+  color: hsl(var(--fg-2));
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dx-word-stat:hover {
+  color: hsl(var(--fg));
+  border-color: hsl(var(--fg) / 0.16);
+}
+.dx-word-stat[aria-pressed='true'] {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+.dx-word-stat:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.dx-word-meta {
+  font-size: 12.5px;
+  color: hsl(var(--fg-3));
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Word card — gender kicker (.dx-word-card-head / .dx-word-card-kicker) ──
+   DX-08: head row inside each WordCard; kicker dot is gender-coloured.
+
+   Deviation Justification: literal gender HSLs (masc/fem); neuter uses --warning
+   token; gender is a 3-value taxonomy not worth 2 global tokens — see
+   docs/design-system.md:151 precedent
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-word-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.dx-word-card-kicker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: hsl(var(--fg-3));
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dx-word-card-kicker::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: hsl(var(--warning));
+}
+/* Deviation Justification: literal gender HSLs (masc/fem); neuter uses --warning token;
+   gender is a 3-value taxonomy not worth 2 global tokens — see docs/design-system.md:151 precedent */
+.dx-word-card-kicker[data-gender='masculine']::before {
+  background: hsl(210 80% 55%);
+}
+.dx-word-card-kicker[data-gender='feminine']::before {
+  background: hsl(330 80% 60%);
+}
+.dx-word-card-kicker[data-gender='neuter']::before {
+  background: hsl(var(--warning));
+}
+
+/* ── Word hero (.dx-w-hero*) ─────────────────────────────────────────────────
+   DX-09: radial panel header for WordReferencePage.
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-w-hero {
+  padding: 28px 32px 26px;
+  background:
+    radial-gradient(60% 80% at 0% 0%, hsl(var(--primary) / 0.07), transparent 55%),
+    radial-gradient(60% 80% at 100% 100%, hsl(var(--accent) / 0.06), transparent 55%),
+    hsl(var(--bg-2));
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.dx-w-hero > * {
+  position: relative;
+  z-index: 1;
+}
+.dx-w-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dx-w-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: hsl(var(--fg-2));
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+}
+.dx-w-back:hover {
+  color: hsl(var(--primary));
+}
+.dx-w-back svg {
+  width: 14px;
+  height: 14px;
+}
+.dx-w-report {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: hsl(var(--fg-3));
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.dx-w-report:hover {
+  color: hsl(var(--warning));
+}
+.dx-w-report svg {
+  width: 14px;
+  height: 14px;
+}
+.dx-w-tags {
+  display: flex;
+  gap: 6px;
+}
+.dx-w-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.dx-w-tag.is-pos {
+  background: hsl(var(--warning) / 0.16);
+  color: hsl(
+    38 80% 55%
+  ); /* Deviation Justification: amber text uses lightened channel (38 80% 55%) for WCAG AA on tinted bg — same precedent as .dx-type-chip[data-tone='amber'] */
+}
+.dx-w-tag.is-gender {
+  background: hsl(var(--fg) / 0.06);
+  color: hsl(var(--fg-2));
+}
+.dx-w-headline {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.dx-w-article {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: clamp(36px, 4vw, 56px);
+  font-weight: 500;
+  color: hsl(var(--fg-3));
+  letter-spacing: -0.01em;
+  line-height: 1;
+  font-style: normal;
+}
+.dx-w-word {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: clamp(48px, 6vw, 84px);
+  font-weight: 600;
+  letter-spacing: -0.018em;
+  line-height: 1;
+  color: hsl(var(--fg));
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
+  font-style: normal;
+}
+.dx-w-audio {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: hsl(var(--fg) / 0.04);
+  border: 1px solid hsl(var(--fg) / 0.08);
+  color: hsl(var(--primary));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  align-self: center;
+  transition:
+    background 0.15s,
+    transform 0.15s;
+}
+.dx-w-audio:hover {
+  background: hsl(var(--primary) / 0.1);
+  transform: scale(1.04);
+}
+.dx-w-audio svg {
+  width: 18px;
+  height: 18px;
+}
+.dx-w-audio.is-playing {
+  background: hsl(var(--primary));
+  color: hsl(0 0% 100% / 0.95);
+  border-color: hsl(var(--primary));
+  animation: dx-pulse 1.4s ease-in-out infinite;
+}
+/* @keyframes dx-pulse — moved to src/index.css per design-system.md rule (keyframes in index.css) */
+@media (prefers-reduced-motion: reduce) {
+  .dx-w-audio.is-playing {
+    animation-duration: 0.01ms;
+  }
+}
+.dx-w-ipa {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 17px;
+  color: hsl(var(--fg-3));
+  font-weight: 500;
+  margin: -2px 0 0;
+}
+.dx-w-en {
+  font-size: 20px;
+  font-weight: 600;
+  color: hsl(var(--fg));
+  margin: 2px 0 0;
+}
+.dx-w-en-extra {
+  font-size: 13.5px;
+  color: hsl(var(--fg-3));
+  font-style: italic;
+  margin: 4px 0 0;
+  max-width: 580px;
+  line-height: 1.5;
+}
+.dx-w-hero-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid hsl(var(--fg) / 0.06);
+}
+.dx-w-speed {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: hsl(var(--fg-3));
+}
+.dx-w-speed-l {
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+}
+.dx-w-hero-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+}
+.dx-w-speed-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: hsl(var(--fg) / 0.06);
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 999px;
+}
+.dx-w-speed-btn {
+  padding: 4px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: hsl(var(--fg-2));
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.dx-w-speed-btn.is-active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+/* ── Tab trigger — primary ring on active ────────────────────────────────────
+   DX-10: adds a 1px primary ring around the active tab trigger so the
+   active state is clearly visible against the muted list background.
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-tab-ring[data-state='active'] {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: -1px;
+}
+
+/* ── Section card (.dx-section*) ─────────────────────────────────────────────
+   DX-10: stacked info cards in the Word Info tab.
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-section {
+  background: hsl(var(--bg-2));
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 16px;
+  padding: 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dx-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dx-section-h {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: hsl(var(--fg));
+}
+.dx-section-tag {
+  display: inline-flex;
+  padding: 3px 10px;
+  background: hsl(var(--fg) / 0.06);
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: hsl(var(--fg-2));
+}
+
+/* ── Example tag (.dx-example-tag) ──────────────────────────────────────────
+   DX-10: per-example type chip (Simple / Comparative / Locative) + R5 amber dot.
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-example-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  background: hsl(var(--accent) / 0.14);
+  color: hsl(var(--accent));
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+/* ── Examples list (.dx-examples*) ──────────────────────────────────────────
+   DX-10: list of example sentences inside a .dx-section card.
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dx-example {
+  padding: 14px 18px 14px 16px;
+  background: hsl(var(--bg));
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 12px;
+  border-left: 3px solid hsl(var(--primary) / 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dx-example-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.dx-example-el {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 17px;
+  font-weight: 500;
+  font-style: normal;
+  color: hsl(var(--fg));
+  line-height: 1.35;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.dx-example-en {
+  font-size: 13.5px;
+  color: hsl(var(--fg-3));
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ── Collocations (.dx-colloc*) ──────────────────────────────────────────────
+   DX-10: placeholder grid for collocations — not yet connected to backend.
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-colloc {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+.dx-colloc-row {
+  padding: 10px 14px;
+  background: hsl(var(--bg));
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dx-colloc-el {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 15px;
+  font-style: normal;
+  color: hsl(var(--fg));
+}
+.dx-colloc-en {
+  font-size: 12px;
+  color: hsl(var(--fg-3));
+}
+
+/* ── Notes callout (.dx-notes*) ──────────────────────────────────────────────
+   DX-10: amber lightbulb callout rendered when grammar_data.notes is present.
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-notes {
+  padding: 14px 18px;
+  background: hsl(var(--warning) / 0.05);
+  border: 1px solid hsl(var(--warning) / 0.16);
+  border-radius: 12px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: hsl(var(--fg-2));
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.dx-notes-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: hsl(var(--warning) / 0.18);
+  color: hsl(var(--warning));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.dx-notes-mark svg {
+  width: 14px;
+  height: 14px;
+}
+.dx-notes b {
+  color: hsl(var(--fg));
+  font-weight: 600;
+}
+.dx-notes [lang='el'] {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-style: normal;
+}
+
+/* ── Related words (.dx-related*) ────────────────────────────────────────────
+   DX-10: inert chip row — no navigation (no vocab graph).
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-related {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.dx-related-chip {
+  padding: 8px 14px;
+  background: hsl(var(--bg));
+  border: 1px solid hsl(var(--fg) / 0.08);
+  border-radius: 999px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: default;
+}
+.dx-related-chip-el {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 15px;
+  font-style: normal;
+  color: hsl(var(--fg));
+}
+.dx-related-chip-en {
+  color: hsl(var(--fg-3));
+  font-size: 12.5px;
+}
+
+/* ── Cards group (.dx-cards-group*) ─────────────────────────────────────────
+   DX-11: card groups with per-group accent tint + colored square marker.
+   ─────────────────────────────────────────────────────────────────────────── */
+.dx-cards-group {
+  background: hsl(var(--bg-2));
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 16px;
+  padding: 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.dx-cards-group[data-group='Translation'] {
+  background:
+    radial-gradient(80% 60% at 100% 0%, hsl(var(--primary) / 0.1), transparent 55%),
+    hsl(var(--bg-2));
+  border-color: hsl(var(--primary) / 0.18);
+}
+.dx-cards-group[data-group='Grammar'] {
+  background:
+    radial-gradient(80% 60% at 100% 0%, hsl(var(--accent) / 0.12), transparent 55%),
+    hsl(var(--bg-2));
+  border-color: hsl(var(--accent) / 0.18);
+}
+.dx-cards-group[data-group='Declension'] {
+  background:
+    radial-gradient(80% 60% at 100% 0%, hsl(var(--accent-2) / 0.12), transparent 55%),
+    hsl(var(--bg-2));
+  border-color: hsl(var(--accent-2) / 0.18);
+}
+.dx-cards-group[data-group='Audio'] {
+  background:
+    radial-gradient(80% 60% at 100% 0%, hsl(var(--warning) / 0.12), transparent 55%),
+    hsl(var(--bg-2));
+  border-color: hsl(var(--warning) / 0.18);
+}
+.dx-cards-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.dx-cards-group-h {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: hsl(var(--fg-2));
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+/* Colored square marker (::before) — driven by data-group */
+.dx-cards-group-h::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: hsl(var(--primary));
+  flex-shrink: 0;
+}
+.dx-cards-group[data-group='Grammar'] .dx-cards-group-h::before {
+  background: hsl(var(--accent));
+}
+.dx-cards-group[data-group='Declension'] .dx-cards-group-h::before {
+  background: hsl(var(--accent-2));
+}
+.dx-cards-group[data-group='Audio'] .dx-cards-group-h::before {
+  background: hsl(var(--warning));
+}
+.dx-cards-group-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  color: hsl(var(--fg-3));
+}
+
+/* ── Cards grid (.dx-cards-grid) ─────────────────────────────────────────────
+   DX-11: responsive 3→2→1 col grid.
+   ─────────────────────────────────────────────────────────────────────────── */
+.dx-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .dx-cards-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .dx-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Card list view (.dx-cards-list-view + .dx-card-row*) ───────────────────
+   DX-11: dense list view — mastery dot · type · prompt · answer · due.
+   ─────────────────────────────────────────────────────────────────────────── */
+.dx-cards-list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dx-card-row {
+  display: grid;
+  grid-template-columns: 12px 110px 1fr 80px 18px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: hsl(var(--bg));
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 10px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.dx-card-row:hover {
+  border-color: hsl(var(--primary) / 0.4);
+}
+.dx-card-row-type {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: hsl(var(--fg-3));
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dx-card-row-prompt {
+  font-size: 13px;
+  color: hsl(var(--fg-2));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dx-card-row-answer {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: hsl(var(--fg));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dx-card-row[data-side='en'] .dx-card-row-answer {
+  font-family: 'Inter Tight', sans-serif;
+  font-weight: 600;
+}
+.dx-card-row-due {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: hsl(var(--fg-3));
+  text-align: right;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── Mastery dot (.dx-card-mast-dot) ─────────────────────────────────────────
+   DX-11: used in both grid cards and list rows.
+   grey → primary (learning) → green (mastered)
+   ─────────────────────────────────────────────────────────────────────────── */
+.dx-card-mast-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: hsl(var(--fg) / 0.18);
+  flex-shrink: 0;
+}
+.dx-card-mast-dot[data-state='learning'] {
+  background: hsl(var(--primary));
+}
+.dx-card-mast-dot[data-state='mastered'] {
+  background: hsl(var(--success));
+}
+
+/* ── Focus-visible rings — visible keyboard focus on all dx- interactive elements ──
+   DX-14: uses --primary outline so focus is always visible and on-brand.
+   Uses :focus-visible so mouse users don't see the ring.
+   ────────────────────────────────────────────────────────────────────────────── */
+.dx-deck-card:focus-visible,
+.dx-chip:focus-visible,
+.dx-action-want-chip:focus-visible,
+.dx-w-speed-btn:focus-visible,
+.dx-action-cta:focus-visible,
+.dx-w-back:focus-visible,
+.dx-w-audio:focus-visible,
+.dx-word-stat:focus-visible,
+.dx-card-row:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* ── Reduced-motion — scoped to dx- animation families ──────────────────────
+   DX-14: a global prefers-reduced-motion: reduce guard already exists in
+   src/index.css (applies animation-duration/iteration/transition to all *).
+   This block is intentionally scoped to the dx- class families as a belt-and-
+   suspenders measure for the dx-pulse animation specifically, and to neutralise
+   any dx- transitions that could feel jarring at narrow duration.
+   ────────────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .dx-deck-card,
+  .dx-chip,
+  .dx-action-want-chip,
+  .dx-action-cta,
+  .dx-w-audio,
+  .dx-ring-fill,
+  .dx-card-row {
+    transition-duration: 0.01ms !important;
+  }
+  .dx-w-audio.is-playing {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

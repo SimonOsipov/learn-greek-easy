@@ -3,13 +3,15 @@
 /**
  * Examples section displaying usage examples for word entries.
  * Shows Greek sentences with English and Russian translations.
+ *
+ * DX-10: re-skinned as a .dx-section card.
+ * Each example has a derived type tag (.dx-example-tag) + R5 amber UnwiredDot.
  */
 
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
+import { UnwiredDot } from '@/features/decks/dx';
 import { track } from '@/lib/analytics';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
 import type { WordEntryExampleSentence } from '@/services/wordEntryAPI';
@@ -27,51 +29,80 @@ export interface ExamplesSectionProps {
   speed?: AudioSpeed;
 }
 
+export type ExampleTag = 'simple' | 'comparative' | 'locative';
+
+/**
+ * Maps the free-text `context` field to one of three ExampleTag values.
+ * Since the backend has no tag taxonomy, this is always derived=false
+ * (we use 'simple' as placeholder) unless the context matches a known keyword.
+ *
+ * derived=true  -> context contained a recognisable keyword
+ * derived=false -> fell back to 'simple' placeholder
+ */
+export function mapContextToTag(context?: string | null): {
+  tag: ExampleTag;
+  derived: boolean;
+} {
+  if (!context) return { tag: 'simple', derived: false };
+  const lower = context.toLowerCase();
+  if (lower.includes('comparative') || lower.includes('comparison')) {
+    return { tag: 'comparative', derived: true };
+  }
+  if (
+    lower.includes('locative') ||
+    lower.includes('location') ||
+    lower.includes('place') ||
+    lower.includes('where')
+  ) {
+    return { tag: 'locative', derived: true };
+  }
+  return { tag: 'simple', derived: false };
+}
+
 // ============================================
 // Component
 // ============================================
 
 export function ExamplesSection({ examples, wordEntryId, deckId, speed }: ExamplesSectionProps) {
-  const { t, i18n } = useTranslation('review');
+  const { t, i18n } = useTranslation(['review', 'deck']);
 
   // Handle empty/null examples
   if (!examples || examples.length === 0) {
     return (
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">{t('grammar.examples.title')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">{t('grammar.examples.noExamples')}</p>
-        </CardContent>
-      </Card>
+      <div className="dx-section" data-testid="examples-section">
+        <div className="dx-section-head">
+          <h3 className="dx-section-h">{t('grammar.examples.title')}</h3>
+        </div>
+        <p className="text-sm text-muted-foreground">{t('grammar.examples.noExamples')}</p>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg">{t('grammar.examples.title')}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="dx-section" data-testid="examples-section">
+      <div className="dx-section-head">
+        <h3 className="dx-section-h">{t('grammar.examples.title')}</h3>
+      </div>
+      <div className="dx-examples">
         {examples.map((example, index) => {
           const exampleTranslation = getLocalizedTranslation(
             example.english,
             example.russian,
             i18n.language
           );
-          return (
-            <Card key={index} className="bg-muted/30 p-4 transition-colors hover:bg-muted/50">
-              {/* Context badge */}
-              {example.context && (
-                <Badge variant="outline" className="mb-2 text-xs">
-                  {example.context}
-                </Badge>
-              )}
+          const { tag } = mapContextToTag(example.context);
 
-              {/* Greek sentence */}
-              <div className="flex items-center gap-2">
-                <p className="text-lg font-medium text-foreground">{example.greek}</p>
+          return (
+            <div key={index} className="dx-example">
+              <div className="dx-example-head">
+                {/* Type tag with R5 amber UnwiredDot — tag text is children so the
+                    wrapper has a natural bounding box and Playwright can see it */}
+                <span className="dx-example-tag" data-testid="example-tag">
+                  <UnwiredDot tone="amber" aria-label={t('deck:dx.unwiredExampleTag')}>
+                    {tag}
+                  </UnwiredDot>
+                </span>
+                {/* Audio speaker */}
                 {example.audio_url && (
                   <SpeakerButton
                     audioUrl={example.audio_url}
@@ -90,14 +121,17 @@ export function ExamplesSection({ examples, wordEntryId, deckId, speed }: Exampl
                 )}
               </div>
 
+              {/* Greek sentence */}
+              <p className="dx-example-el" lang="el">
+                {example.greek}
+              </p>
+
               {/* Locale-appropriate translation */}
-              {exampleTranslation && (
-                <p className="mt-2 text-sm text-muted-foreground">{exampleTranslation}</p>
-              )}
-            </Card>
+              {exampleTranslation && <p className="dx-example-en">{exampleTranslation}</p>}
+            </div>
           );
         })}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

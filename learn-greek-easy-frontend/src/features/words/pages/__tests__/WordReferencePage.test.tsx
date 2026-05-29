@@ -1,12 +1,10 @@
 /**
  * WordReferencePage Component Tests
  *
- * Tests for the VBUG2-03 changes:
- * - Article display before lemma for nouns (masculine/feminine/neuter)
- * - No article for non-noun parts of speech (verb, adjective, adverb)
- * - Article styling (font-normal, text-muted-foreground, mr-2)
- * - Tab layout
- * - Edge cases: missing grammar data, missing gender field, unknown gender
+ * Updated for DX-09:
+ * - Header replaced by WordHero (dx-w-hero radial panel)
+ * - Article/lemma now in data-testid="word-article" / data-testid="word-lemma" spans
+ * - audio pulse driven by onPlayStateChange (not a fake timer)
  */
 
 import userEvent from '@testing-library/user-event';
@@ -22,16 +20,32 @@ vi.mock('@/components/ui/SpeakerButton', () => ({
     audioUrl,
     onPlay,
     onError,
+    onPlayStateChange,
   }: {
     audioUrl: string | null | undefined;
     onPlay?: () => void;
     onError?: (error: string) => void;
+    onPlayStateChange?: (playing: boolean) => void;
   }) => {
     if (!audioUrl) return null;
     return (
       <>
-        <button data-testid="speaker-button" onClick={() => onPlay?.()}>
+        <button
+          data-testid="speaker-button"
+          onClick={() => {
+            onPlayStateChange?.(true);
+            onPlay?.();
+          }}
+        >
           Speaker
+        </button>
+        <button
+          data-testid="speaker-stop-trigger"
+          onClick={() => {
+            onPlayStateChange?.(false);
+          }}
+        >
+          Stop
         </button>
         <button data-testid="speaker-error-trigger" onClick={() => onError?.('play error')}>
           Trigger Error
@@ -101,6 +115,8 @@ function makeWordEntry(overrides: Partial<WordEntryResponse> = {}): WordEntryRes
     grammar_data: null,
     examples: null,
     audio_key: null,
+    audio_url: null,
+    audio_status: 'done',
     is_active: true,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
@@ -236,7 +252,7 @@ afterEach(() => {
 // ============================================
 
 describe('WordReferencePage', () => {
-  describe('Article Display for Nouns', () => {
+  describe('Article Display for Nouns (DX-09 hero)', () => {
     it('shows "ο" article before masculine noun lemma', () => {
       const entry = makeMasculineNoun();
       mockUseWordEntry.mockReturnValue({
@@ -248,11 +264,10 @@ describe('WordReferencePage', () => {
 
       renderPage();
 
-      const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading).toHaveTextContent('ο');
-      expect(heading).toHaveTextContent('άνθρωπος');
-      // Verify article comes before lemma in the DOM
-      expect(heading.textContent).toMatch(/ο\s*άνθρωπος/);
+      const article = screen.getByTestId('word-article');
+      const lemma = screen.getByTestId('word-lemma');
+      expect(article).toHaveTextContent('ο');
+      expect(lemma).toHaveTextContent('άνθρωπος');
     });
 
     it('shows "η" article before feminine noun lemma', () => {
@@ -266,10 +281,8 @@ describe('WordReferencePage', () => {
 
       renderPage();
 
-      const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading).toHaveTextContent('η');
-      expect(heading).toHaveTextContent('γυναίκα');
-      expect(heading.textContent).toMatch(/η\s*γυναίκα/);
+      expect(screen.getByTestId('word-article')).toHaveTextContent('η');
+      expect(screen.getByTestId('word-lemma')).toHaveTextContent('γυναίκα');
     });
 
     it('shows "το" article before neuter noun lemma', () => {
@@ -283,13 +296,11 @@ describe('WordReferencePage', () => {
 
       renderPage();
 
-      const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading).toHaveTextContent('το');
-      expect(heading).toHaveTextContent('σπίτι');
-      expect(heading.textContent).toMatch(/το\s*σπίτι/);
+      expect(screen.getByTestId('word-article')).toHaveTextContent('το');
+      expect(screen.getByTestId('word-lemma')).toHaveTextContent('σπίτι');
     });
 
-    it('renders article in a span with correct styling classes', () => {
+    it('renders article element with lang="el"', () => {
       const entry = makeMasculineNoun();
       mockUseWordEntry.mockReturnValue({
         wordEntry: entry,
@@ -300,12 +311,8 @@ describe('WordReferencePage', () => {
 
       renderPage();
 
-      const heading = screen.getByRole('heading', { level: 1 });
-      const articleSpan = heading.querySelector('span');
-      expect(articleSpan).not.toBeNull();
-      expect(articleSpan).toHaveClass('font-normal');
-      expect(articleSpan).toHaveClass('text-muted-foreground');
-      expect(articleSpan).toHaveClass('mr-2');
+      const article = screen.getByTestId('word-article');
+      expect(article).toHaveAttribute('lang', 'el');
     });
   });
 
@@ -321,12 +328,8 @@ describe('WordReferencePage', () => {
 
       renderPage();
 
-      const heading = screen.getByRole('heading', { level: 1 });
-      // Should have no span child (article span)
-      expect(heading.querySelector('span')).toBeNull();
-      expect(heading).toHaveTextContent('μιλάω');
-      // Verify no Greek article characters present before the lemma
-      expect(heading.textContent).not.toMatch(/^[οητ]/);
+      expect(screen.queryByTestId('word-article')).not.toBeInTheDocument();
+      expect(screen.getByTestId('word-lemma')).toHaveTextContent('μιλάω');
     });
 
     it('does not show article for adjectives', () => {
@@ -340,9 +343,8 @@ describe('WordReferencePage', () => {
 
       renderPage();
 
-      const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading.querySelector('span')).toBeNull();
-      expect(heading).toHaveTextContent('καλός');
+      expect(screen.queryByTestId('word-article')).not.toBeInTheDocument();
+      expect(screen.getByTestId('word-lemma')).toHaveTextContent('καλός');
     });
 
     it('does not show article for adverbs', () => {
@@ -356,9 +358,8 @@ describe('WordReferencePage', () => {
 
       renderPage();
 
-      const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading.querySelector('span')).toBeNull();
-      expect(heading).toHaveTextContent('καλά');
+      expect(screen.queryByTestId('word-article')).not.toBeInTheDocument();
+      expect(screen.getByTestId('word-lemma')).toHaveTextContent('καλά');
     });
   });
 
@@ -378,9 +379,8 @@ describe('WordReferencePage', () => {
 
       renderPage();
 
-      const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading.querySelector('span')).toBeNull();
-      expect(heading).toHaveTextContent('λέξη');
+      expect(screen.queryByTestId('word-article')).not.toBeInTheDocument();
+      expect(screen.getByTestId('word-lemma')).toHaveTextContent('λέξη');
     });
 
     it('does not show article when noun grammar data lacks gender field', () => {
@@ -401,9 +401,7 @@ describe('WordReferencePage', () => {
 
       renderPage();
 
-      const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading.querySelector('span')).toBeNull();
-      expect(heading).toHaveTextContent('λέξη');
+      expect(screen.queryByTestId('word-article')).not.toBeInTheDocument();
     });
 
     it('does not show article when gender value is unknown', () => {
@@ -424,10 +422,7 @@ describe('WordReferencePage', () => {
 
       renderPage();
 
-      const heading = screen.getByRole('heading', { level: 1 });
-      // GENDER_ARTICLE_MAP['unknown_gender'] returns undefined, so no span
-      expect(heading.querySelector('span')).toBeNull();
-      expect(heading).toHaveTextContent('λέξη');
+      expect(screen.queryByTestId('word-article')).not.toBeInTheDocument();
     });
   });
 
@@ -531,6 +526,22 @@ describe('WordReferencePage', () => {
       expect(screen.queryByTestId('word-reference-page')).not.toBeInTheDocument();
     });
   });
+
+  describe('Back link', () => {
+    it('back link points to /decks/:deckId', () => {
+      mockUseWordEntry.mockReturnValue({
+        wordEntry: makeMasculineNoun(),
+        isLoading: false,
+        isError: false,
+        error: null,
+      });
+
+      renderPage();
+
+      const backLink = screen.getByTestId('back-button');
+      expect(backLink).toHaveAttribute('href', '/decks/test-deck-id');
+    });
+  });
 });
 
 // ============================================
@@ -553,6 +564,7 @@ describe('WordReferencePage — Audio SpeakerButton integration', () => {
       examples: null,
       audio_key: 'audio/word-1.mp3',
       audio_url: 'https://cdn.example.com/word-1.mp3',
+      audio_status: 'done',
       is_active: true,
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z',
@@ -609,5 +621,174 @@ describe('WordReferencePage — Audio SpeakerButton integration', () => {
       deck_id: 'test-deck-id',
       playback_speed: 1,
     });
+  });
+
+  it('4. audio wrapper gains is-playing class on play, loses it on stop', async () => {
+    const user = userEvent.setup();
+
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeWordEntryWithAudio(),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+
+    const wrapper = screen.getByTestId('word-audio-wrapper');
+    expect(wrapper).not.toHaveClass('is-playing');
+
+    await user.click(screen.getByTestId('speaker-button'));
+    expect(wrapper).toHaveClass('is-playing');
+
+    await user.click(screen.getByTestId('speaker-stop-trigger'));
+    expect(wrapper).not.toHaveClass('is-playing');
+  });
+});
+
+// ============================================
+// DX-10: Notes section tests
+// ============================================
+
+describe('WordReferencePage — DX-10 Notes section', () => {
+  it('shows notes section when grammar_data.notes is present', () => {
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeWordEntry({
+        grammar_data: { notes: 'This word is irregular in the plural.' },
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+
+    expect(screen.getByTestId('notes-section')).toBeInTheDocument();
+    expect(screen.getByText('This word is irregular in the plural.')).toBeInTheDocument();
+  });
+
+  it('hides notes section when grammar_data.notes is absent', () => {
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeMasculineNoun(), // grammar_data has no notes field
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+
+    expect(screen.queryByTestId('notes-section')).not.toBeInTheDocument();
+  });
+
+  it('hides notes section when grammar_data is null', () => {
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeWordEntry({ grammar_data: null }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+
+    expect(screen.queryByTestId('notes-section')).not.toBeInTheDocument();
+  });
+});
+
+// ============================================
+// DX-10: Active tab ring tests
+// ============================================
+
+describe('WordReferencePage — DX-10 Active tab ring', () => {
+  it('active word-info tab trigger has dx-tab-ring class', () => {
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeMasculineNoun(),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+
+    const trigger = screen.getByTestId('word-reference-tab-word-info');
+    expect(trigger).toHaveClass('dx-tab-ring');
+  });
+
+  it('cards tab trigger also has dx-tab-ring class', () => {
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeMasculineNoun(),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+
+    const trigger = screen.getByTestId('word-reference-tab-cards');
+    expect(trigger).toHaveClass('dx-tab-ring');
+  });
+});
+
+// ============================================
+// DX-10: Grammar section has NO dot
+// ============================================
+
+describe('WordReferencePage — DX-10 Grammar section has no UnwiredDot', () => {
+  it('grammar-section does not contain an UnwiredDot', () => {
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeMasculineNoun(),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+
+    const grammarSection = screen.getByTestId('grammar-section');
+    // UnwiredDot renders as .dx-unwired-dot — should not be present inside grammar
+    const dots = grammarSection.querySelectorAll('.dx-unwired-dot');
+    expect(dots).toHaveLength(0);
+  });
+});
+
+// ============================================
+// DX-11: Cards tab — view toggle + Audio placeholder
+// ============================================
+
+describe('WordReferencePage — DX-11 Cards tab', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseParams.mockReturnValue({ deckId: 'test-deck-id', wordId: 'test-word-id' });
+  });
+
+  it('cards tab shows empty state (not toggle) when there are no real cards', async () => {
+    const user = userEvent.setup();
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeMasculineNoun(),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+    await user.click(screen.getByTestId('word-reference-tab-cards'));
+
+    // Mock returns cards: [] — only Audio placeholder in groupedCards → empty state
+    expect(screen.getByTestId('cards-tab-empty')).toBeInTheDocument();
+    expect(screen.queryByTestId('cards-view-toggle')).not.toBeInTheDocument();
+  });
+
+  it('summary bar not rendered when cards tab shows empty state', async () => {
+    const user = userEvent.setup();
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeMasculineNoun(),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+    await user.click(screen.getByTestId('word-reference-tab-cards'));
+
+    expect(screen.queryByTestId('cards-summary-bar')).not.toBeInTheDocument();
   });
 });

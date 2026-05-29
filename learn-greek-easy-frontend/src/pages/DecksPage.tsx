@@ -12,6 +12,8 @@ import { EmptyState } from '@/components/feedback';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Kicker } from '@/features/decks/dx';
+import '@/features/decks/dx/dx.css';
 import { reportAPIError } from '@/lib/errorReporting';
 import { useDeckStore } from '@/stores/deckStore';
 
@@ -40,11 +42,9 @@ export const DecksPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-20 lg:pb-8">
       {/* Page Header */}
-      <div>
-        <h1
-          className="text-2xl font-semibold text-foreground md:text-3xl"
-          data-testid="decks-title"
-        >
+      <div className="dx-index-head">
+        <Kicker tone="primary">{t('list.kicker')}</Kicker>
+        <h1 className="dx-index-h" data-testid="decks-title">
           {t('list.title')}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground md:text-base">{t('list.subtitle')}</p>
@@ -85,7 +85,7 @@ export const DecksPage: React.FC = () => {
       {isLoading && !error && <DeckGridSkeleton />}
 
       {/* Decks Grid */}
-      {!isLoading && !error && decks.length > 0 && <DecksGrid decks={decks} />}
+      {!isLoading && !error && decks.length > 0 && <DecksGrid decks={decks} gridLayout="dx" />}
 
       {/* Empty State */}
       {!isLoading && !error && decks.length === 0 && (

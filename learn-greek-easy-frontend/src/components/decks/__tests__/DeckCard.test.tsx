@@ -1,13 +1,19 @@
 /**
  * DeckCard Component Tests
  *
- * Tests for the DeckCard component, focusing on:
- * - Premium badge renders when isPremium: true
- * - No badge renders when isPremium: false
- * - Locked state applies when premium + free user
+ * Tests for the DeckCard component (grid variant — DX gradient cover card):
+ * - Status badge per completion percentage (New / In progress / Complete)
+ * - Progress bar width and complete state
+ * - Meta line: cards/mastered, no UnwiredDot (R9)
+ * - progress === undefined → mastered 0 / pct 0 / badge "New" / no throw
+ * - Greek subtitle lang="el" and not italic
+ * - Active card has .is-active
+ * - Locked (isPremium) deck: overlay, non-clickable, showActions still works
  * - Action buttons (edit/delete) for user-owned decks
+ * - Accessibility (aria-label, role, tabIndex)
  *
  * Related features:
+ * - [DX-04] DeckCard gradient cover card
  * - [PREMBDG] Premium Badge for Decks
  * - [DECKCREAT-08] Deck Card Edit/Delete Buttons
  */
@@ -15,19 +21,19 @@
 import React from 'react';
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 
-import { DeckCard, type DeckCardProps } from '../DeckCard';
+import { DeckCard } from '../DeckCard';
 import type { Deck } from '@/types/deck';
 import i18n from '@/i18n';
 
-// Mock deck for testing
+// Mock deck factory
 const createMockDeck = (overrides: Partial<Deck> = {}): Deck => ({
   id: 'test-deck-1',
   title: 'Test Deck',
-  titleGreek: 'Test Deck Greek',
+  titleGreek: 'Δοκιμαστική Κολόνα',
   description: 'A test deck for unit tests',
   level: 'A1',
   category: 'vocabulary',
@@ -55,7 +61,6 @@ const createMockDeck = (overrides: Partial<Deck> = {}): Deck => ({
   ...overrides,
 });
 
-// Wrapper component with i18n provider
 const renderWithI18n = (ui: React.ReactElement) => {
   return render(<I18nextProvider i18n={i18n}>{ui}</I18nextProvider>);
 };
@@ -67,422 +72,321 @@ describe('DeckCard', () => {
     vi.clearAllMocks();
   });
 
-  describe('Premium Badge Rendering', () => {
-    it('should render premium badge when isPremium is true', () => {
-      const deck = createMockDeck({ isPremium: true });
-
+  // ── Status Badge (DX-04 R1) ──────────────────────────────────────────────
+  describe('Status badge per completion percentage', () => {
+    it('shows "New" badge when pct === 0', () => {
+      const deck = createMockDeck({
+        progress: {
+          deckId: 'test-deck-1',
+          status: 'not-started',
+          cardsTotal: 50,
+          cardsNew: 50,
+          cardsLearning: 0,
+          cardsReview: 0,
+          cardsMastered: 0,
+          dueToday: 0,
+          streak: 0,
+          totalTimeSpent: 0,
+          accuracy: 0,
+        },
+      });
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      // Look for the premium badge - it contains a Crown icon and "Premium" text
-      const card = screen.getByTestId('deck-card');
-
-      // The badge should be visible
-      // Using translation key 'card.premium' or looking for the Crown icon
-      const premiumBadge = within(card).queryByText(/premium/i);
-      expect(premiumBadge).toBeInTheDocument();
+      const badge = screen.getByTestId('deck-card-status-badge');
+      expect(badge.textContent?.toLowerCase()).toContain('new');
     });
 
-    it('should not render premium badge when isPremium is false', () => {
-      const deck = createMockDeck({ isPremium: false });
-
+    it('shows "In progress" badge when 0 < pct < 100', () => {
+      // cardsLearning=10, cardsMastered=5 → pct = round(15/50*100) = 30
+      const deck = createMockDeck({
+        progress: {
+          deckId: 'test-deck-1',
+          status: 'in-progress',
+          cardsTotal: 50,
+          cardsNew: 35,
+          cardsLearning: 10,
+          cardsReview: 0,
+          cardsMastered: 5,
+          dueToday: 5,
+          streak: 1,
+          totalTimeSpent: 30,
+          accuracy: 70,
+        },
+      });
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      const card = screen.getByTestId('deck-card');
-
-      // The premium badge should NOT be visible
-      const premiumBadge = within(card).queryByText(/premium/i);
-      expect(premiumBadge).not.toBeInTheDocument();
+      const badge = screen.getByTestId('deck-card-status-badge');
+      expect(badge.textContent?.toLowerCase()).toContain('progress');
     });
 
-    it('should not render premium badge when isPremium is undefined', () => {
-      const deck = createMockDeck();
-      // @ts-expect-error - Testing undefined case
-      delete deck.isPremium;
-
+    it('shows "Complete" badge when pct >= 100', () => {
+      // cardsLearning=25, cardsMastered=25 → pct = round(50/50*100) = 100
+      const deck = createMockDeck({
+        progress: {
+          deckId: 'test-deck-1',
+          status: 'completed',
+          cardsTotal: 50,
+          cardsNew: 0,
+          cardsLearning: 25,
+          cardsReview: 0,
+          cardsMastered: 25,
+          dueToday: 0,
+          streak: 10,
+          totalTimeSpent: 300,
+          accuracy: 90,
+        },
+      });
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      const card = screen.getByTestId('deck-card');
-
-      // The premium badge should NOT be visible
-      const premiumBadge = within(card).queryByText(/premium/i);
-      expect(premiumBadge).not.toBeInTheDocument();
-    });
-
-    it('should render premium badge with b-violet badge styling', () => {
-      const deck = createMockDeck({ isPremium: true });
-
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      // Find the premium badge span
-      const premiumBadge = screen.getByText(/premium/i);
-      expect(premiumBadge.className).toContain('badge');
-      expect(premiumBadge.className).toContain('b-violet');
+      const badge = screen.getByTestId('deck-card-status-badge');
+      expect(badge.textContent?.toLowerCase()).toContain('complete');
     });
   });
 
-  describe('Locked State', () => {
-    it('should show crown icon when deck is premium', () => {
-      const deck = createMockDeck({ isPremium: true });
-
+  // ── Progress bar (DX-04 R2) ──────────────────────────────────────────────
+  describe('Progress bar', () => {
+    it('renders progress bar with correct width when 0 < pct < 100', () => {
+      // cardsLearning=15, cardsMastered=10 → pct = round(25/50*100) = 50
+      const deck = createMockDeck({
+        progress: {
+          deckId: 'test-deck-1',
+          status: 'in-progress',
+          cardsTotal: 50,
+          cardsNew: 25,
+          cardsLearning: 15,
+          cardsReview: 0,
+          cardsMastered: 10,
+          dueToday: 5,
+          streak: 2,
+          totalTimeSpent: 60,
+          accuracy: 80,
+        },
+      });
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      // Look for the crown icon with aria-label
-      const crownIcon = screen.getByLabelText(/premium content/i);
-      expect(crownIcon).toBeInTheDocument();
+      const fill = screen.getByTestId('deck-card-progress-fill');
+      expect(fill).toBeInTheDocument();
+      expect(fill.style.width).toBe('50%');
     });
 
-    it('should not show crown icon when deck is not premium', () => {
+    it('does NOT render progress bar when pct >= 100 (shows complete instead)', () => {
+      const deck = createMockDeck({
+        progress: {
+          deckId: 'test-deck-1',
+          status: 'completed',
+          cardsTotal: 50,
+          cardsNew: 0,
+          cardsLearning: 25,
+          cardsReview: 0,
+          cardsMastered: 25,
+          dueToday: 0,
+          streak: 10,
+          totalTimeSpent: 300,
+          accuracy: 90,
+        },
+      });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(screen.queryByTestId('deck-card-progress-bar')).not.toBeInTheDocument();
+      expect(screen.getByTestId('deck-card-complete')).toBeInTheDocument();
+    });
+
+    it('does NOT render progress bar when pct === 0', () => {
+      const deck = createMockDeck({
+        progress: {
+          deckId: 'test-deck-1',
+          status: 'not-started',
+          cardsTotal: 50,
+          cardsNew: 50,
+          cardsLearning: 0,
+          cardsReview: 0,
+          cardsMastered: 0,
+          dueToday: 0,
+          streak: 0,
+          totalTimeSpent: 0,
+          accuracy: 0,
+        },
+      });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(screen.queryByTestId('deck-card-progress-bar')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('deck-card-complete')).not.toBeInTheDocument();
+    });
+  });
+
+  // ── Meta line — NO UnwiredDot (DX-04 R3 / R9 resolved) ─────────────────
+  describe('Meta line (cards / mastered)', () => {
+    it('renders meta with cardCount and cardsMastered', () => {
+      const progress = createMockDeck().progress!;
+      const deck = createMockDeck({ cardCount: 42, progress: { ...progress, cardsMastered: 7 } });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      const meta = screen.getByTestId('deck-card-meta');
+      expect(meta.textContent).toContain('42');
+      expect(meta.textContent).toContain('7');
+    });
+
+    it('does NOT render any UnwiredDot (R9 resolved)', () => {
+      const deck = createMockDeck();
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(document.querySelector('.dx-unwired-dot')).not.toBeInTheDocument();
+    });
+  });
+
+  // ── progress === undefined → graceful defaults (DX-04 R4) ───────────────
+  describe('Undefined progress', () => {
+    it('renders without throwing when progress is undefined', () => {
+      const deck = createMockDeck({ progress: undefined });
+      expect(() => renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />)).not.toThrow();
+    });
+
+    it('shows mastered=0 in meta when progress is undefined', () => {
+      const deck = createMockDeck({ progress: undefined });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      const meta = screen.getByTestId('deck-card-meta');
+      expect(meta.textContent).toContain('0');
+    });
+
+    it('shows "New" badge when progress is undefined', () => {
+      const deck = createMockDeck({ progress: undefined });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      const badge = screen.getByTestId('deck-card-status-badge');
+      expect(badge.textContent?.toLowerCase()).toContain('new');
+    });
+
+    it('does not render progress bar when progress is undefined', () => {
+      const deck = createMockDeck({ progress: undefined });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(screen.queryByTestId('deck-card-progress-bar')).not.toBeInTheDocument();
+    });
+  });
+
+  // ── Greek subtitle (DX-04 R5) ────────────────────────────────────────────
+  describe('Greek subtitle', () => {
+    it('renders Greek subtitle with lang="el"', () => {
+      const deck = createMockDeck({ titleGreek: 'Δοκιμαστική Κολόνα' });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      const el = screen.getByTestId('deck-card-greek-subtitle');
+      expect(el).toHaveAttribute('lang', 'el');
+    });
+
+    it('Greek subtitle uses dx-deck-card-el class (font-style: normal, Noto Serif)', () => {
+      const deck = createMockDeck({ titleGreek: 'Δοκιμαστική Κολόνα' });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      const el = screen.getByTestId('deck-card-greek-subtitle');
+      expect(el.className).toContain('dx-deck-card-el');
+    });
+  });
+
+  // ── Active state (DX-04 R6) ──────────────────────────────────────────────
+  describe('Active state', () => {
+    it('applies .is-active class when active=true', () => {
+      const deck = createMockDeck();
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} active={true} />);
+      const card = screen.getByTestId('deck-card');
+      expect(card.classList.contains('is-active')).toBe(true);
+      expect(card.classList.contains('dx-deck-card')).toBe(true);
+    });
+
+    it('does NOT apply .is-active when active is omitted', () => {
+      const deck = createMockDeck();
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      const card = screen.getByTestId('deck-card');
+      expect(card.classList.contains('is-active')).toBe(false);
+      expect(card.classList.contains('dx-deck-card')).toBe(true);
+    });
+  });
+
+  // ── Locked/premium state (DX-04 R7) ─────────────────────────────────────
+  describe('Locked (isPremium) deck', () => {
+    it('shows crown icon when deck is premium', () => {
+      const deck = createMockDeck({ isPremium: true });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(screen.getByLabelText(/premium content/i)).toBeInTheDocument();
+    });
+
+    it('does not show crown icon when deck is not premium', () => {
       const deck = createMockDeck({ isPremium: false });
-
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      // Crown icon should NOT be present
-      const crownIcon = screen.queryByLabelText(/premium content/i);
-      expect(crownIcon).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/premium content/i)).not.toBeInTheDocument();
     });
 
-    it('should apply blur styling to badges when deck is locked', () => {
+    it('renders locked overlay when deck is premium', () => {
       const deck = createMockDeck({ isPremium: true });
-
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      const badges = screen.getByTestId('deck-card-badges');
-
-      // Badges should have blur-sm class applied
-      expect(badges.className).toContain('blur-sm');
-    });
-
-    it('should not apply blur styling to badges when deck is not premium', () => {
-      const deck = createMockDeck({ isPremium: false });
-
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      const badges = screen.getByTestId('deck-card-badges');
-
-      // Badges should NOT have blur class
-      expect(badges.className).not.toContain('blur');
-    });
-
-    it('should render overlay when deck is locked', () => {
-      const deck = createMockDeck({ isPremium: true });
-
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      // Overlay should be present with correct classes
       const overlay = screen.getByTestId('deck-card-locked-overlay');
       expect(overlay).toBeInTheDocument();
-      // Overlay uses inline style (hsl(var(--card)/0.6)) + backdrop-blur-sm utility
       expect(overlay.className).toContain('backdrop-blur-sm');
-      expect(overlay.className).toContain('z-10');
       expect(overlay.className).toContain('pointer-events-none');
     });
 
-    it('should not render overlay when deck is not locked', () => {
+    it('does not render locked overlay when deck is not premium', () => {
       const deck = createMockDeck({ isPremium: false });
-
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      // Overlay should NOT be present
-      const overlay = screen.queryByTestId('deck-card-locked-overlay');
-      expect(overlay).not.toBeInTheDocument();
+      expect(screen.queryByTestId('deck-card-locked-overlay')).not.toBeInTheDocument();
     });
 
-    it('should have z-20 on header to keep it above overlay', () => {
-      const deck = createMockDeck({ isPremium: true });
-
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      const header = screen.getByTestId('deck-card-header');
-
-      // Header should have z-20 class for proper layering
-      expect(header.className).toContain('z-20');
-    });
-
-    it('should not be clickable when deck is locked', async () => {
+    it('is NOT clickable when deck is locked', async () => {
       const deck = createMockDeck({ isPremium: true });
       const onClick = vi.fn();
-
       renderWithI18n(<DeckCard deck={deck} onClick={onClick} />);
-
-      const card = screen.getByTestId('deck-card');
-
-      await userEvent.setup().click(card);
-
-      // onClick should NOT be called because deck is locked
+      await userEvent.setup().click(screen.getByTestId('deck-card'));
       expect(onClick).not.toHaveBeenCalled();
     });
 
-    it('should be clickable when deck is not premium', async () => {
+    it('is clickable when deck is not locked', async () => {
       const deck = createMockDeck({ isPremium: false });
       const onClick = vi.fn();
-
       renderWithI18n(<DeckCard deck={deck} onClick={onClick} />);
-
-      const card = screen.getByTestId('deck-card');
-
-      await userEvent.setup().click(card);
-
-      // onClick should be called
+      await userEvent.setup().click(screen.getByTestId('deck-card'));
       expect(onClick).toHaveBeenCalledTimes(1);
     });
-  });
 
-  describe('Accessibility', () => {
-    it('should have correct aria-label including locked status for premium decks', () => {
+    it('renders action buttons even when deck is locked (showActions=true)', () => {
       const deck = createMockDeck({ isPremium: true });
-
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      const card = screen.getByTestId('deck-card');
-
-      // aria-label should mention locked
-      expect(card).toHaveAttribute('aria-label');
-      expect(card.getAttribute('aria-label')).toContain('locked');
-    });
-
-    it('should have correct aria-label without locked status for free decks', () => {
-      const deck = createMockDeck({ isPremium: false });
-
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      const card = screen.getByTestId('deck-card');
-
-      // aria-label should NOT mention locked
-      expect(card).toHaveAttribute('aria-label');
-      expect(card.getAttribute('aria-label')).not.toContain('locked');
-    });
-
-    it('should have role="article" for locked cards (non-interactive)', () => {
-      const deck = createMockDeck({ isPremium: true });
-
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      const card = screen.getByTestId('deck-card');
-
-      // Locked cards should be article role (not button)
-      expect(card).toHaveAttribute('role', 'article');
-    });
-
-    it('should have role="button" for clickable cards', () => {
-      const deck = createMockDeck({ isPremium: false });
-
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      const card = screen.getByTestId('deck-card');
-
-      // Clickable cards should have button role
-      expect(card).toHaveAttribute('role', 'button');
-    });
-
-    it('should be keyboard accessible when not locked', async () => {
-      const deck = createMockDeck({ isPremium: false });
-      const onClick = vi.fn();
-
-      renderWithI18n(<DeckCard deck={deck} onClick={onClick} />);
-
-      const card = screen.getByTestId('deck-card');
-
-      // Should have tabIndex for keyboard navigation
-      expect(card).toHaveAttribute('tabIndex', '0');
-    });
-
-    it('should not have tabIndex when locked', () => {
-      const deck = createMockDeck({ isPremium: true });
-
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      const card = screen.getByTestId('deck-card');
-
-      // Locked cards should not be focusable via tabIndex
-      expect(card).not.toHaveAttribute('tabIndex');
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
+      expect(screen.getByTestId('deck-card-actions')).toBeInTheDocument();
     });
   });
 
-  describe('Badge Positioning', () => {
-    it('should render badges in bottom-left container', () => {
-      const deck = createMockDeck({ isPremium: false, category: 'vocabulary' });
-
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      const badgeContainer = screen.getByTestId('deck-card-badges');
-      expect(badgeContainer).toBeInTheDocument();
-      expect(badgeContainer.className).not.toContain('justify-end');
-    });
-
-    it('should display premium and category badges side-by-side in badge container', () => {
-      const deck = createMockDeck({ isPremium: true, category: 'vocabulary' });
-
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      const badgeContainer = screen.getByTestId('deck-card-badges');
-
-      const premiumBadge = within(badgeContainer).queryByText(/premium/i);
-      const categoryBadge = within(badgeContainer).queryByText(/vocabulary/i);
-
-      expect(premiumBadge).toBeInTheDocument();
-      expect(categoryBadge).toBeInTheDocument();
-    });
-
-    it('should display culture badge in badge container when isCultureDeck is true', () => {
-      const deck = createMockDeck({ isPremium: true, category: 'culture' });
-
-      renderWithI18n(
-        <DeckCard
-          deck={deck}
-          onClick={mockOnClick}
-          isCultureDeck={true}
-          cultureCategory="history"
-        />
-      );
-
-      const badgeContainer = screen.getByTestId('deck-card-badges');
-
-      const premiumBadge = within(badgeContainer).queryByText(/premium/i);
-      const cultureBadge = within(badgeContainer).queryByTestId('culture-badge');
-
-      expect(premiumBadge).toBeInTheDocument();
-      expect(cultureBadge).toBeInTheDocument();
-    });
-  });
-
-  describe('Visual Styling', () => {
-    it('should have special border styling for premium decks when not locked', () => {
-      // Note: In the current implementation, isPremium always results in isLocked=true
-      // This test is for future functionality when unlocked premium decks exist
-      const deck = createMockDeck({ isPremium: true });
-
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      const card = screen.getByTestId('deck-card');
-
-      // Premium (and locked) cards have grayscale but when unlocked would have amber border
-      // For now, just verify the card renders correctly
-      expect(card).toBeInTheDocument();
-    });
-  });
-
-  describe('Accent Stripe', () => {
-    it('should render accent stripe with CEFR color for vocab deck', () => {
-      const deck = createMockDeck({ level: 'A1' });
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-      const stripe = screen.getByTestId('deck-card-accent-stripe');
-      expect(stripe).toBeInTheDocument();
-      // A1 maps to bg-primary (token-based, no raw palette)
-      expect(stripe.className).toContain('bg-primary');
-    });
-
-    it('should render accent stripe with culture category color', () => {
-      const deck = createMockDeck();
-      renderWithI18n(
-        <DeckCard
-          deck={deck}
-          onClick={mockOnClick}
-          isCultureDeck={true}
-          cultureCategory="history"
-        />
-      );
-      const stripe = screen.getByTestId('deck-card-accent-stripe');
-      // history category maps to --warning token (named utility per design-system drift rule)
-      expect(stripe.className).toContain('bg-warning');
-    });
-
-    it('should have aria-hidden on accent stripe', () => {
-      const deck = createMockDeck();
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-      const stripe = screen.getByTestId('deck-card-accent-stripe');
-      expect(stripe).toHaveAttribute('aria-hidden', 'true');
-    });
-  });
-
+  // ── Action buttons (DX-04 / DECKCREAT-08) ───────────────────────────────
   describe('Action Buttons (Edit/Delete)', () => {
-    it('should not render action buttons when showActions is false', () => {
+    it('does not render action buttons when showActions is false', () => {
       const deck = createMockDeck();
-
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={false} />);
-
-      const actionsContainer = screen.queryByTestId('deck-card-actions');
-      expect(actionsContainer).not.toBeInTheDocument();
+      expect(screen.queryByTestId('deck-card-actions')).not.toBeInTheDocument();
     });
 
-    it('should not render action buttons when showActions is not provided (default)', () => {
+    it('does not render action buttons when showActions is not provided', () => {
       const deck = createMockDeck();
-
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      const actionsContainer = screen.queryByTestId('deck-card-actions');
-      expect(actionsContainer).not.toBeInTheDocument();
+      expect(screen.queryByTestId('deck-card-actions')).not.toBeInTheDocument();
     });
 
-    it('should render action buttons when showActions is true', () => {
+    it('renders action buttons when showActions is true', () => {
       const deck = createMockDeck();
-
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
-
-      const actionsContainer = screen.getByTestId('deck-card-actions');
-      expect(actionsContainer).toBeInTheDocument();
+      expect(screen.getByTestId('deck-card-actions')).toBeInTheDocument();
     });
 
-    it('should render edit button with correct data-testid', () => {
+    it('renders edit button with correct data-testid', () => {
       const deck = createMockDeck({ id: 'my-deck-123' });
-
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
-
-      const editButton = screen.getByTestId('edit-deck-my-deck-123');
-      expect(editButton).toBeInTheDocument();
+      expect(screen.getByTestId('edit-deck-my-deck-123')).toBeInTheDocument();
     });
 
-    it('should render delete button with correct data-testid', () => {
+    it('renders delete button with correct data-testid', () => {
       const deck = createMockDeck({ id: 'my-deck-123' });
-
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
-
-      const deleteButton = screen.getByTestId('delete-deck-my-deck-123');
-      expect(deleteButton).toBeInTheDocument();
+      expect(screen.getByTestId('delete-deck-my-deck-123')).toBeInTheDocument();
     });
 
-    it('should use ghost variant styling for edit button (no background)', () => {
-      const deck = createMockDeck();
-
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
-
-      const editButton = screen.getByTestId(`edit-deck-${deck.id}`);
-
-      // Ghost variant buttons don't have the primary bg class, but have hover:text-accent-foreground
-      // The edit button uses custom styling: bg-background/80 hover:bg-background
-      expect(editButton.className).toContain('hover:bg-background');
-      expect(editButton.className).toContain('text-foreground');
-    });
-
-    it('should use ghost variant styling for delete button (no background)', () => {
-      const deck = createMockDeck();
-
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
-
-      const deleteButton = screen.getByTestId(`delete-deck-${deck.id}`);
-
-      // Ghost variant with destructive color
-      expect(deleteButton.className).toContain('hover:bg-background');
-      expect(deleteButton.className).toContain('text-destructive');
-    });
-
-    it('should call onEditClick when edit button is clicked', async () => {
+    it('calls onEditClick when edit button is clicked', async () => {
       const deck = createMockDeck();
       const onEditClick = vi.fn();
-
       renderWithI18n(
         <DeckCard deck={deck} onClick={mockOnClick} showActions={true} onEditClick={onEditClick} />
       );
-
-      const editButton = screen.getByTestId(`edit-deck-${deck.id}`);
-      await userEvent.setup().click(editButton);
-
+      await userEvent.setup().click(screen.getByTestId(`edit-deck-${deck.id}`));
       expect(onEditClick).toHaveBeenCalledTimes(1);
     });
 
-    it('should call onDeleteClick when delete button is clicked', async () => {
+    it('calls onDeleteClick when delete button is clicked', async () => {
       const deck = createMockDeck();
       const onDeleteClick = vi.fn();
-
       renderWithI18n(
         <DeckCard
           deck={deck}
@@ -491,34 +395,26 @@ describe('DeckCard', () => {
           onDeleteClick={onDeleteClick}
         />
       );
-
-      const deleteButton = screen.getByTestId(`delete-deck-${deck.id}`);
-      await userEvent.setup().click(deleteButton);
-
+      await userEvent.setup().click(screen.getByTestId(`delete-deck-${deck.id}`));
       expect(onDeleteClick).toHaveBeenCalledTimes(1);
     });
 
-    it('should NOT trigger card onClick when edit button is clicked (stopPropagation)', async () => {
+    it('does NOT trigger card onClick when edit button is clicked (stopPropagation)', async () => {
       const deck = createMockDeck();
       const onCardClick = vi.fn();
       const onEditClick = vi.fn();
-
       renderWithI18n(
         <DeckCard deck={deck} onClick={onCardClick} showActions={true} onEditClick={onEditClick} />
       );
-
-      const editButton = screen.getByTestId(`edit-deck-${deck.id}`);
-      await userEvent.setup().click(editButton);
-
+      await userEvent.setup().click(screen.getByTestId(`edit-deck-${deck.id}`));
       expect(onEditClick).toHaveBeenCalledTimes(1);
       expect(onCardClick).not.toHaveBeenCalled();
     });
 
-    it('should NOT trigger card onClick when delete button is clicked (stopPropagation)', async () => {
+    it('does NOT trigger card onClick when delete button is clicked (stopPropagation)', async () => {
       const deck = createMockDeck();
       const onCardClick = vi.fn();
       const onDeleteClick = vi.fn();
-
       renderWithI18n(
         <DeckCard
           deck={deck}
@@ -527,96 +423,117 @@ describe('DeckCard', () => {
           onDeleteClick={onDeleteClick}
         />
       );
-
-      const deleteButton = screen.getByTestId(`delete-deck-${deck.id}`);
-      await userEvent.setup().click(deleteButton);
-
+      await userEvent.setup().click(screen.getByTestId(`delete-deck-${deck.id}`));
       expect(onDeleteClick).toHaveBeenCalledTimes(1);
       expect(onCardClick).not.toHaveBeenCalled();
     });
 
-    it('should position action buttons in top-right corner', () => {
+    it('positions action buttons in top-right corner', () => {
       const deck = createMockDeck();
-
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
-
-      const actionsContainer = screen.getByTestId('deck-card-actions');
-
-      // Should have absolute positioning classes
-      expect(actionsContainer.className).toContain('absolute');
-      expect(actionsContainer.className).toContain('right-2');
-      expect(actionsContainer.className).toContain('top-2');
+      const container = screen.getByTestId('deck-card-actions');
+      expect(container.className).toContain('absolute');
+      expect(container.className).toContain('right-2');
+      expect(container.className).toContain('top-2');
     });
 
-    it('should hide action buttons by default and show on hover', () => {
+    it('action buttons have opacity-0 default and group-hover:opacity-100', () => {
       const deck = createMockDeck();
-
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
-
-      const actionsContainer = screen.getByTestId('deck-card-actions');
-
-      // Should have opacity-0 (hidden) and group-hover:opacity-100 (show on hover)
-      expect(actionsContainer.className).toContain('opacity-0');
-      expect(actionsContainer.className).toContain('group-hover:opacity-100');
+      const container = screen.getByTestId('deck-card-actions');
+      expect(container.className).toContain('opacity-0');
+      expect(container.className).toContain('group-hover:opacity-100');
     });
 
-    it('should have proper z-index to appear above other card content', () => {
+    it('action buttons container has z-30', () => {
       const deck = createMockDeck();
-
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
-
-      const actionsContainer = screen.getByTestId('deck-card-actions');
-
-      // Should have z-30 to be above the header (z-20) and overlay (z-10)
-      expect(actionsContainer.className).toContain('z-30');
+      expect(screen.getByTestId('deck-card-actions').className).toContain('z-30');
     });
 
-    it('should have accessible aria-labels for action buttons', () => {
+    it('action buttons have aria-labels', () => {
       const deck = createMockDeck();
-
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
-
-      const editButton = screen.getByTestId(`edit-deck-${deck.id}`);
-      const deleteButton = screen.getByTestId(`delete-deck-${deck.id}`);
-
-      // Buttons should have aria-labels for screen readers
-      expect(editButton).toHaveAttribute('aria-label');
-      expect(deleteButton).toHaveAttribute('aria-label');
+      expect(screen.getByTestId(`edit-deck-${deck.id}`)).toHaveAttribute('aria-label');
+      expect(screen.getByTestId(`delete-deck-${deck.id}`)).toHaveAttribute('aria-label');
     });
 
-    it('should render edit button with Pencil icon', () => {
+    it('delete button has destructive text color', () => {
       const deck = createMockDeck();
-
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
+      expect(screen.getByTestId(`delete-deck-${deck.id}`).className).toContain('text-destructive');
+    });
+  });
 
-      const editButton = screen.getByTestId(`edit-deck-${deck.id}`);
-
-      // Pencil icon should be inside the button (as SVG)
-      const svg = editButton.querySelector('svg');
-      expect(svg).toBeInTheDocument();
+  // ── Accessibility ────────────────────────────────────────────────────────
+  describe('Accessibility', () => {
+    it('has aria-label including "locked" for premium decks', () => {
+      const deck = createMockDeck({ isPremium: true });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(screen.getByTestId('deck-card').getAttribute('aria-label')).toContain('locked');
     });
 
-    it('should render delete button with Trash2 icon', () => {
-      const deck = createMockDeck();
-
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
-
-      const deleteButton = screen.getByTestId(`delete-deck-${deck.id}`);
-
-      // Trash2 icon should be inside the button (as SVG)
-      const svg = deleteButton.querySelector('svg');
-      expect(svg).toBeInTheDocument();
+    it('has aria-label without "locked" for free decks', () => {
+      const deck = createMockDeck({ isPremium: false });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(screen.getByTestId('deck-card').getAttribute('aria-label')).not.toContain('locked');
     });
 
-    it('should render delete button with destructive color styling', () => {
+    it('has role="article" for locked cards (non-interactive)', () => {
+      const deck = createMockDeck({ isPremium: true });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(screen.getByTestId('deck-card')).toHaveAttribute('role', 'article');
+    });
+
+    it('has role="button" for clickable cards', () => {
+      const deck = createMockDeck({ isPremium: false });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(screen.getByTestId('deck-card')).toHaveAttribute('role', 'button');
+    });
+
+    it('has tabIndex=0 when not locked', () => {
+      const deck = createMockDeck({ isPremium: false });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(screen.getByTestId('deck-card')).toHaveAttribute('tabIndex', '0');
+    });
+
+    it('does not have tabIndex when locked', () => {
+      const deck = createMockDeck({ isPremium: true });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(screen.getByTestId('deck-card')).not.toHaveAttribute('tabIndex');
+    });
+
+    it('is keyboard accessible via Enter when not locked', async () => {
+      const deck = createMockDeck({ isPremium: false });
+      const onClick = vi.fn();
+      renderWithI18n(<DeckCard deck={deck} onClick={onClick} />);
+      screen.getByTestId('deck-card').focus();
+      await userEvent.setup().keyboard('{Enter}');
+      expect(onClick).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ── Premium badge ────────────────────────────────────────────────────────
+  describe('Premium Badge Rendering', () => {
+    it('renders premium badge text when isPremium is true', () => {
+      const deck = createMockDeck({ isPremium: true });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(screen.queryByText(/premium/i)).toBeInTheDocument();
+    });
+
+    it('does not render premium badge text when isPremium is false', () => {
+      const deck = createMockDeck({ isPremium: false });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(screen.queryByText(/premium/i)).not.toBeInTheDocument();
+    });
+  });
+
+  // ── Title ────────────────────────────────────────────────────────────────
+  describe('Title', () => {
+    it('renders the localized deck title', () => {
       const deck = createMockDeck();
-
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
-
-      const deleteButton = screen.getByTestId(`delete-deck-${deck.id}`);
-
-      // Delete button should have destructive text color
-      expect(deleteButton.className).toContain('text-destructive');
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(screen.getByTestId('deck-card-title')).toBeInTheDocument();
     });
   });
 });

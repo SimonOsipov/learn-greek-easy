@@ -28,6 +28,8 @@ import { cn } from '@/lib/utils';
 import type { CardTypeMastery } from '@/services/progressAPI';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
 
+import type { WordGender } from './V2DeckPage/WordGrid';
+
 // ============================================
 // POS Abbreviations and badge slots
 // ============================================
@@ -103,6 +105,8 @@ export interface WordCardProps {
   masteryFilled?: number;
   /** Per-card-type mastery breakdown for typed dots */
   typeProgress?: CardTypeMastery[];
+  /** Grammatical gender — drives the kicker dot colour. Omitted when unknown. */
+  gender?: WordGender;
 }
 
 interface MasteryIndicatorProps {
@@ -118,11 +122,12 @@ interface MasteryIndicatorProps {
  * Color reflects mastery status: gray (new), blue (learning), green (mastered).
  */
 const MasteryIndicator: React.FC<MasteryIndicatorProps> = ({ status = 'new' }) => {
+  const { t } = useTranslation('deck');
   return (
     <div
       data-testid="word-card-mastery-indicator"
       className={cn('h-2.5 w-2.5 rounded-full', STATUS_DOT_CLASS[status])}
-      aria-label={`Mastery: ${status}`}
+      aria-label={t('dx.masteryStatus', { status })}
     />
   );
 };
@@ -184,8 +189,9 @@ export const WordCard: React.FC<WordCardProps> = ({
   masteryStatus = 'new',
   masteryFilled = 0,
   typeProgress,
+  gender,
 }) => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation('deck');
   const { lemma, pronunciation, translation_en, translation_ru } = wordEntry;
   const displayTranslation = getLocalizedTranslation(translation_en, translation_ru, i18n.language);
 
@@ -216,24 +222,42 @@ export const WordCard: React.FC<WordCardProps> = ({
       onKeyDown={isClickable ? handleKeyDown : undefined}
       aria-label={`${lemma} - ${displayTranslation}`}
     >
-      <CardContent className="px-4 pb-4 pt-10">
-        {/* Top-left POS badge */}
-        <span
-          data-testid="word-card-pos"
-          className={`badge ${getPosBadgeSlot(wordEntry.part_of_speech)} absolute left-3 top-3`}
-        >
-          {getPosLabel(wordEntry.part_of_speech)}
-        </span>
+      <CardContent className="px-4 pb-4 pt-4">
+        {/* Head row: gender kicker (optional) + POS chip + mastery dot */}
+        <div className="dx-word-card-head">
+          <div className="flex items-center gap-2">
+            {/* Gender kicker — only rendered when gender is known */}
+            {gender !== undefined && (
+              <span
+                className="dx-word-card-kicker"
+                data-gender={gender}
+                data-testid="word-card-gender-kicker"
+                aria-label={t(`wordReference.gender.${gender}`)}
+              >
+                {t(`wordReference.gender.${gender}`)}
+              </span>
+            )}
+            {/* POS badge */}
+            <span
+              data-testid="word-card-pos"
+              className={`badge ${getPosBadgeSlot(wordEntry.part_of_speech)}`}
+            >
+              {getPosLabel(wordEntry.part_of_speech)}
+            </span>
+          </div>
 
-        {/* Top-right mastery indicator */}
-        <div className="absolute right-3 top-3">
+          {/* Mastery indicator */}
           <MasteryIndicator status={masteryStatus} />
         </div>
 
         {/* Main content - centered */}
         <div className="flex flex-col items-center space-y-2 text-center">
-          {/* Greek lemma */}
-          <h3 data-testid="word-card-lemma" className="text-xl font-semibold text-foreground">
+          {/* Greek lemma — Noto Serif, lang=el, not italic */}
+          <h3
+            data-testid="word-card-lemma"
+            className="text-xl font-semibold text-foreground"
+            lang="el"
+          >
             {lemma}
           </h3>
 

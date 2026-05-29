@@ -1,10 +1,13 @@
 import { useTranslation } from 'react-i18next';
 
+import { TypeChip, UnwiredDot } from '@/features/decks/dx';
 import { track } from '@/lib/analytics';
 
+import { CardRow } from './CardRow';
 import { MiniFlipCard } from './MiniFlipCard';
 
 import type { CardGroupKey, GroupedCards } from './cardGrouping';
+import type { CardsView } from './CardsViewToggle';
 import type { CardMasteryItem } from '../hooks';
 
 export interface CardTypeGroupProps {
@@ -15,8 +18,19 @@ export interface CardTypeGroupProps {
   totalCount: number;
   wordEntryId: string;
   deckId: string;
+  tone: 'primary' | 'violet' | 'cyan' | 'amber';
+  isPlaceholder?: boolean;
+  view?: CardsView;
 }
 
+/**
+ * CardTypeGroup — renders one card group (translation / grammar / declension / audio).
+ *
+ * - Accent tint + colored square marker via `.dx-cards-group[data-group]` CSS
+ * - TypeChip shows "{n} cards"
+ * - Audio group (isPlaceholder) shows an UnwiredDot with danger tone
+ * - view='grid' → MiniFlipCard grid (default), view='list' → CardRow list
+ */
 export function CardTypeGroup({
   groupKey,
   i18nKey,
@@ -25,41 +39,72 @@ export function CardTypeGroup({
   totalCount,
   wordEntryId,
   deckId,
+  tone,
+  isPlaceholder = false,
+  view = 'grid',
 }: CardTypeGroupProps) {
   const { t } = useTranslation('deck');
 
+  // Capitalize first letter for the data-group attribute (matches design handoff CSS)
+  const dataGroup = groupKey.charAt(0).toUpperCase() + groupKey.slice(1);
+
   return (
-    <div
-      className="space-y-3 rounded-lg border bg-card p-4 shadow-sm"
-      data-testid={`card-group-${groupKey}`}
-    >
-      <div
-        className="flex items-center justify-between"
-        data-testid={`card-group-header-${groupKey}`}
-      >
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {t(`wordReference.${i18nKey}`)}
-        </span>
-        <span className="text-xs text-muted-foreground">
-          {t('wordReference.groupMastered', { mastered: masteredCount, total: totalCount })}
-        </span>
+    <div className="dx-cards-group" data-group={dataGroup} data-testid={`card-group-${groupKey}`}>
+      {/* Group header */}
+      <div className="dx-cards-group-head" data-testid={`card-group-header-${groupKey}`}>
+        <h4 className="dx-cards-group-h">{t(`wordReference.${i18nKey}`)}</h4>
+        <div className="inline-flex items-center gap-2.5">
+          {!isPlaceholder && (
+            <span className="dx-cards-group-count">
+              {t('wordReference.groupMastered', {
+                mastered: masteredCount,
+                total: totalCount,
+              })}
+            </span>
+          )}
+          {isPlaceholder ? (
+            /* Audio group: UnwiredDot wraps the chip; dot uses danger tone (R8) */
+            <UnwiredDot tone="danger" aria-label={t('dx.unwiredAudioGroup')}>
+              <TypeChip tone={tone}>{t('wordReference.groupAudio')}</TypeChip>
+            </UnwiredDot>
+          ) : (
+            <TypeChip tone={tone}>
+              {t('wordReference.groupCardCount', {
+                n: totalCount,
+                defaultValue: '{{n}} cards',
+              })}
+            </TypeChip>
+          )}
+        </div>
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {cards.map((card) => (
-          <MiniFlipCard
-            key={card.id}
-            card={card}
-            onFlip={(flipped) => {
-              track('word_reference_card_flipped', {
-                card_type: card.card_type,
-                word_entry_id: wordEntryId,
-                deck_id: deckId,
-                direction: flipped ? 'to_back' : 'to_front',
-              });
-            }}
-          />
+
+      {/* Card content */}
+      {!isPlaceholder &&
+        cards.length > 0 &&
+        (view === 'list' ? (
+          <div className="dx-cards-list-view">
+            {cards.map((card) => (
+              <CardRow key={card.id} card={card} />
+            ))}
+          </div>
+        ) : (
+          <div className="dx-cards-grid">
+            {cards.map((card) => (
+              <MiniFlipCard
+                key={card.id}
+                card={card}
+                onFlip={(flipped) => {
+                  track('word_reference_card_flipped', {
+                    card_type: card.card_type,
+                    word_entry_id: wordEntryId,
+                    deck_id: deckId,
+                    direction: flipped ? 'to_back' : 'to_front',
+                  });
+                }}
+              />
+            ))}
+          </div>
         ))}
-      </div>
     </div>
   );
 }

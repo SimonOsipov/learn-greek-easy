@@ -13,6 +13,8 @@ export interface SpeakerButtonProps {
   size?: 'default' | 'sm';
   onPlay?: () => void;
   onError?: (error: string) => void;
+  /** Fired on every play-state change (true = playing, false = stopped/paused). Additive — does not break existing callers. */
+  onPlayStateChange?: (playing: boolean) => void;
   className?: string;
   speed?: AudioSpeed;
   controlledState?: {
@@ -34,6 +36,7 @@ export function SpeakerButton({
   size = 'default',
   onPlay,
   onError,
+  onPlayStateChange,
   className,
   speed,
   controlledState,
@@ -49,12 +52,18 @@ export function SpeakerButton({
   onPlayRef.current = onPlay;
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
+  const onPlayStateChangeRef = useRef(onPlayStateChange);
+  onPlayStateChangeRef.current = onPlayStateChange;
 
   // Fire onPlay only on false→true transition
+  // Fire onPlayStateChange on every play-state change
   const prevPlayingRef = useRef(false);
   useEffect(() => {
     if (isPlaying && !prevPlayingRef.current) {
       onPlayRef.current?.();
+    }
+    if (isPlaying !== prevPlayingRef.current) {
+      onPlayStateChangeRef.current?.(isPlaying);
     }
     prevPlayingRef.current = isPlaying;
   }, [isPlaying]);

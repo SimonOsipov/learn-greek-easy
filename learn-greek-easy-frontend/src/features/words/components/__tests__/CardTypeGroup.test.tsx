@@ -11,6 +11,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) =>
       opts ? `${key}:${JSON.stringify(opts)}` : key,
+    i18n: { language: 'en' },
   }),
 }));
 
@@ -48,6 +49,7 @@ const defaultProps = {
   cards: [makeCard('meaning_el_to_en', 'card-1'), makeCard('meaning_en_to_el', 'card-2')],
   masteredCount: 1,
   totalCount: 2,
+  tone: 'primary' as const,
   wordEntryId: 'we-1',
   deckId: 'deck-1',
 };
@@ -80,16 +82,60 @@ describe('CardTypeGroup', () => {
     expect(countText.textContent).toContain('"total":2');
   });
 
-  it('renders correct number of MiniFlipCard children', () => {
+  it('renders TypeChip with card count', () => {
+    render(<CardTypeGroup {...defaultProps} />);
+    // TypeChip renders the groupCardCount i18n key with n=2
+    expect(screen.getByText(/groupCardCount/)).toBeInTheDocument();
+  });
+
+  it('renders accent marker via dx-cards-group class', () => {
+    render(<CardTypeGroup {...defaultProps} />);
+    const group = screen.getByTestId('card-group-translation');
+    expect(group).toHaveClass('dx-cards-group');
+    expect(group).toHaveAttribute('data-group', 'Translation');
+  });
+
+  it('renders correct number of MiniFlipCard children in grid view', () => {
     render(<CardTypeGroup {...defaultProps} />);
     const cards = screen.getAllByTestId(/^mock-mini-flip-card-/);
     expect(cards).toHaveLength(2);
   });
 
-  it('renders cards in a grid layout', () => {
+  it('renders cards in dx-cards-grid layout by default', () => {
     render(<CardTypeGroup {...defaultProps} />);
-    const grid = document.querySelector('.grid.grid-cols-2');
+    const grid = document.querySelector('.dx-cards-grid');
     expect(grid).toBeInTheDocument();
+  });
+
+  it('renders list view when view="list"', () => {
+    render(<CardTypeGroup {...defaultProps} view="list" />);
+    const listView = document.querySelector('.dx-cards-list-view');
+    expect(listView).toBeInTheDocument();
+    // no grid in list mode
+    const grid = document.querySelector('.dx-cards-grid');
+    expect(grid).not.toBeInTheDocument();
+  });
+
+  it('Audio group shows exactly one UnwiredDot with danger tone', () => {
+    render(
+      <CardTypeGroup
+        groupKey="audio"
+        i18nKey="groupAudio"
+        cards={[]}
+        masteredCount={0}
+        totalCount={0}
+        tone="amber"
+        isPlaceholder={true}
+        wordEntryId="we-1"
+        deckId="deck-1"
+      />
+    );
+    const dots = document.querySelectorAll('.dx-unwired-dot');
+    expect(dots).toHaveLength(1);
+    // danger tone: the marker has no data-tone (danger is default, no attribute set)
+    const marker = dots[0].querySelector('.dx-unwired-dot-marker');
+    expect(marker).toBeInTheDocument();
+    expect(marker).not.toHaveAttribute('data-tone', 'amber');
   });
 
   it('fires track("word_reference_card_flipped") with to_back on first flip', async () => {

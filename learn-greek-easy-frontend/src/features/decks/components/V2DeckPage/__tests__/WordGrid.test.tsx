@@ -364,3 +364,59 @@ describe('WordGridSkeleton Component', () => {
     expect(card?.childNodes.length).toBeGreaterThan(0);
   });
 });
+
+// ============================================================
+// DX-08: getWordGender tests
+// ============================================================
+
+import { getWordGender } from '../WordGrid';
+
+describe('getWordGender', () => {
+  const makeEntry = (grammar_data: Record<string, unknown> | null): WordEntryResponse => ({
+    id: 'w1',
+    deck_id: 'd1',
+    lemma: 'λέξη',
+    part_of_speech: 'NOUN',
+    translation_en: 'word',
+    translation_en_plural: null,
+    translation_ru: null,
+    translation_ru_plural: null,
+    pronunciation: null,
+    grammar_data,
+    examples: null,
+    audio_key: null,
+    audio_url: null,
+    audio_status: 'missing',
+    is_active: true,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  });
+
+  it('returns "masculine" for grammar_data.gender = "masculine"', () => {
+    expect(getWordGender(makeEntry({ gender: 'masculine' }))).toBe('masculine');
+  });
+
+  it('returns "feminine" for grammar_data.gender = "feminine"', () => {
+    expect(getWordGender(makeEntry({ gender: 'feminine' }))).toBe('feminine');
+  });
+
+  it('returns "neuter" for grammar_data.gender = "neuter"', () => {
+    expect(getWordGender(makeEntry({ gender: 'neuter' }))).toBe('neuter');
+  });
+
+  it('returns undefined when grammar_data is null', () => {
+    expect(getWordGender(makeEntry(null))).toBeUndefined();
+  });
+
+  it('returns undefined when grammar_data has no gender field', () => {
+    expect(getWordGender(makeEntry({ voice: 'active' }))).toBeUndefined();
+  });
+
+  it('returns undefined for an invalid gender string', () => {
+    expect(getWordGender(makeEntry({ gender: 'unknown' }))).toBeUndefined();
+  });
+
+  it('returns undefined when gender is a number', () => {
+    expect(getWordGender(makeEntry({ gender: 42 }))).toBeUndefined();
+  });
+});

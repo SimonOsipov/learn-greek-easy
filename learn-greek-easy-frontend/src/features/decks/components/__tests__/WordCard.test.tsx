@@ -280,3 +280,90 @@ describe('WordCardSkeleton', () => {
     expect(dotsContainer?.children).toHaveLength(4);
   });
 });
+
+// ============================================================
+// DX-08: Gender kicker + mastery tests
+// ============================================================
+
+import type { WordGender } from '../V2DeckPage/WordGrid';
+
+describe('WordCard — DX-08 gender kicker', () => {
+  const baseEntry: WordEntryResponse = {
+    ...mockWordEntry,
+    grammar_data: null,
+  };
+
+  it('renders gender kicker with data-gender="masculine" when gender="masculine"', () => {
+    render(<WordCard wordEntry={baseEntry} gender="masculine" />);
+    const kicker = screen.getByTestId('word-card-gender-kicker');
+    expect(kicker).toBeInTheDocument();
+    expect(kicker).toHaveAttribute('data-gender', 'masculine');
+    expect(kicker).toHaveClass('dx-word-card-kicker');
+  });
+
+  it('renders gender kicker with data-gender="feminine" when gender="feminine"', () => {
+    render(<WordCard wordEntry={baseEntry} gender="feminine" />);
+    const kicker = screen.getByTestId('word-card-gender-kicker');
+    expect(kicker).toHaveAttribute('data-gender', 'feminine');
+  });
+
+  it('renders gender kicker with data-gender="neuter" when gender="neuter"', () => {
+    render(<WordCard wordEntry={baseEntry} gender="neuter" />);
+    const kicker = screen.getByTestId('word-card-gender-kicker');
+    expect(kicker).toHaveAttribute('data-gender', 'neuter');
+  });
+
+  it('omits the gender kicker when gender prop is undefined', () => {
+    render(<WordCard wordEntry={baseEntry} />);
+    expect(screen.queryByTestId('word-card-gender-kicker')).not.toBeInTheDocument();
+  });
+
+  it('still renders POS chip when gender is defined', () => {
+    render(<WordCard wordEntry={baseEntry} gender="masculine" />);
+    expect(screen.getByTestId('word-card-pos')).toBeInTheDocument();
+  });
+
+  it('still renders POS chip when gender is undefined', () => {
+    render(<WordCard wordEntry={baseEntry} />);
+    expect(screen.getByTestId('word-card-pos')).toBeInTheDocument();
+  });
+
+  it('mastery indicator is rendered alongside gender kicker', () => {
+    render(<WordCard wordEntry={baseEntry} gender="feminine" masteryStatus="learning" />);
+    expect(screen.getByTestId('word-card-mastery-indicator')).toBeInTheDocument();
+  });
+});
+
+describe('WordCard — DX-08 mastery meter (4-dot)', () => {
+  it('4-dot meter shows min(studied_count, 4) filled dots', () => {
+    render(<WordCard wordEntry={mockWordEntry} masteryFilled={4} />);
+    const dots = screen.getByTestId('mastery-dots');
+    expect(dots).toBeInTheDocument();
+    expect(dots.children).toHaveLength(4);
+  });
+
+  it('caps mastery dots at 4 even when masteryFilled > 4', () => {
+    render(<WordCard wordEntry={mockWordEntry} masteryFilled={6} />);
+    const dots = screen.getByTestId('mastery-dots');
+    expect(dots.children).toHaveLength(4);
+  });
+
+  it('shows 0 filled dots when masteryFilled is 0', () => {
+    render(<WordCard wordEntry={mockWordEntry} masteryFilled={0} />);
+    expect(screen.getByTestId('mastery-dots')).toBeInTheDocument();
+  });
+});
+
+describe('WordCard — DX-08 preserved elements', () => {
+  it('Greek lemma has lang="el"', () => {
+    render(<WordCard wordEntry={mockWordEntry} />);
+    const lemma = screen.getByTestId('word-card-lemma');
+    expect(lemma).toHaveAttribute('lang', 'el');
+  });
+
+  it('does not render UnwiredDot', () => {
+    render(<WordCard wordEntry={mockWordEntry} />);
+    // UnwiredDot has class dx-unwired-dot — must not appear on WordCard
+    expect(document.querySelector('.dx-unwired-dot')).not.toBeInTheDocument();
+  });
+});
