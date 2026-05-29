@@ -240,6 +240,9 @@ async def run_description_audio_pipeline(
     """
     description_id, text = await load_description_text(situation_id, level, factory)
 
+    # First-generation only: invoked from create_news_item on freshly-created rows
+    # (audio_s3_key is None), so there is no prior key to delete.
+    # Regeneration goes through the SSE endpoint, which handles prior-key cleanup.
     s3_key = _versioned_description_key(description_id, level)
 
     result = await generate_description_audio(text, s3_key, audio_service)

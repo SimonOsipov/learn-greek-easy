@@ -240,4 +240,7 @@ async def run_picture_generation_pipeline(
     picture_id, image_prompt = await load_picture_for_generation(situation_id, factory)
     result = await generate_picture_bytes(image_prompt, openrouter_service)
     s3_key = await upload_picture_to_s3(picture_id, result.image_bytes, s3_service)
+    # First-generation only: invoked from create_news_item on a freshly-created
+    # picture (image_s3_key is None), so there is no prior key to delete.
+    # Regeneration goes through the SSE endpoint, which handles prior-key cleanup.
     await persist_picture_generation(picture_id, s3_key, factory)
