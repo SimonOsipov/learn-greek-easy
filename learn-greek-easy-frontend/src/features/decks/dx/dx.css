@@ -316,6 +316,23 @@
   z-index: 1;
 }
 
+/* Photo covers need a stronger scrim: the title/kicker/meta live in the left
+ * column and the progress bar spans the bottom, but a photo is far busier than
+ * a flat gradient. Darken the left column and the bottom edge, leaving the
+ * top-right (only the pill-backed status badge) showing the image. Applied only
+ * when a cover image is present so gradient-only cards keep their lighter scrim. */
+.dx-cover-host.has-cover::before {
+  background:
+    linear-gradient(
+      90deg,
+      hsl(0 0% 0% / 0.7) 0%,
+      hsl(0 0% 0% / 0.38) 36%,
+      hsl(0 0% 0% / 0.06) 66%,
+      transparent 100%
+    ),
+    linear-gradient(0deg, hsl(0 0% 0% / 0.42) 0%, hsl(0 0% 0% / 0.08) 28%, transparent 50%);
+}
+
 /* Sheen: radial top-right gloss highlight */
 .dx-cover-host::after {
   content: '';

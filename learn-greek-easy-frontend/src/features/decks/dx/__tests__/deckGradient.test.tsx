@@ -219,4 +219,16 @@ describe('DxCover', () => {
     const host = container.querySelector('.dx-cover-host') as HTMLElement;
     expect(host.getAttribute('style') ?? '').toContain(deckGradient(baseDeck));
   });
+
+  it('adds the has-cover class (stronger scrim) only when a cover image is present', () => {
+    const withImg = render(<DxCover deck={{ ...baseDeck, coverImageUrl: coverUrl }} />);
+    expect(withImg.container.querySelector('.dx-cover-host')?.classList.contains('has-cover')).toBe(
+      true
+    );
+
+    const noImg = render(<DxCover deck={baseDeck} />);
+    expect(noImg.container.querySelector('.dx-cover-host')?.classList.contains('has-cover')).toBe(
+      false
+    );
+  });
 });

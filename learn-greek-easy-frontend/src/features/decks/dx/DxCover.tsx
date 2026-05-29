@@ -48,7 +48,10 @@ export function DxCover({ deck, variant = 'card', className, children }: DxCover
     [cssVarName]: gradient,
   };
 
-  const cls = ['dx-cover-host', className].filter(Boolean).join(' ');
+  // `has-cover` lets the scrim darken the left text column more on photo covers.
+  const cls = ['dx-cover-host', deck.coverImageUrl && 'has-cover', className]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div className={cls} style={style} data-variant={variant}>
