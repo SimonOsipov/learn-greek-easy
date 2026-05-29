@@ -63,14 +63,15 @@ CONTENT_TYPE_TO_EXT = {
 
 # Content type to Cache-Control header mapping for uploaded objects.
 # Applied via put_object CacheControl= so the stored object carries the directive.
-# NO "immutable" here — that is added in SCACHE-03/04/05 after versioning lands.
+# "immutable" is safe: all overwritten keys are versioned (SCACHE-03/04/05 done),
+# so re-uploads mint a new key + delete the old — no in-place overwrite can pin stale bytes.
 # Unmapped types fall back to the image directive (graceful, no crash).
-_DEFAULT_CACHE_CONTROL = "public, max-age=86400"
+_DEFAULT_CACHE_CONTROL = "public, max-age=86400, immutable"
 CONTENT_TYPE_TO_CACHE_CONTROL: dict[str, str] = {
-    "image/jpeg": "public, max-age=86400",
-    "image/png": "public, max-age=86400",
-    "image/webp": "public, max-age=86400",
-    "audio/mpeg": "public, max-age=86400",
+    "image/jpeg": "public, max-age=86400, immutable",
+    "image/png": "public, max-age=86400, immutable",
+    "image/webp": "public, max-age=86400, immutable",
+    "audio/mpeg": "public, max-age=86400, immutable",
 }
 
 # Lock protecting the process-global botocore.auth.get_current_datetime rebind
