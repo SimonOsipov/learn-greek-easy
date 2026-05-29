@@ -9,6 +9,7 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { DxCover, Kicker } from '@/features/decks/dx';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { calculateCompletionPercentage } from '@/lib/progressUtils';
+import { cn } from '@/lib/utils';
 import type { Deck } from '@/types/deck';
 
 import { DeckBadge } from './DeckBadge';
@@ -175,7 +176,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   return (
     <article
       data-testid="deck-card"
-      className={`dx-deck-card${active ? 'is-active' : ''}`}
+      className={cn('dx-deck-card', active && 'is-active')}
       onClick={isClickable ? onClick : undefined}
       role={isClickable ? 'button' : 'article'}
       tabIndex={isClickable ? 0 : undefined}
@@ -232,7 +233,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
               )}
             </Kicker>
             <span
-              className={`dx-deck-card-badge${complete ? 'is-primary' : ''}`}
+              className={cn('dx-deck-card-badge', complete && 'is-primary')}
               data-testid="deck-card-status-badge"
             >
               {badge}

@@ -277,14 +277,16 @@ describe('DeckCard', () => {
       const deck = createMockDeck();
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} active={true} />);
       const card = screen.getByTestId('deck-card');
-      expect(card.className).toContain('is-active');
+      expect(card.classList.contains('is-active')).toBe(true);
+      expect(card.classList.contains('dx-deck-card')).toBe(true);
     });
 
     it('does NOT apply .is-active when active is omitted', () => {
       const deck = createMockDeck();
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
       const card = screen.getByTestId('deck-card');
-      expect(card.className).not.toContain('is-active');
+      expect(card.classList.contains('is-active')).toBe(false);
+      expect(card.classList.contains('dx-deck-card')).toBe(true);
     });
   });
 
