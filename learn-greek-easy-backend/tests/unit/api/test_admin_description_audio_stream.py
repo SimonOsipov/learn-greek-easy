@@ -10,6 +10,7 @@ import pytest
 
 from src.core.dependencies import SSEAuthResult
 from src.services.audio_generation_service import AudioWithTimestampsResult
+from tests.helpers.assertions import assert_versioned_s3_key
 
 
 def _parse_sse_text(text: str) -> list[dict]:
@@ -99,11 +100,19 @@ def _make_audio_result(description_id, level: str = "b1") -> AudioWithTimestamps
     )
 
 
-def _make_session_factory_mock(description: MagicMock | None = None) -> MagicMock:
+def _make_session_factory_mock(
+    description: MagicMock | None = None,
+    prior_audio_key: str | None = None,
+) -> MagicMock:
     """Create a mock session factory.
 
-    First begin() call: SELECT for SituationDescription.
-    Second begin() call: UPDATE after audio generation.
+    Call 1 (load): SELECT for SituationDescription -> returns *description*.
+    Call 2 (prior-key): SELECT audio_s3_key for the level -> returns *prior_audio_key*.
+    Call 3 (persist): UPDATE after audio generation -> generic execute.
+
+    The pipeline now has an extra SELECT to read the prior key before persist
+    (SCACHE-06 regenerate flow).  Tests that do not care about the prior key
+    can leave *prior_audio_key* as None (no prior audio).
     """
     call_count = 0
 
@@ -113,10 +122,17 @@ def _make_session_factory_mock(description: MagicMock | None = None) -> MagicMoc
         session = MagicMock()
 
         if call_count == 1:
+            # load: SELECT SituationDescription
             result_mock = MagicMock()
             result_mock.scalar_one_or_none.return_value = description
             session.execute = AsyncMock(return_value=result_mock)
+        elif call_count == 2:
+            # prior-key: SELECT audio_s3_key / audio_a2_s3_key
+            result_mock = MagicMock()
+            result_mock.scalar_one_or_none.return_value = prior_audio_key
+            session.execute = AsyncMock(return_value=result_mock)
         else:
+            # persist: UPDATE
             session.execute = AsyncMock(return_value=MagicMock())
 
         cm = MagicMock()
@@ -244,9 +260,14 @@ class TestDescriptionAudioSSEPipeline:
         assert complete_events[0]["data"]["duration_seconds"] == 2.0
         assert complete_events[0]["data"]["audio_url"] == "https://cdn.example.com/audio.mp3"
 
-        # Verify generate_single called with correct args
+        # Verify generate_single called with versioned b1 key shape
         call_kwargs = mock_audio_service.generate_single.call_args
-        assert call_kwargs.kwargs["s3_key"] == f"situation-description-audio/{description_id}.mp3"
+        assert_versioned_s3_key(
+            call_kwargs.kwargs["s3_key"],
+            "situation-description-audio/b1",
+            description_id,
+            ext="mp3",
+        )
         assert call_kwargs.kwargs["with_timestamps"] is True
 
     @pytest.mark.asyncio
@@ -287,10 +308,13 @@ class TestDescriptionAudioSSEPipeline:
         complete_events = [e for e in events if e["event"] == "description_audio:complete"]
         assert complete_events[0]["data"]["level"] == "a2"
 
-        # Verify a2 s3_key and with_timestamps=True were used
+        # Verify a2 versioned key shape and with_timestamps=True were used
         call_kwargs = mock_audio_service.generate_single.call_args
-        assert (
-            call_kwargs.kwargs["s3_key"] == f"situation-description-audio/a2/{description_id}.mp3"
+        assert_versioned_s3_key(
+            call_kwargs.kwargs["s3_key"],
+            "situation-description-audio/a2",
+            description_id,
+            ext="mp3",
         )
         assert call_kwargs.kwargs["with_timestamps"] is True
 
@@ -355,18 +379,31 @@ class TestDescriptionAudioSSEPipeline:
 
     @pytest.mark.asyncio
     async def test_regenerate_overwrites_existing_audio(self) -> None:
-        """Existing audio_s3_key is overwritten when regenerating."""
+        """Existing audio_s3_key is overwritten when regenerating.
+
+        The pipeline now opens THREE factory sessions:
+        1. load: SELECT SituationDescription
+        2. prior-key: SELECT audio_s3_key to capture it before overwriting
+        3. persist: UPDATE the description row with the new key
+
+        After persist succeeds, the prior key is deleted from S3 via delete_object.
+        """
         from src.api.v1.admin import _description_audio_sse_pipeline
 
         situation_id = uuid4()
         description_id = uuid4()
+        prior_key = f"situation-description-audio/{description_id}-old.mp3"
+
         # Description already has existing b1 audio
         description = _make_description_mock(situation_id, description_id)
-        description.audio_s3_key = f"situation-description-audio/{description_id}-old.mp3"
+        description.audio_s3_key = prior_key
         description.audio_duration_seconds = 1.0
         description.word_timestamps = []
 
-        mock_factory = _make_session_factory_mock(description)
+        # Pass prior_audio_key so call 2 returns it from the SELECT
+        mock_factory = _make_session_factory_mock(description, prior_audio_key=prior_key)
+        mock_s3 = MagicMock()
+        mock_s3.delete_object.return_value = True
 
         mock_audio_service = MagicMock()
         mock_audio_service.generate_single = AsyncMock(
@@ -382,6 +419,7 @@ class TestDescriptionAudioSSEPipeline:
                 "src.api.v1.admin.get_audio_generation_service",
                 return_value=mock_audio_service,
             ),
+            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
         ):
             events = await _collect_generator(_description_audio_sse_pipeline(situation_id, "b1"))
 
@@ -392,5 +430,8 @@ class TestDescriptionAudioSSEPipeline:
         complete_events = [e for e in events if e["event"] == "description_audio:complete"]
         assert complete_events[0]["data"]["audio_url"] == "https://cdn.example.com/audio-new.mp3"
 
-        # The UPDATE should have been called (second factory.begin() call)
-        assert mock_factory.begin.call_count == 2
+        # Three factory.begin() calls: load + prior-key SELECT + persist UPDATE
+        assert mock_factory.begin.call_count == 3
+
+        # Prior key was deleted from S3 after successful persist
+        mock_s3.delete_object.assert_called_once_with(prior_key)

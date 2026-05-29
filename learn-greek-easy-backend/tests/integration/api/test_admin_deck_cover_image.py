@@ -16,6 +16,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.factories.content import DeckFactory
+from tests.helpers.assertions import assert_versioned_s3_key
 
 # ============================================================================
 # Test Fixtures
@@ -64,9 +65,9 @@ class TestUploadDeckCoverImage:
         assert data["cover_image_url"] == "https://s3.example.com/deck-images/test.jpg"
         mock_s3.upload_object.assert_called_once()
 
-        # Verify s3_key was persisted in DB
+        # Verify versioned s3_key was persisted in DB (kind-a: output of new upload)
         await db_session.refresh(deck)
-        assert deck.cover_image_s3_key == f"deck-images/{deck.id}.jpg"
+        assert_versioned_s3_key(deck.cover_image_s3_key, "deck-images", deck.id, ext="jpg")
 
     @pytest.mark.asyncio
     async def test_upload_cover_image_png(
@@ -91,7 +92,7 @@ class TestUploadDeckCoverImage:
         assert data["cover_image_url"] is not None
 
         await db_session.refresh(deck)
-        assert deck.cover_image_s3_key == f"deck-images/{deck.id}.png"
+        assert_versioned_s3_key(deck.cover_image_s3_key, "deck-images", deck.id, ext="png")
 
     @pytest.mark.asyncio
     async def test_upload_cover_image_webp(
@@ -116,7 +117,7 @@ class TestUploadDeckCoverImage:
         assert data["cover_image_url"] is not None
 
         await db_session.refresh(deck)
-        assert deck.cover_image_s3_key == f"deck-images/{deck.id}.webp"
+        assert_versioned_s3_key(deck.cover_image_s3_key, "deck-images", deck.id, ext="webp")
 
     @pytest.mark.asyncio
     async def test_upload_cover_image_invalid_content_type(
@@ -210,19 +211,24 @@ class TestUploadDeckCoverImage:
         db_session: AsyncSession,
         mock_s3: MagicMock,
     ) -> None:
-        """Test that uploading twice replaces the image and updates s3_key."""
+        """Test that uploading twice replaces the image and updates s3_key.
+
+        Both the first and second upload produce versioned keys (sha256-based).
+        The delete call after the second upload uses the first upload's versioned key.
+        """
         deck = await DeckFactory.create(session=db_session)
 
-        # First upload (JPEG)
+        # First upload (JPEG) — produces versioned key
         await client.post(
             f"/api/v1/admin/decks/{deck.id}/cover-image",
             files={"file": ("cover.jpg", b"fake-jpeg-bytes", "image/jpeg")},
             headers=superuser_auth_headers,
         )
         await db_session.refresh(deck)
-        assert deck.cover_image_s3_key == f"deck-images/{deck.id}.jpg"
+        first_key = deck.cover_image_s3_key
+        assert_versioned_s3_key(first_key, "deck-images", deck.id, ext="jpg")
 
-        # Second upload (PNG - different extension triggers delete of old key)
+        # Second upload (PNG - different content hash → different key → old key deleted)
         mock_s3.generate_presigned_url.return_value = "https://s3.example.com/deck-images/test.png"
         response = await client.post(
             f"/api/v1/admin/decks/{deck.id}/cover-image",
@@ -232,8 +238,9 @@ class TestUploadDeckCoverImage:
 
         assert response.status_code == 200
         await db_session.refresh(deck)
-        assert deck.cover_image_s3_key == f"deck-images/{deck.id}.png"
-        mock_s3.delete_object.assert_called_once_with(f"deck-images/{deck.id}.jpg")
+        assert_versioned_s3_key(deck.cover_image_s3_key, "deck-images", deck.id, ext="png")
+        # Old versioned key (from first upload) was deleted
+        mock_s3.delete_object.assert_called_once_with(first_key)
 
     @pytest.mark.asyncio
     async def test_deck_list_includes_cover_image_url(

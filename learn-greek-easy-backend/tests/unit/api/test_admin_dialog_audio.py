@@ -26,6 +26,7 @@ from src.db.models import (
 )
 from src.services.audio_generation_service import DialogAudioResult
 from tests.factories import SituationFactory
+from tests.helpers.assertions import assert_versioned_s3_key
 
 
 async def _create_situation(db_session: AsyncSession) -> object:
@@ -117,6 +118,32 @@ def _make_session_factory_mock(db_session: AsyncSession) -> MagicMock:
     mock_factory = MagicMock()
     mock_factory.begin.return_value = mock_begin_cm
     return mock_factory
+
+
+def _make_versioned_generate_dialog(num_lines: int = 3) -> AsyncMock:
+    """Return an AsyncMock for audio_service.generate_dialog that echoes the versioned s3_key.
+
+    The pipeline passes a versioned key into generate_dialog.  A real audio service
+    returns DialogAudioResult whose s3_key matches what was passed in.  This mock
+    replicates that behaviour so tests are realistic about what ends up in the DB.
+    """
+
+    async def _side_effect(inputs, s3_key):  # noqa: ARG001
+        return DialogAudioResult(
+            audio_bytes=b"fake-mp3-bytes",
+            s3_key=s3_key,  # echo back the versioned key
+            duration_seconds=4.5,
+            file_size_bytes=14,
+            line_timings={i: (i * 1500, (i + 1) * 1500) for i in range(num_lines)},
+            word_timestamps_map={
+                i: [{"word": f"w{i}", "start_ms": i * 1500, "end_ms": i * 1500 + 750}]
+                for i in range(num_lines)
+            },
+            alignment_source="original",
+            degenerate_line_count=0,
+        )
+
+    return AsyncMock(side_effect=_side_effect)
 
 
 class TestDialogAudioStreamAuth:
@@ -227,22 +254,7 @@ class TestDialogAudioStreamPipeline:
         mock_factory = _make_session_factory_mock(db_session)
 
         mock_audio_service = MagicMock()
-        mock_audio_service.generate_dialog = AsyncMock(
-            return_value=DialogAudioResult(
-                audio_bytes=b"fake-mp3-bytes",
-                s3_key=f"dialog-audio/{dialog.id}.mp3",
-                duration_seconds=4.5,
-                file_size_bytes=14,
-                line_timings={0: (0, 1500), 1: (1500, 3000), 2: (3000, 4500)},
-                word_timestamps_map={
-                    0: [{"word": "Γεια", "start_ms": 0, "end_ms": 750}],
-                    1: [{"word": "Γεια", "start_ms": 1500, "end_ms": 2250}],
-                    2: [{"word": "Πώς", "start_ms": 3000, "end_ms": 3750}],
-                },
-                alignment_source="original",
-                degenerate_line_count=0,
-            )
-        )
+        mock_audio_service.generate_dialog = _make_versioned_generate_dialog(num_lines=3)
 
         sse_auth = _make_superuser_auth()
 
@@ -267,10 +279,11 @@ class TestDialogAudioStreamPipeline:
         assert "dialog_audio:complete" in event_types
         assert "dialog_audio:error" not in event_types
 
-        # Verify DB state was updated
+        # Verify DB state was updated with a versioned key
         await db_session.refresh(dialog)
         assert dialog.status == DialogStatus.AUDIO_READY
         assert dialog.audio_s3_key is not None
+        assert_versioned_s3_key(dialog.audio_s3_key, "dialog-audio", dialog.id, ext="mp3")
         assert dialog.audio_duration_seconds is not None
         assert dialog.audio_duration_seconds > 0
         assert dialog.audio_generated_at is not None
@@ -363,22 +376,7 @@ class TestDialogAudioStreamPipeline:
         mock_factory = _make_session_factory_mock(db_session)
 
         mock_audio_service = MagicMock()
-        mock_audio_service.generate_dialog = AsyncMock(
-            return_value=DialogAudioResult(
-                audio_bytes=b"fake-mp3-bytes",
-                s3_key=f"dialog-audio/{dialog.id}.mp3",
-                duration_seconds=4.5,
-                file_size_bytes=14,
-                line_timings={0: (0, 1500), 1: (1500, 3000), 2: (3000, 4500)},
-                word_timestamps_map={
-                    0: [{"word": "Γεια", "start_ms": 0, "end_ms": 750}],
-                    1: [{"word": "Γεια", "start_ms": 1500, "end_ms": 2250}],
-                    2: [{"word": "Πώς", "start_ms": 3000, "end_ms": 3750}],
-                },
-                alignment_source="original",
-                degenerate_line_count=0,
-            )
-        )
+        mock_audio_service.generate_dialog = _make_versioned_generate_dialog(num_lines=3)
 
         sse_auth = _make_superuser_auth()
 
@@ -448,11 +446,10 @@ class TestDialogAudioStreamPipeline:
 
         mock_factory = _make_session_factory_mock(db_session)
 
-        mock_audio_service = MagicMock()
-        mock_audio_service.generate_dialog = AsyncMock(
-            return_value=DialogAudioResult(
+        async def _generate_no_timestamps(inputs, s3_key):  # noqa: ARG001
+            return DialogAudioResult(
                 audio_bytes=b"fake-mp3-bytes",
-                s3_key=f"dialog-audio/{dialog.id}.mp3",
+                s3_key=s3_key,  # echo versioned key
                 duration_seconds=3.0,
                 file_size_bytes=14,
                 line_timings={0: (0, 1500), 1: (1500, 3000)},
@@ -460,7 +457,9 @@ class TestDialogAudioStreamPipeline:
                 alignment_source="original",
                 degenerate_line_count=0,
             )
-        )
+
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_dialog = AsyncMock(side_effect=_generate_no_timestamps)
 
         sse_auth = _make_superuser_auth()
 
@@ -600,26 +599,18 @@ class TestDialogAudioStreamPipeline:
         await db_session.flush()
 
         mock_factory = _make_session_factory_mock(db_session)
+        mock_s3_service = MagicMock()
+        mock_s3_service.delete_object.return_value = True
 
         mock_audio_service = MagicMock()
-        mock_audio_service.generate_dialog = AsyncMock(
-            return_value=DialogAudioResult(
-                audio_bytes=b"fake-mp3-bytes",
-                s3_key=f"dialog-audio/{dialog.id}.mp3",
-                duration_seconds=4.5,
-                file_size_bytes=14,
-                line_timings={0: (0, 1500), 1: (1500, 3000), 2: (3000, 4500)},
-                word_timestamps_map={0: None, 1: None, 2: None},
-                alignment_source="original",
-                degenerate_line_count=0,
-            )
-        )
+        mock_audio_service.generate_dialog = _make_versioned_generate_dialog(num_lines=3)
 
         sse_auth = _make_superuser_auth()
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch("src.api.v1.admin.get_audio_generation_service", return_value=mock_audio_service),
+            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3_service),
             patch("src.api.v1.admin.settings") as mock_settings,
         ):
             mock_settings.elevenlabs_configured = True
@@ -636,12 +627,17 @@ class TestDialogAudioStreamPipeline:
         assert len(complete_events) == 1
 
         await db_session.refresh(dialog)
+        # New key is versioned; old flat key is gone
+        assert_versioned_s3_key(dialog.audio_s3_key, "dialog-audio", dialog.id, ext="mp3")
         assert dialog.audio_s3_key != old_s3_key
         assert dialog.audio_generated_at is not None
         assert dialog.audio_generated_at > old_generated_at
         assert dialog.audio_duration_seconds is not None
         assert dialog.audio_duration_seconds > 0
         assert dialog.status == DialogStatus.AUDIO_READY
+
+        # Old flat key was deleted from S3 after successful regeneration
+        mock_s3_service.delete_object.assert_called_once_with(old_s3_key)
 
         for line in lines:
             await db_session.refresh(line)
@@ -703,26 +699,18 @@ class TestDialogAudioStreamPipeline:
         await db_session.flush()
 
         mock_factory = _make_session_factory_mock(db_session)
+        mock_s3_service = MagicMock()
+        mock_s3_service.delete_object.return_value = True
 
         mock_audio_service = MagicMock()
-        mock_audio_service.generate_dialog = AsyncMock(
-            return_value=DialogAudioResult(
-                audio_bytes=b"fake-mp3-bytes",
-                s3_key=f"dialog-audio/{dialog.id}.mp3",
-                duration_seconds=4.5,
-                file_size_bytes=14,
-                line_timings={0: (0, 1500), 1: (1500, 3000), 2: (3000, 4500)},
-                word_timestamps_map={0: None, 1: None, 2: None},
-                alignment_source="original",
-                degenerate_line_count=0,
-            )
-        )
+        mock_audio_service.generate_dialog = _make_versioned_generate_dialog(num_lines=3)
 
         sse_auth = _make_superuser_auth()
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch("src.api.v1.admin.get_audio_generation_service", return_value=mock_audio_service),
+            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3_service),
             patch("src.api.v1.admin.settings") as mock_settings,
         ):
             mock_settings.elevenlabs_configured = True
@@ -739,12 +727,17 @@ class TestDialogAudioStreamPipeline:
         assert len(complete_events) == 1
 
         await db_session.refresh(dialog)
+        # New key is versioned; old flat key is gone
+        assert_versioned_s3_key(dialog.audio_s3_key, "dialog-audio", dialog.id, ext="mp3")
         assert dialog.audio_s3_key != old_s3_key
         assert dialog.audio_generated_at is not None
         assert dialog.audio_generated_at > old_generated_at
         assert dialog.audio_duration_seconds is not None
         assert dialog.audio_duration_seconds > 0
         assert dialog.status == DialogStatus.EXERCISES_READY
+
+        # Old flat key was deleted from S3 after successful regeneration
+        mock_s3_service.delete_object.assert_called_once_with(old_s3_key)
 
         for line in lines:
             await db_session.refresh(line)
@@ -961,11 +954,11 @@ class TestDialogAudioStreamPipeline:
         dialog = await self._setup_dialog_3lines(db_session)
 
         mock_factory = _make_session_factory_mock(db_session)
-        mock_audio_service = MagicMock()
-        mock_audio_service.generate_dialog = AsyncMock(
-            return_value=DialogAudioResult(
+
+        async def _generate_degenerate(inputs, s3_key):  # noqa: ARG001
+            return DialogAudioResult(
                 audio_bytes=b"fake-mp3-bytes",
-                s3_key=f"dialog-audio/{dialog.id}.mp3",
+                s3_key=s3_key,
                 duration_seconds=4.5,
                 file_size_bytes=14,
                 line_timings={0: (0, 0), 1: (1500, 3000), 2: (3000, 4500)},
@@ -973,7 +966,9 @@ class TestDialogAudioStreamPipeline:
                 alignment_source="redistribution",
                 degenerate_line_count=1,
             )
-        )
+
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_dialog = AsyncMock(side_effect=_generate_degenerate)
 
         sse_auth = _make_superuser_auth()
 
@@ -1001,18 +996,7 @@ class TestDialogAudioStreamPipeline:
 
         mock_factory = _make_session_factory_mock(db_session)
         mock_audio_service = MagicMock()
-        mock_audio_service.generate_dialog = AsyncMock(
-            return_value=DialogAudioResult(
-                audio_bytes=b"fake-mp3-bytes",
-                s3_key=f"dialog-audio/{dialog.id}.mp3",
-                duration_seconds=4.5,
-                file_size_bytes=14,
-                line_timings={0: (0, 1500), 1: (1500, 3000), 2: (3000, 4500)},
-                word_timestamps_map={0: None, 1: None, 2: None},
-                alignment_source="original",
-                degenerate_line_count=0,
-            )
-        )
+        mock_audio_service.generate_dialog = _make_versioned_generate_dialog(num_lines=3)
 
         sse_auth = _make_superuser_auth()
 

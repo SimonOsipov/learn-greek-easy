@@ -16,6 +16,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.factories import CultureDeckFactory
+from tests.helpers.assertions import assert_versioned_s3_key
 
 # ============================================================================
 # Test Fixtures
@@ -63,9 +64,9 @@ class TestUploadCultureDeckCoverImage:
         assert data["cover_image_url"] == "https://s3.example.com/culture-deck-images/test.jpg"
         mock_s3.upload_object.assert_called_once()
 
-        # Verify s3_key was persisted in DB
+        # Verify versioned s3_key was persisted in DB (kind-a: output of new upload)
         await db_session.refresh(deck)
-        assert deck.cover_image_s3_key == f"culture-deck-images/{deck.id}.jpg"
+        assert_versioned_s3_key(deck.cover_image_s3_key, "culture-deck-images", deck.id, ext="jpg")
 
     @pytest.mark.asyncio
     async def test_upload_cover_image_invalid_content_type(
@@ -162,16 +163,17 @@ class TestUploadCultureDeckCoverImage:
         """Test that uploading twice with different extension replaces the image."""
         deck = await CultureDeckFactory.create(session=db_session)
 
-        # First upload (JPEG)
+        # First upload (JPEG) — produces versioned key
         await client.post(
             f"/api/v1/culture/decks/{deck.id}/cover-image",
             files={"file": ("cover.jpg", b"fake-jpeg-bytes", "image/jpeg")},
             headers=superuser_auth_headers,
         )
         await db_session.refresh(deck)
-        assert deck.cover_image_s3_key == f"culture-deck-images/{deck.id}.jpg"
+        first_key = deck.cover_image_s3_key
+        assert_versioned_s3_key(first_key, "culture-deck-images", deck.id, ext="jpg")
 
-        # Second upload (PNG - different extension triggers delete of old key)
+        # Second upload (PNG - different content hash -> different key -> old key deleted)
         mock_s3.generate_presigned_url.return_value = (
             "https://s3.example.com/culture-deck-images/test.png"
         )
@@ -183,8 +185,9 @@ class TestUploadCultureDeckCoverImage:
 
         assert response.status_code == 200
         await db_session.refresh(deck)
-        assert deck.cover_image_s3_key == f"culture-deck-images/{deck.id}.png"
-        mock_s3.delete_object.assert_called_once_with(f"culture-deck-images/{deck.id}.jpg")
+        assert_versioned_s3_key(deck.cover_image_s3_key, "culture-deck-images", deck.id, ext="png")
+        # Old versioned key (from first upload) was deleted
+        mock_s3.delete_object.assert_called_once_with(first_key)
 
 
 # ============================================================================
