@@ -5,7 +5,8 @@
  * - deckGradient(): determinism, distinctness, regex shape
  * - deckGradientStack(): 3 distinct strings, front === deckGradient()
  * - DxCover: sets expected --dx-* custom property per variant,
- *            renders children, emits NO <img>
+ *            renders children, emits NO <img>,
+ *            renders cover image layer when coverImageUrl is set (gradient fallback otherwise)
  */
 
 import React from 'react';
@@ -185,5 +186,37 @@ describe('DxCover', () => {
     const expected = deckGradient(baseDeck);
     // The style attr should contain the gradient string
     expect(styleAttr).toContain(expected);
+  });
+
+  // ─── Cover image layer ──────────────────────────────────────────────────────
+
+  const coverUrl = 'https://example.com/deck-cover.png';
+
+  it('renders the cover image layer when coverImageUrl is set', () => {
+    const { container } = render(<DxCover deck={{ ...baseDeck, coverImageUrl: coverUrl }} />);
+    const img = container.querySelector('.dx-cover-img') as HTMLElement;
+    expect(img).not.toBeNull();
+    expect(img.getAttribute('style') ?? '').toContain(`url("${coverUrl}")`);
+    // Decorative layer — hidden from the a11y tree.
+    expect(img.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('does NOT render the cover image layer when coverImageUrl is absent (gradient fallback)', () => {
+    const { container } = render(<DxCover deck={baseDeck} />);
+    expect(container.querySelector('.dx-cover-img')).toBeNull();
+    // Gradient is still applied as the fallback.
+    const host = container.querySelector('.dx-cover-host') as HTMLElement;
+    expect(host.getAttribute('style') ?? '').toContain('--dx-grad');
+  });
+
+  it('still emits NO <img> element even when coverImageUrl is set', () => {
+    const { container } = render(<DxCover deck={{ ...baseDeck, coverImageUrl: coverUrl }} />);
+    expect(container.querySelectorAll('img')).toHaveLength(0);
+  });
+
+  it('keeps the gradient custom property as fallback when a cover image is present', () => {
+    const { container } = render(<DxCover deck={{ ...baseDeck, coverImageUrl: coverUrl }} />);
+    const host = container.querySelector('.dx-cover-host') as HTMLElement;
+    expect(host.getAttribute('style') ?? '').toContain(deckGradient(baseDeck));
   });
 });

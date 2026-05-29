@@ -290,6 +290,24 @@ describe('DeckCard', () => {
     });
   });
 
+  // ── Cover image ──────────────────────────────────────────────────────────
+  describe('Cover image', () => {
+    const coverUrl = 'https://example.com/deck-cover.png';
+
+    it('renders the cover image layer when coverImageUrl is set', () => {
+      const deck = createMockDeck({ coverImageUrl: coverUrl });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      const img = screen.getByTestId('dx-cover-img');
+      expect(img.getAttribute('style') ?? '').toContain(`url("${coverUrl}")`);
+    });
+
+    it('falls back to the gradient (no image layer) when coverImageUrl is absent', () => {
+      const deck = createMockDeck({ coverImageUrl: undefined });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(screen.queryByTestId('dx-cover-img')).toBeNull();
+    });
+  });
+
   // ── Locked/premium state (DX-04 R7) ─────────────────────────────────────
   describe('Locked (isPremium) deck', () => {
     it('shows crown icon when deck is premium', () => {

@@ -333,6 +333,18 @@
   color: hsl(0 0% 100% / 0.95);
 }
 
+/* Cover image layer: painted above the gradient fallback but below the scrim
+ * (::before, z-index 1) and sheen (::after, z-index 2) so text stays legible.
+ * Two classes outrank `.dx-cover-host > *`, keeping it at z-index 0. */
+.dx-cover-host > .dx-cover-img {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
 /* ── Deck grid (2-col, 1-col ≤880px) ─────────────────────────────────────── */
 .dx-deck-grid {
   display: grid;
