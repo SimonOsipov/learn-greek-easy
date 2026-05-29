@@ -16,7 +16,14 @@
  * Note: Tests that create decks should clean up after themselves to maintain isolation.
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Locator } from '@playwright/test';
+
+/** Click a card action button reliably: center it in the viewport first so the sticky header can't intercept the click. */
+async function clickCardActionButton(button: Locator) {
+  await button.scrollIntoViewIfNeeded();
+  await button.evaluate((el) => el.scrollIntoView({ block: 'center', inline: 'nearest' }));
+  await button.click();
+}
 
 // Storage state paths
 const LEARNER_AUTH = 'playwright/.auth/learner.json';
@@ -102,7 +109,7 @@ test.describe('Deck Creation - Create Flows', () => {
     const actionsContainer = newDeckCard.locator('[data-testid="deck-card-actions"]');
     await expect(actionsContainer).toBeVisible({ timeout: 3000 });
     const deleteButton = newDeckCard.locator('button[data-testid^="delete-deck-"]');
-    await deleteButton.click();
+    await clickCardActionButton(deleteButton);
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 5000 });
     await dialog.getByRole('button', { name: /delete/i }).click();
@@ -235,7 +242,7 @@ test.describe('Deck Creation - Edit Flows', () => {
 
     // Click the first edit button in this card's actions
     const editButton = myGreekBasicsCard.locator('button[data-testid^="edit-deck-"]');
-    await editButton.click();
+    await clickCardActionButton(editButton);
 
     // Modal should open in edit mode
     const modal = page.locator('[data-testid="user-deck-modal"]');
@@ -269,7 +276,7 @@ test.describe('Deck Creation - Edit Flows', () => {
     });
     await updatedCard.hover();
     const editButtonRestore = updatedCard.locator('button[data-testid^="edit-deck-"]');
-    await editButtonRestore.click();
+    await clickCardActionButton(editButtonRestore);
     await expect(modal).toBeVisible({ timeout: 5000 });
     await nameInput.clear();
     await nameInput.fill('My Greek Basics');
@@ -383,7 +390,7 @@ test.describe('Deck Creation - Edit Flows', () => {
     const actionsContainer = practiceDeckCard.locator('[data-testid="deck-card-actions"]');
     await expect(actionsContainer).toBeVisible({ timeout: 3000 });
     const editButton = practiceDeckCard.locator('button[data-testid^="edit-deck-"]');
-    await editButton.click();
+    await clickCardActionButton(editButton);
 
     // Modal should open
     const modal = page.locator('[data-testid="user-deck-modal"]');
@@ -469,7 +476,7 @@ test.describe('Deck Creation - Delete Flows', () => {
       const actionsContainer = deckCard.locator('[data-testid="deck-card-actions"]');
       await expect(actionsContainer).toBeVisible({ timeout: 3000 });
       const deleteButton = deckCard.locator('button[data-testid^="delete-deck-"]');
-      await deleteButton.click();
+      await clickCardActionButton(deleteButton);
 
       // Confirmation dialog should appear
       const dialog = page.getByRole('dialog');
@@ -578,7 +585,7 @@ test.describe('Deck Creation - Delete Flows', () => {
       const actionsContainer = myGreekBasicsCard.locator('[data-testid="deck-card-actions"]');
       await expect(actionsContainer).toBeVisible({ timeout: 3000 });
       const deleteButton = myGreekBasicsCard.locator('button[data-testid^="delete-deck-"]');
-      await deleteButton.click();
+      await clickCardActionButton(deleteButton);
 
       // Confirmation dialog should appear
       const dialog = page.getByRole('dialog');
@@ -652,7 +659,7 @@ test.describe('Deck Creation - Admin Flows', () => {
     const actionsContainer = adminDeckCard.locator('[data-testid="deck-card-actions"]');
     await expect(actionsContainer).toBeVisible({ timeout: 3000 });
     const editButton = adminDeckCard.locator('button[data-testid^="edit-deck-"]');
-    await editButton.click();
+    await clickCardActionButton(editButton);
 
     // Modal should open
     const modal = page.locator('[data-testid="user-deck-modal"]');
@@ -773,7 +780,7 @@ test.describe('Deck Creation - Validation Flows', () => {
     const actionsContainer = newDeckCard.locator('[data-testid="deck-card-actions"]');
     await expect(actionsContainer).toBeVisible({ timeout: 3000 });
     const editButton = newDeckCard.locator('button[data-testid^="edit-deck-"]');
-    await editButton.click();
+    await clickCardActionButton(editButton);
 
     await expect(modal).toBeVisible({ timeout: 5000 });
 
@@ -799,7 +806,7 @@ test.describe('Deck Creation - Validation Flows', () => {
     // Clean up - delete the test deck
     await newDeckCard.hover();
     const deleteButton = newDeckCard.locator('button[data-testid^="delete-deck-"]');
-    await deleteButton.click();
+    await clickCardActionButton(deleteButton);
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 5000 });
     await dialog.getByRole('button', { name: /delete/i }).click();
@@ -861,7 +868,7 @@ test.describe('Deck Creation - Action Card Button', () => {
     });
     await newDeckCard.hover();
     const deleteButton = newDeckCard.locator('button[data-testid^="delete-deck-"]');
-    await deleteButton.click();
+    await clickCardActionButton(deleteButton);
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 5000 });
     await dialog.getByRole('button', { name: /delete/i }).click();
