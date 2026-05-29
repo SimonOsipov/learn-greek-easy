@@ -347,7 +347,9 @@
     "promptMeaningReverse": "How do you say this in Greek?",
     "promptArticle": "What is the article?",
     "promptPlural": "What is the plural?",
-    "promptSentence": "Translate this sentence"
+    "promptSentence": "Translate this sentence",
+    "sectionCollocations": "Collocations",
+    "sectionRelatedWords": "Related Words"
   },
   "practice": {
     "title": "Practice",

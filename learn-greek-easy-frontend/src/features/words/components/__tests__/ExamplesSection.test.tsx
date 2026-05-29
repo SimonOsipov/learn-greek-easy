@@ -1,12 +1,11 @@
 /**
  * ExamplesSection Component Tests
  *
- * Tests for the ExamplesSection component, covering:
- * - Display of example sentences
- * - Greek, English, and Russian translations
- * - Context badge rendering
- * - Empty state handling (null, empty array)
- * - Multiple examples rendering
+ * Updated for DX-10:
+ * - Component re-skinned to .dx-section card
+ * - Each example has a .dx-example-tag + R5 amber UnwiredDot
+ * - mapContextToTag logic tested (derived vs placeholder)
+ * - Original bindings (example.context, example.audio_url) preserved
  */
 
 import userEvent from '@testing-library/user-event';
@@ -16,7 +15,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WordEntryExampleSentence } from '@/services/wordEntryAPI';
 
-import { ExamplesSection } from '../ExamplesSection';
+import { ExamplesSection, mapContextToTag } from '../ExamplesSection';
 
 // Mock SpeakerButton — captures callbacks and exposes via test buttons
 vi.mock('@/components/ui/SpeakerButton', () => ({
@@ -43,6 +42,13 @@ vi.mock('@/components/ui/SpeakerButton', () => ({
   },
 }));
 
+// Mock UnwiredDot — renders marker span for assertions
+vi.mock('@/features/decks/dx', () => ({
+  UnwiredDot: ({ tone, 'aria-label': ariaLabel }: { tone?: string; 'aria-label'?: string }) => (
+    <span data-testid="unwired-dot" data-tone={tone} aria-label={ariaLabel} />
+  ),
+}));
+
 // Mock analytics module
 vi.mock('@/lib/analytics', () => ({
   track: vi.fn(),
@@ -51,12 +57,14 @@ vi.mock('@/lib/analytics', () => ({
 // Mock example data
 const mockExamples: WordEntryExampleSentence[] = [
   {
+    id: 'ex-1',
     greek: 'Το σπίτι μου είναι μικρό.',
     english: 'My house is small.',
     russian: 'Мой дом маленький.',
     context: 'daily life',
   },
   {
+    id: 'ex-2',
     greek: 'Μένω σε ένα μεγάλο σπίτι.',
     english: 'I live in a big house.',
     russian: 'Я живу в большом доме.',
@@ -67,6 +75,7 @@ const mockExamples: WordEntryExampleSentence[] = [
 // Example without Russian translation
 const exampleWithoutRussian: WordEntryExampleSentence[] = [
   {
+    id: 'ex-3',
     greek: 'Καλημέρα!',
     english: 'Good morning!',
   },
@@ -75,6 +84,7 @@ const exampleWithoutRussian: WordEntryExampleSentence[] = [
 // Example without English translation
 const exampleWithoutEnglish: WordEntryExampleSentence[] = [
   {
+    id: 'ex-4',
     greek: 'Γεια σου!',
   },
 ];
@@ -83,11 +93,55 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+// ============================================
+// mapContextToTag unit tests
+// ============================================
+
+describe('mapContextToTag', () => {
+  it('returns simple/derived=false when context is null', () => {
+    expect(mapContextToTag(null)).toEqual({ tag: 'simple', derived: false });
+  });
+
+  it('returns simple/derived=false when context is undefined', () => {
+    expect(mapContextToTag(undefined)).toEqual({ tag: 'simple', derived: false });
+  });
+
+  it('returns simple/derived=false for non-matching context', () => {
+    expect(mapContextToTag('daily life')).toEqual({ tag: 'simple', derived: false });
+  });
+
+  it('returns comparative/derived=true when context contains "comparative"', () => {
+    expect(mapContextToTag('comparative adjective')).toEqual({ tag: 'comparative', derived: true });
+  });
+
+  it('returns comparative/derived=true when context contains "comparison"', () => {
+    expect(mapContextToTag('for comparison purposes')).toEqual({
+      tag: 'comparative',
+      derived: true,
+    });
+  });
+
+  it('returns locative/derived=true when context contains "locative"', () => {
+    expect(mapContextToTag('locative case')).toEqual({ tag: 'locative', derived: true });
+  });
+
+  it('returns locative/derived=true when context contains "location"', () => {
+    expect(mapContextToTag('describes a location')).toEqual({ tag: 'locative', derived: true });
+  });
+
+  it('returns locative/derived=true when context contains "place"', () => {
+    expect(mapContextToTag('talking about a place')).toEqual({ tag: 'locative', derived: true });
+  });
+});
+
+// ============================================
+// ExamplesSection rendering tests
+// ============================================
+
 describe('ExamplesSection', () => {
   describe('Section Header', () => {
     it('renders examples section title', () => {
       render(<ExamplesSection examples={mockExamples} />);
-
       expect(screen.getByText('Examples')).toBeInTheDocument();
     });
   });
@@ -95,43 +149,49 @@ describe('ExamplesSection', () => {
   describe('Example Display', () => {
     it('displays Greek sentence', () => {
       render(<ExamplesSection examples={mockExamples} />);
-
       expect(screen.getByText('Το σπίτι μου είναι μικρό.')).toBeInTheDocument();
     });
 
     it('displays English translation', () => {
       render(<ExamplesSection examples={mockExamples} />);
-
       expect(screen.getByText('My house is small.')).toBeInTheDocument();
     });
 
     it('displays locale-appropriate translation (English in en locale)', () => {
       render(<ExamplesSection examples={mockExamples} />);
-      // English locale: should show English translation
       expect(screen.getByText('My house is small.')).toBeInTheDocument();
-      // Russian should NOT be rendered
       expect(screen.queryByText('Мой дом маленький.')).not.toBeInTheDocument();
     });
 
-    it('displays context badge when available', () => {
+    it('renders a .dx-example-tag for each example', () => {
       render(<ExamplesSection examples={mockExamples} />);
-
-      expect(screen.getByText('daily life')).toBeInTheDocument();
+      const tags = screen.getAllByTestId('example-tag');
+      expect(tags).toHaveLength(2);
     });
 
-    it('does not display context badge when null', () => {
+    it('renders an amber UnwiredDot (R5) for each example', () => {
       render(<ExamplesSection examples={mockExamples} />);
+      const dots = screen.getAllByTestId('unwired-dot');
+      expect(dots.length).toBeGreaterThanOrEqual(2);
+      // all per-example dots are amber
+      dots.forEach((dot) => {
+        expect(dot).toHaveAttribute('data-tone', 'amber');
+      });
+    });
 
-      // Second example has context: null, so only one context badge
-      const badges = screen.getAllByText('daily life');
-      expect(badges.length).toBe(1);
+    it('example tag shows "simple" when context is null (placeholder)', () => {
+      render(<ExamplesSection examples={mockExamples} />);
+      // both examples map to 'simple' (context='daily life' → simple; context=null → simple)
+      const tags = screen.getAllByTestId('example-tag');
+      tags.forEach((tag) => {
+        expect(tag).toHaveTextContent('simple');
+      });
     });
   });
 
   describe('Multiple Examples', () => {
     it('renders all examples', () => {
       render(<ExamplesSection examples={mockExamples} />);
-
       expect(screen.getByText('Το σπίτι μου είναι μικρό.')).toBeInTheDocument();
       expect(screen.getByText('Μένω σε ένα μεγάλο σπίτι.')).toBeInTheDocument();
     });
@@ -140,46 +200,44 @@ describe('ExamplesSection', () => {
   describe('Optional Fields', () => {
     it('does not render Russian translation when missing', () => {
       render(<ExamplesSection examples={exampleWithoutRussian} />);
-
       expect(screen.getByText('Good morning!')).toBeInTheDocument();
-      // Russian should not be present
       expect(screen.queryByText(/Доброе утро/)).not.toBeInTheDocument();
     });
 
     it('does not render English translation when missing', () => {
       render(<ExamplesSection examples={exampleWithoutEnglish} />);
-
       expect(screen.getByText('Γεια σου!')).toBeInTheDocument();
+    });
+
+    it('Greek sentence carries lang="el"', () => {
+      render(<ExamplesSection examples={exampleWithoutRussian} />);
+      const greekEl = screen.getByText('Καλημέρα!');
+      expect(greekEl).toHaveAttribute('lang', 'el');
     });
   });
 
   describe('Empty State', () => {
     it('displays empty message when examples is null', () => {
       render(<ExamplesSection examples={null} />);
-
       expect(screen.getByText('No examples available')).toBeInTheDocument();
     });
 
     it('displays empty message when examples array is empty', () => {
       render(<ExamplesSection examples={[]} />);
-
       expect(screen.getByText('No examples available')).toBeInTheDocument();
     });
 
     it('still renders section title in empty state', () => {
       render(<ExamplesSection examples={null} />);
-
       expect(screen.getByText('Examples')).toBeInTheDocument();
     });
   });
 
-  describe('Card Structure', () => {
-    it('renders within a Card component', () => {
+  describe('Section Structure (DX-10)', () => {
+    it('renders as .dx-section element', () => {
       render(<ExamplesSection examples={mockExamples} />);
-
-      // The examples section should be inside a Card
-      const card = screen.getByText('Examples').closest('[class*="card"]');
-      expect(card).toBeInTheDocument();
+      const section = screen.getByTestId('examples-section');
+      expect(section).toHaveClass('dx-section');
     });
   });
 
@@ -188,7 +246,6 @@ describe('ExamplesSection', () => {
       await i18n.changeLanguage('ru');
       render(<ExamplesSection examples={mockExamples} />);
       expect(screen.getByText('Мой дом маленький.')).toBeInTheDocument();
-      // English should NOT be rendered
       expect(screen.queryByText('My house is small.')).not.toBeInTheDocument();
       await i18n.changeLanguage('en'); // cleanup
     });
@@ -197,6 +254,7 @@ describe('ExamplesSection', () => {
       await i18n.changeLanguage('ru');
       const examplesWithoutRu = [
         {
+          id: 'ex-fallback',
           greek: 'Γεια σου!',
           english: 'Hello!',
           russian: undefined,
@@ -246,25 +304,22 @@ describe('ExamplesSection — Audio SpeakerButton integration (reference)', () =
 
   it('1. renders SpeakerButtons for examples with audio_url', () => {
     render(<ExamplesSection examples={examplesWithAudio} wordEntryId="we-1" deckId="deck-1" />);
-
     const buttons = screen.getAllByTestId('speaker-button');
     expect(buttons).toHaveLength(2);
   });
 
   it('2. no SpeakerButtons when examples have no audio_url', () => {
     render(<ExamplesSection examples={mockExamples} />);
-
     expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
   });
 
   it('3. mixed examples — only examples with audio_url show button', () => {
     render(<ExamplesSection examples={examplesMixed} wordEntryId="we-1" deckId="deck-1" />);
-
     const buttons = screen.getAllByTestId('speaker-button');
     expect(buttons).toHaveLength(1);
   });
 
-  it('4. context badges remain visible alongside speaker buttons', () => {
+  it('4. context field still bound — audio buttons visible alongside example tags', () => {
     const examplesWithContext: WordEntryExampleSentence[] = [
       {
         id: 'ex-c',
@@ -275,8 +330,9 @@ describe('ExamplesSection — Audio SpeakerButton integration (reference)', () =
       },
     ];
     render(<ExamplesSection examples={examplesWithContext} />);
-
-    expect(screen.getByText('formal')).toBeInTheDocument();
+    // tag is rendered (context 'formal' → 'simple' placeholder)
+    expect(screen.getByTestId('example-tag')).toBeInTheDocument();
+    // audio button is rendered
     expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
   });
 

@@ -645,3 +645,107 @@ describe('WordReferencePage — Audio SpeakerButton integration', () => {
     expect(wrapper).not.toHaveClass('is-playing');
   });
 });
+
+// ============================================
+// DX-10: Notes section tests
+// ============================================
+
+describe('WordReferencePage — DX-10 Notes section', () => {
+  it('shows notes section when grammar_data.notes is present', () => {
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeWordEntry({
+        grammar_data: { notes: 'This word is irregular in the plural.' },
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+
+    expect(screen.getByTestId('notes-section')).toBeInTheDocument();
+    expect(screen.getByText('This word is irregular in the plural.')).toBeInTheDocument();
+  });
+
+  it('hides notes section when grammar_data.notes is absent', () => {
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeMasculineNoun(), // grammar_data has no notes field
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+
+    expect(screen.queryByTestId('notes-section')).not.toBeInTheDocument();
+  });
+
+  it('hides notes section when grammar_data is null', () => {
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeWordEntry({ grammar_data: null }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+
+    expect(screen.queryByTestId('notes-section')).not.toBeInTheDocument();
+  });
+});
+
+// ============================================
+// DX-10: Active tab ring tests
+// ============================================
+
+describe('WordReferencePage — DX-10 Active tab ring', () => {
+  it('active word-info tab trigger has dx-tab-ring class', () => {
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeMasculineNoun(),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+
+    const trigger = screen.getByTestId('word-reference-tab-word-info');
+    expect(trigger).toHaveClass('dx-tab-ring');
+  });
+
+  it('cards tab trigger also has dx-tab-ring class', () => {
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeMasculineNoun(),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+
+    const trigger = screen.getByTestId('word-reference-tab-cards');
+    expect(trigger).toHaveClass('dx-tab-ring');
+  });
+});
+
+// ============================================
+// DX-10: Grammar section has NO dot
+// ============================================
+
+describe('WordReferencePage — DX-10 Grammar section has no UnwiredDot', () => {
+  it('grammar-section does not contain an UnwiredDot', () => {
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeMasculineNoun(),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+
+    const grammarSection = screen.getByTestId('grammar-section');
+    // UnwiredDot renders as .dx-unwired-dot — should not be present inside grammar
+    const dots = grammarSection.querySelectorAll('.dx-unwired-dot');
+    expect(dots).toHaveLength(0);
+  });
+});

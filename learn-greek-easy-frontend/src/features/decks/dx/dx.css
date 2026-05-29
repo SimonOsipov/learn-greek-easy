@@ -1255,3 +1255,209 @@
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
 }
+
+/* ── Tab trigger — primary ring on active ────────────────────────────────────
+   DX-10: adds a 1px primary ring around the active tab trigger so the
+   active state is clearly visible against the muted list background.
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-tab-ring[data-state='active'] {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: -1px;
+}
+
+/* ── Section card (.dx-section*) ─────────────────────────────────────────────
+   DX-10: stacked info cards in the Word Info tab.
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-section {
+  background: hsl(var(--bg-2));
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 16px;
+  padding: 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dx-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dx-section-h {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: hsl(var(--fg));
+}
+.dx-section-tag {
+  display: inline-flex;
+  padding: 3px 10px;
+  background: hsl(var(--fg) / 0.06);
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: hsl(var(--fg-2));
+}
+
+/* ── Example tag (.dx-example-tag) ──────────────────────────────────────────
+   DX-10: per-example type chip (Simple / Comparative / Locative) + R5 amber dot.
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-example-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  background: hsl(var(--accent) / 0.14);
+  color: hsl(var(--accent));
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+/* ── Examples list (.dx-examples*) ──────────────────────────────────────────
+   DX-10: list of example sentences inside a .dx-section card.
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dx-example {
+  padding: 14px 18px 14px 16px;
+  background: hsl(var(--bg));
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 12px;
+  border-left: 3px solid hsl(var(--primary) / 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dx-example-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.dx-example-el {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 17px;
+  font-weight: 500;
+  font-style: normal;
+  color: hsl(var(--fg));
+  line-height: 1.35;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.dx-example-en {
+  font-size: 13.5px;
+  color: hsl(var(--fg-3));
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ── Collocations (.dx-colloc*) ──────────────────────────────────────────────
+   DX-10: placeholder grid for collocations — not yet connected to backend.
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-colloc {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+.dx-colloc-row {
+  padding: 10px 14px;
+  background: hsl(var(--bg));
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dx-colloc-el {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 15px;
+  font-style: normal;
+  color: hsl(var(--fg));
+}
+.dx-colloc-en {
+  font-size: 12px;
+  color: hsl(var(--fg-3));
+}
+
+/* ── Notes callout (.dx-notes*) ──────────────────────────────────────────────
+   DX-10: amber lightbulb callout rendered when grammar_data.notes is present.
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-notes {
+  padding: 14px 18px;
+  background: hsl(var(--warning) / 0.05);
+  border: 1px solid hsl(var(--warning) / 0.16);
+  border-radius: 12px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: hsl(var(--fg-2));
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.dx-notes-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: hsl(var(--warning) / 0.18);
+  color: hsl(var(--warning));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.dx-notes-mark svg {
+  width: 14px;
+  height: 14px;
+}
+.dx-notes b {
+  color: hsl(var(--fg));
+  font-weight: 600;
+}
+.dx-notes [lang='el'] {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-style: normal;
+}
+
+/* ── Related words (.dx-related*) ────────────────────────────────────────────
+   DX-10: inert chip row — no navigation (no vocab graph).
+   ────────────────────────────────────────────────────────────────────────── */
+.dx-related {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.dx-related-chip {
+  padding: 8px 14px;
+  background: hsl(var(--bg));
+  border: 1px solid hsl(var(--fg) / 0.08);
+  border-radius: 999px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: default;
+}
+.dx-related-chip-el {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 15px;
+  font-style: normal;
+  color: hsl(var(--fg));
+}
+.dx-related-chip-en {
+  color: hsl(var(--fg-3));
+  font-size: 12.5px;
+}

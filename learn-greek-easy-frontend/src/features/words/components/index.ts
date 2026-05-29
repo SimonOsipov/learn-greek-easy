@@ -23,3 +23,9 @@ export type { MiniFlipCardProps } from './MiniFlipCard';
 
 export { WordHero } from './WordHero';
 export type { WordHeroProps } from './WordHero';
+
+export { CollocationsSection } from './CollocationsSection';
+export type { CollocationsSectionProps } from './CollocationsSection';
+
+export { RelatedWordsSection } from './RelatedWordsSection';
+export type { RelatedWordsSectionProps } from './RelatedWordsSection';

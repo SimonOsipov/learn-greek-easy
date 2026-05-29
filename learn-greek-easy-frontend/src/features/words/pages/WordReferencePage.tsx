@@ -6,26 +6,31 @@
  * Includes:
  * - DX-09 WordHero: radial gradient header with word, pronunciation, translations,
  *   audio pulse, DonutRing mastery, WeekHeat placeholder
- * - Grammar tables (conjugation for verbs, declension for nouns/adjectives)
- * - Usage examples
- * - Notes section (if available)
- * - Tab layout with word-info and cards tabs
+ * - DX-10 stacked .dx-section cards in the Word Info tab:
+ *     1. Declension / Case forms (real, re-skinned)
+ *     2. Examples (real, with derived tag + R5 amber dot)
+ *     3. Collocations (R6 danger dot, placeholder)
+ *     4. Note callout (real from grammar_data.notes, amber lightbulb)
+ *     5. Related words (R7 danger dot, placeholder)
+ * - Active tab trigger has a primary ring (.dx-tab-ring)
+ * - Cards tab with word mastery summary
  */
 
 import { useMemo, useState } from 'react';
 
-import { ChevronLeft } from 'lucide-react';
+import { Lightbulb, ChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 
 import { ReportErrorModal } from '@/components/card-errors';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { track } from '@/lib/analytics';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
+import { cn } from '@/lib/utils';
 import type { AdjectiveData, AdverbData, NounDataAny, VerbData } from '@/types/grammar';
 import type { AudioSpeed } from '@/utils/audioSpeed';
 import { getPersistedAudioSpeed, setPersistedAudioSpeed } from '@/utils/audioSpeed';
@@ -34,9 +39,11 @@ import {
   AdjectiveDeclensionTable,
   CardsSummaryBar,
   CardTypeGroup,
+  CollocationsSection,
   ConjugationTable,
   ExamplesSection,
   NounDeclensionTable,
+  RelatedWordsSection,
   WordHero,
 } from '../components';
 import { groupCards } from '../components/cardGrouping';
@@ -148,27 +155,25 @@ function AdverbFormsCard({ grammarData }: AdverbFormsCardProps) {
   const na = t('grammar.adverbForms.notAvailable');
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg">{t('grammar.sections.forms')}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="rounded-lg border p-4 text-center">
-            <p className="text-xs font-medium uppercase text-muted-foreground">
-              {t('grammar.adverbForms.comparative')}
-            </p>
-            <p className="mt-2 text-lg font-medium">{grammarData.comparative || na}</p>
-          </div>
-          <div className="rounded-lg border p-4 text-center">
-            <p className="text-xs font-medium uppercase text-muted-foreground">
-              {t('grammar.adverbForms.superlative')}
-            </p>
-            <p className="mt-2 text-lg font-medium">{grammarData.superlative || na}</p>
-          </div>
+    <div className="dx-section" data-testid="grammar-section">
+      <div className="dx-section-head">
+        <h3 className="dx-section-h">{t('grammar.sections.forms')}</h3>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="rounded-lg border p-4 text-center">
+          <p className="text-xs font-medium uppercase text-muted-foreground">
+            {t('grammar.adverbForms.comparative')}
+          </p>
+          <p className="mt-2 text-lg font-medium">{grammarData.comparative || na}</p>
         </div>
-      </CardContent>
-    </Card>
+        <div className="rounded-lg border p-4 text-center">
+          <p className="text-xs font-medium uppercase text-muted-foreground">
+            {t('grammar.adverbForms.superlative')}
+          </p>
+          <p className="mt-2 text-lg font-medium">{grammarData.superlative || na}</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -238,39 +243,49 @@ export function WordReferencePage() {
       ? GENDER_ARTICLE_MAP[grammarData.gender as string]
       : undefined;
 
-  // Render grammar section based on part of speech
+  // Extract notes from grammar_data if present
+  const notes = grammarData && 'notes' in grammarData ? (grammarData.notes as string) : null;
+
+  // Render grammar section based on part of speech — wrapped in .dx-section
   const renderGrammarSection = () => {
     if (!grammarData) {
       return (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">{t('review:grammar.sections.declension')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              {t('deck:wordBrowser.emptyFilterDescription')}
-            </p>
-          </CardContent>
-        </Card>
+        <div className="dx-section" data-testid="grammar-section">
+          <div className="dx-section-head">
+            <h3 className="dx-section-h">{t('review:grammar.sections.declension')}</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {t('deck:wordBrowser.emptyFilterDescription')}
+          </p>
+        </div>
       );
     }
 
     switch (partOfSpeech) {
       case 'verb':
-        return <ConjugationTable grammarData={grammarData as unknown as VerbData} />;
+        return (
+          <div className="dx-section" data-testid="grammar-section">
+            <ConjugationTable grammarData={grammarData as unknown as VerbData} />
+          </div>
+        );
       case 'noun':
-        return <NounDeclensionTable grammarData={grammarData as unknown as NounDataAny} />;
+        return (
+          <div className="dx-section" data-testid="grammar-section">
+            <NounDeclensionTable grammarData={grammarData as unknown as NounDataAny} />
+          </div>
+        );
       case 'adjective':
-        return <AdjectiveDeclensionTable grammarData={grammarData as unknown as AdjectiveData} />;
+        return (
+          <div className="dx-section" data-testid="grammar-section">
+            <AdjectiveDeclensionTable grammarData={grammarData as unknown as AdjectiveData} />
+          </div>
+        );
       case 'adverb':
         return <AdverbFormsCard grammarData={grammarData as unknown as AdverbData} />;
       default:
         return null;
     }
   };
-
-  // Extract notes from grammar_data if present
-  const notes = grammarData && 'notes' in grammarData ? (grammarData.notes as string) : null;
 
   return (
     <div className="space-y-6" data-testid="word-reference-page">
@@ -304,11 +319,15 @@ export function WordReferencePage() {
           <TabsTrigger
             value="word-info"
             data-testid="word-reference-tab-word-info"
-            className="flex-1"
+            className={cn('dx-tab-ring flex-1')}
           >
             {t('deck:wordReference.tabWordInfo')}
           </TabsTrigger>
-          <TabsTrigger value="cards" data-testid="word-reference-tab-cards" className="flex-1">
+          <TabsTrigger
+            value="cards"
+            data-testid="word-reference-tab-cards"
+            className={cn('dx-tab-ring flex-1')}
+          >
             {totalCards > 0
               ? t('deck:wordReference.tabCardsWithCount', {
                   mastered: masteredCards,
@@ -318,11 +337,12 @@ export function WordReferencePage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="word-info" className="space-y-6">
-          {/* Grammar Section */}
+        {/* ── Word Info Tab ─────────────────────────────────────────────────── */}
+        <TabsContent value="word-info" className="mt-4 space-y-4">
+          {/* 1. Declension / Case forms — REAL, no dot */}
           {renderGrammarSection()}
 
-          {/* Examples Section */}
+          {/* 2. Examples — REAL, amber tag + R5 amber dot */}
           <ExamplesSection
             examples={wordEntry.examples}
             wordEntryId={wordEntry.id}
@@ -330,19 +350,26 @@ export function WordReferencePage() {
             speed={audioSpeed}
           />
 
-          {/* Notes Section (if available) */}
+          {/* 3. Collocations — placeholder, R6 danger dot */}
+          <CollocationsSection lemma={wordEntry.lemma} />
+
+          {/* 4. Note callout — REAL from grammar_data.notes, amber lightbulb, no dot */}
           {notes && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">{t('deck:wordReference.notes')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{notes}</p>
-              </CardContent>
-            </Card>
+            <div className="dx-section" data-testid="notes-section">
+              <div className="dx-notes">
+                <span className="dx-notes-mark" aria-hidden="true">
+                  <Lightbulb />
+                </span>
+                <p>{notes}</p>
+              </div>
+            </div>
           )}
+
+          {/* 5. Related words — placeholder, R7 danger dot */}
+          <RelatedWordsSection lemma={wordEntry.lemma} />
         </TabsContent>
 
+        {/* ── Cards Tab ─────────────────────────────────────────────────────── */}
         <TabsContent value="cards">
           {isMasteryLoading ? (
             <div className="space-y-3 p-4" data-testid="cards-tab-loading">

@@ -347,7 +347,9 @@
     "promptMeaningReverse": "Как это сказать по-гречески?",
     "promptArticle": "Какой артикль?",
     "promptPlural": "Как будет множественное число?",
-    "promptSentence": "Переведите предложение"
+    "promptSentence": "Переведите предложение",
+    "sectionCollocations": "Словосочетания",
+    "sectionRelatedWords": "Похожие слова"
   },
   "practice": {
     "title": "Практика",
