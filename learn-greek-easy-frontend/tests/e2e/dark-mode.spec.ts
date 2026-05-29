@@ -354,6 +354,23 @@ test.describe('Dark Mode - Theme Persists on Logout', () => {
       timeout: 15000,
     });
 
+    // Establish deterministic LIGHT backend state via preferences UI.
+    // (Backend theme from a prior shard test may be dark; localStorage.removeItem
+    // cannot clear the backend pref, so we must sync it explicitly here.)
+    await page.goto('/profile');
+    await verifyAuthSucceeded(page, '/profile');
+    await expect(page.getByTestId('profile-page')).toBeVisible({ timeout: 15000 });
+    const preferencesTab = page.getByRole('button', { name: /preferences/i });
+    await preferencesTab.click();
+    await expect(page.getByTestId('preferences-section')).toBeVisible({ timeout: 10000 });
+    await page.getByTestId('theme-option-light').click();
+    await expect(page.locator('html')).not.toHaveClass(/dark/);
+
+    // Return to dashboard for the toggle dance
+    await page.goto('/dashboard');
+    await verifyAuthSucceeded(page, '/dashboard');
+    await expect(page.getByTestId('dashboard-title')).toBeVisible({ timeout: 15000 });
+
     // Start in dark mode
     await page.getByTestId('theme-switcher').click();
     await expect(page.locator('html')).toHaveClass(/dark/);

@@ -85,7 +85,7 @@ export const DecksPage: React.FC = () => {
       {isLoading && !error && <DeckGridSkeleton />}
 
       {/* Decks Grid */}
-      {!isLoading && !error && decks.length > 0 && <DecksGrid decks={decks} />}
+      {!isLoading && !error && decks.length > 0 && <DecksGrid decks={decks} gridLayout="dx" />}
 
       {/* Empty State */}
       {!isLoading && !error && decks.length === 0 && (

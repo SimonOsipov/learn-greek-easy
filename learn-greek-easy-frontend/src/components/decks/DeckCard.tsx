@@ -180,7 +180,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   return (
     <article
       data-testid="deck-card"
-      className={cn('dx-deck-card group scroll-mt-20', active && 'is-active')}
+      className={cn('dx-deck-card group', active && 'is-active')}
       onClick={isClickable ? onClick : undefined}
       role={isClickable ? 'button' : 'article'}
       tabIndex={isClickable ? 0 : undefined}
