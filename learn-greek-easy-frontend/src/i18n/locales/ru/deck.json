@@ -349,7 +349,12 @@
     "promptPlural": "Как будет множественное число?",
     "promptSentence": "Переведите предложение",
     "sectionCollocations": "Словосочетания",
-    "sectionRelatedWords": "Похожие слова"
+    "sectionRelatedWords": "Похожие слова",
+    "groupAudio": "Аудио",
+    "groupCardCount": "{{n}} карточек",
+    "cardsViewToggleLabel": "Вид карточек",
+    "cardsViewGrid": "Сетка",
+    "cardsViewList": "Список"
   },
   "practice": {
     "title": "Практика",

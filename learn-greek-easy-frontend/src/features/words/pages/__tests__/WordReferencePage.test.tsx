@@ -749,3 +749,46 @@ describe('WordReferencePage — DX-10 Grammar section has no UnwiredDot', () => 
     expect(dots).toHaveLength(0);
   });
 });
+
+// ============================================
+// DX-11: Cards tab — view toggle + Audio placeholder
+// ============================================
+
+describe('WordReferencePage — DX-11 Cards tab', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseParams.mockReturnValue({ deckId: 'test-deck-id', wordId: 'test-word-id' });
+  });
+
+  it('cards tab shows empty state (not toggle) when there are no real cards', async () => {
+    const user = userEvent.setup();
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeMasculineNoun(),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+    await user.click(screen.getByTestId('word-reference-tab-cards'));
+
+    // Mock returns cards: [] — only Audio placeholder in groupedCards → empty state
+    expect(screen.getByTestId('cards-tab-empty')).toBeInTheDocument();
+    expect(screen.queryByTestId('cards-view-toggle')).not.toBeInTheDocument();
+  });
+
+  it('summary bar not rendered when cards tab shows empty state', async () => {
+    const user = userEvent.setup();
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeMasculineNoun(),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+    await user.click(screen.getByTestId('word-reference-tab-cards'));
+
+    expect(screen.queryByTestId('cards-summary-bar')).not.toBeInTheDocument();
+  });
+});

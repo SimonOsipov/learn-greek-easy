@@ -349,7 +349,12 @@
     "promptPlural": "What is the plural?",
     "promptSentence": "Translate this sentence",
     "sectionCollocations": "Collocations",
-    "sectionRelatedWords": "Related Words"
+    "sectionRelatedWords": "Related Words",
+    "groupAudio": "Audio",
+    "groupCardCount": "{{n}} cards",
+    "cardsViewToggleLabel": "Cards view",
+    "cardsViewGrid": "Grid view",
+    "cardsViewList": "List view"
   },
   "practice": {
     "title": "Practice",

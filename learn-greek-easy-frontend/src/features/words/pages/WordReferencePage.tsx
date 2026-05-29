@@ -39,6 +39,7 @@ import {
   AdjectiveDeclensionTable,
   CardsSummaryBar,
   CardTypeGroup,
+  CardsViewToggle,
   CollocationsSection,
   ConjugationTable,
   ExamplesSection,
@@ -50,6 +51,7 @@ import { groupCards } from '../components/cardGrouping';
 import { GENDER_ARTICLE_MAP } from '../components/WordHero';
 import { useWordEntry, useWordMastery } from '../hooks';
 
+import type { CardsView } from '../components/CardsViewToggle';
 import type { CardMasteryItem } from '../hooks';
 
 // ============================================
@@ -202,14 +204,17 @@ export function WordReferencePage() {
   });
 
   const groupedCards = useMemo(() => groupCards(masteryCards), [masteryCards]);
-  const totalCards = masteryCards.length;
-  const masteredCards = masteryCards.filter(
+  // Summary totals EXCLUDE the synthetic Audio placeholder (isPlaceholder=true)
+  const realCards = masteryCards; // masteryCards never includes audio — placeholder is synthetic
+  const totalCards = realCards.length;
+  const masteredCards = realCards.filter(
     (c: CardMasteryItem) => c.mastery_status === 'mastered'
   ).length;
 
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [audioSpeed, setAudioSpeed] = useState<AudioSpeed>(getPersistedAudioSpeed);
   const [activeTab, setActiveTab] = useState('word-info');
+  const [cardsView, setCardsView] = useState<CardsView>('grid');
   const handleSpeedChange = (newSpeed: AudioSpeed) => {
     setAudioSpeed(newSpeed);
     setPersistedAudioSpeed(newSpeed);
@@ -384,13 +389,16 @@ export function WordReferencePage() {
                 {t('deck:wordReference.cardsRetry')}
               </Button>
             </div>
-          ) : groupedCards.length === 0 ? (
+          ) : groupedCards.filter((g) => !g.isPlaceholder).length === 0 ? (
             <div className="py-8 text-center text-muted-foreground" data-testid="cards-tab-empty">
               <p className="text-sm">{t('deck:wordReference.cardsEmpty')}</p>
             </div>
           ) : (
             <div className="space-y-4 py-4" key={`cards-content-${activeTab}`}>
-              <CardsSummaryBar mastered={masteredCards} total={totalCards} />
+              <div className="flex items-center justify-between px-1">
+                <CardsSummaryBar mastered={masteredCards} total={totalCards} />
+                <CardsViewToggle value={cardsView} onChange={setCardsView} />
+              </div>
               {groupedCards.map((group) => (
                 <CardTypeGroup
                   key={group.key}
@@ -399,8 +407,11 @@ export function WordReferencePage() {
                   cards={group.cards}
                   masteredCount={group.masteredCount}
                   totalCount={group.totalCount}
+                  tone={group.tone}
+                  isPlaceholder={group.isPlaceholder}
                   wordEntryId={wordId ?? ''}
                   deckId={deckId ?? ''}
+                  view={cardsView}
                 />
               ))}
             </div>

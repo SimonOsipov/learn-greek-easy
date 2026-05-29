@@ -21,6 +21,12 @@ export type { CardGroupKey, GroupedCards, CardGroupDefinition } from './cardGrou
 export { MiniFlipCard } from './MiniFlipCard';
 export type { MiniFlipCardProps } from './MiniFlipCard';
 
+export { CardsViewToggle } from './CardsViewToggle';
+export type { CardsViewToggleProps, CardsView } from './CardsViewToggle';
+
+export { CardRow } from './CardRow';
+export type { CardRowProps } from './CardRow';
+
 export { WordHero } from './WordHero';
 export type { WordHeroProps } from './WordHero';
 

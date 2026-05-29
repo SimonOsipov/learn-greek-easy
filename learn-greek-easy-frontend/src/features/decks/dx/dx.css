@@ -1461,3 +1461,183 @@
   color: hsl(var(--fg-3));
   font-size: 12.5px;
 }
+
+/* ── Cards group (.dx-cards-group*) ─────────────────────────────────────────
+   DX-11: card groups with per-group accent tint + colored square marker.
+   ─────────────────────────────────────────────────────────────────────────── */
+.dx-cards-group {
+  background: hsl(var(--bg-2));
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 16px;
+  padding: 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.dx-cards-group[data-group='Translation'] {
+  background:
+    radial-gradient(80% 60% at 100% 0%, hsl(var(--primary) / 0.1), transparent 55%),
+    hsl(var(--bg-2));
+  border-color: hsl(var(--primary) / 0.18);
+}
+.dx-cards-group[data-group='Grammar'] {
+  background:
+    radial-gradient(80% 60% at 100% 0%, hsl(var(--accent) / 0.12), transparent 55%),
+    hsl(var(--bg-2));
+  border-color: hsl(var(--accent) / 0.18);
+}
+.dx-cards-group[data-group='Declension'] {
+  background:
+    radial-gradient(80% 60% at 100% 0%, hsl(var(--accent-2) / 0.12), transparent 55%),
+    hsl(var(--bg-2));
+  border-color: hsl(var(--accent-2) / 0.18);
+}
+.dx-cards-group[data-group='Audio'] {
+  background:
+    radial-gradient(80% 60% at 100% 0%, hsl(var(--warning) / 0.12), transparent 55%),
+    hsl(var(--bg-2));
+  border-color: hsl(var(--warning) / 0.18);
+}
+.dx-cards-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.dx-cards-group-h {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: hsl(var(--fg-2));
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+/* Colored square marker (::before) — driven by data-group */
+.dx-cards-group-h::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: hsl(var(--primary));
+  flex-shrink: 0;
+}
+.dx-cards-group[data-group='Grammar'] .dx-cards-group-h::before {
+  background: hsl(var(--accent));
+}
+.dx-cards-group[data-group='Declension'] .dx-cards-group-h::before {
+  background: hsl(var(--accent-2));
+}
+.dx-cards-group[data-group='Audio'] .dx-cards-group-h::before {
+  background: hsl(var(--warning));
+}
+.dx-cards-group-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  color: hsl(var(--fg-3));
+}
+
+/* ── Cards grid (.dx-cards-grid) ─────────────────────────────────────────────
+   DX-11: responsive 3→2→1 col grid.
+   ─────────────────────────────────────────────────────────────────────────── */
+.dx-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .dx-cards-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .dx-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Card list view (.dx-cards-list-view + .dx-card-row*) ───────────────────
+   DX-11: dense list view — mastery dot · type · prompt · answer · due.
+   ─────────────────────────────────────────────────────────────────────────── */
+.dx-cards-list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dx-card-row {
+  display: grid;
+  grid-template-columns: 12px 110px 1fr 80px 18px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: hsl(var(--bg));
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 10px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.dx-card-row:hover {
+  border-color: hsl(var(--primary) / 0.4);
+}
+.dx-card-row-type {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: hsl(var(--fg-3));
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dx-card-row-prompt {
+  font-size: 13px;
+  color: hsl(var(--fg-2));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dx-card-row-answer {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: hsl(var(--fg));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dx-card-row[data-side='en'] .dx-card-row-answer {
+  font-family: 'Inter Tight', sans-serif;
+  font-weight: 600;
+}
+.dx-card-row-due {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: hsl(var(--fg-3));
+  text-align: right;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── Mastery dot (.dx-card-mast-dot) ─────────────────────────────────────────
+   DX-11: used in both grid cards and list rows.
+   grey → primary (learning) → green (mastered)
+   ─────────────────────────────────────────────────────────────────────────── */
+.dx-card-mast-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: hsl(var(--fg) / 0.18);
+  flex-shrink: 0;
+}
+.dx-card-mast-dot[data-state='learning'] {
+  background: hsl(var(--primary));
+}
+.dx-card-mast-dot[data-state='mastered'] {
+  background: hsl(var(--success));
+}
