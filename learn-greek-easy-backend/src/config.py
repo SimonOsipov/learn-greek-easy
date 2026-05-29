@@ -421,8 +421,8 @@ class Settings(BaseSettings):
 
     # Pre-signed URL expiry
     s3_presigned_url_expiry: int = Field(
-        default=3600,
-        description="Pre-signed URL expiry in seconds (default 1 hour)",
+        default=86400,
+        description="Pre-signed URL expiry in seconds (default 24 hours)",
     )
 
     @property
