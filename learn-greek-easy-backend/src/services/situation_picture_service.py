@@ -26,6 +26,7 @@ Orchestrator (background tasks):
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from typing import Literal
 from uuid import UUID
 
@@ -167,7 +168,7 @@ async def upload_picture_to_s3(
 
     Raises :class:`PictureUploadError` when upload returns ``False``.
     """
-    s3_key = f"situation-pictures/{picture_id}.png"
+    s3_key = f"situation-pictures/{picture_id}/{hashlib.sha256(image_bytes).hexdigest()}.png"
     success = await asyncio.to_thread(
         s3_service.upload_object,
         s3_key=s3_key,
@@ -183,8 +184,11 @@ async def persist_picture_generation(
     picture_id: UUID,
     s3_key: str,
     factory: async_sessionmaker[AsyncSession],
-) -> None:
+) -> str | None:
     """Set image_s3_key + status=GENERATED on the picture. Idempotent on re-run.
+
+    Returns the *prior* ``image_s3_key`` value (before overwriting) so the caller
+    can delete the old S3 object.  Returns ``None`` when there was no prior key.
 
     On commit failure: logs the orphaned S3 key at ERROR level then raises
     :class:`PicturePersistError`.  Does NOT delete the S3 object — a stable key
@@ -195,6 +199,7 @@ async def persist_picture_generation(
             picture = await session.get(SituationPicture, picture_id)
             if picture is None:
                 raise PicturePersistError(f"Picture vanished mid-pipeline: {picture_id}")
+            prior_key = picture.image_s3_key
             picture.image_s3_key = s3_key
             picture.status = PictureStatus.GENERATED
             try:
@@ -204,6 +209,7 @@ async def persist_picture_generation(
                     "picture_match_reconcile_failed",
                     extra={"situation_id": str(picture.situation_id), "error": str(exc)},
                 )
+        return prior_key
     except PicturePersistError:
         raise
     except Exception as exc:

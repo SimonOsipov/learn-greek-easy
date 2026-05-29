@@ -4547,19 +4547,27 @@ async def _picture_sse_pipeline(situation_id: UUID) -> AsyncGenerator[str, None]
         result = await generate_picture_bytes(image_prompt, openrouter_service)
 
         current_stage = "upload"
-        s3_key = f"situation-pictures/{picture_id}.png"
+        s3_key = await upload_picture_to_s3(picture_id, result.image_bytes, s3_service)
         yield format_sse_event(
             {"situation_id": str(situation_id), "picture_id": str(picture_id), "s3_key": s3_key},
             event="picture:upload",
         )
-        await upload_picture_to_s3(picture_id, result.image_bytes, s3_service)
 
         current_stage = "persist"
         yield format_sse_event(
             {"situation_id": str(situation_id), "picture_id": str(picture_id)},
             event="picture:persist",
         )
-        await persist_picture_generation(picture_id, s3_key, factory)
+        prior_key = await persist_picture_generation(picture_id, s3_key, factory)
+
+        if prior_key and prior_key != s3_key:
+            try:
+                get_s3_service().delete_object(prior_key)
+            except Exception:
+                logger.warning(
+                    "Failed to delete prior S3 picture object",
+                    extra={"prior_key": prior_key, "picture_id": str(picture_id)},
+                )
 
         image_url = s3_service.generate_presigned_url(s3_key)
         yield format_sse_event(
@@ -4777,7 +4785,8 @@ async def upload_situation_picture(
 
     s3 = get_s3_service()
     ext = S3Service.get_extension_for_content_type(file.content_type) or "png"
-    s3_key = f"situation-pictures/{picture.id}.{ext}"
+    prior_key = picture.image_s3_key
+    s3_key = f"situation-pictures/{picture.id}/{hashlib.sha256(data).hexdigest()}.{ext}"
 
     uploaded = await asyncio.to_thread(s3.upload_object, s3_key, data, file.content_type)
     if not uploaded:
@@ -4786,6 +4795,15 @@ async def upload_situation_picture(
     picture.image_s3_key = s3_key
     await db.commit()
     await db.refresh(picture)
+
+    if prior_key and prior_key != s3_key:
+        try:
+            s3.delete_object(prior_key)
+        except Exception:
+            logger.warning(
+                "Failed to delete prior S3 picture object on manual upload",
+                extra={"prior_key": prior_key, "picture_id": str(picture.id)},
+            )
 
     nested = PictureNested.model_validate(picture)
     nested.image_url = s3.generate_presigned_url(s3_key)
