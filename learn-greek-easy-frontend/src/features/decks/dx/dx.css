@@ -228,7 +228,58 @@
   background: hsl(var(--warning));
 }
 
-/* ── DxCover — gradient cover primitive ─────────────────────────────────── */
+/* ── Index header ───────────────────────────────────────────────────────── */
+.dx-index-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+.dx-index-h {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: clamp(32px, 3.4vw, 44px);
+  font-weight: 700;
+  letter-spacing: -0.028em;
+  line-height: 1.05;
+  margin: 0;
+}
+
+/* ── Filter chips ───────────────────────────────────────────────────────── */
+.dx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  background: transparent;
+  border: 1px solid hsl(var(--fg) / 0.12);
+  border-radius: 999px;
+  color: hsl(var(--fg-2));
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+.dx-chip:hover {
+  border-color: hsl(var(--fg) / 0.22);
+  color: hsl(var(--fg));
+}
+.dx-chip[aria-pressed='true'] {
+  background: hsl(var(--fg));
+  color: hsl(var(--bg));
+  border-color: hsl(var(--fg));
+}
+.dx-chip-sep {
+  width: 1px;
+  height: 22px;
+  background: hsl(var(--fg) / 0.1);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* ── DxCover — gradient cover primitive ─────────────────────────────────────── */
 /*
  * The host element is position:relative so the scrim/sheen pseudo-elements
  * stack correctly above the gradient background.

@@ -1,11 +1,14 @@
 /**
- * DecksPage RTL Tests — DCSPL-04
+ * DecksPage RTL Tests — DCSPL-04 + DX-03
  *
  * Verifies that after the vocabulary-only refactor:
  * 1. No deck-type toggle buttons exist in the DOM (All / Vocabulary / Culture removed)
  * 2. CEFR level filter buttons (A1, A2, B1, B2) are rendered and NOT disabled
  * 3. Vocab deck names appear in the grid
  * 4. Culture deck names do NOT appear (store never fetches them)
+ *
+ * DX-03 additions:
+ * 5. Kicker with list.kicker text renders above the title
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -151,5 +154,39 @@ describe('DecksPage — vocabulary-only (DCSPL-04)', () => {
 
     // Culture decks are never fetched by the store, so they cannot appear
     expect(screen.queryByText(/culture deck/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('DecksPage — DX-03 header kicker', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders Kicker with list.kicker text above the title', async () => {
+    render(<DecksPage />);
+
+    await waitFor(() => {
+      // The kicker text (English locale)
+      const kicker = screen.getByText(/browse.*public decks/i);
+      expect(kicker).toBeInTheDocument();
+      expect(kicker).toHaveClass('dx-kicker');
+
+      // The H1 title is below the kicker in the DOM
+      const title = screen.getByTestId('decks-title');
+      expect(title).toBeInTheDocument();
+    });
+  });
+
+  it('Kicker appears before the H1 in document order', async () => {
+    render(<DecksPage />);
+
+    await waitFor(() => {
+      const kicker = screen.getByText(/browse.*public decks/i);
+      const title = screen.getByTestId('decks-title');
+
+      // compareDocumentPosition: 4 = DOCUMENT_POSITION_FOLLOWING (kicker before title)
+      const position = kicker.compareDocumentPosition(title);
+      expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
   });
 });

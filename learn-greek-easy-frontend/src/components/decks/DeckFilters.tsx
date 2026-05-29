@@ -142,29 +142,27 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
       {(!isMobile || filtersOpen) && (
         <div className="flex flex-wrap items-center gap-2">
           {CEFR_LEVEL_OPTIONS.map(({ value }) => (
-            <Button
+            <button
               key={value}
-              variant={filters.levels.includes(value) ? 'default' : 'outline'}
-              size="sm"
+              type="button"
               onClick={() => handleLevelToggle(value)}
-              className="rounded-full"
+              className="dx-chip"
               aria-pressed={filters.levels.includes(value)}
             >
               {value}
-            </Button>
+            </button>
           ))}
-          <div className="h-6 w-px bg-border" aria-hidden="true" />
+          <div className="dx-chip-sep" aria-hidden="true" data-testid="chip-separator" />
           {STATUS_OPTIONS.map(({ value, labelKey }) => (
-            <Button
+            <button
               key={value}
-              variant={filters.status.includes(value) ? 'default' : 'outline'}
-              size="sm"
+              type="button"
               onClick={() => handleStatusToggle(value)}
-              className="rounded-full"
+              className="dx-chip"
               aria-pressed={filters.status.includes(value)}
             >
               {t(labelKey)}
-            </Button>
+            </button>
           ))}
 
           {/* Clear Filters Button */}

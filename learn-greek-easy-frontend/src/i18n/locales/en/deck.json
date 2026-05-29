@@ -6,7 +6,8 @@
     "tryAgain": "Try Again",
     "noDecksFound": "No Decks Found",
     "noDecksDescription": "No decks match your current filters. Try adjusting your search or clearing filters.",
-    "clearFilters": "Clear All Filters"
+    "clearFilters": "Clear All Filters",
+    "kicker": "Browse · Public decks"
   },
   "filters": {
     "searchPlaceholder": "Search decks by name...",
