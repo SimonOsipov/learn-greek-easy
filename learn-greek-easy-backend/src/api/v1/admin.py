@@ -9,6 +9,7 @@ All endpoints require superuser authentication.
 """
 
 import asyncio
+import hashlib
 import json
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
@@ -832,7 +833,8 @@ async def upload_deck_cover_image(
 
     s3 = get_s3_service()
     ext = S3Service.get_extension_for_content_type(file.content_type) or "jpg"
-    s3_key = f"deck-images/{deck_id}.{ext}"
+    content_hash = hashlib.sha256(data).hexdigest()
+    s3_key = f"deck-images/{deck_id}/{content_hash}.{ext}"
 
     old_key = deck.cover_image_s3_key if deck.cover_image_s3_key != s3_key else None
 

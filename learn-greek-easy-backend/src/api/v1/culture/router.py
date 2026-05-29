@@ -23,6 +23,7 @@ Admin Endpoints (superuser only):
 - DELETE /culture/questions/{question_id} - Delete a question
 """
 
+import hashlib
 from typing import Optional
 from uuid import UUID
 
@@ -921,7 +922,8 @@ async def upload_culture_deck_cover_image(
 
     s3 = get_s3_service()
     ext = S3Service.get_extension_for_content_type(file.content_type) or "jpg"
-    s3_key = f"culture-deck-images/{deck_id}.{ext}"
+    content_hash = hashlib.sha256(data).hexdigest()
+    s3_key = f"culture-deck-images/{deck_id}/{content_hash}.{ext}"
 
     old_key = deck.cover_image_s3_key if deck.cover_image_s3_key != s3_key else None
 
