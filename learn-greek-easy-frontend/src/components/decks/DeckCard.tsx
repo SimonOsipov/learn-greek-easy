@@ -245,7 +245,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
             <h3 className="dx-deck-card-h" data-testid="deck-card-title">
               {localizedName}
             </h3>
-            {deck.titleGreek && (
+            {deck.titleGreek && deck.titleGreek !== deck.title && (
               <p className="dx-deck-card-el" lang="el" data-testid="deck-card-greek-subtitle">
                 {deck.titleGreek}
               </p>
