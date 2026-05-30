@@ -23,6 +23,7 @@ import { ThemeSwitcher } from '@/components/theme';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PracticeApp } from '@/features/practice/pf';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { usePracticeKeyboard } from '@/hooks/usePracticeKeyboard';
 import { usePracticeSession } from '@/hooks/usePracticeSession';
@@ -389,7 +390,7 @@ export function V2FlashcardPracticePage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-practice-bg">
+    <PracticeApp cardType={currentQueueCard?.card_type ?? null}>
       {/* Top bar */}
       <PracticeHeader
         onExit={() => backToDeck()}
@@ -427,6 +428,6 @@ export function V2FlashcardPracticePage() {
           deckId={deckId}
         />
       </div>
-    </div>
+    </PracticeApp>
   );
 }

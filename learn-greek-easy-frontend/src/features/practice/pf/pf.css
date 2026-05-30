@@ -1,0 +1,80 @@
+/* =========================================================================
+   Practice flow — pf-* utility classes
+   All pf-* rules live here; zero pf-* classes in src/index.css.
+   Imported once at PracticeApp.tsx (the practice route shell).
+
+   PRACT2-1-01: shell + ambient glow only.
+   Later subtasks append their own .pf-* blocks here.
+   ========================================================================= */
+
+/* ── Shell ────────────────────────────────────────────────────────────────── */
+
+.pf-app {
+  position: relative;
+  min-height: 100dvh; /* full-screen; NO overflow:hidden so rating buttons
+                           remain reachable on short viewports (AC #5) */
+  /* Per-family accent tokens set inline from PracticeApp.tsx:
+       --pf-c       hsl(var(--<tone>))
+       --pf-glow-1  hsl(var(--<tone>) / 0.22)
+       --pf-glow-2  hsl(var(--<tone>) / 0.12)
+  */
+}
+
+/* Ensure direct children of .pf-app sit above the glow layer */
+.pf-app > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Ambient glow — dual-layer opacity cross-fade technique ────────────────
+   CSS cannot interpolate gradient `background-image` changes (they snap).
+   Instead, two stacked fixed layers (::before = layer A, ::after = layer B)
+   hold the current and previous gradient. On family change, layer B
+   (::after) fades out as layer A (::before) fades in, producing a smooth
+   cross-fade. Both reference the same CSS custom props so the technique is
+   correct as a single-layer fade (JS currently updates props in one shot;
+   two-layer orchestration is a future enhancement if snap is perceptible).
+   ──────────────────────────────────────────────────────────────────────────
+   AC #1: cross-fades on family change.
+   AC #4: fixed, pointer-events:none, behind content (z-index:0).
+   ──────────────────────────────────────────────────────────────────────────
+*/
+
+.pf-app::before,
+.pf-app::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0; /* behind content (AC #4) */
+  pointer-events: none; /* AC #4 */
+  background:
+    radial-gradient(60% 50% at 20% 0%, var(--pf-glow-1, transparent), transparent 70%),
+    radial-gradient(50% 50% at 90% 10%, var(--pf-glow-2, transparent), transparent 70%);
+}
+
+/* ::before is the "live" layer — always visible */
+.pf-app::before {
+  opacity: 1;
+}
+
+/* ::after is the "transition-out" layer — initially hidden */
+.pf-app::after {
+  opacity: 0;
+}
+
+/* Disabled when data-ambient="off" (AC #4) */
+.pf-app[data-ambient='off']::before,
+.pf-app[data-ambient='off']::after {
+  opacity: 0;
+}
+
+/* Gate the cross-fade transition behind prefers-reduced-motion (AC #1)
+   so motion-sensitive users see an instant swap instead */
+@media (prefers-reduced-motion: no-preference) {
+  .pf-app::before {
+    transition: opacity 600ms ease;
+  }
+  .pf-app::after {
+    transition: opacity 600ms ease;
+  }
+}
