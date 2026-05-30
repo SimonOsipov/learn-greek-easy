@@ -110,18 +110,14 @@ export async function logoutViaAPI(page: Page): Promise<void> {
   const storageKey = getSupabaseStorageKey();
 
   try {
-    const sessionJson = await page.evaluate(
-      (key) => localStorage.getItem(key),
-      storageKey
-    );
+    const sessionJson = await page.evaluate((key) => localStorage.getItem(key), storageKey);
 
     if (sessionJson) {
       const session = JSON.parse(sessionJson);
       const accessToken = session?.access_token;
 
       if (accessToken) {
-        const supabaseUrl =
-          process.env.VITE_SUPABASE_URL || 'http://localhost:54321';
+        const supabaseUrl = process.env.VITE_SUPABASE_URL || 'http://localhost:54321';
 
         await page.request.post(`${supabaseUrl}/auth/v1/logout`, {
           headers: {
@@ -185,14 +181,11 @@ export async function isLoggedIn(page: Page): Promise<boolean> {
 export async function clearAuthState(page: Page): Promise<void> {
   const storageKey = getSupabaseStorageKey();
 
-  await page.evaluate(
-    (sbKey) => {
-      localStorage.removeItem(sbKey);
-      localStorage.removeItem('auth-storage');
-      sessionStorage.clear();
-    },
-    storageKey
-  );
+  await page.evaluate((sbKey) => {
+    localStorage.removeItem(sbKey);
+    localStorage.removeItem('auth-storage');
+    sessionStorage.clear();
+  }, storageKey);
 
   console.log('[TEST] Storage cleared for test isolation');
 }

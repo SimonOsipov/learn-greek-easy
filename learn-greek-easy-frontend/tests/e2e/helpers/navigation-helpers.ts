@@ -21,10 +21,7 @@ export async function navigateTo(page: Page, path: string): Promise<void> {
  * @param page - Playwright page object
  * @param selector - CSS selector or text
  */
-export async function waitForElement(
-  page: Page,
-  selector: string
-): Promise<void> {
+export async function waitForElement(page: Page, selector: string): Promise<void> {
   await page.waitForSelector(selector, { state: 'visible' });
 }
 
@@ -34,10 +31,7 @@ export async function waitForElement(
  * @param text - Text to search for (case-insensitive)
  * @returns True if found, false otherwise
  */
-export async function pageContainsText(
-  page: Page,
-  text: string | RegExp
-): Promise<boolean> {
+export async function pageContainsText(page: Page, text: string | RegExp): Promise<boolean> {
   try {
     await expect(page.getByText(text)).toBeVisible({ timeout: 5000 });
     return true;

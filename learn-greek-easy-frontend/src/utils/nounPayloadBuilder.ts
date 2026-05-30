@@ -5,6 +5,7 @@ import type {
   VerificationSummary,
 } from '@/services/adminAPI';
 import type { WordEntryExampleSentence, WordEntryInput } from '@/services/wordEntryAPI';
+import { GREEK_TO_LATIN } from '@/utils/greekToLatin';
 
 export interface EditableExample {
   greek: string;
@@ -15,35 +16,9 @@ export interface EditableExample {
 /**
  * Converts a Greek lemma to an ASCII representation for use in IDs.
  * Uses NFD normalization, strips combining diacritics, and maps Greek chars to Latin.
+ * Transliteration map is shared with the practice judge (src/utils/greekToLatin.ts).
  */
 export function toAsciiLemma(greekLemma: string): string {
-  const GREEK_TO_LATIN: Record<string, string> = {
-    α: 'a',
-    β: 'b',
-    γ: 'g',
-    δ: 'd',
-    ε: 'e',
-    ζ: 'z',
-    η: 'i',
-    θ: 'th',
-    ι: 'i',
-    κ: 'k',
-    λ: 'l',
-    μ: 'm',
-    ν: 'n',
-    ξ: 'x',
-    ο: 'o',
-    π: 'p',
-    ρ: 'r',
-    σ: 's',
-    ς: 's',
-    τ: 't',
-    υ: 'u',
-    φ: 'f',
-    χ: 'ch',
-    ψ: 'ps',
-    ω: 'o',
-  };
   // NFD normalize, strip combining diacritics (U+0300–U+036F)
   const normalized = greekLemma.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   // Map each character: Greek → Latin, else keep if alphanumeric

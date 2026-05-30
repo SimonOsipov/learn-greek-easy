@@ -53,9 +53,18 @@ vi.mock('@/stores/xpStore', () => ({
   ),
 }));
 
-// Default store state
+// Mock useDeck to avoid QueryClientProvider requirement (PRACT2-1-02)
+vi.mock('@/hooks/useDeck', () => ({
+  useDeck: () => ({
+    deck: { name: 'Test Deck', name_en: 'Test Deck' },
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
+// Default store state (uses `cards` — renamed from `queue` in PRACT2-1-02)
 const defaultStoreState = {
-  queue: [],
+  cards: [],
   currentIndex: 0,
   isFlipped: false,
   isLoading: false,
@@ -73,6 +82,13 @@ const defaultStoreState = {
   },
   sessionSummary: null,
   wordEntryId: null,
+  totalNew: 0,
+  totalReview: 0,
+  streak: 0,
+  ratings: [],
+  leaveDirection: null,
+  toast: null,
+  inputMode: 'reveal' as const,
   startSession: mockStartSession,
   rateCard: vi.fn(),
   flipCard: vi.fn(),
@@ -80,6 +96,9 @@ const defaultStoreState = {
   resetSession: vi.fn(),
   clearError: vi.fn(),
   clearSessionSummary: vi.fn(),
+  clearLeaveDirection: vi.fn(),
+  clearToast: vi.fn(),
+  setInputMode: vi.fn(),
 };
 
 let mockStoreState = { ...defaultStoreState };
@@ -143,7 +162,7 @@ describe('V2FlashcardPracticePage', () => {
     mockStoreState = {
       ...mockStoreState,
       isLoading: false,
-      queue: [],
+      cards: [],
       sessionSummary: null,
       error: null,
     };
@@ -160,7 +179,7 @@ describe('V2FlashcardPracticePage', () => {
       ...mockStoreState,
       isLoading: false,
       error: 'Failed to load cards',
-      queue: [],
+      cards: [],
     };
     render(<V2FlashcardPracticePage />);
 
@@ -169,7 +188,7 @@ describe('V2FlashcardPracticePage', () => {
     expect(screen.getAllByRole('button', { name: /Back to Deck/i }).length).toBeGreaterThan(0);
   });
 
-  it('renders inline summary after last card', () => {
+  it('renders Done screen after last card', () => {
     mockStoreState = {
       ...mockStoreState,
       isLoading: false,
@@ -197,10 +216,19 @@ describe('V2FlashcardPracticePage', () => {
     };
     render(<V2FlashcardPracticePage />);
 
-    expect(screen.getByText('Session Complete')).toBeInTheDocument();
-    expect(screen.getByText('3:45')).toBeInTheDocument(); // duration formatted
-    expect(screen.getByRole('button', { name: /Study More/i })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /Back to Deck/i }).length).toBeGreaterThan(0);
+    // Done component heading (Inter Tight, lowercase 'c')
+    expect(screen.getByText('Session complete')).toBeInTheDocument();
+    // Cards reviewed count from cardsReviewed
+    expect(screen.getByTestId('pf-done-cards-reviewed')).toHaveTextContent('10 cards reviewed');
+    // 4-up tally cells
+    expect(screen.getByTestId('pf-done-tally-forgot')).toHaveTextContent('1');
+    expect(screen.getByTestId('pf-done-tally-tough')).toHaveTextContent('2');
+    expect(screen.getByTestId('pf-done-tally-ok')).toHaveTextContent('5');
+    expect(screen.getByTestId('pf-done-tally-easy')).toHaveTextContent('2');
+    // Practice again button (replaces Study More)
+    expect(screen.getByTestId('pf-done-practice-again')).toBeInTheDocument();
+    // Back to deck button
+    expect(screen.getByTestId('pf-done-back-to-deck')).toBeInTheDocument();
   });
 
   it('word-scoped mode calls startSession with wordId', () => {
@@ -215,7 +243,7 @@ describe('V2FlashcardPracticePage', () => {
     mockStoreState = {
       ...mockStoreState,
       isLoading: false,
-      queue: [],
+      cards: [],
       sessionSummary: null,
       error: null,
     };

@@ -110,6 +110,45 @@ This wrapper handles test user filtering and default property injection.
 | Frontend | `src/lib/analytics/track.ts` | Single `track()` function |
 | Backend | `src/core/posthog.py` | `capture_event()` wrapper |
 
+## Practice Session Events (PRACT2-1)
+
+### `practice_session_started`
+
+Fired once when the study queue finishes loading and the session begins (non-empty queue only).
+
+**Properties:**
+
+- `deck_id` (string | null) — UUID of the deck being practiced, or `null` for cross-deck sessions.
+- `total_in_queue` (number) — total cards in the session queue.
+- `total_due` (number) — cards due for review (non-new).
+- `total_new` (number) — new cards introduced in this session.
+- `input_mode` (string) — current input mode: `'reveal'` (tap-to-flip) or `'type'` (typed answer).
+
+### `practice_card_rated`
+
+Fired once per rating submit when the user rates a card (1–4).
+
+**Properties:**
+
+- `deck_id` (string | null) — UUID of the deck, or `null` for cross-deck sessions.
+- `card_type` (string) — the card's type (e.g. `meaning_el_to_en`, `sentence_translation`, `article`).
+- `family` (string) — the practice family derived from `card_type`: `translation`, `sentence`, `grammar`, `declension`, or `audio`.
+- `rating` (number) — the rating submitted: `1` (forgot), `2` (tough), `3` (ok), `4` (easy).
+- `was_typed` (boolean) — `true` when `input_mode === 'type'`; `false` when `input_mode === 'reveal'`.
+
+### `practice_session_completed`
+
+Fired once when the last card is rated and all background review submissions resolve (session summary computed).
+
+**Properties:**
+
+- `deck_id` (string | null) — UUID of the deck, or `null` for cross-deck sessions.
+- `cards_reviewed` (number) — total cards reviewed in the session.
+- `forgot` (number) — cards rated 1 (forgot / again).
+- `tough` (number) — cards rated 2 (tough / hard).
+- `ok` (number) — cards rated 3 (ok / good).
+- `easy` (number) — cards rated 4 (easy).
+
 ## Exercise Events
 
 ### `exercise_answered`

@@ -78,7 +78,7 @@ test.describe.skip('Card Content Blur/Reveal', () => {
     await flipCard(page);
 
     // Content should no longer be blurred (main content area)
-    const blurredContent = page.locator('[data-testid="practice-card"]').locator('.blur-md');
+    const blurredContent = page.locator('[data-testid="pf-card"]').locator('.blur-md');
     // After flip, the card content is NOT blurred - only example translations may still be blurred
     // Check that the main translation is visible and not blurred
 

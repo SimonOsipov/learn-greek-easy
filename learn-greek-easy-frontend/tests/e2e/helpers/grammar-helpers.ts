@@ -193,9 +193,8 @@ export async function navigateToReview(page: Page): Promise<void> {
   await page.goto(`/decks/${mockDeck.id}/practice`);
   await page.waitForLoadState('domcontentloaded');
 
-  // Wait for the V2 practice card to appear (V2FlashcardPracticePage uses PracticeCard
-  // which renders data-testid="practice-card", not "flashcard")
-  const flashcard = page.locator('[data-testid="practice-card"]');
+  // Wait for the pf renderer card to appear (pf-card replaces legacy practice-card)
+  const flashcard = page.locator('[data-testid="pf-card"]');
   await expect(flashcard).toBeVisible({ timeout: 15000 });
 
   // Allow animations to settle
@@ -214,8 +213,8 @@ export async function flipCard(page: Page): Promise<void> {
   // Wait for flip animation and content to render
   await page.waitForTimeout(500);
 
-  // Verify rating buttons are visible (indicates flip complete)
-  await expect(page.getByRole('button', { name: /good/i })).toBeVisible({ timeout: 5000 });
+  // Verify rating row is visible (indicates flip complete; pf uses Forgot/Tough/OK/Easy)
+  await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 5000 });
 }
 
 /**
@@ -224,15 +223,15 @@ export async function flipCard(page: Page): Promise<void> {
  * @param page - Playwright page object
  */
 export async function clickToFlip(page: Page): Promise<void> {
-  // Find and click the card content area (before flip it's clickable)
-  const cardContent = page.locator('[data-testid="practice-card"]');
+  // Find and click the card content area (pf-card before flip is clickable)
+  const cardContent = page.locator('[data-testid="pf-card"]');
   await cardContent.click();
 
   // Wait for flip animation
   await page.waitForTimeout(500);
 
-  // Verify rating buttons are visible
-  await expect(page.getByRole('button', { name: /good/i })).toBeVisible({ timeout: 5000 });
+  // Verify rating row is visible (pf uses Forgot/Tough/OK/Easy, not Good)
+  await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 5000 });
 }
 
 /**

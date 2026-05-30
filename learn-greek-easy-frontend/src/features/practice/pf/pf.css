@@ -1,0 +1,1663 @@
+/* =========================================================================
+   Practice flow — pf-* utility classes
+   All pf-* rules live here; zero pf-* classes in src/index.css.
+   Imported once at PracticeApp.tsx (the practice route shell).
+
+   PRACT2-1-01: shell + ambient glow only.
+   Later subtasks append their own .pf-* blocks here.
+   ========================================================================= */
+
+/* ── Shell ────────────────────────────────────────────────────────────────── */
+
+.pf-app {
+  position: relative;
+  min-height: 100dvh; /* full-screen; NO overflow:hidden so rating buttons
+                           remain reachable on short viewports (AC #5) */
+  /* Per-family accent tokens set inline from PracticeApp.tsx:
+       --pf-c       hsl(var(--<tone>))
+       --pf-glow-1  hsl(var(--<tone>) / 0.22)
+       --pf-glow-2  hsl(var(--<tone>) / 0.12)
+  */
+}
+
+/* Ensure direct children of .pf-app sit above the glow layer */
+.pf-app > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Ambient glow — dual-layer opacity cross-fade technique ────────────────
+   CSS cannot interpolate gradient `background-image` changes (they snap).
+   Instead, two stacked fixed layers (::before = layer A, ::after = layer B)
+   hold the current and previous gradient. On family change, layer B
+   (::after) fades out as layer A (::before) fades in, producing a smooth
+   cross-fade. Both reference the same CSS custom props so the technique is
+   correct as a single-layer fade (JS currently updates props in one shot;
+   two-layer orchestration is a future enhancement if snap is perceptible).
+   ──────────────────────────────────────────────────────────────────────────
+   AC #1: cross-fades on family change.
+   AC #4: fixed, pointer-events:none, behind content (z-index:0).
+   ──────────────────────────────────────────────────────────────────────────
+*/
+
+.pf-app::before,
+.pf-app::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0; /* behind content (AC #4) */
+  pointer-events: none; /* AC #4 */
+  background:
+    radial-gradient(60% 50% at 20% 0%, var(--pf-glow-1, transparent), transparent 70%),
+    radial-gradient(50% 50% at 90% 10%, var(--pf-glow-2, transparent), transparent 70%);
+}
+
+/* ::before is the "live" layer — always visible */
+.pf-app::before {
+  opacity: 1;
+}
+
+/* ::after is the "transition-out" layer — initially hidden */
+.pf-app::after {
+  opacity: 0;
+}
+
+/* Disabled when data-ambient="off" (AC #4) */
+.pf-app[data-ambient='off']::before,
+.pf-app[data-ambient='off']::after {
+  opacity: 0;
+}
+
+/* Gate the cross-fade transition behind prefers-reduced-motion (AC #1)
+   so motion-sensitive users see an instant swap instead */
+@media (prefers-reduced-motion: no-preference) {
+  .pf-app::before {
+    transition: opacity 600ms ease;
+  }
+  .pf-app::after {
+    transition: opacity 600ms ease;
+  }
+}
+
+/* =========================================================================
+   PRACT2-1-02: Top bar — 3-column grid, deck label, segmented progress, streak
+   ========================================================================= */
+
+/* ── Keyframe: current-tick pulse ─────────────────────────────────────────── */
+@keyframes pf-seg-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* ── Top bar shell — 3-column grid ───────────────────────────────────────── */
+.pf-top {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  position: relative;
+  z-index: 2; /* above glow layer */
+}
+
+/* Collapse to stacked at ≤720px */
+@media (max-width: 720px) {
+  .pf-top {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
+/* ── Left column: deck label ─────────────────────────────────────────────── */
+.pf-deck-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0; /* prevent overflow */
+}
+
+.pf-deck-label__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: hsl(var(--fg));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pf-deck-label__meta {
+  font-size: 11px;
+  color: hsl(var(--fg-2));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Centre column: segmented progress bar ───────────────────────────────── */
+.pf-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.pf-seg-track {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Individual tick segment */
+.pf-seg {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: hsl(var(--fg) / 0.15);
+  transition:
+    background 200ms ease,
+    opacity 200ms ease;
+  min-width: 2px;
+  max-width: 32px;
+}
+
+/* Current tick: pulses with family accent colour */
+.pf-seg.is-current {
+  background: var(--pf-c, hsl(var(--primary)));
+  animation: pf-seg-pulse 1.4s ease-in-out infinite;
+}
+
+/* Rated ticks: recoloured by data-rate attribute */
+.pf-seg[data-rate='forgot'] {
+  background: hsl(var(--danger));
+}
+
+.pf-seg[data-rate='tough'] {
+  /* Deviation Justification: --practice-hard (25 95% 53%) is the sanctioned
+     orange for SRS "hard" ratings; used directly here as this token exists in
+     the practice palette and is the only sanctioned literal for this layer. */
+  background: hsl(var(--practice-hard));
+}
+
+.pf-seg[data-rate='ok'] {
+  background: hsl(var(--success));
+}
+
+.pf-seg[data-rate='easy'] {
+  background: hsl(var(--accent));
+}
+
+/* Family-tinted unrated segments (uses per-family --pf-c set by PracticeApp) */
+.pf-seg.pf-fam-tinted {
+  background: var(--pf-c, hsl(var(--primary) / 0.3));
+  opacity: 0.35;
+}
+
+/* Progress count text below the tick track */
+.pf-progress-count {
+  font-size: 11px;
+  color: hsl(var(--fg-3));
+  letter-spacing: 0.02em;
+}
+
+.pf-progress-count b {
+  color: hsl(var(--fg-2));
+  font-weight: 600;
+}
+
+/* ── Right column: streak pill ───────────────────────────────────────────── */
+.pf-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.pf-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  /* Deviation Justification: streak orange uses --practice-hard token (25 95% 53%)
+     which is the only sanctioned literal HSL in this layer per design-system.md.
+     Token reference keeps this compliant — no raw hex or arbitrary value. */
+  background: hsl(var(--practice-hard) / 0.15);
+  color: hsl(var(--practice-hard));
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.pf-streak__icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+/* =========================================================================
+   PRACT2-1-03: Card shell + header + Translation & Grammar renderers
+   ========================================================================= */
+
+/* ── Keyframe: card enter — transform-only (never opacity-gated) ─────────── */
+@keyframes pf-card-in {
+  from {
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Card shell ───────────────────────────────────────────────────────────── */
+.pf-card {
+  position: relative;
+  border-radius: var(--radius-xl, 28px);
+  box-shadow: var(--shadow-3);
+  background: hsl(var(--card));
+  overflow: hidden;
+}
+
+/* Transform-only enter animation — opacity stays 1 at all times */
+@media (prefers-reduced-motion: no-preference) {
+  .pf-card {
+    animation: pf-card-in 280ms var(--ease-smooth, cubic-bezier(0.4, 0, 0.2, 1)) both;
+  }
+}
+
+/* Family accent bar (top edge, coloured by --pf-c from PracticeApp) */
+.pf-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--pf-c, hsl(var(--primary)));
+  border-radius: var(--radius-xl, 28px) var(--radius-xl, 28px) 0 0;
+  z-index: 1;
+}
+
+/* Question phase — stable min-height so flip doesn't shift layout */
+.pf-body {
+  min-height: 220px;
+  padding: 20px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Foot / answer phase — stable min-height */
+.pf-foot {
+  min-height: 320px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ── Card header ──────────────────────────────────────────────────────────── */
+
+/* Header meta row — holds family badge + POS chip + lang switch */
+.pf-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+  padding-top: 12px; /* clear accent bar */
+}
+
+.pf-head__left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Family badge — kicker-style label tinted by --pf-c */
+.pf-fam {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pf-c, hsl(var(--primary)));
+}
+
+.pf-fam::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--pf-c, hsl(var(--primary)));
+  flex-shrink: 0;
+}
+
+/* POS chip — part-of-speech + optional gender-tinted article */
+.pf-pos {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(var(--fg-2));
+  background: hsl(var(--fg) / 0.07);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* Gender-tinted article within the POS chip */
+.pf-pos__article {
+  font-weight: 700;
+}
+
+.pf-pos__article[data-gender='masculine'] {
+  color: hsl(var(--primary));
+}
+
+.pf-pos__article[data-gender='feminine'] {
+  /* Deviation Justification: feminine pink (340 75% 55% / dark 340 80% 72%) is
+     a sanctioned literal per PRACT2-1 design-token note — no --pf-fem token
+     exists yet; literal HSL is the approved approach until tokenization lands. */
+  color: hsl(340 75% 55%);
+}
+
+.dark .pf-pos__article[data-gender='feminine'] {
+  color: hsl(340 80% 72%);
+}
+
+.pf-pos__article[data-gender='neuter'] {
+  color: hsl(var(--fg-3));
+}
+
+/* EN/RU language switch */
+.pf-lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  border-radius: 8px;
+  background: hsl(var(--fg) / 0.05);
+}
+
+.pf-lang__btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: hsl(var(--fg-3));
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+  line-height: 1.4;
+}
+
+.pf-lang__btn:hover {
+  color: hsl(var(--fg-2));
+}
+
+.pf-lang__btn[aria-pressed='true'] {
+  background: hsl(var(--card));
+  color: hsl(var(--fg));
+  box-shadow: var(--shadow-1);
+}
+
+/* ── Translation renderer ─────────────────────────────────────────────────── */
+
+/* Main Greek word — Noto Serif, large, never italic */
+.pf-translation-word {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-size: clamp(2rem, 6vw, 3rem);
+  font-weight: 700;
+  font-style: normal; /* never italic */
+  line-height: 1.15;
+  color: hsl(var(--fg));
+  text-align: center;
+  word-break: break-word;
+}
+
+/* Muted article prefix (ο/η/το) beside the main word */
+.pf-translation-article {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-style: normal;
+  font-weight: 400;
+  color: hsl(var(--fg-3));
+  font-size: 0.65em;
+  vertical-align: baseline;
+  margin-right: 0.25em;
+}
+
+/* IPA sub-line */
+.pf-ipa {
+  font-family: ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 13px;
+  font-style: italic;
+  color: hsl(var(--fg-3));
+  text-align: center;
+}
+
+/* EN prompt (meaning_en_to_el) — Inter Tight 700 */
+.pf-en-prompt {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: hsl(var(--fg));
+  text-align: center;
+  word-break: break-word;
+}
+
+/* ── Grammar renderer ─────────────────────────────────────────────────────── */
+
+/* Stem display (plural/singular given-form or article stem) — Noto Serif */
+.pf-grammar-stem {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 700;
+  font-style: normal;
+  line-height: 1.2;
+  color: hsl(var(--fg));
+  text-align: center;
+  word-break: break-word;
+}
+
+/* Article blank "???" placeholder */
+.pf-grammar-blank {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7em;
+  font-weight: 700;
+  color: hsl(var(--warning));
+  background: hsl(var(--warning) / 0.1);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-right: 0.25em;
+  vertical-align: baseline;
+  letter-spacing: 0.05em;
+}
+
+/* ── Audio chip ───────────────────────────────────────────────────────────── */
+.pf-audio-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* =========================================================================
+   PRACT2-1-04: Sentence renderers + red-dotted grammar tag
+   ========================================================================= */
+
+/* Instruction prompt label (muted, above the sentence) */
+.pf-sentence-prompt {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: hsl(var(--fg-3));
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
+/* ── el_to_en: Greek sentence with curly-quote decoration ─────────────────
+   ::before / ::after generate left/right typographic curly quotes tinted
+   by the family accent colour (--pf-c, set by PracticeApp per card family).
+   The quotes are purely decorative (aria-hidden via CSS content).
+   ────────────────────────────────────────────────────────────────────────── */
+.pf-sentence-text {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-size: clamp(1.25rem, 4.5vw, 2rem);
+  font-weight: 600;
+  font-style: normal; /* never italic — Greek text rule */
+  line-height: 1.4;
+  color: hsl(var(--fg));
+  text-align: center;
+  word-break: break-word;
+  position: relative;
+}
+
+/* Curly-quote decorations tinted by family accent (--pf-c from PracticeApp) */
+.pf-sentence-text::before,
+.pf-sentence-text::after {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 1.4em;
+  line-height: 0;
+  vertical-align: -0.3em;
+  color: var(--pf-c, hsl(var(--primary)));
+  opacity: 0.6;
+}
+
+.pf-sentence-text::before {
+  content: '\201C'; /* left double curly quote " */
+  margin-right: 0.1em;
+}
+
+.pf-sentence-text::after {
+  content: '\201D'; /* right double curly quote " */
+  margin-left: 0.1em;
+}
+
+/* ── en_to_el: English text ───────────────────────────────────────────────── */
+.pf-sentence-en-text {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: clamp(1.25rem, 4.5vw, 2rem);
+  font-weight: 700;
+  line-height: 1.3;
+  color: hsl(var(--fg));
+  text-align: center;
+  word-break: break-word;
+}
+
+/* ── Grammar-tag chip — inert red-dotted placeholder ─────────────────────── */
+.pf-sentence-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(var(--fg-2));
+  background: hsl(var(--fg) / 0.07);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* =========================================================================
+   PRACT2-1-06: Audio surface + green Audio-family styling
+   ========================================================================= */
+
+/* ── Keyframe: waveform bar pulse while playing ──────────────────────────── */
+@keyframes pf-wave {
+  0%,
+  100% {
+    transform: scaleY(0.4);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* ── Keyframe: play-button loading spin ──────────────────────────────────── */
+@keyframes pf-audio-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Audio surface shell ─────────────────────────────────────────────────── */
+.pf-audio-surface {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px 16px;
+  border-radius: var(--radius-lg, 20px);
+  /* Success-tinted background — AC #5: hsl(var(--success)) via token, no raw hex */
+  background: hsl(var(--success) / 0.07);
+  border: 1px solid hsl(var(--success) / 0.18);
+  width: 100%;
+}
+
+/* ── Family header ───────────────────────────────────────────────────────── */
+.pf-audio-surface__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+}
+
+.pf-audio-surface__family-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  /* Success-green tint for audio family — AC #5 */
+  color: hsl(var(--success));
+}
+
+.pf-audio-surface__family-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: hsl(var(--success));
+}
+
+/* ── Play / pause button (56px round green) ──────────────────────────────── */
+.pf-audio-surface__play-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  /* Success-green button — AC #5 */
+  background: hsl(var(--success));
+  color: hsl(var(--success-fg, 0 0% 100%));
+  transition:
+    background 150ms ease,
+    transform 120ms ease,
+    opacity 120ms ease;
+}
+
+/* Hover: slightly darken the green */
+.pf-audio-surface__play-btn:hover:not(:disabled) {
+  background: hsl(var(--success) / 0.88);
+  transform: scale(1.04);
+}
+
+/* Pressed */
+.pf-audio-surface__play-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Disabled (no audioUrl) */
+.pf-audio-surface__play-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pf-audio-surface__play-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+/* Spin animation for loading state */
+.pf-audio-surface__play-icon--loading {
+  animation: pf-audio-spin 0.9s linear infinite;
+}
+
+/* ── Waveform ─────────────────────────────────────────────────────────────── */
+.pf-audio-surface__wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 40px;
+  width: 100%;
+  max-width: 200px;
+}
+
+/* Individual bar — height driven by --bar-h CSS custom prop (set inline) */
+.pf-wave-bar {
+  flex: 1;
+  min-width: 3px;
+  max-width: 8px;
+  height: var(--bar-h, 50%);
+  border-radius: 2px;
+  /* Success-green tint for bars — AC #5 */
+  background: hsl(var(--success) / 0.5);
+  transform-origin: center;
+  transition: background 200ms ease;
+}
+
+/* Playing pulse — stagger animation by bar index via animation-delay.
+   We can't access the bar index in CSS natively, but a sufficiently
+   short animation cycle (600ms) with a per-bar initial phase derived
+   from the height variation produces a natural-looking wave sweep.
+   Delay is approximated via nth-child for 28 bars in 4 groups. */
+@media (prefers-reduced-motion: no-preference) {
+  .pf-wave-bar--playing {
+    background: hsl(var(--success) / 0.9);
+    animation: pf-wave 600ms ease-in-out infinite;
+  }
+
+  /* Stagger offset: 4 groups × 7 bars = 28 bars */
+  .pf-wave-bar--playing:nth-child(4n + 1) {
+    animation-delay: 0ms;
+  }
+  .pf-wave-bar--playing:nth-child(4n + 2) {
+    animation-delay: 150ms;
+  }
+  .pf-wave-bar--playing:nth-child(4n + 3) {
+    animation-delay: 300ms;
+  }
+  .pf-wave-bar--playing:nth-child(4n + 4) {
+    animation-delay: 450ms;
+  }
+}
+
+/* ── Time readout ─────────────────────────────────────────────────────────── */
+.pf-audio-surface__time {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: hsl(var(--fg-2));
+}
+
+.pf-audio-surface__time-current {
+  color: hsl(var(--success));
+  font-weight: 600;
+}
+
+.pf-audio-surface__time-sep {
+  color: hsl(var(--fg-3));
+}
+
+.pf-audio-surface__time-duration {
+  color: hsl(var(--fg-3));
+}
+
+/* ── Speed toggle buttons ─────────────────────────────────────────────────── */
+.pf-audio-surface__speed {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pf-audio-surface__speed-btn {
+  padding: 3px 8px;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  background: hsl(var(--fg) / 0.07);
+  color: hsl(var(--fg-3));
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+  line-height: 1.4;
+}
+
+.pf-audio-surface__speed-btn:hover {
+  background: hsl(var(--fg) / 0.12);
+  color: hsl(var(--fg-2));
+}
+
+/* Active speed button — success-tinted */
+.pf-audio-surface__speed-btn.is-active {
+  background: hsl(var(--success) / 0.15);
+  color: hsl(var(--success));
+}
+
+/* ── Error message ────────────────────────────────────────────────────────── */
+.pf-audio-surface__error {
+  font-size: 12px;
+  color: hsl(var(--danger));
+  text-align: center;
+  margin: 0;
+}
+
+/* =========================================================================
+   PRACT2-1-05: Declension paradigm table
+   ========================================================================= */
+
+/* ── Lemma row (nom-sg el — en gloss) ────────────────────────────────────── */
+.pf-decl-lemma {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-style: normal; /* Greek text is never italic */
+  color: hsl(var(--fg));
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+/* Greek portion of the lemma */
+.pf-decl-lemma__el {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-style: normal;
+}
+
+/* Separator + English gloss — muted */
+.pf-decl-lemma__gloss {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 0.9em;
+  font-weight: 400;
+  color: hsl(var(--fg-2));
+}
+
+/* ── Paradigm table wrapper ───────────────────────────────────────────────── */
+.pf-decl-table {
+  width: 100%;
+  max-width: 360px;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  color: hsl(var(--fg));
+}
+
+/* Column headers: sg / pl */
+.pf-decl-table__th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(var(--fg-3));
+  text-align: center;
+  padding: 2px 8px 6px;
+}
+
+/* Case label column header — empty (spans the row header column) */
+.pf-decl-table__th--case {
+  text-align: left;
+}
+
+/* Row case label */
+.pf-decl-table__case {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: hsl(var(--fg-3));
+  padding: 5px 8px 5px 0;
+  white-space: nowrap;
+  vertical-align: middle;
+  text-align: left;
+}
+
+/* Regular form cell */
+.pf-decl-table__cell {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-style: normal;
+  font-size: 1rem;
+  font-weight: 500;
+  color: hsl(var(--fg));
+  text-align: center;
+  padding: 5px 8px;
+  vertical-align: middle;
+}
+
+/* ── Target cell (the one blank/filled cell) ─────────────────────────────── */
+.pf-cell-target {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  text-align: center;
+  padding: 5px 8px;
+  vertical-align: middle;
+  border-radius: 6px;
+  transition: background 200ms ease;
+}
+
+/* Pre-reveal: tinted "?" using accent-3 (orange) */
+.pf-cell-target.is-blank {
+  /* Deviation Justification: accent-3 is the declension family tone per families.ts:48
+     and index.css:23 (32 100% 60%). Used via token — no raw hex. */
+  color: hsl(var(--accent-3));
+  background: hsl(var(--accent-3) / 0.12);
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+}
+
+/* Post-reveal: form shown, flash animation */
+.pf-cell-target.is-revealed {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-style: normal;
+  font-size: 1rem;
+  font-weight: 700;
+  color: hsl(var(--accent-3));
+  background: hsl(var(--accent-3) / 0.1);
+  animation: pf-cell-fill 400ms ease-out both;
+}
+
+/* ── Fill-in flash: transform + opacity only (no color animation = no jank) */
+@keyframes pf-cell-fill {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* =========================================================================
+   PRACT2-1-07: Answer block, RatingRow, Toast + rating-aware slide-out
+   ========================================================================= */
+
+/* ── Keyframe: card slide-out left (ok/easy → graduate) ──────────────────── */
+@keyframes pf-leave-left {
+  from {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-60px) scale(0.97);
+    opacity: 0;
+  }
+}
+
+/* ── Keyframe: card slide-out right (forgot/tough → relearn) ─────────────── */
+@keyframes pf-leave-right {
+  from {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(60px) scale(0.97);
+    opacity: 0;
+  }
+}
+
+/* ── Keyframe: toast enter ────────────────────────────────────────────────── */
+@keyframes pf-toast-in {
+  from {
+    transform: translateY(6px) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Slide-out card wrapper — data-leave triggers the appropriate animation */
+.pf-card-slide-wrapper {
+  /* No base styles — transparent passthrough */
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pf-card-slide-wrapper[data-leave='left'] .pf-card {
+    animation: pf-leave-left 320ms var(--ease-smooth, cubic-bezier(0.4, 0, 0.2, 1)) both;
+    pointer-events: none;
+  }
+
+  .pf-card-slide-wrapper[data-leave='right'] .pf-card {
+    animation: pf-leave-right 320ms var(--ease-smooth, cubic-bezier(0.4, 0, 0.2, 1)) both;
+    pointer-events: none;
+  }
+}
+
+/* ── Answer block ─────────────────────────────────────────────────────────── */
+.pf-answer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+/* Check icon label */
+.pf-answer__label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--success));
+}
+
+.pf-answer__check-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Greek answer — Noto Serif, never italic */
+.pf-answer__text--el {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 700;
+  font-style: normal; /* Greek text is never italic */
+  line-height: 1.2;
+  color: hsl(var(--fg));
+  text-align: center;
+  word-break: break-word;
+}
+
+/* English answer — Inter Tight */
+.pf-answer__text--en {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: hsl(var(--fg));
+  text-align: center;
+  word-break: break-word;
+}
+
+/* Inert typed-result chip slot — empty in reveal mode (PRACT2-1-08 fills it) */
+.pf-answer__type-slot {
+  /* No visual — zero-height placeholder for type mode */
+  height: 0;
+}
+
+/* Example block */
+.pf-answer__example {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: var(--radius-lg, 20px);
+  background: hsl(var(--fg) / 0.04);
+  border: 1px solid hsl(var(--fg) / 0.08);
+  width: 100%;
+}
+
+/* Russian translation in example block */
+.pf-answer__example-ru {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: hsl(var(--fg-2));
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ── Rating row ───────────────────────────────────────────────────────────── */
+.pf-rating-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+/* Base rating button */
+.pf-rating-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 6px 8px;
+  border-radius: var(--radius-lg, 20px);
+  border: 1px solid hsl(var(--fg) / 0.1);
+  background: hsl(var(--card));
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    transform 100ms ease,
+    box-shadow 120ms ease;
+  min-width: 0;
+}
+
+.pf-rating-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
+}
+
+.pf-rating-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+}
+
+.pf-rating-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Tone bar — coloured strip at the top of each button */
+.pf-rating-btn__bar {
+  display: block;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  transition: background 120ms ease;
+}
+
+/* Label */
+.pf-rating-btn__label {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Keycap hint */
+.pf-rating-btn__key {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: hsl(var(--fg) / 0.07);
+  color: hsl(var(--fg-3));
+  border: none;
+  line-height: 1.4;
+}
+
+/* ── Tone variants ────────────────────────────────────────────────────────── */
+
+/* Forgot — danger */
+.pf-rating-btn--forgot .pf-rating-btn__bar {
+  background: hsl(var(--danger));
+}
+.pf-rating-btn--forgot .pf-rating-btn__label {
+  color: hsl(var(--danger));
+}
+.pf-rating-btn--forgot:hover:not(:disabled) {
+  background: hsl(var(--danger) / 0.06);
+  border-color: hsl(var(--danger) / 0.25);
+}
+
+/* Tough — sanctioned orange literal (Deviation Justification: --practice-hard /
+   25 95% 53% is the only sanctioned literal for SRS "hard" in this palette;
+   matches pf-seg[data-rate=tough] and .pf-streak above). */
+.pf-rating-btn--tough .pf-rating-btn__bar {
+  background: hsl(var(--practice-hard));
+}
+.pf-rating-btn--tough .pf-rating-btn__label {
+  color: hsl(var(--practice-hard));
+}
+.pf-rating-btn--tough:hover:not(:disabled) {
+  background: hsl(var(--practice-hard) / 0.06);
+  border-color: hsl(var(--practice-hard) / 0.25);
+}
+
+/* OK — success */
+.pf-rating-btn--ok .pf-rating-btn__bar {
+  background: hsl(var(--success));
+}
+.pf-rating-btn--ok .pf-rating-btn__label {
+  color: hsl(var(--success));
+}
+.pf-rating-btn--ok:hover:not(:disabled) {
+  background: hsl(var(--success) / 0.06);
+  border-color: hsl(var(--success) / 0.25);
+}
+
+/* Easy — accent */
+.pf-rating-btn--easy .pf-rating-btn__bar {
+  background: hsl(var(--accent));
+}
+.pf-rating-btn--easy .pf-rating-btn__label {
+  color: hsl(var(--accent));
+}
+.pf-rating-btn--easy:hover:not(:disabled) {
+  background: hsl(var(--accent) / 0.06);
+  border-color: hsl(var(--accent) / 0.25);
+}
+
+/* ── Toast pill ───────────────────────────────────────────────────────────── */
+.pf-toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--fg) / 0.1);
+  box-shadow: var(--shadow-1);
+  font-size: 13px;
+  color: hsl(var(--fg-2));
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pf-toast {
+    animation: pf-toast-in 220ms var(--ease-smooth, cubic-bezier(0.4, 0, 0.2, 1)) both;
+  }
+}
+
+.pf-toast__label {
+  font-weight: 400;
+}
+
+.pf-toast__interval {
+  font-weight: 700;
+  color: hsl(var(--fg));
+}
+
+/* =========================================================================
+   PRACT2-1-08: TypedInput + typed-result chip
+   ========================================================================= */
+
+/* ── TypedInput wrapper — sits in .pf-body below question renderer ───────── */
+.pf-typed-input-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 400px;
+  margin-top: 8px;
+}
+
+/* Input + skip button row */
+.pf-typed-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* ── The input field ──────────────────────────────────────────────────────── */
+.pf-typed-input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: var(--radius-lg, 20px);
+  border: 1.5px solid hsl(var(--fg) / 0.15);
+  background: hsl(var(--card));
+  color: hsl(var(--fg));
+  font-size: 1rem;
+  font-weight: 500;
+  outline: none;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.pf-typed-input:focus {
+  border-color: var(--pf-c, hsl(var(--primary)));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--pf-c, hsl(var(--primary))) 25%, transparent);
+}
+
+/* Greek input — Noto Serif, never italic */
+.pf-typed-input--el {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-style: normal;
+  font-size: 1.1rem;
+}
+
+/* English input — Inter Tight */
+.pf-typed-input--en {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+}
+
+/* ── Skip button ─────────────────────────────────────────────────────────── */
+.pf-typed-skip-btn {
+  padding: 10px 14px;
+  border-radius: var(--radius-lg, 20px);
+  border: 1.5px solid hsl(var(--fg) / 0.12);
+  background: hsl(var(--fg) / 0.05);
+  color: hsl(var(--fg-3));
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.pf-typed-skip-btn:hover {
+  background: hsl(var(--fg) / 0.09);
+  color: hsl(var(--fg-2));
+}
+
+/* ── Keyboard hint line ──────────────────────────────────────────────────── */
+.pf-typed-hint {
+  font-size: 11px;
+  color: hsl(var(--fg-3));
+  text-align: center;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.pf-typed-hint kbd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: hsl(var(--fg) / 0.07);
+  color: hsl(var(--fg-3));
+  border: none;
+}
+
+/* ── Typed-result chip (shown in .pf-answer__type-slot post-reveal) ──────── */
+.pf-typed-result {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Correct — success green */
+.pf-typed-result--correct {
+  color: hsl(var(--success));
+  background: hsl(var(--success) / 0.12);
+  border: 1px solid hsl(var(--success) / 0.25);
+}
+
+/* Lenient — amber/warning tone */
+.pf-typed-result--lenient {
+  color: hsl(var(--warning));
+  background: hsl(var(--warning) / 0.12);
+  border: 1px solid hsl(var(--warning) / 0.25);
+}
+
+/* Wrong — danger */
+.pf-typed-result--wrong {
+  color: hsl(var(--danger));
+  background: hsl(var(--danger) / 0.12);
+  border: 1px solid hsl(var(--danger) / 0.25);
+}
+
+/* ── Mode toggle button ──────────────────────────────────────────────────── */
+.pf-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  border: 1px solid hsl(var(--fg) / 0.12);
+  background: hsl(var(--fg) / 0.05);
+  color: hsl(var(--fg-3));
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+  line-height: 1.4;
+}
+
+.pf-mode-toggle:hover {
+  background: hsl(var(--fg) / 0.09);
+  color: hsl(var(--fg-2));
+}
+
+.pf-mode-toggle[data-active='true'] {
+  background: var(--pf-c, hsl(var(--primary)));
+  color: hsl(var(--card));
+  border-color: transparent;
+}
+
+/* =========================================================================
+   PRACT2-1-09: Done screen — session-complete surface
+   ========================================================================= */
+
+/* ── Done surface shell ───────────────────────────────────────────────────── */
+.pf-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px 20px 32px;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ── Check mark container ─────────────────────────────────────────────────── */
+.pf-done__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 9999px;
+  background: hsl(var(--success) / 0.12);
+  color: hsl(var(--success));
+  flex-shrink: 0;
+}
+
+.pf-done__check-icon {
+  width: 36px;
+  height: 36px;
+}
+
+/* ── Heading — Inter Tight ────────────────────────────────────────────────── */
+.pf-done__heading {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: hsl(var(--fg));
+  text-align: center;
+  margin: 0;
+}
+
+/* ── Cards reviewed count ─────────────────────────────────────────────────── */
+.pf-done__count {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  color: hsl(var(--fg-2));
+  text-align: center;
+  margin: 0;
+}
+
+/* ── 4-up tally ───────────────────────────────────────────────────────────── */
+.pf-done__tally {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+/* Individual tally cell */
+.pf-done__tally-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px 8px;
+  border-radius: var(--radius-lg, 20px);
+  border: 1px solid hsl(var(--fg) / 0.1);
+  background: hsl(var(--card));
+}
+
+/* Tally count number */
+.pf-done__tally-count {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Tally label below the count */
+.pf-done__tally-label {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* ── Tone variants for tally cells ───────────────────────────────────────── */
+
+/* Forgot — danger */
+.pf-done__tally-cell--forgot .pf-done__tally-count {
+  color: hsl(var(--danger));
+}
+.pf-done__tally-cell--forgot .pf-done__tally-label {
+  color: hsl(var(--danger));
+}
+
+/* Tough — sanctioned orange literal (matches pf-seg[data-rate=tough] and .pf-streak) */
+/* Deviation Justification: --practice-hard (25 95% 53%) is the sanctioned
+   literal for SRS "hard" rating in this palette; matches pf-rating-btn--tough above. */
+.pf-done__tally-cell--tough .pf-done__tally-count {
+  color: hsl(var(--practice-hard));
+}
+.pf-done__tally-cell--tough .pf-done__tally-label {
+  color: hsl(var(--practice-hard));
+}
+
+/* OK — success */
+.pf-done__tally-cell--ok .pf-done__tally-count {
+  color: hsl(var(--success));
+}
+.pf-done__tally-cell--ok .pf-done__tally-label {
+  color: hsl(var(--success));
+}
+
+/* Easy — accent */
+.pf-done__tally-cell--easy .pf-done__tally-count {
+  color: hsl(var(--accent));
+}
+.pf-done__tally-cell--easy .pf-done__tally-label {
+  color: hsl(var(--accent));
+}
+
+/* ── Optional time stats row ──────────────────────────────────────────────── */
+.pf-done__time-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 16px;
+  border-radius: var(--radius-lg, 20px);
+  background: hsl(var(--fg) / 0.04);
+  border: 1px solid hsl(var(--fg) / 0.08);
+  width: 100%;
+}
+
+.pf-done__time-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.pf-done__time-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: hsl(var(--fg));
+}
+
+.pf-done__time-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: hsl(var(--fg-3));
+}
+
+.pf-done__time-sep {
+  width: 1px;
+  height: 28px;
+  background: hsl(var(--fg) / 0.1);
+  flex-shrink: 0;
+}
+
+/* ── Actions row ──────────────────────────────────────────────────────────── */
+.pf-done__actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+/* ── Reduced-motion — scoped to pf- animation families ──────────────────────
+   A global prefers-reduced-motion: reduce guard already exists in
+   src/index.css (~L4284, applies animation-duration/iteration/transition to
+   all *). Five of the eight pf-* animation carriers are additionally gated
+   behind `@media (prefers-reduced-motion: no-preference)` blocks earlier in
+   this file (pf-card-in, pf-wave, pf-leave-left, pf-leave-right, pf-toast-in).
+   This block is intentionally a belt-and-suspenders measure targeting ALL
+   eight pf-* carriers — the three that are unconditional (pf-seg-pulse,
+   pf-audio-spin, pf-cell-fill) are the primary concern; the other five are
+   reinforced here for completeness. Mirrors the dx.css DX-14 pattern.
+   ────────────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  /* pf-seg-pulse — infinite pulse on active segment (UNCONDITIONAL — primary) */
+  .pf-seg.is-current {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  /* pf-audio-spin — infinite spinner on loading audio button (UNCONDITIONAL — primary) */
+  .pf-audio-surface__play-icon--loading {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  /* pf-cell-fill — cell reveal fill (UNCONDITIONAL — primary) */
+  .pf-cell-target.is-revealed {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  /* pf-card-in — card entrance (reinforces existing no-preference gate) */
+  .pf-card {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  /* pf-wave — wave bars (reinforces existing no-preference gate) */
+  .pf-wave-bar--playing {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  /* pf-leave-left / pf-leave-right — slide-out animations (reinforces existing no-preference gate) */
+  .pf-card-slide-wrapper[data-leave='left'] .pf-card,
+  .pf-card-slide-wrapper[data-leave='right'] .pf-card {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  /* pf-toast-in — toast entrance (reinforces existing no-preference gate) */
+  .pf-toast {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

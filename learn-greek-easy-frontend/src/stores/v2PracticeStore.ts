@@ -8,6 +8,7 @@
  * - Optimistic card advancement on rating
  * - Background review submission with stats accumulation
  * - Session summary computation on completion
+ * - Streak + per-card rating history for PRACT2-1 top bar
  *
  * Simplified V1 reviewStore.ts pattern: flat state, no crash recovery, no pause/resume.
  */
@@ -15,6 +16,8 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import { familyForCardType } from '@/features/practice/pf/families';
+import { track } from '@/lib/analytics/track';
 import { MAX_ANSWER_TIME_SECONDS } from '@/lib/timeFormatUtils';
 import { reviewAPI } from '@/services/reviewAPI';
 import type { ReviewResult } from '@/services/reviewAPI';
@@ -23,6 +26,12 @@ import type { StudyQueue, StudyQueueCard } from '@/services/studyAPI';
 import type { CardRecordResponse, CardRecordType } from '@/services/wordEntryAPI';
 import { useAuthStore } from '@/stores/authStore';
 import { generateSessionId } from '@/utils/analytics';
+import {
+  getPersistedInputMode,
+  setPersistedInputMode,
+  getPersistedShowStreak,
+  setPersistedShowStreak,
+} from '@/utils/practiceSettings';
 
 // ============================================
 // Constants
@@ -34,6 +43,42 @@ const STATUS_ORDER: Record<string, number> = {
   review: 2,
   mastered: 3,
 };
+
+// ============================================
+// Exported types
+// ============================================
+
+/**
+ * Per-card rating outcome bucket used for progress-bar colouring (PRACT2-1-02).
+ * Exact quality→bucket mapping is finalised in PRACT2-1-07; this typing
+ * establishes the shape consumed by TopBar / ProgressBar.
+ */
+export type RatingKey = 'forgot' | 'tough' | 'ok' | 'easy';
+
+/**
+ * Type-mode toggle: 'reveal' is the default (tap-to-flip); 'type' shows the
+ * TypedInput field and runs the forgiving judge before revealing.
+ * Persistence via localStorage is owned by PRACT2-1-11 — this field is
+ * in-memory only.
+ */
+export type InputMode = 'reveal' | 'type';
+
+/**
+ * Maps a practice rating (1-4) to a RatingKey for display purposes.
+ * 1 = forgot, 2 = tough, 3 = ok, 4 = easy.
+ */
+export function ratingToKey(rating: 1 | 2 | 3 | 4): RatingKey {
+  switch (rating) {
+    case 1:
+      return 'forgot';
+    case 2:
+      return 'tough';
+    case 3:
+      return 'ok';
+    case 4:
+      return 'easy';
+  }
+}
 
 // ============================================
 // Exported Utility Functions
@@ -102,6 +147,20 @@ export interface V2SessionStats {
   cardsRelearning: number;
 }
 
+/**
+ * Toast payload set from the .then(result) callback after a review submits.
+ * Keyed by card_record_id so a late async response cannot attach to the wrong
+ * card (the advance is optimistic / synchronous — result arrives after flip).
+ */
+export interface ToastPayload {
+  /** The card this toast belongs to — guards against mis-attachment. */
+  forCardId: string;
+  /** Whole-day interval from SM-2 (ReviewResult.interval). */
+  interval: number;
+  /** ISO date string from ReviewResult.next_review_date. */
+  nextReviewDate: string;
+}
+
 export interface V2SessionSummary {
   sessionId: string;
   deckId: string | null;
@@ -131,7 +190,8 @@ const DEFAULT_SESSION_STATS: V2SessionStats = {
 
 interface V2PracticeState {
   // Session data
-  queue: StudyQueueCard[];
+  /** The cards in the current session queue (renamed from `queue` in PRACT2-1-02). */
+  cards: StudyQueueCard[];
   currentIndex: number;
   isFlipped: boolean;
   sessionId: string | null;
@@ -142,6 +202,30 @@ interface V2PracticeState {
   isLoading: boolean;
   error: string | null;
   sessionSummary: V2SessionSummary | null;
+
+  // Queue totals from the API response (PRACT2-1-02)
+  totalNew: number;
+  totalReview: number;
+
+  // Streak & per-card rating history (PRACT2-1-02)
+  streak: number;
+  ratings: (RatingKey | null)[];
+
+  // Rating-aware slide-out (PRACT2-1-07)
+  /** Direction for the slide-out animation set on rateCard (before advance). */
+  leaveDirection: 'left' | 'right' | null;
+
+  // Toast state (PRACT2-1-07) — set in .then(result) from reviewAPI.submit
+  /** Toast payload keyed by card_record_id to prevent mis-attachment. */
+  toast: ToastPayload | null;
+
+  // Type mode (PRACT2-1-08) — persisted via localStorage (PRACT2-1-11)
+  /** Whether the user types an answer before flipping ('type') or taps to reveal ('reveal'). */
+  inputMode: InputMode;
+
+  // Streak visibility (PRACT2-1-11) — persisted via localStorage
+  /** Whether the streak pill is shown in the top bar. */
+  showStreak: boolean;
 
   // Timing
   cardStartTime: number | null;
@@ -162,6 +246,14 @@ interface V2PracticeState {
   resetSession: () => void;
   clearError: () => void;
   clearSessionSummary: () => void;
+  /** Clear the leave-direction after the slide-out animation completes. */
+  clearLeaveDirection: () => void;
+  /** Clear the toast (called when the user moves to the next card). */
+  clearToast: () => void;
+  /** Switch input mode (reveal ↔ type). Persisted to localStorage. */
+  setInputMode: (mode: InputMode) => void;
+  /** Show/hide the streak pill. Persisted to localStorage. */
+  setShowStreak: (value: boolean) => void;
 }
 
 // ============================================
@@ -172,7 +264,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
   devtools(
     (set, get) => ({
       // Initial state
-      queue: [],
+      cards: [],
       currentIndex: 0,
       isFlipped: false,
       sessionId: null,
@@ -186,6 +278,14 @@ export const useV2PracticeStore = create<V2PracticeState>()(
       cardStartTime: null,
       sessionStartTime: null,
       _pendingReviews: 0,
+      totalNew: 0,
+      totalReview: 0,
+      streak: 0,
+      ratings: [],
+      leaveDirection: null,
+      toast: null,
+      inputMode: getPersistedInputMode(),
+      showStreak: getPersistedShowStreak(),
 
       /**
        * Start a new V2 practice session.
@@ -236,7 +336,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
 
           const now = Date.now();
           set({
-            queue: queueData.cards,
+            cards: queueData.cards,
             currentIndex: 0,
             isFlipped: false,
             sessionId: generateSessionId(),
@@ -250,7 +350,28 @@ export const useV2PracticeStore = create<V2PracticeState>()(
             cardStartTime: now,
             sessionStartTime: now,
             _pendingReviews: 0,
+            // Queue totals for TopBar deck label (PRACT2-1-02)
+            totalNew: queueData.total_new,
+            totalReview: queueData.total_due,
+            // Reset streak + ratings for new session
+            streak: 0,
+            ratings: new Array(queueData.cards.length).fill(null),
+            leaveDirection: null,
+            toast: null,
+            // inputMode persists across cards — reset only on explicit setInputMode call
           });
+
+          // Analytics: practice_session_started (PRACT2-1-12)
+          // Only fire for non-empty queues; empty queue shows "all caught up" screen
+          if (queueData.cards.length > 0) {
+            track('practice_session_started', {
+              deck_id: deckId,
+              total_in_queue: queueData.total_in_queue,
+              total_due: queueData.total_due,
+              total_new: queueData.total_new,
+              input_mode: get().inputMode,
+            });
+          }
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : 'Failed to start practice session.';
@@ -273,20 +394,27 @@ export const useV2PracticeStore = create<V2PracticeState>()(
        * On failure, sets error without reverting the optimistic advance.
        * When the last card is rated and all background submissions return,
        * computes V2SessionSummary.
+       *
+       * Also updates streak and per-card ratings array (PRACT2-1-02):
+       * - ok/easy → streak +1
+       * - forgot  → streak reset to 0
+       * - tough   → streak unchanged
        */
       rateCard: (rating: 1 | 2 | 3 | 4) => {
         const state = get();
         const {
-          queue,
+          cards,
           currentIndex,
           cardStartTime,
           sessionId,
           deckId,
           sessionStartTime,
           _pendingReviews,
+          streak,
+          ratings,
         } = state;
 
-        const card = queue[currentIndex];
+        const card = cards[currentIndex];
         if (!card) return;
 
         const quality = mapPracticeRatingToQuality(rating);
@@ -295,15 +423,47 @@ export const useV2PracticeStore = create<V2PracticeState>()(
           : 0;
 
         const nextIndex = currentIndex + 1;
-        const isLastCard = nextIndex >= queue.length;
+        const isLastCard = nextIndex >= cards.length;
         const now = Date.now();
 
-        // Optimistic advance
+        // Update streak: ok/easy +1, forgot reset to 0, tough unchanged
+        const ratingKey = ratingToKey(rating);
+        const newStreak =
+          ratingKey === 'ok' || ratingKey === 'easy'
+            ? streak + 1
+            : ratingKey === 'forgot'
+              ? 0
+              : streak; // tough: unchanged
+
+        // Update per-card ratings array
+        const newRatings = [...ratings];
+        newRatings[currentIndex] = ratingKey;
+
+        // Determine slide direction: Forgot/Tough → right (relearn); OK/Easy → left (graduate)
+        const newLeaveDirection: 'left' | 'right' =
+          ratingKey === 'forgot' || ratingKey === 'tough' ? 'right' : 'left';
+
+        // Analytics: practice_card_rated (PRACT2-1-12)
+        track('practice_card_rated', {
+          deck_id: deckId,
+          card_type: card.card_type,
+          family: familyForCardType(card.card_type),
+          rating,
+          was_typed: get().inputMode === 'type',
+        });
+
+        // Optimistic advance (includes streak + ratings update — single source of truth)
+        // leaveDirection is set BEFORE the index advances so the outgoing card
+        // can read it in data-leave; toast is cleared — will repopulate from .then
         set({
           currentIndex: nextIndex,
           isFlipped: false,
           cardStartTime: isLastCard ? null : now,
           _pendingReviews: _pendingReviews + 1,
+          streak: newStreak,
+          ratings: newRatings,
+          leaveDirection: newLeaveDirection,
+          toast: null,
         });
 
         // Background submission
@@ -335,6 +495,17 @@ export const useV2PracticeStore = create<V2PracticeState>()(
               cardsRelearning: s.sessionStats.cardsRelearning + (isRelearning ? 1 : 0),
             };
 
+            // Populate toast — keyed by this card's ID so a late response
+            // from a previous card can't clobber the current card's toast.
+            // Only set if the current displayed card is still the one we just rated
+            // (i.e., forCardId matches what was submitted).
+            const toastPayload: ToastPayload = {
+              forCardId: card.card_record_id,
+              interval: result.interval,
+              nextReviewDate: result.next_review_date,
+            };
+            set({ toast: toastPayload });
+
             const isSessionComplete = isLastCard && newPending === 0;
 
             if (isSessionComplete) {
@@ -359,6 +530,17 @@ export const useV2PracticeStore = create<V2PracticeState>()(
                 newStarted: updatedStats.newStarted,
                 cardsMastered: updatedStats.cardsMastered,
               };
+
+              // Analytics: practice_session_completed (PRACT2-1-12)
+              // Fires exactly once — inside the isSessionComplete guard (isLastCard && newPending===0)
+              track('practice_session_completed', {
+                deck_id: deckId,
+                cards_reviewed: summary.cardsReviewed,
+                forgot: summary.ratingBreakdown.again,
+                tough: summary.ratingBreakdown.hard,
+                ok: summary.ratingBreakdown.good,
+                easy: summary.ratingBreakdown.easy,
+              });
 
               set({
                 sessionStats: updatedStats,
@@ -388,7 +570,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
        */
       endSession: () => {
         set({
-          queue: [],
+          cards: [],
           currentIndex: 0,
           isFlipped: false,
           sessionId: null,
@@ -401,6 +583,12 @@ export const useV2PracticeStore = create<V2PracticeState>()(
           cardStartTime: null,
           sessionStartTime: null,
           _pendingReviews: 0,
+          totalNew: 0,
+          totalReview: 0,
+          streak: 0,
+          ratings: [],
+          leaveDirection: null,
+          toast: null,
         });
       },
 
@@ -409,7 +597,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
        */
       resetSession: () => {
         set({
-          queue: [],
+          cards: [],
           currentIndex: 0,
           isFlipped: false,
           sessionId: null,
@@ -423,6 +611,12 @@ export const useV2PracticeStore = create<V2PracticeState>()(
           cardStartTime: null,
           sessionStartTime: null,
           _pendingReviews: 0,
+          totalNew: 0,
+          totalReview: 0,
+          streak: 0,
+          ratings: [],
+          leaveDirection: null,
+          toast: null,
         });
       },
 
@@ -438,6 +632,38 @@ export const useV2PracticeStore = create<V2PracticeState>()(
        */
       clearSessionSummary: () => {
         set({ sessionSummary: null });
+      },
+
+      /**
+       * Clear the leave-direction (called by the slide wrapper after 320ms).
+       */
+      clearLeaveDirection: () => {
+        set({ leaveDirection: null });
+      },
+
+      /**
+       * Clear the toast (called when moving to the next card).
+       */
+      clearToast: () => {
+        set({ toast: null });
+      },
+
+      /**
+       * Switch between reveal mode and type mode.
+       * Persists the choice to localStorage (PRACT2-1-11).
+       */
+      setInputMode: (mode: InputMode) => {
+        setPersistedInputMode(mode);
+        set({ inputMode: mode });
+      },
+
+      /**
+       * Show or hide the streak pill.
+       * Persists the choice to localStorage (PRACT2-1-11).
+       */
+      setShowStreak: (value: boolean) => {
+        setPersistedShowStreak(value);
+        set({ showStreak: value });
       },
     }),
     { name: 'v2PracticeStore' }
