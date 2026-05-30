@@ -28,6 +28,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { AudioSurface, barHeight } from '../AudioSurface';
+import v2PageSource from '../../../../pages/V2FlashcardPracticePage.tsx?raw';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -275,13 +276,9 @@ describe('AudioSurface — error state', () => {
 // ─── No dispatch case in live page (AC #4) ───────────────────────────────────
 
 describe('AudioSurface — NOT in live dispatch', () => {
-  it('V2FlashcardPracticePage does not import or dispatch AudioSurface', async () => {
-    // Read the page source as a string and verify no audio case was added
-    const pageSource = await import(
-      /* @vite-ignore */
-      '/Users/samosipov/Downloads/learn-greek-easy/.claude/worktrees/pract2-1/learn-greek-easy-frontend/src/pages/V2FlashcardPracticePage.tsx?raw'
-    );
-    const src: string = pageSource.default ?? '';
+  it('V2FlashcardPracticePage does not import or dispatch AudioSurface', () => {
+    // Read via static raw import resolved at build time (works on any machine / CI).
+    const src: string = v2PageSource;
     // Must NOT contain an audio card_type switch case
     expect(src).not.toContain("case 'audio");
     expect(src).not.toContain('AudioSurface');
