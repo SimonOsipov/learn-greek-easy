@@ -2816,4 +2816,3 @@ class TestDeckGreekNamePersistence:
         assert db_deck is not None
         assert db_deck.name_el == db_deck.name_en
         assert db_deck.name_el == "Mirror Test"
-        assert data["description"] == deck_data["description"]

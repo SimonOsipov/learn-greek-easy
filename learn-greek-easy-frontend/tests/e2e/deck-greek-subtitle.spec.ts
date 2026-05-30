@@ -211,7 +211,7 @@ test.describe('DGREEK-08: Detail Hero — Greek subtitle locale-switch invariant
       return;
     }
 
-    await page.evaluate(() => localStorage.setItem('i18nextLng', 'en'));
+    await page.addInitScript((lng) => { window.localStorage.setItem('i18nextLng', lng); }, 'en');
     await page.goto(`/decks/${targetDeckId}`);
     await page.waitForLoadState('domcontentloaded');
 
@@ -236,7 +236,7 @@ test.describe('DGREEK-08: Detail Hero — Greek subtitle locale-switch invariant
       return;
     }
 
-    await page.evaluate(() => localStorage.setItem('i18nextLng', 'ru'));
+    await page.addInitScript((lng) => { window.localStorage.setItem('i18nextLng', lng); }, 'ru');
     await page.goto(`/decks/${targetDeckId}`);
     await page.reload();
     await page.waitForLoadState('domcontentloaded');
@@ -262,13 +262,13 @@ test.describe('DGREEK-08: Detail Hero — Greek subtitle locale-switch invariant
     }
 
     // en first
-    await page.evaluate(() => localStorage.setItem('i18nextLng', 'en'));
+    await page.addInitScript((lng) => { window.localStorage.setItem('i18nextLng', lng); }, 'en');
     await page.goto(`/decks/${targetDeckId}`);
     await expect(page.locator('[data-testid="word-browser"]')).toBeVisible({ timeout: 20000 });
     const subtitleEN = page.locator('.dx-hero-resume-el');
     await expect(subtitleEN).toHaveText(GREEK_SUBTITLE, { timeout: 10000 });
 
-    // then ru
+    // then ru (page is already on app origin here — post-goto evaluate is fine)
     await page.evaluate(() => localStorage.setItem('i18nextLng', 'ru'));
     await page.goto(`/decks/${targetDeckId}`);
     await page.reload();
@@ -285,7 +285,7 @@ test.describe('DGREEK-08: Detail Hero — Greek subtitle locale-switch invariant
       return;
     }
 
-    await page.evaluate(() => localStorage.setItem('i18nextLng', 'en'));
+    await page.addInitScript((lng) => { window.localStorage.setItem('i18nextLng', lng); }, 'en');
     await page.goto(`/decks/${targetDeckId}`);
     await expect(page.locator('[data-testid="word-browser"]')).toBeVisible({ timeout: 20000 });
 
@@ -365,7 +365,7 @@ test.describe('DGREEK-08: Equal-case dedup guard via API mock', () => {
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_PROGRESS) });
     });
 
-    await page.evaluate(() => localStorage.setItem('i18nextLng', 'en'));
+    await page.addInitScript((lng) => { window.localStorage.setItem('i18nextLng', lng); }, 'en');
     await page.goto('/decks');
 
     const card = page.locator('[data-testid="deck-card"]').first();
