@@ -14,7 +14,7 @@ import { Page } from '@playwright/test';
  */
 export async function enableTestDiagnostics(page: Page): Promise<void> {
   // Capture browser console logs that start with [TEST]
-  page.on('console', msg => {
+  page.on('console', (msg) => {
     if (msg.text().startsWith('[TEST]') || msg.text().startsWith('[AUTH')) {
       console.log('Browser:', msg.text());
     }
@@ -24,7 +24,7 @@ export async function enableTestDiagnostics(page: Page): Promise<void> {
   await page.addInitScript(() => {
     // Log when localStorage changes
     const originalSetItem = localStorage.setItem;
-    localStorage.setItem = function(key: string, value: string) {
+    localStorage.setItem = function (key: string, value: string) {
       console.log('[TEST] localStorage.setItem:', key, value.substring(0, 100));
       return originalSetItem.call(this, key, value);
     };

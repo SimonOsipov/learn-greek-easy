@@ -6,6 +6,33 @@
  *
  * Strategy: API route interception with page.route() to inject audio URLs
  * and mock audio file responses. This avoids dependency on real audio files.
+ *
+ * pf Audio Matrix (derived from pf renderer source, 2026-05):
+ *
+ *   meaning_el_to_en:
+ *     front  — TranslationElToEn renders AudioChip iff audio_url non-null
+ *     back   — Answer renders AudioChip iff example_audio_url non-null (AND hasExample)
+ *
+ *   meaning_en_to_el:
+ *     front  — TranslationEnToEl: NO audio chip (English-prompt only, no audioState prop)
+ *     back   — Answer renders AudioChip iff example_audio_url non-null (AND hasExample)
+ *
+ *   article:
+ *     front  — GrammarArticle: NO audio chip (no audioState prop)
+ *     back   — Answer: example_audio_url gate
+ *
+ *   plural_form:
+ *     front  — GrammarPlural renders AudioChip iff audio_url non-null
+ *     back   — Answer: example_audio_url gate
+ *
+ *   sentence_translation (el_to_en direction, default):
+ *     front  — SentenceElToEn renders AudioChip iff resolveV2CardAudioUrl non-null
+ *              (resolveV2CardAudioUrl → example_audio_url ?? audio_url)
+ *     back   — Answer: example_audio_url gate
+ *
+ *   sentence_translation (en_to_el direction):
+ *     front  — SentenceEnToEl: NO audio chip
+ *     back   — Answer: example_audio_url gate
  */
 
 import * as fs from 'fs';
@@ -218,25 +245,34 @@ test.describe('Card Audio Playback', () => {
 
   /**
    * Helper: intercept word entry, cards, and study queue APIs to inject audio URL.
+   *
+   * Queue card audio fields set per card type (matches resolveV2CardAudioUrl logic):
+   *   sentence_translation → audio_url: null, example_audio_url: audioUrl
+   *   all other types      → audio_url: audioUrl, example_audio_url: null
+   *
+   * Pass audioUrl: null explicitly to simulate a card with no audio.
    */
   async function setupAudioMocks(
     page: Parameters<Parameters<typeof test>[1]>[0],
     options: {
-      audioUrl?: string;
+      audioUrl?: string | null;
       cardType?: string;
     } = {}
   ) {
-    const audioUrl = options.audioUrl ?? 'https://test.local/audio.wav';
+    const audioUrl =
+      options.audioUrl !== undefined ? options.audioUrl : 'https://test.local/audio.wav';
     const cardType = options.cardType ?? 'meaning_el_to_en';
 
-    // Mock audio file request
-    await page.route('https://test.local/**', (route) => {
-      void route.fulfill({
-        status: 200,
-        contentType: 'audio/wav',
-        body: silentAudioBuffer(),
+    // Mock audio file request (only needed when audioUrl is non-null)
+    if (audioUrl) {
+      await page.route('https://test.local/**', (route) => {
+        void route.fulfill({
+          status: 200,
+          contentType: 'audio/wav',
+          body: silentAudioBuffer(),
+        });
       });
-    });
+    }
 
     // Mock word entry API to inject audio_url.
     // Use a function matcher so query params don't prevent matching, and /cards subpath is excluded.
@@ -261,18 +297,20 @@ test.describe('Card Audio Playback', () => {
             translation_ru_plural: null,
             pronunciation: null,
             grammar_data: null,
-            examples: [
-              {
-                id: 'example-001',
-                greek: 'Γεια σας!',
-                english: 'Hello!',
-                audio_url: audioUrl,
-                audio_status: 'ready',
-              },
-            ],
-            audio_key: 'test/audio.wav',
-            audio_url: audioUrl,
-            audio_status: 'ready',
+            examples: audioUrl
+              ? [
+                  {
+                    id: 'example-001',
+                    greek: 'Γεια σας!',
+                    english: 'Hello!',
+                    audio_url: audioUrl,
+                    audio_status: 'ready',
+                  },
+                ]
+              : null,
+            audio_key: audioUrl ? 'test/audio.wav' : null,
+            audio_url: audioUrl ?? null,
+            audio_status: audioUrl ? 'ready' : 'missing',
             is_active: true,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -294,7 +332,7 @@ test.describe('Card Audio Playback', () => {
           'test-card-001',
           testWordEntryId,
           v2DeckId,
-          audioUrl
+          audioUrl ?? ''
         );
         void route.fulfill({
           status: 200,
@@ -305,8 +343,12 @@ test.describe('Card Audio Playback', () => {
       }
     );
 
-    // Mock V2 study queue API to return a queue card with audio_url.
+    // Mock V2 study queue API to return a queue card with audio fields.
     // The V2FlashcardPracticePage reads audio from the queue card (not word-entry API).
+    //
+    // resolveV2CardAudioUrl dispatch:
+    //   sentence_translation|cloze → example_audio_url ?? audio_url
+    //   other                      → audio_url
     await page.route(
       (url) => url.pathname === '/api/v1/study/queue/v2',
       (route) => {
@@ -319,8 +361,9 @@ test.describe('Card Audio Playback', () => {
           'test-card-001',
           testWordEntryId,
           v2DeckId,
-          audioUrl
+          audioUrl ?? ''
         );
+        const isSentence = cardType === 'sentence_translation';
         const queueCard = {
           card_record_id: 'test-card-001',
           word_entry_id: testWordEntryId,
@@ -336,8 +379,9 @@ test.describe('Card Audio Playback', () => {
           due_date: null,
           easiness_factor: null,
           interval: null,
-          audio_url: cardType === 'sentence_translation' ? null : audioUrl,
-          example_audio_url: cardType === 'sentence_translation' ? audioUrl : null,
+          // sentence_translation uses example_audio_url; other types use audio_url
+          audio_url: isSentence ? null : (audioUrl ?? null),
+          example_audio_url: isSentence ? (audioUrl ?? null) : null,
           translation_ru: null,
           translation_ru_plural: null,
           sentence_ru: null,
@@ -359,6 +403,9 @@ test.describe('Card Audio Playback', () => {
 
   const practiceUrl = () => `/decks/${v2DeckId}/words/${testWordEntryId}/practice`;
 
+  // CAUDIO-01: meaning_el_to_en front shows speaker when audio_url present
+  // pf matrix: TranslationElToEn renders AudioChip iff audioState.audioUrl non-null.
+  // resolveV2CardAudioUrl(meaning_el_to_en) → audio_url. Mock sets audio_url: audioUrl.
   test('speaker button visible on front for meaning_el_to_en card', async ({ page }) => {
     await setupAudioMocks(page, { cardType: 'meaning_el_to_en' });
     await page.goto(practiceUrl());
@@ -369,16 +416,17 @@ test.describe('Card Audio Playback', () => {
     await expect(speakerButton).toBeVisible({ timeout: 5000 });
   });
 
+  // CAUDIO-02: meaning_en_to_el
+  //   Front — TranslationEnToEl renders NO audio chip (English-prompt only, no audioState prop).
+  //   Back  — Answer renders AudioChip only when example_audio_url is set on the queue card.
   test('speaker visible on meaning_en_to_el back after flip (example_audio_url provided)', async ({
     page,
   }) => {
-    // meaning_en_to_el in pf renderer:
-    //   Front — TranslationEnToEl has NO audio chip (English prompt only, no audioState prop).
-    //   Back  — Answer renders AudioChip only when example_audio_url is set on the queue card.
-    // Override the study queue mock to include example_audio_url so the Answer audio chip renders.
     const audioUrl = 'https://test.local/audio.wav';
     await setupAudioMocks(page, { cardType: 'meaning_en_to_el', audioUrl });
-    // Patch the queue mock to add example_audio_url (Answer.tsx hasExample check)
+    // Patch the queue mock to add example_audio_url (Answer.tsx hasExample check):
+    // audio_url stays non-null (for the 'a' key shortcut), AND example_audio_url is set
+    // so Answer renders the AudioChip on the back.
     await page.route(
       (url) => url.pathname === '/api/v1/study/queue/v2',
       (route) => {
@@ -433,7 +481,7 @@ test.describe('Card Audio Playback', () => {
     await page.goto(practiceUrl());
     await page.waitForSelector('[data-testid="pf-card"]', { timeout: 10000 });
 
-    // Front: TranslationEnToEl renders NO audio chip (English prompt only)
+    // Front: TranslationEnToEl renders NO audio chip (English prompt only, no audioState prop)
     await expect(page.getByRole('button', { name: /play audio/i })).not.toBeVisible();
 
     // Flip card
@@ -446,6 +494,10 @@ test.describe('Card Audio Playback', () => {
     await expect(speakerButton).toBeVisible({ timeout: 5000 });
   });
 
+  // CAUDIO-03: sentence_translation (el_to_en direction, default)
+  //   Front — SentenceElToEn renders AudioChip iff resolveV2CardAudioUrl returns non-null.
+  //   resolveV2CardAudioUrl(sentence_translation) → example_audio_url ?? audio_url.
+  //   Mock sets example_audio_url: audioUrl for sentence cards.
   test('speaker button visible on front for sentence_translation (el_to_target)', async ({
     page,
   }) => {
@@ -457,115 +509,58 @@ test.describe('Card Audio Playback', () => {
     await expect(speakerButton).toBeVisible({ timeout: 5000 });
   });
 
+  // CAUDIO-04: speaker hidden when audio_url is null (meaning_el_to_en with no audio)
+  //   pf matrix: AudioChip returns null when audioUrl falsy. Queue card must have audio_url: null.
   test('speaker hidden when audio_url is null', async ({ page }) => {
-    // Set up mocks with non-null audio first (to establish card mock)
+    // Set up mocks with null audio_url to confirm AudioChip returns null
     await setupAudioMocks(page, {
       cardType: 'meaning_el_to_en',
-      audioUrl: 'https://test.local/audio.wav',
+      audioUrl: null,
     });
 
-    // Override the word entry mock to have null audio_url
-    await page.route(
-      (url) => url.pathname === `/api/v1/word-entries/${testWordEntryId}`,
-      (route) => {
-        if (route.request().method() !== 'GET') {
-          void route.continue();
-          return;
-        }
-        void route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            id: testWordEntryId,
-            deck_id: v2DeckId,
-            lemma: testWordEntryLemma,
-            part_of_speech: 'noun',
-            translation_en: 'hello',
-            translation_en_plural: null,
-            translation_ru: null,
-            translation_ru_plural: null,
-            pronunciation: null,
-            grammar_data: null,
-            examples: null,
-            audio_key: null,
-            audio_url: null,
-            audio_status: 'missing',
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }),
-        });
-      }
-    );
-
-    // Override the study queue mock to have null audio_url
-    const mockCard = buildMockCard(
-      'meaning_el_to_en',
-      'test-card-001',
-      testWordEntryId,
-      v2DeckId,
-      ''
-    );
-    await page.route(
-      (url) => url.pathname === '/api/v1/study/queue/v2',
-      (route) => {
-        if (route.request().method() !== 'GET') {
-          void route.continue();
-          return;
-        }
-        void route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            total_due: 0,
-            total_new: 1,
-            total_early_practice: 0,
-            total_in_queue: 1,
-            cards: [
-              {
-                card_record_id: 'test-card-001',
-                word_entry_id: testWordEntryId,
-                deck_id: v2DeckId,
-                deck_name: 'E2E V2 Nouns',
-                card_type: 'meaning_el_to_en',
-                variant_key: 'default',
-                front_content: mockCard.front_content,
-                back_content: mockCard.back_content,
-                status: 'new',
-                is_new: true,
-                is_early_practice: false,
-                due_date: null,
-                easiness_factor: null,
-                interval: null,
-                audio_url: null,
-                example_audio_url: null,
-                translation_ru: null,
-                translation_ru_plural: null,
-                sentence_ru: null,
-              },
-            ],
-          }),
-        });
-      }
-    );
-
     await page.goto(practiceUrl());
     await page.waitForSelector('[data-testid="pf-card"]', { timeout: 10000 });
 
     await expect(page.getByRole('button', { name: /play audio/i })).not.toBeVisible();
   });
 
-  test('no speaker on plural_form card', async ({ page }) => {
-    await setupAudioMocks(page, { cardType: 'plural_form' });
+  // CAUDIO-05: plural_form with null audio_url → no speaker on front or back
+  //   pf matrix: GrammarPlural renders AudioChip iff audioState.audioUrl non-null.
+  //   resolveV2CardAudioUrl(plural_form) → audio_url.
+  //   When audio_url is null → AudioChip returns null → no speaker button.
+  //   Answer back: hasExample gated on sentence_ru || example_audio_url; both null → no chip.
+  test('no speaker on plural_form card when audio_url is null', async ({ page }) => {
+    await setupAudioMocks(page, { cardType: 'plural_form', audioUrl: null });
     await page.goto(practiceUrl());
     await page.waitForSelector('[data-testid="pf-card"]', { timeout: 10000 });
 
+    // Front: GrammarPlural receives audioState with audioUrl=null → AudioChip returns null
     await expect(page.getByRole('button', { name: /play audio/i })).not.toBeVisible();
+
+    // Flip to back
     await page.keyboard.press('Space');
     await page.waitForSelector('[data-testid="pf-rating-row"]', { timeout: 5000 });
+
+    // Back: Answer has no example_audio_url → no AudioChip in example block
     await expect(page.getByRole('button', { name: /play audio/i })).not.toBeVisible();
   });
 
+  // CAUDIO-06: plural_form WITH audio_url → speaker IS visible on front
+  //   pf matrix: GrammarPlural renders AudioChip when audioState.audioUrl is non-null.
+  test('speaker visible on plural_form front when audio_url is present', async ({ page }) => {
+    await setupAudioMocks(page, {
+      cardType: 'plural_form',
+      audioUrl: 'https://test.local/audio.wav',
+    });
+    await page.goto(practiceUrl());
+    await page.waitForSelector('[data-testid="pf-card"]', { timeout: 10000 });
+
+    // Front: GrammarPlural receives non-null audioState → AudioChip renders speaker button
+    const speakerButton = page.getByRole('button', { name: /play audio/i });
+    await expect(speakerButton).toBeVisible({ timeout: 5000 });
+  });
+
+  // CAUDIO-07: "A" key toggles audio when speaker is visible (meaning_el_to_en)
   test('"A" key toggles audio when speaker is visible', async ({ page }) => {
     await setupAudioMocks(page, { cardType: 'meaning_el_to_en' });
     await page.goto(practiceUrl());
@@ -584,15 +579,22 @@ test.describe('Card Audio Playback', () => {
     await audioRequest;
   });
 
-  test('"A" key triggers audio on meaning_en_to_el front', async ({ page }) => {
+  // CAUDIO-08: "A" key triggers audio on meaning_en_to_el even without a visible speaker chip.
+  //   pf matrix: TranslationEnToEl has NO audio chip (no audioState prop passed to it).
+  //   Page-level keyboard handler still calls audioToggle() when audioUrl is truthy
+  //   (V2FlashcardPracticePage: `a: () => { if (audioUrl) audioToggle(); }`).
+  //   So 'a' triggers the audio fetch even when no speaker button is shown.
+  test('"A" key triggers audio on meaning_en_to_el (no speaker chip on front)', async ({
+    page,
+  }) => {
     await setupAudioMocks(page, { cardType: 'meaning_en_to_el' });
     await page.goto(practiceUrl());
     await page.waitForSelector('[data-testid="pf-card"]', { timeout: 10000 });
 
-    // Speaker is visible on front (audio controls shown on both sides for supported card types)
-    await expect(page.getByRole('button', { name: /play audio/i })).toBeVisible({ timeout: 5000 });
+    // Front: TranslationEnToEl renders NO audio chip — speaker button NOT visible
+    await expect(page.getByRole('button', { name: /play audio/i })).not.toBeVisible();
 
-    // Press "A" -- triggers audio playback
+    // Press "A" — page-level handler fires audioToggle() when audioUrl is truthy
     const audioRequest = page.waitForRequest(
       (req) => req.method() === 'GET' && req.url() === 'https://test.local/audio.wav'
     );
