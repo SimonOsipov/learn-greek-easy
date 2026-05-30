@@ -12,7 +12,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@/lib/test-utils';
+import { render, screen, waitFor, within } from '@/lib/test-utils';
 import userEvent from '@testing-library/user-event';
 
 import { CulturePage } from '../CulturePage';
@@ -373,5 +373,102 @@ describe('Mock-exam CTA', () => {
       }
     }
     expect(focused).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Culture streak tile — wired / error path (STRK-07)
+// ---------------------------------------------------------------------------
+
+/** Minimal valid DashboardStatsResponse with culture_current_streak = 5 */
+const dashboardWith5Streak = {
+  overview: {
+    total_cards_studied: 0,
+    total_cards_mastered: 0,
+    total_decks_started: 0,
+    overall_mastery_percentage: 0,
+    culture_questions_mastered: 0,
+    total_study_time_seconds: 0,
+  },
+  today: {
+    reviews_completed: 0,
+    cards_due: 0,
+    daily_goal: 0,
+    goal_progress_percentage: 0,
+    study_time_seconds: 0,
+  },
+  streak: {
+    current_streak: 5,
+    longest_streak: 10,
+    last_study_date: null,
+    vocabulary_current_streak: 0,
+    vocabulary_longest_streak: 0,
+    culture_current_streak: 5,
+    culture_longest_streak: 10,
+    exercise_current_streak: 0,
+    exercise_longest_streak: 0,
+  },
+  cards_by_status: { new: 0, learning: 0, review: 0, mastered: 0 },
+  recent_activity: [],
+};
+
+describe('Culture streak tile (STRK-07)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetReadiness.mockResolvedValue(null);
+    mockGetDashboard.mockResolvedValue(null);
+    mockGetList.mockResolvedValue(mixedPayload);
+  });
+
+  it('shows culture_current_streak value and has no UnwiredDot when dashboard resolves', async () => {
+    mockGetDashboard.mockResolvedValue(dashboardWith5Streak);
+
+    render(<CulturePage />);
+
+    // Wait for the metric strip to appear (loading skeleton gone)
+    await waitFor(() => {
+      expect(screen.getByTestId('culture-metric-strip')).toBeInTheDocument();
+    });
+
+    // Locate the Streak tile by its label text rather than a hardcoded index
+    const strip = screen.getByTestId('culture-metric-strip');
+    const allTiles = within(strip).getAllByTestId(/^culture-metric-\d+$/);
+    const streakTile = allTiles.find((tile) => within(tile).queryByText('Streak') !== null);
+    expect(streakTile).toBeDefined();
+
+    // The tile's value region must show "5"
+    expect(within(streakTile!).getByText('5')).toBeInTheDocument();
+
+    // No UnwiredDot inside the Streak tile — the Streak metric is wired
+    expect(within(streakTile!).queryByTestId('unwired-dot')).not.toBeInTheDocument();
+
+    // Sanity: the "This week" tile (unwired) still carries an UnwiredDot
+    const thisWeekTile = allTiles.find((tile) => within(tile).queryByText('This week') !== null);
+    expect(thisWeekTile).toBeDefined();
+    expect(within(thisWeekTile!).getByTestId('unwired-dot')).toBeInTheDocument();
+  });
+
+  it('shows 0 and page still renders when getDashboard rejects', async () => {
+    mockGetDashboard.mockRejectedValue(new Error('boom'));
+
+    render(<CulturePage />);
+
+    // Wait for the metric strip to appear (CulturePage swallows the error via .catch(() => null))
+    await waitFor(() => {
+      expect(screen.getByTestId('culture-metric-strip')).toBeInTheDocument();
+    });
+
+    // Page rendered normally — culture title is present
+    expect(screen.getByTestId('culture-title')).toBeInTheDocument();
+
+    // Streak tile falls back to "0"
+    const strip = screen.getByTestId('culture-metric-strip');
+    const allTiles = within(strip).getAllByTestId(/^culture-metric-\d+$/);
+    const streakTile = allTiles.find((tile) => within(tile).queryByText('Streak') !== null);
+    expect(streakTile).toBeDefined();
+    expect(within(streakTile!).getByText('0')).toBeInTheDocument();
+
+    // No UnwiredDot on the Streak tile even in the error-fallback path
+    expect(within(streakTile!).queryByTestId('unwired-dot')).not.toBeInTheDocument();
   });
 });
