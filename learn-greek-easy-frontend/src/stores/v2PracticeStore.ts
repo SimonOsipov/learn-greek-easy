@@ -16,8 +16,8 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
-import { track } from '@/lib/analytics/track';
 import { familyForCardType } from '@/features/practice/pf/families';
+import { track } from '@/lib/analytics/track';
 import { MAX_ANSWER_TIME_SECONDS } from '@/lib/timeFormatUtils';
 import { reviewAPI } from '@/services/reviewAPI';
 import type { ReviewResult } from '@/services/reviewAPI';

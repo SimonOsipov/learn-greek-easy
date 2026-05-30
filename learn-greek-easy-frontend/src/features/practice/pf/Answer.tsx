@@ -22,9 +22,10 @@ import type { StudyQueueCard } from '@/services/studyAPI';
 import { resolveV2CardAudioUrl } from '@/stores/v2PracticeStore';
 
 import { AudioChip } from './AudioChip';
+import { TypedResultChip } from './TypedInput';
+
 import type { AudioChipState } from './AudioChip';
 import type { Verdict } from './judge';
-import { TypedResultChip } from './TypedInput';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

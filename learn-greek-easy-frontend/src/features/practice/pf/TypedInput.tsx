@@ -25,9 +25,10 @@
 
 import { useRef, useEffect, useState } from 'react';
 
-import type { Verdict } from './judge';
-import { judge, resolveAnswerText } from './judge';
 import { isElAnswer } from './Answer';
+import { judge, resolveAnswerText } from './judge';
+
+import type { Verdict } from './judge';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
