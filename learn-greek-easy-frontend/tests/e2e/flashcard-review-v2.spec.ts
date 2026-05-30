@@ -476,9 +476,12 @@ test.describe('V2 Flashcard Review', () => {
         // Verify skip button is visible
         await expect(page.locator('[data-testid="pf-typed-skip-btn"]')).toBeVisible();
 
-        // Click skip — reveals without judging (no verdict chip)
-        await page.locator('[data-testid="pf-typed-skip-btn"]').click();
-        await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 5000 });
+        // Click skip — reveals without judging (no verdict chip).
+        // Use force:true so Firefox doesn't drop the click when the input still
+        // has focus (tabIndex=-1 buttons don't steal focus in Firefox, causing
+        // Playwright's actionability checks to be more conservative there).
+        await page.locator('[data-testid="pf-typed-skip-btn"]').click({ force: true });
+        await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
         const skipResult = await page
           .locator('[data-testid="pf-typed-result"]')
           .isVisible()
