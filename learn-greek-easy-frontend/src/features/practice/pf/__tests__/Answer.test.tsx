@@ -75,7 +75,11 @@ describe('isElAnswer', () => {
 describe('Answer', () => {
   it('renders nothing for declension card type', () => {
     const { container } = render(
-      <Answer answerText="test" cardType="declension" card={makeCard({ card_type: 'declension' })} />
+      <Answer
+        answerText="test"
+        cardType="declension"
+        card={makeCard({ card_type: 'declension' })}
+      />
     );
     expect(container.firstChild).toBeNull();
   });
@@ -118,13 +122,7 @@ describe('Answer', () => {
   });
 
   it('renders inert typed-result chip slot', () => {
-    render(
-      <Answer
-        answerText="house"
-        cardType="meaning_el_to_en"
-        card={makeCard()}
-      />
-    );
+    render(<Answer answerText="house" cardType="meaning_el_to_en" card={makeCard()} />);
     expect(screen.getByTestId('pf-answer-type-slot')).toBeInTheDocument();
   });
 

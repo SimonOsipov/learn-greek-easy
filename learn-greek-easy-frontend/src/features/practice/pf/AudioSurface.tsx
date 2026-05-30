@@ -187,7 +187,7 @@ export function AudioSurface({ audioState, className }: AudioSurfaceProps) {
         {BAR_HEIGHTS.map((h, i) => (
           <span
             key={i}
-            className={`pf-wave-bar${isPlaying ? ' pf-wave-bar--playing' : ''}`}
+            className={`pf-wave-bar${isPlaying ? 'pf-wave-bar--playing' : ''}`}
             style={{ '--bar-h': `${h}%` } as React.CSSProperties}
             data-testid={`pf-wave-bar-${i}`}
           />
@@ -214,7 +214,7 @@ export function AudioSurface({ audioState, className }: AudioSurfaceProps) {
             aria-checked={speed === opt}
             aria-label={`${opt}x speed`}
             data-testid={`pf-audio-speed-${opt}`}
-            className={`pf-audio-surface__speed-btn${speed === opt ? ' is-active' : ''}`}
+            className={`pf-audio-surface__speed-btn${speed === opt ? 'is-active' : ''}`}
             onClick={(e) => {
               e.stopPropagation();
               setSpeed?.(opt);

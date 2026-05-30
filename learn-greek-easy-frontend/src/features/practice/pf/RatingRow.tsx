@@ -46,7 +46,12 @@ const RATING_OPTIONS: RatingOption[] = [
  */
 export function RatingRow({ onRate, isFlipped = true }: RatingRowProps) {
   return (
-    <div className="pf-rating-row" role="group" aria-label="Rate this card" data-testid="pf-rating-row">
+    <div
+      className="pf-rating-row"
+      role="group"
+      aria-label="Rate this card"
+      data-testid="pf-rating-row"
+    >
       {RATING_OPTIONS.map(({ rating, label, tone }) => (
         <button
           key={rating}
@@ -63,7 +68,9 @@ export function RatingRow({ onRate, isFlipped = true }: RatingRowProps) {
           {/* Label */}
           <span className="pf-rating-btn__label">{label}</span>
           {/* Keycap hint */}
-          <kbd className="pf-rating-btn__key" aria-hidden="true">{rating}</kbd>
+          <kbd className="pf-rating-btn__key" aria-hidden="true">
+            {rating}
+          </kbd>
         </button>
       ))}
     </div>

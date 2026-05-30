@@ -1241,3 +1241,182 @@
   font-weight: 700;
   color: hsl(var(--fg));
 }
+
+/* =========================================================================
+   PRACT2-1-08: TypedInput + typed-result chip
+   ========================================================================= */
+
+/* ── TypedInput wrapper — sits in .pf-body below question renderer ───────── */
+.pf-typed-input-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 400px;
+  margin-top: 8px;
+}
+
+/* Input + skip button row */
+.pf-typed-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* ── The input field ──────────────────────────────────────────────────────── */
+.pf-typed-input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: var(--radius-lg, 20px);
+  border: 1.5px solid hsl(var(--fg) / 0.15);
+  background: hsl(var(--card));
+  color: hsl(var(--fg));
+  font-size: 1rem;
+  font-weight: 500;
+  outline: none;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.pf-typed-input:focus {
+  border-color: var(--pf-c, hsl(var(--primary)));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--pf-c, hsl(var(--primary))) 25%, transparent);
+}
+
+/* Greek input — Noto Serif, never italic */
+.pf-typed-input--el {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-style: normal;
+  font-size: 1.1rem;
+}
+
+/* English input — Inter Tight */
+.pf-typed-input--en {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+}
+
+/* ── Skip button ─────────────────────────────────────────────────────────── */
+.pf-typed-skip-btn {
+  padding: 10px 14px;
+  border-radius: var(--radius-lg, 20px);
+  border: 1.5px solid hsl(var(--fg) / 0.12);
+  background: hsl(var(--fg) / 0.05);
+  color: hsl(var(--fg-3));
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.pf-typed-skip-btn:hover {
+  background: hsl(var(--fg) / 0.09);
+  color: hsl(var(--fg-2));
+}
+
+/* ── Keyboard hint line ──────────────────────────────────────────────────── */
+.pf-typed-hint {
+  font-size: 11px;
+  color: hsl(var(--fg-3));
+  text-align: center;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.pf-typed-hint kbd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: hsl(var(--fg) / 0.07);
+  color: hsl(var(--fg-3));
+  border: none;
+}
+
+/* ── Typed-result chip (shown in .pf-answer__type-slot post-reveal) ──────── */
+.pf-typed-result {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Correct — success green */
+.pf-typed-result--correct {
+  color: hsl(var(--success));
+  background: hsl(var(--success) / 0.12);
+  border: 1px solid hsl(var(--success) / 0.25);
+}
+
+/* Lenient — amber/warning tone */
+.pf-typed-result--lenient {
+  color: hsl(var(--warning));
+  background: hsl(var(--warning) / 0.12);
+  border: 1px solid hsl(var(--warning) / 0.25);
+}
+
+/* Wrong — danger */
+.pf-typed-result--wrong {
+  color: hsl(var(--danger));
+  background: hsl(var(--danger) / 0.12);
+  border: 1px solid hsl(var(--danger) / 0.25);
+}
+
+/* ── Mode toggle button ──────────────────────────────────────────────────── */
+.pf-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  border: 1px solid hsl(var(--fg) / 0.12);
+  background: hsl(var(--fg) / 0.05);
+  color: hsl(var(--fg-3));
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+  line-height: 1.4;
+}
+
+.pf-mode-toggle:hover {
+  background: hsl(var(--fg) / 0.09);
+  color: hsl(var(--fg-2));
+}
+
+.pf-mode-toggle[data-active='true'] {
+  background: var(--pf-c, hsl(var(--primary)));
+  color: hsl(var(--card));
+  border-color: transparent;
+}

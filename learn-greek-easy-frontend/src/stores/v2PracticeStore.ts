@@ -48,6 +48,14 @@ const STATUS_ORDER: Record<string, number> = {
 export type RatingKey = 'forgot' | 'tough' | 'ok' | 'easy';
 
 /**
+ * Type-mode toggle: 'reveal' is the default (tap-to-flip); 'type' shows the
+ * TypedInput field and runs the forgiving judge before revealing.
+ * Persistence via localStorage is owned by PRACT2-1-11 — this field is
+ * in-memory only.
+ */
+export type InputMode = 'reveal' | 'type';
+
+/**
  * Maps a practice rating (1-4) to a RatingKey for display purposes.
  * 1 = forgot, 2 = tough, 3 = ok, 4 = easy.
  */
@@ -203,6 +211,10 @@ interface V2PracticeState {
   /** Toast payload keyed by card_record_id to prevent mis-attachment. */
   toast: ToastPayload | null;
 
+  // Type mode (PRACT2-1-08) — in-memory only; localStorage persistence is PRACT2-1-11
+  /** Whether the user types an answer before flipping ('type') or taps to reveal ('reveal'). */
+  inputMode: InputMode;
+
   // Timing
   cardStartTime: number | null;
   sessionStartTime: number | null;
@@ -226,6 +238,8 @@ interface V2PracticeState {
   clearLeaveDirection: () => void;
   /** Clear the toast (called when the user moves to the next card). */
   clearToast: () => void;
+  /** Switch input mode (reveal ↔ type) — does NOT persist; that's PRACT2-1-11. */
+  setInputMode: (mode: InputMode) => void;
 }
 
 // ============================================
@@ -256,6 +270,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
       ratings: [],
       leaveDirection: null,
       toast: null,
+      inputMode: 'reveal' as InputMode,
 
       /**
        * Start a new V2 practice session.
@@ -328,6 +343,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
             ratings: new Array(queueData.cards.length).fill(null),
             leaveDirection: null,
             toast: null,
+            // inputMode persists across cards — reset only on explicit setInputMode call
           });
         } catch (error) {
           const errorMessage =
@@ -444,17 +460,17 @@ export const useV2PracticeStore = create<V2PracticeState>()(
             };
 
             // Populate toast — keyed by this card's ID so a late response
-          // from a previous card can't clobber the current card's toast.
-          // Only set if the current displayed card is still the one we just rated
-          // (i.e., forCardId matches what was submitted).
-          const toastPayload: ToastPayload = {
-            forCardId: card.card_record_id,
-            interval: result.interval,
-            nextReviewDate: result.next_review_date,
-          };
-          set({ toast: toastPayload });
+            // from a previous card can't clobber the current card's toast.
+            // Only set if the current displayed card is still the one we just rated
+            // (i.e., forCardId matches what was submitted).
+            const toastPayload: ToastPayload = {
+              forCardId: card.card_record_id,
+              interval: result.interval,
+              nextReviewDate: result.next_review_date,
+            };
+            set({ toast: toastPayload });
 
-          const isSessionComplete = isLastCard && newPending === 0;
+            const isSessionComplete = isLastCard && newPending === 0;
 
             if (isSessionComplete) {
               const totalTimeSeconds = sessionStartTime
@@ -526,6 +542,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
           ratings: [],
           leaveDirection: null,
           toast: null,
+          inputMode: 'reveal' as InputMode,
         });
       },
 
@@ -554,6 +571,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
           ratings: [],
           leaveDirection: null,
           toast: null,
+          inputMode: 'reveal' as InputMode,
         });
       },
 
@@ -583,6 +601,14 @@ export const useV2PracticeStore = create<V2PracticeState>()(
        */
       clearToast: () => {
         set({ toast: null });
+      },
+
+      /**
+       * Switch between reveal mode and type mode.
+       * Persistence is out of scope here — see PRACT2-1-11.
+       */
+      setInputMode: (mode: InputMode) => {
+        set({ inputMode: mode });
       },
     }),
     { name: 'v2PracticeStore' }

@@ -23,6 +23,8 @@ import { resolveV2CardAudioUrl } from '@/stores/v2PracticeStore';
 
 import { AudioChip } from './AudioChip';
 import type { AudioChipState } from './AudioChip';
+import type { Verdict } from './judge';
+import { TypedResultChip } from './TypedInput';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -54,6 +56,11 @@ export interface AnswerProps {
    * Rendered only when example_audio_url is present on the card.
    */
   exampleAudioState?: AudioChipState | null;
+  /**
+   * Type-mode verdict (PRACT2-1-08). When set, renders the typed-result chip
+   * in the .pf-answer__type-slot. Absent in reveal mode.
+   */
+  typedResult?: Verdict | null;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -63,7 +70,13 @@ export interface AnswerProps {
  *
  * For `declension` card type, renders nothing (the DeclTable IS the answer).
  */
-export function Answer({ answerText, cardType, card, exampleAudioState }: AnswerProps) {
+export function Answer({
+  answerText,
+  cardType,
+  card,
+  exampleAudioState,
+  typedResult,
+}: AnswerProps) {
   // Declension suppression: the filled paradigm table IS the answer (PRACT2-1-05)
   if (cardType === 'declension') {
     return null;
@@ -82,11 +95,7 @@ export function Answer({ answerText, cardType, card, exampleAudioState }: Answer
 
       {/* Answer text — Greek or English font */}
       {greek ? (
-        <p
-          className="pf-answer__text pf-answer__text--el"
-          lang="el"
-          data-testid="pf-answer-text"
-        >
+        <p className="pf-answer__text pf-answer__text--el" lang="el" data-testid="pf-answer-text">
           {answerText}
         </p>
       ) : (
@@ -95,8 +104,10 @@ export function Answer({ answerText, cardType, card, exampleAudioState }: Answer
         </p>
       )}
 
-      {/* Inert typed-result chip slot — filled by PRACT2-1-08 type mode */}
-      <div className="pf-answer__type-slot" data-testid="pf-answer-type-slot" />
+      {/* Typed-result chip slot — filled by PRACT2-1-08 type mode */}
+      <div className="pf-answer__type-slot" data-testid="pf-answer-type-slot">
+        {typedResult && <TypedResultChip verdict={typedResult} />}
+      </div>
 
       {/* Example block — only when sentence_ru or example_audio_url present */}
       {hasExample && (
@@ -106,9 +117,7 @@ export function Answer({ answerText, cardType, card, exampleAudioState }: Answer
               {card.sentence_ru}
             </p>
           )}
-          {exampleAudioUrl && exampleAudioState && (
-            <AudioChip audioState={exampleAudioState} />
-          )}
+          {exampleAudioUrl && exampleAudioState && <AudioChip audioState={exampleAudioState} />}
         </div>
       )}
     </div>

@@ -37,6 +37,10 @@ export interface TopBarProps {
   ratings: (RatingKey | null)[];
   /** Whether to display the streak pill. */
   showStreak: boolean;
+  /** Current input mode (reveal vs type). Omit to hide the toggle. */
+  inputMode?: 'reveal' | 'type';
+  /** Called when the user clicks the mode toggle button. */
+  onToggleInputMode?: () => void;
 }
 
 /**
@@ -53,6 +57,8 @@ export function TopBar({
   streak,
   ratings,
   showStreak,
+  inputMode,
+  onToggleInputMode,
 }: TopBarProps) {
   const displayName = deckName ?? 'Practice';
   const totalCards = cards.length;
@@ -86,6 +92,18 @@ export function TopBar({
       {/* ── Right: streak + utility chrome ────────────────────────────── */}
       <div className="pf-right">
         <StreakPill streak={streak} showStreak={showStreak} />
+        {inputMode !== undefined && onToggleInputMode && (
+          <button
+            type="button"
+            className="pf-mode-toggle"
+            data-active={inputMode === 'type' ? 'true' : 'false'}
+            onClick={onToggleInputMode}
+            aria-label={inputMode === 'type' ? 'Switch to reveal mode' : 'Switch to type mode'}
+            data-testid="pf-mode-toggle"
+          >
+            {inputMode === 'type' ? 'Type' : 'Reveal'}
+          </button>
+        )}
         <LanguageSwitcher variant="icon" />
         <ThemeSwitcher />
       </div>

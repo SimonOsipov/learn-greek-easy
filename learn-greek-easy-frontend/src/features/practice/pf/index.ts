@@ -56,3 +56,9 @@ export { RatingRow } from './RatingRow';
 export type { RatingRowProps } from './RatingRow';
 export { Toast, formatReviewInterval } from './Toast';
 export type { ToastProps } from './Toast';
+
+// ── Type mode (PRACT2-1-08) ──────────────────────────────────────────────────
+export { TypedInput, TypedResultChip } from './TypedInput';
+export type { TypedInputProps, TypedResultChipProps } from './TypedInput';
+export { judge, normalize, levenshtein, transliterateGreek, resolveAnswerText } from './judge';
+export type { Verdict } from './judge';

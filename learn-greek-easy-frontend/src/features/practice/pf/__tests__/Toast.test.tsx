@@ -62,20 +62,26 @@ describe('Toast', () => {
   it('auto-dismisses after autoDismissMs', () => {
     render(<Toast interval={3} autoDismissMs={1000} />);
     expect(screen.getByTestId('pf-toast')).toBeInTheDocument();
-    act(() => { vi.advanceTimersByTime(1000); });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
     expect(screen.queryByTestId('pf-toast')).toBeNull();
   });
 
   it('calls onDismiss when auto-dismissed', () => {
     const onDismiss = vi.fn();
     render(<Toast interval={1} autoDismissMs={500} onDismiss={onDismiss} />);
-    act(() => { vi.advanceTimersByTime(500); });
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
     expect(onDismiss).toHaveBeenCalledOnce();
   });
 
   it('is still visible before auto-dismiss timeout', () => {
     render(<Toast interval={5} autoDismissMs={3000} />);
-    act(() => { vi.advanceTimersByTime(2999); });
+    act(() => {
+      vi.advanceTimersByTime(2999);
+    });
     expect(screen.getByTestId('pf-toast')).toBeInTheDocument();
   });
 });
