@@ -24,6 +24,12 @@ import type { StudyQueue, StudyQueueCard } from '@/services/studyAPI';
 import type { CardRecordResponse, CardRecordType } from '@/services/wordEntryAPI';
 import { useAuthStore } from '@/stores/authStore';
 import { generateSessionId } from '@/utils/analytics';
+import {
+  getPersistedInputMode,
+  setPersistedInputMode,
+  getPersistedShowStreak,
+  setPersistedShowStreak,
+} from '@/utils/practiceSettings';
 
 // ============================================
 // Constants
@@ -211,9 +217,13 @@ interface V2PracticeState {
   /** Toast payload keyed by card_record_id to prevent mis-attachment. */
   toast: ToastPayload | null;
 
-  // Type mode (PRACT2-1-08) — in-memory only; localStorage persistence is PRACT2-1-11
+  // Type mode (PRACT2-1-08) — persisted via localStorage (PRACT2-1-11)
   /** Whether the user types an answer before flipping ('type') or taps to reveal ('reveal'). */
   inputMode: InputMode;
+
+  // Streak visibility (PRACT2-1-11) — persisted via localStorage
+  /** Whether the streak pill is shown in the top bar. */
+  showStreak: boolean;
 
   // Timing
   cardStartTime: number | null;
@@ -238,8 +248,10 @@ interface V2PracticeState {
   clearLeaveDirection: () => void;
   /** Clear the toast (called when the user moves to the next card). */
   clearToast: () => void;
-  /** Switch input mode (reveal ↔ type) — does NOT persist; that's PRACT2-1-11. */
+  /** Switch input mode (reveal ↔ type). Persisted to localStorage. */
   setInputMode: (mode: InputMode) => void;
+  /** Show/hide the streak pill. Persisted to localStorage. */
+  setShowStreak: (value: boolean) => void;
 }
 
 // ============================================
@@ -270,7 +282,8 @@ export const useV2PracticeStore = create<V2PracticeState>()(
       ratings: [],
       leaveDirection: null,
       toast: null,
-      inputMode: 'reveal' as InputMode,
+      inputMode: getPersistedInputMode(),
+      showStreak: getPersistedShowStreak(),
 
       /**
        * Start a new V2 practice session.
@@ -542,7 +555,6 @@ export const useV2PracticeStore = create<V2PracticeState>()(
           ratings: [],
           leaveDirection: null,
           toast: null,
-          inputMode: 'reveal' as InputMode,
         });
       },
 
@@ -571,7 +583,6 @@ export const useV2PracticeStore = create<V2PracticeState>()(
           ratings: [],
           leaveDirection: null,
           toast: null,
-          inputMode: 'reveal' as InputMode,
         });
       },
 
@@ -605,10 +616,20 @@ export const useV2PracticeStore = create<V2PracticeState>()(
 
       /**
        * Switch between reveal mode and type mode.
-       * Persistence is out of scope here — see PRACT2-1-11.
+       * Persists the choice to localStorage (PRACT2-1-11).
        */
       setInputMode: (mode: InputMode) => {
+        setPersistedInputMode(mode);
         set({ inputMode: mode });
+      },
+
+      /**
+       * Show or hide the streak pill.
+       * Persists the choice to localStorage (PRACT2-1-11).
+       */
+      setShowStreak: (value: boolean) => {
+        setPersistedShowStreak(value);
+        set({ showStreak: value });
       },
     }),
     { name: 'v2PracticeStore' }

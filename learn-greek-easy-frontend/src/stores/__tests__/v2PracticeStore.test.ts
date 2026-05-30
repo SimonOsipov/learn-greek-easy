@@ -14,6 +14,12 @@ import {
   v2QueueCardToCardRecord,
   resolveV2CardAudioUrl,
 } from '../v2PracticeStore';
+import {
+  getPersistedInputMode,
+  setPersistedInputMode,
+  getPersistedShowStreak,
+  setPersistedShowStreak,
+} from '@/utils/practiceSettings';
 import type { ToastPayload } from '../v2PracticeStore';
 
 // ============================================
@@ -33,6 +39,13 @@ vi.mock('@/services/reviewAPI', () => ({
 }));
 
 vi.mock('@/stores/authStore');
+
+vi.mock('@/utils/practiceSettings', () => ({
+  getPersistedInputMode: vi.fn(() => 'reveal'),
+  setPersistedInputMode: vi.fn(),
+  getPersistedShowStreak: vi.fn(() => true),
+  setPersistedShowStreak: vi.fn(),
+}));
 
 // ============================================
 // Helpers
@@ -521,5 +534,64 @@ describe('v2PracticeStore', () => {
     });
     useV2PracticeStore.getState().clearToast();
     expect(useV2PracticeStore.getState().toast).toBeNull();
+  });
+
+  // ============================================
+  // Settings persistence (PRACT2-1-11)
+  // ============================================
+
+  describe('inputMode persistence', () => {
+    it('initialises inputMode from getPersistedInputMode', () => {
+      vi.mocked(getPersistedInputMode).mockReturnValueOnce('type');
+      // Reset store so init runs fresh via the mocked getter
+      useV2PracticeStore.setState({ inputMode: getPersistedInputMode() });
+      expect(useV2PracticeStore.getState().inputMode).toBe('type');
+    });
+
+    it('setInputMode updates store and calls setPersistedInputMode', () => {
+      useV2PracticeStore.setState({ inputMode: 'reveal' });
+      useV2PracticeStore.getState().setInputMode('type');
+      expect(useV2PracticeStore.getState().inputMode).toBe('type');
+      expect(setPersistedInputMode).toHaveBeenCalledWith('type');
+    });
+
+    it('inputMode is NOT reset by endSession', () => {
+      useV2PracticeStore.setState({ inputMode: 'type' });
+      useV2PracticeStore.getState().endSession();
+      expect(useV2PracticeStore.getState().inputMode).toBe('type');
+    });
+
+    it('inputMode is NOT reset by resetSession', () => {
+      useV2PracticeStore.setState({ inputMode: 'type' });
+      useV2PracticeStore.getState().resetSession();
+      expect(useV2PracticeStore.getState().inputMode).toBe('type');
+    });
+  });
+
+  describe('showStreak persistence', () => {
+    it('initialises showStreak from getPersistedShowStreak', () => {
+      vi.mocked(getPersistedShowStreak).mockReturnValueOnce(false);
+      useV2PracticeStore.setState({ showStreak: getPersistedShowStreak() });
+      expect(useV2PracticeStore.getState().showStreak).toBe(false);
+    });
+
+    it('setShowStreak updates store and calls setPersistedShowStreak', () => {
+      useV2PracticeStore.setState({ showStreak: true });
+      useV2PracticeStore.getState().setShowStreak(false);
+      expect(useV2PracticeStore.getState().showStreak).toBe(false);
+      expect(setPersistedShowStreak).toHaveBeenCalledWith(false);
+    });
+
+    it('showStreak is NOT reset by endSession', () => {
+      useV2PracticeStore.setState({ showStreak: false });
+      useV2PracticeStore.getState().endSession();
+      expect(useV2PracticeStore.getState().showStreak).toBe(false);
+    });
+
+    it('showStreak is NOT reset by resetSession', () => {
+      useV2PracticeStore.setState({ showStreak: false });
+      useV2PracticeStore.getState().resetSession();
+      expect(useV2PracticeStore.getState().showStreak).toBe(false);
+    });
   });
 });

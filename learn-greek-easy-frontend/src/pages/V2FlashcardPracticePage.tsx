@@ -89,12 +89,14 @@ export function V2FlashcardPracticePage() {
     leaveDirection,
     toast,
     inputMode,
+    showStreak,
     startSession,
     rateCard,
     flipCard,
     clearLeaveDirection,
     clearToast,
     setInputMode,
+    setShowStreak,
   } = useV2PracticeStore();
 
   // ── Slide-out deferred remount (PRACT2-1-07) ─────────────────────────────
@@ -440,7 +442,8 @@ export function V2FlashcardPracticePage() {
         totalReview={totalReview}
         streak={streak}
         ratings={ratings}
-        showStreak={true}
+        showStreak={showStreak}
+        onToggleShowStreak={() => setShowStreak(!showStreak)}
         inputMode={inputMode}
         onToggleInputMode={() => setInputMode(inputMode === 'reveal' ? 'type' : 'reveal')}
       />

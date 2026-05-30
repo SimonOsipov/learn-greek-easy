@@ -37,6 +37,8 @@ export interface TopBarProps {
   ratings: (RatingKey | null)[];
   /** Whether to display the streak pill. */
   showStreak: boolean;
+  /** Called when the user clicks the streak visibility toggle. */
+  onToggleShowStreak?: () => void;
   /** Current input mode (reveal vs type). Omit to hide the toggle. */
   inputMode?: 'reveal' | 'type';
   /** Called when the user clicks the mode toggle button. */
@@ -57,6 +59,7 @@ export function TopBar({
   streak,
   ratings,
   showStreak,
+  onToggleShowStreak,
   inputMode,
   onToggleInputMode,
 }: TopBarProps) {
@@ -91,7 +94,19 @@ export function TopBar({
 
       {/* ── Right: streak + utility chrome ────────────────────────────── */}
       <div className="pf-right">
-        <StreakPill streak={streak} showStreak={showStreak} />
+        {onToggleShowStreak ? (
+          <button
+            type="button"
+            className="pf-streak-toggle"
+            onClick={onToggleShowStreak}
+            aria-label={showStreak ? 'Hide streak' : 'Show streak'}
+            data-testid="pf-streak-toggle"
+          >
+            <StreakPill streak={streak} showStreak={showStreak} />
+          </button>
+        ) : (
+          <StreakPill streak={streak} showStreak={showStreak} />
+        )}
         {inputMode !== undefined && onToggleInputMode && (
           <button
             type="button"
