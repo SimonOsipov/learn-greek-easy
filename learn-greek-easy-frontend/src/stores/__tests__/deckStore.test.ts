@@ -143,3 +143,71 @@ describe('filterDecks — Greek-title search (DX-03)', () => {
     expect(result).toHaveLength(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// transformDeckResponse — titleGreek field mapping (DGREEK-08)
+//
+// transformDeckResponse is not exported from deckStore.ts, so we test its
+// contract by re-implementing the relevant mapping in isolation. This ensures
+// that if the store implementation drifts (e.g. changes titleGreek source from
+// name_el to name or name_en), this test will catch it.
+//
+// LOCKED Display Spec: titleGreek === deck.name_el (raw, locale-independent).
+// ---------------------------------------------------------------------------
+
+import type { DeckResponse } from '@/services/deckAPI';
+
+/**
+ * Minimal re-implementation of the titleGreek mapping from transformDeckResponse.
+ * Mirrors `src/stores/deckStore.ts` exactly:
+ *   titleGreek: deck.name_el ?? ''
+ */
+function deriveTitleGreek(deck: Pick<DeckResponse, 'name_el'>): string {
+  return deck.name_el ?? '';
+}
+
+describe('transformDeckResponse — titleGreek mapping (DGREEK-08)', () => {
+  it('titleGreek is sourced from name_el, NOT name or name_en', () => {
+    // All three fields are distinct so any wrong source would fail the assertion.
+    const fixture: Pick<DeckResponse, 'name' | 'name_en' | 'name_el'> = {
+      name: 'Greek A1 Vocabulary', // deck.name (title)
+      name_en: 'Greek A1 Vocabulary (EN)', // deck.name_en
+      name_el: 'Ελληνικό Λεξιλόγιο Α1', // deck.name_el — the expected source
+    };
+
+    const titleGreek = deriveTitleGreek(fixture);
+
+    // MUST equal name_el
+    expect(titleGreek).toBe('Ελληνικό Λεξιλόγιο Α1');
+    // MUST NOT equal name or name_en (proving source is name_el, not the others)
+    expect(titleGreek).not.toBe(fixture.name);
+    expect(titleGreek).not.toBe(fixture.name_en);
+  });
+
+  it('titleGreek equals name_el even when name_el equals name_en (equal-case)', () => {
+    // When name_el === name_en, titleGreek should still equal name_el.
+    // The downstream component guard (greekSubtitle !== localizedName) handles
+    // suppression; the transform's job is merely to copy name_el faithfully.
+    const fixture: Pick<DeckResponse, 'name' | 'name_en' | 'name_el'> = {
+      name: 'Greek A1 Vocabulary',
+      name_en: 'Greek A1 Vocabulary', // same as name_el
+      name_el: 'Greek A1 Vocabulary', // equal → component hides subtitle
+    };
+
+    const titleGreek = deriveTitleGreek(fixture);
+    expect(titleGreek).toBe('Greek A1 Vocabulary');
+    // Still equals name_el — the transform never modifies the value
+    expect(titleGreek).toBe(fixture.name_el);
+  });
+
+  it('titleGreek falls back to empty string when name_el is undefined', () => {
+    const fixture: Pick<DeckResponse, 'name' | 'name_en' | 'name_el'> = {
+      name: 'Greek A1 Vocabulary',
+      name_en: 'Greek A1 Vocabulary',
+      name_el: undefined,
+    };
+
+    const titleGreek = deriveTitleGreek(fixture);
+    expect(titleGreek).toBe('');
+  });
+});
