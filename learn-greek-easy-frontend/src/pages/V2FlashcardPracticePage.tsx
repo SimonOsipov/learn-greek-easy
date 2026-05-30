@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 
 import { LanguageSwitcher } from '@/components/i18n';
-import { PracticeHeader, SessionSummary } from '@/components/practice';
+import { PracticeHeader } from '@/components/practice';
 import { PracticeCard } from '@/components/shared/PracticeCard';
 import { ThemeSwitcher } from '@/components/theme';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -39,13 +39,13 @@ import {
   Toast,
   TypedInput,
   resolveAnswerText,
+  Done,
 } from '@/features/practice/pf';
 import type { Verdict } from '@/features/practice/pf';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useDeck } from '@/hooks/useDeck';
 import { usePracticeKeyboard } from '@/hooks/usePracticeKeyboard';
 import { usePracticeSession } from '@/hooks/usePracticeSession';
-import { formatDuration } from '@/lib/timeFormatUtils';
 import type { CardRecordType } from '@/services/wordEntryAPI';
 import {
   useV2PracticeStore,
@@ -380,72 +380,14 @@ export function V2FlashcardPracticePage() {
             </>
           }
         />
-        <div className="flex flex-1 items-center justify-center">
-          <SessionSummary
-            title={t('v2Practice.sessionComplete', 'Session Complete')}
-            stats={[
-              {
-                label: t('v2Practice.cardsReviewed', 'Cards Reviewed'),
-                value: String(sessionSummary.cardsReviewed),
-              },
-              {
-                label: t('v2Practice.totalTime', 'Total Time'),
-                value: formatDuration(sessionSummary.totalTimeSeconds),
-              },
-              {
-                label: t('v2Practice.avgPerCard', 'Avg/Card'),
-                value: formatDuration(Math.round(sessionSummary.avgTimePerCard)),
-              },
-            ]}
-            details={
-              <div className="mb-4 rounded-lg border p-4">
-                <p className="mb-2 text-sm font-medium">
-                  {t('v2Practice.ratingBreakdown', 'Rating Breakdown')}
-                </p>
-                <div className="grid grid-cols-4 gap-2 text-center text-sm">
-                  <div>
-                    <div className="font-bold text-practice-incorrect">
-                      {sessionSummary.ratingBreakdown.again}
-                    </div>
-                    <div className="text-muted-foreground">{t('v2Practice.again', 'Again')}</div>
-                  </div>
-                  <div>
-                    <div className="font-bold text-practice-hard">
-                      {sessionSummary.ratingBreakdown.hard}
-                    </div>
-                    <div className="text-muted-foreground">{t('v2Practice.hard', 'Hard')}</div>
-                  </div>
-                  <div>
-                    <div className="font-bold text-practice-correct">
-                      {sessionSummary.ratingBreakdown.good}
-                    </div>
-                    <div className="text-muted-foreground">{t('v2Practice.good', 'Good')}</div>
-                  </div>
-                  <div>
-                    <div className="font-bold text-practice-accent">
-                      {sessionSummary.ratingBreakdown.easy}
-                    </div>
-                    <div className="text-muted-foreground">{t('v2Practice.easy', 'Easy')}</div>
-                  </div>
-                </div>
-              </div>
-            }
-            actions={
-              <div className="flex w-full gap-3">
-                <Button variant="outline" className="flex-1" onClick={() => backToDeck()}>
-                  {t('v2Practice.backToDeck', 'Back to Deck')}
-                </Button>
-                <Button
-                  className="flex-1"
-                  onClick={() => {
-                    resetTracking();
-                    if (deckId) startSession(deckId, cardType, wordId).catch(() => {});
-                  }}
-                >
-                  {t('v2Practice.studyMore', 'Study More')}
-                </Button>
-              </div>
-            }
+        <div className="flex flex-1 items-center justify-center px-4 py-8">
+          <Done
+            summary={sessionSummary}
+            onBackToDeck={backToDeck}
+            onPracticeAgain={() => {
+              resetTracking();
+              if (deckId) startSession(deckId, cardType, wordId).catch(() => {});
+            }}
           />
         </div>
       </div>

@@ -1420,3 +1420,194 @@
   color: hsl(var(--card));
   border-color: transparent;
 }
+
+/* =========================================================================
+   PRACT2-1-09: Done screen — session-complete surface
+   ========================================================================= */
+
+/* ── Done surface shell ───────────────────────────────────────────────────── */
+.pf-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px 20px 32px;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ── Check mark container ─────────────────────────────────────────────────── */
+.pf-done__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 9999px;
+  background: hsl(var(--success) / 0.12);
+  color: hsl(var(--success));
+  flex-shrink: 0;
+}
+
+.pf-done__check-icon {
+  width: 36px;
+  height: 36px;
+}
+
+/* ── Heading — Inter Tight ────────────────────────────────────────────────── */
+.pf-done__heading {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: hsl(var(--fg));
+  text-align: center;
+  margin: 0;
+}
+
+/* ── Cards reviewed count ─────────────────────────────────────────────────── */
+.pf-done__count {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  color: hsl(var(--fg-2));
+  text-align: center;
+  margin: 0;
+}
+
+/* ── 4-up tally ───────────────────────────────────────────────────────────── */
+.pf-done__tally {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+/* Individual tally cell */
+.pf-done__tally-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px 8px;
+  border-radius: var(--radius-lg, 20px);
+  border: 1px solid hsl(var(--fg) / 0.1);
+  background: hsl(var(--card));
+}
+
+/* Tally count number */
+.pf-done__tally-count {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Tally label below the count */
+.pf-done__tally-label {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* ── Tone variants for tally cells ───────────────────────────────────────── */
+
+/* Forgot — danger */
+.pf-done__tally-cell--forgot .pf-done__tally-count {
+  color: hsl(var(--danger));
+}
+.pf-done__tally-cell--forgot .pf-done__tally-label {
+  color: hsl(var(--danger));
+}
+
+/* Tough — sanctioned orange literal (matches pf-seg[data-rate=tough] and .pf-streak) */
+/* Deviation Justification: --practice-hard (25 95% 53%) is the sanctioned
+   literal for SRS "hard" rating in this palette; matches pf-rating-btn--tough above. */
+.pf-done__tally-cell--tough .pf-done__tally-count {
+  color: hsl(var(--practice-hard));
+}
+.pf-done__tally-cell--tough .pf-done__tally-label {
+  color: hsl(var(--practice-hard));
+}
+
+/* OK — success */
+.pf-done__tally-cell--ok .pf-done__tally-count {
+  color: hsl(var(--success));
+}
+.pf-done__tally-cell--ok .pf-done__tally-label {
+  color: hsl(var(--success));
+}
+
+/* Easy — accent */
+.pf-done__tally-cell--easy .pf-done__tally-count {
+  color: hsl(var(--accent));
+}
+.pf-done__tally-cell--easy .pf-done__tally-label {
+  color: hsl(var(--accent));
+}
+
+/* ── Optional time stats row ──────────────────────────────────────────────── */
+.pf-done__time-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 16px;
+  border-radius: var(--radius-lg, 20px);
+  background: hsl(var(--fg) / 0.04);
+  border: 1px solid hsl(var(--fg) / 0.08);
+  width: 100%;
+}
+
+.pf-done__time-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.pf-done__time-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: hsl(var(--fg));
+}
+
+.pf-done__time-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: hsl(var(--fg-3));
+}
+
+.pf-done__time-sep {
+  width: 1px;
+  height: 28px;
+  background: hsl(var(--fg) / 0.1);
+  flex-shrink: 0;
+}
+
+/* ── Actions row ──────────────────────────────────────────────────────────── */
+.pf-done__actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  margin-top: 4px;
+}

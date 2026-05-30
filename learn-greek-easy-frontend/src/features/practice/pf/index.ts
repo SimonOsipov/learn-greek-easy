@@ -62,3 +62,7 @@ export { TypedInput, TypedResultChip } from './TypedInput';
 export type { TypedInputProps, TypedResultChipProps } from './TypedInput';
 export { judge, normalize, levenshtein, transliterateGreek, resolveAnswerText } from './judge';
 export type { Verdict } from './judge';
+
+// ── Done screen (PRACT2-1-09) ────────────────────────────────────────────────
+export { Done } from './Done';
+export type { DoneProps } from './Done';
