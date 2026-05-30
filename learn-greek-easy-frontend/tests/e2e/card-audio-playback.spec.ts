@@ -37,8 +37,9 @@ function getLearnerAccessToken(): string | null {
     const storageKey = getSupabaseStorageKey();
     const authState = JSON.parse(fs.readFileSync(LEARNER_AUTH, 'utf-8'));
     const sessionEntry = (authState.origins ?? [])
-      .flatMap((origin: { localStorage?: Array<{ name: string; value: string }> }) =>
-        origin.localStorage ?? []
+      .flatMap(
+        (origin: { localStorage?: Array<{ name: string; value: string }> }) =>
+          origin.localStorage ?? []
       )
       .find((item: { name: string; value: string }) => item.name === storageKey);
     if (sessionEntry) {
@@ -53,8 +54,7 @@ function getLearnerAccessToken(): string | null {
 
 // Minimal valid WAV file (44 bytes, 1 sample, 8kHz, mono)
 // Allows the browser Audio element to load without 404
-const SILENT_WAV_BASE64 =
-  'UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+const SILENT_WAV_BASE64 = 'UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
 
 function silentAudioBuffer(): Buffer {
   return Buffer.from(SILENT_WAV_BASE64, 'base64');
@@ -289,7 +289,13 @@ test.describe('Card Audio Playback', () => {
           void route.continue();
           return;
         }
-        const mockCard = buildMockCard(cardType, 'test-card-001', testWordEntryId, v2DeckId, audioUrl);
+        const mockCard = buildMockCard(
+          cardType,
+          'test-card-001',
+          testWordEntryId,
+          v2DeckId,
+          audioUrl
+        );
         void route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -308,7 +314,13 @@ test.describe('Card Audio Playback', () => {
           void route.continue();
           return;
         }
-        const mockCard = buildMockCard(cardType, 'test-card-001', testWordEntryId, v2DeckId, audioUrl);
+        const mockCard = buildMockCard(
+          cardType,
+          'test-card-001',
+          testWordEntryId,
+          v2DeckId,
+          audioUrl
+        );
         const queueCard = {
           card_record_id: 'test-card-001',
           word_entry_id: testWordEntryId,
@@ -350,18 +362,17 @@ test.describe('Card Audio Playback', () => {
   test('speaker button visible on front for meaning_el_to_en card', async ({ page }) => {
     await setupAudioMocks(page, { cardType: 'meaning_el_to_en' });
     await page.goto(practiceUrl());
-    await page.waitForSelector('[data-testid="practice-card-front"]', { timeout: 10000 });
+    // pf-card is the question-phase shell (replaces legacy practice-card-front)
+    await page.waitForSelector('[data-testid="pf-card"]', { timeout: 10000 });
 
     const speakerButton = page.getByRole('button', { name: /play audio/i });
     await expect(speakerButton).toBeVisible({ timeout: 5000 });
   });
 
-  test('speaker visible on meaning_en_to_el front and back after flip', async ({
-    page,
-  }) => {
+  test('speaker visible on meaning_en_to_el front and back after flip', async ({ page }) => {
     await setupAudioMocks(page, { cardType: 'meaning_en_to_el' });
     await page.goto(practiceUrl());
-    await page.waitForSelector('[data-testid="practice-card-front"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="pf-card"]', { timeout: 10000 });
 
     // Speaker is visible on front (audio controls shown on both sides for supported card types)
     const speakerButtonFront = page.getByRole('button', { name: /play audio/i });
@@ -369,7 +380,8 @@ test.describe('Card Audio Playback', () => {
 
     // Flip card
     await page.keyboard.press('Space');
-    await page.waitForSelector('[data-testid="practice-card-back"]', { timeout: 5000 });
+    // pf-rating-row appears after flip (replaces legacy practice-card-back)
+    await page.waitForSelector('[data-testid="pf-rating-row"]', { timeout: 5000 });
 
     // Speaker still visible on back
     const speakerButton = page.getByRole('button', { name: /play audio/i });
@@ -381,7 +393,7 @@ test.describe('Card Audio Playback', () => {
   }) => {
     await setupAudioMocks(page, { cardType: 'sentence_translation' });
     await page.goto(practiceUrl());
-    await page.waitForSelector('[data-testid="practice-card-front"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="pf-card"]', { timeout: 10000 });
 
     const speakerButton = page.getByRole('button', { name: /play audio/i });
     await expect(speakerButton).toBeVisible({ timeout: 5000 });
@@ -389,7 +401,10 @@ test.describe('Card Audio Playback', () => {
 
   test('speaker hidden when audio_url is null', async ({ page }) => {
     // Set up mocks with non-null audio first (to establish card mock)
-    await setupAudioMocks(page, { cardType: 'meaning_el_to_en', audioUrl: 'https://test.local/audio.wav' });
+    await setupAudioMocks(page, {
+      cardType: 'meaning_el_to_en',
+      audioUrl: 'https://test.local/audio.wav',
+    });
 
     // Override the word entry mock to have null audio_url
     await page.route(
@@ -426,7 +441,13 @@ test.describe('Card Audio Playback', () => {
     );
 
     // Override the study queue mock to have null audio_url
-    const mockCard = buildMockCard('meaning_el_to_en', 'test-card-001', testWordEntryId, v2DeckId, '');
+    const mockCard = buildMockCard(
+      'meaning_el_to_en',
+      'test-card-001',
+      testWordEntryId,
+      v2DeckId,
+      ''
+    );
     await page.route(
       (url) => url.pathname === '/api/v1/study/queue/v2',
       (route) => {
@@ -471,7 +492,7 @@ test.describe('Card Audio Playback', () => {
     );
 
     await page.goto(practiceUrl());
-    await page.waitForSelector('[data-testid="practice-card-front"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="pf-card"]', { timeout: 10000 });
 
     await expect(page.getByRole('button', { name: /play audio/i })).not.toBeVisible();
   });
@@ -479,18 +500,18 @@ test.describe('Card Audio Playback', () => {
   test('no speaker on plural_form card', async ({ page }) => {
     await setupAudioMocks(page, { cardType: 'plural_form' });
     await page.goto(practiceUrl());
-    await page.waitForSelector('[data-testid="practice-card-front"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="pf-card"]', { timeout: 10000 });
 
     await expect(page.getByRole('button', { name: /play audio/i })).not.toBeVisible();
     await page.keyboard.press('Space');
-    await page.waitForSelector('[data-testid="practice-card-back"]', { timeout: 5000 });
+    await page.waitForSelector('[data-testid="pf-rating-row"]', { timeout: 5000 });
     await expect(page.getByRole('button', { name: /play audio/i })).not.toBeVisible();
   });
 
   test('"A" key toggles audio when speaker is visible', async ({ page }) => {
     await setupAudioMocks(page, { cardType: 'meaning_el_to_en' });
     await page.goto(practiceUrl());
-    await page.waitForSelector('[data-testid="practice-card-front"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="pf-card"]', { timeout: 10000 });
 
     // Verify speaker is visible
     const speakerButton = page.getByRole('button', { name: /play audio/i });
@@ -505,12 +526,10 @@ test.describe('Card Audio Playback', () => {
     await audioRequest;
   });
 
-  test('"A" key triggers audio on meaning_en_to_el front', async ({
-    page,
-  }) => {
+  test('"A" key triggers audio on meaning_en_to_el front', async ({ page }) => {
     await setupAudioMocks(page, { cardType: 'meaning_en_to_el' });
     await page.goto(practiceUrl());
-    await page.waitForSelector('[data-testid="practice-card-front"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="pf-card"]', { timeout: 10000 });
 
     // Speaker is visible on front (audio controls shown on both sides for supported card types)
     await expect(page.getByRole('button', { name: /play audio/i })).toBeVisible({ timeout: 5000 });
