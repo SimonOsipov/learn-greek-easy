@@ -958,6 +958,9 @@
 .dx-metric-trend.is-flat {
   color: hsl(var(--fg-3));
 }
+.dx-metric-trend.is-down {
+  color: hsl(var(--danger));
+}
 
 /* ── Word toolbar (.dx-word-toolbar) ─────────────────────────────────────────
    DX-08: re-skin of the WordBrowser search/filter bar.

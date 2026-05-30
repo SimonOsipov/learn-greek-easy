@@ -22,7 +22,8 @@ export interface CultureMetric {
   sub?: string;
   /** Optional trend line below the value */
   trend?: string;
-  trendFlat?: boolean;
+  /** Trend colour: 'flat' = muted, 'down' = danger; omit for the success-green default */
+  trendTone?: 'flat' | 'down';
   /** Card tone — drives .dx-metric data-tone */
   tone?: DxTone | 'green';
   /**
@@ -66,7 +67,16 @@ export function CultureMetricStrip({ metrics }: CultureMetricStripProps) {
               {m.sub && <small>{m.sub}</small>}
             </div>
             {m.trend && (
-              <div className={`dx-metric-trend${m.trendFlat ? 'is-flat' : ''}`}>{m.trend}</div>
+              <div
+                className={[
+                  'dx-metric-trend',
+                  m.trendTone === 'down' ? 'is-down' : m.trendTone === 'flat' ? 'is-flat' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {m.trend}
+              </div>
             )}
           </div>
         </div>

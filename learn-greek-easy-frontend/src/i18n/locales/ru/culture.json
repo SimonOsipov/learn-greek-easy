@@ -3,7 +3,7 @@
     "kicker": "Обзор · Культура Кипра и подготовка к экзамену",
     "heroKicker": "Продолжите с того места, где остановились",
     "metricReadiness": "Готовность к экзамену",
-    "metricReadinessTrend": "Нужно 60% для сдачи",
+    "metricReadinessTrend": "нужно 60% для сдачи",
     "metricLearned": "Выученных вопросов",
     "metricLearnedTrend": "{{pct}}% от общего числа",
     "metricStreak": "Серия",

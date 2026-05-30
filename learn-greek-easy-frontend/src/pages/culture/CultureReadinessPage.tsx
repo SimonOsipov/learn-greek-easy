@@ -461,7 +461,6 @@ export const CultureReadinessPage: React.FC = () => {
       value: Math.round(readiness.readiness_percentage),
       sub: '%',
       trend: t('readiness.metricReadinessTrend', { n: needMore, defaultValue: 'need {{n}}% more' }),
-      trendFlat: false,
       tone: 'green' as const,
     },
     {
@@ -471,7 +470,7 @@ export const CultureReadinessPage: React.FC = () => {
         readiness.accuracy_percentage !== null ? Math.round(readiness.accuracy_percentage) : '—',
       sub: readiness.accuracy_percentage !== null ? '%' : undefined,
       trend: t('readiness.metricAccuracyTrend', 'on attempted questions'),
-      trendFlat: true,
+      trendTone: 'flat' as const,
       tone: 'amber' as const,
     },
     {
@@ -483,7 +482,7 @@ export const CultureReadinessPage: React.FC = () => {
         n: readiness.categories.length,
         defaultValue: 'across {{n}} categories',
       }),
-      trendFlat: true,
+      trendTone: 'flat' as const,
       tone: 'violet' as const,
     },
     {
