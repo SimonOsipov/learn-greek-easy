@@ -40,3 +40,7 @@ export type { GrammarArticleProps, GrammarPluralProps } from './questions/Gramma
 // ── Question renderers (PRACT2-1-04) ────────────────────────────────────────
 export { Sentence, SentenceElToEn, SentenceEnToEl } from './questions/Sentence';
 export type { SentenceProps } from './questions/Sentence';
+
+// ── Audio surface (PRACT2-1-06) ─────────────────────────────────────────────
+export { AudioSurface, barHeight } from './AudioSurface';
+export type { AudioSurfaceProps, AudioSurfaceState } from './AudioSurface';

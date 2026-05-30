@@ -586,3 +586,234 @@
   padding: 2px 8px;
   border-radius: 999px;
 }
+
+/* =========================================================================
+   PRACT2-1-06: Audio surface + green Audio-family styling
+   ========================================================================= */
+
+/* ── Keyframe: waveform bar pulse while playing ──────────────────────────── */
+@keyframes pf-wave {
+  0%,
+  100% {
+    transform: scaleY(0.4);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* ── Keyframe: play-button loading spin ──────────────────────────────────── */
+@keyframes pf-audio-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Audio surface shell ─────────────────────────────────────────────────── */
+.pf-audio-surface {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px 16px;
+  border-radius: var(--radius-lg, 20px);
+  /* Success-tinted background — AC #5: hsl(var(--success)) via token, no raw hex */
+  background: hsl(var(--success) / 0.07);
+  border: 1px solid hsl(var(--success) / 0.18);
+  width: 100%;
+}
+
+/* ── Family header ───────────────────────────────────────────────────────── */
+.pf-audio-surface__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+}
+
+.pf-audio-surface__family-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  /* Success-green tint for audio family — AC #5 */
+  color: hsl(var(--success));
+}
+
+.pf-audio-surface__family-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: hsl(var(--success));
+}
+
+/* ── Play / pause button (56px round green) ──────────────────────────────── */
+.pf-audio-surface__play-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  /* Success-green button — AC #5 */
+  background: hsl(var(--success));
+  color: hsl(var(--success-fg, 0 0% 100%));
+  transition:
+    background 150ms ease,
+    transform 120ms ease,
+    opacity 120ms ease;
+}
+
+/* Hover: slightly darken the green */
+.pf-audio-surface__play-btn:hover:not(:disabled) {
+  background: hsl(var(--success) / 0.88);
+  transform: scale(1.04);
+}
+
+/* Pressed */
+.pf-audio-surface__play-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Disabled (no audioUrl) */
+.pf-audio-surface__play-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pf-audio-surface__play-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+/* Spin animation for loading state */
+.pf-audio-surface__play-icon--loading {
+  animation: pf-audio-spin 0.9s linear infinite;
+}
+
+/* ── Waveform ─────────────────────────────────────────────────────────────── */
+.pf-audio-surface__wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 40px;
+  width: 100%;
+  max-width: 200px;
+}
+
+/* Individual bar — height driven by --bar-h CSS custom prop (set inline) */
+.pf-wave-bar {
+  flex: 1;
+  min-width: 3px;
+  max-width: 8px;
+  height: var(--bar-h, 50%);
+  border-radius: 2px;
+  /* Success-green tint for bars — AC #5 */
+  background: hsl(var(--success) / 0.5);
+  transform-origin: center;
+  transition: background 200ms ease;
+}
+
+/* Playing pulse — stagger animation by bar index via animation-delay.
+   We can't access the bar index in CSS natively, but a sufficiently
+   short animation cycle (600ms) with a per-bar initial phase derived
+   from the height variation produces a natural-looking wave sweep.
+   Delay is approximated via nth-child for 28 bars in 4 groups. */
+@media (prefers-reduced-motion: no-preference) {
+  .pf-wave-bar--playing {
+    background: hsl(var(--success) / 0.9);
+    animation: pf-wave 600ms ease-in-out infinite;
+  }
+
+  /* Stagger offset: 4 groups × 7 bars = 28 bars */
+  .pf-wave-bar--playing:nth-child(4n + 1) {
+    animation-delay: 0ms;
+  }
+  .pf-wave-bar--playing:nth-child(4n + 2) {
+    animation-delay: 150ms;
+  }
+  .pf-wave-bar--playing:nth-child(4n + 3) {
+    animation-delay: 300ms;
+  }
+  .pf-wave-bar--playing:nth-child(4n + 4) {
+    animation-delay: 450ms;
+  }
+}
+
+/* ── Time readout ─────────────────────────────────────────────────────────── */
+.pf-audio-surface__time {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: hsl(var(--fg-2));
+}
+
+.pf-audio-surface__time-current {
+  color: hsl(var(--success));
+  font-weight: 600;
+}
+
+.pf-audio-surface__time-sep {
+  color: hsl(var(--fg-3));
+}
+
+.pf-audio-surface__time-duration {
+  color: hsl(var(--fg-3));
+}
+
+/* ── Speed toggle buttons ─────────────────────────────────────────────────── */
+.pf-audio-surface__speed {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pf-audio-surface__speed-btn {
+  padding: 3px 8px;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  background: hsl(var(--fg) / 0.07);
+  color: hsl(var(--fg-3));
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+  line-height: 1.4;
+}
+
+.pf-audio-surface__speed-btn:hover {
+  background: hsl(var(--fg) / 0.12);
+  color: hsl(var(--fg-2));
+}
+
+/* Active speed button — success-tinted */
+.pf-audio-surface__speed-btn.is-active {
+  background: hsl(var(--success) / 0.15);
+  color: hsl(var(--success));
+}
+
+/* ── Error message ────────────────────────────────────────────────────────── */
+.pf-audio-surface__error {
+  font-size: 12px;
+  color: hsl(var(--danger));
+  text-align: center;
+  margin: 0;
+}
