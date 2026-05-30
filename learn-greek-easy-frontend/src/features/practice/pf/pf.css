@@ -946,3 +946,298 @@
     opacity: 1;
   }
 }
+
+/* =========================================================================
+   PRACT2-1-07: Answer block, RatingRow, Toast + rating-aware slide-out
+   ========================================================================= */
+
+/* ── Keyframe: card slide-out left (ok/easy → graduate) ──────────────────── */
+@keyframes pf-leave-left {
+  from {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-60px) scale(0.97);
+    opacity: 0;
+  }
+}
+
+/* ── Keyframe: card slide-out right (forgot/tough → relearn) ─────────────── */
+@keyframes pf-leave-right {
+  from {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(60px) scale(0.97);
+    opacity: 0;
+  }
+}
+
+/* ── Keyframe: toast enter ────────────────────────────────────────────────── */
+@keyframes pf-toast-in {
+  from {
+    transform: translateY(6px) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Slide-out card wrapper — data-leave triggers the appropriate animation */
+.pf-card-slide-wrapper {
+  /* No base styles — transparent passthrough */
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pf-card-slide-wrapper[data-leave='left'] .pf-card {
+    animation: pf-leave-left 320ms var(--ease-smooth, cubic-bezier(0.4, 0, 0.2, 1)) both;
+    pointer-events: none;
+  }
+
+  .pf-card-slide-wrapper[data-leave='right'] .pf-card {
+    animation: pf-leave-right 320ms var(--ease-smooth, cubic-bezier(0.4, 0, 0.2, 1)) both;
+    pointer-events: none;
+  }
+}
+
+/* ── Answer block ─────────────────────────────────────────────────────────── */
+.pf-answer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+/* Check icon label */
+.pf-answer__label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--success));
+}
+
+.pf-answer__check-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Greek answer — Noto Serif, never italic */
+.pf-answer__text--el {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 700;
+  font-style: normal; /* Greek text is never italic */
+  line-height: 1.2;
+  color: hsl(var(--fg));
+  text-align: center;
+  word-break: break-word;
+}
+
+/* English answer — Inter Tight */
+.pf-answer__text--en {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: hsl(var(--fg));
+  text-align: center;
+  word-break: break-word;
+}
+
+/* Inert typed-result chip slot — empty in reveal mode (PRACT2-1-08 fills it) */
+.pf-answer__type-slot {
+  /* No visual — zero-height placeholder for type mode */
+  height: 0;
+}
+
+/* Example block */
+.pf-answer__example {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: var(--radius-lg, 20px);
+  background: hsl(var(--fg) / 0.04);
+  border: 1px solid hsl(var(--fg) / 0.08);
+  width: 100%;
+}
+
+/* Russian translation in example block */
+.pf-answer__example-ru {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: hsl(var(--fg-2));
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ── Rating row ───────────────────────────────────────────────────────────── */
+.pf-rating-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+/* Base rating button */
+.pf-rating-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 6px 8px;
+  border-radius: var(--radius-lg, 20px);
+  border: 1px solid hsl(var(--fg) / 0.1);
+  background: hsl(var(--card));
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    transform 100ms ease,
+    box-shadow 120ms ease;
+  min-width: 0;
+}
+
+.pf-rating-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
+}
+
+.pf-rating-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+}
+
+.pf-rating-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Tone bar — coloured strip at the top of each button */
+.pf-rating-btn__bar {
+  display: block;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  transition: background 120ms ease;
+}
+
+/* Label */
+.pf-rating-btn__label {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Keycap hint */
+.pf-rating-btn__key {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: hsl(var(--fg) / 0.07);
+  color: hsl(var(--fg-3));
+  border: none;
+  line-height: 1.4;
+}
+
+/* ── Tone variants ────────────────────────────────────────────────────────── */
+
+/* Forgot — danger */
+.pf-rating-btn--forgot .pf-rating-btn__bar {
+  background: hsl(var(--danger));
+}
+.pf-rating-btn--forgot .pf-rating-btn__label {
+  color: hsl(var(--danger));
+}
+.pf-rating-btn--forgot:hover:not(:disabled) {
+  background: hsl(var(--danger) / 0.06);
+  border-color: hsl(var(--danger) / 0.25);
+}
+
+/* Tough — sanctioned orange literal (Deviation Justification: --practice-hard /
+   25 95% 53% is the only sanctioned literal for SRS "hard" in this palette;
+   matches pf-seg[data-rate=tough] and .pf-streak above). */
+.pf-rating-btn--tough .pf-rating-btn__bar {
+  background: hsl(var(--practice-hard));
+}
+.pf-rating-btn--tough .pf-rating-btn__label {
+  color: hsl(var(--practice-hard));
+}
+.pf-rating-btn--tough:hover:not(:disabled) {
+  background: hsl(var(--practice-hard) / 0.06);
+  border-color: hsl(var(--practice-hard) / 0.25);
+}
+
+/* OK — success */
+.pf-rating-btn--ok .pf-rating-btn__bar {
+  background: hsl(var(--success));
+}
+.pf-rating-btn--ok .pf-rating-btn__label {
+  color: hsl(var(--success));
+}
+.pf-rating-btn--ok:hover:not(:disabled) {
+  background: hsl(var(--success) / 0.06);
+  border-color: hsl(var(--success) / 0.25);
+}
+
+/* Easy — accent */
+.pf-rating-btn--easy .pf-rating-btn__bar {
+  background: hsl(var(--accent));
+}
+.pf-rating-btn--easy .pf-rating-btn__label {
+  color: hsl(var(--accent));
+}
+.pf-rating-btn--easy:hover:not(:disabled) {
+  background: hsl(var(--accent) / 0.06);
+  border-color: hsl(var(--accent) / 0.25);
+}
+
+/* ── Toast pill ───────────────────────────────────────────────────────────── */
+.pf-toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--fg) / 0.1);
+  box-shadow: var(--shadow-1);
+  font-size: 13px;
+  color: hsl(var(--fg-2));
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pf-toast {
+    animation: pf-toast-in 220ms var(--ease-smooth, cubic-bezier(0.4, 0, 0.2, 1)) both;
+  }
+}
+
+.pf-toast__label {
+  font-weight: 400;
+}
+
+.pf-toast__interval {
+  font-weight: 700;
+  color: hsl(var(--fg));
+}

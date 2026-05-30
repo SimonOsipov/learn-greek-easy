@@ -131,6 +131,20 @@ export interface V2SessionStats {
   cardsRelearning: number;
 }
 
+/**
+ * Toast payload set from the .then(result) callback after a review submits.
+ * Keyed by card_record_id so a late async response cannot attach to the wrong
+ * card (the advance is optimistic / synchronous — result arrives after flip).
+ */
+export interface ToastPayload {
+  /** The card this toast belongs to — guards against mis-attachment. */
+  forCardId: string;
+  /** Whole-day interval from SM-2 (ReviewResult.interval). */
+  interval: number;
+  /** ISO date string from ReviewResult.next_review_date. */
+  nextReviewDate: string;
+}
+
 export interface V2SessionSummary {
   sessionId: string;
   deckId: string | null;
@@ -181,6 +195,14 @@ interface V2PracticeState {
   streak: number;
   ratings: (RatingKey | null)[];
 
+  // Rating-aware slide-out (PRACT2-1-07)
+  /** Direction for the slide-out animation set on rateCard (before advance). */
+  leaveDirection: 'left' | 'right' | null;
+
+  // Toast state (PRACT2-1-07) — set in .then(result) from reviewAPI.submit
+  /** Toast payload keyed by card_record_id to prevent mis-attachment. */
+  toast: ToastPayload | null;
+
   // Timing
   cardStartTime: number | null;
   sessionStartTime: number | null;
@@ -200,6 +222,10 @@ interface V2PracticeState {
   resetSession: () => void;
   clearError: () => void;
   clearSessionSummary: () => void;
+  /** Clear the leave-direction after the slide-out animation completes. */
+  clearLeaveDirection: () => void;
+  /** Clear the toast (called when the user moves to the next card). */
+  clearToast: () => void;
 }
 
 // ============================================
@@ -228,6 +254,8 @@ export const useV2PracticeStore = create<V2PracticeState>()(
       totalReview: 0,
       streak: 0,
       ratings: [],
+      leaveDirection: null,
+      toast: null,
 
       /**
        * Start a new V2 practice session.
@@ -298,6 +326,8 @@ export const useV2PracticeStore = create<V2PracticeState>()(
             // Reset streak + ratings for new session
             streak: 0,
             ratings: new Array(queueData.cards.length).fill(null),
+            leaveDirection: null,
+            toast: null,
           });
         } catch (error) {
           const errorMessage =
@@ -366,7 +396,13 @@ export const useV2PracticeStore = create<V2PracticeState>()(
         const newRatings = [...ratings];
         newRatings[currentIndex] = ratingKey;
 
+        // Determine slide direction: Forgot/Tough → right (relearn); OK/Easy → left (graduate)
+        const newLeaveDirection: 'left' | 'right' =
+          ratingKey === 'forgot' || ratingKey === 'tough' ? 'right' : 'left';
+
         // Optimistic advance (includes streak + ratings update — single source of truth)
+        // leaveDirection is set BEFORE the index advances so the outgoing card
+        // can read it in data-leave; toast is cleared — will repopulate from .then
         set({
           currentIndex: nextIndex,
           isFlipped: false,
@@ -374,6 +410,8 @@ export const useV2PracticeStore = create<V2PracticeState>()(
           _pendingReviews: _pendingReviews + 1,
           streak: newStreak,
           ratings: newRatings,
+          leaveDirection: newLeaveDirection,
+          toast: null,
         });
 
         // Background submission
@@ -405,7 +443,18 @@ export const useV2PracticeStore = create<V2PracticeState>()(
               cardsRelearning: s.sessionStats.cardsRelearning + (isRelearning ? 1 : 0),
             };
 
-            const isSessionComplete = isLastCard && newPending === 0;
+            // Populate toast — keyed by this card's ID so a late response
+          // from a previous card can't clobber the current card's toast.
+          // Only set if the current displayed card is still the one we just rated
+          // (i.e., forCardId matches what was submitted).
+          const toastPayload: ToastPayload = {
+            forCardId: card.card_record_id,
+            interval: result.interval,
+            nextReviewDate: result.next_review_date,
+          };
+          set({ toast: toastPayload });
+
+          const isSessionComplete = isLastCard && newPending === 0;
 
             if (isSessionComplete) {
               const totalTimeSeconds = sessionStartTime
@@ -475,6 +524,8 @@ export const useV2PracticeStore = create<V2PracticeState>()(
           totalReview: 0,
           streak: 0,
           ratings: [],
+          leaveDirection: null,
+          toast: null,
         });
       },
 
@@ -501,6 +552,8 @@ export const useV2PracticeStore = create<V2PracticeState>()(
           totalReview: 0,
           streak: 0,
           ratings: [],
+          leaveDirection: null,
+          toast: null,
         });
       },
 
@@ -516,6 +569,20 @@ export const useV2PracticeStore = create<V2PracticeState>()(
        */
       clearSessionSummary: () => {
         set({ sessionSummary: null });
+      },
+
+      /**
+       * Clear the leave-direction (called by the slide wrapper after 320ms).
+       */
+      clearLeaveDirection: () => {
+        set({ leaveDirection: null });
+      },
+
+      /**
+       * Clear the toast (called when moving to the next card).
+       */
+      clearToast: () => {
+        set({ toast: null });
       },
     }),
     { name: 'v2PracticeStore' }

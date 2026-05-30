@@ -48,3 +48,11 @@ export type { AudioSurfaceProps, AudioSurfaceState } from './AudioSurface';
 // -- Question renderers (PRACT2-1-05) -----------------------------------------
 export { Declension } from './questions/Declension';
 export type { DeclensionProps, DeclensionTable, DeclensionRow } from './questions/Declension';
+
+// ── Answer phase (PRACT2-1-07) ───────────────────────────────────────────────
+export { Answer, isElAnswer } from './Answer';
+export type { AnswerProps } from './Answer';
+export { RatingRow } from './RatingRow';
+export type { RatingRowProps } from './RatingRow';
+export { Toast, formatReviewInterval } from './Toast';
+export type { ToastProps } from './Toast';

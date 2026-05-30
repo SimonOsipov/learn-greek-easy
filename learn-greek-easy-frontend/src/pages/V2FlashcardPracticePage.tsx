@@ -8,7 +8,7 @@
  * Rendered outside AppLayout for an immersive full-screen experience.
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
@@ -34,6 +34,9 @@ import {
   GrammarPlural,
   Sentence,
   Declension,
+  Answer,
+  RatingRow,
+  Toast,
 } from '@/features/practice/pf';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useDeck } from '@/hooks/useDeck';
@@ -80,10 +83,38 @@ export function V2FlashcardPracticePage() {
     totalReview,
     streak,
     ratings,
+    leaveDirection,
+    toast,
     startSession,
     rateCard,
     flipCard,
+    clearLeaveDirection,
+    clearToast,
   } = useV2PracticeStore();
+
+  // ── Slide-out deferred remount (PRACT2-1-07) ─────────────────────────────
+  //
+  // The store advances currentIndex SYNCHRONOUSLY on rateCard (optimistic).
+  // Without a delay, React would instantly remount the card via key={currentCard.id},
+  // skipping the 320ms slide-out animation.
+  //
+  // Solution: displayIndex is the index actually rendered; it lags currentIndex
+  // by 320ms when leaveDirection is set, giving data-leave time to animate.
+  const [displayIndex, setDisplayIndex] = useState(currentIndex);
+
+  useEffect(() => {
+    if (leaveDirection) {
+      // A rating was just submitted — play slide, then advance display
+      const timer = window.setTimeout(() => {
+        setDisplayIndex(currentIndex);
+        clearLeaveDirection();
+      }, 320);
+      return () => window.clearTimeout(timer);
+    } else {
+      // No slide in progress (e.g., session start) — sync immediately
+      setDisplayIndex(currentIndex);
+    }
+  }, [currentIndex, leaveDirection, clearLeaveDirection]);
 
   const { resetTracking } = usePracticeSession({
     startEvent: 'study_session_started_v2',
@@ -147,9 +178,12 @@ export function V2FlashcardPracticePage() {
     }
   }, [sessionSummary, queryClient]);
 
-  // Audio: resolve URL from current cards card
-  const currentQueueCard = cards[currentIndex] ?? null;
-  const audioUrl = currentQueueCard ? resolveV2CardAudioUrl(currentQueueCard) : null;
+  // Audio: resolve URL from current cards card.
+  // displayIndex is used for rendering (lags 320ms for slide-out animation);
+  // currentIndex is used for audio/session logic (always the latest).
+  const currentQueueCard = cards[displayIndex] ?? null;
+  const audioQueueCard = cards[currentIndex] ?? null;
+  const audioUrl = audioQueueCard ? resolveV2CardAudioUrl(audioQueueCard) : null;
   const {
     isPlaying: audioIsPlaying,
     isLoading: audioIsLoading,
@@ -418,6 +452,34 @@ export function V2FlashcardPracticePage() {
     return null;
   }
 
+  // Toast: only show if the toast belongs to the currently displayed card
+  const activeToast =
+    toast && currentQueueCard && toast.forCardId === currentQueueCard.card_record_id
+      ? toast
+      : null;
+
+  // Shared pf foot — Answer + RatingRow + Toast (replaces PracticeCard answer section)
+  const pfFoot = (
+    <>
+      {currentQueueCard && (
+        <Answer
+          answerText={
+            ((currentCard.back_content as Record<string, unknown>).main as string | undefined) ??
+            ((currentCard.back_content as Record<string, unknown>).answer as string | undefined) ??
+            ''
+          }
+          cardType={currentCard.card_type}
+          card={currentQueueCard}
+          exampleAudioState={audioState}
+        />
+      )}
+      <RatingRow onRate={handleRate} isFlipped={isFlipped} />
+      {activeToast && (
+        <Toast interval={activeToast.interval} onDismiss={clearToast} />
+      )}
+    </>
+  );
+
   return (
     <PracticeApp cardType={currentQueueCard?.card_type ?? null}>
       {/* Top bar — replaces legacy PracticeHeader + ProgressIndicator (PRACT2-1-02) */}
@@ -435,255 +497,192 @@ export function V2FlashcardPracticePage() {
 
       {/* Content area */}
       <div className="mx-auto w-full max-w-lg px-4">
-        {/* Practice card — pf renderers for covered types; PracticeCard fallback for others */}
-        {(() => {
-          const cardType = currentQueueCard?.card_type;
-          const front = currentCard.front_content as Record<string, unknown>;
-          const back = currentCard.back_content as Record<string, unknown>;
+        {/* Slide-out wrapper — data-leave drives the 320ms rating-aware animation.
+            The inner card key={currentCard.id} remounts after displayIndex advances
+            (deferred 320ms by the useEffect above). */}
+        <div
+          className="pf-card-slide-wrapper"
+          data-leave={leaveDirection ?? undefined}
+          data-testid="pf-card-slide-wrapper"
+        >
+          {/* Practice card — pf renderers for covered types; PracticeCard fallback for others */}
+          {(() => {
+            const cardType = currentQueueCard?.card_type;
+            const front = currentCard.front_content as Record<string, unknown>;
+            const back = currentCard.back_content as Record<string, unknown>;
 
-          // Shared card head props
-          const headEl = (
-            <CardHead
-              cardType={cardType ?? ''}
-              posLabel={(front.badge as string | null | undefined) ?? null}
-              gender={(back.gender as string | null | undefined) ?? null}
-              genderRu={(back.gender_ru as string | null | undefined) ?? null}
-              currentLang={currentLang}
-              onLangChange={handleLangChange}
-            />
-          );
-
-          if (cardType === 'meaning_el_to_en') {
-            return (
-              <PfCard
-                key={currentCard.id}
-                onClick={!isFlipped ? flipCard : undefined}
-                isFlipped={isFlipped}
-                body={
-                  <>
-                    {headEl}
-                    <TranslationElToEn
-                      word={(front.main as string) ?? ''}
-                      ipa={(front.sub as string | null | undefined) ?? null}
-                      audioState={audioState ?? null}
-                    />
-                  </>
-                }
-                foot={
-                  <PracticeCard
-                    card={currentCard}
-                    isFlipped={isFlipped}
-                    onFlip={flipCard}
-                    translationRu={currentQueueCard?.translation_ru ?? null}
-                    translationRuPlural={currentQueueCard?.translation_ru_plural ?? null}
-                    sentenceRu={currentQueueCard?.sentence_ru ?? null}
-                    onRate={handleRate}
-                    audioState={audioState}
-                    wordEntryId={currentCard.word_entry_id}
-                    deckId={deckId}
-                  />
-                }
+            // Shared card head props
+            const headEl = (
+              <CardHead
+                cardType={cardType ?? ''}
+                posLabel={(front.badge as string | null | undefined) ?? null}
+                gender={(back.gender as string | null | undefined) ?? null}
+                genderRu={(back.gender_ru as string | null | undefined) ?? null}
+                currentLang={currentLang}
+                onLangChange={handleLangChange}
               />
             );
-          }
 
-          if (cardType === 'meaning_en_to_el') {
-            const prompt =
-              (front.main as string | undefined) ?? (front.prompt as string | undefined) ?? '';
+            if (cardType === 'meaning_el_to_en') {
+              return (
+                <PfCard
+                  key={currentCard.id}
+                  onClick={!isFlipped ? flipCard : undefined}
+                  isFlipped={isFlipped}
+                  body={
+                    <>
+                      {headEl}
+                      <TranslationElToEn
+                        word={(front.main as string) ?? ''}
+                        ipa={(front.sub as string | null | undefined) ?? null}
+                        audioState={audioState ?? null}
+                      />
+                    </>
+                  }
+                  foot={pfFoot}
+                />
+              );
+            }
+
+            if (cardType === 'meaning_en_to_el') {
+              const prompt =
+                (front.main as string | undefined) ?? (front.prompt as string | undefined) ?? '';
+              return (
+                <PfCard
+                  key={currentCard.id}
+                  onClick={!isFlipped ? flipCard : undefined}
+                  isFlipped={isFlipped}
+                  body={
+                    <>
+                      {headEl}
+                      <TranslationEnToEl prompt={prompt} />
+                    </>
+                  }
+                  foot={pfFoot}
+                />
+              );
+            }
+
+            if (cardType === 'article') {
+              return (
+                <PfCard
+                  key={currentCard.id}
+                  onClick={!isFlipped ? flipCard : undefined}
+                  isFlipped={isFlipped}
+                  body={
+                    <>
+                      {headEl}
+                      <GrammarArticle
+                        wordWithArticle={(front.main as string) ?? ''}
+                        prompt={(front.prompt as string | null | undefined) ?? null}
+                      />
+                    </>
+                  }
+                  foot={pfFoot}
+                />
+              );
+            }
+
+            if (cardType === 'plural_form') {
+              return (
+                <PfCard
+                  key={currentCard.id}
+                  onClick={!isFlipped ? flipCard : undefined}
+                  isFlipped={isFlipped}
+                  body={
+                    <>
+                      {headEl}
+                      <GrammarPlural
+                        stem={(front.main as string) ?? ''}
+                        ipa={(front.sub as string | null | undefined) ?? null}
+                        audioState={audioState ?? null}
+                        prompt={(front.prompt as string | null | undefined) ?? null}
+                      />
+                    </>
+                  }
+                  foot={pfFoot}
+                />
+              );
+            }
+
+            if (cardType === 'sentence_translation') {
+              const translatedPrompt = (front.prompt as string | null | undefined) ?? null;
+              return (
+                <PfCard
+                  key={currentCard.id}
+                  onClick={!isFlipped ? flipCard : undefined}
+                  isFlipped={isFlipped}
+                  body={
+                    <>
+                      {headEl}
+                      <Sentence
+                        prompt={translatedPrompt}
+                        main={(front.main as string) ?? ''}
+                        audioState={audioState ?? null}
+                      />
+                    </>
+                  }
+                  foot={pfFoot}
+                />
+              );
+            }
+
+            if (cardType === 'declension') {
+              return (
+                <PfCard
+                  key={currentCard.id}
+                  onClick={!isFlipped ? flipCard : undefined}
+                  isFlipped={isFlipped}
+                  body={
+                    <>
+                      {headEl}
+                      <Declension
+                        card={{
+                          back_content: currentCard.back_content as Record<string, unknown>,
+                          front_content: currentCard.front_content as Record<string, unknown>,
+                        }}
+                        revealed={false}
+                      />
+                    </>
+                  }
+                  foot={
+                    <>
+                      <Declension
+                        card={{
+                          back_content: currentCard.back_content as Record<string, unknown>,
+                          front_content: currentCard.front_content as Record<string, unknown>,
+                        }}
+                        revealed={true}
+                      />
+                      {/* Answer suppressed for declension (DeclTable IS the answer) */}
+                      <RatingRow onRate={handleRate} isFlipped={isFlipped} />
+                      {activeToast && (
+                        <Toast interval={activeToast.interval} onDismiss={clearToast} />
+                      )}
+                    </>
+                  }
+                />
+              );
+            }
+
+            // Fallback: legacy PracticeCard for cloze, conjugation
             return (
-              <PfCard
+              <PracticeCard
                 key={currentCard.id}
-                onClick={!isFlipped ? flipCard : undefined}
+                card={currentCard}
                 isFlipped={isFlipped}
-                body={
-                  <>
-                    {headEl}
-                    <TranslationEnToEl prompt={prompt} />
-                  </>
-                }
-                foot={
-                  <PracticeCard
-                    card={currentCard}
-                    isFlipped={isFlipped}
-                    onFlip={flipCard}
-                    translationRu={currentQueueCard?.translation_ru ?? null}
-                    translationRuPlural={currentQueueCard?.translation_ru_plural ?? null}
-                    sentenceRu={currentQueueCard?.sentence_ru ?? null}
-                    onRate={handleRate}
-                    audioState={audioState}
-                    wordEntryId={currentCard.word_entry_id}
-                    deckId={deckId}
-                  />
-                }
+                onFlip={flipCard}
+                translationRu={currentQueueCard?.translation_ru ?? null}
+                translationRuPlural={currentQueueCard?.translation_ru_plural ?? null}
+                sentenceRu={currentQueueCard?.sentence_ru ?? null}
+                onRate={handleRate}
+                audioState={audioState}
+                wordEntryId={currentCard.word_entry_id}
+                deckId={deckId}
               />
             );
-          }
-
-          if (cardType === 'article') {
-            return (
-              <PfCard
-                key={currentCard.id}
-                onClick={!isFlipped ? flipCard : undefined}
-                isFlipped={isFlipped}
-                body={
-                  <>
-                    {headEl}
-                    <GrammarArticle
-                      wordWithArticle={(front.main as string) ?? ''}
-                      prompt={(front.prompt as string | null | undefined) ?? null}
-                    />
-                  </>
-                }
-                foot={
-                  <PracticeCard
-                    card={currentCard}
-                    isFlipped={isFlipped}
-                    onFlip={flipCard}
-                    translationRu={currentQueueCard?.translation_ru ?? null}
-                    translationRuPlural={currentQueueCard?.translation_ru_plural ?? null}
-                    sentenceRu={currentQueueCard?.sentence_ru ?? null}
-                    onRate={handleRate}
-                    audioState={audioState}
-                    wordEntryId={currentCard.word_entry_id}
-                    deckId={deckId}
-                  />
-                }
-              />
-            );
-          }
-
-          if (cardType === 'plural_form') {
-            return (
-              <PfCard
-                key={currentCard.id}
-                onClick={!isFlipped ? flipCard : undefined}
-                isFlipped={isFlipped}
-                body={
-                  <>
-                    {headEl}
-                    <GrammarPlural
-                      stem={(front.main as string) ?? ''}
-                      ipa={(front.sub as string | null | undefined) ?? null}
-                      audioState={audioState ?? null}
-                      prompt={(front.prompt as string | null | undefined) ?? null}
-                    />
-                  </>
-                }
-                foot={
-                  <PracticeCard
-                    card={currentCard}
-                    isFlipped={isFlipped}
-                    onFlip={flipCard}
-                    translationRu={currentQueueCard?.translation_ru ?? null}
-                    translationRuPlural={currentQueueCard?.translation_ru_plural ?? null}
-                    sentenceRu={currentQueueCard?.sentence_ru ?? null}
-                    onRate={handleRate}
-                    audioState={audioState}
-                    wordEntryId={currentCard.word_entry_id}
-                    deckId={deckId}
-                  />
-                }
-              />
-            );
-          }
-
-          if (cardType === 'sentence_translation') {
-            const translatedPrompt = (front.prompt as string | null | undefined) ?? null;
-            return (
-              <PfCard
-                key={currentCard.id}
-                onClick={!isFlipped ? flipCard : undefined}
-                isFlipped={isFlipped}
-                body={
-                  <>
-                    {headEl}
-                    <Sentence
-                      prompt={translatedPrompt}
-                      main={(front.main as string) ?? ''}
-                      audioState={audioState ?? null}
-                    />
-                  </>
-                }
-                foot={
-                  <PracticeCard
-                    card={currentCard}
-                    isFlipped={isFlipped}
-                    onFlip={flipCard}
-                    translationRu={currentQueueCard?.translation_ru ?? null}
-                    translationRuPlural={currentQueueCard?.translation_ru_plural ?? null}
-                    sentenceRu={currentQueueCard?.sentence_ru ?? null}
-                    onRate={handleRate}
-                    audioState={audioState}
-                    wordEntryId={currentCard.word_entry_id}
-                    deckId={deckId}
-                  />
-                }
-              />
-            );
-          }
-
-          if (cardType === 'declension') {
-            return (
-              <PfCard
-                key={currentCard.id}
-                onClick={!isFlipped ? flipCard : undefined}
-                isFlipped={isFlipped}
-                body={
-                  <>
-                    {headEl}
-                    <Declension
-                      card={{
-                        back_content: currentCard.back_content as Record<string, unknown>,
-                        front_content: currentCard.front_content as Record<string, unknown>,
-                      }}
-                      revealed={false}
-                    />
-                  </>
-                }
-                foot={
-                  <>
-                    <Declension
-                      card={{
-                        back_content: currentCard.back_content as Record<string, unknown>,
-                        front_content: currentCard.front_content as Record<string, unknown>,
-                      }}
-                      revealed={true}
-                    />
-                    <PracticeCard
-                      card={currentCard}
-                      isFlipped={isFlipped}
-                      onFlip={flipCard}
-                      translationRu={currentQueueCard?.translation_ru ?? null}
-                      translationRuPlural={currentQueueCard?.translation_ru_plural ?? null}
-                      sentenceRu={currentQueueCard?.sentence_ru ?? null}
-                      onRate={handleRate}
-                      audioState={audioState}
-                      wordEntryId={currentCard.word_entry_id}
-                      deckId={deckId}
-                    />
-                  </>
-                }
-              />
-            );
-          }
-
-          // Fallback: legacy PracticeCard for cloze, conjugation
-          return (
-            <PracticeCard
-              key={currentCard.id}
-              card={currentCard}
-              isFlipped={isFlipped}
-              onFlip={flipCard}
-              translationRu={currentQueueCard?.translation_ru ?? null}
-              translationRuPlural={currentQueueCard?.translation_ru_plural ?? null}
-              sentenceRu={currentQueueCard?.sentence_ru ?? null}
-              onRate={handleRate}
-              audioState={audioState}
-              wordEntryId={currentCard.word_entry_id}
-              deckId={deckId}
-            />
-          );
-        })()}
+          })()}
+        </div>
       </div>
     </PracticeApp>
   );

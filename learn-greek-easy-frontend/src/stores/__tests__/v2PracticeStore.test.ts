@@ -14,6 +14,7 @@ import {
   v2QueueCardToCardRecord,
   resolveV2CardAudioUrl,
 } from '../v2PracticeStore';
+import type { ToastPayload } from '../v2PracticeStore';
 
 // ============================================
 // Mocks
@@ -121,6 +122,8 @@ describe('v2PracticeStore', () => {
       totalReview: 0,
       streak: 0,
       ratings: [],
+      leaveDirection: null,
+      toast: null,
     });
 
     vi.mocked(useAuthStore.getState).mockReturnValue({
@@ -407,5 +410,116 @@ describe('v2PracticeStore', () => {
 
     expect(useV2PracticeStore.getState().streak).toBe(3);
     expect(useV2PracticeStore.getState().ratings[0]).toBe('tough');
+  });
+
+  // ============================================
+  // Tests: leaveDirection (PRACT2-1-07)
+  // ============================================
+
+  it('rateCard sets leaveDirection=right for Forgot (rating=1)', async () => {
+    const card1 = makeMockCard({ card_record_id: 'cr-1' });
+    const card2 = makeMockCard({ card_record_id: 'cr-2' });
+    vi.mocked(studyAPI.getQueue).mockResolvedValue(makeMockQueue([card1, card2]));
+    vi.mocked(reviewAPI.submit).mockResolvedValue(makeMockReviewResult());
+
+    await useV2PracticeStore.getState().startSession('deck-1');
+    useV2PracticeStore.getState().rateCard(1); // Forgot
+
+    expect(useV2PracticeStore.getState().leaveDirection).toBe('right');
+  });
+
+  it('rateCard sets leaveDirection=right for Tough (rating=2)', async () => {
+    const card1 = makeMockCard({ card_record_id: 'cr-1' });
+    const card2 = makeMockCard({ card_record_id: 'cr-2' });
+    vi.mocked(studyAPI.getQueue).mockResolvedValue(makeMockQueue([card1, card2]));
+    vi.mocked(reviewAPI.submit).mockResolvedValue(makeMockReviewResult());
+
+    await useV2PracticeStore.getState().startSession('deck-1');
+    useV2PracticeStore.getState().rateCard(2); // Tough
+
+    expect(useV2PracticeStore.getState().leaveDirection).toBe('right');
+  });
+
+  it('rateCard sets leaveDirection=left for OK (rating=3)', async () => {
+    const card1 = makeMockCard({ card_record_id: 'cr-1' });
+    const card2 = makeMockCard({ card_record_id: 'cr-2' });
+    vi.mocked(studyAPI.getQueue).mockResolvedValue(makeMockQueue([card1, card2]));
+    vi.mocked(reviewAPI.submit).mockResolvedValue(makeMockReviewResult());
+
+    await useV2PracticeStore.getState().startSession('deck-1');
+    useV2PracticeStore.getState().rateCard(3); // OK
+
+    expect(useV2PracticeStore.getState().leaveDirection).toBe('left');
+  });
+
+  it('rateCard sets leaveDirection=left for Easy (rating=4)', async () => {
+    const card1 = makeMockCard({ card_record_id: 'cr-1' });
+    const card2 = makeMockCard({ card_record_id: 'cr-2' });
+    vi.mocked(studyAPI.getQueue).mockResolvedValue(makeMockQueue([card1, card2]));
+    vi.mocked(reviewAPI.submit).mockResolvedValue(makeMockReviewResult());
+
+    await useV2PracticeStore.getState().startSession('deck-1');
+    useV2PracticeStore.getState().rateCard(4); // Easy
+
+    expect(useV2PracticeStore.getState().leaveDirection).toBe('left');
+  });
+
+  it('clearLeaveDirection sets leaveDirection to null', async () => {
+    useV2PracticeStore.setState({ leaveDirection: 'right' });
+    useV2PracticeStore.getState().clearLeaveDirection();
+    expect(useV2PracticeStore.getState().leaveDirection).toBeNull();
+  });
+
+  // ============================================
+  // Tests: toast state (PRACT2-1-07)
+  // ============================================
+
+  it('toast is set from reviewAPI.submit .then with real interval and nextReviewDate', async () => {
+    const card1 = makeMockCard({ card_record_id: 'cr-1' });
+    const card2 = makeMockCard({ card_record_id: 'cr-2' });
+    vi.mocked(studyAPI.getQueue).mockResolvedValue(makeMockQueue([card1, card2]));
+    vi.mocked(reviewAPI.submit).mockResolvedValue(
+      makeMockReviewResult({ interval: 7, next_review_date: '2026-06-06' })
+    );
+
+    await useV2PracticeStore.getState().startSession('deck-1');
+    useV2PracticeStore.getState().rateCard(3);
+
+    // Wait for .then to resolve
+    await vi.waitFor(() => {
+      const t = useV2PracticeStore.getState().toast as ToastPayload | null;
+      return t !== null;
+    });
+
+    const toast = useV2PracticeStore.getState().toast as ToastPayload;
+    expect(toast.interval).toBe(7);
+    expect(toast.nextReviewDate).toBe('2026-06-06');
+    expect(toast.forCardId).toBe('cr-1');
+  });
+
+  it('toast is cleared on next rateCard call', async () => {
+    const card1 = makeMockCard({ card_record_id: 'cr-1' });
+    const card2 = makeMockCard({ card_record_id: 'cr-2' });
+    const card3 = makeMockCard({ card_record_id: 'cr-3' });
+    vi.mocked(studyAPI.getQueue).mockResolvedValue(makeMockQueue([card1, card2, card3]));
+    vi.mocked(reviewAPI.submit).mockResolvedValue(makeMockReviewResult({ interval: 5 }));
+
+    await useV2PracticeStore.getState().startSession('deck-1');
+    useV2PracticeStore.getState().rateCard(3);
+    // Wait for toast to populate
+    await vi.waitFor(() => useV2PracticeStore.getState().toast !== null);
+
+    // Rate next card — toast should clear immediately (synchronous set in rateCard)
+    useV2PracticeStore.getState().rateCard(3);
+    // Toast is set to null synchronously before the next .then fires
+    expect(useV2PracticeStore.getState().toast).toBeNull();
+  });
+
+  it('clearToast sets toast to null', () => {
+    useV2PracticeStore.setState({
+      toast: { forCardId: 'cr-1', interval: 3, nextReviewDate: '2026-06-03' },
+    });
+    useV2PracticeStore.getState().clearToast();
+    expect(useV2PracticeStore.getState().toast).toBeNull();
   });
 });
