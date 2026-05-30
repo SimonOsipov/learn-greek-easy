@@ -97,9 +97,7 @@ export function Declension({ card, revealed }: DeclensionProps) {
     // Graceful degradation -- no paradigm data
     return (
       <div className="flex flex-col items-center gap-3 py-4" data-testid="pf-declension">
-        <p style={{ color: 'hsl(var(--fg-2))' }} className="text-center text-sm">
-          Paradigm not available
-        </p>
+        <p className="text-center text-sm text-fg2">Paradigm not available</p>
       </div>
     );
   }

@@ -379,8 +379,20 @@ When you add a token / class / animation / component:
 3. If it's a non-trivial visual addition, also update `Design-System-v2.4.html` (or bump to `-v2.5.html` if the change is large enough to warrant a snapshot).
 4. PR description should call it out under "Design system delta".
 
-**Practice top bar motion (PRACT2-1-02 pf-layer):**
-- `pf-seg-pulse` (1.4s ease-in-out ∞, opacity 1→0.55→1) — current segment tick in progress bar. Defined in `src/features/practice/pf/pf.css`, not in `tailwind.config.js` (pf-layer animations live in pf.css, not the global animation map). Gated behind `prefers-reduced-motion` via `.pf-app::before` pattern.
+**Practice session animations (pf-layer, all in `src/features/practice/pf/pf.css`, NOT in `tailwind.config.js`):**
+
+All eight `pf-*` keyframes are scoped to `pf.css`. They are neutralised under `prefers-reduced-motion: reduce` via both the global `index.css` guard and a dedicated belt-and-suspenders block at the end of `pf.css`.
+
+| Keyframe | Duration / Timing | Carrier selector | What it does |
+|---|---|---|---|
+| `pf-card-in` | 280ms ease-smooth | `.pf-card` | Card entrance: slides up 12 px + fades in. Gated behind `prefers-reduced-motion: no-preference`. |
+| `pf-seg-pulse` | 1.4s ease-in-out ∞ | `.pf-seg.is-current` | Progress-bar tick opacity pulse (1→0.55→1) while a card is active. |
+| `pf-cell-fill` | 400ms ease-out | `.pf-cell-target.is-revealed` | Declension-table cell reveal: scales + fades the filled-in answer. |
+| `pf-wave` | 600ms ease-in-out ∞ | `.pf-wave-bar--playing` | Audio waveform bars bounce while audio is playing. Gated behind `prefers-reduced-motion: no-preference`. |
+| `pf-audio-spin` | 0.9s linear ∞ | `.pf-audio-surface__play-icon--loading` | Loading spinner on the audio play button while TTS is fetching. |
+| `pf-leave-left` | 320ms ease-smooth | `.pf-card-slide-wrapper[data-leave='left'] .pf-card` | Card exit to the left (forgot/skip). Gated behind `prefers-reduced-motion: no-preference`. |
+| `pf-leave-right` | 320ms ease-smooth | `.pf-card-slide-wrapper[data-leave='right'] .pf-card` | Card exit to the right (rated). Gated behind `prefers-reduced-motion: no-preference`. |
+| `pf-toast-in` | 220ms ease-smooth | `.pf-toast` | Toast notification entrance: slides up + fades in. Gated behind `prefers-reduced-motion: no-preference`. |
 
 ### Practice top bar utility classes (pf-layer, PRACT2-1-02)
 

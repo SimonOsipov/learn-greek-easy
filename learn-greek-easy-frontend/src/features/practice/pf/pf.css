@@ -1611,3 +1611,53 @@
   width: 100%;
   margin-top: 4px;
 }
+
+/* ── Reduced-motion — scoped to pf- animation families ──────────────────────
+   A global prefers-reduced-motion: reduce guard already exists in
+   src/index.css (~L4284, applies animation-duration/iteration/transition to
+   all *). Five of the eight pf-* animation carriers are additionally gated
+   behind `@media (prefers-reduced-motion: no-preference)` blocks earlier in
+   this file (pf-card-in, pf-wave, pf-leave-left, pf-leave-right, pf-toast-in).
+   This block is intentionally a belt-and-suspenders measure targeting ALL
+   eight pf-* carriers — the three that are unconditional (pf-seg-pulse,
+   pf-audio-spin, pf-cell-fill) are the primary concern; the other five are
+   reinforced here for completeness. Mirrors the dx.css DX-14 pattern.
+   ────────────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  /* pf-seg-pulse — infinite pulse on active segment (UNCONDITIONAL — primary) */
+  .pf-seg.is-current {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  /* pf-audio-spin — infinite spinner on loading audio button (UNCONDITIONAL — primary) */
+  .pf-audio-surface__play-icon--loading {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  /* pf-cell-fill — cell reveal fill (UNCONDITIONAL — primary) */
+  .pf-cell-target.is-revealed {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  /* pf-card-in — card entrance (reinforces existing no-preference gate) */
+  .pf-card {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  /* pf-wave — wave bars (reinforces existing no-preference gate) */
+  .pf-wave-bar--playing {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  /* pf-leave-left / pf-leave-right — slide-out animations (reinforces existing no-preference gate) */
+  .pf-card-slide-wrapper[data-leave='left'] .pf-card,
+  .pf-card-slide-wrapper[data-leave='right'] .pf-card {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  /* pf-toast-in — toast entrance (reinforces existing no-preference gate) */
+  .pf-toast {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

@@ -81,11 +81,7 @@ export function GrammarArticle({ wordWithArticle, prompt }: GrammarArticleProps)
 
   return (
     <div className="flex flex-col items-center gap-3 py-4" data-testid="pf-grammar-article">
-      {prompt && (
-        <p className="text-center text-sm" style={{ color: 'hsl(var(--fg-2))' }}>
-          {prompt}
-        </p>
-      )}
+      {prompt && <p className="text-center text-sm text-fg2">{prompt}</p>}
       <p className="pf-grammar-stem" lang="el">
         {hasArticle && (
           <span
@@ -112,11 +108,7 @@ export function GrammarArticle({ wordWithArticle, prompt }: GrammarArticleProps)
 export function GrammarPlural({ stem, ipa, audioState, prompt }: GrammarPluralProps) {
   return (
     <div className="flex flex-col items-center gap-3 py-4" data-testid="pf-grammar-plural">
-      {prompt && (
-        <p className="text-center text-sm" style={{ color: 'hsl(var(--fg-2))' }}>
-          {prompt}
-        </p>
-      )}
+      {prompt && <p className="text-center text-sm text-fg2">{prompt}</p>}
       <p className="pf-grammar-stem" lang="el">
         {stem}
       </p>
