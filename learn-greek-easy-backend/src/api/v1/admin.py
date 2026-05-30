@@ -9,11 +9,12 @@ All endpoints require superuser authentication.
 """
 
 import asyncio
+import hashlib
 import json
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import (
     APIRouter,
@@ -187,6 +188,7 @@ from src.services.changelog_service import ChangelogService
 from src.services.cross_ai_verification_service import get_cross_ai_verification_service
 from src.services.description_audio_service import (
     DescriptionAudioError,
+    _versioned_description_key,
     generate_description_audio,
     load_description_text,
     persist_description_audio,
@@ -832,7 +834,8 @@ async def upload_deck_cover_image(
 
     s3 = get_s3_service()
     ext = S3Service.get_extension_for_content_type(file.content_type) or "jpg"
-    s3_key = f"deck-images/{deck_id}.{ext}"
+    content_hash = hashlib.sha256(data).hexdigest()
+    s3_key = f"deck-images/{deck_id}/{content_hash}.{ext}"
 
     old_key = deck.cover_image_s3_key if deck.cover_image_s3_key != s3_key else None
 
@@ -840,13 +843,17 @@ async def upload_deck_cover_image(
     if not uploaded:
         raise HTTPException(status_code=500, detail="Failed to upload cover image")
 
-    # Delete old key only after successful upload (avoid data loss if upload fails)
-    if old_key:
-        s3.delete_object(old_key)
-
     deck.cover_image_s3_key = s3_key
     await db.commit()
     await db.refresh(deck)
+
+    # Delete old key only after commit — if commit fails, the row still
+    # references the old object and we must not orphan it.
+    if old_key and not s3.delete_object(old_key):
+        logger.warning(
+            "Failed to delete prior deck cover image from S3",
+            extra={"prior_key": old_key, "deck_id": str(deck_id)},
+        )
 
     cover_url = s3.generate_presigned_url(s3_key)
     card_count = await deck_repo.count_cards(deck_id)
@@ -4236,6 +4243,7 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 return
 
             # Extract all data before session closes (ORM objects become detached)
+            prior_audio_key = dialog.audio_s3_key
             dialog_data = {"id": str(dialog.id), "status": dialog.status}
             lines_data = [
                 {
@@ -4272,7 +4280,7 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
         try:
             audio_result = await audio_service.generate_dialog(
                 inputs=dialog_inputs,
-                s3_key=f"dialog-audio/{dialog_id}.mp3",
+                s3_key=f"dialog-audio/{dialog_id}/{uuid4().hex}.mp3",
             )
         except Exception as e:
             yield format_sse_event(
@@ -4329,6 +4337,16 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                         end_time_ms=end_ms,
                         word_timestamps=audio_result.word_timestamps_map.get(i),
                     )
+                )
+
+        # Best-effort deletion of the prior audio object now that persist succeeded.
+        if prior_audio_key and prior_audio_key != audio_result.s3_key:
+            try:
+                get_s3_service().delete_object(prior_audio_key)
+            except Exception:
+                logger.warning(
+                    "Failed to delete prior dialog audio from S3",
+                    extra={"prior_key": prior_audio_key, "dialog_id": str(dialog_id)},
                 )
 
         yield format_sse_event(
@@ -4400,11 +4418,20 @@ async def _description_audio_sse_pipeline(
             level,  # type: ignore[arg-type]
             factory,
         )
-        s3_key = (
-            f"situation-description-audio/{description_id}.mp3"
+        s3_key = _versioned_description_key(description_id, level)  # type: ignore[arg-type]
+
+        # Capture prior audio key for this level before persist so we can delete it afterward.
+        # Only read the column for the level being regenerated — never touch the sibling level.
+        prior_key_col = (
+            SituationDescription.audio_s3_key
             if level == "b1"
-            else f"situation-description-audio/a2/{description_id}.mp3"
+            else SituationDescription.audio_a2_s3_key
         )
+        async with factory.begin() as _prior_session:
+            prior_key_row = await _prior_session.execute(
+                select(prior_key_col).where(SituationDescription.id == description_id)
+            )
+            prior_description_key: str | None = prior_key_row.scalar_one_or_none()
 
         yield format_sse_event(
             {"situation_id": str(situation_id), "level": level},
@@ -4451,6 +4478,21 @@ async def _description_audio_sse_pipeline(
             audio_result,
             factory,
         )
+
+        # Best-effort deletion of the prior audio object now that persist succeeded.
+        # b1 and a2 are independent — only ever delete the level being regenerated.
+        if prior_description_key and prior_description_key != s3_key:
+            try:
+                get_s3_service().delete_object(prior_description_key)
+            except Exception:
+                logger.warning(
+                    "Failed to delete prior description audio from S3",
+                    extra={
+                        "prior_key": prior_description_key,
+                        "situation_id": str(situation_id),
+                        "level": level,
+                    },
+                )
 
         audio_url = audio_service.generate_presigned_url(s3_key)
 
@@ -4545,19 +4587,27 @@ async def _picture_sse_pipeline(situation_id: UUID) -> AsyncGenerator[str, None]
         result = await generate_picture_bytes(image_prompt, openrouter_service)
 
         current_stage = "upload"
-        s3_key = f"situation-pictures/{picture_id}.png"
+        s3_key = await upload_picture_to_s3(picture_id, result.image_bytes, s3_service)
         yield format_sse_event(
             {"situation_id": str(situation_id), "picture_id": str(picture_id), "s3_key": s3_key},
             event="picture:upload",
         )
-        await upload_picture_to_s3(picture_id, result.image_bytes, s3_service)
 
         current_stage = "persist"
         yield format_sse_event(
             {"situation_id": str(situation_id), "picture_id": str(picture_id)},
             event="picture:persist",
         )
-        await persist_picture_generation(picture_id, s3_key, factory)
+        prior_key = await persist_picture_generation(picture_id, s3_key, factory)
+
+        if prior_key and prior_key != s3_key:
+            try:
+                get_s3_service().delete_object(prior_key)
+            except Exception:
+                logger.warning(
+                    "Failed to delete prior S3 picture object",
+                    extra={"prior_key": prior_key, "picture_id": str(picture_id)},
+                )
 
         image_url = s3_service.generate_presigned_url(s3_key)
         yield format_sse_event(
@@ -4775,7 +4825,8 @@ async def upload_situation_picture(
 
     s3 = get_s3_service()
     ext = S3Service.get_extension_for_content_type(file.content_type) or "png"
-    s3_key = f"situation-pictures/{picture.id}.{ext}"
+    prior_key = picture.image_s3_key
+    s3_key = f"situation-pictures/{picture.id}/{hashlib.sha256(data).hexdigest()}.{ext}"
 
     uploaded = await asyncio.to_thread(s3.upload_object, s3_key, data, file.content_type)
     if not uploaded:
@@ -4784,6 +4835,15 @@ async def upload_situation_picture(
     picture.image_s3_key = s3_key
     await db.commit()
     await db.refresh(picture)
+
+    if prior_key and prior_key != s3_key:
+        try:
+            s3.delete_object(prior_key)
+        except Exception:
+            logger.warning(
+                "Failed to delete prior S3 picture object on manual upload",
+                extra={"prior_key": prior_key, "picture_id": str(picture.id)},
+            )
 
     nested = PictureNested.model_validate(picture)
     nested.image_url = s3.generate_presigned_url(s3_key)

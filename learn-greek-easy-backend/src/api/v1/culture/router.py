@@ -23,6 +23,7 @@ Admin Endpoints (superuser only):
 - DELETE /culture/questions/{question_id} - Delete a question
 """
 
+import hashlib
 from typing import Optional
 from uuid import UUID
 
@@ -921,7 +922,8 @@ async def upload_culture_deck_cover_image(
 
     s3 = get_s3_service()
     ext = S3Service.get_extension_for_content_type(file.content_type) or "jpg"
-    s3_key = f"culture-deck-images/{deck_id}.{ext}"
+    content_hash = hashlib.sha256(data).hexdigest()
+    s3_key = f"culture-deck-images/{deck_id}/{content_hash}.{ext}"
 
     old_key = deck.cover_image_s3_key if deck.cover_image_s3_key != s3_key else None
 
@@ -929,13 +931,17 @@ async def upload_culture_deck_cover_image(
     if not uploaded:
         raise HTTPException(status_code=500, detail="Failed to upload cover image")
 
-    # Delete old key only after successful upload
-    if old_key:
-        s3.delete_object(old_key)
-
     deck.cover_image_s3_key = s3_key
     await db.commit()
     await db.refresh(deck)
+
+    # Delete old key only after commit — if commit fails, the row still
+    # references the old object and we must not orphan it.
+    if old_key and not s3.delete_object(old_key):
+        logger.warning(
+            "Failed to delete prior culture deck cover image from S3",
+            extra={"prior_key": old_key, "deck_id": str(deck_id)},
+        )
 
     cover_url = s3.generate_presigned_url(s3_key)
     question_count = await deck_repo.count_questions(deck_id)

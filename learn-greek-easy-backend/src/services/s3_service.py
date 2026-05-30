@@ -18,12 +18,26 @@ AWS S3 Configuration:
     Set: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET_NAME, AWS_S3_REGION
     No endpoint needed (uses AWS default)
 
+URL Stability Guarantee:
+    Presigned GET URLs are byte-identical across deploys and across separate S3Service
+    instances (including after a process restart) via *clock-window determinism*: the
+    signing clock is floored to a window boundary before calling generate_presigned_url,
+    so every signer that is within the same window produces the same X-Amz-Date and
+    therefore the same signature.  The in-process _url_cache is a micro-optimisation
+    (avoids redundant signing CPU) but is NOT the source of URL stability.
+    NOTE: the app runs --workers 1 (see Dockerfile CMD), but concurrent threaded signing
+    can occur via asyncio.to_thread; the module-level _SIGN_LOCK ensures the process-global
+    botocore.auth rebind/restore is always atomic.
+
 """
 
+import threading
 import time
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 
 import boto3
+import botocore.auth
 from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 
@@ -47,12 +61,31 @@ CONTENT_TYPE_TO_EXT = {
     "image/webp": "webp",
 }
 
+# Content type to Cache-Control header mapping for uploaded objects.
+# Applied via put_object CacheControl= so the stored object carries the directive.
+# "immutable" is safe: all overwritten keys are versioned (SCACHE-03/04/05 done),
+# so re-uploads mint a new key + delete the old — no in-place overwrite can pin stale bytes.
+# Unmapped types fall back to the image directive (graceful, no crash).
+_DEFAULT_CACHE_CONTROL = "public, max-age=86400, immutable"
+CONTENT_TYPE_TO_CACHE_CONTROL: dict[str, str] = {
+    "image/jpeg": "public, max-age=86400, immutable",
+    "image/png": "public, max-age=86400, immutable",
+    "image/webp": "public, max-age=86400, immutable",
+    "audio/mpeg": "public, max-age=86400, immutable",
+}
+
+# Lock protecting the process-global botocore.auth.get_current_datetime rebind
+# used for deterministic presigned URL signing.  asyncio.to_thread can run
+# multiple signing calls concurrently even in a --workers 1 deployment.
+_SIGN_LOCK = threading.Lock()
+
 # Deck cover image upload constraints
 ALLOWED_DECK_IMAGE_CONTENT_TYPES = frozenset(["image/jpeg", "image/png", "image/webp"])
 MAX_DECK_IMAGE_SIZE_BYTES = 3 * 1024 * 1024  # 3MB
 
-# Presigned URL cache: reuse the same URL for a key within a TTL window
-# so browsers can cache the content behind a stable URL.
+# Presigned URL cache: hot-path micro-optimisation that avoids redundant signing.
+# URL stability across deploys is guaranteed by clock-window determinism (see module
+# docstring), NOT by this cache.
 _PRESIGNED_URL_CACHE_BUFFER = 600  # 10 minutes before expiry, generate a new URL
 
 
@@ -176,14 +209,34 @@ class S3Service:
         try:
             bucket_name = settings.effective_s3_bucket_name
             assert bucket_name is not None  # Guaranteed by _get_client() check
-            url: str = client.generate_presigned_url(
-                "get_object",
-                Params={
-                    "Bucket": bucket_name,
-                    "Key": image_key,
-                },
-                ExpiresIn=expiry,
-            )
+
+            # Clock-window determinism: floor the signing clock to a window boundary
+            # so every signer within the same window produces an identical X-Amz-Date
+            # and therefore a byte-identical URL.  This guarantees stable URLs across
+            # deploys and fresh instances — NOT the in-process cache.
+            window_seconds = max(expiry - _PRESIGNED_URL_CACHE_BUFFER, 60)
+            now_epoch = time.time()
+            floored_epoch = (int(now_epoch) // window_seconds) * window_seconds
+            # Build naive UTC datetime (datetime.utcfromtimestamp is deprecated)
+            frozen_dt = datetime.fromtimestamp(floored_epoch, tz=timezone.utc).replace(tzinfo=None)
+
+            # Temporarily rebind botocore.auth.get_current_datetime to return the
+            # floored datetime so SigV4Auth stamps X-Amz-Date with the window boundary.
+            # Lock ensures the process-global rebind/restore is atomic across threads.
+            with _SIGN_LOCK:
+                _orig_get_current_datetime = getattr(botocore.auth, "get_current_datetime")
+                setattr(botocore.auth, "get_current_datetime", lambda: frozen_dt)
+                try:
+                    url: str = client.generate_presigned_url(
+                        "get_object",
+                        Params={
+                            "Bucket": bucket_name,
+                            "Key": image_key,
+                        },
+                        ExpiresIn=expiry,
+                    )
+                finally:
+                    setattr(botocore.auth, "get_current_datetime", _orig_get_current_datetime)
 
             # Cache the URL: valid until expiry minus buffer
             cache_ttl = max(expiry - _PRESIGNED_URL_CACHE_BUFFER, 60)
@@ -382,11 +435,16 @@ class S3Service:
             bucket_name = settings.effective_s3_bucket_name
             assert bucket_name is not None
 
+            # Apply per-content-type Cache-Control; unmapped types fall back to the
+            # default image directive so news_item_service dynamic content-types
+            # (e.g. image/gif, image/avif) never cause a crash.
+            cache_control = CONTENT_TYPE_TO_CACHE_CONTROL.get(content_type, _DEFAULT_CACHE_CONTROL)
             client.put_object(
                 Bucket=bucket_name,
                 Key=s3_key,
                 Body=data,
                 ContentType=content_type,
+                CacheControl=cache_control,
             )
             self._url_cache.pop(s3_key, None)
             logger.info(
