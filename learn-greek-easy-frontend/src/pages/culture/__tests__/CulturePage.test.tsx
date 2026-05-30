@@ -39,6 +39,16 @@ vi.mock('@/services/cultureDeckAPI', () => ({
   },
 }));
 
+// ---------------------------------------------------------------------------
+// Mock progressAPI — getDashboard resolves to null by default (non-critical)
+// ---------------------------------------------------------------------------
+const mockGetDashboard = vi.fn().mockResolvedValue(null);
+vi.mock('@/services/progressAPI', () => ({
+  progressAPI: {
+    getDashboard: (...args: unknown[]) => mockGetDashboard(...args),
+  },
+}));
+
 vi.mock('@/lib/errorReporting', () => ({
   reportAPIError: vi.fn(),
 }));
@@ -108,6 +118,7 @@ describe('CulturePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetReadiness.mockResolvedValue(null);
+    mockGetDashboard.mockResolvedValue(null);
   });
 
   it('renders the loading skeleton before the API resolves', async () => {
@@ -277,6 +288,7 @@ describe('Mock-exam CTA', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetReadiness.mockResolvedValue(null);
+    mockGetDashboard.mockResolvedValue(null);
     // Use a never-resolving promise so the loading state is active during most CTA tests;
     // the CTA must render unconditionally regardless of data state.
     mockGetList.mockReturnValue(new Promise(() => {}));
