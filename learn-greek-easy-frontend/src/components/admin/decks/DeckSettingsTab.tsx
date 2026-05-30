@@ -80,8 +80,10 @@ export function DeckSettingsTab({ deck, onSaved }: DeckSettingsTabProps) {
         const vocabData = data as VocabularyDeckFormData;
         await adminAPI.updateVocabularyDeck(deck.id, {
           name_en: vocabData.name_en,
+          name_el: vocabData.name_el || null,
           name_ru: vocabData.name_ru,
           description_en: vocabData.description_en || null,
+          description_el: vocabData.description_el || null,
           description_ru: vocabData.description_ru || null,
           level: vocabData.level,
           is_active: vocabData.is_active,
