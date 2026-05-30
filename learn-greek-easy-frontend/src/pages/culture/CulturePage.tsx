@@ -19,6 +19,8 @@ import { transformCultureDeckResponse } from '@/lib/cultureDeckTransform';
 import { reportAPIError } from '@/lib/errorReporting';
 import { cultureDeckAPI } from '@/services/cultureDeckAPI';
 import type { CultureReadinessResponse } from '@/services/cultureDeckAPI';
+import { progressAPI } from '@/services/progressAPI';
+import type { DashboardStatsResponse } from '@/services/progressAPI';
 import type { Deck } from '@/types/deck';
 
 export const CulturePage: React.FC = () => {
@@ -29,6 +31,7 @@ export const CulturePage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [readiness, setReadiness] = useState<CultureReadinessResponse | null>(null);
+  const [dashboard, setDashboard] = useState<DashboardStatsResponse | null>(null);
 
   const loadDecks = React.useCallback(() => {
     setError(null);
@@ -36,10 +39,12 @@ export const CulturePage: React.FC = () => {
     Promise.all([
       cultureDeckAPI.getList(),
       cultureDeckAPI.getReadiness().catch(() => null), // readiness is non-critical
+      progressAPI.getDashboard().catch(() => null), // dashboard is non-critical
     ])
-      .then(([res, readinessData]) => {
+      .then(([res, readinessData, dashboardData]) => {
         setDecks(res.decks.map(transformCultureDeckResponse));
         setReadiness(readinessData);
+        setDashboard(dashboardData);
       })
       .catch((err: unknown) => {
         reportAPIError(err, { operation: 'fetchCultureDecks', endpoint: '/api/v1/culture/decks' });
@@ -114,11 +119,9 @@ export const CulturePage: React.FC = () => {
     {
       icon: <Flame size={18} aria-hidden />,
       label: t('hub.metricStreak', 'Streak'),
-      value: '0',
+      value: String(dashboard?.streak.culture_current_streak ?? 0),
       sub: t('hub.days', 'days'),
       tone: 'amber' as const,
-      unwired: true,
-      unwiredLabel: 'Streak — not yet connected to backend data.',
     },
     {
       icon: <CheckSquare size={18} aria-hidden />,

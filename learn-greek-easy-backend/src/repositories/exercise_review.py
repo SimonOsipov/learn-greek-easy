@@ -1,7 +1,9 @@
 """ExerciseReview repository."""
 
+from datetime import date, datetime, timedelta
 from uuid import UUID
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import ExerciseReview
@@ -45,3 +47,44 @@ class ExerciseReviewRepository(BaseRepository[ExerciseReview]):
         self.db.add(review)
         await self.db.flush()
         return review
+
+    async def get_unique_dates(self, user_id: UUID, days: int) -> list[date]:
+        """Get distinct dates on which the user attempted exercises within a rolling window.
+
+        Args:
+            user_id: User UUID.
+            days: Number of days to look back.
+
+        Returns:
+            List of dates in descending order.
+        """
+        cutoff = datetime.combine(date.today() - timedelta(days=days), datetime.min.time())
+        query = (
+            select(func.date(ExerciseReview.reviewed_at).label("review_date"))
+            .where(
+                ExerciseReview.user_id == user_id,
+                ExerciseReview.reviewed_at >= cutoff,
+            )
+            .group_by(func.date(ExerciseReview.reviewed_at))
+            .order_by(func.date(ExerciseReview.reviewed_at).desc())
+        )
+        result = await self.db.execute(query)
+        return [row.review_date for row in result.all()]
+
+    async def get_all_unique_dates(self, user_id: UUID) -> list[date]:
+        """Get all distinct dates on which the user attempted exercises, oldest first.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            List of dates in ascending order.
+        """
+        query = (
+            select(func.date(ExerciseReview.reviewed_at).label("review_date"))
+            .where(ExerciseReview.user_id == user_id)
+            .group_by(func.date(ExerciseReview.reviewed_at))
+            .order_by(func.date(ExerciseReview.reviewed_at).asc())
+        )
+        result = await self.db.execute(query)
+        return [row.review_date for row in result.all()]

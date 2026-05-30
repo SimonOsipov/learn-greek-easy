@@ -15,6 +15,7 @@ from src.repositories.culture_answer_history import CultureAnswerHistoryReposito
 from src.repositories.culture_deck import CultureDeckRepository
 from src.repositories.culture_question_stats import CultureQuestionStatsRepository
 from src.repositories.deck import DeckRepository
+from src.repositories.exercise_review import ExerciseReviewRepository
 from src.repositories.mock_exam import MockExamRepository
 from src.schemas.progress import (
     DailyStats,
@@ -32,7 +33,13 @@ from src.schemas.progress import (
     TodayStats,
     TrendsSummary,
 )
-from src.services.gamification.streak import compute_aggregated_streak
+from src.services.gamification.streak import (
+    _longest_streak_from_dates,
+    compute_aggregated_streak,
+    compute_culture_streak,
+    compute_exercise_streak,
+    compute_vocabulary_streak,
+)
 
 _DATETIME_MIN_UTC = datetime.min.replace(tzinfo=timezone.utc)
 
@@ -48,6 +55,7 @@ class ProgressService:
         self.culture_answer_repo = CultureAnswerHistoryRepository(db)
         self.culture_deck_repo = CultureDeckRepository(db)
         self.mock_exam_repo = MockExamRepository(db)
+        self.exercise_review_repo = ExerciseReviewRepository(db)
 
     # ── Dashboard ──────────────────────────────────────────────────────────
 
@@ -147,13 +155,51 @@ class ProgressService:
             ),
         )
 
-        # Streak
-        current_streak = await compute_aggregated_streak(self.db, user_id)
-        longest_streak = await self._get_aggregated_longest_streak(user_id)
+        # Streak — all eight values fetched concurrently
+        async def _vocab_longest() -> int:
+            dates = await self.card_review_repo.get_all_unique_dates(user_id)
+            return _longest_streak_from_dates(sorted(set(dates)))
+
+        async def _culture_longest() -> int:
+            culture_dates, mock_dates = await asyncio.gather(
+                self.culture_answer_repo.get_all_unique_dates(user_id),
+                self.mock_exam_repo.get_all_unique_dates(user_id),
+            )
+            return _longest_streak_from_dates(sorted(set(culture_dates) | set(mock_dates)))
+
+        async def _exercise_longest() -> int:
+            dates = await self.exercise_review_repo.get_all_unique_dates(user_id)
+            return _longest_streak_from_dates(sorted(set(dates)))
+
+        (
+            current_streak,
+            longest_streak,
+            vocab_current,
+            culture_current,
+            exercise_current,
+            vocab_longest,
+            culture_longest,
+            exercise_longest,
+        ) = await asyncio.gather(
+            compute_aggregated_streak(self.db, user_id),
+            self._get_aggregated_longest_streak(user_id),
+            compute_vocabulary_streak(self.db, user_id),
+            compute_culture_streak(self.db, user_id),
+            compute_exercise_streak(self.db, user_id),
+            _vocab_longest(),
+            _culture_longest(),
+            _exercise_longest(),
+        )
         streak = StreakStats(
             current_streak=current_streak,
             longest_streak=longest_streak,
             last_study_date=last_review_date,
+            vocabulary_current_streak=vocab_current,
+            vocabulary_longest_streak=vocab_longest,
+            culture_current_streak=culture_current,
+            culture_longest_streak=culture_longest,
+            exercise_current_streak=exercise_current,
+            exercise_longest_streak=exercise_longest,
         )
 
         # cards_by_status: merge vocab + culture
@@ -273,17 +319,7 @@ class ProgressService:
             self.mock_exam_repo.get_all_unique_dates(user_id),
         )
         all_dates = sorted(set(vocab_dates) | set(culture_dates) | set(mock_dates))
-        if not all_dates:
-            return 0
-        longest = 1
-        current = 1
-        for i in range(1, len(all_dates)):
-            if all_dates[i] == all_dates[i - 1] + timedelta(days=1):
-                current += 1
-                longest = max(longest, current)
-            else:
-                current = 1
-        return longest
+        return _longest_streak_from_dates(all_dates)
 
     # ── Trends ────────────────────────────────────────────────────────────
 

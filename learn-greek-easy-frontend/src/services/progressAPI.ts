@@ -47,6 +47,12 @@ export interface StreakStats {
   current_streak: number;
   longest_streak: number;
   last_study_date: string | null;
+  vocabulary_current_streak: number;
+  vocabulary_longest_streak: number;
+  culture_current_streak: number;
+  culture_longest_streak: number;
+  exercise_current_streak: number;
+  exercise_longest_streak: number;
 }
 
 /**

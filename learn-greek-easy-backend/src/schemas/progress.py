@@ -77,6 +77,12 @@ class StreakStats(BaseModel):
     current_streak: int
     longest_streak: int
     last_study_date: Optional[date]
+    vocabulary_current_streak: int = 0
+    vocabulary_longest_streak: int = 0
+    culture_current_streak: int = 0
+    culture_longest_streak: int = 0
+    exercise_current_streak: int = 0
+    exercise_longest_streak: int = 0
 
 
 class RecentActivity(BaseModel):
