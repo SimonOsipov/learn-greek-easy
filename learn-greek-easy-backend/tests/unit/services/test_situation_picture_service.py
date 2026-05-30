@@ -37,6 +37,7 @@ from src.services.situation_picture_service import (
     run_picture_generation_pipeline,
     upload_picture_to_s3,
 )
+from tests.helpers.assertions import assert_versioned_s3_key
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -182,17 +183,17 @@ class TestGeneratePictureBytes:
 
 class TestUploadPictureToS3:
     async def test_happy_path_returns_s3_key(self):
-        """Returns the canonical s3_key when upload_object returns True."""
+        """Returns a versioned s3_key when upload_object returns True."""
         picture_id = uuid4()
         s3_service = MagicMock()
         s3_service.upload_object.return_value = True
 
         result = await upload_picture_to_s3(picture_id, b"\x89PNG", s3_service)
 
-        assert result == f"situation-pictures/{picture_id}.png"
+        assert_versioned_s3_key(result, "situation-pictures", picture_id, ext="png")
 
     async def test_upload_object_called_with_correct_kwargs(self):
-        """upload_object is called with keyword args s3_key, data, content_type."""
+        """upload_object is called with keyword args s3_key (versioned), data, content_type."""
         picture_id = uuid4()
         image_bytes = b"\x89PNG fake"
         s3_service = MagicMock()
@@ -200,11 +201,11 @@ class TestUploadPictureToS3:
 
         await upload_picture_to_s3(picture_id, image_bytes, s3_service)
 
-        s3_service.upload_object.assert_called_once_with(
-            s3_key=f"situation-pictures/{picture_id}.png",
-            data=image_bytes,
-            content_type="image/png",
-        )
+        s3_service.upload_object.assert_called_once()
+        call_kwargs = s3_service.upload_object.call_args.kwargs
+        assert_versioned_s3_key(call_kwargs["s3_key"], "situation-pictures", picture_id, ext="png")
+        assert call_kwargs["data"] is image_bytes
+        assert call_kwargs["content_type"] == "image/png"
 
     async def test_upload_failure_raises_picture_upload_error(self):
         """Raises PictureUploadError when upload_object returns False."""
@@ -223,8 +224,11 @@ class TestUploadPictureToS3:
 class TestPersistPictureGeneration:
     async def test_happy_path_updates_key_and_status(self):
         """Updates image_s3_key and status=GENERATED on the picture row."""
+        import hashlib
+
         picture_id = uuid4()
-        s3_key = f"situation-pictures/{picture_id}.png"
+        # Use a versioned key shape as produced by upload_picture_to_s3
+        s3_key = f"situation-pictures/{picture_id}/{hashlib.sha256(b'img').hexdigest()}.png"
 
         picture = MagicMock()
         picture.id = picture_id
@@ -241,10 +245,16 @@ class TestPersistPictureGeneration:
         assert picture.status == PictureStatus.GENERATED
 
     async def test_regenerate_updates_key_keeps_generated_status(self):
-        """Second call (regenerate) keeps status=GENERATED and overwrites s3_key."""
+        """Second call (regenerate) keeps status=GENERATED and overwrites s3_key.
+
+        Old and new versioned keys differ (different image content -> different sha256).
+        persist_picture_generation returns the prior key so the caller can delete it.
+        """
+        import hashlib
+
         picture_id = uuid4()
-        old_key = f"situation-pictures/{picture_id}.png"
-        new_key = f"situation-pictures/{picture_id}.png"
+        old_key = f"situation-pictures/{picture_id}/{hashlib.sha256(b'old-image').hexdigest()}.png"
+        new_key = f"situation-pictures/{picture_id}/{hashlib.sha256(b'new-image').hexdigest()}.png"
 
         picture = MagicMock()
         picture.id = picture_id
@@ -255,15 +265,19 @@ class TestPersistPictureGeneration:
         session.get.return_value = picture
         factory = _make_factory(session)
 
-        await persist_picture_generation(picture_id, new_key, factory)
+        prior_key = await persist_picture_generation(picture_id, new_key, factory)
 
         assert picture.image_s3_key == new_key
         assert picture.status == PictureStatus.GENERATED
+        # persist_picture_generation returns the prior key so caller can delete it
+        assert prior_key == old_key
 
     async def test_commit_failure_logs_orphaned_key_and_raises(self, caplog_loguru):
         """On commit failure: logs orphaned key at ERROR level and raises PicturePersistError."""
+        import hashlib
+
         picture_id = uuid4()
-        s3_key = f"situation-pictures/{picture_id}.png"
+        s3_key = f"situation-pictures/{picture_id}/{hashlib.sha256(b'img').hexdigest()}.png"
 
         # Session.get returns a picture, but committing (context manager exit) raises
         picture = MagicMock()

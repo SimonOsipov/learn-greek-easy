@@ -5,6 +5,7 @@ This module provides domain-specific assertion functions that:
 - Verify SM-2 algorithm calculations
 - Check pagination response format
 - Validate error response structures
+- Assert versioned S3 key shapes for SCACHE cache-busting keys
 
 All assertions raise AssertionError with descriptive messages on failure.
 
@@ -13,12 +14,14 @@ Usage:
         assert_valid_user_response,
         assert_valid_token_response,
         assert_sm2_calculation,
+        assert_versioned_s3_key,
     )
 
     def test_user_creation(response):
         assert_valid_user_response(response.json())
 """
 
+import re
 from datetime import date
 from typing import Any
 from uuid import UUID
@@ -532,6 +535,96 @@ def assert_valid_progress_response(
 
 
 # =============================================================================
+# Versioned S3 Key Assertions (SCACHE)
+# =============================================================================
+
+# Regex patterns for versioned S3 key shapes.
+# sha256 produces a 64-char hex digest; uuid4.hex produces a 32-char hex string.
+_SHA256_SEGMENT = r"[0-9a-f]{64}"
+_UUID4_SEGMENT = r"[0-9a-f]{32}"
+
+_VERSIONED_KEY_PATTERNS: dict[str, str] = {
+    # deck-images/{deck_id}/{sha256hex}.{ext}
+    "deck-images": rf"^deck-images/[^/]+/{_SHA256_SEGMENT}\.[a-z]+$",
+    # culture-deck-images/{deck_id}/{sha256hex}.{ext}
+    "culture-deck-images": rf"^culture-deck-images/[^/]+/{_SHA256_SEGMENT}\.[a-z]+$",
+    # situation-pictures/{picture_id}/{sha256hex}.{ext}
+    "situation-pictures": rf"^situation-pictures/[^/]+/{_SHA256_SEGMENT}\.[a-z]+$",
+    # dialog-audio/{dialog_id}/{uuid4hex}.mp3
+    "dialog-audio": rf"^dialog-audio/[^/]+/{_UUID4_SEGMENT}\.mp3$",
+    # situation-description-audio/{description_id}/{uuid4hex}.mp3  (b1)
+    "situation-description-audio/b1": rf"^situation-description-audio/[^/]+/{_UUID4_SEGMENT}\.mp3$",
+    # situation-description-audio/a2/{description_id}/{uuid4hex}.mp3
+    "situation-description-audio/a2": rf"^situation-description-audio/a2/[^/]+/{_UUID4_SEGMENT}\.mp3$",
+}
+
+
+def assert_versioned_s3_key(
+    key: str,
+    prefix: str,
+    entity_id: object,
+    *,
+    ext: str | None = None,
+) -> None:
+    """Assert that *key* has the versioned cache-busting shape for *prefix*.
+
+    ``prefix`` must be one of the recognised S3 prefix families:
+    - ``"deck-images"``
+    - ``"culture-deck-images"``
+    - ``"situation-pictures"``
+    - ``"dialog-audio"``
+    - ``"situation-description-audio/b1"``  (b1 level)
+    - ``"situation-description-audio/a2"``  (a2 level)
+
+    Checks:
+    1. Key starts with the expected prefix.
+    2. ``entity_id`` (stringified) appears as a path segment inside the key.
+    3. Key matches the versioned-shape regex (64-hex sha256 or 32-hex uuid4).
+    4. If ``ext`` is given, the key ends with ``.{ext}``.
+
+    Args:
+        key: The S3 key string to validate.
+        prefix: One of the recognised prefix families (see above).
+        entity_id: The entity UUID whose stringified form must appear in the key.
+        ext: Optional expected file extension (without the dot).
+
+    Raises:
+        AssertionError: If any check fails.
+
+    Example::
+
+        assert_versioned_s3_key(
+            deck.cover_image_s3_key,
+            "deck-images",
+            deck.id,
+            ext="jpg",
+        )
+        assert_versioned_s3_key(
+            picture.image_s3_key,
+            "situation-pictures",
+            picture.id,
+        )
+    """
+    pattern = _VERSIONED_KEY_PATTERNS.get(prefix)
+    if pattern is None:
+        raise ValueError(
+            f"Unknown prefix '{prefix}'. Known prefixes: {list(_VERSIONED_KEY_PATTERNS)}"
+        )
+
+    entity_str = str(entity_id)
+
+    assert entity_str in key, f"entity_id '{entity_str}' not found in S3 key '{key}'"
+
+    assert re.match(pattern, key), (
+        f"S3 key '{key}' does not match versioned shape pattern for prefix '{prefix}'. "
+        f"Pattern: {pattern}"
+    )
+
+    if ext is not None:
+        assert key.endswith(f".{ext}"), f"Expected S3 key to end with '.{ext}', got '{key}'"
+
+
+# =============================================================================
 # Module Exports
 # =============================================================================
 
@@ -550,4 +643,6 @@ __all__ = [
     "assert_valid_card_response",
     # Progress Assertions
     "assert_valid_progress_response",
+    # Versioned S3 Key Assertions
+    "assert_versioned_s3_key",
 ]

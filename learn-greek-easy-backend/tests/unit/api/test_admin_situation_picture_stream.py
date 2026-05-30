@@ -12,6 +12,7 @@ from src.core.dependencies import SSEAuthResult
 from src.core.exceptions import OpenRouterNoImageError
 from src.db.models import PictureStatus
 from src.schemas.nlp import OpenRouterImageResult
+from tests.helpers.assertions import assert_versioned_s3_key
 
 # ---------------------------------------------------------------------------
 # SSE parsing helpers (copied verbatim from test_admin_description_audio_stream.py)
@@ -255,7 +256,6 @@ class TestPictureSSEPipeline:
 
         situation_id = uuid4()
         picture_id = uuid4()
-        s3_key = f"situation-pictures/{picture_id}.png"
 
         situation = _make_situation_with_picture(situation_id, picture_id)
         persist_picture = MagicMock()
@@ -288,18 +288,21 @@ class TestPictureSSEPipeline:
         assert event_types.index("picture:upload") < event_types.index("picture:persist")
         assert event_types.index("picture:persist") < event_types.index("picture:complete")
 
-        # Verify S3 upload called with correct args
-        mock_s3.upload_object.assert_called_once_with(
-            s3_key=s3_key,
-            data=PNG_BYTES,
-            content_type="image/png",
-        )
+        # Verify S3 upload called once with versioned key shape (sha256 of PNG_BYTES)
+        mock_s3.upload_object.assert_called_once()
+        upload_call = mock_s3.upload_object.call_args.kwargs
+        assert_versioned_s3_key(upload_call["s3_key"], "situation-pictures", picture_id, ext="png")
+        assert upload_call["data"] == PNG_BYTES
+        assert upload_call["content_type"] == "image/png"
 
-        # Verify picture:complete carries presigned URL
+        # Verify picture:complete carries presigned URL and versioned s3_key
         complete_events = [e for e in events if e["event"] == "picture:complete"]
         assert len(complete_events) == 1
-        assert complete_events[0]["data"]["image_url"] == f"https://cdn.example.com/{s3_key}"
-        assert complete_events[0]["data"]["s3_key"] == s3_key
+        assert_versioned_s3_key(
+            complete_events[0]["data"]["s3_key"], "situation-pictures", picture_id, ext="png"
+        )
+        # image_url is whatever the mock generate_presigned_url returned — just check present
+        assert complete_events[0]["data"]["image_url"] is not None
 
         # Verify persist was called (second factory.begin() call)
         assert mock_factory.begin.call_count == 2
@@ -380,11 +383,17 @@ class TestPictureSSEPipeline:
 
     @pytest.mark.asyncio
     async def test_regenerate(self) -> None:
-        """Regenerate: pre-seeded GENERATED picture gets S3 upload called again."""
+        """Regenerate: pre-seeded GENERATED picture gets a NEW versioned key on re-upload.
+
+        The pre-seeded flat key is the legacy prior key (kind-b backward compat).
+        The new upload produces a versioned key. After persist, the prior flat key
+        is deleted from S3.
+        """
         from src.api.v1.admin import _picture_sse_pipeline
 
         situation_id = uuid4()
         picture_id = uuid4()
+        # Pre-seeded LEGACY flat key — keep it flat (kind-b backward compat)
         existing_key = f"situation-pictures/{picture_id}.png"
 
         situation = _make_situation_with_picture(
@@ -396,6 +405,7 @@ class TestPictureSSEPipeline:
         persist_picture = MagicMock()
         persist_picture.id = picture_id
         persist_picture.status = PictureStatus.GENERATED
+        # persist_picture.image_s3_key holds the PRIOR key; persist_picture_generation reads it
         persist_picture.image_s3_key = existing_key
 
         mock_factory = _make_factory(situation, persist_picture)
@@ -413,12 +423,15 @@ class TestPictureSSEPipeline:
         assert "picture:complete" in event_types
         assert "picture:error" not in event_types
 
-        # S3 upload was still called with the canonical key (idempotent overwrite)
-        mock_s3.upload_object.assert_called_once_with(
-            s3_key=existing_key,
-            data=PNG_BYTES,
-            content_type="image/png",
-        )
+        # New S3 upload uses a versioned key (sha256 of PNG_BYTES)
+        mock_s3.upload_object.assert_called_once()
+        upload_call = mock_s3.upload_object.call_args.kwargs
+        assert_versioned_s3_key(upload_call["s3_key"], "situation-pictures", picture_id, ext="png")
+        assert upload_call["data"] == PNG_BYTES
+        assert upload_call["content_type"] == "image/png"
+
+        # Prior flat key is deleted after successful persist
+        mock_s3.delete_object.assert_called_once_with(existing_key)
 
         # Both DB calls happened
         assert mock_factory.begin.call_count == 2
@@ -484,7 +497,13 @@ class TestPictureSSEPipeline:
 
     @pytest.mark.asyncio
     async def test_persist_failure_logs_orphaned_key(self) -> None:
-        """Persist DB failure → picture:error stage=persist + orphaned-key log."""
+        """Persist DB failure -> picture:error stage=persist + orphaned-key log.
+
+        The logged s3_key is now the versioned key (sha256 of PNG_BYTES), not the
+        flat legacy key.  Assert on shape (prefix + picture_id present) rather than
+        the exact hash, which is non-deterministic across runs.
+        """
+        import re
         from io import StringIO
 
         from loguru import logger
@@ -493,7 +512,6 @@ class TestPictureSSEPipeline:
 
         situation_id = uuid4()
         picture_id = uuid4()
-        s3_key = f"situation-pictures/{picture_id}.png"
 
         situation = _make_situation_with_picture(situation_id, picture_id)
         persist_picture = MagicMock()
@@ -519,8 +537,14 @@ class TestPictureSSEPipeline:
         assert len(error_events) >= 1
         assert error_events[0]["data"]["stage"] == "persist"
 
-        # Verify orphaned-key log was emitted
+        # Verify orphaned-key log was emitted with the versioned key shape
         captured = log_output.getvalue()
         assert "Orphaned S3 key after picture persist failure" in captured
         assert str(picture_id) in captured
-        assert s3_key in captured
+        # The logged key must match the versioned shape: situation-pictures/{id}/{sha256}.png
+        versioned_key_pattern = (
+            rf"situation-pictures/{re.escape(str(picture_id))}/[0-9a-f]{{64}}\.png"
+        )
+        assert re.search(
+            versioned_key_pattern, captured
+        ), f"Versioned key pattern not found in log output: {captured!r}"
