@@ -113,8 +113,10 @@ export interface UnifiedDeckItem {
   owner_name: string | null;
   // Bilingual fields for edit forms
   name_en?: string;
+  name_el?: string;
   name_ru?: string;
   description_en?: string;
+  description_el?: string;
   description_ru?: string;
   cover_image_url?: string | null;
 }
@@ -145,9 +147,11 @@ export interface ListDecksParams {
 export interface VocabularyDeckUpdatePayload {
   name?: string;
   name_en?: string;
+  name_el?: string | null;
   name_ru?: string;
   description?: string | null;
   description_en?: string | null;
+  description_el?: string | null;
   description_ru?: string | null;
   level?: DeckLevel;
   is_active?: boolean;
@@ -175,9 +179,11 @@ export interface CultureDeckUpdatePayload {
 export interface VocabularyDeckCreatePayload {
   name: string;
   name_en?: string;
+  name_el?: string | null;
   name_ru?: string;
   description?: string | null;
   description_en?: string | null;
+  description_el?: string | null;
   description_ru?: string | null;
   level: DeckLevel;
   is_premium?: boolean;

@@ -880,8 +880,10 @@ const AdminPage: React.FC = () => {
         // API expects single name field (use name_en as primary)
         const vocabularyData = data as {
           name_en: string;
+          name_el?: string;
           name_ru: string;
           description_en?: string;
+          description_el?: string;
           description_ru?: string;
           level: 'A1' | 'A2' | 'B1' | 'B2';
           is_premium: boolean;
@@ -889,8 +891,10 @@ const AdminPage: React.FC = () => {
         const payload: VocabularyDeckCreatePayload = {
           name: vocabularyData.name_en,
           name_en: vocabularyData.name_en,
+          name_el: vocabularyData.name_el || null,
           name_ru: vocabularyData.name_ru,
           description_en: vocabularyData.description_en || null,
+          description_el: vocabularyData.description_el || null,
           description_ru: vocabularyData.description_ru || null,
           level: vocabularyData.level,
           is_premium: vocabularyData.is_premium,
