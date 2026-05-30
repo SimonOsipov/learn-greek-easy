@@ -32,6 +32,7 @@ import {
   TranslationEnToEl,
   GrammarArticle,
   GrammarPlural,
+  Sentence,
 } from '@/features/practice/pf';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useDeck } from '@/hooks/useDeck';
@@ -585,7 +586,42 @@ export function V2FlashcardPracticePage() {
             );
           }
 
-          // Fallback: legacy PracticeCard for sentence_translation, cloze, conjugation, declension
+          if (cardType === 'sentence_translation') {
+            const translatedPrompt = (front.prompt as string | null | undefined) ?? null;
+            return (
+              <PfCard
+                key={currentCard.id}
+                onClick={!isFlipped ? flipCard : undefined}
+                isFlipped={isFlipped}
+                body={
+                  <>
+                    {headEl}
+                    <Sentence
+                      prompt={translatedPrompt}
+                      main={(front.main as string) ?? ''}
+                      audioState={audioState ?? null}
+                    />
+                  </>
+                }
+                foot={
+                  <PracticeCard
+                    card={currentCard}
+                    isFlipped={isFlipped}
+                    onFlip={flipCard}
+                    translationRu={currentQueueCard?.translation_ru ?? null}
+                    translationRuPlural={currentQueueCard?.translation_ru_plural ?? null}
+                    sentenceRu={currentQueueCard?.sentence_ru ?? null}
+                    onRate={handleRate}
+                    audioState={audioState}
+                    wordEntryId={currentCard.word_entry_id}
+                    deckId={deckId}
+                  />
+                }
+              />
+            );
+          }
+
+          // Fallback: legacy PracticeCard for cloze, conjugation, declension
           return (
             <PracticeCard
               key={currentCard.id}

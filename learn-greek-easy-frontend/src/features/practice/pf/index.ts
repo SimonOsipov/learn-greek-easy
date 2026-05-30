@@ -36,3 +36,7 @@ export { TranslationElToEn, TranslationEnToEl } from './questions/Translation';
 export type { TranslationElToEnProps, TranslationEnToElProps } from './questions/Translation';
 export { GrammarArticle, GrammarPlural } from './questions/Grammar';
 export type { GrammarArticleProps, GrammarPluralProps } from './questions/Grammar';
+
+// ── Question renderers (PRACT2-1-04) ────────────────────────────────────────
+export { Sentence, SentenceElToEn, SentenceEnToEl } from './questions/Sentence';
+export type { SentenceProps } from './questions/Sentence';
