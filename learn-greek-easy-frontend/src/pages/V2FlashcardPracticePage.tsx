@@ -8,11 +8,10 @@
  * Rendered outside AppLayout for an immersive full-screen experience.
  */
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
-import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 
@@ -45,7 +44,6 @@ import type { Verdict } from '@/features/practice/pf';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useDeck } from '@/hooks/useDeck';
 import { usePracticeKeyboard } from '@/hooks/usePracticeKeyboard';
-import { usePracticeSession } from '@/hooks/usePracticeSession';
 import type { CardRecordType } from '@/services/wordEntryAPI';
 import {
   useV2PracticeStore,
@@ -127,51 +125,14 @@ export function V2FlashcardPracticePage() {
     }
   }, [currentIndex, leaveDirection, clearLeaveDirection]);
 
-  const { resetTracking } = usePracticeSession({
-    startEvent: 'study_session_started_v2',
-    completeEvent: 'study_session_completed_v2',
-    abandonEvent: 'study_session_abandoned_v2',
-    isSessionActive: cards.length > 0 && !sessionSummary,
-    isSessionComplete: Boolean(sessionSummary),
-    getStartProps: useCallback(() => {
-      if (cards.length === 0) return null;
-      return {
-        deck_id: deckId ?? null,
-        card_type: cardType ?? null,
-        card_count: cards.length,
-      };
-    }, [cards, deckId, cardType]),
-    getCompleteProps: useCallback(
-      (_durationSec: number) => {
-        if (!sessionSummary) return null;
-        return {
-          deck_id: deckId ?? null,
-          cards_reviewed: sessionSummary.cardsReviewed,
-          total_time_seconds: sessionSummary.totalTimeSeconds,
-          avg_time_per_card: sessionSummary.avgTimePerCard,
-          again: sessionSummary.ratingBreakdown.again,
-          hard: sessionSummary.ratingBreakdown.hard,
-          good: sessionSummary.ratingBreakdown.good,
-          easy: sessionSummary.ratingBreakdown.easy,
-        };
-      },
-      [sessionSummary, deckId]
-    ),
-    getAbandonProps: useCallback(
-      (durationSec: number) => {
-        if (cards.length === 0 || sessionSummary) return null;
-        return {
-          deck_id: deckId ?? null,
-          cards_reviewed: currentIndex,
-          duration_sec: durationSec,
-        };
-      },
-      [cards, sessionSummary, deckId, currentIndex]
-    ),
-    onCompleteTracked: useCallback(() => {
+  // Load XP stats once when session completes (re-homed from usePracticeSession onCompleteTracked)
+  const hasLoadedXPRef = useRef(false);
+  useEffect(() => {
+    if (sessionSummary && !hasLoadedXPRef.current) {
+      hasLoadedXPRef.current = true;
       useXPStore.getState().loadXPStats(true);
-    }, []),
-  });
+    }
+  }, [sessionSummary]);
 
   // Start session on mount
   useEffect(() => {
@@ -227,19 +188,6 @@ export function V2FlashcardPracticePage() {
     (rating: number) => {
       if (!isFlipped || !currentQueueCard || !sessionId) return;
       const safeRating = rating as 1 | 2 | 3 | 4;
-      try {
-        posthog.capture('card_reviewed_v2', {
-          deck_id: deckId,
-          card_record_id: currentQueueCard.card_record_id,
-          rating: safeRating,
-          quality: [0, 0, 2, 4, 5][safeRating] ?? safeRating,
-          card_type: currentQueueCard.card_type,
-          card_status: currentQueueCard.status,
-          session_id: sessionId,
-        });
-      } catch {
-        // Silent failure
-      }
       rateCard(safeRating);
     },
     [isFlipped, currentQueueCard, sessionId, deckId, rateCard]
@@ -387,7 +335,7 @@ export function V2FlashcardPracticePage() {
             summary={sessionSummary}
             onBackToDeck={backToDeck}
             onPracticeAgain={() => {
-              resetTracking();
+              hasLoadedXPRef.current = false;
               if (deckId) startSession(deckId, cardType, wordId).catch(() => {});
             }}
           />

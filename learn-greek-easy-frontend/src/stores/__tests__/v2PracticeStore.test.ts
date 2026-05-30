@@ -21,6 +21,7 @@ import {
   setPersistedShowStreak,
 } from '@/utils/practiceSettings';
 import type { ToastPayload } from '../v2PracticeStore';
+import { track } from '@/lib/analytics/track';
 
 // ============================================
 // Mocks
@@ -45,6 +46,26 @@ vi.mock('@/utils/practiceSettings', () => ({
   setPersistedInputMode: vi.fn(),
   getPersistedShowStreak: vi.fn(() => true),
   setPersistedShowStreak: vi.fn(),
+}));
+
+vi.mock('@/lib/analytics/track', () => ({
+  track: vi.fn(),
+}));
+
+vi.mock('@/features/practice/pf/families', () => ({
+  familyForCardType: vi.fn((cardType: string) => {
+    const map: Record<string, string> = {
+      meaning_el_to_en: 'translation',
+      meaning_en_to_el: 'translation',
+      sentence_translation: 'sentence',
+      cloze: 'sentence',
+      conjugation: 'grammar',
+      article: 'grammar',
+      declension: 'declension',
+      plural_form: 'declension',
+    };
+    return map[cardType] ?? 'translation';
+  }),
 }));
 
 // ============================================
@@ -592,6 +613,167 @@ describe('v2PracticeStore', () => {
       useV2PracticeStore.setState({ showStreak: false });
       useV2PracticeStore.getState().resetSession();
       expect(useV2PracticeStore.getState().showStreak).toBe(false);
+    });
+  });
+
+  // ============================================
+  // Tests: analytics events (PRACT2-1-12)
+  // ============================================
+
+  describe('analytics events', () => {
+    beforeEach(() => {
+      vi.mocked(track).mockClear();
+      // Reset inputMode to default to avoid cross-test state leak
+      useV2PracticeStore.setState({ inputMode: 'reveal' });
+    });
+
+    it('startSession fires practice_session_started once with queue counts and input_mode', async () => {
+      const card = makeMockCard();
+      const queue = makeMockQueue([card]);
+      vi.mocked(studyAPI.getQueue).mockResolvedValue(queue);
+
+      await useV2PracticeStore.getState().startSession('deck-1');
+
+      expect(track).toHaveBeenCalledTimes(1);
+      expect(track).toHaveBeenCalledWith('practice_session_started', {
+        deck_id: 'deck-1',
+        total_in_queue: 1,
+        total_due: 0,
+        total_new: 1,
+        input_mode: 'reveal',
+      });
+    });
+
+    it('startSession does NOT fire practice_session_started for empty queue', async () => {
+      const queue = makeMockQueue([]);
+      vi.mocked(studyAPI.getQueue).mockResolvedValue(queue);
+
+      await useV2PracticeStore.getState().startSession('deck-1');
+
+      expect(track).not.toHaveBeenCalled();
+    });
+
+    it('rateCard fires practice_card_rated with correct props including family and was_typed', async () => {
+      const card1 = makeMockCard({ card_record_id: 'cr-1', card_type: 'meaning_el_to_en' });
+      const card2 = makeMockCard({ card_record_id: 'cr-2' });
+      vi.mocked(studyAPI.getQueue).mockResolvedValue(makeMockQueue([card1, card2]));
+      vi.mocked(reviewAPI.submit).mockResolvedValue(makeMockReviewResult());
+
+      await useV2PracticeStore.getState().startSession('deck-1');
+      vi.mocked(track).mockClear(); // clear the started event
+
+      useV2PracticeStore.getState().rateCard(3); // ok
+
+      // practice_card_rated fires synchronously on rateCard
+      expect(track).toHaveBeenCalledWith('practice_card_rated', {
+        deck_id: 'deck-1',
+        card_type: 'meaning_el_to_en',
+        family: 'translation',
+        rating: 3,
+        was_typed: false, // inputMode defaults to 'reveal'
+      });
+    });
+
+    it('rateCard fires practice_card_rated with was_typed=true when inputMode is type', async () => {
+      const card1 = makeMockCard({ card_record_id: 'cr-1' });
+      const card2 = makeMockCard({ card_record_id: 'cr-2' });
+      vi.mocked(studyAPI.getQueue).mockResolvedValue(makeMockQueue([card1, card2]));
+      vi.mocked(reviewAPI.submit).mockResolvedValue(makeMockReviewResult());
+
+      await useV2PracticeStore.getState().startSession('deck-1');
+      useV2PracticeStore.setState({ inputMode: 'type' });
+      vi.mocked(track).mockClear();
+
+      useV2PracticeStore.getState().rateCard(4); // easy
+
+      expect(track).toHaveBeenCalledWith(
+        'practice_card_rated',
+        expect.objectContaining({
+          was_typed: true,
+        })
+      );
+    });
+
+    it('rateCard fires practice_card_rated once per rating (no flip/reveal event)', async () => {
+      const card1 = makeMockCard({ card_record_id: 'cr-1' });
+      const card2 = makeMockCard({ card_record_id: 'cr-2' });
+      vi.mocked(studyAPI.getQueue).mockResolvedValue(makeMockQueue([card1, card2]));
+      vi.mocked(reviewAPI.submit).mockResolvedValue(makeMockReviewResult());
+
+      await useV2PracticeStore.getState().startSession('deck-1');
+      vi.mocked(track).mockClear();
+
+      useV2PracticeStore.getState().rateCard(2); // tough
+
+      const cardRatedCalls = vi
+        .mocked(track)
+        .mock.calls.filter(([name]) => name === 'practice_card_rated');
+      expect(cardRatedCalls).toHaveLength(1);
+      // No flip/reveal event
+      const flipCalls = vi
+        .mocked(track)
+        .mock.calls.filter(([name]) => name.includes('flip') || name.includes('reveal'));
+      expect(flipCalls).toHaveLength(0);
+    });
+
+    it('practice_session_completed fires once on last card with 4-up tally', async () => {
+      const card = makeMockCard({ card_record_id: 'cr-1' });
+      vi.mocked(studyAPI.getQueue).mockResolvedValue(makeMockQueue([card]));
+      vi.mocked(reviewAPI.submit).mockResolvedValue(makeMockReviewResult());
+
+      await useV2PracticeStore.getState().startSession('deck-1');
+      vi.mocked(track).mockClear();
+
+      useV2PracticeStore.getState().rateCard(4); // easy (last card)
+
+      // Wait for the async .then to run (where sessionSummary is set)
+      await vi.waitFor(() => {
+        return useV2PracticeStore.getState().sessionSummary !== null;
+      });
+
+      const completedCalls = vi
+        .mocked(track)
+        .mock.calls.filter(([name]) => name === 'practice_session_completed');
+      expect(completedCalls).toHaveLength(1);
+      expect(completedCalls[0][1]).toMatchObject({
+        deck_id: 'deck-1',
+        cards_reviewed: 1,
+        forgot: 0,
+        tough: 0,
+        ok: 0,
+        easy: 1,
+      });
+    });
+
+    it('no abandoned event is fired', async () => {
+      const card1 = makeMockCard({ card_record_id: 'cr-1' });
+      const card2 = makeMockCard({ card_record_id: 'cr-2' });
+      vi.mocked(studyAPI.getQueue).mockResolvedValue(makeMockQueue([card1, card2]));
+      vi.mocked(reviewAPI.submit).mockResolvedValue(makeMockReviewResult());
+
+      await useV2PracticeStore.getState().startSession('deck-1');
+      useV2PracticeStore.getState().rateCard(1);
+
+      const abandonedCalls = vi
+        .mocked(track)
+        .mock.calls.filter(([name]) => name.includes('abandoned'));
+      expect(abandonedCalls).toHaveLength(0);
+    });
+
+    it('legacy off-convention events are NOT fired (study_session_*_v2, card_reviewed_v2)', async () => {
+      const card = makeMockCard();
+      vi.mocked(studyAPI.getQueue).mockResolvedValue(makeMockQueue([card]));
+      vi.mocked(reviewAPI.submit).mockResolvedValue(makeMockReviewResult());
+
+      await useV2PracticeStore.getState().startSession('deck-1');
+      useV2PracticeStore.getState().rateCard(3);
+
+      await vi.waitFor(() => useV2PracticeStore.getState().sessionSummary !== null);
+
+      const legacyCalls = vi
+        .mocked(track)
+        .mock.calls.filter(([name]) => name.includes('_v2') || name === 'card_reviewed_v2');
+      expect(legacyCalls).toHaveLength(0);
     });
   });
 });

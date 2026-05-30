@@ -16,6 +16,8 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import { track } from '@/lib/analytics/track';
+import { familyForCardType } from '@/features/practice/pf/families';
 import { MAX_ANSWER_TIME_SECONDS } from '@/lib/timeFormatUtils';
 import { reviewAPI } from '@/services/reviewAPI';
 import type { ReviewResult } from '@/services/reviewAPI';
@@ -358,6 +360,18 @@ export const useV2PracticeStore = create<V2PracticeState>()(
             toast: null,
             // inputMode persists across cards — reset only on explicit setInputMode call
           });
+
+          // Analytics: practice_session_started (PRACT2-1-12)
+          // Only fire for non-empty queues; empty queue shows "all caught up" screen
+          if (queueData.cards.length > 0) {
+            track('practice_session_started', {
+              deck_id: deckId,
+              total_in_queue: queueData.total_in_queue,
+              total_due: queueData.total_due,
+              total_new: queueData.total_new,
+              input_mode: get().inputMode,
+            });
+          }
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : 'Failed to start practice session.';
@@ -428,6 +442,15 @@ export const useV2PracticeStore = create<V2PracticeState>()(
         // Determine slide direction: Forgot/Tough → right (relearn); OK/Easy → left (graduate)
         const newLeaveDirection: 'left' | 'right' =
           ratingKey === 'forgot' || ratingKey === 'tough' ? 'right' : 'left';
+
+        // Analytics: practice_card_rated (PRACT2-1-12)
+        track('practice_card_rated', {
+          deck_id: deckId,
+          card_type: card.card_type,
+          family: familyForCardType(card.card_type),
+          rating,
+          was_typed: get().inputMode === 'type',
+        });
 
         // Optimistic advance (includes streak + ratings update — single source of truth)
         // leaveDirection is set BEFORE the index advances so the outgoing card
@@ -507,6 +530,17 @@ export const useV2PracticeStore = create<V2PracticeState>()(
                 newStarted: updatedStats.newStarted,
                 cardsMastered: updatedStats.cardsMastered,
               };
+
+              // Analytics: practice_session_completed (PRACT2-1-12)
+              // Fires exactly once — inside the isSessionComplete guard (isLastCard && newPending===0)
+              track('practice_session_completed', {
+                deck_id: deckId,
+                cards_reviewed: summary.cardsReviewed,
+                forgot: summary.ratingBreakdown.again,
+                tough: summary.ratingBreakdown.hard,
+                ok: summary.ratingBreakdown.good,
+                easy: summary.ratingBreakdown.easy,
+              });
 
               set({
                 sessionStats: updatedStats,
