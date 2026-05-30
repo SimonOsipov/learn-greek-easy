@@ -35,6 +35,19 @@ def _make_full_repo_patches():
             "src.services.progress_service.compute_aggregated_streak",
             new=AsyncMock(return_value=0),
         ),
+        patch("src.services.progress_service.ExerciseReviewRepository"),
+        patch(
+            "src.services.progress_service.compute_vocabulary_streak",
+            new=AsyncMock(return_value=0),
+        ),
+        patch(
+            "src.services.progress_service.compute_culture_streak",
+            new=AsyncMock(return_value=0),
+        ),
+        patch(
+            "src.services.progress_service.compute_exercise_streak",
+            new=AsyncMock(return_value=0),
+        ),
     )
 
 
@@ -44,6 +57,7 @@ def _setup_dashboard_mocks(
     culture_stats_cls,
     culture_answer_cls,
     mock_exam_cls,
+    exercise_cls=None,
     *_rest,
     vocab_status=None,
     culture_status=None,
@@ -98,6 +112,11 @@ def _setup_dashboard_mocks(
     mexam.get_unique_dates = AsyncMock(return_value=[])
     mexam.get_all_unique_dates = AsyncMock(return_value=[])
 
+    if exercise_cls is not None:
+        exercise = exercise_cls.return_value
+        exercise.get_unique_dates = AsyncMock(return_value=[])
+        exercise.get_all_unique_dates = AsyncMock(return_value=[])
+
 
 # ============================================================================
 # TestGetDashboardStats
@@ -119,8 +138,12 @@ class TestGetDashboardStats:
             patches[6],
             patches[7],
             patches[8],
+            patches[9] as ex_cls,
+            patches[10],
+            patches[11],
+            patches[12],
         ):
-            _setup_dashboard_mocks(s_cls, r_cls, cs_cls, ca_cls, me_cls)
+            _setup_dashboard_mocks(s_cls, r_cls, cs_cls, ca_cls, me_cls, ex_cls)
             service = ProgressService(mock_db)
             result = await service.get_dashboard_stats(mock_user_id)
 
@@ -143,6 +166,10 @@ class TestGetDashboardStats:
             patches[6],
             patches[7],
             patches[8],
+            patches[9] as ex_cls,
+            patches[10],
+            patches[11],
+            patches[12],
         ):
             _setup_dashboard_mocks(
                 s_cls,
@@ -150,6 +177,7 @@ class TestGetDashboardStats:
                 cs_cls,
                 ca_cls,
                 me_cls,
+                ex_cls,
                 vocab_status={"new": 5, "learning": 3, "review": 2, "mastered": 10, "due": 1},
                 distinct_decks=2,
             )
@@ -172,6 +200,10 @@ class TestGetDashboardStats:
             patches[6],
             patches[7],
             patches[8],
+            patches[9] as ex_cls,
+            patches[10],
+            patches[11],
+            patches[12],
         ):
             _setup_dashboard_mocks(
                 s_cls,
@@ -179,6 +211,7 @@ class TestGetDashboardStats:
                 cs_cls,
                 ca_cls,
                 me_cls,
+                ex_cls,
                 vocab_status={"new": 0, "learning": 0, "review": 0, "mastered": 50, "due": 0},
                 culture_mastered=0,
             )
@@ -205,8 +238,14 @@ class TestGetDashboardStats:
             patches[6],
             patches[7],
             patches[8],
+            patches[9] as ex_cls,
+            patches[10],
+            patches[11],
+            patches[12],
         ):
-            _setup_dashboard_mocks(s_cls, r_cls, cs_cls, ca_cls, me_cls, daily_stats=daily_rows)
+            _setup_dashboard_mocks(
+                s_cls, r_cls, cs_cls, ca_cls, me_cls, ex_cls, daily_stats=daily_rows
+            )
             service = ProgressService(mock_db)
             result = await service.get_dashboard_stats(mock_user_id)
 
@@ -227,6 +266,10 @@ class TestGetDashboardStats:
             patches[6],
             patches[7],
             patches[8],
+            patches[9] as ex_cls,
+            patches[10],
+            patches[11],
+            patches[12],
         ):
             _setup_dashboard_mocks(
                 s_cls,
@@ -234,6 +277,7 @@ class TestGetDashboardStats:
                 cs_cls,
                 ca_cls,
                 me_cls,
+                ex_cls,
                 vocab_status={"new": 0, "due": 7},
                 culture_status={"new": 0, "due": 3},
             )
