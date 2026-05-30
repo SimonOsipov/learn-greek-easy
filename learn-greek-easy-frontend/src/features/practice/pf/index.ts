@@ -22,3 +22,17 @@ export { ProgressBar } from './ProgressBar';
 export type { ProgressBarProps } from './ProgressBar';
 export { StreakPill } from './StreakPill';
 export type { StreakPillProps } from './StreakPill';
+
+// ── Card shell + head (PRACT2-1-03) ─────────────────────────────────────────
+export { Card } from './Card';
+export type { CardProps } from './Card';
+export { CardHead } from './CardHead';
+export type { CardHeadProps } from './CardHead';
+export { AudioChip } from './AudioChip';
+export type { AudioChipProps, AudioChipState } from './AudioChip';
+
+// ── Question renderers (PRACT2-1-03) ────────────────────────────────────────
+export { TranslationElToEn, TranslationEnToEl } from './questions/Translation';
+export type { TranslationElToEnProps, TranslationEnToElProps } from './questions/Translation';
+export { GrammarArticle, GrammarPlural } from './questions/Grammar';
+export type { GrammarArticleProps, GrammarPluralProps } from './questions/Grammar';

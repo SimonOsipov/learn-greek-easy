@@ -240,3 +240,265 @@
   height: 14px;
   flex-shrink: 0;
 }
+
+/* =========================================================================
+   PRACT2-1-03: Card shell + header + Translation & Grammar renderers
+   ========================================================================= */
+
+/* ── Keyframe: card enter — transform-only (never opacity-gated) ─────────── */
+@keyframes pf-card-in {
+  from {
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Card shell ───────────────────────────────────────────────────────────── */
+.pf-card {
+  position: relative;
+  border-radius: var(--radius-xl, 28px);
+  box-shadow: var(--shadow-3);
+  background: hsl(var(--card));
+  overflow: hidden;
+}
+
+/* Transform-only enter animation — opacity stays 1 at all times */
+@media (prefers-reduced-motion: no-preference) {
+  .pf-card {
+    animation: pf-card-in 280ms var(--ease-smooth, cubic-bezier(0.4, 0, 0.2, 1)) both;
+  }
+}
+
+/* Family accent bar (top edge, coloured by --pf-c from PracticeApp) */
+.pf-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--pf-c, hsl(var(--primary)));
+  border-radius: var(--radius-xl, 28px) var(--radius-xl, 28px) 0 0;
+  z-index: 1;
+}
+
+/* Question phase — stable min-height so flip doesn't shift layout */
+.pf-body {
+  min-height: 220px;
+  padding: 20px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Foot / answer phase — stable min-height */
+.pf-foot {
+  min-height: 320px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ── Card header ──────────────────────────────────────────────────────────── */
+
+/* Header meta row — holds family badge + POS chip + lang switch */
+.pf-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+  padding-top: 12px; /* clear accent bar */
+}
+
+.pf-head__left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Family badge — kicker-style label tinted by --pf-c */
+.pf-fam {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pf-c, hsl(var(--primary)));
+}
+
+.pf-fam::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--pf-c, hsl(var(--primary)));
+  flex-shrink: 0;
+}
+
+/* POS chip — part-of-speech + optional gender-tinted article */
+.pf-pos {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(var(--fg-2));
+  background: hsl(var(--fg) / 0.07);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* Gender-tinted article within the POS chip */
+.pf-pos__article {
+  font-weight: 700;
+}
+
+.pf-pos__article[data-gender='masculine'] {
+  color: hsl(var(--primary));
+}
+
+.pf-pos__article[data-gender='feminine'] {
+  /* Deviation Justification: feminine pink (340 75% 55% / dark 340 80% 72%) is
+     a sanctioned literal per PRACT2-1 design-token note — no --pf-fem token
+     exists yet; literal HSL is the approved approach until tokenization lands. */
+  color: hsl(340 75% 55%);
+}
+
+.dark .pf-pos__article[data-gender='feminine'] {
+  color: hsl(340 80% 72%);
+}
+
+.pf-pos__article[data-gender='neuter'] {
+  color: hsl(var(--fg-3));
+}
+
+/* EN/RU language switch */
+.pf-lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  border-radius: 8px;
+  background: hsl(var(--fg) / 0.05);
+}
+
+.pf-lang__btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: hsl(var(--fg-3));
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+  line-height: 1.4;
+}
+
+.pf-lang__btn:hover {
+  color: hsl(var(--fg-2));
+}
+
+.pf-lang__btn[aria-pressed='true'] {
+  background: hsl(var(--card));
+  color: hsl(var(--fg));
+  box-shadow: var(--shadow-1);
+}
+
+/* ── Translation renderer ─────────────────────────────────────────────────── */
+
+/* Main Greek word — Noto Serif, large, never italic */
+.pf-translation-word {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-size: clamp(2rem, 6vw, 3rem);
+  font-weight: 700;
+  font-style: normal; /* never italic */
+  line-height: 1.15;
+  color: hsl(var(--fg));
+  text-align: center;
+  word-break: break-word;
+}
+
+/* Muted article prefix (ο/η/το) beside the main word */
+.pf-translation-article {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-style: normal;
+  font-weight: 400;
+  color: hsl(var(--fg-3));
+  font-size: 0.65em;
+  vertical-align: baseline;
+  margin-right: 0.25em;
+}
+
+/* IPA sub-line */
+.pf-ipa {
+  font-family: ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 13px;
+  font-style: italic;
+  color: hsl(var(--fg-3));
+  text-align: center;
+}
+
+/* EN prompt (meaning_en_to_el) — Inter Tight 700 */
+.pf-en-prompt {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: hsl(var(--fg));
+  text-align: center;
+  word-break: break-word;
+}
+
+/* ── Grammar renderer ─────────────────────────────────────────────────────── */
+
+/* Stem display (plural/singular given-form or article stem) — Noto Serif */
+.pf-grammar-stem {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 700;
+  font-style: normal;
+  line-height: 1.2;
+  color: hsl(var(--fg));
+  text-align: center;
+  word-break: break-word;
+}
+
+/* Article blank "???" placeholder */
+.pf-grammar-blank {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7em;
+  font-weight: 700;
+  color: hsl(var(--warning));
+  background: hsl(var(--warning) / 0.1);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-right: 0.25em;
+  vertical-align: baseline;
+  letter-spacing: 0.05em;
+}
+
+/* ── Audio chip ───────────────────────────────────────────────────────────── */
+.pf-audio-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

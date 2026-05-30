@@ -23,7 +23,16 @@ import { ThemeSwitcher } from '@/components/theme';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PracticeApp, TopBar } from '@/features/practice/pf';
+import {
+  PracticeApp,
+  TopBar,
+  Card as PfCard,
+  CardHead,
+  TranslationElToEn,
+  TranslationEnToEl,
+  GrammarArticle,
+  GrammarPlural,
+} from '@/features/practice/pf';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useDeck } from '@/hooks/useDeck';
 import { usePracticeKeyboard } from '@/hooks/usePracticeKeyboard';
@@ -42,7 +51,7 @@ import { useXPStore } from '@/stores/xpStore';
 // ============================================
 
 export function V2FlashcardPracticePage() {
-  const { t } = useTranslation('deck');
+  const { t, i18n } = useTranslation('deck');
   const { deckId, wordId } = useParams<{ deckId: string; wordId?: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -159,6 +168,12 @@ export function V2FlashcardPracticePage() {
         setSpeed: audioSetSpeed,
       }
     : null;
+
+  // Current UI language — drives EN/RU switch in CardHead
+  const currentLang = (i18n.language?.split('-')[0] ?? 'en') as 'en' | 'ru';
+  const handleLangChange = (lang: 'en' | 'ru') => {
+    i18n.changeLanguage(lang);
+  };
 
   // Handle rating
   const handleRate = useCallback(
@@ -418,20 +433,175 @@ export function V2FlashcardPracticePage() {
 
       {/* Content area */}
       <div className="mx-auto w-full max-w-lg px-4">
-        {/* Practice card */}
-        <PracticeCard
-          key={currentCard.id}
-          card={currentCard}
-          isFlipped={isFlipped}
-          onFlip={flipCard}
-          translationRu={currentQueueCard?.translation_ru ?? null}
-          translationRuPlural={currentQueueCard?.translation_ru_plural ?? null}
-          sentenceRu={currentQueueCard?.sentence_ru ?? null}
-          onRate={handleRate}
-          audioState={audioState}
-          wordEntryId={currentCard.word_entry_id}
-          deckId={deckId}
-        />
+        {/* Practice card — pf renderers for covered types; PracticeCard fallback for others */}
+        {(() => {
+          const cardType = currentQueueCard?.card_type;
+          const front = currentCard.front_content as Record<string, unknown>;
+          const back = currentCard.back_content as Record<string, unknown>;
+
+          // Shared card head props
+          const headEl = (
+            <CardHead
+              cardType={cardType ?? ''}
+              posLabel={(front.badge as string | null | undefined) ?? null}
+              gender={(back.gender as string | null | undefined) ?? null}
+              genderRu={(back.gender_ru as string | null | undefined) ?? null}
+              currentLang={currentLang}
+              onLangChange={handleLangChange}
+            />
+          );
+
+          if (cardType === 'meaning_el_to_en') {
+            return (
+              <PfCard
+                key={currentCard.id}
+                onClick={!isFlipped ? flipCard : undefined}
+                isFlipped={isFlipped}
+                body={
+                  <>
+                    {headEl}
+                    <TranslationElToEn
+                      word={(front.main as string) ?? ''}
+                      ipa={(front.sub as string | null | undefined) ?? null}
+                      audioState={audioState ?? null}
+                    />
+                  </>
+                }
+                foot={
+                  <PracticeCard
+                    card={currentCard}
+                    isFlipped={isFlipped}
+                    onFlip={flipCard}
+                    translationRu={currentQueueCard?.translation_ru ?? null}
+                    translationRuPlural={currentQueueCard?.translation_ru_plural ?? null}
+                    sentenceRu={currentQueueCard?.sentence_ru ?? null}
+                    onRate={handleRate}
+                    audioState={audioState}
+                    wordEntryId={currentCard.word_entry_id}
+                    deckId={deckId}
+                  />
+                }
+              />
+            );
+          }
+
+          if (cardType === 'meaning_en_to_el') {
+            const prompt =
+              (front.main as string | undefined) ?? (front.prompt as string | undefined) ?? '';
+            return (
+              <PfCard
+                key={currentCard.id}
+                onClick={!isFlipped ? flipCard : undefined}
+                isFlipped={isFlipped}
+                body={
+                  <>
+                    {headEl}
+                    <TranslationEnToEl prompt={prompt} />
+                  </>
+                }
+                foot={
+                  <PracticeCard
+                    card={currentCard}
+                    isFlipped={isFlipped}
+                    onFlip={flipCard}
+                    translationRu={currentQueueCard?.translation_ru ?? null}
+                    translationRuPlural={currentQueueCard?.translation_ru_plural ?? null}
+                    sentenceRu={currentQueueCard?.sentence_ru ?? null}
+                    onRate={handleRate}
+                    audioState={audioState}
+                    wordEntryId={currentCard.word_entry_id}
+                    deckId={deckId}
+                  />
+                }
+              />
+            );
+          }
+
+          if (cardType === 'article') {
+            return (
+              <PfCard
+                key={currentCard.id}
+                onClick={!isFlipped ? flipCard : undefined}
+                isFlipped={isFlipped}
+                body={
+                  <>
+                    {headEl}
+                    <GrammarArticle
+                      wordWithArticle={(front.main as string) ?? ''}
+                      prompt={(front.prompt as string | null | undefined) ?? null}
+                    />
+                  </>
+                }
+                foot={
+                  <PracticeCard
+                    card={currentCard}
+                    isFlipped={isFlipped}
+                    onFlip={flipCard}
+                    translationRu={currentQueueCard?.translation_ru ?? null}
+                    translationRuPlural={currentQueueCard?.translation_ru_plural ?? null}
+                    sentenceRu={currentQueueCard?.sentence_ru ?? null}
+                    onRate={handleRate}
+                    audioState={audioState}
+                    wordEntryId={currentCard.word_entry_id}
+                    deckId={deckId}
+                  />
+                }
+              />
+            );
+          }
+
+          if (cardType === 'plural_form') {
+            return (
+              <PfCard
+                key={currentCard.id}
+                onClick={!isFlipped ? flipCard : undefined}
+                isFlipped={isFlipped}
+                body={
+                  <>
+                    {headEl}
+                    <GrammarPlural
+                      stem={(front.main as string) ?? ''}
+                      ipa={(front.sub as string | null | undefined) ?? null}
+                      audioState={audioState ?? null}
+                      prompt={(front.prompt as string | null | undefined) ?? null}
+                    />
+                  </>
+                }
+                foot={
+                  <PracticeCard
+                    card={currentCard}
+                    isFlipped={isFlipped}
+                    onFlip={flipCard}
+                    translationRu={currentQueueCard?.translation_ru ?? null}
+                    translationRuPlural={currentQueueCard?.translation_ru_plural ?? null}
+                    sentenceRu={currentQueueCard?.sentence_ru ?? null}
+                    onRate={handleRate}
+                    audioState={audioState}
+                    wordEntryId={currentCard.word_entry_id}
+                    deckId={deckId}
+                  />
+                }
+              />
+            );
+          }
+
+          // Fallback: legacy PracticeCard for sentence_translation, cloze, conjugation, declension
+          return (
+            <PracticeCard
+              key={currentCard.id}
+              card={currentCard}
+              isFlipped={isFlipped}
+              onFlip={flipCard}
+              translationRu={currentQueueCard?.translation_ru ?? null}
+              translationRuPlural={currentQueueCard?.translation_ru_plural ?? null}
+              sentenceRu={currentQueueCard?.sentence_ru ?? null}
+              onRate={handleRate}
+              audioState={audioState}
+              wordEntryId={currentCard.word_entry_id}
+              deckId={deckId}
+            />
+          );
+        })()}
       </div>
     </PracticeApp>
   );
