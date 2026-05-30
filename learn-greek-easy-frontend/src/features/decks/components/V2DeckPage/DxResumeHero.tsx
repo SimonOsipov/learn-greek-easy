@@ -57,7 +57,7 @@ export function DxResumeHero({ deck, progress, siblings }: DxResumeHeroProps) {
 
           <div>
             <h1 className="dx-hero-resume-h">{localizedName}</h1>
-            {greekSubtitle && (
+            {greekSubtitle && greekSubtitle !== localizedName && (
               <p className="dx-hero-resume-el" lang="el">
                 {greekSubtitle}
               </p>
@@ -111,7 +111,7 @@ export function DxResumeHero({ deck, progress, siblings }: DxResumeHeroProps) {
                 {t('dx.coverTagVocabulary', { level: deck.level })}
               </span>
               <div className="dx-cover-title">{localizedName}</div>
-              {greekSubtitle && (
+              {greekSubtitle && greekSubtitle !== localizedName && (
                 <div className="dx-cover-el" lang="el">
                   {greekSubtitle}
                 </div>
