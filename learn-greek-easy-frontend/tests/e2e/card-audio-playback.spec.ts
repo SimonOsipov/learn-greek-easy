@@ -369,21 +369,79 @@ test.describe('Card Audio Playback', () => {
     await expect(speakerButton).toBeVisible({ timeout: 5000 });
   });
 
-  test('speaker visible on meaning_en_to_el front and back after flip', async ({ page }) => {
-    await setupAudioMocks(page, { cardType: 'meaning_en_to_el' });
+  test('speaker visible on meaning_en_to_el back after flip (example_audio_url provided)', async ({
+    page,
+  }) => {
+    // meaning_en_to_el in pf renderer:
+    //   Front — TranslationEnToEl has NO audio chip (English prompt only, no audioState prop).
+    //   Back  — Answer renders AudioChip only when example_audio_url is set on the queue card.
+    // Override the study queue mock to include example_audio_url so the Answer audio chip renders.
+    const audioUrl = 'https://test.local/audio.wav';
+    await setupAudioMocks(page, { cardType: 'meaning_en_to_el', audioUrl });
+    // Patch the queue mock to add example_audio_url (Answer.tsx hasExample check)
+    await page.route(
+      (url) => url.pathname === '/api/v1/study/queue/v2',
+      (route) => {
+        if (route.request().method() !== 'GET') {
+          void route.continue();
+          return;
+        }
+        const mockCard = buildMockCard(
+          'meaning_en_to_el',
+          'test-card-001',
+          testWordEntryId,
+          v2DeckId,
+          audioUrl
+        );
+        void route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            total_due: 0,
+            total_new: 1,
+            total_early_practice: 0,
+            total_in_queue: 1,
+            cards: [
+              {
+                card_record_id: 'test-card-001',
+                word_entry_id: testWordEntryId,
+                deck_id: v2DeckId,
+                deck_name: 'E2E V2 Nouns',
+                card_type: 'meaning_en_to_el',
+                variant_key: 'default',
+                front_content: mockCard.front_content,
+                back_content: mockCard.back_content,
+                status: 'new',
+                is_new: true,
+                is_early_practice: false,
+                due_date: null,
+                easiness_factor: null,
+                interval: null,
+                audio_url: audioUrl,
+                // example_audio_url set so Answer.tsx hasExample=true → AudioChip renders on back
+                example_audio_url: audioUrl,
+                translation_ru: null,
+                translation_ru_plural: null,
+                sentence_ru: null,
+              },
+            ],
+          }),
+        });
+      }
+    );
+
     await page.goto(practiceUrl());
     await page.waitForSelector('[data-testid="pf-card"]', { timeout: 10000 });
 
-    // Speaker is visible on front (audio controls shown on both sides for supported card types)
-    const speakerButtonFront = page.getByRole('button', { name: /play audio/i });
-    await expect(speakerButtonFront).toBeVisible({ timeout: 5000 });
+    // Front: TranslationEnToEl renders NO audio chip (English prompt only)
+    await expect(page.getByRole('button', { name: /play audio/i })).not.toBeVisible();
 
     // Flip card
     await page.keyboard.press('Space');
-    // pf-rating-row appears after flip (replaces legacy practice-card-back)
+    // pf-rating-row appears after flip
     await page.waitForSelector('[data-testid="pf-rating-row"]', { timeout: 5000 });
 
-    // Speaker still visible on back
+    // Back: Answer renders AudioChip because example_audio_url is set
     const speakerButton = page.getByRole('button', { name: /play audio/i });
     await expect(speakerButton).toBeVisible({ timeout: 5000 });
   });
