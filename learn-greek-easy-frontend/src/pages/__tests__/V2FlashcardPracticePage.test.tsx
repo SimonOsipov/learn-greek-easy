@@ -53,9 +53,18 @@ vi.mock('@/stores/xpStore', () => ({
   ),
 }));
 
-// Default store state
+// Mock useDeck to avoid QueryClientProvider requirement (PRACT2-1-02)
+vi.mock('@/hooks/useDeck', () => ({
+  useDeck: () => ({
+    deck: { name: 'Test Deck', name_en: 'Test Deck' },
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
+// Default store state (uses `cards` — renamed from `queue` in PRACT2-1-02)
 const defaultStoreState = {
-  queue: [],
+  cards: [],
   currentIndex: 0,
   isFlipped: false,
   isLoading: false,
@@ -73,6 +82,10 @@ const defaultStoreState = {
   },
   sessionSummary: null,
   wordEntryId: null,
+  totalNew: 0,
+  totalReview: 0,
+  streak: 0,
+  ratings: [],
   startSession: mockStartSession,
   rateCard: vi.fn(),
   flipCard: vi.fn(),
@@ -143,7 +156,7 @@ describe('V2FlashcardPracticePage', () => {
     mockStoreState = {
       ...mockStoreState,
       isLoading: false,
-      queue: [],
+      cards: [],
       sessionSummary: null,
       error: null,
     };
@@ -160,7 +173,7 @@ describe('V2FlashcardPracticePage', () => {
       ...mockStoreState,
       isLoading: false,
       error: 'Failed to load cards',
-      queue: [],
+      cards: [],
     };
     render(<V2FlashcardPracticePage />);
 
@@ -215,7 +228,7 @@ describe('V2FlashcardPracticePage', () => {
     mockStoreState = {
       ...mockStoreState,
       isLoading: false,
-      queue: [],
+      cards: [],
       sessionSummary: null,
       error: null,
     };

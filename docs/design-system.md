@@ -378,3 +378,26 @@ When you add a token / class / animation / component:
 2. Add a row to the relevant table above.
 3. If it's a non-trivial visual addition, also update `Design-System-v2.4.html` (or bump to `-v2.5.html` if the change is large enough to warrant a snapshot).
 4. PR description should call it out under "Design system delta".
+
+**Practice top bar motion (PRACT2-1-02 pf-layer):**
+- `pf-seg-pulse` (1.4s ease-in-out ∞, opacity 1→0.55→1) — current segment tick in progress bar. Defined in `src/features/practice/pf/pf.css`, not in `tailwind.config.js` (pf-layer animations live in pf.css, not the global animation map). Gated behind `prefers-reduced-motion` via `.pf-app::before` pattern.
+
+### Practice top bar utility classes (pf-layer, PRACT2-1-02)
+
+New classes in `src/features/practice/pf/pf.css` (pf-layer scoping, not `src/index.css`):
+
+| Class | Role |
+|---|---|
+| `.pf-top` | 3-column grid shell (`1fr 2fr 1fr`, collapses to stacked at ≤720px). Stacks left/centre/right columns for the practice top bar. |
+| `.pf-deck-label` | Flex column wrapper for deck label; clips overflow with ellipsis. |
+| `.pf-deck-label__title` | First line: `{deck_name} · Practice`. 13px/600 `hsl(var(--fg))`. |
+| `.pf-deck-label__meta` | Second line: `{N} cards · {review} review · {new} new`. 11px `hsl(var(--fg-2))`. |
+| `.pf-progress` | Flex column wrapping the tick track + count. |
+| `.pf-seg-track` | Flex row of ticks; `role="progressbar"`. |
+| `.pf-seg` | One tick per card; 4px height, rounded, muted grey resting. |
+| `.pf-seg.is-current` | Current tick: `var(--pf-c)` bg + `pf-seg-pulse` animation. |
+| `.pf-seg[data-rate]` | Rated tick: `forgot`→`--danger`, `tough`→`--practice-hard`, `ok`→`--success`, `easy`→`--accent`. |
+| `.pf-progress-count` | `{idx+1} / {total}` text below ticks. 11px `hsl(var(--fg-3))`; `<b>` uses `hsl(var(--fg-2))`. |
+| `.pf-right` | Right column flex row (streak + utility chrome). |
+| `.pf-streak` | Streak pill: flame + count, `--practice-hard` tint bg, 12px/600. |
+| `.pf-streak__icon` | 14×14 lucide Flame icon inside streak pill. |

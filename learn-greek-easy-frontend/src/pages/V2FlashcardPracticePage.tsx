@@ -17,14 +17,15 @@ import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 
 import { LanguageSwitcher } from '@/components/i18n';
-import { PracticeHeader, ProgressIndicator, SessionSummary } from '@/components/practice';
+import { PracticeHeader, SessionSummary } from '@/components/practice';
 import { PracticeCard } from '@/components/shared/PracticeCard';
 import { ThemeSwitcher } from '@/components/theme';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PracticeApp } from '@/features/practice/pf';
+import { PracticeApp, TopBar } from '@/features/practice/pf';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
+import { useDeck } from '@/hooks/useDeck';
 import { usePracticeKeyboard } from '@/hooks/usePracticeKeyboard';
 import { usePracticeSession } from '@/hooks/usePracticeSession';
 import { formatDuration } from '@/lib/timeFormatUtils';
@@ -49,14 +50,25 @@ export function V2FlashcardPracticePage() {
 
   const cardType = (searchParams.get('cardType') ?? undefined) as CardRecordType | undefined;
 
+  // Resolve deck name for TopBar label (PRACT2-1-02)
+  const { deck } = useDeck(deckId ?? null);
+  const deckName =
+    deck?.name && typeof deck.name === 'string'
+      ? deck.name
+      : (deck?.name_en ?? deck?.name_el ?? null);
+
   const {
-    queue,
+    cards,
     currentIndex,
     isFlipped,
     isLoading,
     error,
     sessionId,
     sessionSummary,
+    totalNew,
+    totalReview,
+    streak,
+    ratings,
     startSession,
     rateCard,
     flipCard,
@@ -66,16 +78,16 @@ export function V2FlashcardPracticePage() {
     startEvent: 'study_session_started_v2',
     completeEvent: 'study_session_completed_v2',
     abandonEvent: 'study_session_abandoned_v2',
-    isSessionActive: queue.length > 0 && !sessionSummary,
+    isSessionActive: cards.length > 0 && !sessionSummary,
     isSessionComplete: Boolean(sessionSummary),
     getStartProps: useCallback(() => {
-      if (queue.length === 0) return null;
+      if (cards.length === 0) return null;
       return {
         deck_id: deckId ?? null,
         card_type: cardType ?? null,
-        card_count: queue.length,
+        card_count: cards.length,
       };
-    }, [queue, deckId, cardType]),
+    }, [cards, deckId, cardType]),
     getCompleteProps: useCallback(
       (_durationSec: number) => {
         if (!sessionSummary) return null;
@@ -94,14 +106,14 @@ export function V2FlashcardPracticePage() {
     ),
     getAbandonProps: useCallback(
       (durationSec: number) => {
-        if (queue.length === 0 || sessionSummary) return null;
+        if (cards.length === 0 || sessionSummary) return null;
         return {
           deck_id: deckId ?? null,
           cards_reviewed: currentIndex,
           duration_sec: durationSec,
         };
       },
-      [queue, sessionSummary, deckId, currentIndex]
+      [cards, sessionSummary, deckId, currentIndex]
     ),
     onCompleteTracked: useCallback(() => {
       useXPStore.getState().loadXPStats(true);
@@ -124,8 +136,8 @@ export function V2FlashcardPracticePage() {
     }
   }, [sessionSummary, queryClient]);
 
-  // Audio: resolve URL from current queue card
-  const currentQueueCard = queue[currentIndex] ?? null;
+  // Audio: resolve URL from current cards card
+  const currentQueueCard = cards[currentIndex] ?? null;
   const audioUrl = currentQueueCard ? resolveV2CardAudioUrl(currentQueueCard) : null;
   const {
     isPlaying: audioIsPlaying,
@@ -267,7 +279,7 @@ export function V2FlashcardPracticePage() {
   // ============================================
   // Render: Empty (no cards due)
   // ============================================
-  if (!isLoading && !error && queue.length === 0 && !sessionSummary) {
+  if (!isLoading && !error && cards.length === 0 && !sessionSummary) {
     return (
       <div className="flex min-h-screen flex-col bg-practice-bg">
         <PracticeHeader
@@ -391,28 +403,21 @@ export function V2FlashcardPracticePage() {
 
   return (
     <PracticeApp cardType={currentQueueCard?.card_type ?? null}>
-      {/* Top bar */}
-      <PracticeHeader
-        onExit={() => backToDeck()}
-        exitLabel="Exit"
-        exitTestId="practice-close-button"
-        rightSlot={
-          <>
-            <LanguageSwitcher variant="icon" />
-            <ThemeSwitcher />
-          </>
-        }
+      {/* Top bar — replaces legacy PracticeHeader + ProgressIndicator (PRACT2-1-02) */}
+      <TopBar
+        onExit={backToDeck}
+        deckName={deckName}
+        cards={cards}
+        currentIndex={currentIndex}
+        totalNew={totalNew}
+        totalReview={totalReview}
+        streak={streak}
+        ratings={ratings}
+        showStreak={true}
       />
 
       {/* Content area */}
       <div className="mx-auto w-full max-w-lg px-4">
-        {/* Progress counter */}
-        <ProgressIndicator
-          current={Math.min(currentIndex + 1, queue.length)}
-          total={queue.length}
-          label={t('v2Practice.cardLabel', 'Card')}
-        />
-
         {/* Practice card */}
         <PracticeCard
           key={currentCard.id}

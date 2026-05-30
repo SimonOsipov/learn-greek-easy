@@ -8,6 +8,7 @@
  * - Optimistic card advancement on rating
  * - Background review submission with stats accumulation
  * - Session summary computation on completion
+ * - Streak + per-card rating history for PRACT2-1 top bar
  *
  * Simplified V1 reviewStore.ts pattern: flat state, no crash recovery, no pause/resume.
  */
@@ -34,6 +35,34 @@ const STATUS_ORDER: Record<string, number> = {
   review: 2,
   mastered: 3,
 };
+
+// ============================================
+// Exported types
+// ============================================
+
+/**
+ * Per-card rating outcome bucket used for progress-bar colouring (PRACT2-1-02).
+ * Exact quality→bucket mapping is finalised in PRACT2-1-07; this typing
+ * establishes the shape consumed by TopBar / ProgressBar.
+ */
+export type RatingKey = 'forgot' | 'tough' | 'ok' | 'easy';
+
+/**
+ * Maps a practice rating (1-4) to a RatingKey for display purposes.
+ * 1 = forgot, 2 = tough, 3 = ok, 4 = easy.
+ */
+export function ratingToKey(rating: 1 | 2 | 3 | 4): RatingKey {
+  switch (rating) {
+    case 1:
+      return 'forgot';
+    case 2:
+      return 'tough';
+    case 3:
+      return 'ok';
+    case 4:
+      return 'easy';
+  }
+}
 
 // ============================================
 // Exported Utility Functions
@@ -131,7 +160,8 @@ const DEFAULT_SESSION_STATS: V2SessionStats = {
 
 interface V2PracticeState {
   // Session data
-  queue: StudyQueueCard[];
+  /** The cards in the current session queue (renamed from `queue` in PRACT2-1-02). */
+  cards: StudyQueueCard[];
   currentIndex: number;
   isFlipped: boolean;
   sessionId: string | null;
@@ -142,6 +172,14 @@ interface V2PracticeState {
   isLoading: boolean;
   error: string | null;
   sessionSummary: V2SessionSummary | null;
+
+  // Queue totals from the API response (PRACT2-1-02)
+  totalNew: number;
+  totalReview: number;
+
+  // Streak & per-card rating history (PRACT2-1-02)
+  streak: number;
+  ratings: (RatingKey | null)[];
 
   // Timing
   cardStartTime: number | null;
@@ -172,7 +210,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
   devtools(
     (set, get) => ({
       // Initial state
-      queue: [],
+      cards: [],
       currentIndex: 0,
       isFlipped: false,
       sessionId: null,
@@ -186,6 +224,10 @@ export const useV2PracticeStore = create<V2PracticeState>()(
       cardStartTime: null,
       sessionStartTime: null,
       _pendingReviews: 0,
+      totalNew: 0,
+      totalReview: 0,
+      streak: 0,
+      ratings: [],
 
       /**
        * Start a new V2 practice session.
@@ -236,7 +278,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
 
           const now = Date.now();
           set({
-            queue: queueData.cards,
+            cards: queueData.cards,
             currentIndex: 0,
             isFlipped: false,
             sessionId: generateSessionId(),
@@ -250,6 +292,12 @@ export const useV2PracticeStore = create<V2PracticeState>()(
             cardStartTime: now,
             sessionStartTime: now,
             _pendingReviews: 0,
+            // Queue totals for TopBar deck label (PRACT2-1-02)
+            totalNew: queueData.total_new,
+            totalReview: queueData.total_due,
+            // Reset streak + ratings for new session
+            streak: 0,
+            ratings: new Array(queueData.cards.length).fill(null),
           });
         } catch (error) {
           const errorMessage =
@@ -273,20 +321,27 @@ export const useV2PracticeStore = create<V2PracticeState>()(
        * On failure, sets error without reverting the optimistic advance.
        * When the last card is rated and all background submissions return,
        * computes V2SessionSummary.
+       *
+       * Also updates streak and per-card ratings array (PRACT2-1-02):
+       * - ok/easy → streak +1
+       * - forgot  → streak reset to 0
+       * - tough   → streak unchanged
        */
       rateCard: (rating: 1 | 2 | 3 | 4) => {
         const state = get();
         const {
-          queue,
+          cards,
           currentIndex,
           cardStartTime,
           sessionId,
           deckId,
           sessionStartTime,
           _pendingReviews,
+          streak,
+          ratings,
         } = state;
 
-        const card = queue[currentIndex];
+        const card = cards[currentIndex];
         if (!card) return;
 
         const quality = mapPracticeRatingToQuality(rating);
@@ -295,15 +350,30 @@ export const useV2PracticeStore = create<V2PracticeState>()(
           : 0;
 
         const nextIndex = currentIndex + 1;
-        const isLastCard = nextIndex >= queue.length;
+        const isLastCard = nextIndex >= cards.length;
         const now = Date.now();
 
-        // Optimistic advance
+        // Update streak: ok/easy +1, forgot reset to 0, tough unchanged
+        const ratingKey = ratingToKey(rating);
+        const newStreak =
+          ratingKey === 'ok' || ratingKey === 'easy'
+            ? streak + 1
+            : ratingKey === 'forgot'
+              ? 0
+              : streak; // tough: unchanged
+
+        // Update per-card ratings array
+        const newRatings = [...ratings];
+        newRatings[currentIndex] = ratingKey;
+
+        // Optimistic advance (includes streak + ratings update — single source of truth)
         set({
           currentIndex: nextIndex,
           isFlipped: false,
           cardStartTime: isLastCard ? null : now,
           _pendingReviews: _pendingReviews + 1,
+          streak: newStreak,
+          ratings: newRatings,
         });
 
         // Background submission
@@ -388,7 +458,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
        */
       endSession: () => {
         set({
-          queue: [],
+          cards: [],
           currentIndex: 0,
           isFlipped: false,
           sessionId: null,
@@ -401,6 +471,10 @@ export const useV2PracticeStore = create<V2PracticeState>()(
           cardStartTime: null,
           sessionStartTime: null,
           _pendingReviews: 0,
+          totalNew: 0,
+          totalReview: 0,
+          streak: 0,
+          ratings: [],
         });
       },
 
@@ -409,7 +483,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
        */
       resetSession: () => {
         set({
-          queue: [],
+          cards: [],
           currentIndex: 0,
           isFlipped: false,
           sessionId: null,
@@ -423,6 +497,10 @@ export const useV2PracticeStore = create<V2PracticeState>()(
           cardStartTime: null,
           sessionStartTime: null,
           _pendingReviews: 0,
+          totalNew: 0,
+          totalReview: 0,
+          streak: 0,
+          ratings: [],
         });
       },
 

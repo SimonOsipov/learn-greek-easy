@@ -78,3 +78,165 @@
     transition: opacity 600ms ease;
   }
 }
+
+/* =========================================================================
+   PRACT2-1-02: Top bar — 3-column grid, deck label, segmented progress, streak
+   ========================================================================= */
+
+/* ── Keyframe: current-tick pulse ─────────────────────────────────────────── */
+@keyframes pf-seg-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* ── Top bar shell — 3-column grid ───────────────────────────────────────── */
+.pf-top {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  position: relative;
+  z-index: 2; /* above glow layer */
+}
+
+/* Collapse to stacked at ≤720px */
+@media (max-width: 720px) {
+  .pf-top {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
+/* ── Left column: deck label ─────────────────────────────────────────────── */
+.pf-deck-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0; /* prevent overflow */
+}
+
+.pf-deck-label__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: hsl(var(--fg));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pf-deck-label__meta {
+  font-size: 11px;
+  color: hsl(var(--fg-2));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Centre column: segmented progress bar ───────────────────────────────── */
+.pf-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.pf-seg-track {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Individual tick segment */
+.pf-seg {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: hsl(var(--fg) / 0.15);
+  transition:
+    background 200ms ease,
+    opacity 200ms ease;
+  min-width: 2px;
+  max-width: 32px;
+}
+
+/* Current tick: pulses with family accent colour */
+.pf-seg.is-current {
+  background: var(--pf-c, hsl(var(--primary)));
+  animation: pf-seg-pulse 1.4s ease-in-out infinite;
+}
+
+/* Rated ticks: recoloured by data-rate attribute */
+.pf-seg[data-rate='forgot'] {
+  background: hsl(var(--danger));
+}
+
+.pf-seg[data-rate='tough'] {
+  /* Deviation Justification: --practice-hard (25 95% 53%) is the sanctioned
+     orange for SRS "hard" ratings; used directly here as this token exists in
+     the practice palette and is the only sanctioned literal for this layer. */
+  background: hsl(var(--practice-hard));
+}
+
+.pf-seg[data-rate='ok'] {
+  background: hsl(var(--success));
+}
+
+.pf-seg[data-rate='easy'] {
+  background: hsl(var(--accent));
+}
+
+/* Family-tinted unrated segments (uses per-family --pf-c set by PracticeApp) */
+.pf-seg.pf-fam-tinted {
+  background: var(--pf-c, hsl(var(--primary) / 0.3));
+  opacity: 0.35;
+}
+
+/* Progress count text below the tick track */
+.pf-progress-count {
+  font-size: 11px;
+  color: hsl(var(--fg-3));
+  letter-spacing: 0.02em;
+}
+
+.pf-progress-count b {
+  color: hsl(var(--fg-2));
+  font-weight: 600;
+}
+
+/* ── Right column: streak pill ───────────────────────────────────────────── */
+.pf-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.pf-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  /* Deviation Justification: streak orange uses --practice-hard token (25 95% 53%)
+     which is the only sanctioned literal HSL in this layer per design-system.md.
+     Token reference keeps this compliant — no raw hex or arbitrary value. */
+  background: hsl(var(--practice-hard) / 0.15);
+  color: hsl(var(--practice-hard));
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.pf-streak__icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}

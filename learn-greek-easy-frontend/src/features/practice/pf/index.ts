@@ -14,3 +14,11 @@ export type { PracticeAppProps } from './PracticeApp';
 // ── Family map utilities ────────────────────────────────────────────────────
 export { FAMILIES, familyForCardType, descriptorForCardType } from './families';
 export type { PracticeFamily, FamilyDescriptor } from './families';
+
+// ── Top bar components (PRACT2-1-02) ────────────────────────────────────────
+export { TopBar } from './TopBar';
+export type { TopBarProps } from './TopBar';
+export { ProgressBar } from './ProgressBar';
+export type { ProgressBarProps } from './ProgressBar';
+export { StreakPill } from './StreakPill';
+export type { StreakPillProps } from './StreakPill';
