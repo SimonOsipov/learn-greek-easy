@@ -817,3 +817,132 @@
   text-align: center;
   margin: 0;
 }
+
+/* =========================================================================
+   PRACT2-1-05: Declension paradigm table
+   ========================================================================= */
+
+/* ── Lemma row (nom-sg el — en gloss) ────────────────────────────────────── */
+.pf-decl-lemma {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-style: normal; /* Greek text is never italic */
+  color: hsl(var(--fg));
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+/* Greek portion of the lemma */
+.pf-decl-lemma__el {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-style: normal;
+}
+
+/* Separator + English gloss — muted */
+.pf-decl-lemma__gloss {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 0.9em;
+  font-weight: 400;
+  color: hsl(var(--fg-2));
+}
+
+/* ── Paradigm table wrapper ───────────────────────────────────────────────── */
+.pf-decl-table {
+  width: 100%;
+  max-width: 360px;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  color: hsl(var(--fg));
+}
+
+/* Column headers: sg / pl */
+.pf-decl-table__th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(var(--fg-3));
+  text-align: center;
+  padding: 2px 8px 6px;
+}
+
+/* Case label column header — empty (spans the row header column) */
+.pf-decl-table__th--case {
+  text-align: left;
+}
+
+/* Row case label */
+.pf-decl-table__case {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: hsl(var(--fg-3));
+  padding: 5px 8px 5px 0;
+  white-space: nowrap;
+  vertical-align: middle;
+  text-align: left;
+}
+
+/* Regular form cell */
+.pf-decl-table__cell {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-style: normal;
+  font-size: 1rem;
+  font-weight: 500;
+  color: hsl(var(--fg));
+  text-align: center;
+  padding: 5px 8px;
+  vertical-align: middle;
+}
+
+/* ── Target cell (the one blank/filled cell) ─────────────────────────────── */
+.pf-cell-target {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  text-align: center;
+  padding: 5px 8px;
+  vertical-align: middle;
+  border-radius: 6px;
+  transition: background 200ms ease;
+}
+
+/* Pre-reveal: tinted "?" using accent-3 (orange) */
+.pf-cell-target.is-blank {
+  /* Deviation Justification: accent-3 is the declension family tone per families.ts:48
+     and index.css:23 (32 100% 60%). Used via token — no raw hex. */
+  color: hsl(var(--accent-3));
+  background: hsl(var(--accent-3) / 0.12);
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+}
+
+/* Post-reveal: form shown, flash animation */
+.pf-cell-target.is-revealed {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-style: normal;
+  font-size: 1rem;
+  font-weight: 700;
+  color: hsl(var(--accent-3));
+  background: hsl(var(--accent-3) / 0.1);
+  animation: pf-cell-fill 400ms ease-out both;
+}
+
+/* ── Fill-in flash: transform + opacity only (no color animation = no jank) */
+@keyframes pf-cell-fill {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

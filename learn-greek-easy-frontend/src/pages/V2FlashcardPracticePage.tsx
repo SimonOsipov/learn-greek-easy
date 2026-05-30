@@ -33,6 +33,7 @@ import {
   GrammarArticle,
   GrammarPlural,
   Sentence,
+  Declension,
 } from '@/features/practice/pf';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useDeck } from '@/hooks/useDeck';
@@ -621,7 +622,52 @@ export function V2FlashcardPracticePage() {
             );
           }
 
-          // Fallback: legacy PracticeCard for cloze, conjugation, declension
+          if (cardType === 'declension') {
+            return (
+              <PfCard
+                key={currentCard.id}
+                onClick={!isFlipped ? flipCard : undefined}
+                isFlipped={isFlipped}
+                body={
+                  <>
+                    {headEl}
+                    <Declension
+                      card={{
+                        back_content: currentCard.back_content as Record<string, unknown>,
+                        front_content: currentCard.front_content as Record<string, unknown>,
+                      }}
+                      revealed={false}
+                    />
+                  </>
+                }
+                foot={
+                  <>
+                    <Declension
+                      card={{
+                        back_content: currentCard.back_content as Record<string, unknown>,
+                        front_content: currentCard.front_content as Record<string, unknown>,
+                      }}
+                      revealed={true}
+                    />
+                    <PracticeCard
+                      card={currentCard}
+                      isFlipped={isFlipped}
+                      onFlip={flipCard}
+                      translationRu={currentQueueCard?.translation_ru ?? null}
+                      translationRuPlural={currentQueueCard?.translation_ru_plural ?? null}
+                      sentenceRu={currentQueueCard?.sentence_ru ?? null}
+                      onRate={handleRate}
+                      audioState={audioState}
+                      wordEntryId={currentCard.word_entry_id}
+                      deckId={deckId}
+                    />
+                  </>
+                }
+              />
+            );
+          }
+
+          // Fallback: legacy PracticeCard for cloze, conjugation
           return (
             <PracticeCard
               key={currentCard.id}

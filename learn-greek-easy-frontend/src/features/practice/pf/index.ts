@@ -44,3 +44,7 @@ export type { SentenceProps } from './questions/Sentence';
 // ── Audio surface (PRACT2-1-06) ─────────────────────────────────────────────
 export { AudioSurface, barHeight } from './AudioSurface';
 export type { AudioSurfaceProps, AudioSurfaceState } from './AudioSurface';
+
+// -- Question renderers (PRACT2-1-05) -----------------------------------------
+export { Declension } from './questions/Declension';
+export type { DeclensionProps, DeclensionTable, DeclensionRow } from './questions/Declension';
