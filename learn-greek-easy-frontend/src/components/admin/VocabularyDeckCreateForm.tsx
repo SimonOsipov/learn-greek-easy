@@ -34,11 +34,12 @@ import type { DeckLevel } from '@/services/adminAPI';
 /**
  * Supported languages for vocabulary deck names
  */
-const DECK_LANGUAGES = ['en', 'ru'] as const;
+const DECK_LANGUAGES = ['en', 'el', 'ru'] as const;
 type DeckLanguage = (typeof DECK_LANGUAGES)[number];
 
 const LANGUAGE_LABELS: Record<DeckLanguage, string> = {
   en: 'English',
+  el: 'Greek',
   ru: 'Russian',
 };
 
@@ -52,8 +53,14 @@ const CEFR_LEVELS: DeckLevel[] = ['A1', 'A2', 'B1', 'B2'];
  */
 const vocabularyDeckCreateSchema = z.object({
   name_en: z.string().min(1, 'Name is required').max(255, 'Name must be at most 255 characters'),
+  name_el: z.string().max(255, 'Name must be at most 255 characters').optional().or(z.literal('')),
   name_ru: z.string().min(1, 'Name is required').max(255, 'Name must be at most 255 characters'),
   description_en: z
+    .string()
+    .max(1000, 'Description must be at most 1000 characters')
+    .optional()
+    .or(z.literal('')),
+  description_el: z
     .string()
     .max(1000, 'Description must be at most 1000 characters')
     .optional()
@@ -97,8 +104,10 @@ export const VocabularyDeckCreateForm: React.FC<VocabularyDeckCreateFormProps> =
     mode: 'onChange',
     defaultValues: {
       name_en: '',
+      name_el: '',
       name_ru: '',
       description_en: '',
+      description_el: '',
       description_ru: '',
       level: 'A1',
       is_premium: false,
@@ -163,6 +172,8 @@ export const VocabularyDeckCreateForm: React.FC<VocabularyDeckCreateFormProps> =
                       <Input
                         placeholder={t('deckCreate.namePlaceholder')}
                         data-testid={`deck-create-name-${lang}`}
+                        lang={lang === 'el' ? 'el' : undefined}
+                        className={cn(lang === 'el' && 'font-serif not-italic')}
                         {...field}
                         value={field.value as string}
                       />
@@ -183,8 +194,9 @@ export const VocabularyDeckCreateForm: React.FC<VocabularyDeckCreateFormProps> =
                     <FormControl>
                       <Textarea
                         placeholder={t('deckCreate.descriptionPlaceholder')}
-                        className="min-h-[100px]"
+                        className={cn('min-h-[100px]', lang === 'el' && 'font-serif not-italic')}
                         data-testid={`deck-create-description-${lang}`}
+                        lang={lang === 'el' ? 'el' : undefined}
                         {...field}
                         value={field.value as string}
                       />

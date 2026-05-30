@@ -181,4 +181,122 @@ describe('DxResumeHero', () => {
     expect(barFill).toBeTruthy();
     expect(barFill.style.width).toBe('0%');
   });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // DGREEK-08: Greek subtitle guard — show/hide at both render sites
+  //
+  // LOCKED Display Spec:
+  //   • shown  when greekSubtitle !== '' && greekSubtitle !== localizedName
+  //   • hidden when greekSubtitle === ''  OR  greekSubtitle === localizedName
+  //
+  // Two render sites:
+  //   1. Left column heading area  — class "dx-hero-resume-el"
+  //   2. Front cover overlay       — class "dx-cover-el"  (only when siblings >= 2)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  describe('Greek subtitle guard (DGREEK-08)', () => {
+    // i18n defaults to "en" in the test environment (I18nextProvider with shared i18n).
+    // getLocalizedDeckName returns nameEn || name_en || name || title for locale "en".
+    // Therefore localizedName === deck.nameEn when nameEn is set.
+
+    it('SITE 1 (heading): Greek subtitle shown when titleGreek !== localizedName (en locale)', () => {
+      // titleGreek = 'Ελληνικό Λεξιλόγιο' — different from nameEn 'Greek A1 Vocabulary'
+      const deck = makeDeck('show-case', {
+        title: 'Greek A1 Vocabulary', // deck.name / title fallback
+        nameEn: 'Greek A1 Vocabulary', // localizedName in en locale
+        titleGreek: 'Ελληνικό Λεξιλόγιο', // must be shown (differs from nameEn)
+      });
+
+      renderHero(deck, undefined, []);
+
+      const el = document.querySelector('.dx-hero-resume-el');
+      expect(el).toBeInTheDocument();
+      expect(el).toHaveTextContent('Ελληνικό Λεξιλόγιο');
+      expect(el).toHaveAttribute('lang', 'el');
+    });
+
+    it('SITE 1 (heading): Greek subtitle hidden when titleGreek === localizedName (equal-case)', () => {
+      // When titleGreek === nameEn, the component guard hides the element.
+      const deck = makeDeck('hide-case', {
+        title: 'Greek A1 Vocabulary',
+        nameEn: 'Greek A1 Vocabulary',
+        titleGreek: 'Greek A1 Vocabulary', // equal → hidden
+      });
+
+      renderHero(deck, undefined, []);
+
+      const el = document.querySelector('.dx-hero-resume-el');
+      expect(el).not.toBeInTheDocument();
+    });
+
+    it('SITE 1 (heading): Greek subtitle hidden when titleGreek is empty string', () => {
+      const deck = makeDeck('empty-greek', {
+        nameEn: 'Greek A1 Vocabulary',
+        titleGreek: '',
+      });
+
+      renderHero(deck, undefined, []);
+
+      const el = document.querySelector('.dx-hero-resume-el');
+      expect(el).not.toBeInTheDocument();
+    });
+
+    it('SITE 2 (cover overlay): Greek subtitle shown when titleGreek !== localizedName', () => {
+      // The cover overlay (.dx-cover-el) renders inside .dx-cover-3 when siblings >= 2.
+      const deck = makeDeck('cover-show', {
+        title: 'Greek A1 Vocabulary',
+        nameEn: 'Greek A1 Vocabulary',
+        titleGreek: 'Ελληνικό Λεξιλόγιο',
+      });
+
+      const { container } = renderHero(deck, mockProgress, [mockSibling1, mockSibling2]);
+
+      const coverEl = container.querySelector('.dx-cover-3 .dx-cover-el');
+      expect(coverEl).toBeInTheDocument();
+      expect(coverEl).toHaveTextContent('Ελληνικό Λεξιλόγιο');
+      expect(coverEl).toHaveAttribute('lang', 'el');
+    });
+
+    it('SITE 2 (cover overlay): Greek subtitle hidden when titleGreek === localizedName', () => {
+      const deck = makeDeck('cover-hide', {
+        title: 'Greek A1 Vocabulary',
+        nameEn: 'Greek A1 Vocabulary',
+        titleGreek: 'Greek A1 Vocabulary', // equal → hidden
+      });
+
+      const { container } = renderHero(deck, mockProgress, [mockSibling1, mockSibling2]);
+
+      const coverEl = container.querySelector('.dx-cover-3 .dx-cover-el');
+      expect(coverEl).not.toBeInTheDocument();
+    });
+
+    it('Both sites simultaneously: shown in heading, shown in cover', () => {
+      // Verify both guards are independent and both show when conditions are met.
+      const deck = makeDeck('both-show', {
+        title: 'Greek A1 Vocabulary',
+        nameEn: 'Greek A1 Vocabulary',
+        titleGreek: 'Ελληνικό Λεξιλόγιο',
+      });
+
+      const { container } = renderHero(deck, mockProgress, [mockSibling1, mockSibling2]);
+
+      // Heading site
+      expect(container.querySelector('.dx-hero-resume-el')).toBeInTheDocument();
+      // Cover overlay site
+      expect(container.querySelector('.dx-cover-3 .dx-cover-el')).toBeInTheDocument();
+    });
+
+    it('Both sites simultaneously: hidden in heading, hidden in cover', () => {
+      const deck = makeDeck('both-hide', {
+        title: 'Greek A1 Vocabulary',
+        nameEn: 'Greek A1 Vocabulary',
+        titleGreek: 'Greek A1 Vocabulary',
+      });
+
+      const { container } = renderHero(deck, mockProgress, [mockSibling1, mockSibling2]);
+
+      expect(container.querySelector('.dx-hero-resume-el')).not.toBeInTheDocument();
+      expect(container.querySelector('.dx-cover-3 .dx-cover-el')).not.toBeInTheDocument();
+    });
+  });
 });

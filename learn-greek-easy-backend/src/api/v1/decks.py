@@ -52,6 +52,42 @@ def _deck_cover_url(deck: Deck, s3: S3Service) -> str | None:
     return s3.generate_presigned_url(deck.cover_image_s3_key)
 
 
+def _map_trilingual_create_fields(create_data: dict) -> None:
+    """Map name/description fields to trilingual columns in-place for deck creation.
+
+    Bilingual path (name_en/name_ru present):
+    - name_el: persists verbatim when caller supplied it; mirrors name_en otherwise (NOT NULL).
+    - description_el: persists verbatim when caller supplied it; left absent when omitted (nullable).
+
+    Legacy path (only `name` present): copies to all three columns unchanged.
+    """
+    if "name_en" in create_data or "name_ru" in create_data:
+        name_en = create_data.get("name_en") or create_data.get("name", "")
+        create_data["name_en"] = name_en
+        if not create_data.get("name_el"):
+            create_data["name_el"] = name_en
+        if "name_ru" not in create_data:
+            create_data["name_ru"] = name_en
+        create_data.pop("name", None)
+    elif "name" in create_data:
+        name = create_data.pop("name")
+        create_data["name_en"] = name
+        create_data["name_el"] = name
+        create_data["name_ru"] = name
+
+    if "description_en" in create_data or "description_ru" in create_data:
+        desc_en = create_data.get("description_en") or create_data.get("description")
+        create_data["description_en"] = desc_en
+        if "description_ru" not in create_data:
+            create_data["description_ru"] = desc_en
+        create_data.pop("description", None)
+    elif "description" in create_data:
+        description = create_data.pop("description")
+        create_data["description_en"] = description
+        create_data["description_el"] = description
+        create_data["description_ru"] = description
+
+
 @router.get(
     "",
     response_model=DeckListResponse,
@@ -143,8 +179,10 @@ async def list_decks(
                 description=description,
                 name_en=deck.name_en,
                 name_ru=deck.name_ru,
+                name_el=deck.name_el,
                 description_en=deck.description_en,
                 description_ru=deck.description_ru,
+                description_el=deck.description_el,
                 level=deck.level,
                 is_active=deck.is_active,
                 is_premium=deck.is_premium,
@@ -226,35 +264,8 @@ async def create_deck(
     # which is only used for logic, not stored in the database
     create_data = deck_data.model_dump(exclude_unset=True, exclude={"is_system_deck"})
 
-    # Map name/description to trilingual fields
-    # Bilingual fields (name_en, name_ru) take priority over single name field
-    if "name_en" in create_data or "name_ru" in create_data:
-        # Bilingual fields provided — use them directly, default name_el to name_en
-        name_en = create_data.get("name_en") or create_data.get("name", "")
-        create_data["name_en"] = name_en
-        create_data["name_el"] = name_en  # Greek mirrors English
-        if "name_ru" not in create_data:
-            create_data["name_ru"] = name_en
-        create_data.pop("name", None)
-    elif "name" in create_data:
-        # Legacy single-name field — copy to all columns
-        name = create_data.pop("name")
-        create_data["name_en"] = name
-        create_data["name_el"] = name  # Same as English for user-created decks
-        create_data["name_ru"] = name  # Same as English for user-created decks
-    if "description_en" in create_data or "description_ru" in create_data:
-        # Bilingual description fields — use directly
-        desc_en = create_data.get("description_en") or create_data.get("description")
-        create_data["description_en"] = desc_en
-        create_data["description_el"] = desc_en  # Greek mirrors English
-        if "description_ru" not in create_data:
-            create_data["description_ru"] = desc_en
-        create_data.pop("description", None)
-    elif "description" in create_data:
-        description = create_data.pop("description")
-        create_data["description_en"] = description
-        create_data["description_el"] = description  # Same as English for user-created decks
-        create_data["description_ru"] = description  # Same as English for user-created decks
+    # Map name/description to trilingual fields (see _map_trilingual_create_fields for rules)
+    _map_trilingual_create_fields(create_data)
 
     # Determine deck ownership based on is_system_deck flag and user permissions
     if deck_data.is_system_deck:
@@ -286,8 +297,10 @@ async def create_deck(
         description=deck.description_en,
         name_en=deck.name_en,
         name_ru=deck.name_ru,
+        name_el=deck.name_el,
         description_en=deck.description_en,
         description_ru=deck.description_ru,
+        description_el=deck.description_el,
         level=deck.level,
         is_active=deck.is_active,
         is_premium=deck.is_premium,
@@ -394,8 +407,10 @@ async def search_decks(
                 description=description,
                 name_en=deck.name_en,
                 name_ru=deck.name_ru,
+                name_el=deck.name_el,
                 description_en=deck.description_en,
                 description_ru=deck.description_ru,
+                description_el=deck.description_el,
                 level=deck.level,
                 is_active=deck.is_active,
                 is_premium=deck.is_premium,
@@ -510,8 +525,10 @@ async def list_my_decks(
                 description=description,
                 name_en=deck.name_en,
                 name_ru=deck.name_ru,
+                name_el=deck.name_el,
                 description_en=deck.description_en,
                 description_ru=deck.description_ru,
+                description_el=deck.description_el,
                 level=deck.level,
                 is_active=deck.is_active,
                 is_premium=deck.is_premium,
@@ -618,8 +635,10 @@ async def get_deck(
         description=description,
         name_en=deck.name_en,
         name_ru=deck.name_ru,
+        name_el=deck.name_el,
         description_en=deck.description_en,
         description_ru=deck.description_ru,
+        description_el=deck.description_el,
         level=deck.level,
         is_active=deck.is_active,
         is_premium=deck.is_premium,
@@ -892,9 +911,8 @@ async def update_deck(
     update_data = deck_data.model_dump(exclude_unset=True)
     if "name_en" in update_data or "name_ru" in update_data:
         # Bilingual fields provided — use them directly
-        # Set name_el to name_en (Greek not user-editable)
-        if "name_en" in update_data:
-            update_data["name_el"] = update_data["name_en"]
+        # name_el: persist verbatim when caller supplied it; when absent, leave update_data
+        # without it so the existing DB value is preserved (exclude_unset semantics)
         update_data.pop("name", None)
     elif "name" in update_data:
         # Legacy single-name field — copy to all columns
@@ -904,8 +922,8 @@ async def update_deck(
         update_data["name_ru"] = name
     if "description_en" in update_data or "description_ru" in update_data:
         # Bilingual description fields — use directly
-        if "description_en" in update_data:
-            update_data["description_el"] = update_data["description_en"]
+        # description_el: persist verbatim when caller supplied it; when absent, leave
+        # update_data without it so the existing DB value is preserved (exclude_unset)
         update_data.pop("description", None)
     elif "description" in update_data:
         description = update_data.pop("description")
@@ -937,8 +955,10 @@ async def update_deck(
         description=updated_deck.description_en,
         name_en=updated_deck.name_en,
         name_ru=updated_deck.name_ru,
+        name_el=updated_deck.name_el,
         description_en=updated_deck.description_en,
         description_ru=updated_deck.description_ru,
+        description_el=updated_deck.description_el,
         level=updated_deck.level,
         is_active=updated_deck.is_active,
         is_premium=updated_deck.is_premium,

@@ -40,14 +40,16 @@ class DeckCreate(DeckBase):
     deck (visible to all users in /decks) or a personal deck (visible only
     to the creator in /mine).
 
-    Optional bilingual fields (name_en, name_ru, description_en, description_ru)
-    allow admin to set per-language values. When provided, these take priority
-    over the single name/description fields.
+    Optional trilingual fields (name_el, name_en, name_ru, description_el,
+    description_en, description_ru) allow admin to set per-language values.
+    When provided, these take priority over the single name/description fields.
     """
 
     is_system_deck: bool = False
+    name_el: Optional[str] = Field(None, min_length=1, max_length=255)
     name_en: Optional[str] = Field(None, min_length=1, max_length=255)
     name_ru: Optional[str] = Field(None, min_length=1, max_length=255)
+    description_el: Optional[str] = None
     description_en: Optional[str] = None
     description_ru: Optional[str] = None
 
@@ -55,15 +57,18 @@ class DeckCreate(DeckBase):
 class DeckUpdate(BaseModel):
     """Schema for updating a deck (admin only).
 
-    Supports both legacy single-field (name, description) and bilingual
-    (name_en, name_ru, description_en, description_ru) updates.
-    When bilingual fields are provided, they take priority over single fields.
+    Supports both legacy single-field (name, description) and trilingual
+    (name_el, name_en, name_ru, description_el, description_en, description_ru)
+    updates. When trilingual fields are provided, they take priority over
+    single fields.
     """
 
     name: Optional[str] = Field(None, min_length=1, max_length=255)
+    name_el: Optional[str] = Field(None, min_length=1, max_length=255)
     name_en: Optional[str] = Field(None, min_length=1, max_length=255)
     name_ru: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
+    description_el: Optional[str] = None
     description_en: Optional[str] = None
     description_ru: Optional[str] = None
     level: Optional[DeckLevel] = None
@@ -87,8 +92,10 @@ class DeckResponse(BaseModel):
     description: str | None = None
 
     # All-language fields for client-side locale resolution
+    name_el: str | None = None
     name_en: str | None = None
     name_ru: str | None = None
+    description_el: str | None = None
     description_en: str | None = None
     description_ru: str | None = None
 
@@ -130,51 +137,6 @@ class DeckSearchResponse(BaseModel):
 # ============================================================================
 # Admin Schemas (All languages)
 # ============================================================================
-
-
-class DeckAdminCreate(BaseModel):
-    """Schema for creating a localized deck (admin only).
-
-    Admin creates system decks with trilingual name/description.
-    All language fields are required for system decks.
-    """
-
-    # Trilingual name fields (all required for system decks)
-    name_el: str = Field(..., min_length=1, max_length=255, description="Greek name")
-    name_en: str = Field(..., min_length=1, max_length=255, description="English name")
-    name_ru: str = Field(..., min_length=1, max_length=255, description="Russian name")
-
-    # Trilingual description fields (optional)
-    description_el: str | None = Field(None, max_length=2000, description="Greek description")
-    description_en: str | None = Field(None, max_length=2000, description="English description")
-    description_ru: str | None = Field(None, max_length=2000, description="Russian description")
-
-    # Common fields
-    level: DeckLevel
-    is_active: bool = True
-    is_premium: bool = False
-
-
-class DeckAdminUpdate(BaseModel):
-    """Schema for updating a localized deck (admin only).
-
-    All fields optional for partial updates.
-    """
-
-    # Trilingual name fields (optional for partial update)
-    name_el: str | None = Field(None, min_length=1, max_length=255)
-    name_en: str | None = Field(None, min_length=1, max_length=255)
-    name_ru: str | None = Field(None, min_length=1, max_length=255)
-
-    # Trilingual description fields
-    description_el: str | None = Field(None, max_length=2000)
-    description_en: str | None = Field(None, max_length=2000)
-    description_ru: str | None = Field(None, max_length=2000)
-
-    # Common fields
-    level: DeckLevel | None = None
-    is_active: bool | None = None
-    is_premium: bool | None = None
 
 
 class DeckAdminResponse(BaseModel):

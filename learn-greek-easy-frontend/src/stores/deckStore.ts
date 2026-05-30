@@ -124,7 +124,7 @@ const transformDeckResponse = (deck: DeckResponse, progressData?: DeckProgressSu
   return {
     id: deck.id,
     title: deck.name,
-    titleGreek: deck.name, // Use name as Greek title (backend stores Greek names)
+    titleGreek: deck.name_el ?? '', // Constant Greek name (raw name_el), independent of UI locale
     description: deck.description || '',
     level: deck.level.toUpperCase() as 'A1' | 'A2' | 'B1' | 'B2',
     category: 'vocabulary', // Default category - backend doesn't have categories

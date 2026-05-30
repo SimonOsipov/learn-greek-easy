@@ -38,11 +38,12 @@ import { DeactivationWarningDialog } from './DeactivationWarningDialog';
 /**
  * Supported languages for vocabulary deck names
  */
-const DECK_LANGUAGES = ['en', 'ru'] as const;
+const DECK_LANGUAGES = ['en', 'el', 'ru'] as const;
 type DeckLanguage = (typeof DECK_LANGUAGES)[number];
 
 const LANGUAGE_LABELS: Record<DeckLanguage, string> = {
   en: 'English',
+  el: 'Greek',
   ru: 'Russian',
 };
 
@@ -59,8 +60,14 @@ const MAX_IMAGE_SIZE_BYTES = 3 * 1024 * 1024;
  */
 const vocabularyDeckSchema = z.object({
   name_en: z.string().min(1, 'Name is required').max(255, 'Name must be at most 255 characters'),
+  name_el: z.string().max(255, 'Name must be at most 255 characters').optional().or(z.literal('')),
   name_ru: z.string().min(1, 'Name is required').max(255, 'Name must be at most 255 characters'),
   description_en: z
+    .string()
+    .max(1000, 'Description must be at most 1000 characters')
+    .optional()
+    .or(z.literal('')),
+  description_el: z
     .string()
     .max(1000, 'Description must be at most 1000 characters')
     .optional()
@@ -210,8 +217,10 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
     mode: 'onChange',
     defaultValues: {
       name_en: deckName,
+      name_el: deck.name_el ?? '',
       name_ru: deck.name_ru || (typeof deck.name !== 'string' ? deck.name.ru : '') || '',
       description_en: deck.description_en || '',
+      description_el: deck.description_el ?? '',
       description_ru: deck.description_ru || '',
       level: (deck.level as DeckLevel) || 'A1',
       is_active: deck.is_active,
@@ -318,6 +327,8 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
                           <Input
                             placeholder={t('deckEdit.namePlaceholder')}
                             data-testid={`deck-edit-name-${lang}`}
+                            lang={lang === 'el' ? 'el' : undefined}
+                            className={cn(lang === 'el' && 'font-serif not-italic')}
                             {...field}
                             value={field.value as string}
                           />
@@ -338,8 +349,12 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
                         <FormControl>
                           <Textarea
                             placeholder={t('deckEdit.descriptionPlaceholder')}
-                            className="min-h-[100px]"
+                            className={cn(
+                              'min-h-[100px]',
+                              lang === 'el' && 'font-serif not-italic'
+                            )}
                             data-testid={`deck-edit-description-${lang}`}
+                            lang={lang === 'el' ? 'el' : undefined}
                             {...field}
                             value={field.value as string}
                           />

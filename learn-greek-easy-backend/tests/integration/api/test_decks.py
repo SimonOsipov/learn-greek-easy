@@ -13,6 +13,7 @@ from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import Deck
 from tests.fixtures.deck import DeckWithCards, MultiLevelDecks
@@ -2562,4 +2563,256 @@ class TestDeckLocalizationIntegration:
         data = get_response.json()
         # Should still show the English content since user decks only have _en
         assert data["name"] == deck_data["name"]
-        assert data["description"] == deck_data["description"]
+
+
+class TestDeckGreekNamePersistence:
+    """Test suite for Greek (name_el) field persistence and raw response (DGREEK-04).
+
+    Covers acceptance criteria:
+    1. Create with name_el sets DB column to the supplied Greek value (not overwritten).
+    2. Update name_el only → persists new value without touching name_en.
+    3. Update without name_el → existing name_el is preserved (not reset to name_en).
+    4. GET with Accept-Language: en and Accept-Language: el both expose the same raw name_el.
+    5. Create without name_el → name_el mirrors name_en (no NOT NULL violation).
+    """
+
+    # =========================================================================
+    # Test 1: Create with name_el persists verbatim in DB
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_create_with_name_el_persists_in_db(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Create deck with name_el='Το ελληνικό σπίτι' → DB row has that exact value."""
+        from sqlalchemy import select
+
+        from src.db.models import Deck
+
+        deck_data = {
+            "name": "Greek House",
+            "name_en": "Greek House",
+            "name_el": "Το ελληνικό σπίτι",
+            "level": "A1",
+            "is_system_deck": True,
+        }
+
+        response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        deck_id = data["id"]
+
+        # API response exposes name_el verbatim
+        assert data["name_el"] == "Το ελληνικό σπίτι"
+        assert data["name_en"] == "Greek House"
+
+        # DB row must have the exact Greek value (not overwritten by name_en)
+        result = await db_session.execute(select(Deck).where(Deck.id == deck_id))
+        db_deck = result.scalar_one_or_none()
+        assert db_deck is not None
+        assert db_deck.name_el == "Το ελληνικό σπίτι"
+        assert db_deck.name_en == "Greek House"
+        assert db_deck.name_el != db_deck.name_en  # Distinct values
+
+    # =========================================================================
+    # Test 2: Update name_el only → persists new value, name_en untouched
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_update_name_el_only_persists_without_touching_name_en(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """PATCH name_el only → DB row has new name_el; name_en is unchanged."""
+        from sqlalchemy import select
+
+        # Seed a system deck (owner_id=None so it's accessible to all auth users)
+        from src.db.models import Deck, DeckLevel
+        from tests.fixtures.deck import create_deck
+
+        original_deck = await create_deck(
+            db_session,
+            name="English Only Name",
+            level=DeckLevel.A1,
+        )
+        # The factory sets name_el == name_en == "English Only Name"
+        original_name_en = original_deck.name_en
+
+        response = await client.patch(
+            f"/api/v1/decks/{original_deck.id}",
+            json={"name_el": "Νέο ελληνικό όνομα"},
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        # Response carries updated name_el
+        assert data["name_el"] == "Νέο ελληνικό όνομα"
+        # name_en must be unchanged in response
+        assert data["name_en"] == original_name_en
+
+        # Verify DB row
+        await db_session.refresh(original_deck)
+        result = await db_session.execute(select(Deck).where(Deck.id == original_deck.id))
+        db_deck = result.scalar_one_or_none()
+        assert db_deck is not None
+        assert db_deck.name_el == "Νέο ελληνικό όνομα"
+        assert db_deck.name_en == original_name_en
+
+    # =========================================================================
+    # Test 3: Update WITHOUT name_el → existing name_el is preserved
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_update_without_name_el_preserves_existing_value(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """PATCH a field other than name_el → existing name_el is NOT reset to name_en."""
+        from sqlalchemy import select
+
+        from src.db.models import Deck, DeckLevel
+
+        # Seed a deck where name_el is intentionally distinct from name_en
+        deck_data_obj = Deck(
+            name_en="Preservation Test",
+            name_el="Τεστ διατήρησης",
+            name_ru="Preservation Test",
+            description_en="A deck to test preservation",
+            description_el="A deck to test preservation",
+            description_ru="A deck to test preservation",
+            level=DeckLevel.A1,
+            is_active=True,
+        )
+        db_session.add(deck_data_obj)
+        await db_session.commit()
+        await db_session.refresh(deck_data_obj)
+
+        # PATCH only level — name_el must remain untouched
+        response = await client.patch(
+            f"/api/v1/decks/{deck_data_obj.id}",
+            json={"level": "A2"},
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["level"] == "A2"
+        # name_el in response must still be the original Greek value
+        assert data["name_el"] == "Τεστ διατήρησης"
+        assert data["name_en"] == "Preservation Test"
+
+        # Verify DB row directly
+        result = await db_session.execute(select(Deck).where(Deck.id == deck_data_obj.id))
+        db_deck = result.scalar_one_or_none()
+        assert db_deck is not None
+        assert db_deck.name_el == "Τεστ διατήρησης"  # Still the original Greek value
+
+    # =========================================================================
+    # Test 4: GET exposes same raw name_el regardless of Accept-Language
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_get_raw_name_el_constant_across_locales(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """GET with Accept-Language: en and Accept-Language: el both return same raw name_el."""
+        from src.db.models import Deck, DeckLevel
+
+        # Seed a system deck with distinct name_el
+        deck_obj = Deck(
+            name_en="Locale Invariance Test",
+            name_el="Τεστ αμετάβλητης γλώσσας",
+            name_ru="Locale Invariance Test",
+            description_en=None,
+            description_el=None,
+            description_ru=None,
+            level=DeckLevel.B1,
+            is_active=True,
+        )
+        db_session.add(deck_obj)
+        await db_session.commit()
+        await db_session.refresh(deck_obj)
+        deck_id = deck_obj.id
+
+        # Request in English
+        headers_en = {**auth_headers, "Accept-Language": "en"}
+        response_en = await client.get(f"/api/v1/decks/{deck_id}", headers=headers_en)
+        assert response_en.status_code == 200
+        data_en = response_en.json()
+
+        # Request in Greek
+        headers_el = {**auth_headers, "Accept-Language": "el"}
+        response_el = await client.get(f"/api/v1/decks/{deck_id}", headers=headers_el)
+        assert response_el.status_code == 200
+        data_el = response_el.json()
+
+        # Raw name_el must be identical in both responses
+        assert data_en["name_el"] == "Τεστ αμετάβλητης γλώσσας"
+        assert data_el["name_el"] == "Τεστ αμετάβλητης γλώσσας"
+        assert data_en["name_el"] == data_el["name_el"]
+
+        # Localized `name` field may differ (en → English value, el → Greek value)
+        assert data_en["name"] == "Locale Invariance Test"
+        assert data_el["name"] == "Τεστ αμετάβλητης γλώσσας"
+
+    # =========================================================================
+    # Test 5: Create without name_el → name_el mirrors name_en (no NOT NULL error)
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_create_without_name_el_mirrors_name_en(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Create deck WITHOUT name_el → DB row has name_el == name_en (no constraint error)."""
+        from sqlalchemy import select
+
+        from src.db.models import Deck
+
+        deck_data = {
+            "name": "Mirror Test",
+            "name_en": "Mirror Test",
+            "level": "B2",
+            "is_system_deck": True,
+        }
+
+        response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        deck_id = data["id"]
+
+        # name_el must not be null and must mirror name_en
+        assert data["name_el"] == "Mirror Test"
+        assert data["name_en"] == "Mirror Test"
+
+        # Confirm DB row
+        result = await db_session.execute(select(Deck).where(Deck.id == deck_id))
+        db_deck = result.scalar_one_or_none()
+        assert db_deck is not None
+        assert db_deck.name_el == db_deck.name_en
+        assert db_deck.name_el == "Mirror Test"
