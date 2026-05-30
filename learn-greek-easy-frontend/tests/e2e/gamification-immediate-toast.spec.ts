@@ -46,7 +46,7 @@ function getLearnerAccessToken(): string {
   try {
     const authState = JSON.parse(fs.readFileSync(LEARNER_AUTH, 'utf-8'));
     const sessionEntry = authState.origins?.[0]?.localStorage?.find(
-      (item: { name: string; value: string }) => item.name === storageKey,
+      (item: { name: string; value: string }) => item.name === storageKey
     );
     if (sessionEntry) {
       const session = JSON.parse(sessionEntry.value);
@@ -58,7 +58,7 @@ function getLearnerAccessToken(): string {
   }
   throw new Error(
     '[GAMIF-05-06] Could not read learner access token from storageState. ' +
-      'Ensure auth.setup.ts ran successfully before this spec.',
+      'Ensure auth.setup.ts ran successfully before this spec.'
   );
 }
 
@@ -71,16 +71,13 @@ function getLearnerAccessToken(): string {
  */
 async function resetToNearThreshold(request: import('@playwright/test').APIRequestContext) {
   const apiBaseUrl = getApiBaseUrl();
-  const resp = await request.post(
-    `${apiBaseUrl}/api/v1/test/seed/gamification-near-threshold`,
-    {
-      data: { email: LEARNER_EMAIL, achievement_id: ACHIEVEMENT_ID },
-    },
-  );
+  const resp = await request.post(`${apiBaseUrl}/api/v1/test/seed/gamification-near-threshold`, {
+    data: { email: LEARNER_EMAIL, achievement_id: ACHIEVEMENT_ID },
+  });
   if (!resp.ok()) {
     const body = await resp.text();
     throw new Error(
-      `[GAMIF-05-06] gamification-near-threshold seed failed: ${resp.status()} ${body}`,
+      `[GAMIF-05-06] gamification-near-threshold seed failed: ${resp.status()} ${body}`
     );
   }
   return resp.json();
@@ -125,8 +122,7 @@ test.describe('Gamification — IMMEDIATE-mode notification on review unlock (GA
       const v2Deck = decks.find((d) => d.name.includes('Greek A1 Vocabulary'));
       if (!v2Deck) {
         throw new Error(
-          '[GAMIF-05-06] No V2 deck found. ' +
-            `Available: ${decks.map((d) => d.name).join(', ')}`,
+          '[GAMIF-05-06] No V2 deck found. ' + `Available: ${decks.map((d) => d.name).join(', ')}`
         );
       }
 
@@ -134,7 +130,7 @@ test.describe('Gamification — IMMEDIATE-mode notification on review unlock (GA
       await page.goto(`/decks/${v2Deck.id}/practice`);
 
       // Wait until the card is visible (SSE connection will be established by now)
-      const practiceCard = page.locator('[data-testid="practice-card"]');
+      const practiceCard = page.locator('[data-testid="pf-card"]');
       const emptyState = page.getByText(/all caught up/i);
       await expect(practiceCard.or(emptyState)).toBeVisible({ timeout: 15000 });
 
@@ -145,22 +141,23 @@ test.describe('Gamification — IMMEDIATE-mode notification on review unlock (GA
       if (isEmpty) {
         throw new Error(
           '[GAMIF-05-06] No new/due cards found after near-threshold reset. ' +
-            'Ensure /seed/all created the V2 Greek A1 Vocabulary deck with active cards.',
+            'Ensure /seed/all created the V2 Greek A1 Vocabulary deck with active cards.'
         );
       }
 
       // ── ACT: flip card and submit "Good" — crosses the threshold ────────────
       // Card front is visible; press Space to flip (or click the card)
-      await expect(page.locator('[data-testid="practice-card-front"]')).toBeVisible({
+      await expect(page.locator('[data-testid="pf-card"]')).toBeVisible({
         timeout: 10000,
       });
-      await page.locator('[data-testid="practice-card-front"]').click();
+      // Press Space to flip the card (pf renderer uses Space/Enter for reveal)
+      await page.keyboard.press('Space');
 
-      // Card back must be visible before we click the rating
-      await expect(page.locator('[data-testid="practice-card-back"]')).toBeVisible({
+      // Rating row must be visible after flip (pf renderer)
+      await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({
         timeout: 10000,
       });
-      await page.locator('[data-testid="srs-button-good"]').click();
+      await page.locator('[data-testid="pf-rating-btn-ok"]').click();
 
       // ── ASSERT: ACHIEVEMENT_UNLOCKED notification persisted in DB within 30s ──
       // The deck review goes through the ASYNC persist_deck_review_task path
@@ -174,10 +171,9 @@ test.describe('Gamification — IMMEDIATE-mode notification on review unlock (GA
       let notifBody: unknown = null;
       const pollStart = Date.now();
       while (Date.now() - pollStart < 30000) {
-        const notifResp = await request.get(
-          `${apiBaseUrl}/api/v1/notifications?limit=10`,
-          { headers: authHeaders },
-        );
+        const notifResp = await request.get(`${apiBaseUrl}/api/v1/notifications?limit=10`, {
+          headers: authHeaders,
+        });
         if (notifResp.ok()) {
           notifBody = await notifResp.json();
           const notifications = (notifBody as { notifications?: Array<{ type: string }> })
@@ -185,12 +181,12 @@ test.describe('Gamification — IMMEDIATE-mode notification on review unlock (GA
           if (Array.isArray(notifications)) {
             const ach = notifications.find(
               (n: { type: string }) =>
-                n.type === 'ACHIEVEMENT_UNLOCKED' || n.type === 'achievement_unlocked',
+                n.type === 'ACHIEVEMENT_UNLOCKED' || n.type === 'achievement_unlocked'
             );
             if (ach) {
               notifFound = true;
               console.log(
-                `[GAMIF-05-06] Notification created: ${JSON.stringify(ach).slice(0, 200)}`,
+                `[GAMIF-05-06] Notification created: ${JSON.stringify(ach).slice(0, 200)}`
               );
               break;
             }
@@ -201,7 +197,7 @@ test.describe('Gamification — IMMEDIATE-mode notification on review unlock (GA
       expect(
         notifFound,
         `[GAMIF-05-06] Backend never created ACHIEVEMENT_UNLOCKED notification within 30s. ` +
-          `Last response: ${JSON.stringify(notifBody).slice(0, 500)}`,
+          `Last response: ${JSON.stringify(notifBody).slice(0, 500)}`
       ).toBe(true);
 
       // ── PROVE achievement DB write happened ─────────────────────────────────
@@ -223,12 +219,12 @@ test.describe('Gamification — IMMEDIATE-mode notification on review unlock (GA
         unlocked_at: string | null;
       }>;
       const unlockedAfterReview = allAchievements.filter(
-        (a) => a.unlocked && a.unlocked_at !== null,
+        (a) => a.unlocked && a.unlocked_at !== null
       );
       expect(
         unlockedAfterReview.length,
-        `[GAMIF-05-06] Expected at least 1 unlocked achievement after review, got 0. Sample: ${JSON.stringify(allAchievements.slice(0, 3))}`,
+        `[GAMIF-05-06] Expected at least 1 unlocked achievement after review, got 0. Sample: ${JSON.stringify(allAchievements.slice(0, 3))}`
       ).toBeGreaterThan(0);
-    },
+    }
   );
 });

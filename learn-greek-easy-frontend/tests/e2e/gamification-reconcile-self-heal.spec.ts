@@ -41,7 +41,7 @@ function getLearnerAccessToken(): string {
   try {
     const authState = JSON.parse(fs.readFileSync(LEARNER_AUTH, 'utf-8'));
     const sessionEntry = authState.origins?.[0]?.localStorage?.find(
-      (item: { name: string; value: string }) => item.name === storageKey,
+      (item: { name: string; value: string }) => item.name === storageKey
     );
     if (sessionEntry) {
       const session = JSON.parse(sessionEntry.value);
@@ -53,7 +53,7 @@ function getLearnerAccessToken(): string {
   }
   throw new Error(
     '[GAMIF-04] Could not read learner access token from storageState. ' +
-      'Ensure auth.setup.ts ran successfully before this spec.',
+      'Ensure auth.setup.ts ran successfully before this spec.'
   );
 }
 
@@ -65,17 +65,12 @@ function getLearnerAccessToken(): string {
  */
 async function resetToStuckState(request: import('@playwright/test').APIRequestContext) {
   const apiBaseUrl = getApiBaseUrl();
-  const resp = await request.post(
-    `${apiBaseUrl}/api/v1/test/seed/gamification-reset-stuck-state`,
-    {
-      data: { email: LEARNER_EMAIL, achievement_id: ACHIEVEMENT_ID },
-    },
-  );
+  const resp = await request.post(`${apiBaseUrl}/api/v1/test/seed/gamification-reset-stuck-state`, {
+    data: { email: LEARNER_EMAIL, achievement_id: ACHIEVEMENT_ID },
+  });
   if (!resp.ok()) {
     const body = await resp.text();
-    throw new Error(
-      `[GAMIF-04] gamification-reset-stuck-state failed: ${resp.status()} ${body}`,
-    );
+    throw new Error(`[GAMIF-04] gamification-reset-stuck-state failed: ${resp.status()} ${body}`);
   }
   return resp.json();
 }
@@ -96,47 +91,47 @@ test.describe('Gamification — reconcile-on-read self-heal (GAMIF-04)', () => {
     await resetToStuckState(request);
   });
 
-  test(
-    'GAMIF-04-05: stuck user navigating to /achievements is self-healed',
-    async ({ page, request }) => {
-      const apiBaseUrl = getApiBaseUrl();
-      const authHeaders = { Authorization: `Bearer ${getLearnerAccessToken()}` };
+  test('GAMIF-04-05: stuck user navigating to /achievements is self-healed', async ({
+    page,
+    request,
+  }) => {
+    const apiBaseUrl = getApiBaseUrl();
+    const authHeaders = { Authorization: `Bearer ${getLearnerAccessToken()}` };
 
-      // ── ACT: navigate to /achievements — triggers reconcile on read ─────────
-      // NOTE: We intentionally skip a pre-state API check here. Calling
-      // GET /xp/achievements would itself trigger reconcile-on-read (flags are
-      // on at 100% in CI), which would immediately re-unlock the achievement
-      // and make the "pre-locked" assertion false. The beforeEach reset
-      // (gamification-reset-stuck-state) is the authoritative source that the
-      // stuck state is set; the test only needs to verify the AFTER state.
-      await page.goto('/achievements');
+    // ── ACT: navigate to /achievements — triggers reconcile on read ─────────
+    // NOTE: We intentionally skip a pre-state API check here. Calling
+    // GET /xp/achievements would itself trigger reconcile-on-read (flags are
+    // on at 100% in CI), which would immediately re-unlock the achievement
+    // and make the "pre-locked" assertion false. The beforeEach reset
+    // (gamification-reset-stuck-state) is the authoritative source that the
+    // stuck state is set; the test only needs to verify the AFTER state.
+    await page.goto('/achievements');
 
-      // ── ASSERT: card visibly shows Unlocked ─────────────────────────────────
-      const card = page.getByTestId(`achievement-card-${ACHIEVEMENT_ID}`);
-      await expect(card).toBeVisible({ timeout: 15000 });
+    // ── ASSERT: card visibly shows Unlocked ─────────────────────────────────
+    const card = page.getByTestId(`achievement-card-${ACHIEVEMENT_ID}`);
+    await expect(card).toBeVisible({ timeout: 15000 });
 
-      // "Completed" badge is visible
-      await expect(card.getByText('Completed')).toBeVisible({ timeout: 10000 });
+    // "Completed" badge is visible
+    await expect(card.getByText('Completed')).toBeVisible({ timeout: 10000 });
 
-      // "Locked" badge is NOT visible (exact match — "Unlocked 5/1/2026" contains "Locked" as substring)
-      await expect(card.getByText('Locked', { exact: true })).not.toBeVisible();
+    // "Locked" badge is NOT visible (exact match — "Unlocked 5/1/2026" contains "Locked" as substring)
+    await expect(card.getByText('Locked', { exact: true })).not.toBeVisible();
 
-      // ── PROVE DB write happened (not a UI lie) ──────────────────────────────
-      const postResp = await request.get(`${apiBaseUrl}/api/v1/xp/achievements`, {
-        headers: authHeaders,
-      });
-      expect(postResp.ok()).toBeTruthy();
-      const postBody = await postResp.json();
-      const postAch = (
-        postBody.achievements as Array<{
-          id: string;
-          unlocked: boolean;
-          unlocked_at: string | null;
-        }>
-      ).find((a) => a.id === ACHIEVEMENT_ID);
-      expect(postAch).toBeDefined();
-      expect(postAch!.unlocked).toBe(true);
-      expect(postAch!.unlocked_at).toBeTruthy();
-    },
-  );
+    // ── PROVE DB write happened (not a UI lie) ──────────────────────────────
+    const postResp = await request.get(`${apiBaseUrl}/api/v1/xp/achievements`, {
+      headers: authHeaders,
+    });
+    expect(postResp.ok()).toBeTruthy();
+    const postBody = await postResp.json();
+    const postAch = (
+      postBody.achievements as Array<{
+        id: string;
+        unlocked: boolean;
+        unlocked_at: string | null;
+      }>
+    ).find((a) => a.id === ACHIEVEMENT_ID);
+    expect(postAch).toBeDefined();
+    expect(postAch!.unlocked).toBe(true);
+    expect(postAch!.unlocked_at).toBeTruthy();
+  });
 });
