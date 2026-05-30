@@ -204,13 +204,17 @@ export const CulturePage: React.FC = () => {
             />
           )}
 
-          {/* Mock-exam CTA card (when no resume deck so there's always a CTA) */}
+          {/* Mock-exam CTA (when no resume deck so there's always a CTA).
+              testId is on the Link itself so `culture-mock-exam-cta` is always the
+              navigating link element, matching the hero CTA render path. */}
           {!resumeDeck && (
-            <div data-testid="culture-mock-exam-cta">
-              <Link to="/practice/culture-exam" className="cx-cta-ghost">
-                {t('page.mockExamCta.cta', 'Take mock exam')}
-              </Link>
-            </div>
+            <Link
+              to="/practice/culture-exam"
+              className="cx-cta-ghost"
+              data-testid="culture-mock-exam-cta"
+            >
+              {t('page.mockExamCta.cta', 'Take mock exam')}
+            </Link>
           )}
 
           {/* What's-new strip */}

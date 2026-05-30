@@ -48,10 +48,12 @@ test.describe('Decks / Culture IA split', () => {
 
     test('mock-exam CTA navigates to /practice/culture-exam', async ({ page }) => {
       await page.goto('/culture');
+      // Post-redesign the CTA is itself the navigating link (testid on the <a>),
+      // not a card wrapping a nested link.
       const cta = page.getByTestId('culture-mock-exam-cta');
       await expect(cta).toBeVisible({ timeout: 10000 });
-      // Click the CTA button/link inside the card
-      await cta.getByRole('link', { name: /take mock exam/i }).click();
+      await expect(cta).toHaveText(/take mock exam/i);
+      await cta.click();
       await expect(page).toHaveURL(/\/practice\/culture-exam/);
       await expect(page.getByTestId('mock-exam-page')).toBeVisible({ timeout: 15000 });
     });
