@@ -1,30 +1,46 @@
 // src/pages/culture/CultureDeckDetailPage.tsx
 
 /**
- * Culture Deck Detail Page
+ * Culture Deck Detail Page — Batch 2 redesign (CX-01)
  *
  * Displays details of a culture deck and allows starting practice sessions.
- * Similar to DeckDetailPage but tailored for culture content.
+ * Uses CultureHero, CultureMetricStrip, and dx-action* panel from the dx system.
  */
 
 import React, { useEffect, useState } from 'react';
 
-import { ChevronLeft, BookOpen, AlertCircle, Play, TrendingUp } from 'lucide-react';
+import { BookOpen, AlertCircle, RotateCcw, Trophy, Clock } from 'lucide-react';
+import '@/features/decks/dx/dx.css';
 import { useTranslation } from 'react-i18next';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 
-import { CultureBadge } from '@/components/culture';
 import { QuestionBrowser } from '@/components/culture/QuestionBrowser';
-import { DeckProgressBar } from '@/components/decks/DeckProgressBar';
+import { CultureHero } from '@/components/culture/redesign/CultureHero';
+import { CultureMetricStrip } from '@/components/culture/redesign/CultureMetricStrip';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getDeckBackgroundStyle } from '@/lib/deckBackground';
+import { Breadcrumb, Kicker, UnwiredDot } from '@/features/decks/dx';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { cultureDeckAPI } from '@/services/cultureDeckAPI';
 import type { CultureDeckDetailResponse } from '@/services/cultureDeckAPI';
-import type { DeckProgress } from '@/types/deck';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Topic chips — no backend data per question, rendered as non-functional UI
+// ─────────────────────────────────────────────────────────────────────────────
+
+const TOPIC_CHIPS = [
+  { value: 'all', labelKey: 'detail.topicAll' },
+  { value: 'politics', labelKey: 'detail.topicPolitics' },
+  { value: 'culture', labelKey: 'detail.topicCulture' },
+  { value: 'history', labelKey: 'detail.topicHistory' },
+  { value: 'geography', labelKey: 'detail.topicGeography' },
+] as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main page
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function CultureDeckDetailPage() {
   const { t, i18n } = useTranslation(['deck', 'culture']);
@@ -34,263 +50,356 @@ export function CultureDeckDetailPage() {
   const [deck, setDeck] = useState<CultureDeckDetailResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<string>('all');
 
-  // Fetch deck on mount
-  useEffect(() => {
+  const fetchDeck = React.useCallback(() => {
     if (!deckId) return;
-
-    const fetchDeck = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const response = await cultureDeckAPI.getById(deckId);
-        setDeck(response);
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to load deck. Please try again.';
-        setError(errorMessage);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchDeck();
+    setIsLoading(true);
+    setError(null);
+    cultureDeckAPI
+      .getById(deckId)
+      .then(setDeck)
+      .catch((err) => {
+        const msg = err instanceof Error ? err.message : 'Failed to load deck. Please try again.';
+        setError(msg);
+      })
+      .finally(() => setIsLoading(false));
   }, [deckId]);
 
-  // Handle invalid deckId
+  useEffect(() => {
+    fetchDeck();
+  }, [fetchDeck]);
+
+  // ── Guard states ───────────────────────────────────────────────────────────
+
   if (!deckId) {
     return <NotFoundState />;
   }
 
-  // Loading state
   if (isLoading) {
     return <LoadingSkeleton />;
   }
 
-  // Error state
   if (error) {
-    return (
-      <ErrorState
-        error={error}
-        onRetry={() => {
-          setIsLoading(true);
-          setError(null);
-          cultureDeckAPI
-            .getById(deckId)
-            .then(setDeck)
-            .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load deck.'))
-            .finally(() => setIsLoading(false));
-        }}
-      />
-    );
+    return <ErrorState error={error} onRetry={fetchDeck} />;
   }
 
-  // Not found state
   if (!deck) {
     return <NotFoundState />;
   }
 
-  // Transform progress for DeckProgressBar compatibility
-  const progress: DeckProgress | undefined = deck.progress
-    ? {
-        deckId: deck.id,
-        status:
-          deck.progress.questions_mastered >= deck.progress.questions_total
-            ? 'completed'
-            : deck.progress.questions_mastered > 0 || deck.progress.questions_learning > 0
-              ? 'in-progress'
-              : 'not-started',
-        cardsTotal: deck.progress.questions_total,
-        cardsNew: deck.progress.questions_new,
-        cardsLearning: deck.progress.questions_learning,
-        cardsReview: 0,
-        cardsMastered: deck.progress.questions_mastered,
-        dueToday: 0,
-        streak: 0,
-        lastStudied: undefined,
-        totalTimeSpent: 0,
-        accuracy:
-          deck.progress.questions_total > 0
-            ? Math.round((deck.progress.questions_mastered / deck.progress.questions_total) * 100)
-            : 0,
-      }
-    : undefined;
+  // ── Derived values ────────────────────────────────────────────────────────
 
-  const handleStartPractice = () => {
-    navigate(`/culture/${deckId}/practice`);
+  const deckName = getLocalizedDeckName(deck, i18n.language);
+  const cultureCategory = deck.category;
+
+  const prog = deck.progress;
+  const total = prog?.questions_total ?? deck.question_count ?? 0;
+  const mastered = prog?.questions_mastered ?? 0;
+  const learning = prog?.questions_learning ?? 0;
+  const newQ = prog?.questions_new ?? total;
+  const pct = total > 0 ? Math.round((mastered / total) * 100) : 0;
+  // "to practice" = new + due-learning (questions not yet mastered and not in-review)
+  const toPractice = newQ + learning;
+
+  const hasProgress = mastered > 0 || learning > 0;
+  const ctaLabel =
+    selectedTopic === 'all'
+      ? hasProgress
+        ? t('culture:practice.continuePractice', 'Continue Practice')
+        : t('culture:practice.startPractice', 'Start Practice')
+      : hasProgress
+        ? `${t('culture:practice.continuePractice', 'Continue Practice')} · ${t(`culture:detail.topic${selectedTopic.charAt(0).toUpperCase() + selectedTopic.slice(1)}`, selectedTopic)} ${t('culture:detail.topicOnly', 'only')}`
+        : `${t('culture:practice.startPractice', 'Start Practice')} · ${t(`culture:detail.topic${selectedTopic.charAt(0).toUpperCase() + selectedTopic.slice(1)}`, selectedTopic)} ${t('culture:detail.topicOnly', 'only')}`;
+
+  // CultureHero expects a Deck-compatible object
+  const coverDeck = {
+    id: deck.id,
+    level: 'A1' as const,
+    category: 'culture' as const,
+    coverImageUrl: deck.cover_image_url ?? undefined,
   };
 
-  // Get culture category from deck
-  const cultureCategory = deck.category;
+  const heroKicker = `${cultureCategory.charAt(0).toUpperCase() + cultureCategory.slice(1)} · ${total} ${t('culture:deck.questions', 'questions')}`;
+
+  const heroStats = [
+    { label: t('culture:deck.questions', 'Questions'), value: total },
+    {
+      label: t('culture:detail.inReview', 'In review'),
+      value: learning,
+    },
+    {
+      label: t('culture:detail.completePct', 'Complete'),
+      value: `${pct}%`,
+    },
+  ];
+
+  const heroCtas = [
+    {
+      label: hasProgress
+        ? t('culture:practice.continuePractice', 'Continue Practice')
+        : t('culture:practice.startPractice', 'Start Practice'),
+      to: `/culture/${deckId}/practice`,
+      primary: true,
+      testId: 'hero-practice-cta',
+    },
+  ];
 
   return (
     <div data-testid="deck-detail" className="container mx-auto px-4 py-6 md:py-8">
-      {/* Breadcrumb Navigation */}
-      <nav
-        data-testid="breadcrumb"
-        className="mb-4 flex items-center gap-2 text-sm text-muted-foreground"
-        aria-label="Breadcrumb"
-      >
-        <Link
-          to="/decks"
-          className="flex items-center gap-1 transition-colors hover:text-foreground"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          {t('deck:detail.breadcrumb')}
-        </Link>
-        <span>/</span>
-        <span className="truncate font-medium text-foreground">
-          {getLocalizedDeckName(deck, i18n.language)}
-        </span>
-      </nav>
-
-      {/* Main Content */}
-      <div className="space-y-6">
-        {/* Deck Header Section */}
-        <Card
-          className="min-h-[160px]"
-          style={getDeckBackgroundStyle(deck.cover_image_url ?? undefined)}
-        >
-          <CardHeader>
-            {/* Title and Badges Row */}
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                {/* Title */}
-                <h1 className="mb-1 text-2xl font-semibold text-foreground md:text-3xl">
-                  {getLocalizedDeckName(deck, i18n.language)}
-                </h1>
-              </div>
-
-              {/* Culture Badge */}
-              <div className="flex flex-shrink-0 items-center gap-2">
-                <CultureBadge
-                  category={cultureCategory}
-                  showLabel={true}
-                  className={deck.cover_image_url ? 'on-photo' : ''}
-                />
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent>
-            {/* Description */}
-            {deck.description && (
-              <p className="leading-relaxed text-foreground">{deck.description}</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Progress & Action — below the cover image */}
-        <Card>
-          <CardContent className="pt-6">
-            {/* Progress Bar (if has progress) */}
-            {progress && progress.status !== 'not-started' && (
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground">
-                    {t('deck:detail.yourProgress')}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {Math.round(
-                      ((progress.cardsLearning + progress.cardsMastered) / progress.cardsTotal) *
-                        100
-                    )}
-                    % {t('deck:detail.complete')}
-                  </span>
-                </div>
-                <DeckProgressBar progress={progress} showLegend={true} size="large" />
-              </div>
-            )}
-
-            {/* Action Button */}
-            <div className={progress && progress.status !== 'not-started' ? 'mt-6' : ''}>
-              {progress && progress.status !== 'not-started' ? (
-                <Button
-                  data-testid="start-practice-button"
-                  variant="hero"
-                  size="lg"
-                  onClick={handleStartPractice}
-                  className="w-full"
-                >
-                  <TrendingUp className="mr-2 h-5 w-5" />
-                  {t('culture:practice.continuePractice')}
-                </Button>
-              ) : (
-                <Button
-                  data-testid="start-practice-button"
-                  variant="hero"
-                  size="lg"
-                  onClick={handleStartPractice}
-                  className="w-full"
-                >
-                  <Play className="mr-2 h-5 w-5" />
-                  {t('culture:practice.startPractice')}
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Question Browser */}
-        <QuestionBrowser
-          deckId={deckId}
-          totalQuestions={deck.question_count}
-          category={cultureCategory}
+      {/* 1. Breadcrumb */}
+      <div className="mb-6" data-testid="breadcrumb">
+        <Breadcrumb
+          trail={[
+            { label: t('culture:list.title', 'Culture'), to: '/culture' },
+            { label: deckName },
+          ]}
         />
+      </div>
+
+      <div className="space-y-6">
+        {/* 2. Resume hero */}
+        <CultureHero
+          kicker={heroKicker}
+          kickerTone="primary"
+          title={deckName}
+          description={
+            deck.description
+              ? `${deck.description} ${t('culture:detail.examMirrorNote', 'Each deck mirrors the real citizenship exam.')}`
+              : t('culture:detail.examMirrorNote', 'Each deck mirrors the real citizenship exam.')
+          }
+          stats={heroStats}
+          ctas={heroCtas}
+          coverDeck={coverDeck}
+        />
+
+        {/* 3. Metric strip — 4 cards */}
+        <CultureMetricStrip
+          metrics={[
+            {
+              icon: <BookOpen className="h-5 w-5" />,
+              label: t('culture:detail.metricToPractice', 'To practice'),
+              value: toPractice,
+              tone: 'primary',
+            },
+            {
+              icon: <RotateCcw className="h-5 w-5" />,
+              label: t('culture:detail.metricInReview', 'In review'),
+              value: learning,
+              tone: 'amber',
+            },
+            {
+              icon: <Trophy className="h-5 w-5" />,
+              label: t('culture:detail.metricMastered', 'Mastered'),
+              value: `${mastered}/${total}`,
+              tone: 'green',
+            },
+            {
+              icon: <Clock className="h-5 w-5" />,
+              label: t('culture:detail.metricTimeOnDeck', 'Time on deck'),
+              value: '—',
+              sub: t('culture:hub.minutes', 'min'),
+              tone: 'violet',
+              // No time-on-deck backend source exists yet
+              unwired: true,
+              unwiredLabel: t(
+                'culture:detail.metricTimeUnwired',
+                'Time on deck — not yet connected to backend data.'
+              ),
+            },
+          ]}
+        />
+
+        {/* 4. Action panel */}
+        <div className="dx-action" data-testid="culture-action-panel">
+          {/* Eyebrow kicker */}
+          <Kicker tone="primary">
+            {t('culture:detail.actionEyebrow', 'Pick what to practice')}
+          </Kicker>
+
+          {/* Progress head: title + pct */}
+          <div className="dx-action-head">
+            <h3 className="dx-action-h">
+              {t('culture:detail.actionYourProgress', 'Your progress')} &middot;{' '}
+              <span className="dx-action-pct">{pct}%</span>
+            </h3>
+          </div>
+
+          {/* Counts line */}
+          <div className="dx-action-legend">
+            <span className="dx-action-legend-item" data-tone="todo">
+              {t('culture:detail.actionCounts', {
+                defaultValue: '{{new}} new · {{learning}} learning · {{mastered}} mastered',
+                new: newQ,
+                learning,
+                mastered,
+              })}
+            </span>
+          </div>
+
+          {/* Gradient progress bar */}
+          <div
+            className="dx-action-bar"
+            role="progressbar"
+            aria-valuenow={pct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={t('culture:detail.progressBarLabel', 'Deck completion progress')}
+          >
+            <span data-testid="culture-action-bar-fill" style={{ width: `${pct}%` }} />
+          </div>
+
+          {/* Legend */}
+          <div className="dx-action-legend">
+            <span className="dx-action-legend-item" data-tone="todo">
+              {t('culture:detail.legendToPractice', 'To practice')}
+            </span>
+            <span className="dx-action-legend-item" data-tone="learn">
+              {t('culture:detail.legendLearning', 'Learning')}
+            </span>
+            <span className="dx-action-legend-item" data-tone="master">
+              {t('culture:detail.legendMastered', 'Mastered')}
+            </span>
+          </div>
+
+          {/* Topic chips — not wired to filter; red-dot flags row as placeholder */}
+          <div className="dx-action-want">
+            <p className="dx-action-want-l">
+              {t('culture:detail.actionTopicLabel', 'Topic')}
+              {/* Red dot on the chip row — topic data does not exist per-question */}
+              <UnwiredDot
+                tone="danger"
+                aria-label={t(
+                  'culture:detail.topicUnwired',
+                  'Topic filtering — not yet connected to backend data.'
+                )}
+              />
+            </p>
+            <div className="dx-action-want-chips">
+              {TOPIC_CHIPS.map(({ value, labelKey }) => (
+                <button
+                  key={value}
+                  type="button"
+                  className="dx-action-want-chip"
+                  aria-pressed={selectedTopic === value}
+                  onClick={() => setSelectedTopic(value)}
+                >
+                  {t(`culture:${labelKey}`, value.charAt(0).toUpperCase() + value.slice(1))}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Full-width primary CTA */}
+          <button
+            type="button"
+            className="dx-action-cta"
+            data-testid="start-practice-button"
+            onClick={() => navigate(`/culture/${deckId}/practice`)}
+          >
+            {ctaLabel}
+          </button>
+        </div>
+
+        {/* 5. Question browser */}
+        <div>
+          <div className="cx-section-head mb-4">
+            <Kicker tone="primary">
+              {t('culture:detail.questionsEyebrow', 'Questions in this deck')}
+            </Kicker>
+          </div>
+          <QuestionBrowser
+            deckId={deckId}
+            totalQuestions={deck.question_count}
+            category={cultureCategory}
+          />
+        </div>
       </div>
     </div>
   );
 }
 
-// Loading Skeleton Component
+// ─────────────────────────────────────────────────────────────────────────────
+// Loading skeleton
+// ─────────────────────────────────────────────────────────────────────────────
+
 const LoadingSkeleton: React.FC = () => {
   return (
     <div data-testid="deck-detail" className="container mx-auto px-4 py-6 md:py-8">
-      {/* Breadcrumb Skeleton */}
-      <div className="mb-4 flex items-center gap-2">
-        <Skeleton className="h-4 w-32" />
+      {/* Breadcrumb skeleton */}
+      <div className="mb-6 flex items-center gap-2">
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="h-4 w-4" />
+        <Skeleton className="h-4 w-40" />
       </div>
 
-      {/* Header Skeleton */}
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 space-y-2">
+      <div className="space-y-6">
+        {/* Hero skeleton */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              <Skeleton className="h-4 w-40" />
               <Skeleton className="h-8 w-3/4" />
-              <Skeleton className="h-6 w-1/2" />
+              <Skeleton className="h-16 w-full" />
+              <div className="flex gap-6">
+                <Skeleton className="h-12 w-20" />
+                <Skeleton className="h-12 w-20" />
+                <Skeleton className="h-12 w-20" />
+              </div>
+              <Skeleton className="h-12 w-48" />
             </div>
-            <Skeleton className="h-8 w-24 rounded-full" />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-20 w-full" />
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Question Grid Skeleton */}
-      <div className="space-y-4">
-        {/* Search + Filter bar skeleton */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Skeleton className="h-10 w-full sm:w-64" />
-          <Skeleton className="h-8 w-48" />
-        </div>
-        {/* Count skeleton */}
-        <Skeleton className="h-4 w-40" />
-        {/* Grid skeleton: 6 question cards */}
-        <div
-          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
-          className="grid gap-3"
-        >
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 w-full rounded-lg" />
+        {/* Metric strip skeleton */}
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full rounded-xl" />
           ))}
+        </div>
+
+        {/* Action panel skeleton */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-6 w-64" />
+              <Skeleton className="h-2 w-full" />
+              <div className="flex gap-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-9 w-24 rounded-full" />
+                ))}
+              </div>
+              <Skeleton className="h-12 w-full rounded-xl" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Question grid skeleton */}
+        <div className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <Skeleton className="h-10 w-full sm:w-64" />
+            <Skeleton className="h-8 w-48" />
+          </div>
+          <Skeleton className="h-4 w-40" />
+          <div
+            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
+            className="grid gap-3"
+          >
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-28 w-full rounded-lg" />
+            ))}
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-// Error State Component
+// ─────────────────────────────────────────────────────────────────────────────
+// Error state
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface ErrorStateProps {
   error: string;
   onRetry: () => void;
@@ -328,7 +437,10 @@ const ErrorState: React.FC<ErrorStateProps> = ({ error, onRetry }) => {
   );
 };
 
-// Not Found State Component
+// ─────────────────────────────────────────────────────────────────────────────
+// Not found state
+// ─────────────────────────────────────────────────────────────────────────────
+
 const NotFoundState: React.FC = () => {
   const { t } = useTranslation('deck');
   const navigate = useNavigate();
@@ -342,7 +454,7 @@ const NotFoundState: React.FC = () => {
           <p className="mx-auto mb-6 max-w-md text-sm text-muted-foreground">
             {t('detail.notFoundDescription')}
           </p>
-          <Button onClick={() => navigate('/decks')}>{t('detail.browseAll')}</Button>
+          <Button onClick={() => navigate('/culture')}>{t('detail.browseAll')}</Button>
         </CardContent>
       </Card>
     </div>

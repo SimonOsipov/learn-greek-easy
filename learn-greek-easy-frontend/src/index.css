@@ -3645,6 +3645,641 @@ html.theme-transition *::after {
   cursor: not-allowed;
 }
 
+/* ── Culture hero CTAs (.cx-hero-ctas / .cx-cta-ghost) ─────────────────────
+   Used in CultureHero for the "Continue" (primary = .dx-action-cta) and
+   "Take mock exam" (ghost = .cx-cta-ghost) button row.
+   ────────────────────────────────────────────────────────────────────────── */
+.cx-hero-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.cx-cta-ghost {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 22px;
+  background: hsl(var(--fg) / 0.08);
+  border: 1px solid hsl(var(--fg) / 0.12);
+  border-radius: 12px;
+  color: hsl(var(--fg));
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Inter Tight', sans-serif;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.cx-cta-ghost:hover {
+  background: hsl(var(--fg) / 0.12);
+  border-color: hsl(var(--fg) / 0.2);
+}
+
+/* ── Culture what's-new strip (.cx-whatsnew-*) ──────────────────────────────
+   Chip row below the hub hero: "{N} cultural exam decks" · "{N} questions"
+   + a "Check readiness →" ghost link.
+   ────────────────────────────────────────────────────────────────────────── */
+.cx-whatsnew {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: hsl(var(--bg-2));
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 14px;
+}
+
+.cx-whatsnew-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  background: hsl(var(--fg) / 0.06);
+  border-radius: 999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: hsl(var(--fg-2));
+}
+
+.cx-whatsnew-sep {
+  width: 1px;
+  height: 18px;
+  background: hsl(var(--fg) / 0.1);
+  flex-shrink: 0;
+}
+
+.cx-whatsnew-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border: 1px solid hsl(var(--primary) / 0.3);
+  border-radius: 999px;
+  background: transparent;
+  color: hsl(var(--primary));
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  margin-left: auto;
+}
+
+.cx-whatsnew-cta:hover {
+  background: hsl(var(--primary) / 0.08);
+  border-color: hsl(var(--primary) / 0.5);
+}
+
+/* ── Culture section (.cx-section-*) ────────────────────────────────────────
+   Eyebrow kicker + H2 section header used for deck group sections.
+   ────────────────────────────────────────────────────────────────────────── */
+.cx-section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.cx-section-h {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: clamp(20px, 2vw, 26px);
+  font-weight: 700;
+  letter-spacing: -0.018em;
+  margin: 0;
+  color: hsl(var(--fg));
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cx-section-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(var(--fg-3));
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* 3-col culture deck grid (matches design spec) */
+.cx-deck-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+@media (max-width: 1100px) {
+  .cx-deck-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .cx-deck-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Culture Readiness page — cx-donut, cx-cat, cx-attempt, cx-nudge ────────
+   CX-01 Batch 3: Exam Readiness page.
+   All colours via HSL tokens — no raw hex/rgba.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Donut wrapper: column-centred (donut + verdict pill) */
+.cx-donut-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* SVG donut container */
+.cx-donut {
+  position: relative;
+  width: 180px;
+  height: 180px;
+}
+.cx-donut svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.cx-donut-track {
+  stroke: hsl(var(--fg) / 0.08);
+  fill: none;
+}
+.cx-donut-fill {
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.cx-donut[data-tone='danger'] .cx-donut-fill {
+  stroke: hsl(var(--danger));
+}
+.cx-donut[data-tone='warning'] .cx-donut-fill {
+  stroke: hsl(var(--warning));
+}
+.cx-donut[data-tone='success'] .cx-donut-fill {
+  stroke: hsl(var(--success));
+}
+
+/* Centered label inside the donut ring */
+.cx-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter Tight', sans-serif;
+  text-align: center;
+}
+.cx-donut-center b {
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  color: hsl(var(--fg));
+}
+.cx-donut-center span {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  color: hsl(var(--fg-3));
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 6px;
+}
+
+/* Verdict pill below the donut */
+.cx-donut-verdict {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+.cx-donut-verdict[data-tone='danger'] {
+  background: hsl(var(--danger) / 0.12);
+  color: hsl(var(--danger));
+}
+.cx-donut-verdict[data-tone='warning'] {
+  /* Deviation Justification: amber text uses 38 80% 52% for WCAG AA on
+     tinted bg — same precedent as .dx-type-chip[data-tone='amber'] */
+  background: hsl(var(--warning) / 0.16);
+  color: hsl(38 80% 52%);
+}
+.cx-donut-verdict[data-tone='success'] {
+  background: hsl(var(--success) / 0.14);
+  color: hsl(var(--success));
+}
+
+/* 3-col hero grid: donut | summary | cover-stack */
+.cx-readiness-hero-grid {
+  display: grid;
+  grid-template-columns: auto 1fr minmax(260px, 340px);
+  gap: 32px;
+  align-items: stretch;
+  position: relative;
+  z-index: 1;
+  min-height: 224px;
+}
+@media (max-width: 1100px) {
+  .cx-readiness-hero-grid {
+    grid-template-columns: auto 1fr;
+  }
+  .cx-readiness-hero-grid .dx-cover-stack {
+    display: none;
+  }
+}
+@media (max-width: 720px) {
+  .cx-readiness-hero-grid {
+    grid-template-columns: 1fr;
+  }
+  .cx-readiness-hero-grid .cx-donut-wrap {
+    justify-self: center;
+  }
+}
+
+/* Category bar list inside the action panel */
+.cx-cat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cx-cat-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 130px;
+  gap: 18px;
+  align-items: center;
+}
+@media (max-width: 640px) {
+  .cx-cat-row {
+    grid-template-columns: 90px 1fr 110px;
+    gap: 12px;
+  }
+}
+
+/* Category label with coloured dot ::before */
+.cx-cat-l {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Inter Tight', sans-serif;
+  color: hsl(var(--fg));
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.cx-cat-l::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: hsl(var(--accent));
+  flex-shrink: 0;
+}
+.cx-cat-l[data-tone='amber']::before {
+  background: hsl(var(--warning));
+}
+.cx-cat-l[data-tone='primary']::before {
+  background: hsl(var(--primary));
+}
+.cx-cat-l[data-tone='green']::before {
+  background: hsl(var(--success));
+}
+
+/* Horizontal progress bar */
+.cx-cat-bar {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: hsl(var(--fg) / 0.06);
+  overflow: hidden;
+}
+.cx-cat-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  min-width: 12px;
+  background: hsl(var(--danger));
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.cx-cat-bar[data-tone='warning'] > span {
+  background: hsl(var(--warning));
+}
+.cx-cat-bar[data-tone='success'] > span {
+  background: hsl(var(--success));
+}
+
+/* Right-aligned % + accuracy */
+.cx-cat-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-family: 'Inter Tight', sans-serif;
+}
+.cx-cat-pct {
+  font-size: 16px;
+  font-weight: 700;
+  color: hsl(var(--fg));
+}
+.cx-cat-accuracy {
+  font-size: 11.5px;
+  color: hsl(var(--fg-3));
+  font-weight: 500;
+}
+.cx-cat-accuracy[data-tone='danger'] {
+  color: hsl(var(--danger));
+}
+.cx-cat-accuracy[data-tone='success'] {
+  color: hsl(var(--success));
+}
+
+/* Recent attempts list */
+.cx-attempts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cx-attempt {
+  display: grid;
+  grid-template-columns: 36px 1fr auto auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 18px;
+  background: hsl(var(--bg-2));
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 12px;
+}
+
+/* Pass/fail icon circle */
+.cx-attempt-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: hsl(var(--danger) / 0.14);
+  color: hsl(var(--danger));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.cx-attempt-icon[data-pass='true'] {
+  background: hsl(var(--success) / 0.14);
+  color: hsl(var(--success));
+}
+.cx-attempt-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.cx-attempt-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.cx-attempt-h {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: hsl(var(--fg));
+}
+.cx-attempt-h small {
+  color: hsl(var(--fg-3));
+  font-weight: 500;
+  margin-left: 6px;
+}
+.cx-attempt-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: hsl(var(--fg-3));
+  font-family: 'JetBrains Mono', monospace;
+}
+.cx-attempt-score {
+  font-family: 'Inter Tight', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: hsl(var(--fg));
+}
+.cx-attempt-tag {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.cx-attempt-tag[data-pass='true'] {
+  background: hsl(var(--success) / 0.14);
+  color: hsl(var(--success));
+}
+.cx-attempt-tag[data-pass='false'] {
+  background: hsl(var(--danger) / 0.14);
+  color: hsl(var(--danger));
+}
+
+/* Nudge / motivational amber banner */
+.cx-nudge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: hsl(var(--warning) / 0.12);
+  border: 1px solid hsl(var(--warning) / 0.3);
+  border-radius: 12px;
+  font-size: 14px;
+  color: hsl(var(--fg));
+}
+.cx-nudge-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  /* Deviation Justification: amber text uses 38 80% 52% for WCAG AA — same precedent */
+  background: hsl(var(--warning) / 0.2);
+  color: hsl(38 80% 52%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.cx-nudge-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Empty-attempts state */
+.cx-attempts-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 16px;
+  color: hsl(var(--fg-3));
+  font-size: 14px;
+  text-align: center;
+}
+
+/* ── Question Details modal (cx-modal) ─────────────────────────────────── */
+
+.cx-modal-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 12px;
+  color: hsl(var(--fg-3));
+  font-weight: 600;
+}
+
+.cx-modal-h {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.02em;
+  color: hsl(var(--fg));
+}
+
+.cx-modal-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cx-modal-tag {
+  padding: 5px 11px;
+  border-radius: 8px;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: hsl(var(--bg));
+  border: 1px solid hsl(var(--fg) / 0.12);
+  color: hsl(var(--fg-2));
+  cursor: pointer;
+  transition:
+    background 120ms,
+    border-color 120ms,
+    color 120ms;
+  line-height: 1;
+}
+
+.cx-modal-tag:hover {
+  border-color: hsl(var(--primary) / 0.4);
+  color: hsl(var(--fg));
+}
+
+.cx-modal-tag.is-active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+
+.cx-modal-tags-sep {
+  width: 1px;
+  height: 18px;
+  background: hsl(var(--fg) / 0.15);
+  flex-shrink: 0;
+}
+
+.cx-modal-q {
+  font-family: 'Noto Serif', 'Georgia', serif;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.45;
+  margin: 0;
+  color: hsl(var(--fg));
+}
+
+.cx-modal-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cx-modal-option {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid hsl(var(--fg) / 0.1);
+  background: hsl(var(--bg));
+  font-size: 14px;
+  color: hsl(var(--fg));
+}
+
+.cx-modal-option-k {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-weight: 700;
+  color: hsl(var(--fg-3));
+  font-size: 12px;
+}
+
+.cx-modal-option.is-correct {
+  background: hsl(var(--success) / 0.08);
+  border-color: hsl(var(--success) / 0.5);
+}
+
+.cx-modal-option.is-correct .cx-modal-option-k {
+  color: hsl(var(--success));
+}
+
+.cx-modal-option-check {
+  color: hsl(var(--success));
+  display: inline-flex;
+}
+
+.cx-modal-alsoin {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  color: hsl(var(--fg-3));
+}
+
+.cx-modal-alsoin-l {
+  font-weight: 600;
+}
+
+.cx-modal-alsoin-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cx-modal-alsoin-chip {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: hsl(var(--fg) / 0.06);
+  color: hsl(var(--fg-2));
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    background 120ms,
+    color 120ms;
+}
+
+.cx-modal-alsoin-chip:hover {
+  background: hsl(var(--fg) / 0.1);
+  color: hsl(var(--fg));
+}
+
 /* Accessibility: Respect user's motion preferences */
 @media (prefers-reduced-motion: reduce) {
   * {

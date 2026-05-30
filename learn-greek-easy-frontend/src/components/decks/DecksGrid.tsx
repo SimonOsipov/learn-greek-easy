@@ -27,7 +27,7 @@ export interface DecksGridProps {
    * 'default' (default) — original responsive 3-col grid (grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3).
    * 'dx' — DX-04 2-col grid (.dx-deck-grid), used by the learner /decks page only.
    */
-  gridLayout?: 'default' | 'dx';
+  gridLayout?: 'default' | 'dx' | 'cx';
 }
 
 export const DecksGrid: React.FC<DecksGridProps> = ({
@@ -73,7 +73,11 @@ export const DecksGrid: React.FC<DecksGridProps> = ({
   };
 
   const gridClassName =
-    gridLayout === 'dx' ? 'dx-deck-grid' : 'grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3';
+    gridLayout === 'dx'
+      ? 'dx-deck-grid'
+      : gridLayout === 'cx'
+        ? 'cx-deck-grid'
+        : 'grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3';
 
   return (
     <div className={gridClassName} role="list" aria-label={ariaLabel ?? t('list.title')}>
