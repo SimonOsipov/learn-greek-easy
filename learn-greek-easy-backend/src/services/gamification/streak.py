@@ -76,17 +76,15 @@ async def compute_aggregated_streak(db: AsyncSession, user_id: UUID) -> int:
     Returns:
         Current consecutive-day streak (0 if no activity).
     """
-    import asyncio
-
     card_review_repo = CardRecordReviewRepository(db)
     culture_repo = CultureAnswerHistoryRepository(db)
     mock_exam_repo = MockExamRepository(db)
 
-    vocab_dates, culture_dates, mock_dates = await asyncio.gather(
-        card_review_repo.get_unique_dates(user_id, days=MAX_STREAK_LOOKBACK_DAYS),
-        culture_repo.get_unique_dates(user_id, days=MAX_STREAK_LOOKBACK_DAYS),
-        mock_exam_repo.get_unique_dates(user_id, days=MAX_STREAK_LOOKBACK_DAYS),
-    )
+    # Sequential on the shared AsyncSession (INFRA-01) — concurrent reads on one
+    # session collide in _connection_for_bind(). Merged into a single UNION in INFRA-04.
+    vocab_dates = await card_review_repo.get_unique_dates(user_id, days=MAX_STREAK_LOOKBACK_DAYS)
+    culture_dates = await culture_repo.get_unique_dates(user_id, days=MAX_STREAK_LOOKBACK_DAYS)
+    mock_dates = await mock_exam_repo.get_unique_dates(user_id, days=MAX_STREAK_LOOKBACK_DAYS)
 
     all_dates = sorted(
         set(vocab_dates) | set(culture_dates) | set(mock_dates),
@@ -124,15 +122,12 @@ async def compute_culture_streak(db: AsyncSession, user_id: UUID) -> int:
     Returns:
         Current consecutive-day streak (0 if no activity).
     """
-    import asyncio
-
     culture_repo = CultureAnswerHistoryRepository(db)
     mock_exam_repo = MockExamRepository(db)
 
-    culture_dates, mock_dates = await asyncio.gather(
-        culture_repo.get_unique_dates(user_id, days=MAX_STREAK_LOOKBACK_DAYS),
-        mock_exam_repo.get_unique_dates(user_id, days=MAX_STREAK_LOOKBACK_DAYS),
-    )
+    # Sequential on the shared AsyncSession (INFRA-01). Merged into one UNION in INFRA-04.
+    culture_dates = await culture_repo.get_unique_dates(user_id, days=MAX_STREAK_LOOKBACK_DAYS)
+    mock_dates = await mock_exam_repo.get_unique_dates(user_id, days=MAX_STREAK_LOOKBACK_DAYS)
 
     all_dates = sorted(set(culture_dates) | set(mock_dates), reverse=True)
     return _compute_streak_from_dates(all_dates)

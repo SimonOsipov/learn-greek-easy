@@ -3730,15 +3730,17 @@ async def create_and_link_word_entry(
     # Link to deck (idempotent via on_conflict_do_nothing)
     await word_entry_repo.link_to_deck(word_entry.id, body.deck_id)
 
-    # Generate all card types
+    # Generate all card types — sequential on the shared AsyncSession (INFRA-01).
+    # These are writes against one session; a concurrent gather here collided in
+    # _connection_for_bind() exactly like the gamification read path.
     card_service = CardGeneratorService(db)
-    results = await asyncio.gather(
-        card_service.generate_meaning_cards([word_entry], body.deck_id),
-        card_service.generate_plural_form_cards([word_entry], body.deck_id),
-        card_service.generate_sentence_translation_cards([word_entry], body.deck_id),
-        card_service.generate_article_cards([word_entry], body.deck_id),
-        card_service.generate_declension_cards([word_entry], body.deck_id),
-    )
+    results = [
+        await card_service.generate_meaning_cards([word_entry], body.deck_id),
+        await card_service.generate_plural_form_cards([word_entry], body.deck_id),
+        await card_service.generate_sentence_translation_cards([word_entry], body.deck_id),
+        await card_service.generate_article_cards([word_entry], body.deck_id),
+        await card_service.generate_declension_cards([word_entry], body.deck_id),
+    ]
     cards_created = sum(r[0] for r in results)
 
     await db.commit()
