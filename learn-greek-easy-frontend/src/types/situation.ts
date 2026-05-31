@@ -107,6 +107,8 @@ export interface SituationListItem {
   dialog_lines_count: number;
   roles: string[];
   picture_image_url: string | null;
+  /** WebP derivative URLs keyed by pixel-width (PERF-10); null until PERF-11 backfills. */
+  picture_image_variants: Record<number, string> | null;
   audio_duration_seconds: number | null;
   source_title_en: string | null;
   source_country: string | null;
@@ -225,6 +227,10 @@ export interface LearnerSituationDetailResponse {
   source_image_url: string | null;
   picture_url: string | null;
   source_title: string | null;
+  /** WebP derivative URLs for picture_url, keyed by pixel-width (PERF-10). */
+  picture_variants: Record<number, string> | null;
+  /** WebP derivative URLs for source_image_url, keyed by pixel-width (PERF-10). */
+  source_image_variants: Record<number, string> | null;
 }
 
 // Exercise types for admin situation detail

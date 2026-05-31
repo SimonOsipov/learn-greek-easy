@@ -40,7 +40,12 @@ from src.schemas.news_item import (
     NewsItemUpdate,
 )
 from src.services.picture_prompt import resolve_picture_style_en
-from src.services.s3_service import IMAGE_PRESIGN_EXPIRY_SECONDS, S3Service, get_s3_service
+from src.services.s3_service import (
+    IMAGE_PRESIGN_EXPIRY_SECONDS,
+    S3Service,
+    get_s3_service,
+    maybe_generate_derivatives,
+)
 
 logger = get_logger(__name__)
 
@@ -375,6 +380,9 @@ class NewsItemService:
         success = self.s3_service.upload_object(s3_key, image_bytes, content_type)
         if not success:
             raise ValueError("Failed to upload image to S3")
+        # Generate WebP derivatives alongside the original (PERF-10).
+        # Failures are swallowed inside maybe_generate_derivatives.
+        maybe_generate_derivatives(s3_key, image_bytes, content_type)
         return s3_key
 
     @staticmethod
@@ -452,6 +460,11 @@ class NewsItemService:
         image_url = self.s3_service.generate_presigned_url(
             situation.source_image_s3_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
         )
+        image_variants = (
+            self.s3_service.get_derivative_presigned_urls(situation.source_image_s3_key)
+            if situation.source_image_s3_key
+            else None
+        )
         audio_url = self.s3_service.generate_presigned_url(description.audio_s3_key)
         audio_a2_url = self.s3_service.generate_presigned_url(description.audio_a2_s3_key)
 
@@ -492,6 +505,7 @@ class NewsItemService:
             original_article_url=news_item.original_article_url,
             country=description.country.value if description.country else "cyprus",
             image_url=image_url,
+            image_variants=image_variants or None,
             audio_url=audio_url,
             audio_generated_at=None,
             audio_duration_seconds=description.audio_duration_seconds,

@@ -210,6 +210,7 @@ from src.services.s3_service import (
     MAX_DECK_IMAGE_SIZE_BYTES,
     S3Service,
     get_s3_service,
+    maybe_generate_derivatives,
 )
 from src.services.situation_picture_service import (
     PictureGenerationError,
@@ -842,6 +843,10 @@ async def upload_deck_cover_image(
     uploaded = s3.upload_object(s3_key, data, file.content_type)
     if not uploaded:
         raise HTTPException(status_code=500, detail="Failed to upload cover image")
+
+    # Generate WebP derivatives alongside the original (PERF-10).
+    # Failures are swallowed inside maybe_generate_derivatives — upload succeeds regardless.
+    await asyncio.to_thread(maybe_generate_derivatives, s3_key, data, file.content_type)
 
     deck.cover_image_s3_key = s3_key
     await db.commit()
@@ -4830,6 +4835,9 @@ async def upload_situation_picture(
     if not uploaded:
         raise HTTPException(status_code=500, detail="Failed to upload picture")
 
+    # Generate WebP derivatives alongside the original (PERF-10).
+    await asyncio.to_thread(maybe_generate_derivatives, s3_key, data, file.content_type)
+
     picture.image_s3_key = s3_key
     await db.commit()
     await db.refresh(picture)
@@ -4998,8 +5006,12 @@ async def list_situations(
             roles = [row[0] for row in roles_result.all()]
 
         picture_image_url: str | None = None
+        picture_image_variants: dict[int, str] | None = None
         if s.picture is not None and s.picture.image_s3_key:
             picture_image_url = s3_svc.generate_presigned_url(s.picture.image_s3_key)
+            picture_image_variants = (
+                s3_svc.get_derivative_presigned_urls(s.picture.image_s3_key) or None
+            )
 
         items.append(
             SituationListItem(
@@ -5028,6 +5040,7 @@ async def list_situations(
                 dialog_lines_count=lines_count,
                 roles=roles,
                 picture_image_url=picture_image_url,
+                picture_image_variants=picture_image_variants,
                 audio_duration_seconds=s.dialog.audio_duration_seconds if s.dialog else None,
                 source_title_en=s.source_title_en,
                 source_country=s.description.country if s.description else None,

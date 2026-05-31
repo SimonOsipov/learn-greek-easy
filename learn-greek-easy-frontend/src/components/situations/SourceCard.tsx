@@ -1,10 +1,13 @@
 import { ExternalLink } from 'lucide-react';
 
+import { buildSrcSet, type ImageVariants } from '@/lib/imageVariants';
 import { cn } from '@/lib/utils';
 
 interface SourceCardProps {
   sourceUrl: string;
   sourceImageUrl?: string | null;
+  /** WebP derivative URLs for sourceImageUrl (PERF-10). */
+  sourceImageVariants?: ImageVariants;
   sourceTitle?: string | null;
   className?: string;
 }
@@ -20,6 +23,7 @@ function extractDomain(url: string): string {
 export const SourceCard: React.FC<SourceCardProps> = ({
   sourceUrl,
   sourceImageUrl,
+  sourceImageVariants,
   sourceTitle,
   className,
 }) => {
@@ -36,7 +40,16 @@ export const SourceCard: React.FC<SourceCardProps> = ({
       )}
     >
       {sourceImageUrl && (
-        <img src={sourceImageUrl} alt="" className="aspect-video w-full object-cover" />
+        <img
+          src={sourceImageUrl}
+          srcSet={buildSrcSet(sourceImageVariants)}
+          sizes="(max-width: 768px) 100vw, 50vw"
+          alt=""
+          width={800}
+          height={450}
+          className="aspect-video w-full object-cover"
+          loading="lazy"
+        />
       )}
       <div className="flex items-center gap-2 px-4 py-3 text-sm">
         <span className="flex-1 font-medium text-foreground">{displayTitle}</span>

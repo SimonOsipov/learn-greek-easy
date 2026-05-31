@@ -4,11 +4,14 @@ import { ImageOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Skeleton } from '@/components/ui/skeleton';
+import { buildSrcSet, type ImageVariants } from '@/lib/imageVariants';
 import { getSentry, isSentryLoaded, queueMessage } from '@/lib/sentry-queue';
 import { cn } from '@/lib/utils';
 
 interface PictureOptionProps {
   imageUrl: string | null;
+  /** WebP derivative URLs (PERF-10). Falls back to imageUrl when absent. */
+  imageVariants?: ImageVariants;
   optionIndex: number;
   exerciseId: string;
   alt: string;
@@ -19,6 +22,7 @@ type ImgState = 'loading' | 'loaded' | 'error';
 
 export function PictureOption({
   imageUrl,
+  imageVariants,
   optionIndex,
   exerciseId,
   alt,
@@ -86,7 +90,11 @@ export function PictureOption({
       {imgState === 'loading' && <Skeleton className="absolute inset-0 h-full w-full rounded-lg" />}
       <img
         src={imageUrl!}
+        srcSet={buildSrcSet(imageVariants)}
+        sizes="(max-width: 768px) 50vw, 25vw"
         alt={alt}
+        width={400}
+        height={400}
         className={cn(
           'h-full w-full object-cover transition-opacity duration-200',
           imgState === 'loaded' ? 'opacity-100' : 'opacity-0'

@@ -78,6 +78,8 @@ export interface PictureMatchOption {
   option_index: number;
   image_url: string | null;
   description_text: string | null;
+  /** WebP derivative URLs keyed by pixel-width (PERF-10); null until PERF-11 backfills. */
+  image_variants: Record<number, string> | null;
 }
 
 export interface SelectPictureFromDescriptionPayload {

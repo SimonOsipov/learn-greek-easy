@@ -23,6 +23,7 @@ Admin Endpoints (superuser only):
 - DELETE /culture/questions/{question_id} - Delete a question
 """
 
+import asyncio
 import hashlib
 from typing import Optional
 from uuid import UUID
@@ -72,6 +73,7 @@ from src.services.s3_service import (
     MAX_DECK_IMAGE_SIZE_BYTES,
     S3Service,
     get_s3_service,
+    maybe_generate_derivatives,
 )
 from src.tasks import is_background_tasks_enabled, persist_culture_answer_task
 
@@ -942,6 +944,9 @@ async def upload_culture_deck_cover_image(
     uploaded = s3.upload_object(s3_key, data, file.content_type)
     if not uploaded:
         raise HTTPException(status_code=500, detail="Failed to upload cover image")
+
+    # Generate WebP derivatives alongside the original (PERF-10).
+    await asyncio.to_thread(maybe_generate_derivatives, s3_key, data, file.content_type)
 
     deck.cover_image_s3_key = s3_key
     await db.commit()

@@ -31,10 +31,12 @@ URL Stability Guarantee:
 
 """
 
+import io
+import posixpath
 import threading
 import time
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import boto3
 import botocore.auth
@@ -89,6 +91,25 @@ MAX_DECK_IMAGE_SIZE_BYTES = 3 * 1024 * 1024  # 3MB
 # image URLs byte-stable for ~30 days so returning users hit browser disk cache
 # instead of re-downloading on every session.
 IMAGE_PRESIGN_EXPIRY_SECONDS = 2592000  # 30 days
+
+# WebP derivative widths generated alongside every image upload (PERF-10).
+# Keys follow the scheme  <base_without_ext>_<width>w.webp
+# e.g. situation-pictures/abc123/sha256hash_400w.webp
+# PERF-11 backfill script reuses these same widths + key scheme.
+DERIVATIVE_WIDTHS: tuple[int, ...] = (400, 800, 1600)
+_DERIVATIVE_CONTENT_TYPE = "image/webp"
+
+# MIME types that trigger derivative generation (audio/other types are skipped).
+_IMAGE_CONTENT_TYPES = frozenset(
+    [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif",
+        "image/avif",
+        "image/heic",
+    ]
+)
 
 # Presigned URL cache: hot-path micro-optimisation that avoids redundant signing.
 # URL stability across deploys is guaranteed by clock-window determinism (see module
@@ -485,6 +506,148 @@ class S3Service:
         """Get file extension for a content type."""
         return CONTENT_TYPE_TO_EXT.get(content_type)
 
+    @staticmethod
+    def _encode_webp(img: "Any", width: int, original_height: int) -> Optional[bytes]:
+        """Resize *img* (a PIL Image) to *width* px and encode as WebP."""
+        from PIL import Image  # noqa: PLC0415
+
+        height = max(1, int(original_height * width / img.width))
+        resized: Any = img.resize((width, height), Image.Resampling.LANCZOS)
+        if resized.mode not in ("RGB", "RGBA"):
+            resized = resized.convert("RGB")
+        buf = io.BytesIO()
+        resized.save(buf, format="WEBP", quality=82, method=4)
+        return buf.getvalue()
+
+    def _upload_derivative_width(
+        self,
+        base_without_ext: str,
+        img: "Any",
+        width: int,
+        original_height: int,
+        base_s3_key: str,
+    ) -> Optional[str]:
+        """Encode one WebP derivative, upload it, return key on success or None."""
+        webp_bytes = self._encode_webp(img, width, original_height)
+        if not webp_bytes:
+            return None
+        derivative_key = f"{base_without_ext}_{width}w.webp"
+        ok = self.upload_object(derivative_key, webp_bytes, _DERIVATIVE_CONTENT_TYPE)
+        if ok:
+            logger.info(
+                "Uploaded WebP derivative",
+                extra={
+                    "derivative_key": derivative_key,
+                    "width": width,
+                    "size_bytes": len(webp_bytes),
+                },
+            )
+            return derivative_key
+        logger.warning(
+            "Failed to upload WebP derivative",
+            extra={"derivative_key": derivative_key, "width": width},
+        )
+        return None
+
+    @staticmethod
+    def _open_image(image_bytes: bytes) -> "Optional[Any]":
+        """Open *image_bytes* as a Pillow Image, normalise mode to RGB/RGBA, return it.
+
+        Returns a ``PIL.Image.Image`` instance, or None if decoding fails.
+        Typed as ``Any`` because PIL has no PEP 561 stubs bundled with the package.
+        """
+        from PIL import Image  # noqa: PLC0415
+
+        try:
+            img: Any = Image.open(io.BytesIO(image_bytes))
+        except Exception:
+            return None
+        if img.mode not in ("RGB", "RGBA"):
+            try:
+                img = img.convert(
+                    "RGBA" if img.mode == "P" and "transparency" in img.info else "RGB"
+                )
+            except Exception:
+                pass
+        return img
+
+    def generate_image_derivatives(
+        self,
+        base_s3_key: str,
+        image_bytes: bytes,
+        widths: tuple[int, ...] = DERIVATIVE_WIDTHS,
+    ) -> list[str]:
+        """Generate WebP derivatives at the requested widths and upload them to S3.
+
+        Produces one WebP variant per width (skipping widths >= source width) and
+        uploads each under the deterministic key ``<base_without_ext>_<width>w.webp``.
+        The original object is never modified.  Per-width failures are swallowed.
+
+        Returns:
+            List of S3 keys for successfully uploaded derivatives.
+        """
+        img = self._open_image(image_bytes)
+        if img is None:
+            logger.warning(
+                "Could not open image for derivative generation; skipping",
+                extra={"s3_key": base_s3_key},
+            )
+            return []
+
+        original_width, original_height = img.size
+        base_without_ext = posixpath.splitext(base_s3_key)[0]
+
+        uploaded_keys: list[str] = []
+        for width in sorted(widths):
+            if width >= original_width:
+                continue
+            try:
+                key = self._upload_derivative_width(
+                    base_without_ext, img, width, original_height, base_s3_key
+                )
+                if key:
+                    uploaded_keys.append(key)
+            except Exception as exc:
+                logger.warning(
+                    "WebP derivative generation failed for width; skipping",
+                    extra={"s3_key": base_s3_key, "width": width, "error": str(exc)},
+                )
+        return uploaded_keys
+
+    def get_derivative_presigned_urls(
+        self,
+        base_s3_key: str,
+        expiry_seconds: Optional[int] = None,
+    ) -> dict[int, str]:
+        """Return presigned URLs for each available WebP derivative of base_s3_key.
+
+        Keys are the pixel-width integers (e.g. {400: url, 800: url, 1600: url}).
+        A width entry is omitted when the derivative key does not exist in S3
+        (no-op — presigning never checks existence, but callers should treat a
+        missing URL as "derivative not yet generated").
+
+        In practice we always presign all DERIVATIVE_WIDTHS and let the frontend
+        gracefully fall back to the original when a URL resolves to 404.  This
+        keeps the helper simple and avoids a HEAD-per-width round-trip at read time.
+        PERF-11 (backfill) will create the missing objects so 404s will heal.
+
+        Args:
+            base_s3_key:    S3 key of the original image.
+            expiry_seconds: Presign expiry; defaults to IMAGE_PRESIGN_EXPIRY_SECONDS.
+
+        Returns:
+            dict mapping width (int) to presigned URL (str); empty if S3 not configured.
+        """
+        expiry = expiry_seconds or IMAGE_PRESIGN_EXPIRY_SECONDS
+        base_without_ext = posixpath.splitext(base_s3_key)[0]
+        result: dict[int, str] = {}
+        for width in DERIVATIVE_WIDTHS:
+            derivative_key = f"{base_without_ext}_{width}w.webp"
+            url = self.generate_presigned_url(derivative_key, expiry_seconds=expiry)
+            if url:
+                result[width] = url
+        return result
+
 
 # Singleton instance for use across the application
 _s3_service: Optional[S3Service] = None
@@ -500,3 +663,26 @@ def get_s3_service() -> S3Service:
     if _s3_service is None:
         _s3_service = S3Service()
     return _s3_service
+
+
+def maybe_generate_derivatives(
+    base_s3_key: str,
+    image_bytes: bytes,
+    content_type: str,
+) -> None:
+    """Fire-and-forget derivative generation for an image upload.
+
+    Calls ``S3Service.generate_image_derivatives`` only when the content type is
+    a recognised image format.  Any failure is logged inside the helper and does
+    NOT propagate — so callers can invoke this after ``upload_object`` without
+    wrapping in try/except.
+
+    Args:
+        base_s3_key:   S3 key the original bytes were uploaded to.
+        image_bytes:   The same bytes that were uploaded.
+        content_type:  MIME type of the upload.
+    """
+    if content_type not in _IMAGE_CONTENT_TYPES:
+        return
+    svc = get_s3_service()
+    svc.generate_image_derivatives(base_s3_key, image_bytes)
