@@ -3,6 +3,8 @@
 import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { queryClient } from '@/lib/queryClient';
+import { supabase } from '@/lib/supabaseClient';
+import { authAPI } from '@/services/authAPI';
 import { useAuthStore } from '@/stores/authStore';
 
 /**
@@ -119,6 +121,37 @@ describe.skip('authStore (uses persist middleware)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Shared mocks (apply to all describe blocks below)
+// ---------------------------------------------------------------------------
+
+vi.mock('@/lib/supabaseClient', () => ({
+  supabase: {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
+      signOut: vi.fn().mockResolvedValue({ error: null }),
+      onAuthStateChange: vi.fn().mockReturnValue({
+        data: { subscription: { unsubscribe: vi.fn() } },
+      }),
+    },
+  },
+}));
+
+vi.mock('posthog-js', () => ({
+  default: { capture: vi.fn(), reset: vi.fn(), identify: vi.fn() },
+}));
+
+vi.mock('@/lib/errorReporting', () => ({
+  reportAPIError: vi.fn(),
+}));
+
+vi.mock('@/services/authAPI', () => ({
+  authAPI: {
+    getProfile: vi.fn(),
+    updateProfile: vi.fn(),
+  },
+}));
+
+// ---------------------------------------------------------------------------
 // AC #6: logout removes analytics cache entries from the singleton queryClient
 //
 // authStore.logout() calls queryClient.removeQueries({ queryKey: ['analytics'] })
@@ -128,22 +161,6 @@ describe.skip('authStore (uses persist middleware)', () => {
 // Supabase sign-out is mocked so no network call is made. PostHog is also
 // mocked to prevent warnings.
 // ---------------------------------------------------------------------------
-
-vi.mock('@/lib/supabaseClient', () => ({
-  supabase: {
-    auth: {
-      signOut: vi.fn().mockResolvedValue({ error: null }),
-    },
-  },
-}));
-
-vi.mock('posthog-js', () => ({
-  default: { capture: vi.fn(), reset: vi.fn() },
-}));
-
-vi.mock('@/lib/errorReporting', () => ({
-  reportAPIError: vi.fn(),
-}));
 
 describe('authStore — logout cache-clear (AC #6)', () => {
   const seedKey = ['analytics', 'user-A', 'last7'] as const;
@@ -168,5 +185,65 @@ describe('authStore — logout cache-clear (AC #6)', () => {
 
     // Analytics cache entry should be gone
     expect(queryClient.getQueryData(seedKey)).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PERF-03: checkAuth in-flight guard + freshness window
+//
+// We test the dedup logic against the real store singleton (same approach as
+// the logout cache-clear tests above). The persist middleware's localStorage
+// side-effects don't affect these tests — we only care about how many times
+// authAPI.getProfile is called.
+// ---------------------------------------------------------------------------
+
+// Minimal profile response for checkAuth
+const minimalProfile = {
+  id: 'user-dedup',
+  email: 'dedup@test.com',
+  full_name: 'Dedup User',
+  avatar_url: null,
+  is_active: true,
+  is_superuser: false,
+  created_at: '2025-01-01T00:00:00Z',
+  updated_at: '2025-01-01T00:00:00Z',
+};
+
+describe('authStore — checkAuth in-flight dedup (PERF-03)', () => {
+  const getSession = supabase.auth.getSession as ReturnType<typeof vi.fn>;
+  const getProfile = authAPI.getProfile as ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Reset store to unauthenticated state
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+    });
+    // Provide a valid session so checkAuth doesn't bail out at the session guard
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
+    // Default: profile fetch succeeds
+    getProfile.mockResolvedValue(minimalProfile);
+  });
+
+  it('two concurrent checkAuth() calls result in exactly one getProfile() request', async () => {
+    // Fire two concurrent calls — neither has awaited yet, so the second
+    // should latch onto the first's in-flight Promise.
+    await Promise.all([useAuthStore.getState().checkAuth(), useAuthStore.getState().checkAuth()]);
+
+    expect(getProfile).toHaveBeenCalledTimes(1);
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+  });
+
+  it('a subsequent checkAuth() within the freshness window skips the fetch', async () => {
+    // First call — populates store + stamps _profileFetchedAt
+    await useAuthStore.getState().checkAuth();
+    expect(getProfile).toHaveBeenCalledTimes(1);
+
+    // Second call immediately after — should be a no-op (freshness window)
+    await useAuthStore.getState().checkAuth();
+    expect(getProfile).toHaveBeenCalledTimes(1); // still 1
   });
 });

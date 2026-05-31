@@ -6,9 +6,10 @@
  * - role derivation: effective_role ?? (is_superuser ? 'admin' : 'free')
  * - mapSupabaseError key mapping (incl. unknown fallthrough)
  * - return-to redirect honored via location.state.from
+ * - authAPI.getProfile is NOT called directly from LoginForm (uses store.checkAuth)
  *
  * Supabase client is globally mocked in src/lib/test-setup.ts; authAPI is
- * mocked per-file (matching the sibling RegisterForm / ProtectedRoute tests).
+ * mocked per-file so we can verify getProfile call counts.
  */
 
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
@@ -28,15 +29,17 @@ import { useAuthStore } from '@/stores/authStore';
 
 import { LoginForm } from '../LoginForm';
 
-// authAPI is imported by LoginForm but not globally mocked
+// authAPI is called by authStore.checkAuth (not directly by LoginForm any more)
 vi.mock('@/services/authAPI', () => ({
   authAPI: {
     getProfile: vi.fn(),
+    updateProfile: vi.fn(),
   },
 }));
 
 // Typed handles to the globally-mocked supabase auth methods
 const signInWithPassword = supabase.auth.signInWithPassword as ReturnType<typeof vi.fn>;
+const getSession = supabase.auth.getSession as ReturnType<typeof vi.fn>;
 const getProfile = authAPI.getProfile as ReturnType<typeof vi.fn>;
 
 const baseProfile: UserProfileResponse = {
@@ -49,6 +52,9 @@ const baseProfile: UserProfileResponse = {
   created_at: '2025-01-01T00:00:00Z',
   updated_at: '2025-01-02T00:00:00Z',
 };
+
+// A Supabase session stub (enough for checkAuth to proceed past the session guard)
+const stubSession = { access_token: 'tok', user: { id: 'supabase-user' } };
 
 /**
  * Render LoginForm inside a router so navigation lands on a sentinel route.
@@ -94,6 +100,8 @@ describe('LoginForm', () => {
       data: { user: { id: 'supabase-user', email: 'demo@learngreekeasy.com' } },
       error: null,
     });
+    // After login, getSession returns a valid session so checkAuth can proceed
+    getSession.mockResolvedValue({ data: { session: stubSession } });
     getProfile.mockResolvedValue(baseProfile);
   });
 
@@ -109,7 +117,7 @@ describe('LoginForm', () => {
         expect(screen.getByText('Dashboard Destination')).toBeInTheDocument();
       });
 
-      // Store is populated from the profile response
+      // Store is populated from the profile response (via checkAuth)
       const state = useAuthStore.getState();
       expect(state.isAuthenticated).toBe(true);
       expect(state.error).toBeNull();
@@ -124,6 +132,20 @@ describe('LoginForm', () => {
         email: 'demo@learngreekeasy.com',
         password: 'password123',
       });
+    });
+
+    it('fetches the profile exactly once via store.checkAuth (not directly)', async () => {
+      const user = userEvent.setup();
+      renderLoginForm();
+
+      await fillAndSubmit(user);
+
+      await waitFor(() => {
+        expect(screen.getByText('Dashboard Destination')).toBeInTheDocument();
+      });
+
+      // getProfile should be called exactly once (via checkAuth), not twice
+      expect(getProfile).toHaveBeenCalledTimes(1);
     });
   });
 
