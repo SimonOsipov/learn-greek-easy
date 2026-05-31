@@ -779,3 +779,272 @@ test.describe('V2 Flashcard Review', () => {
     await expect(page.locator('[data-testid="pf-decl-target"]')).toBeVisible();
   });
 });
+
+// ============================================================================
+// PRACT2-2 Tests: Card sizing, mode toggle removal, family badge, EN/RU isolation
+// ============================================================================
+
+test.describe('PRACT2-2 Practice Card Sizing & Stability', () => {
+  test.use({ storageState: LEARNER_AUTH });
+
+  // E2E-P22-01: Mode toggle absent
+  //
+  // The Reveal/Type mode toggle was removed in PRACT2-2.
+  // [data-testid="pf-mode-toggle"] must NOT exist in the active practice screen.
+  test('E2E-P22-01: pf-mode-toggle is absent from the practice screen', async ({ page }) => {
+    await navigateToV2Practice(page, v2NounsDeckId);
+
+    const cardVisible = await page
+      .locator('[data-testid="pf-card"]')
+      .isVisible()
+      .catch(() => false);
+    if (!cardVisible) {
+      console.log('[P22-01] No card available — skipping (cards exhausted)');
+      return;
+    }
+
+    // The toggle must not exist anywhere in the DOM
+    await expect(page.locator('[data-testid="pf-mode-toggle"]')).toHaveCount(0);
+  });
+
+  // E2E-P22-02: Family badge shows full word (not an abbreviation)
+  //
+  // PRACT2-2 ships .pf-fam with text-transform:uppercase in CSS, so the
+  // displayed label is uppercase, but the DOM textContent is the source-case
+  // string: "Translation", "Sentence", "Grammar", "Declension", or "Audio".
+  test('E2E-P22-02: family badge textContent is a full word', async ({ page }) => {
+    await navigateToV2Practice(page, v2NounsDeckId);
+
+    const cardVisible = await page
+      .locator('[data-testid="pf-card"]')
+      .isVisible()
+      .catch(() => false);
+    if (!cardVisible) {
+      console.log('[P22-02] No card available — skipping (cards exhausted)');
+      return;
+    }
+
+    const badge = page.locator('[data-testid="pf-fam-badge"]');
+    await expect(badge).toBeVisible();
+
+    const text = await badge.textContent();
+    // text-transform:uppercase is CSS — textContent reflects the source string.
+    // Full words: Translation, Sentence, Grammar, Declension, Audio (any capitalisation).
+    expect(text).toMatch(/^(Translation|Sentence|Grammar|Declension|Audio)$/i);
+  });
+
+  // E2E-P22-03: Zero height-delta on reveal (stable card frame)
+  //
+  // .pf-foot is always mounted (with inert + visibility:hidden pre-reveal) so
+  // the card frame reserves full height before the flip — no layout shift.
+  // Asserts |height_after_reveal - height_before_reveal| <= 1px.
+  //
+  // Covers a Translation card (first reachable card). Declension is covered
+  // below in E2E-P22-04 when one is available in the seed queue.
+  test('E2E-P22-03: card height is stable on reveal (translation card)', async ({ page }) => {
+    await navigateToV2Practice(page, v2NounsDeckId);
+
+    const cardVisible = await page
+      .locator('[data-testid="pf-card"]')
+      .isVisible()
+      .catch(() => false);
+    if (!cardVisible) {
+      console.log('[P22-03] No card available — skipping (cards exhausted)');
+      return;
+    }
+
+    // Find the first translation-family card
+    let foundTranslation = false;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const isDone = await page
+        .locator('[data-testid="pf-done"]')
+        .isVisible()
+        .catch(() => false);
+      if (isDone) break;
+
+      const isTranslation = await page
+        .locator('.pf-app[data-fam="translation"]')
+        .isVisible()
+        .catch(() => false);
+
+      if (isTranslation) {
+        foundTranslation = true;
+        break;
+      }
+
+      // Advance past this card
+      const cv = await page.locator('[data-testid="pf-card"]').isVisible().catch(() => false);
+      if (!cv) break;
+      await page.keyboard.press('Space');
+      await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
+      await page.keyboard.press('3');
+      await page.waitForTimeout(300);
+      const nxt = page
+        .locator('[data-testid="pf-card"]')
+        .or(page.locator('[data-testid="pf-done"]'));
+      await expect(nxt).toBeVisible({ timeout: 10000 });
+    }
+
+    if (!foundTranslation) {
+      console.log('[P22-03] No translation card found — skipping height-delta assertion');
+      return;
+    }
+
+    const cardLocator = page.locator('[data-testid="pf-card"]');
+
+    // Capture height BEFORE reveal
+    const boxBefore = await cardLocator.boundingBox();
+    expect(boxBefore).not.toBeNull();
+
+    // Flip the card (reveal answer)
+    await page.keyboard.press('Space');
+    await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
+    // Let layout settle
+    await page.waitForTimeout(100);
+
+    // Capture height AFTER reveal
+    const boxAfter = await cardLocator.boundingBox();
+    expect(boxAfter).not.toBeNull();
+
+    const delta = Math.abs(boxAfter!.height - boxBefore!.height);
+    console.log(
+      `[P22-03] Translation height before=${boxBefore!.height}px after=${boxAfter!.height}px delta=${delta}px`
+    );
+    expect(delta).toBeLessThanOrEqual(1);
+
+    // Rate to advance
+    await page.keyboard.press('3');
+    const nxt = page
+      .locator('[data-testid="pf-card"]')
+      .or(page.locator('[data-testid="pf-done"]'));
+    await expect(nxt).toBeVisible({ timeout: 10000 });
+  });
+
+  // E2E-P22-04: Zero height-delta on reveal (declension card)
+  //
+  // Same stability assertion as P22-03, but targeted at a Declension card.
+  // Declension cards use a different foot (DeclTable revealed vs. hidden),
+  // so they must also maintain height stability.
+  //
+  // If no declension card is reachable in the seeded queue (e.g. all consumed
+  // by earlier serial tests), the test logs a note and exits without failing.
+  test('E2E-P22-04: card height is stable on reveal (declension card)', async ({ page }) => {
+    await navigateToV2Practice(page, v2NounsDeckId);
+
+    const cardVisible = await page
+      .locator('[data-testid="pf-card"]')
+      .isVisible()
+      .catch(() => false);
+    if (!cardVisible) {
+      console.log('[P22-04] No card available — skipping (cards exhausted)');
+      return;
+    }
+
+    // Iterate to find a declension card (safety limit 30)
+    let foundDeclension = false;
+    for (let i = 0; i < 30; i++) {
+      const isDone = await page
+        .locator('[data-testid="pf-done"]')
+        .isVisible()
+        .catch(() => false);
+      if (isDone) break;
+
+      const isDeclension = await page
+        .locator('.pf-app[data-fam="declension"]')
+        .isVisible()
+        .catch(() => false);
+      if (isDeclension) {
+        foundDeclension = true;
+        break;
+      }
+
+      const cv = await page.locator('[data-testid="pf-card"]').isVisible().catch(() => false);
+      if (!cv) break;
+      await page.keyboard.press('Space');
+      await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
+      await page.keyboard.press('3');
+      await page.waitForTimeout(300);
+      const nxt = page
+        .locator('[data-testid="pf-card"]')
+        .or(page.locator('[data-testid="pf-done"]'));
+      await expect(nxt).toBeVisible({ timeout: 10000 });
+    }
+
+    if (!foundDeclension) {
+      console.log(
+        '[P22-04] No declension card found in queue — height-delta for declension is covered by unit tests'
+      );
+      return;
+    }
+
+    const cardLocator = page.locator('[data-testid="pf-card"]');
+
+    // Capture height BEFORE reveal
+    const boxBefore = await cardLocator.boundingBox();
+    expect(boxBefore).not.toBeNull();
+
+    // Flip the card
+    await page.locator('[data-testid="pf-card"]').click();
+    await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
+    await page.waitForTimeout(100);
+
+    // Capture height AFTER reveal
+    const boxAfter = await cardLocator.boundingBox();
+    expect(boxAfter).not.toBeNull();
+
+    const delta = Math.abs(boxAfter!.height - boxBefore!.height);
+    console.log(
+      `[P22-04] Declension height before=${boxBefore!.height}px after=${boxAfter!.height}px delta=${delta}px`
+    );
+    expect(delta).toBeLessThanOrEqual(1);
+  });
+
+  // E2E-P22-05: EN/RU toggle does NOT mutate global i18n language
+  //
+  // PRACT2-2 decouples card language from i18n. Clicking the RU button must:
+  //   a. NOT change document.documentElement.lang (i18n language invariant)
+  //   b. Set aria-pressed="true" on pf-lang-ru
+  //
+  // Content-swap assertions (EN answer vs RU answer) require a sentence_translation
+  // card with answer_ru populated. In the seeded "Greek A1 Vocabulary (Nouns)" deck,
+  // sentence_translation cards may carry sentence_ru (shown in the example block post-
+  // reveal) but answer_ru is only populated on sentence cards — availability depends
+  // on the seed run. If not reachable, the i18n-invariant + aria-pressed assertions
+  // below are the canonical E2E coverage; content-swap is covered by unit tests in
+  // src/features/practice/pf/__tests__/Answer.test.tsx.
+  test('E2E-P22-05: EN/RU toggle does not change i18n language; RU reflects pressed state', async ({
+    page,
+  }) => {
+    await navigateToV2Practice(page, v2NounsDeckId);
+
+    const cardVisible = await page
+      .locator('[data-testid="pf-card"]')
+      .isVisible()
+      .catch(() => false);
+    if (!cardVisible) {
+      console.log('[P22-05] No card available — skipping (cards exhausted)');
+      return;
+    }
+
+    // Capture the HTML lang attribute BEFORE clicking RU
+    const langBefore = await page.evaluate(() => document.documentElement.lang);
+    console.log(`[P22-05] HTML lang before RU click: "${langBefore}"`);
+
+    // Click RU button (stop-propagation is handled inside CardHead)
+    const ruBtn = page.locator('[data-testid="pf-lang-ru"]');
+    await expect(ruBtn).toBeVisible();
+    await ruBtn.click();
+
+    // Assert (a): HTML lang attribute unchanged
+    const langAfter = await page.evaluate(() => document.documentElement.lang);
+    console.log(`[P22-05] HTML lang after RU click: "${langAfter}"`);
+    expect(langAfter).toBe(langBefore);
+
+    // Assert (b): RU button is now aria-pressed="true"
+    await expect(ruBtn).toHaveAttribute('aria-pressed', 'true');
+
+    // Assert EN button is now aria-pressed="false"
+    const enBtn = page.locator('[data-testid="pf-lang-en"]');
+    await expect(enBtn).toHaveAttribute('aria-pressed', 'false');
+  });
+});

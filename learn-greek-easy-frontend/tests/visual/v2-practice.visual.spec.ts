@@ -765,3 +765,341 @@ test.describe('V2 Practice - Deck Header Filter Pills', () => {
     await takeSnapshot(page, 'V2 Practice - Filter Pills - Mobile Light', testInfo);
   });
 });
+
+// ============================================================================
+// PRACT2-2 Visual Regression Tests
+//
+// Covers the fixed visual states introduced in PRACT2-2:
+//   1. Stable card frame (unrevealed vs revealed at identical bounding box)
+//   2. Top bar: progress centred, NO mode toggle
+//   3. Family badge full word (text-transform:uppercase is CSS, source-case in DOM)
+//   4. ~760px card width (pf-card-area max-width: min(760px, 100%))
+//
+// NOTE: These tests generate Chromatic snapshot baselines. Per project
+// convention (skip-visual label), baselines are verified manually on the dev
+// preview environment before merge — the tests exist to provide coverage and
+// the snapshot names serve as anchors for future diffs.
+//
+// Snapshots are light + dark for each reference state.
+// ============================================================================
+
+// ── PRACT2-2 State A: Translation card unrevealed (stable height, full badge, ~760px) ──
+
+test.describe('PRACT2-2 - Card Frame Stability', () => {
+  // ── State A1: Translation unrevealed ────────────────────────────────────────
+
+  test('PRACT2-2 - Translation Unrevealed - Desktop Light', async ({ page }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await setupV2PracticeMocks(page, mockV2Queue);
+    await loginForVisualTest(page);
+    await setTheme(page, 'light');
+    await navigateToPractice(page);
+
+    // Confirm translation family and card in question state
+    await expect(page.locator('.pf-app[data-fam="translation"]')).toBeVisible({ timeout: 5000 });
+    // pf-fam-badge must show the full label (source-case, CSS renders uppercase)
+    await expect(page.locator('[data-testid="pf-fam-badge"]')).toHaveText('Translation');
+    // Mode toggle must be absent
+    await expect(page.locator('[data-testid="pf-mode-toggle"]')).toHaveCount(0);
+
+    await takeSnapshot(page, 'PRACT2-2 - Translation Unrevealed - Desktop Light', testInfo);
+  });
+
+  test('PRACT2-2 - Translation Unrevealed - Desktop Dark', async ({ page }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await setupV2PracticeMocks(page, mockV2Queue);
+    await loginForVisualTest(page);
+    await setTheme(page, 'dark');
+    await navigateToPractice(page);
+
+    await expect(page.locator('.pf-app[data-fam="translation"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="pf-fam-badge"]')).toHaveText('Translation');
+    await expect(page.locator('[data-testid="pf-mode-toggle"]')).toHaveCount(0);
+
+    await takeSnapshot(page, 'PRACT2-2 - Translation Unrevealed - Desktop Dark', testInfo);
+  });
+
+  // ── State A2: Translation revealed (same card height) ───────────────────────
+
+  test('PRACT2-2 - Translation Revealed - Desktop Light', async ({ page }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await setupV2PracticeMocks(page, mockV2Queue);
+    await loginForVisualTest(page);
+    await setTheme(page, 'light');
+    await navigateToPractice(page);
+
+    await expect(page.locator('.pf-app[data-fam="translation"]')).toBeVisible({ timeout: 5000 });
+
+    // Capture height before reveal
+    const boxBefore = await page.locator('[data-testid="pf-card"]').boundingBox();
+    expect(boxBefore).not.toBeNull();
+
+    // Flip card
+    await flipCard(page);
+    await page.waitForTimeout(100);
+
+    // Capture height after reveal — must be identical (±1px)
+    const boxAfter = await page.locator('[data-testid="pf-card"]').boundingBox();
+    expect(boxAfter).not.toBeNull();
+    const delta = Math.abs(boxAfter!.height - boxBefore!.height);
+    expect(delta).toBeLessThanOrEqual(1);
+
+    // Mode toggle still absent post-reveal
+    await expect(page.locator('[data-testid="pf-mode-toggle"]')).toHaveCount(0);
+
+    await takeSnapshot(page, 'PRACT2-2 - Translation Revealed - Desktop Light', testInfo);
+  });
+
+  test('PRACT2-2 - Translation Revealed - Desktop Dark', async ({ page }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await setupV2PracticeMocks(page, mockV2Queue);
+    await loginForVisualTest(page);
+    await setTheme(page, 'dark');
+    await navigateToPractice(page);
+
+    await expect(page.locator('.pf-app[data-fam="translation"]')).toBeVisible({ timeout: 5000 });
+
+    const boxBefore = await page.locator('[data-testid="pf-card"]').boundingBox();
+    expect(boxBefore).not.toBeNull();
+
+    await flipCard(page);
+    await page.waitForTimeout(100);
+
+    const boxAfter = await page.locator('[data-testid="pf-card"]').boundingBox();
+    expect(boxAfter).not.toBeNull();
+    const delta = Math.abs(boxAfter!.height - boxBefore!.height);
+    expect(delta).toBeLessThanOrEqual(1);
+
+    await expect(page.locator('[data-testid="pf-mode-toggle"]')).toHaveCount(0);
+
+    await takeSnapshot(page, 'PRACT2-2 - Translation Revealed - Desktop Dark', testInfo);
+  });
+
+  // ── State B: Declension card unrevealed + revealed (stable height) ──────────
+  //
+  // Navigates to card index 5 (cr-006, declension) by rating cards 0-4.
+  // The declension card uses DeclTable as both question and answer surface,
+  // but .pf-foot must still be mounted pre-reveal so the frame height stays fixed.
+
+  test('PRACT2-2 - Declension Unrevealed - Desktop Light', async ({ page }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await setupV2PracticeMocks(page, mockV2Queue);
+    await loginForVisualTest(page);
+    await setTheme(page, 'light');
+    await navigateToPractice(page);
+
+    // Advance to declension card (index 5 in mock queue)
+    for (let i = 0; i < 5; i++) {
+      await flipCard(page);
+      await rateOk(page);
+      await expect(page.locator('[data-testid="pf-card"]')).toBeVisible({ timeout: 8000 });
+    }
+
+    await expect(page.locator('.pf-app[data-fam="declension"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="pf-fam-badge"]')).toHaveText('Declension');
+    await expect(page.locator('[data-testid="pf-mode-toggle"]')).toHaveCount(0);
+
+    await takeSnapshot(page, 'PRACT2-2 - Declension Unrevealed - Desktop Light', testInfo);
+  });
+
+  test('PRACT2-2 - Declension Unrevealed - Desktop Dark', async ({ page }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await setupV2PracticeMocks(page, mockV2Queue);
+    await loginForVisualTest(page);
+    await setTheme(page, 'dark');
+    await navigateToPractice(page);
+
+    for (let i = 0; i < 5; i++) {
+      await flipCard(page);
+      await rateOk(page);
+      await expect(page.locator('[data-testid="pf-card"]')).toBeVisible({ timeout: 8000 });
+    }
+
+    await expect(page.locator('.pf-app[data-fam="declension"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="pf-fam-badge"]')).toHaveText('Declension');
+    await expect(page.locator('[data-testid="pf-mode-toggle"]')).toHaveCount(0);
+
+    await takeSnapshot(page, 'PRACT2-2 - Declension Unrevealed - Desktop Dark', testInfo);
+  });
+
+  test('PRACT2-2 - Declension Revealed - Desktop Light', async ({ page }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await setupV2PracticeMocks(page, mockV2Queue);
+    await loginForVisualTest(page);
+    await setTheme(page, 'light');
+    await navigateToPractice(page);
+
+    for (let i = 0; i < 5; i++) {
+      await flipCard(page);
+      await rateOk(page);
+      await expect(page.locator('[data-testid="pf-card"]')).toBeVisible({ timeout: 8000 });
+    }
+
+    await expect(page.locator('.pf-app[data-fam="declension"]')).toBeVisible({ timeout: 5000 });
+
+    // Capture height before reveal
+    const boxBefore = await page.locator('[data-testid="pf-card"]').boundingBox();
+    expect(boxBefore).not.toBeNull();
+
+    await flipCard(page);
+    await page.waitForTimeout(100);
+
+    // Capture height after reveal — must be identical (±1px)
+    const boxAfter = await page.locator('[data-testid="pf-card"]').boundingBox();
+    expect(boxAfter).not.toBeNull();
+    const delta = Math.abs(boxAfter!.height - boxBefore!.height);
+    expect(delta).toBeLessThanOrEqual(1);
+
+    await expect(page.locator('[data-testid="pf-decl-target"]')).toBeVisible();
+
+    await takeSnapshot(page, 'PRACT2-2 - Declension Revealed - Desktop Light', testInfo);
+  });
+
+  test('PRACT2-2 - Declension Revealed - Desktop Dark', async ({ page }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await setupV2PracticeMocks(page, mockV2Queue);
+    await loginForVisualTest(page);
+    await setTheme(page, 'dark');
+    await navigateToPractice(page);
+
+    for (let i = 0; i < 5; i++) {
+      await flipCard(page);
+      await rateOk(page);
+      await expect(page.locator('[data-testid="pf-card"]')).toBeVisible({ timeout: 8000 });
+    }
+
+    await expect(page.locator('.pf-app[data-fam="declension"]')).toBeVisible({ timeout: 5000 });
+
+    const boxBefore = await page.locator('[data-testid="pf-card"]').boundingBox();
+    expect(boxBefore).not.toBeNull();
+
+    await flipCard(page);
+    await page.waitForTimeout(100);
+
+    const boxAfter = await page.locator('[data-testid="pf-card"]').boundingBox();
+    expect(boxAfter).not.toBeNull();
+    const delta = Math.abs(boxAfter!.height - boxBefore!.height);
+    expect(delta).toBeLessThanOrEqual(1);
+
+    await expect(page.locator('[data-testid="pf-decl-target"]')).toBeVisible();
+
+    await takeSnapshot(page, 'PRACT2-2 - Declension Revealed - Desktop Dark', testInfo);
+  });
+});
+
+// ── PRACT2-2 State C: Top bar — progress centred, no mode toggle ─────────────
+
+test.describe('PRACT2-2 - Top Bar Layout', () => {
+  test('PRACT2-2 - Top Bar Centred Progress No Toggle - Desktop Light', async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await setupV2PracticeMocks(page, mockV2Queue);
+    await loginForVisualTest(page);
+    await setTheme(page, 'light');
+    await navigateToPractice(page);
+
+    // Top bar must be present
+    await expect(page.locator('[data-testid="pf-top-bar"]')).toBeVisible({ timeout: 5000 });
+    // Mode toggle must be absent
+    await expect(page.locator('[data-testid="pf-mode-toggle"]')).toHaveCount(0);
+    // Progress bar must be present (centred column in .pf-top grid)
+    // ProgressBar renders .pf-progress (no data-testid); use the class selector
+    await expect(page.locator('.pf-progress')).toBeVisible();
+
+    // Verify centred layout: the progress bar bounding box should be
+    // within the centre third of the viewport width
+    const progressBox = await page.locator('.pf-progress').boundingBox();
+    expect(progressBox).not.toBeNull();
+    const viewportWidth = VIEWPORTS.desktop.width;
+    const progressCentre = progressBox!.x + progressBox!.width / 2;
+    // Centre should be within ±15% of the true viewport centre
+    const viewportCentre = viewportWidth / 2;
+    const maxOffset = viewportWidth * 0.15;
+    expect(Math.abs(progressCentre - viewportCentre)).toBeLessThanOrEqual(maxOffset);
+
+    await takeSnapshot(
+      page,
+      'PRACT2-2 - Top Bar Centred Progress No Toggle - Desktop Light',
+      testInfo
+    );
+  });
+
+  test('PRACT2-2 - Top Bar Centred Progress No Toggle - Desktop Dark', async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await setupV2PracticeMocks(page, mockV2Queue);
+    await loginForVisualTest(page);
+    await setTheme(page, 'dark');
+    await navigateToPractice(page);
+
+    await expect(page.locator('[data-testid="pf-top-bar"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="pf-mode-toggle"]')).toHaveCount(0);
+    await expect(page.locator('.pf-progress')).toBeVisible();
+
+    const progressBox = await page.locator('.pf-progress').boundingBox();
+    expect(progressBox).not.toBeNull();
+    const viewportWidth = VIEWPORTS.desktop.width;
+    const progressCentre = progressBox!.x + progressBox!.width / 2;
+    const viewportCentre = viewportWidth / 2;
+    const maxOffset = viewportWidth * 0.15;
+    expect(Math.abs(progressCentre - viewportCentre)).toBeLessThanOrEqual(maxOffset);
+
+    await takeSnapshot(
+      page,
+      'PRACT2-2 - Top Bar Centred Progress No Toggle - Desktop Dark',
+      testInfo
+    );
+  });
+});
+
+// ── PRACT2-2 State D: Family badge full word + ~760px card width ──────────────
+
+test.describe('PRACT2-2 - Card Width and Family Badge', () => {
+  test('PRACT2-2 - Card Width 760px and Full Badge - Desktop Light', async ({
+    page,
+  }, testInfo) => {
+    // Use desktop viewport wider than 760px to confirm max-width cap
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await setupV2PracticeMocks(page, mockV2Queue);
+    await loginForVisualTest(page);
+    await setTheme(page, 'light');
+    await navigateToPractice(page);
+
+    await expect(page.locator('.pf-app[data-fam="translation"]')).toBeVisible({ timeout: 5000 });
+
+    // Card width should be capped at ~760px
+    const cardBox = await page.locator('[data-testid="pf-card"]').boundingBox();
+    expect(cardBox).not.toBeNull();
+    // Allow a few px for borders/padding — card element itself should not exceed 762px
+    expect(cardBox!.width).toBeLessThanOrEqual(762);
+
+    // Family badge shows the full word (source-case: "Translation")
+    const badgeText = await page.locator('[data-testid="pf-fam-badge"]').textContent();
+    expect(badgeText).toMatch(/^(Translation|Sentence|Grammar|Declension|Audio)$/i);
+
+    await takeSnapshot(page, 'PRACT2-2 - Card Width 760px and Full Badge - Desktop Light', testInfo);
+  });
+
+  test('PRACT2-2 - Card Width 760px and Full Badge - Desktop Dark', async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await setupV2PracticeMocks(page, mockV2Queue);
+    await loginForVisualTest(page);
+    await setTheme(page, 'dark');
+    await navigateToPractice(page);
+
+    await expect(page.locator('.pf-app[data-fam="translation"]')).toBeVisible({ timeout: 5000 });
+
+    const cardBox = await page.locator('[data-testid="pf-card"]').boundingBox();
+    expect(cardBox).not.toBeNull();
+    expect(cardBox!.width).toBeLessThanOrEqual(762);
+
+    const badgeText = await page.locator('[data-testid="pf-fam-badge"]').textContent();
+    expect(badgeText).toMatch(/^(Translation|Sentence|Grammar|Declension|Audio)$/i);
+
+    await takeSnapshot(page, 'PRACT2-2 - Card Width 760px and Full Badge - Desktop Dark', testInfo);
+  });
+});
