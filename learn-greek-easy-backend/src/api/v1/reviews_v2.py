@@ -66,7 +66,6 @@ async def submit_v2_review(
             **context,
             reviews_before=reviews_before,
             user_email=current_user.email,
-            db_url=settings.database_url,
         )
     else:
         await service.persist_review(context)

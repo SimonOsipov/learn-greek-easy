@@ -2,10 +2,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
-from src.config import settings
 from src.core.logging import get_logger
+from src.db.session import get_session_factory
 from src.services.openrouter_service import get_openrouter_service
 from src.services.s3_service import get_s3_service
 from src.services.situation_picture_service import run_picture_generation_pipeline
@@ -14,12 +12,12 @@ from src.tasks.background import is_background_tasks_enabled
 logger = get_logger(__name__)
 
 
-async def generate_picture_task(situation_id: UUID, db_url: str) -> None:
+async def generate_picture_task(situation_id: UUID) -> None:
     """Fire-and-forget BG task: generate AI picture for a situation.
 
     Convention (per src/tasks/background.py):
       - Gated on settings.feature_background_tasks via is_background_tasks_enabled().
-      - Builds its own engine per call; disposes in finally.
+      - Uses the global session factory initialised at startup.
       - Catches all exceptions, logs ERROR, never raises out.
     """
     if not is_background_tasks_enabled():
@@ -29,14 +27,8 @@ async def generate_picture_task(situation_id: UUID, db_url: str) -> None:
         )
         return
 
-    engine = None
     try:
-        engine = create_async_engine(
-            db_url,
-            pool_pre_ping=True,
-            connect_args={"ssl": "require"} if settings.is_production else {},
-        )
-        factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+        factory = get_session_factory()
         openrouter_service = get_openrouter_service()
         s3_service = get_s3_service()
         await run_picture_generation_pipeline(situation_id, factory, openrouter_service, s3_service)
@@ -46,6 +38,3 @@ async def generate_picture_task(situation_id: UUID, db_url: str) -> None:
             extra={"situation_id": str(situation_id)},
             exc_info=True,
         )
-    finally:
-        if engine is not None:
-            await engine.dispose()

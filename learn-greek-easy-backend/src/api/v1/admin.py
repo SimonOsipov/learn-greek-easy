@@ -1461,13 +1461,11 @@ async def create_news_item(
         background_tasks.add_task(
             generate_picture_task,
             situation_id=result.situation_id,
-            db_url=settings.database_url,
         )
         background_tasks.add_task(
             generate_description_audio_task,
             situation_id=result.situation_id,
             level="b1",
-            db_url=settings.database_url,
         )
         # A2 dispatch ONLY when both A2 fields present.
         # validate_a2_pair (schemas/news_item.py:43-50) guarantees they appear
@@ -1477,7 +1475,6 @@ async def create_news_item(
                 generate_description_audio_task,
                 situation_id=result.situation_id,
                 level="a2",
-                db_url=settings.database_url,
             )
 
     return result
@@ -1630,7 +1627,6 @@ async def create_announcement(
         campaign_title=campaign.title,
         campaign_message=campaign.message,
         link_url=campaign.link_url,
-        db_url=settings.database_url,
     )
 
     logger.info(

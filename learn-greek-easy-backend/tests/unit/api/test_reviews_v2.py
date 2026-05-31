@@ -135,7 +135,6 @@ class TestSubmitV2Review:
                 return_value=(_make_v2_review_result(), _make_review_context())
             )
             mock_settings.feature_background_tasks = True
-            mock_settings.database_url = "postgresql://test"
 
             response = await client.post(
                 "/api/v1/reviews/v2",
@@ -249,7 +248,6 @@ class TestSubmitV2Review:
                 return_value=(_make_v2_review_result(), _make_review_context())
             )
             mock_settings.feature_background_tasks = True
-            mock_settings.database_url = "postgresql://test"
 
             response = await client.post(
                 "/api/v1/reviews/v2",
