@@ -1,7 +1,7 @@
 :{$PORT:80}
 
 root * /srv
-encode gzip
+encode zstd gzip
 
 # Logging for debugging
 log {
@@ -245,8 +245,13 @@ handle @static {
     file_server
 }
 
+# Reject source map requests (no prod sourcemaps; prevent accidental 200)
+@sourcemaps path *.map
+respond @sourcemaps 404
+
 # SPA fallback - serve index.html for all other routes
 handle {
+    header /index.html Cache-Control "no-cache, must-revalidate"
     try_files {path} /index.html
     file_server
 }

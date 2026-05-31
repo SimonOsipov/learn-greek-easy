@@ -710,22 +710,22 @@ class TestUploadObjectCacheControl:
     def test_jpeg_cache_control(self):
         """image/jpeg => public, max-age=86400, immutable."""
         kwargs = self._upload_and_get_call_kwargs("image/jpeg")
-        assert kwargs["CacheControl"] == "public, max-age=86400, immutable"
+        assert kwargs["CacheControl"] == "public, max-age=31536000, immutable"
 
     def test_png_cache_control(self):
         """image/png => public, max-age=86400, immutable."""
         kwargs = self._upload_and_get_call_kwargs("image/png")
-        assert kwargs["CacheControl"] == "public, max-age=86400, immutable"
+        assert kwargs["CacheControl"] == "public, max-age=31536000, immutable"
 
     def test_webp_cache_control(self):
         """image/webp => public, max-age=86400, immutable."""
         kwargs = self._upload_and_get_call_kwargs("image/webp")
-        assert kwargs["CacheControl"] == "public, max-age=86400, immutable"
+        assert kwargs["CacheControl"] == "public, max-age=31536000, immutable"
 
     def test_audio_mpeg_cache_control(self):
         """audio/mpeg => public, max-age=86400, immutable."""
         kwargs = self._upload_and_get_call_kwargs("audio/mpeg")
-        assert kwargs["CacheControl"] == "public, max-age=86400, immutable"
+        assert kwargs["CacheControl"] == "public, max-age=31536000, immutable"
 
     def test_unmapped_gif_falls_back_to_default(self):
         """image/gif (unmapped) => falls back to _DEFAULT_CACHE_CONTROL without raising."""
@@ -750,7 +750,7 @@ class TestUploadObjectCacheControl:
         """_DEFAULT_CACHE_CONTROL is public, max-age=86400, immutable."""
         from src.services.s3_service import _DEFAULT_CACHE_CONTROL
 
-        assert _DEFAULT_CACHE_CONTROL == "public, max-age=86400, immutable"
+        assert _DEFAULT_CACHE_CONTROL == "public, max-age=31536000, immutable"
 
 
 # ============================================================================

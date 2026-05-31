@@ -66,12 +66,12 @@ CONTENT_TYPE_TO_EXT = {
 # "immutable" is safe: all overwritten keys are versioned (SCACHE-03/04/05 done),
 # so re-uploads mint a new key + delete the old — no in-place overwrite can pin stale bytes.
 # Unmapped types fall back to the image directive (graceful, no crash).
-_DEFAULT_CACHE_CONTROL = "public, max-age=86400, immutable"
+_DEFAULT_CACHE_CONTROL = "public, max-age=31536000, immutable"
 CONTENT_TYPE_TO_CACHE_CONTROL: dict[str, str] = {
-    "image/jpeg": "public, max-age=86400, immutable",
-    "image/png": "public, max-age=86400, immutable",
-    "image/webp": "public, max-age=86400, immutable",
-    "audio/mpeg": "public, max-age=86400, immutable",
+    "image/jpeg": "public, max-age=31536000, immutable",
+    "image/png": "public, max-age=31536000, immutable",
+    "image/webp": "public, max-age=31536000, immutable",
+    "audio/mpeg": "public, max-age=31536000, immutable",
 }
 
 # Lock protecting the process-global botocore.auth.get_current_datetime rebind

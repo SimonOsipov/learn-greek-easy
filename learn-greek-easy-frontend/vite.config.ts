@@ -80,7 +80,7 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
 
       // Generate sourcemaps for production (disable for security if needed)
-      sourcemap: true,
+      sourcemap: false,
 
       // Minification options (using esbuild for faster builds)
       minify: 'esbuild',
