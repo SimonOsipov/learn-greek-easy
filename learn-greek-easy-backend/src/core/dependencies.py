@@ -210,6 +210,14 @@ async def get_current_user(
         async def get_me(current_user: User = Depends(get_current_user)):
             return UserProfileResponse.model_validate(current_user)
     """
+    # 0. Per-request memo: if the user was already resolved earlier in this
+    #    request (e.g. via a second Depends(get_current_user) injection),
+    #    return the cached object immediately — no DB round-trip required.
+    #    request.state is request-scoped so this never leaks across requests.
+    cached: User | None = getattr(request.state, "current_user", None)
+    if cached is not None:
+        return cached
+
     # 1. Extract Bearer token
     if not credentials:
         raise UnauthorizedException(
@@ -248,6 +256,10 @@ async def get_current_user(
 
     # 7. Store user email in request state for exception handlers
     request.state.user_email = user.email
+
+    # 8. Memoize the fully-resolved user (with settings loaded via selectinload
+    #    in get_or_create_user) for the lifetime of this request.
+    request.state.current_user = user
 
     return user
 
