@@ -271,8 +271,6 @@ export const useAdminNewsStore = create<AdminNewsState>()(
 // Selectors (Optional optimization)
 // ============================================
 
-export const selectNewsItems = (state: AdminNewsState) => state.newsItems;
-export const selectSelectedItem = (state: AdminNewsState) => state.selectedItem;
 export const selectIsLoading = (state: AdminNewsState) => state.isLoading;
 export const selectIsCreating = (state: AdminNewsState) => state.isCreating;
 export const selectIsUpdating = (state: AdminNewsState) => state.isUpdating;
@@ -284,7 +282,6 @@ export const selectPagination = (state: AdminNewsState) => ({
   total: state.total,
   totalPages: state.totalPages,
 });
-export const selectCountryFilter = (state: AdminNewsState) => state.countryFilter;
 export const selectFilterState = (state: AdminNewsState) => ({
   countryFilter: state.countryFilter,
   levelFilter: state.levelFilter,
