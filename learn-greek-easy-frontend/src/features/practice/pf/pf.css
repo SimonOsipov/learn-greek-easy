@@ -1386,41 +1386,6 @@
   border: 1px solid hsl(var(--danger) / 0.25);
 }
 
-/* ── Mode toggle button ──────────────────────────────────────────────────── */
-.pf-mode-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border-radius: 9999px;
-  border: 1px solid hsl(var(--fg) / 0.12);
-  background: hsl(var(--fg) / 0.05);
-  color: hsl(var(--fg-3));
-  font-family:
-    'Inter Tight',
-    Inter,
-    -apple-system,
-    sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 120ms ease,
-    color 120ms ease;
-  line-height: 1.4;
-}
-
-.pf-mode-toggle:hover {
-  background: hsl(var(--fg) / 0.09);
-  color: hsl(var(--fg-2));
-}
-
-.pf-mode-toggle[data-active='true'] {
-  background: var(--pf-c, hsl(var(--primary)));
-  color: hsl(var(--card));
-  border-color: transparent;
-}
-
 /* =========================================================================
    PRACT2-1-09: Done screen — session-complete surface
    ========================================================================= */
