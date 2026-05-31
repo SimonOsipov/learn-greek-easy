@@ -24,11 +24,11 @@ from uuid import UUID
 
 import sentry_sdk
 from sqlalchemy import distinct, select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.config import settings
 from src.core.logging import get_logger
 from src.db.models import CardRecordReview, ExerciseReview
+from src.db.session import get_session_factory
 from src.services.gamification.reconciler import GamificationReconciler
 from src.services.gamification.types import ReconcileMode
 
@@ -69,19 +69,13 @@ async def reconcile_active_users_task() -> None:
     second run in the same day produces no new notifications.
     """
     started_at = datetime.now(timezone.utc)
-    engine = None
     total_users = 0
     succeeded = 0
     failed = 0
     total_new_unlocks = 0
 
     try:
-        engine = create_async_engine(
-            settings.database_url,
-            pool_pre_ping=True,
-            connect_args={"ssl": "require"} if settings.is_production else {},
-        )
-        sm = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+        sm = get_session_factory()
 
         # Phase 1: collect active user IDs in a dedicated session
         async with sm() as session:
@@ -117,9 +111,6 @@ async def reconcile_active_users_task() -> None:
         raise
 
     finally:
-        if engine is not None:
-            await engine.dispose()
-
         duration_ms = (datetime.now(timezone.utc) - started_at).total_seconds() * 1000
         logger.info(
             "scheduled_gamification: complete",

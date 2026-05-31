@@ -23,6 +23,7 @@ from typing import Optional
 from src.config import settings
 from src.core.logging import get_logger, setup_logging
 from src.core.redis import close_redis, init_redis
+from src.db import close_db, init_db
 from src.tasks.scheduler import get_scheduler, setup_scheduler, shutdown_scheduler
 
 # Configure logging with loguru
@@ -64,6 +65,10 @@ async def main() -> None:
         await init_redis()
         logger.info("Redis connection established")
 
+        # Initialize database connection pool (shared across all scheduled tasks)
+        await init_db()
+        logger.info("Database connection pool established")
+
         # Start the scheduler
         setup_scheduler()
         scheduler = get_scheduler()
@@ -94,6 +99,9 @@ async def main() -> None:
 
         logger.info("Closing Redis connection...")
         await close_redis()
+
+        logger.info("Closing database connection pool...")
+        await close_db()
 
         logger.info("Scheduler service stopped")
 

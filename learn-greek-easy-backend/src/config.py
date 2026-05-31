@@ -42,8 +42,8 @@ class Settings(BaseSettings):
     database_url: str = Field(
         description="Database connection URL (required -- set DATABASE_URL in .env)",
     )
-    database_pool_size: int = Field(default=20, description="Database connection pool size")
-    database_max_overflow: int = Field(default=10, description="Max overflow connections")
+    database_pool_size: int = Field(default=15, description="Database connection pool size")
+    database_max_overflow: int = Field(default=5, description="Max overflow connections")
     database_pool_timeout: int = Field(default=30, description="Pool connection timeout")
 
     # =========================================================================

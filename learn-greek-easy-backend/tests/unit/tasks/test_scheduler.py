@@ -265,25 +265,25 @@ class TestScheduledTaskStubs:
     @pytest.mark.asyncio
     async def test_streak_reset_task_runs_without_error(self, caplog_loguru):
         """Test that streak_reset_task runs without error (with mocked DB)."""
+        from contextlib import asynccontextmanager
         from unittest.mock import AsyncMock, MagicMock, patch
 
         from src.tasks.scheduled import streak_reset_task
 
-        with patch("src.tasks.scheduled.create_async_engine") as mock_engine_creator:
-            mock_engine = AsyncMock()
-            mock_engine_creator.return_value = mock_engine
+        mock_session = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.fetchall.return_value = []
+        mock_session.execute.return_value = mock_result
 
-            with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
-                mock_session = AsyncMock()
-                mock_session_factory = MagicMock(return_value=mock_session)
-                mock_sessionmaker.return_value = mock_session_factory
+        @asynccontextmanager
+        async def _ctx():
+            yield mock_session
 
-                mock_result = MagicMock()
-                mock_result.fetchall.return_value = []
-                mock_session.execute.return_value = mock_result
+        mock_factory = MagicMock(return_value=_ctx())
 
-                with caplog_loguru.at_level("INFO"):
-                    await streak_reset_task()
+        with patch("src.tasks.scheduled.get_session_factory", return_value=mock_factory):
+            with caplog_loguru.at_level("INFO"):
+                await streak_reset_task()
 
         assert "streak reset" in caplog_loguru.text.lower()
 
@@ -313,28 +313,28 @@ class TestScheduledTaskStubs:
     @pytest.mark.asyncio
     async def test_stats_aggregate_task_runs_without_error(self, caplog_loguru):
         """Test that stats_aggregate_task runs without error (with mocked DB)."""
+        from contextlib import asynccontextmanager
         from unittest.mock import AsyncMock, MagicMock, patch
 
         from src.tasks.scheduled import stats_aggregate_task
 
-        with patch("src.tasks.scheduled.create_async_engine") as mock_engine_creator:
-            mock_engine = AsyncMock()
-            mock_engine_creator.return_value = mock_engine
+        mock_session = AsyncMock()
+        # Mock empty results for both queries
+        review_result = MagicMock()
+        review_result.fetchall.return_value = []
+        mastery_result = MagicMock()
+        mastery_result.fetchall.return_value = []
+        mock_session.execute.side_effect = [review_result, mastery_result]
 
-            with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
-                mock_session = AsyncMock()
-                mock_session_factory = MagicMock(return_value=mock_session)
-                mock_sessionmaker.return_value = mock_session_factory
+        @asynccontextmanager
+        async def _ctx():
+            yield mock_session
 
-                # Mock empty results for both queries
-                review_result = MagicMock()
-                review_result.fetchall.return_value = []
-                mastery_result = MagicMock()
-                mastery_result.fetchall.return_value = []
-                mock_session.execute.side_effect = [review_result, mastery_result]
+        mock_factory = MagicMock(return_value=_ctx())
 
-                with caplog_loguru.at_level("INFO"):
-                    await stats_aggregate_task()
+        with patch("src.tasks.scheduled.get_session_factory", return_value=mock_factory):
+            with caplog_loguru.at_level("INFO"):
+                await stats_aggregate_task()
 
         assert "stats aggregation" in caplog_loguru.text.lower()
 

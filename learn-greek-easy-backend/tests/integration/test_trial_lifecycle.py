@@ -14,6 +14,7 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
+import pytest_asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,7 +26,6 @@ from src.db.models import Deck, DeckLevel, SubscriptionStatus, SubscriptionTier,
 from src.main import app
 from tests.factories.auth import UserFactory
 from tests.fixtures.auth import _get_override_function, _test_user_registry
-from tests.helpers.database import get_test_database_url
 
 # ===========================================================================
 # Module-level Helpers
@@ -186,6 +186,24 @@ class TestTrialApiAccess:
 class TestTrialExpirationTaskIntegration:
     """trial_expiration_task with real DB - verifies actual status transitions."""
 
+    @pytest_asyncio.fixture(autouse=True)
+    async def _init_db_for_task(self):
+        """Initialize the global DB engine so trial_expiration_task can use get_session_factory().
+
+        trial_expiration_task now uses the shared engine via get_session_factory() instead of
+        creating a per-call engine. The test DATABASE_URL env var already points to the test DB,
+        so init_db() here wires up the correct engine for the task under test.
+        """
+        import src.db.session as _db_session_module
+        from src.db import close_db, init_db
+
+        already_initialized = _db_session_module._engine is not None
+        if not already_initialized:
+            await init_db()
+        yield
+        if not already_initialized:
+            await close_db()
+
     async def test_expired_auto_trial_transitions_to_none(self, db_session: AsyncSession):
         """Expired auto-trial SQL correctly transitions TRIALING→NONE, preserving trial dates.
 
@@ -238,14 +256,10 @@ class TestTrialExpirationTaskIntegration:
 
         await db_session.commit()
 
-        test_db_url = get_test_database_url()
         with (
-            patch("src.tasks.scheduled.settings") as mock_settings,
             patch("src.tasks.scheduled.init_posthog"),
             patch("src.tasks.scheduled.is_posthog_enabled", return_value=False),
         ):
-            mock_settings.database_url = test_db_url
-            mock_settings.is_production = False
             await trial_expiration_task()
 
         await db_session.refresh(user)
@@ -265,14 +279,10 @@ class TestTrialExpirationTaskIntegration:
 
         await db_session.commit()
 
-        test_db_url = get_test_database_url()
         with (
-            patch("src.tasks.scheduled.settings") as mock_settings,
             patch("src.tasks.scheduled.init_posthog"),
             patch("src.tasks.scheduled.is_posthog_enabled", return_value=False),
         ):
-            mock_settings.database_url = test_db_url
-            mock_settings.is_production = False
             await trial_expiration_task()
 
         await db_session.refresh(user)
@@ -314,14 +324,10 @@ class TestTrialExpirationTaskIntegration:
         from src.tasks.scheduled import trial_expiration_task
 
         # No expired trial users in the DB for this test
-        test_db_url = get_test_database_url()
         with (
-            patch("src.tasks.scheduled.settings") as mock_settings,
             patch("src.tasks.scheduled.init_posthog"),
             patch("src.tasks.scheduled.is_posthog_enabled", return_value=False),
         ):
-            mock_settings.database_url = test_db_url
-            mock_settings.is_production = False
             # Should not raise
             await trial_expiration_task()
 

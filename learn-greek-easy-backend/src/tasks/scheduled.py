@@ -13,11 +13,11 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.config import settings
 from src.core.logging import get_logger
 from src.core.posthog import capture_event, flush_posthog, init_posthog, is_posthog_enabled
+from src.db.session import get_session_factory
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
@@ -45,21 +45,9 @@ async def streak_reset_task() -> None:
     )
 
     start_time = datetime.now(timezone.utc)
-    engine = None
 
     try:
-        # Create dedicated engine for this scheduled task
-        engine = create_async_engine(
-            settings.database_url,
-            pool_pre_ping=True,
-            connect_args={"ssl": "require"} if settings.is_production else {},
-        )
-        async_session_factory = async_sessionmaker(
-            engine, class_=AsyncSession, expire_on_commit=False
-        )
-
-        session = async_session_factory()
-        try:
+        async with get_session_factory()() as session:
             today = datetime.now(timezone.utc).date()
             yesterday = today - timedelta(days=1)
 
@@ -116,17 +104,10 @@ async def streak_reset_task() -> None:
                 )
 
             await session.commit()
-        finally:
-            await session.close()
 
     except Exception as e:
         logger.error(f"Streak reset task failed: {e}", exc_info=True)
         raise
-
-    finally:
-        # Always dispose of the engine to clean up connections
-        if engine is not None:
-            await engine.dispose()
 
 
 async def _cleanup_session_keys_without_ttl(redis: "Redis") -> tuple[int, int]:
@@ -295,21 +276,9 @@ async def stats_aggregate_task() -> None:
     """
     logger.info("Starting stats aggregation task")
     start_time = datetime.now(timezone.utc)
-    engine = None
 
     try:
-        # Create dedicated engine for this scheduled task
-        engine = create_async_engine(
-            settings.database_url,
-            pool_pre_ping=True,
-            connect_args={"ssl": "require"} if settings.is_production else {},
-        )
-        async_session_factory = async_sessionmaker(
-            engine, class_=AsyncSession, expire_on_commit=False
-        )
-
-        session = async_session_factory()
-        try:
+        async with get_session_factory()() as session:
             yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
 
             # Aggregate review statistics by user for yesterday
@@ -403,17 +372,10 @@ async def stats_aggregate_task() -> None:
             )
 
             await session.commit()
-        finally:
-            await session.close()
 
     except Exception as e:
         logger.error(f"Stats aggregation failed: {e}", exc_info=True)
         raise
-
-    finally:
-        # Always dispose of the engine to clean up connections
-        if engine is not None:
-            await engine.dispose()
 
 
 async def trial_expiration_task() -> None:
@@ -428,23 +390,12 @@ async def trial_expiration_task() -> None:
     """
     logger.info("Starting trial expiration task")
     start_time = datetime.now(timezone.utc)
-    engine = None
 
     # Initialize PostHog (scheduler_main.py does not init it)
     init_posthog()
 
     try:
-        engine = create_async_engine(
-            settings.database_url,
-            pool_pre_ping=True,
-            connect_args={"ssl": "require"} if settings.is_production else {},
-        )
-        async_session_factory = async_sessionmaker(
-            engine, class_=AsyncSession, expire_on_commit=False
-        )
-
-        session = async_session_factory()
-        try:
+        async with get_session_factory()() as session:
             # Phase 1: Find expired auto-trial users
             select_query = text(
                 """
@@ -509,13 +460,6 @@ async def trial_expiration_task() -> None:
                 },
             )
 
-        finally:
-            await session.close()
-
     except Exception as e:
         logger.error(f"Trial expiration task failed: {e}", exc_info=True)
         raise
-
-    finally:
-        if engine is not None:
-            await engine.dispose()
