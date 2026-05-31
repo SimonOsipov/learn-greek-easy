@@ -283,7 +283,7 @@ class TestSeedTranslationsMethod:
         # Calls: index 0 = TRUNCATE, indices 1..N = INSERTs, last = SELECT COUNT
         insert_calls = mock_db_with_count.execute.call_args_list[1 : 1 + len(SEED_TRANSLATIONS)]
 
-        for i, (entry, call_args) in enumerate(zip(SEED_TRANSLATIONS, insert_calls)):
+        for i, (entry, call_args) in enumerate(zip(SEED_TRANSLATIONS, insert_calls, strict=True)):
             # The entry dict is passed as the second positional argument to execute()
             passed_params = call_args[0][1]
             assert (

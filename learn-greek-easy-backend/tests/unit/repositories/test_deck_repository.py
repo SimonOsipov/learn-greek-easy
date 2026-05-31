@@ -27,8 +27,8 @@ async def system_deck(db_session: AsyncSession) -> Deck:
     """Active system deck (owner_id=None)."""
     deck = Deck(
         name_en="Greek A1 Basics",
-        name_el="Βασικά Α1",
-        name_ru="Основы А1",
+        name_el="Βασικά A1",
+        name_ru="Основы A1",
         description_en="Basic Greek vocabulary",
         description_el="Βασικό λεξιλόγιο",
         description_ru="Базовая лексика",
@@ -101,8 +101,8 @@ async def system_deck_a2(db_session: AsyncSession) -> Deck:
     """Active A2-level system deck."""
     deck = Deck(
         name_en="Greek A2 Daily Life",
-        name_el="Καθημερινή Α2",
-        name_ru="Ежедневная жизнь А2",
+        name_el="Καθημερινή A2",
+        name_ru="Ежедневная жизнь A2",
         description_en="Intermediate Greek vocabulary",
         description_el="Ενδιάμεσο λεξιλόγιο",
         description_ru="Промежуточная лексика",

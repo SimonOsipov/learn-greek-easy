@@ -282,7 +282,9 @@ class TestSeedLexiconIntegration:
         insert_calls = mock_db.execute.call_args_list[1:-1]
         assert len(insert_calls) == len(LEXICON_SEED_DATA)
 
-        for i, (execute_call, expected_entry) in enumerate(zip(insert_calls, LEXICON_SEED_DATA)):
+        for i, (execute_call, expected_entry) in enumerate(
+            zip(insert_calls, LEXICON_SEED_DATA, strict=True)
+        ):
             # execute(text(...), entry_dict) — second positional arg is the params dict
             actual_params = execute_call[0][1]
             assert (
