@@ -472,3 +472,224 @@ describe('Culture streak tile (STRK-07)', () => {
     expect(within(streakTile!).queryByTestId('unwired-dot')).not.toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------
+// CULT2-2 — resume hero (recency + personalized sentence) + what's-new strip
+// Fixtures use the RAW culture-API shape (name / question_count / raw progress);
+// CulturePage runs them through transformCultureDeckResponse, so progress maps
+// last_practiced_at → lastStudied and cardsMastered/cardsLearning/cardsTotal.
+// ---------------------------------------------------------------------------
+
+/** Full readiness payload (drives the exam-clause branch of the hero sentence) */
+const readinessFixture = {
+  readiness_percentage: 42,
+  verdict: 'getting_there' as const,
+  questions_learned: 5,
+  questions_total: 490,
+  accuracy_percentage: null,
+  total_answers: 10,
+  categories: [],
+  motivation: null,
+};
+
+/** In-progress culture deck practiced earlier (Jan) */
+const olderInProgressDeck = {
+  id: 'deck-older-1',
+  name: 'Cultural Exam Jan 2025',
+  description: 'Older paper blurb',
+  category: 'culture' as const,
+  question_count: 10,
+  is_premium: false,
+  cover_image_url: null,
+  progress: {
+    questions_total: 10,
+    questions_mastered: 3,
+    questions_learning: 2,
+    questions_new: 5,
+    last_practiced_at: '2025-01-10T10:00:00.000Z',
+  },
+};
+
+/** In-progress culture deck practiced more recently (Feb) */
+const newerInProgressDeck = {
+  id: 'deck-newer-1',
+  name: 'Cultural Exam Feb 2025',
+  description: 'Newer paper blurb',
+  category: 'culture' as const,
+  question_count: 20,
+  is_premium: false,
+  cover_image_url: null,
+  progress: {
+    questions_total: 20,
+    questions_mastered: 5,
+    questions_learning: 3,
+    questions_new: 12,
+    last_practiced_at: '2025-02-15T10:00:00.000Z',
+  },
+};
+
+/** Two in-progress decks WITHOUT last_practiced_at — exercise the legacy fallback */
+const inProgressNoTsA = {
+  id: 'deck-nots-a',
+  name: 'Deck A No TS',
+  description: 'A',
+  category: 'culture' as const,
+  question_count: 10,
+  is_premium: false,
+  cover_image_url: null,
+  progress: { questions_total: 10, questions_mastered: 2, questions_learning: 1, questions_new: 7 },
+};
+const inProgressNoTsB = {
+  id: 'deck-nots-b',
+  name: 'Deck B No TS',
+  description: 'B',
+  category: 'culture' as const,
+  question_count: 10,
+  is_premium: false,
+  cover_image_url: null,
+  progress: { questions_total: 10, questions_mastered: 4, questions_learning: 1, questions_new: 5 },
+};
+
+/** Exam deck whose name lacks the "Cultural Exam " prefix → label falls back to full name */
+const localizedNameDeck = {
+  id: 'deck-localized-1',
+  name: 'Παράδοση Κύπρου',
+  description: 'Localized',
+  category: 'culture' as const,
+  question_count: 24,
+  is_premium: false,
+  cover_image_url: null,
+  progress: undefined,
+};
+
+describe('Resume hero recency + sentence (CULT2-2)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetReadiness.mockResolvedValue(null);
+    mockGetDashboard.mockResolvedValue(null);
+  });
+
+  it('resumes the most recently practiced in-progress deck (recency beats list order)', async () => {
+    // older deck is first in the list; newer deck has the later last_practiced_at
+    mockGetList.mockResolvedValue({ decks: [olderInProgressDeck, newerInProgressDeck], total: 2 });
+
+    const { container } = render(<CulturePage />);
+
+    await waitFor(() => {
+      expect(container.querySelector('.dx-hero-resume-h')?.textContent).toBe(
+        'Cultural Exam Feb 2025'
+      );
+    });
+  });
+
+  it('falls back to first-in-list when no in-progress deck has a timestamp (no regression)', async () => {
+    mockGetList.mockResolvedValue({ decks: [inProgressNoTsA, inProgressNoTsB], total: 2 });
+
+    const { container } = render(<CulturePage />);
+
+    await waitFor(() => {
+      expect(container.querySelector('.dx-hero-resume-h')?.textContent).toBe('Deck A No TS');
+    });
+  });
+
+  it('renders the personalized sentence with readiness (answered N of T … X% ready)', async () => {
+    mockGetReadiness.mockResolvedValue(readinessFixture);
+    mockGetList.mockResolvedValue({ decks: [newerInProgressDeck], total: 1 });
+
+    const { container } = render(<CulturePage />);
+
+    await waitFor(() => {
+      expect(container.querySelector('.dx-hero-resume-desc')).not.toBeNull();
+    });
+    const desc = container.querySelector('.dx-hero-resume-desc')?.textContent ?? '';
+    // answered = mastered(5) + learning(3) = 8; deckTotal = 20; inReview = 3
+    expect(desc).toContain('8 of 20 questions');
+    expect(desc).toContain('3 in review');
+    expect(desc).toContain('490 questions');
+    expect(desc).toContain('42% ready');
+  });
+
+  it('renders the no-readiness sentence (no exam clause) when readiness rejects; page still loads', async () => {
+    mockGetReadiness.mockRejectedValue(new Error('readiness down'));
+    mockGetList.mockResolvedValue({ decks: [newerInProgressDeck], total: 1 });
+
+    const { container } = render(<CulturePage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('culture-title')).toBeInTheDocument();
+    });
+    const desc = container.querySelector('.dx-hero-resume-desc')?.textContent ?? '';
+    expect(desc).toContain('8 of 20 questions');
+    expect(desc).toContain('3 in review');
+    // exam-readiness clause must be absent
+    expect(desc).not.toMatch(/ready/i);
+    expect(desc).not.toContain('490');
+  });
+
+  it('keeps the generic deck description for a fresh (no-progress) resume deck', async () => {
+    mockGetList.mockResolvedValue({ decks: [historyDeck], total: 1 });
+
+    const { container } = render(<CulturePage />);
+
+    await waitFor(() => {
+      expect(container.querySelector('.dx-hero-resume-desc')?.textContent).toContain(
+        'History of ancient Greece'
+      );
+    });
+  });
+
+  it('primary hero CTA uses .cx-cta-primary (not the full-width .dx-action-cta)', async () => {
+    mockGetList.mockResolvedValue({ decks: [newerInProgressDeck], total: 1 });
+
+    const { container } = render(<CulturePage />);
+
+    await waitFor(() => {
+      expect(container.querySelector('a.cx-cta-primary')).not.toBeNull();
+    });
+    const primary = container.querySelector('a.cx-cta-primary')!;
+    expect(primary).toHaveAttribute('href', '/culture/deck-newer-1/practice');
+    expect(primary).not.toHaveClass('dx-action-cta');
+  });
+});
+
+describe("What's-new strip (CULT2-2)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetReadiness.mockResolvedValue(null);
+    mockGetDashboard.mockResolvedValue(null);
+  });
+
+  it('renders the "In Culture" label', async () => {
+    mockGetList.mockResolvedValue({ decks: [newerInProgressDeck], total: 1 });
+
+    render(<CulturePage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('In Culture')).toBeInTheDocument();
+    });
+  });
+
+  it('renders the Latest chip from the newest exam deck, linking to /culture/decks/{id}', async () => {
+    // newest = first in list (created_at DESC); the "Cultural Exam " prefix is stripped
+    mockGetList.mockResolvedValue({ decks: [newerInProgressDeck, olderInProgressDeck], total: 2 });
+
+    render(<CulturePage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: /Latest: Feb 2025/ })).toBeInTheDocument();
+    });
+    const latestLink = screen.getByRole('link', { name: /Latest: Feb 2025/ });
+    expect(latestLink).toHaveAttribute('href', '/culture/decks/deck-newer-1');
+    expect(latestLink.textContent).toContain('20 questions');
+  });
+
+  it('falls back to the full deck name when the "Cultural Exam " prefix is absent', async () => {
+    mockGetList.mockResolvedValue({ decks: [localizedNameDeck], total: 1 });
+
+    render(<CulturePage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: /Latest: Παράδοση Κύπρου/ })).toBeInTheDocument();
+    });
+  });
+});

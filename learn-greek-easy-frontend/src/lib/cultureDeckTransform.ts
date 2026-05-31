@@ -43,7 +43,9 @@ export const transformCultureDeckResponse = (deck: CultureDeckResponse): Deck =>
         cardsMastered: deck.progress.questions_mastered,
         dueToday: 0, // Culture decks don't have spaced repetition yet
         streak: 0,
-        lastStudied: undefined,
+        lastStudied: deck.progress.last_practiced_at
+          ? new Date(deck.progress.last_practiced_at)
+          : undefined,
         totalTimeSpent: 0,
         accuracy:
           deck.progress.questions_total > 0

@@ -37,6 +37,7 @@ export interface CultureDeckProgress {
   questions_mastered: number;
   questions_learning: number;
   questions_new: number;
+  last_practiced_at?: string | null;
 }
 
 /**
