@@ -29,31 +29,16 @@ describe('practiceSettings', () => {
   });
 
   // ── inputMode ─────────────────────────────────────────────────────────────
+  // Type-mode toggle removed (PRACT2-2-05): getPersistedInputMode always
+  // returns 'reveal' regardless of any stored value.
 
   describe('getPersistedInputMode', () => {
-    it('returns reveal when nothing is stored (default)', () => {
+    it('always returns reveal (toggle removed, type mode unreachable)', () => {
       expect(getPersistedInputMode()).toBe('reveal');
     });
 
-    it('returns type when stored value is "type"', () => {
+    it('returns reveal even when localStorage contains "type"', () => {
       localStorage.setItem(INPUT_MODE_KEY, 'type');
-      expect(getPersistedInputMode()).toBe('type');
-    });
-
-    it('returns reveal when stored value is "reveal"', () => {
-      localStorage.setItem(INPUT_MODE_KEY, 'reveal');
-      expect(getPersistedInputMode()).toBe('reveal');
-    });
-
-    it('returns reveal for unknown stored values (safe default)', () => {
-      localStorage.setItem(INPUT_MODE_KEY, 'unknown');
-      expect(getPersistedInputMode()).toBe('reveal');
-    });
-
-    it('returns reveal and does not throw when localStorage throws', () => {
-      vi.spyOn(Storage.prototype, 'getItem').mockImplementationOnce(() => {
-        throw new Error('storage error');
-      });
       expect(getPersistedInputMode()).toBe('reveal');
     });
   });

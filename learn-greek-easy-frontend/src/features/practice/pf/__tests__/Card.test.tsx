@@ -1,14 +1,14 @@
 /**
- * pf/Card.tsx — unit tests (PRACT2-1-03)
+ * pf/Card.tsx — unit tests (PRACT2-1-03, PRACT2-2-01)
  *
  * Covers:
  * - Renders .pf-card shell
  * - Renders pf-body (question zone)
- * - Renders pf-foot (answer zone) when isFlipped=true + foot provided
- * - Does NOT render pf-foot when isFlipped=false
+ * - Renders pf-foot when foot is provided — ALWAYS in DOM (PRACT2-2-01)
+ * - pf-foot has data-hidden="true" + inert when isFlipped=false (hidden but in DOM)
+ * - pf-foot has no data-hidden when isFlipped=true (visible)
  * - Card acts as a button (role + tabIndex) when not flipped
  * - Enter/Space key triggers onClick
- * - Stable height: pf-body and pf-foot always exist in the DOM (no layout shift)
  * - Enter animation is transform-only (no opacity keyframe gating)
  */
 
@@ -35,19 +35,32 @@ describe('Card', () => {
     expect(screen.getByText('my question')).not.toBeNull();
   });
 
-  it('does NOT render pf-foot when isFlipped=false', () => {
+  // PRACT2-2-01: pf-foot is ALWAYS in the DOM when foot is provided (stable height)
+  it('renders pf-foot in DOM when isFlipped=false (hidden but present for stable height)', () => {
     const { container } = render(
       <Card body={<span>q</span>} foot={<span>answer</span>} isFlipped={false} />
     );
-    expect(container.querySelector('.pf-foot')).toBeNull();
+    const foot = container.querySelector('.pf-foot');
+    expect(foot).not.toBeNull();
+    expect(foot?.getAttribute('data-hidden')).toBe('true');
+    expect(foot?.hasAttribute('inert')).toBe(true);
+    expect(foot?.getAttribute('aria-hidden')).toBe('true');
   });
 
-  it('renders pf-foot when isFlipped=true and foot is provided', () => {
+  it('renders pf-foot visible (no data-hidden) when isFlipped=true and foot is provided', () => {
     const { container } = render(
       <Card body={<span>q</span>} foot={<span>answer content</span>} isFlipped={true} />
     );
-    expect(container.querySelector('.pf-foot')).not.toBeNull();
+    const foot = container.querySelector('.pf-foot');
+    expect(foot).not.toBeNull();
+    expect(foot?.getAttribute('data-hidden')).toBeNull();
+    expect(foot?.hasAttribute('inert')).toBe(false);
     expect(screen.getByText('answer content')).not.toBeNull();
+  });
+
+  it('does NOT render pf-foot at all when foot prop is null/undefined', () => {
+    const { container } = render(<Card body={<span>q</span>} isFlipped={false} />);
+    expect(container.querySelector('.pf-foot')).toBeNull();
   });
 
   it('acts as button (role=button, tabIndex) when not flipped', () => {

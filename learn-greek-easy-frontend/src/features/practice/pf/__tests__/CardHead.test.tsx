@@ -3,7 +3,7 @@
  *
  * Covers:
  * - Renders pf-head container
- * - Shows family badge (pf-fam) with descriptor.short
+ * - Shows family badge (pf-fam) with descriptor.label
  * - Shows POS chip (pf-pos) when posLabel is provided
  * - Shows gender-tinted article when gender is present (noun card)
  * - Shows UnwiredDot amber when gender is absent (noun card)
@@ -48,17 +48,17 @@ describe('CardHead', () => {
     expect(container.querySelector('.pf-head')).not.toBeNull();
   });
 
-  it('renders family badge (pf-fam) with short label', () => {
+  it('renders family badge (pf-fam) with full label', () => {
     render(<CardHead {...BASE} cardType="meaning_el_to_en" />);
-    // translation family short = 'Trans'
+    // translation family label = 'Translation'
     const badge = screen.getByTestId('pf-fam-badge');
-    expect(badge.textContent).toContain('Trans');
+    expect(badge.textContent).toContain('Translation');
   });
 
   it('renders grammar family badge for article card', () => {
     render(<CardHead {...BASE} cardType="article" />);
     const badge = screen.getByTestId('pf-fam-badge');
-    expect(badge.textContent).toContain('Gram');
+    expect(badge.textContent).toContain('Grammar');
   });
 
   it('renders POS chip when posLabel is provided', () => {
@@ -137,6 +137,31 @@ describe('CardHead', () => {
       render(<CardHead {...BASE} onLangChange={onLangChange} />);
       fireEvent.click(screen.getByTestId('pf-lang-en'));
       expect(onLangChange).toHaveBeenCalledWith('en');
+    });
+  });
+
+  describe('Gender label (genderRu)', () => {
+    it('shows English gender label when currentLang=en and gender is present', () => {
+      render(<CardHead {...BASE} gender="masculine" genderRu="Мужской" currentLang="en" />);
+      const label = screen.getByTestId('pf-gender-label');
+      expect(label.textContent).toBe('masculine');
+    });
+
+    it('shows Russian gender label when currentLang=ru and genderRu is present', () => {
+      render(<CardHead {...BASE} gender="masculine" genderRu="Мужской" currentLang="ru" />);
+      const label = screen.getByTestId('pf-gender-label');
+      expect(label.textContent).toBe('Мужской');
+    });
+
+    it('falls back to English gender when currentLang=ru but genderRu is null', () => {
+      render(<CardHead {...BASE} gender="masculine" genderRu={null} currentLang="ru" />);
+      const label = screen.getByTestId('pf-gender-label');
+      expect(label.textContent).toBe('masculine');
+    });
+
+    it('does not render gender label when gender is absent', () => {
+      render(<CardHead {...BASE} gender={null} genderRu={null} currentLang="en" />);
+      expect(screen.queryByTestId('pf-gender-label')).toBeNull();
     });
   });
 });

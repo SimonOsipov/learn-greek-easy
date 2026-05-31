@@ -97,7 +97,7 @@
 /* ── Top bar shell — 3-column grid ───────────────────────────────────────── */
 .pf-top {
   display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
@@ -255,6 +255,16 @@
   }
 }
 
+/* ── Card area wrapper — responsive centering with prototype-matched max-width ──
+   Replaces the Tailwind max-w-lg (512px) on the page wrapper with the prototype's
+   760px ceiling. Uses a CSS class (not arbitrary Tailwind) to stay within the
+   design-system drift rules. */
+.pf-card-area {
+  max-width: min(760px, 100%);
+  width: 100%;
+  margin-inline: auto;
+}
+
 /* ── Card shell ───────────────────────────────────────────────────────────── */
 .pf-card {
   position: relative;
@@ -302,6 +312,13 @@
   flex-direction: column;
   align-items: center;
   gap: 12px;
+}
+
+/* Pre-reveal: content stays in the DOM (reserving natural height) but is invisible
+   and non-interactive. visibility:hidden keeps the box in flow; inert (set via prop
+   in Card.tsx) removes focus/pointer access at the browser level. */
+.pf-foot[data-hidden='true'] {
+  visibility: hidden;
 }
 
 /* ── Card header ──────────────────────────────────────────────────────────── */
@@ -1384,41 +1401,6 @@
   color: hsl(var(--danger));
   background: hsl(var(--danger) / 0.12);
   border: 1px solid hsl(var(--danger) / 0.25);
-}
-
-/* ── Mode toggle button ──────────────────────────────────────────────────── */
-.pf-mode-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border-radius: 9999px;
-  border: 1px solid hsl(var(--fg) / 0.12);
-  background: hsl(var(--fg) / 0.05);
-  color: hsl(var(--fg-3));
-  font-family:
-    'Inter Tight',
-    Inter,
-    -apple-system,
-    sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 120ms ease,
-    color 120ms ease;
-  line-height: 1.4;
-}
-
-.pf-mode-toggle:hover {
-  background: hsl(var(--fg) / 0.09);
-  color: hsl(var(--fg-2));
-}
-
-.pf-mode-toggle[data-active='true'] {
-  background: var(--pf-c, hsl(var(--primary)));
-  color: hsl(var(--card));
-  border-color: transparent;
 }
 
 /* =========================================================================

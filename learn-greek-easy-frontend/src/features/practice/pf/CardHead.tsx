@@ -50,11 +50,21 @@ export interface CardHeadProps {
  * Design-system compliance: all colours via CSS token classes / pf.css.
  * No raw hex or inline rgba.
  */
-export function CardHead({ cardType, posLabel, gender, currentLang, onLangChange }: CardHeadProps) {
+export function CardHead({
+  cardType,
+  posLabel,
+  gender,
+  genderRu,
+  currentLang,
+  onLangChange,
+}: CardHeadProps) {
   const { t } = useTranslation('deck');
   const descriptor = descriptorForCardType(cardType);
 
-  // Determine the article to show based on gender
+  // When lang is RU and genderRu is available, show it in the chip; otherwise English gender.
+  const activeGender = currentLang === 'ru' && genderRu ? genderRu : gender;
+
+  // Determine the article to show based on gender (only for article derivation, use English gender)
   const article = gender ? (GENDER_ARTICLE[gender.toLowerCase()] ?? null) : null;
   const normalizedGender = gender?.toLowerCase() ?? null;
 
@@ -67,7 +77,7 @@ export function CardHead({ cardType, posLabel, gender, currentLang, onLangChange
       <div className="pf-head__left">
         {/* Family badge */}
         <span className="pf-fam" data-testid="pf-fam-badge">
-          {descriptor.short}
+          {descriptor.label}
         </span>
 
         {/* POS chip — only when posLabel is present */}
@@ -91,6 +101,12 @@ export function CardHead({ cardType, posLabel, gender, currentLang, onLangChange
               </>
             )}
             {posLabel}
+            {/* Gender label — shown when gender is present; switches to RU label when available */}
+            {activeGender && (
+              <span className="pf-pos__gender" data-testid="pf-gender-label">
+                {activeGender}
+              </span>
+            )}
           </span>
         )}
       </div>

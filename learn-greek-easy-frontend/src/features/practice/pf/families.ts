@@ -26,8 +26,6 @@ export interface FamilyDescriptor {
   tone: string;
   /** Full label — i18n key or English fallback for the kicker. */
   label: string;
-  /** Compact label for tight chips. */
-  short: string;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -42,11 +40,11 @@ export interface FamilyDescriptor {
  * declarations for them (verified: index.css:176 marks them 'same').
  */
 export const FAMILIES: Record<PracticeFamily, FamilyDescriptor> = {
-  translation: { family: 'translation', tone: 'primary', label: 'Translation', short: 'Trans' },
-  sentence: { family: 'sentence', tone: 'accent-2', label: 'Sentence', short: 'Sent' },
-  grammar: { family: 'grammar', tone: 'accent', label: 'Grammar', short: 'Gram' },
-  declension: { family: 'declension', tone: 'accent-3', label: 'Declension', short: 'Decl' },
-  audio: { family: 'audio', tone: 'success', label: 'Audio', short: 'Audio' },
+  translation: { family: 'translation', tone: 'primary', label: 'Translation' },
+  sentence: { family: 'sentence', tone: 'accent-2', label: 'Sentence' },
+  grammar: { family: 'grammar', tone: 'accent', label: 'Grammar' },
+  declension: { family: 'declension', tone: 'accent-3', label: 'Declension' },
+  audio: { family: 'audio', tone: 'success', label: 'Audio' },
 };
 
 // ────────────────────────────────────────────────────────────────────────────

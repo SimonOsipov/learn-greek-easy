@@ -36,11 +36,9 @@ import {
   Answer,
   RatingRow,
   Toast,
-  TypedInput,
   resolveAnswerText,
   Done,
 } from '@/features/practice/pf';
-import type { Verdict } from '@/features/practice/pf';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useDeck } from '@/hooks/useDeck';
 import { usePracticeKeyboard } from '@/hooks/usePracticeKeyboard';
@@ -86,14 +84,12 @@ export function V2FlashcardPracticePage() {
     ratings,
     leaveDirection,
     toast,
-    inputMode,
     showStreak,
     startSession,
     rateCard,
     flipCard,
     clearLeaveDirection,
     clearToast,
-    setInputMode,
     setShowStreak,
   } = useV2PracticeStore();
 
@@ -106,8 +102,6 @@ export function V2FlashcardPracticePage() {
   // Solution: displayIndex is the index actually rendered; it lags currentIndex
   // by 320ms when leaveDirection is set, giving data-leave time to animate.
   const [displayIndex, setDisplayIndex] = useState(currentIndex);
-  // Type-mode verdict — set when user presses Enter in TypedInput; cleared on card advance
-  const [typedResult, setTypedResult] = useState<Verdict | null>(null);
 
   useEffect(() => {
     if (leaveDirection) {
@@ -115,13 +109,11 @@ export function V2FlashcardPracticePage() {
       const timer = window.setTimeout(() => {
         setDisplayIndex(currentIndex);
         clearLeaveDirection();
-        setTypedResult(null); // clear verdict for new card
       }, 320);
       return () => window.clearTimeout(timer);
     } else {
       // No slide in progress (e.g., session start) — sync immediately
       setDisplayIndex(currentIndex);
-      setTypedResult(null); // clear verdict on immediate advance
     }
   }, [currentIndex, leaveDirection, clearLeaveDirection]);
 
@@ -177,10 +169,14 @@ export function V2FlashcardPracticePage() {
       }
     : null;
 
-  // Current UI language — drives EN/RU switch in CardHead
-  const currentLang = (i18n.language?.split('-')[0] ?? 'en') as 'en' | 'ru';
+  // Practice-local card language — decoupled from global i18n.
+  // Initialized once from the UI language (so Russian-UI users start on RU),
+  // but toggling NEVER writes back to i18n.changeLanguage.
+  const [cardLang, setCardLang] = useState<'en' | 'ru'>(
+    i18n.language?.split('-')[0] === 'ru' ? 'ru' : 'en'
+  );
   const handleLangChange = (lang: 'en' | 'ru') => {
-    i18n.changeLanguage(lang);
+    setCardLang(lang);
   };
 
   // Handle rating
@@ -240,7 +236,7 @@ export function V2FlashcardPracticePage() {
             <ThemeSwitcher />
           </div>
         </div>
-        <div className="mx-auto w-full max-w-lg px-4">
+        <div className="pf-card-area px-4">
           <Skeleton className="min-h-[280px] w-full rounded-xl" />
         </div>
       </div>
@@ -264,7 +260,7 @@ export function V2FlashcardPracticePage() {
             </>
           }
         />
-        <div className="mx-auto w-full max-w-lg px-4">
+        <div className="pf-card-area px-4">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
@@ -303,7 +299,7 @@ export function V2FlashcardPracticePage() {
             </>
           }
         />
-        <div className="mx-auto w-full max-w-lg px-4 py-12 text-center">
+        <div className="pf-card-area px-4 py-12 text-center">
           <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-practice-correct" />
           <h2 className="mb-2 text-2xl font-bold">{t('v2Practice.allCaughtUp')}</h2>
           <p className="mb-6 text-muted-foreground">{t('v2Practice.allCaughtUpDescription')}</p>
@@ -365,12 +361,13 @@ export function V2FlashcardPracticePage() {
         <Answer
           answerText={resolveAnswerText(
             currentCard.card_type,
-            currentCard.back_content as Record<string, unknown>
+            currentCard.back_content as Record<string, unknown>,
+            cardLang
           )}
           cardType={currentCard.card_type}
           card={currentQueueCard}
+          lang={cardLang}
           exampleAudioState={audioState}
-          typedResult={typedResult}
         />
       )}
       <RatingRow onRate={handleRate} isFlipped={isFlipped} />
@@ -392,12 +389,10 @@ export function V2FlashcardPracticePage() {
         ratings={ratings}
         showStreak={showStreak}
         onToggleShowStreak={() => setShowStreak(!showStreak)}
-        inputMode={inputMode}
-        onToggleInputMode={() => setInputMode(inputMode === 'reveal' ? 'type' : 'reveal')}
       />
 
       {/* Content area */}
-      <div className="mx-auto w-full max-w-lg px-4">
+      <div className="pf-card-area px-4">
         {/* Slide-out wrapper — data-leave drives the 320ms rating-aware animation.
             The inner card key={currentCard.id} remounts after displayIndex advances
             (deferred 320ms by the useEffect above). */}
@@ -419,29 +414,16 @@ export function V2FlashcardPracticePage() {
                 posLabel={(front.badge as string | null | undefined) ?? null}
                 gender={(back.gender as string | null | undefined) ?? null}
                 genderRu={(back.gender_ru as string | null | undefined) ?? null}
-                currentLang={currentLang}
+                currentLang={cardLang}
                 onLangChange={handleLangChange}
               />
             );
-
-            // Type-mode input — shared across all pf-backed card types
-            // Only shown when inputMode === 'type' && !isFlipped
-            const typedInputEl =
-              inputMode === 'type' && !isFlipped ? (
-                <TypedInput
-                  key={`typed-${currentCard.id}`}
-                  cardType={cardType}
-                  backContent={back}
-                  onFlip={flipCard}
-                  onResult={(v) => setTypedResult(v)}
-                />
-              ) : null;
 
             if (cardType === 'meaning_el_to_en') {
               return (
                 <PfCard
                   key={currentCard.id}
-                  onClick={!isFlipped && inputMode === 'reveal' ? flipCard : undefined}
+                  onClick={!isFlipped ? flipCard : undefined}
                   isFlipped={isFlipped}
                   body={
                     <>
@@ -451,7 +433,6 @@ export function V2FlashcardPracticePage() {
                         ipa={(front.sub as string | null | undefined) ?? null}
                         audioState={audioState ?? null}
                       />
-                      {typedInputEl}
                     </>
                   }
                   foot={pfFoot}
@@ -465,13 +446,12 @@ export function V2FlashcardPracticePage() {
               return (
                 <PfCard
                   key={currentCard.id}
-                  onClick={!isFlipped && inputMode === 'reveal' ? flipCard : undefined}
+                  onClick={!isFlipped ? flipCard : undefined}
                   isFlipped={isFlipped}
                   body={
                     <>
                       {headEl}
                       <TranslationEnToEl prompt={prompt} />
-                      {typedInputEl}
                     </>
                   }
                   foot={pfFoot}
@@ -483,7 +463,7 @@ export function V2FlashcardPracticePage() {
               return (
                 <PfCard
                   key={currentCard.id}
-                  onClick={!isFlipped && inputMode === 'reveal' ? flipCard : undefined}
+                  onClick={!isFlipped ? flipCard : undefined}
                   isFlipped={isFlipped}
                   body={
                     <>
@@ -492,7 +472,6 @@ export function V2FlashcardPracticePage() {
                         wordWithArticle={(front.main as string) ?? ''}
                         prompt={(front.prompt as string | null | undefined) ?? null}
                       />
-                      {typedInputEl}
                     </>
                   }
                   foot={pfFoot}
@@ -504,7 +483,7 @@ export function V2FlashcardPracticePage() {
               return (
                 <PfCard
                   key={currentCard.id}
-                  onClick={!isFlipped && inputMode === 'reveal' ? flipCard : undefined}
+                  onClick={!isFlipped ? flipCard : undefined}
                   isFlipped={isFlipped}
                   body={
                     <>
@@ -515,7 +494,6 @@ export function V2FlashcardPracticePage() {
                         audioState={audioState ?? null}
                         prompt={(front.prompt as string | null | undefined) ?? null}
                       />
-                      {typedInputEl}
                     </>
                   }
                   foot={pfFoot}
@@ -528,7 +506,7 @@ export function V2FlashcardPracticePage() {
               return (
                 <PfCard
                   key={currentCard.id}
-                  onClick={!isFlipped && inputMode === 'reveal' ? flipCard : undefined}
+                  onClick={!isFlipped ? flipCard : undefined}
                   isFlipped={isFlipped}
                   body={
                     <>
@@ -538,7 +516,6 @@ export function V2FlashcardPracticePage() {
                         main={(front.main as string) ?? ''}
                         audioState={audioState ?? null}
                       />
-                      {typedInputEl}
                     </>
                   }
                   foot={pfFoot}
@@ -550,7 +527,7 @@ export function V2FlashcardPracticePage() {
               return (
                 <PfCard
                   key={currentCard.id}
-                  onClick={!isFlipped && inputMode === 'reveal' ? flipCard : undefined}
+                  onClick={!isFlipped ? flipCard : undefined}
                   isFlipped={isFlipped}
                   body={
                     <>
@@ -562,7 +539,6 @@ export function V2FlashcardPracticePage() {
                         }}
                         revealed={false}
                       />
-                      {typedInputEl}
                     </>
                   }
                   foot={
@@ -575,23 +551,6 @@ export function V2FlashcardPracticePage() {
                         revealed={true}
                       />
                       {/* Answer suppressed for declension (DeclTable IS the answer) */}
-                      {/* Typed-result chip for declension (Answer is suppressed) */}
-                      {typedResult && (
-                        <div className="pf-answer__type-slot" data-testid="pf-answer-type-slot">
-                          <div
-                            className={`pf-typed-result pf-typed-result--${typedResult}`}
-                            data-testid="pf-typed-result"
-                            data-verdict={typedResult}
-                            role="status"
-                          >
-                            {typedResult === 'correct'
-                              ? 'Correct'
-                              : typedResult === 'lenient'
-                                ? 'Close enough'
-                                : 'Wrong'}
-                          </div>
-                        </div>
-                      )}
                       <RatingRow onRate={handleRate} isFlipped={isFlipped} />
                       {activeToast && (
                         <Toast interval={activeToast.interval} onDismiss={clearToast} />

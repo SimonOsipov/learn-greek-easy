@@ -198,7 +198,8 @@ export function judge(typed: string, answer: string): Verdict {
  */
 export function resolveAnswerText(
   cardType: string | null | undefined,
-  backContent: Record<string, unknown>
+  backContent: Record<string, unknown>,
+  lang: 'en' | 'ru' = 'en'
 ): string {
   if (cardType === 'declension') {
     // Find the highlighted row in the declension table
@@ -217,6 +218,20 @@ export function resolveAnswerText(
       }
     }
     return '';
+  }
+
+  // When lang === 'ru', prefer _ru variant of the answer field when present.
+  // Only sentence_translation carries answer_ru; plural_form carries answer_sub_ru.
+  // Falls back to English when the _ru field is absent/empty.
+  if (lang === 'ru') {
+    if (cardType === 'sentence_translation') {
+      const ruVal = backContent['answer_ru'];
+      if (typeof ruVal === 'string' && ruVal.length > 0) return ruVal;
+    }
+    if (cardType === 'plural_form') {
+      const ruVal = backContent['answer_sub_ru'];
+      if (typeof ruVal === 'string' && ruVal.length > 0) return ruVal;
+    }
   }
 
   // Non-declension: main first, then answer fallback
