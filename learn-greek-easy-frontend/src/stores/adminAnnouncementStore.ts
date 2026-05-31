@@ -157,9 +157,6 @@ export const useAdminAnnouncementStore = create<AdminAnnouncementState>()(
 // Selectors (Optional optimization)
 // ============================================
 
-export const selectAnnouncements = (state: AdminAnnouncementState) => state.announcements;
-export const selectSelectedAnnouncement = (state: AdminAnnouncementState) =>
-  state.selectedAnnouncement;
 export const selectIsLoading = (state: AdminAnnouncementState) => state.isLoading;
 export const selectIsLoadingDetail = (state: AdminAnnouncementState) => state.isLoadingDetail;
 export const selectError = (state: AdminAnnouncementState) => state.error;

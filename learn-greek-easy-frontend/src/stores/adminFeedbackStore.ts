@@ -292,7 +292,6 @@ export const useAdminFeedbackStore = create<AdminFeedbackState>()(
 // Selectors (Optional optimization)
 // ============================================
 
-export const selectAdminFeedbackList = (state: AdminFeedbackState) => state.feedbackList;
 export const selectSelectedFeedback = (state: AdminFeedbackState) => state.selectedFeedback;
 export const selectIsLoading = (state: AdminFeedbackState) => state.isLoading;
 export const selectIsUpdating = (state: AdminFeedbackState) => state.isUpdating;
@@ -304,10 +303,3 @@ export const selectPagination = (state: AdminFeedbackState) => ({
   total: state.total,
   totalPages: state.totalPages,
 });
-export const selectOpenFeedbackId = (state: AdminFeedbackState) => state.openFeedbackId;
-export const selectOpenInnerTab = (state: AdminFeedbackState) => state.openInnerTab;
-/** Returns the AdminFeedbackItem that is currently open in the drawer, or null. */
-export const selectOpenFeedback = (state: AdminFeedbackState): AdminFeedbackItem | null =>
-  state.openFeedbackId
-    ? (state.feedbackList.find((f) => f.id === state.openFeedbackId) ?? null)
-    : null;

@@ -19,7 +19,6 @@ from src.repositories.feedback import FeedbackRepository
 from src.repositories.mock_exam import MockExamRepository
 from src.repositories.news_item import NewsItemRepository
 from src.repositories.notification import NotificationRepository
-from src.repositories.session import SessionRepository
 from src.repositories.user import UserRepository, UserSettingsRepository
 from src.repositories.webhook_event import WebhookEventRepository
 from src.repositories.word_entry import WordEntryRepository
@@ -39,8 +38,6 @@ __all__ = [
     # V2 Progress
     "CardRecordStatisticsRepository",
     "CardRecordReviewRepository",
-    # Session (Redis)
-    "SessionRepository",
     # Exercise
     "ExerciseRepository",
     "ExerciseRecordRepository",
