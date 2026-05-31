@@ -64,6 +64,13 @@ export const CulturePage: React.FC = () => {
   const examDecks = decks.filter((d) => d.tags?.[0] === 'culture');
   const crossCuttingDecks = decks.filter((d) => d.tags?.[0] !== 'culture');
 
+  // Newest exam paper (decks arrive created_at DESC, so examDecks[0] is newest).
+  // Short label is frontend-derived: strip a known prefix, fall back to full name.
+  const latestPaper = examDecks[0];
+  const latestPaperLabel = latestPaper
+    ? latestPaper.title.replace(/^Cultural Exam\s+/i, '').trim() || latestPaper.title
+    : '';
+
   // ── Resume deck: most recently practiced in-progress deck ────────────────
   const inProgress = decks.filter(
     (d) =>
@@ -245,6 +252,7 @@ export const CulturePage: React.FC = () => {
           {/* What's-new strip */}
           {decks.length > 0 && (
             <div className="cx-whatsnew">
+              <span className="cx-whatsnew-l">{t('hub.whatsNewLabel', 'In Culture')}</span>
               <span className="cx-whatsnew-chip">
                 {t('hub.chipsExamDecks', '{{n}} cultural exam decks', { n: examDecks.length })}
               </span>
@@ -252,6 +260,17 @@ export const CulturePage: React.FC = () => {
               <span className="cx-whatsnew-chip">
                 {t('hub.chipsQuestions', '{{n}} questions', { n: questionsTotal })}
               </span>
+              {latestPaper && (
+                <>
+                  <span className="cx-whatsnew-sep" aria-hidden />
+                  <Link to={`/culture/decks/${latestPaper.id}`} className="cx-whatsnew-chip">
+                    {t('hub.chipsLatest', 'Latest: {{label}} · {{n}} questions', {
+                      label: latestPaperLabel,
+                      n: latestPaper.cardCount,
+                    })}
+                  </Link>
+                </>
+              )}
               <span className="cx-whatsnew-sep" aria-hidden />
               <span className="cx-whatsnew-chip">
                 {t('hub.chipsCategories', '{{n}} categories', {

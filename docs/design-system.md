@@ -413,3 +413,14 @@ New classes in `src/features/practice/pf/pf.css` (pf-layer scoping, not `src/ind
 | `.pf-right` | Right column flex row (streak + utility chrome). |
 | `.pf-streak` | Streak pill: flame + count, `--practice-hard` tint bg, 12px/600. |
 | `.pf-streak__icon` | 14×14 lucide Flame icon inside streak pill. |
+
+### Culture hub hero + what's-new strip (cx-, CULT2-2)
+
+New classes in `src/index.css` for the Culture hub (`CulturePage` / `CultureHero`). Token-only — no raw hex.
+
+| Class | Role |
+|---|---|
+| `.cx-cta-primary` | **Compact, auto-width** hero primary CTA (Continue), paired with `.cx-cta-ghost` so the two hero buttons sit side by side. `--primary` fill, `--primary-foreground` text, 12px/22px padding, 12px radius, 14px/700 Inter Tight, primary inset+drop shadow. Deliberately distinct from the shared **full-width** `.dx-action-cta` (used by the action panels and readiness/detail pages) — do not substitute one for the other. |
+| `.cx-whatsnew-l` | "In Culture" eyebrow label, first child of the what's-new strip. JetBrains Mono 10.5px/700, `letter-spacing: 0.1em`, uppercase, `hsl(var(--fg-3))`, with a small green `::before` dot (`hsl(var(--success))` + soft `0.18` alpha ring). |
+
+**Design system delta (CULT2-2):** adds `.cx-cta-primary` and `.cx-whatsnew-l`; no tokens introduced.

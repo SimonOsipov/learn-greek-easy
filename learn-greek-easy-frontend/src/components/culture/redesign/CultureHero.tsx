@@ -114,7 +114,7 @@ export function CultureHero({
                 <Link
                   key={i}
                   to={cta.to}
-                  className={cta.primary ? 'dx-action-cta' : 'cx-cta-ghost'}
+                  className={cta.primary ? 'cx-cta-primary' : 'cx-cta-ghost'}
                   data-testid={cta.testId}
                 >
                   {cta.label}
