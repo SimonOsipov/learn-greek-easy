@@ -139,6 +139,7 @@ router = APIRouter(
     },
 )
 async def list_culture_decks(
+    response: Response,  # injected for Cache-Control header
     page: int = Query(default=1, ge=1, description="Page number (starting from 1)"),
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page (max 100)"),
     category: Optional[str] = Query(
@@ -148,7 +149,6 @@ async def list_culture_decks(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     locale: str = Depends(get_locale_from_header),
-    response: Optional[Response] = None,  # injected for Cache-Control header
 ) -> CultureDeckListResponse:
     """List all active culture decks with pagination and optional filtering.
 
@@ -174,8 +174,7 @@ async def list_culture_decks(
 
     # PERF-08: short private TTL cache — deck list is user-specific (includes progress)
     # so must be private. 60s avoids repeat fetches within the same browse session.
-    if response is not None:
-        response.headers["Cache-Control"] = "private, max-age=60"
+    response.headers["Cache-Control"] = "private, max-age=60"
 
     return await service.list_decks(
         page=page,
@@ -397,6 +396,7 @@ async def get_categories(
     },
 )
 async def get_question_queue(
+    response: Response,  # injected for Cache-Control header
     deck_id: UUID,
     limit: int = Query(default=10, ge=1, le=50, description="Max questions to return"),
     include_new: bool = Query(default=True, description="Include new (unstudied) questions"),
@@ -410,7 +410,6 @@ async def get_question_queue(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     locale: str = Depends(get_locale_from_header),
-    response: Optional[Response] = None,  # injected for Cache-Control header
 ) -> CultureQuestionQueue:
     """Get questions due for review plus new questions for a practice session.
 
@@ -442,8 +441,7 @@ async def get_question_queue(
     # PERF-08: short private TTL cache — queue is user-specific (due/new per user).
     # 30s is safe: SM-2 scheduling is date-granular, so within-session freshness
     # is preserved. Force-practice bypasses stale concerns via explicit intent.
-    if response is not None:
-        response.headers["Cache-Control"] = "private, max-age=30"
+    response.headers["Cache-Control"] = "private, max-age=30"
 
     return await service.get_question_queue(
         user_id=current_user.id,
