@@ -130,6 +130,12 @@ export default defineConfig(({ mode }) => {
             // Error tracking - always needed
             'sentry': ['@sentry/react'],
 
+            // Analytics - deferred init, split so it leaves the entry chunk
+            'posthog': ['posthog-js', 'posthog-js/react'],
+
+            // Auth client - split so it leaves the entry chunk
+            'supabase': ['@supabase/supabase-js'],
+
             // Utilities
             'utils': ['clsx', 'tailwind-merge', 'class-variance-authority'],
           },

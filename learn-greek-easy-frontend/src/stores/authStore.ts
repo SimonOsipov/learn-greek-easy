@@ -1,4 +1,3 @@
-import posthog from 'posthog-js';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
@@ -7,6 +6,20 @@ import { queryClient } from '@/lib/queryClient';
 import { supabase } from '@/lib/supabaseClient';
 import { authAPI, type ProfileUpdateRequest } from '@/services/authAPI';
 import type { User, AuthError } from '@/types/auth';
+
+// posthog-js is imported lazily to keep it out of the entry chunk.
+// See PostHogProvider.tsx for the main init; here we access the singleton
+// via dynamic import only inside async store actions where it may already be loaded.
+let _posthogModule: typeof import('posthog-js') | null = null;
+function getPosthog() {
+  return _posthogModule?.default ?? null;
+}
+// Pre-warm the posthog chunk after the module is ready (non-blocking).
+import('posthog-js')
+  .then((mod) => {
+    _posthogModule = mod;
+  })
+  .catch(() => {});
 
 /**
  * In-flight guard: if checkAuth is already in progress, callers share the
@@ -62,8 +75,9 @@ export const useAuthStore = create<AuthState>()(
       // Logout action
       logout: async () => {
         // Track logout event before reset
-        if (typeof posthog?.capture === 'function') {
-          posthog.capture('user_logged_out');
+        const _ph = getPosthog();
+        if (typeof _ph?.capture === 'function') {
+          _ph.capture('user_logged_out');
         }
 
         // Sign out via Supabase (clears session)
@@ -86,8 +100,8 @@ export const useAuthStore = create<AuthState>()(
         queryClient.removeQueries({ queryKey: ['analytics'] });
 
         // Reset PostHog identity so next session is anonymous
-        if (typeof posthog?.reset === 'function') {
-          posthog.reset();
+        if (typeof _ph?.reset === 'function') {
+          _ph.reset();
         }
       },
 
@@ -273,8 +287,9 @@ export const useAuthStore = create<AuthState>()(
             _profileFetchedAt = Date.now();
 
             // Re-identify user to ensure PostHog session continuity
-            if (typeof posthog?.identify === 'function') {
-              posthog.identify(fetchedUser.id, {
+            const _phCheck = getPosthog();
+            if (typeof _phCheck?.identify === 'function') {
+              _phCheck.identify(fetchedUser.id, {
                 email: fetchedUser.email,
                 created_at: fetchedUser.createdAt.toISOString(),
               });
