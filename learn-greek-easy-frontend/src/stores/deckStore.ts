@@ -98,8 +98,11 @@ const transformDeckResponse = (deck: DeckResponse, progressData?: DeckProgressSu
     }
   }
 
-  // Get total cards from progress data (more reliable) or deck response
-  const totalCards = progressData?.total_cards ?? deck.card_count ?? 0;
+  // cardCount is the WORD-ENTRY count (one "word" per deck_word_entry), surfaced
+  // as the deck's headline stat. Prefer deck.card_count; progressData.total_cards
+  // is the SRS card-record count (~15 per word) and must NOT feed this field —
+  // SRS counts live on the `progress` object below (cardsTotal etc.).
+  const totalCards = deck.card_count ?? progressData?.total_cards ?? 0;
 
   // Build progress object matching DeckProgress interface
   const progress: DeckProgress | undefined = progressData

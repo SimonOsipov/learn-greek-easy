@@ -16,9 +16,19 @@
  * resetting state between tests.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import type { Deck, DeckFilters } from '@/types/deck';
+
+// Mock the API modules so we can drive transformDeckResponse via the public
+// store API (selectDeck). transformDeckResponse is not exported, so this is the
+// only way to assert the REAL cardCount mapping rather than a re-implementation.
+vi.mock('@/services/deckAPI', () => ({
+  deckAPI: { getById: vi.fn() },
+}));
+vi.mock('@/services/progressAPI', () => ({
+  progressAPI: { getDeckProgressDetail: vi.fn() },
+}));
 
 // ---------------------------------------------------------------------------
 // Minimal Deck fixture factory
@@ -209,5 +219,107 @@ describe('transformDeckResponse — titleGreek mapping (DGREEK-08)', () => {
 
     const titleGreek = deriveTitleGreek(fixture);
     expect(titleGreek).toBe('');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// transformDeckResponse — cardCount source (#522 regression guard)
+//
+// Deck.cardCount is the headline "words" stat (deck hero, list card, selector
+// modal). It MUST be the word-entry count (deck.card_count), NOT the SRS
+// card-record count (progress.total_cards, ~15 records per word). A 37-word
+// deck once displayed 555 because the transform preferred total_cards.
+//
+// This drives the REAL transformDeckResponse through selectDeck with mocked
+// APIs so the precedence is genuinely exercised, not re-implemented.
+// ---------------------------------------------------------------------------
+
+import { useDeckStore } from '@/stores/deckStore';
+import { deckAPI } from '@/services/deckAPI';
+import { progressAPI } from '@/services/progressAPI';
+import type { DeckDetailResponse } from '@/services/deckAPI';
+import type { DeckProgressDetailResponse } from '@/services/progressAPI';
+
+const WORD_COUNT = 37;
+const SRS_CARD_COUNT = 555; // 37 words x ~15 SRS cards each
+
+function makeDeckDetail(): DeckDetailResponse {
+  return {
+    id: 'deck-words',
+    name: 'Numbers',
+    description: null,
+    name_el: 'Αριθμοί',
+    level: 'a1',
+    is_active: true,
+    card_count: WORD_COUNT,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  } as DeckDetailResponse;
+}
+
+function makeProgressDetail(): DeckProgressDetailResponse {
+  return {
+    deck_id: 'deck-words',
+    deck_name: 'Numbers',
+    deck_level: 'a1',
+    deck_description: null,
+    progress: {
+      total_cards: SRS_CARD_COUNT,
+      cards_studied: 100,
+      cards_mastered: 40,
+      cards_due: 10,
+      cards_new: 455,
+      cards_learning: 60,
+      cards_review: 40,
+      mastery_percentage: 7,
+      completion_percentage: 18,
+    },
+    statistics: {
+      total_reviews: 200,
+      total_study_time_seconds: 1200,
+      average_quality: 4,
+      average_easiness_factor: 2.5,
+      average_interval_days: 3,
+    },
+    timeline: {
+      first_studied_at: null,
+      last_studied_at: null,
+      days_active: 1,
+      estimated_completion_days: null,
+    },
+  };
+}
+
+describe('transformDeckResponse — cardCount uses word count, not SRS count (#522)', () => {
+  beforeEach(() => {
+    vi.mocked(deckAPI.getById).mockResolvedValue(makeDeckDetail());
+    vi.mocked(progressAPI.getDeckProgressDetail).mockResolvedValue(makeProgressDetail());
+  });
+
+  it('selectedDeck.cardCount is the word count (card_count), not progress.total_cards', async () => {
+    await useDeckStore.getState().selectDeck('deck-words');
+    const { selectedDeck } = useDeckStore.getState();
+
+    expect(selectedDeck?.cardCount).toBe(WORD_COUNT);
+    expect(selectedDeck?.cardCount).not.toBe(SRS_CARD_COUNT);
+  });
+
+  it('SRS card count still flows through the progress object (cardsTotal)', async () => {
+    await useDeckStore.getState().selectDeck('deck-words');
+    const { selectedDeck } = useDeckStore.getState();
+
+    // Progress bars/percentages remain SRS-based — only the headline stat changed.
+    expect(selectedDeck?.progress?.cardsTotal).toBe(SRS_CARD_COUNT);
+  });
+
+  it('falls back to total_cards when card_count is absent', async () => {
+    const detail = makeDeckDetail();
+    delete (detail as Partial<DeckDetailResponse>).card_count;
+    vi.mocked(deckAPI.getById).mockResolvedValue(detail as DeckDetailResponse);
+
+    await useDeckStore.getState().selectDeck('deck-words');
+    const { selectedDeck } = useDeckStore.getState();
+
+    expect(selectedDeck?.cardCount).toBe(SRS_CARD_COUNT);
   });
 });
