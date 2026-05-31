@@ -83,7 +83,7 @@ from src.schemas.culture import (
     MotivationMessage,
     SM2QuestionResult,
 )
-from src.services.s3_service import S3Service, get_s3_service
+from src.services.s3_service import IMAGE_PRESIGN_EXPIRY_SECONDS, S3Service, get_s3_service
 from src.services.xp_constants import (
     PERFECT_RECALL_THRESHOLD_SECONDS,
     XP_CORRECT_ANSWER,
@@ -402,7 +402,9 @@ class CultureQuestionService:
 
         # 4. Presigned S3 URLs
         image_url = (
-            self.s3_service.generate_presigned_url(question.image_key)
+            self.s3_service.generate_presigned_url(
+                question.image_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
+            )
             if question.image_key
             else None
         )
@@ -1530,7 +1532,9 @@ class CultureQuestionService:
         # Generate presigned URL if image exists
         image_url = None
         if question.image_key:
-            image_url = self.s3_service.generate_presigned_url(question.image_key)
+            image_url = self.s3_service.generate_presigned_url(
+                question.image_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
+            )
 
         # Generate presigned URL if audio exists
         audio_url = None

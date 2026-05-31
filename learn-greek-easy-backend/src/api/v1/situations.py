@@ -32,7 +32,7 @@ from src.schemas.learner_situation import (
     LearnerSituationListResponse,
 )
 from src.services.exercise_sm2_service import ExerciseSM2Service
-from src.services.s3_service import get_s3_service
+from src.services.s3_service import IMAGE_PRESIGN_EXPIRY_SECONDS, get_s3_service
 
 router = APIRouter(
     responses={
@@ -134,7 +134,9 @@ async def list_situations(
             exercise_total=exercise_total or 0,
             exercise_completed=exercise_completed or 0,
             source_image_url=(
-                s3.generate_presigned_url(situation.source_image_s3_key)
+                s3.generate_presigned_url(
+                    situation.source_image_s3_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
+                )
                 if situation.source_image_s3_key
                 else None
             ),
@@ -227,7 +229,9 @@ async def get_situation(
     # Source metadata
     source_image_url: str | None = None
     if situation.source_image_s3_key:
-        source_image_url = s3.generate_presigned_url(situation.source_image_s3_key)
+        source_image_url = s3.generate_presigned_url(
+            situation.source_image_s3_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
+        )
 
     # Picture (presigned only when generated)
     picture_url: str | None = None
@@ -236,7 +240,9 @@ async def get_situation(
         and situation.picture.status == PictureStatus.GENERATED
         and situation.picture.image_s3_key
     ):
-        picture_url = s3.generate_presigned_url(situation.picture.image_s3_key)
+        picture_url = s3.generate_presigned_url(
+            situation.picture.image_s3_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
+        )
 
     return LearnerSituationDetailResponse(
         id=situation.id,

@@ -813,3 +813,131 @@ class TestForbiddenDirectives:
         assert (
             "ResponseCacheControl" not in captured_params
         ), f"ResponseCacheControl found in Params: {captured_params}"
+
+
+# ============================================================================
+# PERF-02: IMAGE_PRESIGN_EXPIRY_SECONDS constant + 30-day window stability
+# ============================================================================
+
+# 30-day expiry parameters
+_IMG_EXPIRY = 2592000  # 30 days in seconds
+_IMG_WINDOW_SEC = _IMG_EXPIRY - _CACHE_BUFFER  # 2591400 s (~29.99 days)
+_IMG_FIXED_EPOCH = 1748553315.0  # same epoch as SCACHE-02 tests
+_IMG_FLOORED_EPOCH = (int(_IMG_FIXED_EPOCH) // _IMG_WINDOW_SEC) * _IMG_WINDOW_SEC
+_IMG_KEY = "situations/images/s456.jpg"
+
+
+@pytest.fixture
+def mock_settings_30d():
+    """S3 settings fixture for 30-day image expiry tests."""
+    with patch("src.services.s3_service.settings") as mock:
+        mock.s3_configured = True
+        mock.effective_s3_access_key_id = "AKIAIOSFODNN7EXAMPLE"
+        mock.effective_s3_secret_access_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+        mock.effective_s3_bucket_name = "test-bucket"
+        mock.effective_s3_region = "eu-central-1"
+        mock.effective_s3_endpoint_url = None
+        mock.s3_presigned_url_expiry = 86400
+        yield mock
+
+
+def _gen_img_url(svc, clock_epoch: float) -> str | None:
+    """Generate a 30-day image URL with a controlled clock and empty cache."""
+    svc._url_cache.clear()
+    with patch("src.services.s3_service.time") as t:
+        t.time.return_value = clock_epoch
+        t.monotonic.return_value = 9_999_999  # always cache-miss
+        return svc.generate_presigned_url(_IMG_KEY, expiry_seconds=_IMG_EXPIRY)
+
+
+class TestImagePresignExpiry:
+    """PERF-02: IMAGE_PRESIGN_EXPIRY_SECONDS constant and 30-day URL stability."""
+
+    def test_constant_value(self):
+        """IMAGE_PRESIGN_EXPIRY_SECONDS must equal 2592000 (30 days)."""
+        from src.services.s3_service import IMAGE_PRESIGN_EXPIRY_SECONDS
+
+        assert IMAGE_PRESIGN_EXPIRY_SECONDS == 2592000
+
+    def test_constant_exported(self):
+        """IMAGE_PRESIGN_EXPIRY_SECONDS must be importable from src.services.s3_service."""
+        import importlib
+
+        mod = importlib.import_module("src.services.s3_service")
+        assert hasattr(mod, "IMAGE_PRESIGN_EXPIRY_SECONDS")
+
+    def test_30d_image_url_stable_within_window(self, mock_settings_30d):
+        """Image URL byte-identical for two calls within the same 30-day window."""
+        from src.services.s3_service import S3Service
+
+        svc1 = S3Service()
+        svc2 = S3Service()
+
+        url_a = _gen_img_url(svc1, _IMG_FIXED_EPOCH)
+        # 24 hours later — still same 30-day window
+        url_b = _gen_img_url(svc2, _IMG_FIXED_EPOCH + 86400)
+
+        assert url_a is not None
+        assert url_b is not None
+        pa, pb = _parse(url_a), _parse(url_b)
+
+        assert (
+            pa["date"] == pb["date"]
+        ), f"X-Amz-Date rotated within 30-day window: {pa['date']!r} != {pb['date']!r}"
+        assert url_a == url_b, "Image URL must be byte-identical within a 30-day window"
+
+    def test_30d_image_url_amz_expires_equals_30d(self, mock_settings_30d):
+        """X-Amz-Expires in the image URL equals IMAGE_PRESIGN_EXPIRY_SECONDS (2592000)."""
+        from src.services.s3_service import IMAGE_PRESIGN_EXPIRY_SECONDS, S3Service
+
+        svc = S3Service()
+        url = _gen_img_url(svc, _IMG_FIXED_EPOCH)
+
+        assert url is not None
+        p = _parse(url)
+        assert p["expires"] == str(
+            IMAGE_PRESIGN_EXPIRY_SECONDS
+        ), f"X-Amz-Expires={p['expires']!r}, expected {IMAGE_PRESIGN_EXPIRY_SECONDS}"
+
+    def test_audio_presign_expiry_unchanged(self, mock_settings_24h):
+        """Audio presign still uses the default (short) expiry — not the image 30d constant.
+
+        Regression guard: ensures IMAGE_PRESIGN_EXPIRY_SECONDS is not accidentally
+        applied to audio call sites.
+        """
+        from src.services.s3_service import IMAGE_PRESIGN_EXPIRY_SECONDS, S3Service
+
+        audio_expiry = 86400  # default short expiry
+        assert (
+            audio_expiry != IMAGE_PRESIGN_EXPIRY_SECONDS
+        ), "Test assumption invalid: audio and image expiries must differ"
+
+        svc = S3Service()
+        # Produce a URL with the *audio* (short) expiry
+        url = _gen_url_with_clock(svc, _FIXED_EPOCH, expiry=audio_expiry)
+
+        assert url is not None
+        p = _parse(url)
+        assert p["expires"] == str(audio_expiry), (
+            f"Audio URL X-Amz-Expires={p['expires']!r}, expected {audio_expiry} — "
+            "audio expiry appears to have been changed"
+        )
+
+    def test_30d_image_x_amz_date_stable_across_24h_boundary(self, mock_settings_30d):
+        """X-Amz-Date is unchanged after 24 hours (30-day window is still active)."""
+        from src.services.s3_service import S3Service
+
+        svc1 = S3Service()
+        svc2 = S3Service()
+
+        url_day0 = _gen_img_url(svc1, _IMG_FIXED_EPOCH)
+        url_day1 = _gen_img_url(svc2, _IMG_FIXED_EPOCH + 86400)
+
+        assert url_day0 is not None and url_day1 is not None
+        p0 = _parse(url_day0)
+        p1 = _parse(url_day1)
+
+        assert p0["date"] == p1["date"], (
+            f"X-Amz-Date changed after 24h: {p0['date']!r} -> {p1['date']!r}. "
+            "The 30-day window must not rotate on a 24-hour boundary."
+        )

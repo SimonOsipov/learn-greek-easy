@@ -83,6 +83,13 @@ _SIGN_LOCK = threading.Lock()
 ALLOWED_DECK_IMAGE_CONTENT_TYPES = frozenset(["image/jpeg", "image/png", "image/webp"])
 MAX_DECK_IMAGE_SIZE_BYTES = 3 * 1024 * 1024  # 3MB
 
+# 30-day expiry for situation/news/culture-question image presigns.
+# Mirrors _COVER_IMAGE_URL_EXPIRY_SECONDS in culture_deck_service.py (line 53).
+# The clock-window floor derives a ~30-day signing window from this value, making
+# image URLs byte-stable for ~30 days so returning users hit browser disk cache
+# instead of re-downloading on every session.
+IMAGE_PRESIGN_EXPIRY_SECONDS = 2592000  # 30 days
+
 # Presigned URL cache: hot-path micro-optimisation that avoids redundant signing.
 # URL stability across deploys is guaranteed by clock-window determinism (see module
 # docstring), NOT by this cache.

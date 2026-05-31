@@ -34,6 +34,7 @@ from src.schemas.mock_exam import (
     MockExamSubmitAllResponse,
 )
 from src.services import MockExamService
+from src.services.s3_service import IMAGE_PRESIGN_EXPIRY_SECONDS
 
 router = APIRouter(
     prefix="/mock-exam",
@@ -124,7 +125,11 @@ async def get_mock_exam_queue(
             + ([q.option_d] if q.option_d else []),
             option_count=q.option_count,
             image_url=(
-                service.s3_service.generate_presigned_url(q.image_key) if q.image_key else None
+                service.s3_service.generate_presigned_url(
+                    q.image_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
+                )
+                if q.image_key
+                else None
             ),
             order_index=q.order_index,
         )

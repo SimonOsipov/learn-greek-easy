@@ -40,7 +40,7 @@ from src.schemas.news_item import (
     NewsItemUpdate,
 )
 from src.services.picture_prompt import resolve_picture_style_en
-from src.services.s3_service import S3Service, get_s3_service
+from src.services.s3_service import IMAGE_PRESIGN_EXPIRY_SECONDS, S3Service, get_s3_service
 
 logger = get_logger(__name__)
 
@@ -449,7 +449,9 @@ class NewsItemService:
                 a zero-aggregate summary is built from the available objects
                 (covers create/update/list paths where the dialog graph is not loaded).
         """
-        image_url = self.s3_service.generate_presigned_url(situation.source_image_s3_key)
+        image_url = self.s3_service.generate_presigned_url(
+            situation.source_image_s3_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
+        )
         audio_url = self.s3_service.generate_presigned_url(description.audio_s3_key)
         audio_a2_url = self.s3_service.generate_presigned_url(description.audio_a2_s3_key)
 
