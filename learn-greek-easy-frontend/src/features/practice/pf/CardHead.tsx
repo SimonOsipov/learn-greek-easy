@@ -67,7 +67,7 @@ export function CardHead({ cardType, posLabel, gender, currentLang, onLangChange
       <div className="pf-head__left">
         {/* Family badge */}
         <span className="pf-fam" data-testid="pf-fam-badge">
-          {descriptor.short}
+          {descriptor.label}
         </span>
 
         {/* POS chip — only when posLabel is present */}
