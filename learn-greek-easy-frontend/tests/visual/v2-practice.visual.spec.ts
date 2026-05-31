@@ -1070,14 +1070,13 @@ test.describe('PRACT2-2 - Card Width and Family Badge', () => {
     await expect(page.locator('.pf-app[data-fam="translation"]')).toBeVisible({ timeout: 5000 });
 
     // Card width should be capped at ~760px
-    const cardBox = await page.locator('[data-testid="pf-card"]').boundingBox();
-    expect(cardBox).not.toBeNull();
-    // Allow a few px for borders/padding — card element itself should not exceed 762px
-    expect(cardBox!.width).toBeLessThanOrEqual(762);
+    const cardAreaBox = await page.locator('.pf-card-area').boundingBox();
+    expect(cardAreaBox).not.toBeNull();
+    // Allow a few px for borders/padding — .pf-card-area carries max-width: min(760px,100%)
+    expect(cardAreaBox!.width).toBeLessThanOrEqual(762);
 
     // Family badge shows the full word (source-case: "Translation")
-    const badgeText = await page.locator('[data-testid="pf-fam-badge"]').textContent();
-    expect(badgeText).toMatch(/^(Translation|Sentence|Grammar|Declension|Audio)$/i);
+    await expect(page.locator('[data-testid="pf-fam-badge"]')).toHaveText('Translation');
 
     await takeSnapshot(page, 'PRACT2-2 - Card Width 760px and Full Badge - Desktop Light', testInfo);
   });
@@ -1093,12 +1092,11 @@ test.describe('PRACT2-2 - Card Width and Family Badge', () => {
 
     await expect(page.locator('.pf-app[data-fam="translation"]')).toBeVisible({ timeout: 5000 });
 
-    const cardBox = await page.locator('[data-testid="pf-card"]').boundingBox();
-    expect(cardBox).not.toBeNull();
-    expect(cardBox!.width).toBeLessThanOrEqual(762);
+    const cardAreaBox = await page.locator('.pf-card-area').boundingBox();
+    expect(cardAreaBox).not.toBeNull();
+    expect(cardAreaBox!.width).toBeLessThanOrEqual(762);
 
-    const badgeText = await page.locator('[data-testid="pf-fam-badge"]').textContent();
-    expect(badgeText).toMatch(/^(Translation|Sentence|Grammar|Declension|Audio)$/i);
+    await expect(page.locator('[data-testid="pf-fam-badge"]')).toHaveText('Translation');
 
     await takeSnapshot(page, 'PRACT2-2 - Card Width 760px and Full Badge - Desktop Dark', testInfo);
   });

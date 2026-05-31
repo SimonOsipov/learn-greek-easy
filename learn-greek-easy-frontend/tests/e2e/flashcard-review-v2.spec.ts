@@ -5,8 +5,6 @@
  * - Partial session with flip and rating
  * - Full session with inline summary + 4-up tally assertions
  * - Keyboard-only navigation (Space/Enter reveal, 1-4 rate)
- * - Type-mode: accept (correct/lenient) and reject (wrong) paths via pf-typed-input
- * - Keyboard completeness: Enter reveals, Tab reveal-without-judge, skip (pf-typed-skip-btn)
  * - Toast pill (pf-toast) visible after rating
  * - Red-dot presence (unwired-dot) on sentence grammar-tag and gender-absent translation card
  * - Card type filter pills and Study Now navigation
@@ -16,8 +14,8 @@
  *
  * Tests run in serial mode. Order is intentional — tests consuming more cards
  * run last to preserve due cards for tests that need them.
- * Expected card budget: 0 (V2-05) + 0 (V2-04) + ~variable (V2-11) + 1 (V2-10) + 1 (V2-08) +
- *   1 (V2-09) + 1 (V2-06) + 2 (V2-03) + 3 (V2-01) + remaining (V2-02) + variable (V2-07)
+ * Expected card budget: 0 (V2-05) + 0 (V2-04) + ~variable (V2-11) + 1 (V2-10) +
+ *   1 (V2-06) + 2 (V2-03) + 3 (V2-01) + remaining (V2-02) + variable (V2-07)
  *
  * Selector notes (post-PRACT2-1 pf-renderer migration):
  *   pf-card           — the flip target (Card.tsx), replaces legacy practice-card
@@ -28,11 +26,9 @@
  *   pf-done-tally-*   — individual tally cells (forgot/tough/ok/easy)
  *   pf-decl-grid      — the declension paradigm table
  *   pf-decl-target    — the target cell (revealed = filled form, unrevealed = "?")
- *   pf-typed-input    — the type-mode answer input (TypedInput.tsx)
  *   pf-typed-result   — verdict chip (data-verdict=correct|lenient|wrong)
- *   pf-typed-skip-btn — skip button in type mode
  *   pf-toast          — "next in N" interval pill after rating
- *   pf-mode-toggle    — button to toggle reveal/type input mode
+ *   pf-mode-toggle    — removed in PRACT2-2 (absence asserted by E2E-P22-01)
  *   unwired-dot       — UnwiredDot placeholder indicator (data-testid from UnwiredDot.tsx)
  *   .pf-app[data-fam] — family discriminator set by PracticeApp (reliable for asserting current family)
  *
@@ -305,225 +301,6 @@ test.describe('V2 Flashcard Review', () => {
     await expect(page.locator('[data-testid="pf-toast-interval"]')).toBeVisible();
   });
 
-  // E2E-V2-08: Type-mode — accept (correct) and reject (wrong) paths — 1 card consumed
-  //
-  // Sets inputMode='type' via localStorage before navigation (practiceSettings.ts key).
-  // Tests:
-  //   a. Entering a correct answer → pf-typed-result[data-verdict="correct" or "lenient"]
-  //   b. Entering a wrong answer → pf-typed-result[data-verdict="wrong"]
-  // Both paths trigger onFlip via Enter keypress, flipping the card into answer state.
-  // After the flip, the verdict chip is shown in the Answer's type-slot.
-  //
-  // NOTE: type-mode only activates for non-declension families. The test iterates
-  // cards until it finds one where pf-typed-input appears (inputMode takes effect).
-  test('E2E-V2-08: type-mode accept and reject paths', async ({ page }) => {
-    // Activate type mode via localStorage before loading the page
-    await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.setItem('greekly_practice_input_mode', 'type');
-    });
-
-    await navigateToV2Practice(page, v2NounsDeckId);
-
-    const cardVisible = await page
-      .locator('[data-testid="pf-card"]')
-      .isVisible()
-      .catch(() => false);
-    if (!cardVisible) {
-      console.log('[V2-08] No cards available — skipping type-mode test');
-      return;
-    }
-
-    // Find a card where pf-typed-input renders (type mode active, non-declension family)
-    let foundTypeInput = false;
-    for (let attempt = 0; attempt < 10; attempt++) {
-      const isDone = await page
-        .locator('[data-testid="pf-done"]')
-        .isVisible()
-        .catch(() => false);
-      if (isDone) break;
-
-      const inputVisible = await page
-        .locator('[data-testid="pf-typed-input"]')
-        .isVisible()
-        .catch(() => false);
-
-      if (inputVisible) {
-        foundTypeInput = true;
-
-        // --- Path A: wrong answer → data-verdict="wrong" ---
-        await page.locator('[data-testid="pf-typed-input"]').fill('zzzzwrong_answer_zzz');
-        await page.locator('[data-testid="pf-typed-input"]').press('Enter');
-
-        // After Enter, the card flips and pf-typed-result appears in Answer
-        await expect(page.locator('[data-testid="pf-typed-result"]')).toBeVisible({
-          timeout: 5000,
-        });
-        const wrongVerdict = await page
-          .locator('[data-testid="pf-typed-result"]')
-          .getAttribute('data-verdict');
-        expect(wrongVerdict).toBe('wrong');
-
-        // Rate to advance to next card
-        await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 5000 });
-        await page.keyboard.press('3');
-
-        // Wait for next card or done
-        const nextCard = page.locator('[data-testid="pf-card"]');
-        const doneSrc = page.locator('[data-testid="pf-done"]');
-        await expect(nextCard.or(doneSrc)).toBeVisible({ timeout: 10000 });
-        await page.waitForTimeout(300);
-
-        // --- Path B: correct/lenient answer ---
-        const inputVisibleB = await page
-          .locator('[data-testid="pf-typed-input"]')
-          .isVisible()
-          .catch(() => false);
-
-        if (inputVisibleB) {
-          // Type into the correct answer via Tab (reveal without judging) instead
-          // of guessing the exact Greek — Tab ensures onFlip without verdict
-          await page.locator('[data-testid="pf-typed-input"]').press('Tab');
-          // After Tab, card flips but pf-typed-result should NOT be present
-          await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({
-            timeout: 5000,
-          });
-          const resultAfterTab = await page
-            .locator('[data-testid="pf-typed-result"]')
-            .isVisible()
-            .catch(() => false);
-          expect(resultAfterTab).toBe(false);
-
-          // Rate and advance
-          await page.keyboard.press('3');
-          const after = page
-            .locator('[data-testid="pf-card"]')
-            .or(page.locator('[data-testid="pf-done"]'));
-          await expect(after).toBeVisible({ timeout: 10000 });
-        }
-
-        break;
-      }
-
-      // pf-typed-input not visible yet (declension family or unexpected state) — skip card
-      const cardStillVisible = await page
-        .locator('[data-testid="pf-card"]')
-        .isVisible()
-        .catch(() => false);
-      if (!cardStillVisible) break;
-
-      await page.keyboard.press('Space');
-      await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
-      await page.keyboard.press('3');
-      await page.waitForTimeout(300);
-      const nxt = page
-        .locator('[data-testid="pf-card"]')
-        .or(page.locator('[data-testid="pf-done"]'));
-      await expect(nxt).toBeVisible({ timeout: 10000 });
-    }
-
-    if (!foundTypeInput) {
-      console.log(
-        '[V2-08] NOTE: pf-typed-input not found in any card this run — seed or mode state issue'
-      );
-    }
-  });
-
-  // E2E-V2-09: Type-mode keyboard completeness — 1 card consumed
-  //
-  // With inputMode='type' already in localStorage from V2-08, verifies:
-  //   - Enter key (while input focused) runs judge → flips card
-  //   - Tab key reveals without judging (no verdict chip)
-  //   - pf-typed-skip-btn click reveals without judging
-  //
-  // Space/Enter in reveal mode already covered by V2-03/V2-01.
-  // 1–4 key ratings already covered by V2-03.
-  test('E2E-V2-09: type-mode keyboard Enter/Tab/skip completeness', async ({ page }) => {
-    // Ensure type mode is still set (persisted from V2-08 via localStorage)
-    await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.setItem('greekly_practice_input_mode', 'type');
-    });
-
-    await navigateToV2Practice(page, v2NounsDeckId);
-
-    const cardVisible = await page
-      .locator('[data-testid="pf-card"]')
-      .isVisible()
-      .catch(() => false);
-    if (!cardVisible) {
-      console.log('[V2-09] No cards — skipping keyboard completeness test');
-      return;
-    }
-
-    // Find a card where type input is shown
-    let foundInput = false;
-    for (let attempt = 0; attempt < 10; attempt++) {
-      const isDone = await page
-        .locator('[data-testid="pf-done"]')
-        .isVisible()
-        .catch(() => false);
-      if (isDone) break;
-
-      const inputVisible = await page
-        .locator('[data-testid="pf-typed-input"]')
-        .isVisible()
-        .catch(() => false);
-
-      if (inputVisible) {
-        foundInput = true;
-
-        // Verify skip button is visible
-        await expect(page.locator('[data-testid="pf-typed-skip-btn"]')).toBeVisible();
-
-        // Click skip — reveals without judging (no verdict chip).
-        // Use force:true so Firefox doesn't drop the click when the input still
-        // has focus (tabIndex=-1 buttons don't steal focus in Firefox, causing
-        // Playwright's actionability checks to be more conservative there).
-        await page.locator('[data-testid="pf-typed-skip-btn"]').click({ force: true });
-        await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
-        const skipResult = await page
-          .locator('[data-testid="pf-typed-result"]')
-          .isVisible()
-          .catch(() => false);
-        expect(skipResult).toBe(false);
-
-        // Rate and advance
-        await page.keyboard.press('3');
-        const nxt = page
-          .locator('[data-testid="pf-card"]')
-          .or(page.locator('[data-testid="pf-done"]'));
-        await expect(nxt).toBeVisible({ timeout: 10000 });
-        await page.waitForTimeout(300);
-        break;
-      }
-
-      const cardStillVisible = await page
-        .locator('[data-testid="pf-card"]')
-        .isVisible()
-        .catch(() => false);
-      if (!cardStillVisible) break;
-
-      await page.keyboard.press('Space');
-      await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
-      await page.keyboard.press('3');
-      await page.waitForTimeout(300);
-      const nxt2 = page
-        .locator('[data-testid="pf-card"]')
-        .or(page.locator('[data-testid="pf-done"]'));
-      await expect(nxt2).toBeVisible({ timeout: 10000 });
-    }
-
-    if (!foundInput) {
-      console.log('[V2-09] NOTE: pf-typed-input not found this run');
-    }
-
-    // Reset to reveal mode so subsequent tests are unaffected
-    await page.evaluate(() => {
-      localStorage.setItem('greekly_practice_input_mode', 'reveal');
-    });
-  });
-
   // E2E-V2-06: Button-click rating — 1 card consumed
   test('E2E-V2-06: button-click rating advances card', async ({ page }) => {
     await navigateToV2Practice(page, v2NounsDeckId);
@@ -787,21 +564,52 @@ test.describe('V2 Flashcard Review', () => {
 test.describe('PRACT2-2 Practice Card Sizing & Stability', () => {
   test.use({ storageState: LEARNER_AUTH });
 
+  let p22DeckId: string;
+
+  test.beforeAll(async ({ request }) => {
+    const apiBaseUrl = getApiBaseUrl();
+    const accessToken = getLearnerAccessToken();
+    if (!accessToken) {
+      throw new Error(
+        '[P22] Could not read learner access token from storageState. ' +
+          'Ensure auth.setup.ts ran successfully.'
+      );
+    }
+
+    const response = await request.get(`${apiBaseUrl}/api/v1/decks?page_size=100`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    expect(response.ok()).toBe(true);
+
+    const data = await response.json();
+    const decks = data.decks as Array<{ id: string; name: string }>;
+    const deck = decks.find((d) => d.name.includes('Greek A1 Vocabulary'));
+
+    if (!deck) {
+      throw new Error(
+        '[P22] No V2 Nouns deck found in database. ' +
+          `Available decks: ${decks.map((d) => d.name).join(', ')}`
+      );
+    }
+
+    p22DeckId = deck.id;
+    console.log(`[P22] Found deck: ${deck.name} (${p22DeckId})`);
+  });
+
   // E2E-P22-01: Mode toggle absent
   //
   // The Reveal/Type mode toggle was removed in PRACT2-2.
   // [data-testid="pf-mode-toggle"] must NOT exist in the active practice screen.
   test('E2E-P22-01: pf-mode-toggle is absent from the practice screen', async ({ page }) => {
-    await navigateToV2Practice(page, v2NounsDeckId);
+    await navigateToV2Practice(page, p22DeckId);
 
     const cardVisible = await page
       .locator('[data-testid="pf-card"]')
       .isVisible()
       .catch(() => false);
-    if (!cardVisible) {
-      console.log('[P22-01] No card available — skipping (cards exhausted)');
-      return;
-    }
+    test.skip(!cardVisible, '[P22-01] No card available — cards exhausted');
 
     // The toggle must not exist anywhere in the DOM
     await expect(page.locator('[data-testid="pf-mode-toggle"]')).toHaveCount(0);
@@ -813,16 +621,13 @@ test.describe('PRACT2-2 Practice Card Sizing & Stability', () => {
   // displayed label is uppercase, but the DOM textContent is the source-case
   // string: "Translation", "Sentence", "Grammar", "Declension", or "Audio".
   test('E2E-P22-02: family badge textContent is a full word', async ({ page }) => {
-    await navigateToV2Practice(page, v2NounsDeckId);
+    await navigateToV2Practice(page, p22DeckId);
 
     const cardVisible = await page
       .locator('[data-testid="pf-card"]')
       .isVisible()
       .catch(() => false);
-    if (!cardVisible) {
-      console.log('[P22-02] No card available — skipping (cards exhausted)');
-      return;
-    }
+    test.skip(!cardVisible, '[P22-02] No card available — cards exhausted');
 
     const badge = page.locator('[data-testid="pf-fam-badge"]');
     await expect(badge).toBeVisible();
@@ -842,16 +647,13 @@ test.describe('PRACT2-2 Practice Card Sizing & Stability', () => {
   // Covers a Translation card (first reachable card). Declension is covered
   // below in E2E-P22-04 when one is available in the seed queue.
   test('E2E-P22-03: card height is stable on reveal (translation card)', async ({ page }) => {
-    await navigateToV2Practice(page, v2NounsDeckId);
+    await navigateToV2Practice(page, p22DeckId);
 
     const cardVisible = await page
       .locator('[data-testid="pf-card"]')
       .isVisible()
       .catch(() => false);
-    if (!cardVisible) {
-      console.log('[P22-03] No card available — skipping (cards exhausted)');
-      return;
-    }
+    test.skip(!cardVisible, '[P22-03] No card available — cards exhausted');
 
     // Find the first translation-family card
     let foundTranslation = false;
@@ -885,10 +687,7 @@ test.describe('PRACT2-2 Practice Card Sizing & Stability', () => {
       await expect(nxt).toBeVisible({ timeout: 10000 });
     }
 
-    if (!foundTranslation) {
-      console.log('[P22-03] No translation card found — skipping height-delta assertion');
-      return;
-    }
+    test.skip(!foundTranslation, '[P22-03] No translation card found — height-delta assertion skipped');
 
     const cardLocator = page.locator('[data-testid="pf-card"]');
 
@@ -927,18 +726,15 @@ test.describe('PRACT2-2 Practice Card Sizing & Stability', () => {
   // so they must also maintain height stability.
   //
   // If no declension card is reachable in the seeded queue (e.g. all consumed
-  // by earlier serial tests), the test logs a note and exits without failing.
+  // by earlier serial tests), the test is skipped explicitly.
   test('E2E-P22-04: card height is stable on reveal (declension card)', async ({ page }) => {
-    await navigateToV2Practice(page, v2NounsDeckId);
+    await navigateToV2Practice(page, p22DeckId);
 
     const cardVisible = await page
       .locator('[data-testid="pf-card"]')
       .isVisible()
       .catch(() => false);
-    if (!cardVisible) {
-      console.log('[P22-04] No card available — skipping (cards exhausted)');
-      return;
-    }
+    test.skip(!cardVisible, '[P22-04] No card available — cards exhausted');
 
     // Iterate to find a declension card (safety limit 30)
     let foundDeclension = false;
@@ -970,12 +766,7 @@ test.describe('PRACT2-2 Practice Card Sizing & Stability', () => {
       await expect(nxt).toBeVisible({ timeout: 10000 });
     }
 
-    if (!foundDeclension) {
-      console.log(
-        '[P22-04] No declension card found in queue — height-delta for declension is covered by unit tests'
-      );
-      return;
-    }
+    test.skip(!foundDeclension, '[P22-04] No declension card found — height-delta for declension covered by unit tests');
 
     const cardLocator = page.locator('[data-testid="pf-card"]');
 
@@ -1015,16 +806,13 @@ test.describe('PRACT2-2 Practice Card Sizing & Stability', () => {
   test('E2E-P22-05: EN/RU toggle does not change i18n language; RU reflects pressed state', async ({
     page,
   }) => {
-    await navigateToV2Practice(page, v2NounsDeckId);
+    await navigateToV2Practice(page, p22DeckId);
 
     const cardVisible = await page
       .locator('[data-testid="pf-card"]')
       .isVisible()
       .catch(() => false);
-    if (!cardVisible) {
-      console.log('[P22-05] No card available — skipping (cards exhausted)');
-      return;
-    }
+    test.skip(!cardVisible, '[P22-05] No card available — cards exhausted');
 
     // Capture the HTML lang attribute BEFORE clicking RU
     const langBefore = await page.evaluate(() => document.documentElement.lang);

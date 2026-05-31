@@ -95,7 +95,9 @@ export function Answer({
   const exampleAudioUrl = resolveV2CardAudioUrl(card);
   // sentence_ru is only shown when lang === 'ru' (no English equivalent field exists).
   const showSentenceRu = lang === 'ru' && Boolean(card.sentence_ru);
-  const hasExample = Boolean(showSentenceRu || card.example_audio_url);
+  // Audio renders only when both url and state are present (matches the child condition below).
+  const showExampleAudio = Boolean(exampleAudioUrl && exampleAudioState);
+  const hasExample = showSentenceRu || showExampleAudio;
 
   return (
     <div className="pf-answer" data-testid="pf-answer">

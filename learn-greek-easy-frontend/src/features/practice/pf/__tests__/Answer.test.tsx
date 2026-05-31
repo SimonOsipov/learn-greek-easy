@@ -168,7 +168,11 @@ describe('Answer', () => {
       <Answer
         answerText="house"
         cardType="sentence_translation"
-        card={makeCard({ sentence_ru: null, example_audio_url: 'https://s3.test/ex.mp3' })}
+        card={makeCard({
+          card_type: 'sentence_translation',
+          sentence_ru: null,
+          example_audio_url: 'https://s3.test/ex.mp3',
+        })}
         exampleAudioState={{
           audioUrl: 'https://s3.test/ex.mp3',
           isPlaying: false,
