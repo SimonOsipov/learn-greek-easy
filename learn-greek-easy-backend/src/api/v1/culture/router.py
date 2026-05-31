@@ -146,6 +146,7 @@ async def list_culture_decks(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     locale: str = Depends(get_locale_from_header),
+    response: Optional[Response] = None,  # injected for Cache-Control header
 ) -> CultureDeckListResponse:
     """List all active culture decks with pagination and optional filtering.
 
@@ -168,6 +169,11 @@ async def list_culture_decks(
     """
     service = CultureDeckService(db)
     user_id = current_user.id
+
+    # PERF-08: short private TTL cache — deck list is user-specific (includes progress)
+    # so must be private. 60s avoids repeat fetches within the same browse session.
+    if response is not None:
+        response.headers["Cache-Control"] = "private, max-age=60"
 
     return await service.list_decks(
         page=page,
@@ -402,6 +408,7 @@ async def get_question_queue(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     locale: str = Depends(get_locale_from_header),
+    response: Optional[Response] = None,  # injected for Cache-Control header
 ) -> CultureQuestionQueue:
     """Get questions due for review plus new questions for a practice session.
 
@@ -429,6 +436,12 @@ async def get_question_queue(
         GET /api/v1/culture/decks/{deck_id}/questions?limit=10&include_new=true
     """
     service = CultureQuestionService(db)
+
+    # PERF-08: short private TTL cache — queue is user-specific (due/new per user).
+    # 30s is safe: SM-2 scheduling is date-granular, so within-session freshness
+    # is preserved. Force-practice bypasses stale concerns via explicit intent.
+    if response is not None:
+        response.headers["Cache-Control"] = "private, max-age=30"
 
     return await service.get_question_queue(
         user_id=current_user.id,
