@@ -1,6 +1,6 @@
 """Notification repository for database operations."""
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import delete, func, select, update
@@ -101,7 +101,7 @@ class NotificationRepository(BaseRepository[Notification]):
 
     async def delete_older_than(self, days: int) -> int:
         """Delete notifications older than N days. Returns count deleted."""
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = datetime.now(UTC) - timedelta(days=days)
         result = await self.db.execute(delete(Notification).where(Notification.created_at < cutoff))
         # CursorResult from DELETE has rowcount, but Result[Any] type doesn't expose it
         return int(result.rowcount) if result.rowcount else 0  # type: ignore[attr-defined]

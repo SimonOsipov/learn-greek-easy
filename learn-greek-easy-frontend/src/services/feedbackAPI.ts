@@ -34,7 +34,9 @@ export const feedbackAPI = {
     const queryString = buildQueryString({
       category: params.category,
       status: params.status,
-      sort: params.sort || 'created_at',
+      // Default to 'votes' to match feedbackStore's DEFAULT_FILTERS — keeps the
+      // most-voted-first ordering consistent whether or not a caller passes a sort.
+      sort: params.sort || 'votes',
       order: params.order || 'desc',
       page: params.page || 1,
       page_size: params.page_size || 20,

@@ -21,7 +21,10 @@ export const transformCultureDeckResponse = (deck: CultureDeckResponse): Deck =>
   // Determine status from progress data
   let status: 'not-started' | 'in-progress' | 'completed' = 'not-started';
   if (deck.progress) {
-    if (deck.progress.questions_mastered >= deck.progress.questions_total) {
+    if (
+      deck.progress.questions_total > 0 &&
+      deck.progress.questions_mastered >= deck.progress.questions_total
+    ) {
       status = 'completed';
     } else if (deck.progress.questions_mastered > 0 || deck.progress.questions_learning > 0) {
       status = 'in-progress';

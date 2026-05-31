@@ -506,7 +506,20 @@ export function PracticeCard({
         '\u041f\u0435\u0440\u0435\u0432\u0435\u0434\u0438\u0442\u0435 \u043d\u0430 \u0433\u0440\u0435\u0447\u0435\u0441\u043a\u0438\u0439',
     };
 
-    return promptTranslations[englishPrompt] ?? englishPrompt;
+    if (englishPrompt in promptTranslations) {
+      return promptTranslations[englishPrompt];
+    }
+
+    // Avoid leaking untranslated English to RU users: fall back to a generic
+    // per-card-type Russian prompt when the specific prompt text isn't mapped.
+    const cardTypeFallbacks: Record<string, string> = {
+      // "What form?"
+      plural_form: 'Какая форма?',
+      // "Translate this sentence"
+      sentence_translation: 'Переведите это предложение',
+    };
+
+    return cardTypeFallbacks[cardType] ?? englishPrompt;
   };
 
   const translatedPrompt = translatePrompt(front.prompt, currentLang, card.card_type);
