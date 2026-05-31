@@ -201,22 +201,11 @@ export const useAdminSituationStore = create<AdminSituationState>()(
 
 // --- Selectors ---
 
-export const selectSituations = (state: AdminSituationState) => state.situations;
-export const selectSelectedSituation = (state: AdminSituationState) => state.selectedSituation;
 export const selectIsLoading = (state: AdminSituationState) => state.isLoading;
 export const selectIsLoadingDetail = (state: AdminSituationState) => state.isLoadingDetail;
 export const selectIsCreating = (state: AdminSituationState) => state.isCreating;
 export const selectIsDeleting = (state: AdminSituationState) => state.isDeleting;
 export const selectError = (state: AdminSituationState) => state.error;
-export const selectDetailError = (state: AdminSituationState) => state.detailError;
-export const selectPage = (state: AdminSituationState) => state.page;
-export const selectPageSize = (state: AdminSituationState) => state.pageSize;
-export const selectTotal = (state: AdminSituationState) => state.total;
-export const selectTotalPages = (state: AdminSituationState) => state.totalPages;
-export const selectStatusFilter = (state: AdminSituationState) => state.statusFilter;
-export const selectLevelFilter = (state: AdminSituationState) => state.levelFilter;
-export const selectSearchQuery = (state: AdminSituationState) => state.searchQuery;
-export const selectStatusCounts = (state: AdminSituationState) => state.statusCounts;
 export const selectSortMode = (state: AdminSituationState) => state.sortMode;
 export const selectDrawerItemId = (state: AdminSituationState) => state.drawerItemId;
 

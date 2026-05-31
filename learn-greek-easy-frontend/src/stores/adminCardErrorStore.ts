@@ -217,21 +217,3 @@ export const useAdminCardErrorStore = create<AdminCardErrorState>()(
     { name: 'adminCardErrorStore' }
   )
 );
-
-// ============================================
-// Selectors (Optional optimization)
-// ============================================
-
-export const selectAdminCardErrorList = (state: AdminCardErrorState) => state.errorList;
-export const selectSelectedCardError = (state: AdminCardErrorState) => state.selectedError;
-export const selectCardErrorIsLoading = (state: AdminCardErrorState) => state.isLoading;
-export const selectCardErrorIsUpdating = (state: AdminCardErrorState) => state.isUpdating;
-export const selectCardErrorError = (state: AdminCardErrorState) => state.error;
-export const selectCardErrorFilters = (state: AdminCardErrorState) => state.filters;
-
-export const selectCardErrorPagination = (state: AdminCardErrorState) => ({
-  page: state.page,
-  pageSize: state.pageSize,
-  total: state.total,
-  totalPages: state.totalPages,
-});
