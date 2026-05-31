@@ -58,8 +58,21 @@ export function Card({ body, foot = null, isFlipped = false, onClick, className 
       {/* Question zone */}
       <div className="pf-body">{body}</div>
 
-      {/* Answer zone — rendered but conditionally visible */}
-      {isFlipped && foot != null && <div className="pf-foot">{foot}</div>}
+      {/* Answer zone — always mounted when foot is provided so layout height is reserved
+          pre-reveal. Visibility is toggled via data-hidden (drives visibility:hidden in
+          pf.css) and inert (removes all tab-stops + pointer interactions while hidden).
+          The real content is present in the DOM, reserving its natural height, so
+          getBoundingClientRect().height on .pf-card is identical before and after flip. */}
+      {foot != null && (
+        <div
+          className="pf-foot"
+          data-hidden={!isFlipped ? 'true' : undefined}
+          inert={!isFlipped}
+          aria-hidden={!isFlipped ? true : undefined}
+        >
+          {foot}
+        </div>
+      )}
     </div>
   );
 }

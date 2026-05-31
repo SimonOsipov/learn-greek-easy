@@ -381,3 +381,62 @@ describe('resolveAnswerText', () => {
     expect(resolveAnswerText('declension', { declension_table: null })).toBe('');
   });
 });
+
+// ── resolveAnswerText — lang param ───────────────────────────────────────────
+
+describe('resolveAnswerText — lang param', () => {
+  it('defaults to en behaviour when lang is omitted', () => {
+    expect(
+      resolveAnswerText('sentence_translation', {
+        answer: 'Good morning!',
+        answer_ru: 'Доброе утро!',
+      })
+    ).toBe('Good morning!');
+  });
+
+  it('returns answer_ru for sentence_translation when lang=ru and answer_ru is present', () => {
+    expect(
+      resolveAnswerText(
+        'sentence_translation',
+        { answer: 'Good morning!', answer_ru: 'Доброе утро!' },
+        'ru'
+      )
+    ).toBe('Доброе утро!');
+  });
+
+  it('falls back to English answer for sentence_translation when lang=ru but answer_ru is absent', () => {
+    expect(resolveAnswerText('sentence_translation', { answer: 'Good morning!' }, 'ru')).toBe(
+      'Good morning!'
+    );
+  });
+
+  it('falls back to English answer for sentence_translation when lang=ru but answer_ru is empty string', () => {
+    expect(
+      resolveAnswerText('sentence_translation', { answer: 'Good morning!', answer_ru: '' }, 'ru')
+    ).toBe('Good morning!');
+  });
+
+  it('returns answer_sub_ru for plural_form when lang=ru and answer_sub_ru is present', () => {
+    // plural_form: main = Greek stem, answer = plural form; answer_sub_ru = RU gender label
+    expect(
+      resolveAnswerText(
+        'plural_form',
+        { main: 'σπίτια', answer: 'σπίτια', answer_sub_ru: 'дома' },
+        'ru'
+      )
+    ).toBe('дома');
+  });
+
+  it('falls back to main for plural_form when lang=ru but answer_sub_ru is absent', () => {
+    expect(resolveAnswerText('plural_form', { main: 'σπίτια' }, 'ru')).toBe('σπίτια');
+  });
+
+  it('does not apply RU variant for article card type (no answer_ru field)', () => {
+    // article cards: answer = the article ("ο"), no answer_ru
+    expect(resolveAnswerText('article', { answer: 'ο', gender: 'masculine' }, 'ru')).toBe('ο');
+  });
+
+  it('does not apply RU variant for meaning cards', () => {
+    expect(resolveAnswerText('meaning_el_to_en', { main: 'house' }, 'ru')).toBe('house');
+  });
+});

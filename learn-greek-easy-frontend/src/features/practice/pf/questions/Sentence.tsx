@@ -78,6 +78,8 @@ export interface SentenceProps {
   main: string;
   /** Lifted audio state — passed through to AudioChip (el_to_en only). */
   audioState?: AudioChipState | null;
+  /** Current card language. No-op for Sentence question front (no RU front data exists). */
+  lang?: 'en' | 'ru';
 }
 
 // ── SentenceElToEn renderer ───────────────────────────────────────────────────
@@ -155,7 +157,7 @@ export function SentenceEnToEl({ prompt, main }: Omit<SentenceProps, 'audioState
  * Usage in the dispatch block:
  *   <Sentence prompt={front.prompt} main={front.main} audioState={audioState} />
  */
-export function Sentence({ prompt, main, audioState }: SentenceProps) {
+export function Sentence({ prompt, main, audioState, lang: _lang }: SentenceProps) {
   const direction = deriveDirection(prompt as string | null | undefined);
 
   if (direction === 'en_to_el') {

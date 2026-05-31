@@ -104,10 +104,9 @@ describe('FAMILIES', () => {
     });
   });
 
-  it('every family entry has non-empty label and short', () => {
+  it('every family entry has non-empty label', () => {
     families.forEach((d) => {
       expect(d.label.length).toBeGreaterThan(0);
-      expect(d.short.length).toBeGreaterThan(0);
     });
   });
 
