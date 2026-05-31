@@ -3645,9 +3645,11 @@ html.theme-transition *::after {
   cursor: not-allowed;
 }
 
-/* ── Culture hero CTAs (.cx-hero-ctas / .cx-cta-ghost) ─────────────────────
-   Used in CultureHero for the "Continue" (primary = .dx-action-cta) and
-   "Take mock exam" (ghost = .cx-cta-ghost) button row.
+/* ── Culture hero CTAs (.cx-hero-ctas / .cx-cta-primary / .cx-cta-ghost) ────
+   Used in CultureHero for the "Continue" (primary = .cx-cta-primary) and
+   "Take mock exam" (ghost = .cx-cta-ghost) button row. The primary is a
+   compact, auto-width hero CTA — distinct from the shared full-width
+   .dx-action-cta used by the action panels.
    ────────────────────────────────────────────────────────────────────────── */
 .cx-hero-ctas {
   display: flex;
@@ -3681,6 +3683,37 @@ html.theme-transition *::after {
   border-color: hsl(var(--fg) / 0.2);
 }
 
+.cx-cta-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  background: hsl(var(--primary));
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: hsl(var(--primary-foreground));
+  font-size: 14px;
+  font-weight: 700;
+  font-family: 'Inter Tight', sans-serif;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow:
+    0 1px 0 hsl(255 100% 100% / 0.18) inset,
+    0 8px 20px -6px hsl(var(--primary) / 0.5);
+  transition:
+    background 0.15s,
+    transform 0.12s;
+}
+
+.cx-cta-primary:hover {
+  background: hsl(var(--primary) / 0.92);
+}
+
+.cx-cta-primary:active {
+  transform: translateY(1px);
+}
+
 /* ── Culture what's-new strip (.cx-whatsnew-*) ──────────────────────────────
    Chip row below the hub hero: "{N} cultural exam decks" · "{N} questions"
    + a "Check readiness →" ghost link.
@@ -3694,6 +3727,27 @@ html.theme-transition *::after {
   background: hsl(var(--bg-2));
   border: 1px solid hsl(var(--fg) / 0.06);
   border-radius: 14px;
+}
+
+.cx-whatsnew-l {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: hsl(var(--fg-3));
+}
+
+.cx-whatsnew-l::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: hsl(var(--success));
+  box-shadow: 0 0 0 3px hsl(var(--success) / 0.18);
 }
 
 .cx-whatsnew-chip {

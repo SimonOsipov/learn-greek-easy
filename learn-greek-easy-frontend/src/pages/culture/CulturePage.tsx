@@ -64,14 +64,27 @@ export const CulturePage: React.FC = () => {
   const examDecks = decks.filter((d) => d.tags?.[0] === 'culture');
   const crossCuttingDecks = decks.filter((d) => d.tags?.[0] !== 'culture');
 
-  // ── Resume deck: first in-progress culture deck ────────────────────────────
+  // Newest exam paper (decks arrive created_at DESC, so examDecks[0] is newest).
+  // Short label is frontend-derived: strip a known prefix, fall back to full name.
+  const latestPaper = examDecks[0];
+  const latestPaperLabel = latestPaper
+    ? latestPaper.title.replace(/^Cultural Exam\s+/i, '').trim() || latestPaper.title
+    : '';
+
+  // ── Resume deck: most recently practiced in-progress deck ────────────────
+  const inProgress = decks.filter(
+    (d) =>
+      d.progress &&
+      d.progress.cardsMastered > 0 &&
+      d.progress.cardsMastered < (d.progress.cardsTotal ?? d.cardCount)
+  );
   const resumeDeck =
-    decks.find(
-      (d) =>
-        d.progress &&
-        d.progress.cardsMastered > 0 &&
-        d.progress.cardsMastered < (d.progress.cardsTotal ?? d.cardCount)
-    ) ?? decks[0];
+    inProgress.reduce<Deck | undefined>((latest, d) => {
+      if (!latest) return d;
+      const a = d.progress?.lastStudied?.getTime() ?? -Infinity;
+      const b = latest.progress?.lastStudied?.getTime() ?? -Infinity;
+      return a > b ? d : latest;
+    }, undefined) ?? decks[0];
 
   const resumePct =
     resumeDeck?.progress && resumeDeck.progress.cardsTotal > 0
@@ -105,6 +118,21 @@ export const CulturePage: React.FC = () => {
   const readinessPct = readiness?.readiness_percentage ?? 0;
   const questionsLearned = readiness?.questions_learned ?? 0;
   const questionsTotal = readiness?.questions_total ?? decks.reduce((s, d) => s + d.cardCount, 0);
+
+  const heroDescription = (() => {
+    const p = resumeDeck?.progress;
+    if (!p) return resumeDeck?.description ?? '';
+    const answered = p.cardsMastered + p.cardsLearning;
+    const deckTotal = p.cardsTotal ?? resumeDeck.cardCount;
+    const vars = { answered, deckTotal, inReview: p.cardsLearning };
+    return readiness
+      ? t('hub.resumeSentence', {
+          ...vars,
+          examTotal: questionsTotal,
+          pct: Math.round(readinessPct),
+        })
+      : t('hub.resumeSentenceNoReadiness', vars);
+  })();
 
   const metrics = [
     {
@@ -187,7 +215,7 @@ export const CulturePage: React.FC = () => {
               kicker={t('hub.heroKicker', 'Continue where you left off')}
               kickerTone="primary"
               title={resumeDeck.title}
-              description={resumeDeck.description}
+              description={heroDescription}
               stats={resumeStats}
               ctas={[
                 {
@@ -224,6 +252,7 @@ export const CulturePage: React.FC = () => {
           {/* What's-new strip */}
           {decks.length > 0 && (
             <div className="cx-whatsnew">
+              <span className="cx-whatsnew-l">{t('hub.whatsNewLabel', 'In Culture')}</span>
               <span className="cx-whatsnew-chip">
                 {t('hub.chipsExamDecks', '{{n}} cultural exam decks', { n: examDecks.length })}
               </span>
@@ -231,6 +260,17 @@ export const CulturePage: React.FC = () => {
               <span className="cx-whatsnew-chip">
                 {t('hub.chipsQuestions', '{{n}} questions', { n: questionsTotal })}
               </span>
+              {latestPaper && (
+                <>
+                  <span className="cx-whatsnew-sep" aria-hidden />
+                  <Link to={`/culture/decks/${latestPaper.id}`} className="cx-whatsnew-chip">
+                    {t('hub.chipsLatest', 'Latest: {{label}} · {{n}} questions', {
+                      label: latestPaperLabel,
+                      n: latestPaper.cardCount,
+                    })}
+                  </Link>
+                </>
+              )}
               <span className="cx-whatsnew-sep" aria-hidden />
               <span className="cx-whatsnew-chip">
                 {t('hub.chipsCategories', '{{n}} categories', {

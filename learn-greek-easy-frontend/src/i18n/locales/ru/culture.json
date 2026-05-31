@@ -20,7 +20,11 @@
     "sectionExamTitle": "Экзаменационные колоды по культуре",
     "sectionCrossLabel": "Тематические учебные колоды",
     "sectionCrossKicker": "Тематические колоды",
-    "sectionCrossTitle": "Тематические учебные колоды"
+    "sectionCrossTitle": "Тематические учебные колоды",
+    "resumeSentence": "Вы ответили на {{answered}} из {{deckTotal}} вопросов · {{inReview}} на повторении. Полный экзамен по культуре Кипра — {{examTotal}} вопросов, вы готовы на {{pct}}%.",
+    "resumeSentenceNoReadiness": "Вы ответили на {{answered}} из {{deckTotal}} вопросов · {{inReview}} на повторении.",
+    "whatsNewLabel": "В разделе культуры",
+    "chipsLatest": "Новое: {{label}} · {{n}} вопросов"
   },
   "page": {
     "mockExamCta": {
