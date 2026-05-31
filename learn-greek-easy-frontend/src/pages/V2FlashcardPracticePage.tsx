@@ -232,7 +232,7 @@ export function V2FlashcardPracticePage() {
             <ThemeSwitcher />
           </div>
         </div>
-        <div className="mx-auto w-full max-w-lg px-4">
+        <div className="pf-card-area px-4">
           <Skeleton className="min-h-[280px] w-full rounded-xl" />
         </div>
       </div>
@@ -256,7 +256,7 @@ export function V2FlashcardPracticePage() {
             </>
           }
         />
-        <div className="mx-auto w-full max-w-lg px-4">
+        <div className="pf-card-area px-4">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
@@ -295,7 +295,7 @@ export function V2FlashcardPracticePage() {
             </>
           }
         />
-        <div className="mx-auto w-full max-w-lg px-4 py-12 text-center">
+        <div className="pf-card-area px-4 py-12 text-center">
           <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-practice-correct" />
           <h2 className="mb-2 text-2xl font-bold">{t('v2Practice.allCaughtUp')}</h2>
           <p className="mb-6 text-muted-foreground">{t('v2Practice.allCaughtUpDescription')}</p>
@@ -386,7 +386,7 @@ export function V2FlashcardPracticePage() {
       />
 
       {/* Content area */}
-      <div className="mx-auto w-full max-w-lg px-4">
+      <div className="pf-card-area px-4">
         {/* Slide-out wrapper — data-leave drives the 320ms rating-aware animation.
             The inner card key={currentCard.id} remounts after displayIndex advances
             (deferred 320ms by the useEffect above). */}

@@ -255,6 +255,16 @@
   }
 }
 
+/* ── Card area wrapper — responsive centering with prototype-matched max-width ──
+   Replaces the Tailwind max-w-lg (512px) on the page wrapper with the prototype's
+   760px ceiling. Uses a CSS class (not arbitrary Tailwind) to stay within the
+   design-system drift rules. */
+.pf-card-area {
+  max-width: min(760px, 100%);
+  width: 100%;
+  margin-inline: auto;
+}
+
 /* ── Card shell ───────────────────────────────────────────────────────────── */
 .pf-card {
   position: relative;
@@ -302,6 +312,13 @@
   flex-direction: column;
   align-items: center;
   gap: 12px;
+}
+
+/* Pre-reveal: content stays in the DOM (reserving natural height) but is invisible
+   and non-interactive. visibility:hidden keeps the box in flow; inert (set via prop
+   in Card.tsx) removes focus/pointer access at the browser level. */
+.pf-foot[data-hidden='true'] {
+  visibility: hidden;
 }
 
 /* ── Card header ──────────────────────────────────────────────────────────── */
