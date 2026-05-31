@@ -63,7 +63,11 @@ async def card_record(db_session: AsyncSession, v2_deck: Deck, word_entry: WordE
         deck_id=v2_deck.id,
         card_type=CardType.MEANING_EL_TO_EN,
         variant_key="default",
-        front_content={"card_type": "meaning_el_to_en", "prompt": "Translate", "main": "σπίτι"},
+        front_content={
+            "card_type": "meaning_el_to_en",
+            "prompt": "Translate",
+            "main": "σπίτι",
+        },
         back_content={"card_type": "meaning_el_to_en", "answer": "house"},
     )
     db_session.add(record)
@@ -219,7 +223,11 @@ class TestGetDailyStats:
         )
         db_session.add(
             _make_review(
-                test_user.id, card_record.id, quality=2, time_taken=20, reviewed_at=yesterday
+                test_user.id,
+                card_record.id,
+                quality=2,
+                time_taken=20,
+                reviewed_at=yesterday,
             )
         )
         await db_session.flush()
@@ -530,3 +538,282 @@ class TestGetAllUniqueDates:
         repo = CardRecordReviewRepository(db_session)
         result = await repo.get_all_unique_dates(test_user.id)
         assert result == []
+
+
+class TestGetDeckStudyDays:
+    @pytest.mark.asyncio
+    async def test_get_deck_study_days_descending_unique(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        v2_deck: Deck,
+        word_entry: WordEntry,
+        card_record: CardRecord,
+    ) -> None:
+        """Returned dates are descending and distinct even with duplicate-day reviews."""
+        day1 = datetime(2024, 3, 5, 10, 0, 0, tzinfo=timezone.utc)
+        day2 = datetime(2024, 3, 3, 10, 0, 0, tzinfo=timezone.utc)
+        day2_dup = datetime(2024, 3, 3, 14, 0, 0, tzinfo=timezone.utc)  # same UTC day as day2
+        day3 = datetime(2024, 3, 1, 10, 0, 0, tzinfo=timezone.utc)
+        for ts in (day1, day2, day2_dup, day3):
+            db_session.add(_make_review(test_user.id, card_record.id, reviewed_at=ts))
+        await db_session.flush()
+
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_deck_study_days(test_user.id, v2_deck.id)
+
+        assert result == [
+            date(2024, 3, 5),
+            date(2024, 3, 3),
+            date(2024, 3, 1),
+        ]
+        # Verify strictly descending and no duplicates
+        for i in range(len(result) - 1):
+            assert result[i] > result[i + 1]
+
+    @pytest.mark.asyncio
+    async def test_get_deck_study_days_deck_isolation(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        v2_deck: Deck,
+        word_entry: WordEntry,
+        card_record: CardRecord,
+    ) -> None:
+        """Reviews in deck B do not appear in get_deck_study_days for deck A."""
+        # Create a second deck with its own word and card record
+        deck_b = Deck(
+            name_en="Deck B",
+            name_el="Deck B",
+            name_ru="Deck B",
+            description_en="test b",
+            description_el="test b",
+            description_ru="test b",
+            level=DeckLevel.A1,
+            is_active=True,
+        )
+        db_session.add(deck_b)
+        await db_session.flush()
+        await db_session.refresh(deck_b)
+
+        word_b = WordEntry(
+            owner_id=None,
+            lemma="γεια",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="hello",
+            is_active=True,
+        )
+        db_session.add(word_b)
+        await db_session.flush()
+        db_session.add(DeckWordEntry(deck_id=deck_b.id, word_entry_id=word_b.id))
+        await db_session.flush()
+
+        card_b = CardRecord(
+            word_entry_id=word_b.id,
+            deck_id=deck_b.id,
+            card_type=CardType.MEANING_EL_TO_EN,
+            variant_key="default",
+            front_content={
+                "card_type": "meaning_el_to_en",
+                "prompt": "Translate",
+                "main": "γεια",
+            },
+            back_content={"card_type": "meaning_el_to_en", "answer": "hello"},
+        )
+        db_session.add(card_b)
+        await db_session.flush()
+        await db_session.refresh(card_b)
+
+        # Review in deck A on Jan 10
+        deck_a_ts = datetime(2024, 1, 10, 10, 0, 0, tzinfo=timezone.utc)
+        db_session.add(_make_review(test_user.id, card_record.id, reviewed_at=deck_a_ts))
+        # Review in deck B on Jan 15 — must NOT appear for deck A
+        deck_b_ts = datetime(2024, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+        db_session.add(_make_review(test_user.id, card_b.id, reviewed_at=deck_b_ts))
+        await db_session.flush()
+
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_deck_study_days(test_user.id, v2_deck.id)
+
+        assert result == [date(2024, 1, 10)]
+        assert date(2024, 1, 15) not in result
+
+    @pytest.mark.asyncio
+    async def test_get_deck_study_days_empty_returns_empty_list(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        v2_deck: Deck,
+    ) -> None:
+        """No reviews for the deck returns an empty list."""
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_deck_study_days(test_user.id, v2_deck.id)
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_get_deck_weekly_activity_per_day_counts(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        v2_deck: Deck,
+        word_entry: WordEntry,
+        card_record: CardRecord,
+    ) -> None:
+        """Per-day review counts are correct within the given window."""
+        week_start = date(2024, 1, 1)  # Monday
+        week_end = date(2024, 1, 7)  # Sunday
+
+        # 1 review on Monday 2024-01-01
+        db_session.add(
+            _make_review(
+                test_user.id,
+                card_record.id,
+                reviewed_at=datetime(2024, 1, 1, 10, 0, 0, tzinfo=timezone.utc),
+            )
+        )
+        # 2 reviews on Wednesday 2024-01-03
+        db_session.add(
+            _make_review(
+                test_user.id,
+                card_record.id,
+                reviewed_at=datetime(2024, 1, 3, 9, 0, 0, tzinfo=timezone.utc),
+            )
+        )
+        db_session.add(
+            _make_review(
+                test_user.id,
+                card_record.id,
+                reviewed_at=datetime(2024, 1, 3, 15, 0, 0, tzinfo=timezone.utc),
+            )
+        )
+        await db_session.flush()
+
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_deck_weekly_activity(test_user.id, v2_deck.id, week_start, week_end)
+
+        assert result == {date(2024, 1, 1): 1, date(2024, 1, 3): 2}
+
+    @pytest.mark.asyncio
+    async def test_get_deck_weekly_activity_excludes_out_of_window(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        v2_deck: Deck,
+        word_entry: WordEntry,
+        card_record: CardRecord,
+    ) -> None:
+        """Reviews outside the window boundary are excluded."""
+        week_start = date(2024, 1, 1)
+        week_end = date(2024, 1, 7)
+
+        # Outside window (before start)
+        db_session.add(
+            _make_review(
+                test_user.id,
+                card_record.id,
+                reviewed_at=datetime(2023, 12, 31, 23, 59, 0, tzinfo=timezone.utc),
+            )
+        )
+        # Outside window (after end)
+        db_session.add(
+            _make_review(
+                test_user.id,
+                card_record.id,
+                reviewed_at=datetime(2024, 1, 8, 0, 0, 0, tzinfo=timezone.utc),
+            )
+        )
+        # Inside window
+        db_session.add(
+            _make_review(
+                test_user.id,
+                card_record.id,
+                reviewed_at=datetime(2024, 1, 4, 12, 0, 0, tzinfo=timezone.utc),
+            )
+        )
+        await db_session.flush()
+
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_deck_weekly_activity(test_user.id, v2_deck.id, week_start, week_end)
+
+        assert result == {date(2024, 1, 4): 1}
+
+    @pytest.mark.asyncio
+    async def test_get_deck_weekly_activity_deck_isolation(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        v2_deck: Deck,
+        word_entry: WordEntry,
+        card_record: CardRecord,
+    ) -> None:
+        """Reviews from deck B inside the window do not appear for deck A."""
+        week_start = date(2024, 1, 1)
+        week_end = date(2024, 1, 7)
+
+        # Build deck B with its own card record
+        deck_b = Deck(
+            name_en="Deck B Weekly",
+            name_el="Deck B Weekly",
+            name_ru="Deck B Weekly",
+            description_en="test b",
+            description_el="test b",
+            description_ru="test b",
+            level=DeckLevel.A1,
+            is_active=True,
+        )
+        db_session.add(deck_b)
+        await db_session.flush()
+        await db_session.refresh(deck_b)
+
+        word_b = WordEntry(
+            owner_id=None,
+            lemma="νερό",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="water",
+            is_active=True,
+        )
+        db_session.add(word_b)
+        await db_session.flush()
+        db_session.add(DeckWordEntry(deck_id=deck_b.id, word_entry_id=word_b.id))
+        await db_session.flush()
+
+        card_b = CardRecord(
+            word_entry_id=word_b.id,
+            deck_id=deck_b.id,
+            card_type=CardType.MEANING_EL_TO_EN,
+            variant_key="default",
+            front_content={
+                "card_type": "meaning_el_to_en",
+                "prompt": "Translate",
+                "main": "νερό",
+            },
+            back_content={"card_type": "meaning_el_to_en", "answer": "water"},
+        )
+        db_session.add(card_b)
+        await db_session.flush()
+        await db_session.refresh(card_b)
+
+        # Deck A: 1 review inside window
+        db_session.add(
+            _make_review(
+                test_user.id,
+                card_record.id,
+                reviewed_at=datetime(2024, 1, 2, 10, 0, 0, tzinfo=timezone.utc),
+            )
+        )
+        # Deck B: 3 reviews inside window — must NOT be counted for deck A
+        for _ in range(3):
+            db_session.add(
+                _make_review(
+                    test_user.id,
+                    card_b.id,
+                    reviewed_at=datetime(2024, 1, 3, 10, 0, 0, tzinfo=timezone.utc),
+                )
+            )
+        await db_session.flush()
+
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_deck_weekly_activity(test_user.id, v2_deck.id, week_start, week_end)
+
+        assert result == {date(2024, 1, 2): 1}
+        assert date(2024, 1, 3) not in result
