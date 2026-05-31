@@ -12,6 +12,8 @@ import type { DeckStatistics, ProgressMetrics } from '@/services/progressAPI';
 
 import { WeekHeat } from '../../dx';
 
+import type { deriveWordProgress } from '../../dx';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,21 +33,24 @@ function getTodayIdx(): number {
 export interface DxMetricStripProps {
   progress: ProgressMetrics | undefined;
   statistics: DeckStatistics | undefined;
+  wordProgress?: ReturnType<typeof deriveWordProgress> | undefined;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function DxMetricStrip({ progress, statistics }: DxMetricStripProps) {
+export function DxMetricStrip({ progress, statistics, wordProgress }: DxMetricStripProps) {
   const { t } = useTranslation('deck');
 
   const due = progress?.cards_due ?? 0;
-  const mastered = progress?.cards_mastered ?? 0;
-  const total = progress?.total_cards ?? 0;
   const timeMin = Math.round((statistics?.total_study_time_seconds ?? 0) / 60);
-  const pct = total > 0 ? Math.round((mastered / total) * 100) : 0;
   const todayIdx = getTodayIdx();
+
+  // Mastered card uses word-level counts when available
+  const mastered = wordProgress?.masteredWords ?? 0;
+  const total = wordProgress?.totalWords ?? 0;
+  const pct = wordProgress?.progressPct ?? 0;
 
   return (
     <div className="dx-metrics" data-testid="dx-metric-strip">
@@ -81,7 +86,7 @@ export function DxMetricStrip({ progress, statistics }: DxMetricStripProps) {
         </div>
       </div>
 
-      {/* Card 3: Mastered (green) — real data, no UnwiredDot */}
+      {/* Card 3: Mastered (green) — word-level data */}
       <div className="dx-metric" data-tone="green" data-testid="dx-metric-mastered">
         <div className="dx-metric-icon">
           <Check />

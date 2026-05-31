@@ -18,7 +18,7 @@ import { progressAPI } from '@/services/progressAPI';
 import { useDeckStore } from '@/stores/deckStore';
 import type { Deck } from '@/types/deck';
 
-import { DxCover, Kicker } from '../../dx';
+import { DxCover, Kicker, deriveWordProgress } from '../../dx';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Props
@@ -27,6 +27,7 @@ import { DxCover, Kicker } from '../../dx';
 export interface DxResumeHeroProps {
   deck: Deck;
   masteredWords: number;
+  progressPct: number;
   siblings: Deck[];
 }
 
@@ -34,7 +35,7 @@ export interface DxResumeHeroProps {
 // Component
 // ────────────────────────────────────────────────────────────────────────────
 
-export function DxResumeHero({ deck, masteredWords, siblings }: DxResumeHeroProps) {
+export function DxResumeHero({ deck, masteredWords, progressPct, siblings }: DxResumeHeroProps) {
   const { t, i18n } = useTranslation('deck');
 
   const localizedName = getLocalizedDeckName(deck, i18n.language);
@@ -46,7 +47,7 @@ export function DxResumeHero({ deck, masteredWords, siblings }: DxResumeHeroProp
   // word-entry count (card_count from the API). Card-level SRS counts live in
   // DxMetricStrip / DxActionPanel, not here.
   const totalWords = deck.cardCount;
-  const pct = totalWords > 0 ? Math.round((masteredWords / totalWords) * 100) : 0;
+  const pct = progressPct;
 
   const showStack = siblings.length >= 2;
 
@@ -154,9 +155,14 @@ export function DxResumeHeroConnected({ deck }: DxResumeHeroConnectedProps) {
     queryFn: () => progressAPI.getWordMastery(deck.id),
   });
 
-  const masteredWords = (wordMastery?.items ?? []).filter(
-    (m) => m.total_count > 0 && m.mastered_count === m.total_count
-  ).length;
+  const { masteredWords, progressPct } = deriveWordProgress(wordMastery?.items ?? []);
 
-  return <DxResumeHero deck={deck} masteredWords={masteredWords} siblings={siblings} />;
+  return (
+    <DxResumeHero
+      deck={deck}
+      masteredWords={masteredWords}
+      progressPct={progressPct}
+      siblings={siblings}
+    />
+  );
 }

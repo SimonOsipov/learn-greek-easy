@@ -891,7 +891,7 @@
   border: 1px solid hsl(var(--fg) / 0.06);
   border-radius: 14px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
 }
 .dx-metric-icon {
