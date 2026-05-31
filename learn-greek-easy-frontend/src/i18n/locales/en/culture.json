@@ -20,7 +20,9 @@
     "sectionExamTitle": "Cultural exam decks",
     "sectionCrossLabel": "Cross-cutting study decks",
     "sectionCrossKicker": "Topic decks",
-    "sectionCrossTitle": "Cross-cutting study decks"
+    "sectionCrossTitle": "Cross-cutting study decks",
+    "resumeSentence": "You've answered {{answered}} of {{deckTotal}} questions · {{inReview}} in review. The full Cyprus culture exam is {{examTotal}} questions — you're {{pct}}% ready.",
+    "resumeSentenceNoReadiness": "You've answered {{answered}} of {{deckTotal}} questions · {{inReview}} in review."
   },
   "page": {
     "mockExamCta": {
