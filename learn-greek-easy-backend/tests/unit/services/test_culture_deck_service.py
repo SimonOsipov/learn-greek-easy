@@ -66,12 +66,12 @@ class TestCultureDeckServiceList:
             patch.object(service.deck_repo, "list_active", new_callable=AsyncMock) as mock_list,
             patch.object(service.deck_repo, "count_active", new_callable=AsyncMock) as mock_count,
             patch.object(
-                service.deck_repo, "count_questions", new_callable=AsyncMock
-            ) as mock_count_q,
+                service.deck_repo, "get_batch_question_counts", new_callable=AsyncMock
+            ) as mock_batch_counts,
         ):
             mock_list.return_value = [mock_deck]
             mock_count.return_value = 1
-            mock_count_q.return_value = 25
+            mock_batch_counts.return_value = {mock_deck.id: 25}
 
             result = await service.list_decks()
 
@@ -143,8 +143,8 @@ class TestCultureDeckServiceList:
             patch.object(service.deck_repo, "list_active", new_callable=AsyncMock) as mock_list,
             patch.object(service.deck_repo, "count_active", new_callable=AsyncMock) as mock_count,
             patch.object(
-                service.deck_repo, "count_questions", new_callable=AsyncMock
-            ) as mock_count_q,
+                service.deck_repo, "get_batch_question_counts", new_callable=AsyncMock
+            ) as mock_batch_counts,
             patch.object(
                 service.stats_repo, "has_user_started_deck", new_callable=AsyncMock
             ) as mock_started,
@@ -157,7 +157,7 @@ class TestCultureDeckServiceList:
         ):
             mock_list.return_value = [mock_deck]
             mock_count.return_value = 1
-            mock_count_q.return_value = 30
+            mock_batch_counts.return_value = {mock_deck.id: 30}
             mock_started.return_value = True
             mock_progress.return_value = {
                 "questions_total": 30,
@@ -194,17 +194,100 @@ class TestCultureDeckServiceList:
             patch.object(service.deck_repo, "list_active", new_callable=AsyncMock) as mock_list,
             patch.object(service.deck_repo, "count_active", new_callable=AsyncMock) as mock_count,
             patch.object(
-                service.deck_repo, "count_questions", new_callable=AsyncMock
-            ) as mock_count_q,
+                service.deck_repo, "get_batch_question_counts", new_callable=AsyncMock
+            ) as mock_batch_counts,
         ):
             mock_list.return_value = [mock_deck]
             mock_count.return_value = 1
-            mock_count_q.return_value = 30
+            mock_batch_counts.return_value = {mock_deck.id: 30}
 
             # No user_id provided
             result = await service.list_decks(user_id=None)
 
             assert result.decks[0].progress is None
+
+
+class TestCultureDeckListBatchCount:
+    """Tests asserting N+1 elimination in list_decks (PERF-06)."""
+
+    @pytest.mark.asyncio
+    async def test_list_decks_issues_one_batch_count_not_per_deck(self, mock_db_session: MagicMock):
+        """list_decks with M decks must call get_batch_question_counts once,
+        never count_questions per-deck (AC-1 / AC-4)."""
+        service = CultureDeckService(mock_db_session)
+        num_decks = 5
+
+        mock_decks = []
+        for i in range(num_decks):
+            d = MagicMock()
+            d.id = __import__("uuid").uuid4()
+            d.name_en = f"Deck {i}"
+            d.name_el = f"Τράπουλα {i}"
+            d.name_ru = f"Колода {i}"
+            d.description_en = f"Desc {i}"
+            d.description_el = f"Περιγραφή {i}"
+            d.description_ru = f"Описание {i}"
+            d.category = "history"
+            d.is_active = True
+            d.is_premium = False
+            d.cover_image_s3_key = None
+            mock_decks.append(d)
+
+        counts_map = {d.id: 10 + i for i, d in enumerate(mock_decks)}
+
+        with (
+            patch.object(service.deck_repo, "list_active", new_callable=AsyncMock) as mock_list,
+            patch.object(service.deck_repo, "count_active", new_callable=AsyncMock) as mock_count,
+            patch.object(
+                service.deck_repo, "get_batch_question_counts", new_callable=AsyncMock
+            ) as mock_batch,
+            patch.object(
+                service.deck_repo, "count_questions", new_callable=AsyncMock
+            ) as mock_single_count,
+        ):
+            mock_list.return_value = mock_decks
+            mock_count.return_value = num_decks
+            mock_batch.return_value = counts_map
+
+            result = await service.list_decks()
+
+            # Batch helper called exactly once with all deck ids
+            mock_batch.assert_awaited_once()
+            called_ids = mock_batch.call_args[0][0]
+            assert set(called_ids) == {d.id for d in mock_decks}
+
+            # Per-deck count_questions must NOT be called (N+1 eliminated)
+            mock_single_count.assert_not_called()
+
+            # Per-deck counts are correct
+            assert len(result.decks) == num_decks
+            for deck_resp in result.decks:
+                expected = counts_map[deck_resp.id]
+                assert (
+                    deck_resp.question_count == expected
+                ), f"deck {deck_resp.id}: expected {expected}, got {deck_resp.question_count}"
+
+    @pytest.mark.asyncio
+    async def test_list_decks_empty_no_batch_call(self, mock_db_session: MagicMock):
+        """Empty page: get_batch_question_counts is still called (with empty list)
+        and returns {} gracefully."""
+        service = CultureDeckService(mock_db_session)
+
+        with (
+            patch.object(service.deck_repo, "list_active", new_callable=AsyncMock) as mock_list,
+            patch.object(service.deck_repo, "count_active", new_callable=AsyncMock) as mock_count,
+            patch.object(
+                service.deck_repo, "get_batch_question_counts", new_callable=AsyncMock
+            ) as mock_batch,
+        ):
+            mock_list.return_value = []
+            mock_count.return_value = 0
+            mock_batch.return_value = {}
+
+            result = await service.list_decks()
+
+            assert result.decks == []
+            mock_batch.assert_awaited_once_with([])
 
 
 class TestCultureDeckServiceGetDeck:
