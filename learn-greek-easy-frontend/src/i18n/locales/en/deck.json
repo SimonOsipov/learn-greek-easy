@@ -391,7 +391,7 @@
     "resumeStatMastered": "Mastered",
     "resumeStatComplete": "Complete",
     "coverTagVocabulary": "{{level}} · Vocabulary",
-    "weekHeatLabel": "Practice · this wk",
+    "weekHeatLabel": "This week",
     "donutRingLabel": "cards mastered",
     "unwiredTooltip": "Placeholder — not yet connected to backend data.",
     "unwiredExtraGloss": "Extra gloss — placeholder, not yet connected to backend data.",

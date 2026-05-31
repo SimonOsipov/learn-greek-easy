@@ -391,7 +391,7 @@
     "resumeStatMastered": "Освоено",
     "resumeStatComplete": "Завершено",
     "coverTagVocabulary": "{{level}} · Словарь",
-    "weekHeatLabel": "Практика · эта неделя",
+    "weekHeatLabel": "Эта неделя",
     "donutRingLabel": "карточек освоено",
     "unwiredTooltip": "Заглушка — данные ещё не подключены.",
     "unwiredExtraGloss": "Дополнительный глосс — заглушка, данные ещё не подключены.",
