@@ -109,6 +109,7 @@ export function DxMetricStrip({ progress, statistics }: DxMetricStripProps) {
           <WeekHeat
             heat={statistics?.weekly_activity ?? [0, 0, 0, 0, 0, 0, 0]}
             todayIdx={todayIdx}
+            label={t('dx.weekHeatLabel')}
           />
         </div>
       </div>
