@@ -1,56 +1,87 @@
-# Welcome to your Expo app 👋
+# Greeklish Mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo SDK 56 + Expo Router + TypeScript app with a custom dev-client build. Managed via EAS Build under the `sams-team` org.
 
-## Get started
+## Variants & bundle IDs
 
-1. Install dependencies
+Per-environment config is driven by the `APP_VARIANT` env var. When unset it defaults to `development`.
 
-   ```bash
-   npm install
-   ```
+| `APP_VARIANT` | Display name | iOS bundleIdentifier / Android package |
+|---|---|---|
+| `development` | Greeklish (Dev) | `eu.greeklish.app.dev` |
+| `preview` | Greeklish (Preview) | `eu.greeklish.app.preview` |
+| `production` | Greeklish | `eu.greeklish.app` |
 
-2. Start the app
+Each variant installs as a separate app on device/simulator because the bundle IDs differ.
 
-   ```bash
-   npx expo start
-   ```
+## Config approach — no `.env`
 
-In the output, you'll find options to open the app in a
+All per-environment config lives committed in `app.config.ts`, keyed by `APP_VARIANT`. EAS sets this variable at build time via the `env` block in each `eas.json` profile — there is no `.env` file to create or manage locally.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+These values are intentionally client-public: a mobile binary can be decompiled, so there is nothing to hide in `app.config.ts`. The only real secret in this epic (the EAS CI token) lives in GitHub Actions secrets and is wired in MOB-08.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Future stories will add committed Supabase credentials (MOB-03) and the API URL (MOB-05) into the same variant map in `app.config.ts`.
 
-## Get a fresh project
+## EAS build commands per profile
 
-When you're ready, run:
+Authenticate first (`eas whoami` — must be in `sams-team` org):
 
 ```bash
-npm run reset-project
+eas login          # if not already logged in
+eas whoami         # confirm sams-team org
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Then build:
 
-### Other setup steps
+```bash
+# iOS simulator dev-client build (developmentClient: true, simulator: true)
+eas build --profile development --platform ios
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+# Internal-distribution simulator-capable build
+eas build --profile preview --platform ios
 
-## Learn more
+# Store-oriented build (not wired for TestFlight/store submit yet)
+eas build --profile production --platform ios
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+Notes:
+- `development` and `preview` target the iOS simulator.
+- There is no Apple Developer Program enrollment yet, so device distribution, TestFlight, and store submission are not wired up.
+- All builds run on EAS cloud (no local Xcode required for building).
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Local development
 
-## Join the community
+```bash
+npm install
+npx expo start           # starts Metro; opens Expo Go or a dev-client if installed
+```
 
-Join our community of developers creating universal apps.
+Use `npx expo start --ios` to open directly in the iOS simulator.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Verification (DCEAS-05)
+
+1. **TypeScript** — run from this directory:
+
+   ```bash
+   npx tsc --noEmit
+   ```
+
+   Expected: 2 pre-existing NativeWind/CSS errors (`animated-icon.module.css`, `@/global.css`). These are owned by MOB-02 and are unrelated to the config work. No other errors should appear.
+
+2. **Dev-client simulator build** — trigger the development profile:
+
+   ```bash
+   eas build --profile development --platform ios
+   ```
+
+   When the build completes, download the `.app` artifact, then install and launch it:
+
+   ```bash
+   # Install on the booted simulator
+   xcrun simctl install booted /path/to/Greeklish.app
+
+   # Launch
+   xcrun simctl launch booted eu.greeklish.app.dev
+   ```
+
+   Expected: app boots showing the Greeklish (Dev) name, and the Expo dev menu appears on Cmd+D. Requires an iOS simulator runtime installed locally (`xcode-select --install` + Xcode Simulator runtimes).
