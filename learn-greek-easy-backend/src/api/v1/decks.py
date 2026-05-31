@@ -49,7 +49,11 @@ router = APIRouter(
 def _deck_cover_url(deck: Deck, s3: S3Service) -> str | None:
     if not deck.cover_image_s3_key:
         return None
-    return s3.generate_presigned_url(deck.cover_image_s3_key)
+    # 30-day expiry (matches avatar URLs in auth.py). Cover images are stable,
+    # long-lived assets. The default 24h expiry is only 600s longer than the
+    # in-process URL cache window, so stale-cached URLs expire mid-flight and S3
+    # returns 403 -> intermittently missing cover images.
+    return s3.generate_presigned_url(deck.cover_image_s3_key, expiry_seconds=2592000)
 
 
 def _map_trilingual_create_fields(create_data: dict) -> None:

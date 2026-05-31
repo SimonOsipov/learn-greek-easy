@@ -46,6 +46,12 @@ logger = get_logger(__name__)
 SUPPORTED_LOCALES = frozenset(["en", "el", "ru"])
 DEFAULT_LOCALE = "en"
 
+# 30-day expiry for cover image URLs (matches avatar URLs in auth.py and vocab
+# deck covers in decks.py). Covers are stable assets; the default 24h expiry is
+# only 600s longer than the in-process URL cache window, so stale-cached URLs
+# expire mid-flight and S3 returns 403 -> intermittently missing cover images.
+_COVER_IMAGE_URL_EXPIRY_SECONDS = 2592000
+
 
 class CultureDeckService:
     """Service for culture deck operations.
@@ -155,7 +161,9 @@ class CultureDeckService:
         cover_image_url = None
         if deck.cover_image_s3_key:
             s3 = get_s3_service()
-            cover_image_url = s3.generate_presigned_url(deck.cover_image_s3_key)
+            cover_image_url = s3.generate_presigned_url(
+                deck.cover_image_s3_key, expiry_seconds=_COVER_IMAGE_URL_EXPIRY_SECONDS
+            )
 
         return CultureDeckResponse(
             id=deck.id,
@@ -195,7 +203,9 @@ class CultureDeckService:
         cover_image_url = None
         if deck.cover_image_s3_key:
             s3 = get_s3_service()
-            cover_image_url = s3.generate_presigned_url(deck.cover_image_s3_key)
+            cover_image_url = s3.generate_presigned_url(
+                deck.cover_image_s3_key, expiry_seconds=_COVER_IMAGE_URL_EXPIRY_SECONDS
+            )
 
         return CultureDeckDetailResponse(
             id=deck.id,
@@ -494,7 +504,10 @@ class CultureDeckService:
         cover_image_url = None
         if updated_deck.cover_image_s3_key:
             s3 = get_s3_service()
-            cover_image_url = s3.generate_presigned_url(updated_deck.cover_image_s3_key)
+            cover_image_url = s3.generate_presigned_url(
+                updated_deck.cover_image_s3_key,
+                expiry_seconds=_COVER_IMAGE_URL_EXPIRY_SECONDS,
+            )
 
         return CultureDeckAdminResponse(
             id=updated_deck.id,
