@@ -6,9 +6,8 @@
  * - Time card: total_study_time_seconds=3600 → "60" min shown (DX-12 coverage)
  * - Time card has NO UnwiredDot on the numeric value itself
  * - Mastered card shows cards_mastered/total_cards + pct
- * - Streak card renders exactly one UnwiredDot (R1)
- * - WeekHeat in Time card carries UnwiredDot (R2)
- * - Total UnwiredDots in the strip === 2 (R1 + R2)
+ * - Streak + WeekHeat render real backend data (R1, R2 wired); no UnwiredDot markers
+ * - Total UnwiredDots in the strip === 0
  */
 
 import React from 'react';
@@ -44,6 +43,9 @@ const mockStatistics: DeckStatistics = {
   average_quality: 3.5,
   average_easiness_factor: 2.4,
   average_interval_days: 7,
+  deck_streak_current: 5,
+  deck_streak_longest: 12,
+  weekly_activity: [1, 2, 0, 3, 1, 0, 4],
 };
 
 function renderStrip(
@@ -137,42 +139,26 @@ describe('DxMetricStrip', () => {
 
   // ── Streak card ───────────────────────────────────────────────────────────
 
-  it('Streak card renders exactly one UnwiredDot (R1)', () => {
+  it('streak card renders real value, no UnwiredDot (R1 wired)', () => {
     const { container } = renderStrip(mockProgress, mockStatistics);
     const streakCard = container.querySelector('[data-testid="dx-metric-streak"]');
+    // No unwired dot — R1 is now wired
     const dots = streakCard?.querySelectorAll('.dx-unwired-dot');
-    expect(dots?.length).toBe(1);
-  });
-
-  it('Streak card UnwiredDot (R1) uses danger tone', () => {
-    const { container } = renderStrip(mockProgress, mockStatistics);
-    const streakCard = container.querySelector('[data-testid="dx-metric-streak"]');
-    const marker = streakCard?.querySelector('.dx-unwired-dot-marker');
-    // danger tone: no data-tone attribute (default)
-    expect(marker?.getAttribute('data-tone')).toBeNull();
+    expect(dots?.length).toBe(0);
+    // Real streak value (deck_streak_current=5) renders in the stat value element
+    const statValue = streakCard?.querySelector('.dx-stat-value');
+    expect(statValue?.textContent).toBe('5');
   });
 
   // ── Time card WeekHeat (R2) ───────────────────────────────────────────────
 
-  it('WeekHeat embedded in Time card renders its own UnwiredDot (R2)', () => {
+  it('time card WeekHeat renders real data, no UnwiredDot (R2 wired)', () => {
     const { container } = renderStrip(mockProgress, mockStatistics);
     const timeCard = container.querySelector('[data-testid="dx-metric-time"]');
-    // WeekHeat lives inside an UnwiredDot wrapper
+    // No unwired dot — R2 is now wired
     const unwiredInTime = timeCard?.querySelectorAll('.dx-unwired-dot');
-    expect(unwiredInTime?.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('WeekHeat UnwiredDot (R2) uses danger tone, not amber', () => {
-    const { container } = renderStrip(mockProgress, mockStatistics);
-    const timeCard = container.querySelector('[data-testid="dx-metric-time"]');
-    const marker = timeCard?.querySelector('.dx-unwired-dot-marker');
-    // danger tone: no data-tone attribute (default), same as R1
-    expect(marker?.getAttribute('data-tone')).toBeNull();
-  });
-
-  it('WeekHeat in Time card renders exactly 7 cells', () => {
-    const { container } = renderStrip(mockProgress, mockStatistics);
-    const timeCard = container.querySelector('[data-testid="dx-metric-time"]');
+    expect(unwiredInTime?.length).toBe(0);
+    // WeekHeat cells render (7 cells from weekly_activity data)
     const cells = timeCard?.querySelectorAll('.dx-week-cell');
     expect(cells?.length).toBe(7);
   });
@@ -186,10 +172,10 @@ describe('DxMetricStrip', () => {
 
   // ── Total UnwiredDot count ────────────────────────────────────────────────
 
-  it('total UnwiredDots in the strip === 2 (R1 streak + R2 WeekHeat)', () => {
+  it('total UnwiredDots in the strip === 0 (R1 + R2 both wired)', () => {
     const { container } = renderStrip(mockProgress, mockStatistics);
     const strip = container.querySelector('[data-testid="dx-metric-strip"]');
     const allDots = strip?.querySelectorAll('.dx-unwired-dot');
-    expect(allDots?.length).toBe(2);
+    expect(allDots?.length).toBe(0);
   });
 });

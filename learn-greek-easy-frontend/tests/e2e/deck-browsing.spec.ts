@@ -117,7 +117,9 @@ test.describe('Deck Browsing', () => {
     await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
 
     // Look for status filter buttons
-    const statusFilterBtn = page.getByRole('button', { name: /in progress|not started|completed/i }).first();
+    const statusFilterBtn = page
+      .getByRole('button', { name: /in progress|not started|completed/i })
+      .first();
     const isStatusFilterVisible = await statusFilterBtn.isVisible().catch(() => false);
 
     if (isStatusFilterVisible) {
@@ -143,9 +145,9 @@ test.describe('Deck Browsing', () => {
     await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
 
     // Look for search input
-    const searchInput = page.getByPlaceholder(/search/i).or(
-      page.getByRole('textbox', { name: /search/i })
-    );
+    const searchInput = page
+      .getByPlaceholder(/search/i)
+      .or(page.getByRole('textbox', { name: /search/i }));
     const isSearchVisible = await searchInput.isVisible().catch(() => false);
 
     if (isSearchVisible) {
@@ -319,7 +321,10 @@ test.describe('DX-15: Deck Index → Detail → Word navigation', () => {
 
     // Wait for word cards in the grid
     const wordCards = page.locator('[data-testid="word-card"]');
-    const hasWordCards = await wordCards.first().isVisible({ timeout: 10000 }).catch(() => false);
+    const hasWordCards = await wordCards
+      .first()
+      .isVisible({ timeout: 10000 })
+      .catch(() => false);
 
     if (hasWordCards) {
       // Click first word card to go to word reference
@@ -331,8 +336,8 @@ test.describe('DX-15: Deck Index → Detail → Word navigation', () => {
   });
 });
 
-test.describe('DX-15: Deck Detail — UnwiredDot presence (R1, R2)', () => {
-  test('DX-15.6: UnwiredDot visible on Streak metric card (R1)', async ({ page }) => {
+test.describe('DX-15: Deck Detail — Streak & WeekHeat wired (R1, R2 retired)', () => {
+  test('DX-15.6: Streak metric card wired — real value, no UnwiredDot (R1)', async ({ page }) => {
     await page.goto('/decks');
 
     const deckCards = page.locator('[data-testid="deck-card"]');
@@ -342,14 +347,14 @@ test.describe('DX-15: Deck Detail — UnwiredDot presence (R1, R2)', () => {
     // Detail page metric strip
     await expect(page.locator('[data-testid="dx-metric-strip"]')).toBeVisible({ timeout: 15000 });
 
-    // R1: UnwiredDot inside the streak metric card
+    // R1 retired: streak card now shows real per-deck data, no UnwiredDot.
     const streakCard = page.locator('[data-testid="dx-metric-streak"]');
     await expect(streakCard).toBeVisible();
-    const streakDot = streakCard.locator('[data-testid="unwired-dot"]').first();
-    await expect(streakDot).toBeVisible();
+    await expect(streakCard.locator('[data-testid="unwired-dot"]')).toHaveCount(0);
+    await expect(streakCard).toContainText(/\d/);
   });
 
-  test('DX-15.7: UnwiredDot visible on Time/WeekHeat metric card (R2)', async ({ page }) => {
+  test('DX-15.7: Time/WeekHeat metric card wired — no UnwiredDot (R2)', async ({ page }) => {
     await page.goto('/decks');
 
     const deckCards = page.locator('[data-testid="deck-card"]');
@@ -358,11 +363,10 @@ test.describe('DX-15: Deck Detail — UnwiredDot presence (R1, R2)', () => {
 
     await expect(page.locator('[data-testid="dx-metric-strip"]')).toBeVisible({ timeout: 15000 });
 
-    // R2: UnwiredDot inside the time metric card (wraps WeekHeat)
+    // R2 retired: time card's WeekHeat now shows real per-deck data, no UnwiredDot.
     const timeCard = page.locator('[data-testid="dx-metric-time"]');
     await expect(timeCard).toBeVisible();
-    const timeDot = timeCard.locator('[data-testid="unwired-dot"]').first();
-    await expect(timeDot).toBeVisible();
+    await expect(timeCard.locator('[data-testid="unwired-dot"]')).toHaveCount(0);
   });
 });
 

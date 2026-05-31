@@ -400,8 +400,6 @@
     "unwiredCollocations": "Collocations — not yet connected to backend data.",
     "unwiredRelated": "Related words — not yet connected to backend data.",
     "unwiredAudioGroup": "Audio cards — not yet available.",
-    "unwiredStreak": "Streak — not yet connected to backend data.",
-    "unwiredWeekHeat": "Weekly heatmap — not yet connected to backend data.",
     "premiumContent": "Premium content",
     "masteryStatus": "Mastery: {{status}}"
   }

@@ -34,6 +34,7 @@ from src.schemas.progress import (
     TrendsSummary,
 )
 from src.services.gamification.streak import (
+    _compute_streak_from_dates,
     _longest_streak_from_dates,
     compute_aggregated_streak,
     compute_culture_streak,
@@ -230,7 +231,9 @@ class ProgressService:
         )
 
     @staticmethod
-    def _build_vocab_status_map(vocab_status_per_day: list[dict]) -> dict[date, dict[str, int]]:
+    def _build_vocab_status_map(
+        vocab_status_per_day: list[dict],
+    ) -> dict[date, dict[str, int]]:
         result: dict[date, dict[str, int]] = {}
         for row in vocab_status_per_day:
             d = row["date"]
@@ -514,6 +517,10 @@ class ProgressService:
         if deck.owner_id is not None and deck.owner_id != user_id:
             raise ForbiddenException()
 
+        today = datetime.now(timezone.utc).date()
+        week_start = today - timedelta(days=today.weekday())  # Monday (weekday Mon=0)
+        week_end = week_start + timedelta(days=6)  # Sunday
+
         vocab_status, review_stats, avg_ef, avg_interval, total_cards = await asyncio.gather(
             self.card_stats_repo.count_by_status(user_id, deck_id),
             self.card_review_repo.get_deck_review_stats(user_id, deck_id),
@@ -521,6 +528,14 @@ class ProgressService:
             self.card_stats_repo.get_average_interval(user_id, deck_id),
             self.card_record_repo.count_by_deck(deck_id, is_active=True),
         )
+        deck_dates_desc, weekly_counts = await asyncio.gather(
+            self.card_review_repo.get_deck_study_days(user_id, deck_id),
+            self.card_review_repo.get_deck_weekly_activity(user_id, deck_id, week_start, week_end),
+        )
+
+        weekly_activity = [weekly_counts.get(week_start + timedelta(days=i), 0) for i in range(7)]
+        deck_streak_current = _compute_streak_from_dates(deck_dates_desc)
+        deck_streak_longest = _longest_streak_from_dates(sorted(deck_dates_desc))
 
         cards_mastered = vocab_status.get("mastered", 0)
         cards_new = vocab_status.get("new", 0)
@@ -549,6 +564,9 @@ class ProgressService:
             average_quality=round(review_stats["average_quality"], 2),
             average_easiness_factor=round(avg_ef, 2),
             average_interval_days=round(avg_interval, 1),
+            deck_streak_current=deck_streak_current,
+            deck_streak_longest=deck_streak_longest,
+            weekly_activity=weekly_activity,
         )
 
         first_at = review_stats.get("first_reviewed_at")

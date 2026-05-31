@@ -159,6 +159,9 @@ class DeckStatistics(BaseModel):
     average_quality: float = Field(..., ge=0, le=5)
     average_easiness_factor: float = Field(..., ge=1.3)
     average_interval_days: float = Field(..., ge=0)
+    deck_streak_current: int
+    deck_streak_longest: int
+    weekly_activity: list[int] = Field(min_length=7, max_length=7)
 
 
 class DeckTimeline(BaseModel):

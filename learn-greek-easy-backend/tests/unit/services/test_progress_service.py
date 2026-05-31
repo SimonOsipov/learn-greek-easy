@@ -1,6 +1,6 @@
 """Unit tests for ProgressService."""
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -178,7 +178,13 @@ class TestGetDashboardStats:
                 ca_cls,
                 me_cls,
                 ex_cls,
-                vocab_status={"new": 5, "learning": 3, "review": 2, "mastered": 10, "due": 1},
+                vocab_status={
+                    "new": 5,
+                    "learning": 3,
+                    "review": 2,
+                    "mastered": 10,
+                    "due": 1,
+                },
                 distinct_decks=2,
             )
             service = ProgressService(mock_db)
@@ -212,7 +218,13 @@ class TestGetDashboardStats:
                 ca_cls,
                 me_cls,
                 ex_cls,
-                vocab_status={"new": 0, "learning": 0, "review": 0, "mastered": 50, "due": 0},
+                vocab_status={
+                    "new": 0,
+                    "learning": 0,
+                    "review": 0,
+                    "mastered": 50,
+                    "due": 0,
+                },
                 culture_mastered=0,
             )
             service = ProgressService(mock_db)
@@ -658,3 +670,252 @@ class TestGetDeckProgressList:
         # Vocab (t_vocab=March) should sort before culture (t_culture=Feb)
         assert result.decks[0].deck_type == "vocabulary"
         assert result.decks[1].deck_type == "culture"
+
+
+# ============================================================================
+# TestGetDeckProgressDetail
+# ============================================================================
+
+
+def _make_deck_detail_mock():
+    """Build a minimal deck mock sufficient for get_deck_progress_detail."""
+    deck = MagicMock()
+    deck.is_active = True
+    deck.owner_id = None
+    deck.name_en = "Test Deck"
+    deck.description_en = "A test deck"
+    deck.level = MagicMock()
+    deck.level.value = "A1"
+    return deck
+
+
+def _make_review_stats(total_study_time_seconds: int = 0) -> dict:
+    """Return a minimal get_deck_review_stats result dict."""
+    return {
+        "total_reviews": 0,
+        "total_study_time_seconds": total_study_time_seconds,
+        "average_quality": 0.0,
+        "first_reviewed_at": None,
+        "last_reviewed_at": None,
+    }
+
+
+def _setup_deck_detail_mocks(
+    stats_cls,
+    review_cls,
+    deck_cls,
+    card_rec_cls,
+    *,
+    study_days=None,
+    weekly_activity=None,
+    total_study_time_seconds: int = 0,
+):
+    """Wire AsyncMock return values on the mocked repos used by get_deck_progress_detail."""
+    if study_days is None:
+        study_days = []
+    if weekly_activity is None:
+        weekly_activity = {}
+
+    deck_cls.return_value.get = AsyncMock(return_value=_make_deck_detail_mock())
+
+    stats = stats_cls.return_value
+    stats.count_by_status = AsyncMock(
+        return_value={"new": 0, "learning": 0, "review": 0, "mastered": 0, "due": 0}
+    )
+    stats.get_average_easiness_factor = AsyncMock(return_value=2.5)
+    stats.get_average_interval = AsyncMock(return_value=1.0)
+
+    review = review_cls.return_value
+    review.get_deck_review_stats = AsyncMock(
+        return_value=_make_review_stats(total_study_time_seconds)
+    )
+    review.get_deck_study_days = AsyncMock(return_value=study_days)
+    review.get_deck_weekly_activity = AsyncMock(return_value=weekly_activity)
+
+    card_rec_cls.return_value.count_by_deck = AsyncMock(return_value=0)
+
+
+@pytest.mark.unit
+class TestGetDeckProgressDetail:
+    async def test_get_deck_progress_detail_streak_grace_alive(self, mock_db, mock_user_id):
+        """Current streak = 3 when studied today and previous two days."""
+        today = datetime.now(timezone.utc).date()
+        study_days = [today, today - timedelta(days=1), today - timedelta(days=2)]
+
+        patches = _make_full_repo_patches()
+        with (
+            patches[0] as stats_cls,
+            patches[1] as review_cls,
+            patches[2],
+            patches[3],
+            patches[4],
+            patches[5] as deck_cls,
+            patches[6] as card_rec_cls,
+            patches[7],
+            patches[8],
+            patches[9],
+            patches[10],
+            patches[11],
+            patches[12],
+        ):
+            _setup_deck_detail_mocks(
+                stats_cls,
+                review_cls,
+                deck_cls,
+                card_rec_cls,
+                study_days=study_days,
+            )
+            service = ProgressService(mock_db)
+            result = await service.get_deck_progress_detail(mock_user_id, mock_user_id)
+
+        assert result.statistics.deck_streak_current == 3
+
+    async def test_get_deck_progress_detail_streak_grace_expired(self, mock_db, mock_user_id):
+        """Current streak = 0 and longest streak = 3 when last study was 2+ days ago."""
+        today = datetime.now(timezone.utc).date()
+        # Last study was today-2, so streak is broken (grace window expired)
+        study_days = [
+            today - timedelta(days=2),
+            today - timedelta(days=3),
+            today - timedelta(days=4),
+        ]
+
+        patches = _make_full_repo_patches()
+        with (
+            patches[0] as stats_cls,
+            patches[1] as review_cls,
+            patches[2],
+            patches[3],
+            patches[4],
+            patches[5] as deck_cls,
+            patches[6] as card_rec_cls,
+            patches[7],
+            patches[8],
+            patches[9],
+            patches[10],
+            patches[11],
+            patches[12],
+        ):
+            _setup_deck_detail_mocks(
+                stats_cls,
+                review_cls,
+                deck_cls,
+                card_rec_cls,
+                study_days=study_days,
+            )
+            service = ProgressService(mock_db)
+            result = await service.get_deck_progress_detail(mock_user_id, mock_user_id)
+
+        assert result.statistics.deck_streak_current == 0
+        assert result.statistics.deck_streak_longest == 3
+
+    async def test_get_deck_progress_detail_empty_deck_zeros(self, mock_db, mock_user_id):
+        """No study days and no weekly activity yields all-zero streak and activity."""
+        patches = _make_full_repo_patches()
+        with (
+            patches[0] as stats_cls,
+            patches[1] as review_cls,
+            patches[2],
+            patches[3],
+            patches[4],
+            patches[5] as deck_cls,
+            patches[6] as card_rec_cls,
+            patches[7],
+            patches[8],
+            patches[9],
+            patches[10],
+            patches[11],
+            patches[12],
+        ):
+            _setup_deck_detail_mocks(
+                stats_cls,
+                review_cls,
+                deck_cls,
+                card_rec_cls,
+                study_days=[],
+                weekly_activity={},
+            )
+            service = ProgressService(mock_db)
+            result = await service.get_deck_progress_detail(mock_user_id, mock_user_id)
+
+        assert result.statistics.deck_streak_current == 0
+        assert result.statistics.deck_streak_longest == 0
+        assert result.statistics.weekly_activity == [0, 0, 0, 0, 0, 0, 0]
+
+    async def test_get_deck_progress_detail_weekly_assembly_slot(self, mock_db, mock_user_id):
+        """weekly_activity is a 7-element list, Mon=index 0, Wed=index 2."""
+        today = datetime.now(timezone.utc).date()
+        week_start = today - timedelta(days=today.weekday())  # Monday
+
+        weekly_mock = {
+            week_start: 4,
+            week_start + timedelta(days=2): 1,
+        }
+
+        patches = _make_full_repo_patches()
+        with (
+            patches[0] as stats_cls,
+            patches[1] as review_cls,
+            patches[2],
+            patches[3],
+            patches[4],
+            patches[5] as deck_cls,
+            patches[6] as card_rec_cls,
+            patches[7],
+            patches[8],
+            patches[9],
+            patches[10],
+            patches[11],
+            patches[12],
+        ):
+            _setup_deck_detail_mocks(
+                stats_cls,
+                review_cls,
+                deck_cls,
+                card_rec_cls,
+                weekly_activity=weekly_mock,
+            )
+            service = ProgressService(mock_db)
+            result = await service.get_deck_progress_detail(mock_user_id, mock_user_id)
+
+        wa = result.statistics.weekly_activity
+        assert len(wa) == 7
+        assert wa[0] == 4  # Monday
+        assert wa[2] == 1  # Wednesday
+        assert wa[1] == 0
+        assert wa[3] == 0
+        assert wa[4] == 0
+        assert wa[5] == 0
+        assert wa[6] == 0
+
+    async def test_get_deck_progress_detail_total_study_time_unchanged(self, mock_db, mock_user_id):
+        """total_study_time_seconds in statistics equals the value from get_deck_review_stats."""
+        expected_time = 9876
+
+        patches = _make_full_repo_patches()
+        with (
+            patches[0] as stats_cls,
+            patches[1] as review_cls,
+            patches[2],
+            patches[3],
+            patches[4],
+            patches[5] as deck_cls,
+            patches[6] as card_rec_cls,
+            patches[7],
+            patches[8],
+            patches[9],
+            patches[10],
+            patches[11],
+            patches[12],
+        ):
+            _setup_deck_detail_mocks(
+                stats_cls,
+                review_cls,
+                deck_cls,
+                card_rec_cls,
+                total_study_time_seconds=expected_time,
+            )
+            service = ProgressService(mock_db)
+            result = await service.get_deck_progress_detail(mock_user_id, mock_user_id)
+
+        assert result.statistics.total_study_time_seconds == expected_time

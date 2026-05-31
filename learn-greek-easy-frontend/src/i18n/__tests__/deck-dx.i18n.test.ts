@@ -94,8 +94,6 @@ describe('deck.dx — DX-13 new keys present in both locales', () => {
     'dx.unwiredCollocations',
     'dx.unwiredRelated',
     'dx.unwiredAudioGroup',
-    'dx.unwiredStreak',
-    'dx.unwiredWeekHeat',
     'dx.premiumContent',
     'dx.masteryStatus',
     'wordReference.extraGlossPlaceholder',

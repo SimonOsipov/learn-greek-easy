@@ -366,6 +366,80 @@ class CardRecordReviewRepository(BaseRepository[CardRecordReview]):
             "last_reviewed_at": row.last_reviewed_at,
         }
 
+    async def get_deck_study_days(self, user_id: UUID, deck_id: UUID) -> list[date]:
+        """Return descending distinct UTC study dates for a deck (user-scoped).
+
+        Args:
+            user_id: User UUID.
+            deck_id: Deck UUID.
+
+        Returns:
+            List of dates in descending order. Empty list if no reviews exist.
+        """
+        stmt = (
+            select(func.date(CardRecordReview.reviewed_at).label("review_date"))
+            .join(CardRecord, CardRecordReview.card_record_id == CardRecord.id)
+            .where(
+                CardRecordReview.user_id == user_id,
+                CardRecord.deck_id == deck_id,
+            )
+            .distinct()
+            .order_by(func.date(CardRecordReview.reviewed_at).desc())
+        )
+        result = await self.db.execute(stmt)
+        return [
+            (
+                datetime.strptime(row.review_date, "%Y-%m-%d").date()
+                if isinstance(row.review_date, str)
+                else row.review_date
+            )
+            for row in result.all()
+        ]
+
+    async def get_deck_weekly_activity(
+        self,
+        user_id: UUID,
+        deck_id: UUID,
+        week_start_utc: date,
+        week_end_utc: date,
+    ) -> dict[date, int]:
+        """Return {UTC date: review count} for a deck within [start, end] inclusive.
+
+        Args:
+            user_id: User UUID.
+            deck_id: Deck UUID.
+            week_start_utc: Start of the date range (inclusive, UTC).
+            week_end_utc: End of the date range (inclusive, UTC).
+
+        Returns:
+            Dict mapping date to review count for days with activity. Empty dict
+            if no reviews exist in the given range.
+        """
+        stmt = (
+            select(
+                func.date(CardRecordReview.reviewed_at).label("review_date"),
+                func.count(CardRecordReview.id).label("review_count"),
+            )
+            .join(CardRecord, CardRecordReview.card_record_id == CardRecord.id)
+            .where(
+                CardRecordReview.user_id == user_id,
+                CardRecord.deck_id == deck_id,
+                func.date(CardRecordReview.reviewed_at) >= week_start_utc,
+                func.date(CardRecordReview.reviewed_at) <= week_end_utc,
+            )
+            .group_by(func.date(CardRecordReview.reviewed_at))
+        )
+        result = await self.db.execute(stmt)
+        out: dict[date, int] = {}
+        for row in result.all():
+            d = (
+                datetime.strptime(row.review_date, "%Y-%m-%d").date()
+                if isinstance(row.review_date, str)
+                else row.review_date
+            )
+            out[d] = row.review_count
+        return out
+
     async def get_session_aggregates(self, user_id: UUID) -> list[SessionAgg]:
         """Return per-session aggregates for all reviews by a user.
 
