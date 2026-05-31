@@ -6,6 +6,7 @@ Tests cover:
 """
 
 import asyncio
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -183,6 +184,22 @@ class TestTrialExpirationTask:
             mock_session.execute.return_value = mock_select_result
         return mock_session
 
+    @staticmethod
+    def _factory_for(mock_session):
+        """Build a patched get_session_factory return value.
+
+        The task does ``async with get_session_factory()() as session:`` —
+        so get_session_factory() returns the sessionmaker, and calling it
+        returns an async context manager yielding the session (INFRA-03,
+        shared global pool — no per-task engine to dispose).
+        """
+
+        @asynccontextmanager
+        async def _ctx():
+            yield mock_session
+
+        return MagicMock(return_value=_ctx())
+
     def test_import_and_is_async(self):
         """trial_expiration_task is importable and is a coroutine function."""
         from src.tasks.scheduled import trial_expiration_task
@@ -197,15 +214,13 @@ class TestTrialExpirationTask:
         mock_session = self._setup_mock_session_with_results([])
 
         with (
-            patch("src.tasks.scheduled.create_async_engine") as mock_engine_creator,
-            patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker,
+            patch(
+                "src.tasks.scheduled.get_session_factory",
+                return_value=self._factory_for(mock_session),
+            ),
             patch("src.tasks.scheduled.init_posthog"),
             patch("src.tasks.scheduled.is_posthog_enabled", return_value=False),
         ):
-            mock_engine = AsyncMock()
-            mock_engine_creator.return_value = mock_engine
-            mock_sessionmaker.return_value = MagicMock(return_value=mock_session)
-
             await trial_expiration_task()
 
         # Only SELECT, no UPDATE
@@ -221,15 +236,13 @@ class TestTrialExpirationTask:
         mock_session = self._setup_mock_session_with_results([row])
 
         with (
-            patch("src.tasks.scheduled.create_async_engine") as mock_engine_creator,
-            patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker,
+            patch(
+                "src.tasks.scheduled.get_session_factory",
+                return_value=self._factory_for(mock_session),
+            ),
             patch("src.tasks.scheduled.init_posthog"),
             patch("src.tasks.scheduled.is_posthog_enabled", return_value=False),
         ):
-            mock_engine = AsyncMock()
-            mock_engine_creator.return_value = mock_engine
-            mock_sessionmaker.return_value = MagicMock(return_value=mock_session)
-
             await trial_expiration_task()
 
         # SELECT + UPDATE
@@ -245,17 +258,15 @@ class TestTrialExpirationTask:
         mock_session = self._setup_mock_session_with_results(rows)
 
         with (
-            patch("src.tasks.scheduled.create_async_engine") as mock_engine_creator,
-            patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker,
+            patch(
+                "src.tasks.scheduled.get_session_factory",
+                return_value=self._factory_for(mock_session),
+            ),
             patch("src.tasks.scheduled.init_posthog"),
             patch("src.tasks.scheduled.is_posthog_enabled", return_value=True),
             patch("src.tasks.scheduled.capture_event") as mock_capture,
             patch("src.tasks.scheduled.flush_posthog"),
         ):
-            mock_engine = AsyncMock()
-            mock_engine_creator.return_value = mock_engine
-            mock_sessionmaker.return_value = MagicMock(return_value=mock_session)
-
             await trial_expiration_task()
 
         assert mock_capture.call_count == 2
@@ -270,17 +281,15 @@ class TestTrialExpirationTask:
         mock_session = self._setup_mock_session_with_results([row])
 
         with (
-            patch("src.tasks.scheduled.create_async_engine") as mock_engine_creator,
-            patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker,
+            patch(
+                "src.tasks.scheduled.get_session_factory",
+                return_value=self._factory_for(mock_session),
+            ),
             patch("src.tasks.scheduled.init_posthog"),
             patch("src.tasks.scheduled.is_posthog_enabled", return_value=True),
             patch("src.tasks.scheduled.capture_event") as mock_capture,
             patch("src.tasks.scheduled.flush_posthog"),
         ):
-            mock_engine = AsyncMock()
-            mock_engine_creator.return_value = mock_engine
-            mock_sessionmaker.return_value = MagicMock(return_value=mock_session)
-
             await trial_expiration_task()
 
         call_kwargs = mock_capture.call_args
@@ -303,17 +312,15 @@ class TestTrialExpirationTask:
         mock_session = self._setup_mock_session_with_results([row])
 
         with (
-            patch("src.tasks.scheduled.create_async_engine") as mock_engine_creator,
-            patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker,
+            patch(
+                "src.tasks.scheduled.get_session_factory",
+                return_value=self._factory_for(mock_session),
+            ),
             patch("src.tasks.scheduled.init_posthog"),
             patch("src.tasks.scheduled.is_posthog_enabled", return_value=True),
             patch("src.tasks.scheduled.capture_event"),
             patch("src.tasks.scheduled.flush_posthog") as mock_flush,
         ):
-            mock_engine = AsyncMock()
-            mock_engine_creator.return_value = mock_engine
-            mock_sessionmaker.return_value = MagicMock(return_value=mock_session)
-
             await trial_expiration_task()
 
         mock_flush.assert_called_once()
@@ -327,83 +334,83 @@ class TestTrialExpirationTask:
         mock_session = self._setup_mock_session_with_results([row])
 
         with (
-            patch("src.tasks.scheduled.create_async_engine") as mock_engine_creator,
-            patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker,
+            patch(
+                "src.tasks.scheduled.get_session_factory",
+                return_value=self._factory_for(mock_session),
+            ),
             patch("src.tasks.scheduled.init_posthog"),
             patch("src.tasks.scheduled.is_posthog_enabled", return_value=False),
             patch("src.tasks.scheduled.capture_event") as mock_capture,
             patch("src.tasks.scheduled.flush_posthog") as mock_flush,
         ):
-            mock_engine = AsyncMock()
-            mock_engine_creator.return_value = mock_engine
-            mock_sessionmaker.return_value = MagicMock(return_value=mock_session)
-
             await trial_expiration_task()
 
         mock_capture.assert_not_called()
         mock_flush.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_session_closed_on_completion(self, caplog_loguru):
-        """Session is closed and engine is disposed on successful completion."""
+    async def test_session_committed_on_completion(self, caplog_loguru):
+        """Session is committed on successful completion (lifecycle via async with)."""
         from src.tasks.scheduled import trial_expiration_task
 
         mock_session = self._setup_mock_session_with_results([])
 
         with (
-            patch("src.tasks.scheduled.create_async_engine") as mock_engine_creator,
-            patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker,
+            patch(
+                "src.tasks.scheduled.get_session_factory",
+                return_value=self._factory_for(mock_session),
+            ),
             patch("src.tasks.scheduled.init_posthog"),
             patch("src.tasks.scheduled.is_posthog_enabled", return_value=False),
         ):
-            mock_engine = AsyncMock()
-            mock_engine_creator.return_value = mock_engine
-            mock_sessionmaker.return_value = MagicMock(return_value=mock_session)
-
             await trial_expiration_task()
 
-        mock_session.close.assert_awaited_once()
-        mock_engine.dispose.assert_awaited_once()
+        mock_session.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_engine_disposed_on_error(self, caplog_loguru):
-        """Engine is disposed even when an exception occurs."""
+    async def test_session_context_exited_on_error(self, caplog_loguru):
+        """Session context manager is exited even when an exception occurs."""
         from src.tasks.scheduled import trial_expiration_task
 
+        exited = []
+        mock_session = AsyncMock()
+        mock_session.execute.side_effect = RuntimeError("DB connection failed")
+
+        @asynccontextmanager
+        async def _tracking_ctx():
+            try:
+                yield mock_session
+            finally:
+                exited.append("exit")
+
+        mock_factory = MagicMock(return_value=_tracking_ctx())
+
         with (
-            patch("src.tasks.scheduled.create_async_engine") as mock_engine_creator,
-            patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker,
+            patch("src.tasks.scheduled.get_session_factory", return_value=mock_factory),
             patch("src.tasks.scheduled.init_posthog"),
             patch("src.tasks.scheduled.is_posthog_enabled", return_value=False),
         ):
-            mock_engine = AsyncMock()
-            mock_engine_creator.return_value = mock_engine
-            mock_session = AsyncMock()
-            mock_session.execute.side_effect = RuntimeError("DB connection failed")
-            mock_sessionmaker.return_value = MagicMock(return_value=mock_session)
-
             with pytest.raises(RuntimeError):
                 await trial_expiration_task()
 
-        mock_engine.dispose.assert_awaited_once()
+        assert exited == ["exit"]
 
     @pytest.mark.asyncio
     async def test_error_logged_and_reraised(self, caplog_loguru):
         """Exception during task is logged with logger.error and re-raised."""
         from src.tasks.scheduled import trial_expiration_task
 
+        mock_session = AsyncMock()
+        mock_session.execute.side_effect = RuntimeError("DB error")
+
         with (
-            patch("src.tasks.scheduled.create_async_engine") as mock_engine_creator,
-            patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker,
+            patch(
+                "src.tasks.scheduled.get_session_factory",
+                return_value=self._factory_for(mock_session),
+            ),
             patch("src.tasks.scheduled.init_posthog"),
             patch("src.tasks.scheduled.is_posthog_enabled", return_value=False),
         ):
-            mock_engine = AsyncMock()
-            mock_engine_creator.return_value = mock_engine
-            mock_session = AsyncMock()
-            mock_session.execute.side_effect = RuntimeError("DB error")
-            mock_sessionmaker.return_value = MagicMock(return_value=mock_session)
-
             with caplog_loguru.at_level("ERROR"):
                 with pytest.raises(RuntimeError):
                     await trial_expiration_task()
@@ -418,15 +425,13 @@ class TestTrialExpirationTask:
         mock_session = self._setup_mock_session_with_results([])
 
         with (
-            patch("src.tasks.scheduled.create_async_engine") as mock_engine_creator,
-            patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker,
+            patch(
+                "src.tasks.scheduled.get_session_factory",
+                return_value=self._factory_for(mock_session),
+            ),
             patch("src.tasks.scheduled.init_posthog"),
             patch("src.tasks.scheduled.is_posthog_enabled", return_value=False),
         ):
-            mock_engine = AsyncMock()
-            mock_engine_creator.return_value = mock_engine
-            mock_sessionmaker.return_value = MagicMock(return_value=mock_session)
-
             with caplog_loguru.at_level("INFO"):
                 await trial_expiration_task()
 

@@ -85,8 +85,8 @@ engine_kwargs = {
 }
 
 # Production: AsyncAdaptedQueuePool with configurable limits
-engine_kwargs["pool_size"] = settings.database_pool_size       # Default: 20
-engine_kwargs["max_overflow"] = settings.database_max_overflow  # Default: 10
+engine_kwargs["pool_size"] = settings.database_pool_size       # Default: 15
+engine_kwargs["max_overflow"] = settings.database_max_overflow  # Default: 5
 engine_kwargs["pool_timeout"] = settings.database_pool_timeout  # Default: 30
 
 # Testing: NullPool (no connection pooling)
@@ -98,14 +98,29 @@ engine = create_async_engine(settings.database_url, **engine_kwargs)
 
 ### Connection Budget
 
+The Supavisor session-mode pooler has a hard cap of **30 connections**. Pool sizes are set per Railway service via environment variables so each service can be tuned independently without code changes.
+
+| Service | Railway env vars | pool_size + max_overflow | Max connections |
+|---------|-----------------|--------------------------|-----------------|
+| API | `DATABASE_POOL_SIZE=15`, `DATABASE_MAX_OVERFLOW=5` | 15 + 5 | 20 |
+| Scheduler | `DATABASE_POOL_SIZE=3`, `DATABASE_MAX_OVERFLOW=2` | 3 + 2 | 5 |
+| Alembic migrations | — (NullPool) | — | 1 per run |
+| **Total** | | | **~26** |
+
+**Buffer**: ~4 connections remain for Supabase internal housekeeping, ad-hoc admin queries, and monitoring.
+
+**Strategy**: Keep API + scheduler total under 25 connections, leaving at least 5 for Alembic (NullPool, 1 connection per run) and Supabase internal use. Code defaults (15/5) match API service env vars; override per service in Railway.
+
+**Backfill and seed scripts** (`scripts/seed_e2e_data.py`, `scripts/backfill_*.py`) call `init_db()` and inherit the pool configured by `DATABASE_POOL_SIZE` / `DATABASE_MAX_OVERFLOW`. Do not run these against production while the API service is live — combined pool usage would exceed the Supavisor cap.
+
+#### Legacy budget table (pre-INFRA-03, for reference)
+
 | Resource | Limit | Usage | Available | Notes |
 |----------|-------|-------|-----------|-------|
 | Max Connections | 60 | ~10 (internal) | ~50 | PostgreSQL max_connections setting |
 | Supavisor Pool | 30 | 0-30 | 30 | Configured pool_size |
-| Application Pool | 30 | 0-30 | 30 | pool_size (20) + max_overflow (10) |
+| Application Pool | 30 | 0-30 | 30 | pool_size (20) + max_overflow (10) — **outdated** |
 | Buffer | 20 | 0 | 20 | Reserved for admin, monitoring, migrations |
-
-**Strategy**: Application pool (30) matches Supavisor pool (30) to use 50% of total database capacity, leaving buffer for admin tools, Alembic migrations, monitoring, and health checks.
 
 ## Extensions
 

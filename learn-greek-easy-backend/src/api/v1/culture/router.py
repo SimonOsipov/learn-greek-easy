@@ -594,7 +594,6 @@ async def submit_answer(
                 sm2_new_status=context["sm2_new_status"],
                 sm2_next_review_date=context["sm2_next_review_date"],
                 stats_previous_status=context["stats_previous_status"],
-                db_url=str(settings.database_url),
             )
 
             return response

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
@@ -65,28 +64,18 @@ class ProgressService:
         vocab_status: dict[str, int]
         culture_status: dict[str, int]
         accuracy_stats: dict[str, int]
-        vocab_status, culture_status, accuracy_stats = await asyncio.gather(
-            self.card_stats_repo.count_by_status(user_id),
-            self.culture_stats_repo.count_all_by_status(user_id),
-            self.card_review_repo.get_accuracy_stats(user_id, days=30),
-        )
+        # Sequential on the shared AsyncSession (INFRA-01) — see module note below.
+        vocab_status = await self.card_stats_repo.count_by_status(user_id)
+        culture_status = await self.culture_stats_repo.count_all_by_status(user_id)
+        accuracy_stats = await self.card_review_repo.get_accuracy_stats(user_id, days=30)
 
         # Group 2: counts and study times
-        (
-            culture_mastered,
-            distinct_decks,
-            last_review_date,
-            total_study_time_vocab,
-            total_study_time_culture,
-            total_study_time_mock,
-        ) = await asyncio.gather(
-            self.culture_stats_repo.count_mastered_questions(user_id),
-            self.card_stats_repo.count_distinct_decks(user_id),
-            self.card_review_repo.get_last_review_date(user_id),
-            self.card_review_repo.get_total_study_time(user_id),
-            self.culture_answer_repo.get_total_study_time(user_id),
-            self.mock_exam_repo.get_total_study_time(user_id),
-        )
+        culture_mastered = await self.culture_stats_repo.count_mastered_questions(user_id)
+        distinct_decks = await self.card_stats_repo.count_distinct_decks(user_id)
+        last_review_date = await self.card_review_repo.get_last_review_date(user_id)
+        total_study_time_vocab = await self.card_review_repo.get_total_study_time(user_id)
+        total_study_time_culture = await self.culture_answer_repo.get_total_study_time(user_id)
+        total_study_time_mock = await self.mock_exam_repo.get_total_study_time(user_id)
         culture_mastered_int: int = culture_mastered
         distinct_decks_int: int = distinct_decks
         total_study_time_vocab_int: int = total_study_time_vocab
@@ -99,19 +88,11 @@ class ProgressService:
         study_time_today_vocab: int
         study_time_today_culture: int
         study_time_today_mock: int
-        (
-            reviews_today,
-            culture_answers_today,
-            study_time_today_vocab,
-            study_time_today_culture,
-            study_time_today_mock,
-        ) = await asyncio.gather(
-            self.card_review_repo.count_reviews_today(user_id),
-            self.culture_answer_repo.count_answers_today(user_id),
-            self.card_review_repo.get_study_time_today(user_id),
-            self.culture_answer_repo.get_study_time_today(user_id),
-            self.mock_exam_repo.get_study_time_today(user_id),
-        )
+        reviews_today = await self.card_review_repo.count_reviews_today(user_id)
+        culture_answers_today = await self.culture_answer_repo.count_answers_today(user_id)
+        study_time_today_vocab = await self.card_review_repo.get_study_time_today(user_id)
+        study_time_today_culture = await self.culture_answer_repo.get_study_time_today(user_id)
+        study_time_today_mock = await self.mock_exam_repo.get_study_time_today(user_id)
 
         # Overview
         vocab_studied = sum(v for k, v in vocab_status.items() if k not in ("new", "due"))
@@ -156,41 +137,30 @@ class ProgressService:
             ),
         )
 
-        # Streak — all eight values fetched concurrently
+        # Streak — all eight values fetched sequentially on the shared session
+        # (INFRA-01). The heavy date-set re-querying here is the top INFRA-04
+        # consolidation target (28 statements -> ~8 via a single tagged UNION).
         async def _vocab_longest() -> int:
             dates = await self.card_review_repo.get_all_unique_dates(user_id)
             return _longest_streak_from_dates(sorted(set(dates)))
 
         async def _culture_longest() -> int:
-            culture_dates, mock_dates = await asyncio.gather(
-                self.culture_answer_repo.get_all_unique_dates(user_id),
-                self.mock_exam_repo.get_all_unique_dates(user_id),
-            )
+            culture_dates = await self.culture_answer_repo.get_all_unique_dates(user_id)
+            mock_dates = await self.mock_exam_repo.get_all_unique_dates(user_id)
             return _longest_streak_from_dates(sorted(set(culture_dates) | set(mock_dates)))
 
         async def _exercise_longest() -> int:
             dates = await self.exercise_review_repo.get_all_unique_dates(user_id)
             return _longest_streak_from_dates(sorted(set(dates)))
 
-        (
-            current_streak,
-            longest_streak,
-            vocab_current,
-            culture_current,
-            exercise_current,
-            vocab_longest,
-            culture_longest,
-            exercise_longest,
-        ) = await asyncio.gather(
-            compute_aggregated_streak(self.db, user_id),
-            self._get_aggregated_longest_streak(user_id),
-            compute_vocabulary_streak(self.db, user_id),
-            compute_culture_streak(self.db, user_id),
-            compute_exercise_streak(self.db, user_id),
-            _vocab_longest(),
-            _culture_longest(),
-            _exercise_longest(),
-        )
+        current_streak = await compute_aggregated_streak(self.db, user_id)
+        longest_streak = await self._get_aggregated_longest_streak(user_id)
+        vocab_current = await compute_vocabulary_streak(self.db, user_id)
+        culture_current = await compute_culture_streak(self.db, user_id)
+        exercise_current = await compute_exercise_streak(self.db, user_id)
+        vocab_longest = await _vocab_longest()
+        culture_longest = await _culture_longest()
+        exercise_longest = await _exercise_longest()
         streak = StreakStats(
             current_streak=current_streak,
             longest_streak=longest_streak,
@@ -316,11 +286,10 @@ class ProgressService:
         )
 
     async def _get_aggregated_longest_streak(self, user_id: UUID) -> int:
-        vocab_dates, culture_dates, mock_dates = await asyncio.gather(
-            self.card_review_repo.get_all_unique_dates(user_id),
-            self.culture_answer_repo.get_all_unique_dates(user_id),
-            self.mock_exam_repo.get_all_unique_dates(user_id),
-        )
+        # Sequential on the shared AsyncSession (INFRA-01).
+        vocab_dates = await self.card_review_repo.get_all_unique_dates(user_id)
+        culture_dates = await self.culture_answer_repo.get_all_unique_dates(user_id)
+        mock_dates = await self.mock_exam_repo.get_all_unique_dates(user_id)
         all_dates = sorted(set(vocab_dates) | set(culture_dates) | set(mock_dates))
         return _longest_streak_from_dates(all_dates)
 
@@ -337,20 +306,22 @@ class ProgressService:
         end_date = date.today()
         start_date = end_date - timedelta(days=days - 1)
 
-        (
-            vocab_daily,
-            vocab_status_per_day,
-            vocab_accuracy_per_day,
-            culture_status_per_day,
-            culture_accuracy_per_day,
-            cards_mastered_in_range,
-        ) = await asyncio.gather(
-            self.card_review_repo.get_daily_stats(user_id, start_date, end_date),
-            self.card_stats_repo.count_cards_by_status_per_day(user_id, start_date, end_date),
-            self.card_review_repo.get_daily_accuracy_stats(user_id, start_date, end_date),
-            self.culture_stats_repo.count_cards_by_status_per_day(user_id, start_date, end_date),
-            self.culture_stats_repo.get_daily_culture_accuracy_stats(user_id, start_date, end_date),
-            self.card_stats_repo.count_cards_mastered_in_range(user_id, start_date, end_date),
+        # Sequential on the shared AsyncSession (INFRA-01).
+        vocab_daily = await self.card_review_repo.get_daily_stats(user_id, start_date, end_date)
+        vocab_status_per_day = await self.card_stats_repo.count_cards_by_status_per_day(
+            user_id, start_date, end_date
+        )
+        vocab_accuracy_per_day = await self.card_review_repo.get_daily_accuracy_stats(
+            user_id, start_date, end_date
+        )
+        culture_status_per_day = await self.culture_stats_repo.count_cards_by_status_per_day(
+            user_id, start_date, end_date
+        )
+        culture_accuracy_per_day = await self.culture_stats_repo.get_daily_culture_accuracy_stats(
+            user_id, start_date, end_date
+        )
+        cards_mastered_in_range = await self.card_stats_repo.count_cards_mastered_in_range(
+            user_id, start_date, end_date
         )
 
         vocab_daily_map = {row["date"]: row for row in vocab_daily}
@@ -451,9 +422,12 @@ class ProgressService:
         culture_decks = await self.culture_deck_repo.list_active()
         culture_deck_ids = [d.id for d in culture_decks]
         if culture_deck_ids:
-            culture_stats_batch, culture_question_counts = await asyncio.gather(
-                self.culture_stats_repo.get_batch_deck_stats(user_id, culture_deck_ids),
-                self.culture_deck_repo.get_batch_question_counts(culture_deck_ids),
+            # Sequential on the shared AsyncSession (INFRA-01).
+            culture_stats_batch = await self.culture_stats_repo.get_batch_deck_stats(
+                user_id, culture_deck_ids
+            )
+            culture_question_counts = await self.culture_deck_repo.get_batch_question_counts(
+                culture_deck_ids
             )
         else:
             culture_stats_batch = {}
@@ -521,16 +495,15 @@ class ProgressService:
         week_start = today - timedelta(days=today.weekday())  # Monday (weekday Mon=0)
         week_end = week_start + timedelta(days=6)  # Sunday
 
-        vocab_status, review_stats, avg_ef, avg_interval, total_cards = await asyncio.gather(
-            self.card_stats_repo.count_by_status(user_id, deck_id),
-            self.card_review_repo.get_deck_review_stats(user_id, deck_id),
-            self.card_stats_repo.get_average_easiness_factor(user_id, deck_id),
-            self.card_stats_repo.get_average_interval(user_id, deck_id),
-            self.card_record_repo.count_by_deck(deck_id, is_active=True),
-        )
-        deck_dates_desc, weekly_counts = await asyncio.gather(
-            self.card_review_repo.get_deck_study_days(user_id, deck_id),
-            self.card_review_repo.get_deck_weekly_activity(user_id, deck_id, week_start, week_end),
+        # Sequential on the shared AsyncSession (INFRA-01).
+        vocab_status = await self.card_stats_repo.count_by_status(user_id, deck_id)
+        review_stats = await self.card_review_repo.get_deck_review_stats(user_id, deck_id)
+        avg_ef = await self.card_stats_repo.get_average_easiness_factor(user_id, deck_id)
+        avg_interval = await self.card_stats_repo.get_average_interval(user_id, deck_id)
+        total_cards = await self.card_record_repo.count_by_deck(deck_id, is_active=True)
+        deck_dates_desc = await self.card_review_repo.get_deck_study_days(user_id, deck_id)
+        weekly_counts = await self.card_review_repo.get_deck_weekly_activity(
+            user_id, deck_id, week_start, week_end
         )
 
         weekly_activity = [weekly_counts.get(week_start + timedelta(days=i), 0) for i in range(7)]

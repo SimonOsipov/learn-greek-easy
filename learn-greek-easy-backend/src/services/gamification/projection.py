@@ -1,13 +1,12 @@
 """GamificationProjection — pure, read-only snapshot computation.
 
-Reads raw activity data concurrently from multiple repositories, derives all
-27 metric values, resolves unlocked achievements, computes total XP, and
-returns an immutable GamificationSnapshot.
+Reads raw activity data sequentially from multiple repositories (one shared
+AsyncSession — see INFRA-01), derives all 27 metric values, resolves unlocked
+achievements, computes total XP, and returns an immutable GamificationSnapshot.
 
 Zero DB writes — this module never calls add(), flush(), commit(), or delete().
 """
 
-import asyncio
 from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
@@ -259,44 +258,40 @@ class GamificationProjection:
         culture_stats_repo = CultureQuestionStatsRepository(db)
 
         # ----------------------------------------------------------------
-        # 2. Concurrent reads via asyncio.gather
+        # 2. Sequential reads — one shared AsyncSession (INFRA-01)
         # ----------------------------------------------------------------
-        results = await asyncio.gather(
-            compute_aggregated_streak(db, user_id),
-            card_stats_repo.count_by_status(user_id),
-            card_review_repo.get_total_reviews(user_id),
-            card_review_repo.get_session_aggregates(user_id),
-            card_review_repo.get_weekly_accuracy(user_id),
-            card_review_repo.get_consecutive_correct_streak(user_id),
-            card_stats_repo.get_cefr_completion(user_id),
-            card_review_repo.get_max_inactive_gap_days(user_id),
-            card_review_repo.get_daily_review_counts(user_id),
-            culture_history_repo.get_total_answers(user_id),
-            culture_history_repo.get_correct_answers_count(user_id),
-            culture_history_repo.get_consecutive_correct_streak(user_id),
-            culture_stats_repo.get_category_mastery_counts(user_id),
-            culture_history_repo.count_by_language(user_id, "el"),
-            culture_history_repo.count_distinct_languages(user_id),
-            culture_history_repo.get_daily_answer_counts(user_id),
+        # These MUST stay sequential. AsyncSession owns a single connection /
+        # transaction and is not safe for concurrent use; the previous
+        # asyncio.gather interleaved coroutines on the one session and collided
+        # in _connection_for_bind() (Sentry GREEKLY-BACKEND-1P, plus orphaned
+        # connections surfacing as GC "non-checked-in connection" warnings).
+        # Round-trip latency is recovered in INFRA-04 by merging these into
+        # fewer SQL statements — NOT by reintroducing concurrency (the
+        # Supavisor session-mode pooler caps us at 30 connections).
+        streak_days: int = await compute_aggregated_streak(db, user_id)
+        count_by_status: dict[str, int] = await card_stats_repo.count_by_status(user_id)
+        total_reviews: int = await card_review_repo.get_total_reviews(user_id)
+        sessions: list[SessionAgg] = await card_review_repo.get_session_aggregates(user_id)
+        weekly_correct_total: tuple[int, int] = await card_review_repo.get_weekly_accuracy(user_id)
+        consecutive_correct: int = await card_review_repo.get_consecutive_correct_streak(user_id)
+        cefr_completion: dict[DeckLevel, tuple[int, int]] = (
+            await card_stats_repo.get_cefr_completion(user_id)
         )
-
-        # Unpack with explicit types so mypy can track them
-        streak_days: int = results[0]  # type: ignore[assignment]
-        count_by_status: dict[str, int] = results[1]  # type: ignore[assignment]
-        total_reviews: int = results[2]  # type: ignore[assignment]
-        sessions: list[SessionAgg] = results[3]  # type: ignore[assignment]
-        weekly_correct_total: tuple[int, int] = results[4]  # type: ignore[assignment]
-        consecutive_correct: int = results[5]  # type: ignore[assignment]
-        cefr_completion: dict[DeckLevel, tuple[int, int]] = results[6]  # type: ignore[assignment]
-        max_inactive_gap: int = results[7]  # type: ignore[assignment]
-        vocab_daily: list[tuple[date, int]] = results[8]  # type: ignore[assignment]
-        culture_total: int = results[9]  # type: ignore[assignment]
-        culture_correct: int = results[10]  # type: ignore[assignment]
-        culture_consec: int = results[11]  # type: ignore[assignment]
-        culture_categories: dict[str, tuple[int, int]] = results[12]  # type: ignore[assignment]
-        culture_greek: int = results[13]  # type: ignore[assignment]
-        culture_languages: int = results[14]  # type: ignore[assignment]
-        culture_daily: list[tuple[date, int]] = results[15]  # type: ignore[assignment]
+        max_inactive_gap: int = await card_review_repo.get_max_inactive_gap_days(user_id)
+        vocab_daily: list[tuple[date, int]] = await card_review_repo.get_daily_review_counts(
+            user_id
+        )
+        culture_total: int = await culture_history_repo.get_total_answers(user_id)
+        culture_correct: int = await culture_history_repo.get_correct_answers_count(user_id)
+        culture_consec: int = await culture_history_repo.get_consecutive_correct_streak(user_id)
+        culture_categories: dict[str, tuple[int, int]] = (
+            await culture_stats_repo.get_category_mastery_counts(user_id)
+        )
+        culture_greek: int = await culture_history_repo.count_by_language(user_id, "el")
+        culture_languages: int = await culture_history_repo.count_distinct_languages(user_id)
+        culture_daily: list[tuple[date, int]] = await culture_history_repo.get_daily_answer_counts(
+            user_id
+        )
 
         # ----------------------------------------------------------------
         # 3. Fetch daily_goal inline (UserSettings may be absent for new users)

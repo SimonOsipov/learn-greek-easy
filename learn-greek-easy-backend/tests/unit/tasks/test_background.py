@@ -126,7 +126,7 @@ class TestPlaceholderFunctions:
 
         sig = inspect.signature(check_achievements_task)
         params = list(sig.parameters.keys())
-        assert params == ["user_id", "db_url"]
+        assert params == ["user_id"]
 
     def test_invalidate_cache_task_signature(self):
         """Test that invalidate_cache_task has correct signature."""
@@ -154,11 +154,10 @@ class TestPlaceholderExecution:
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
-        db_url = "postgresql+asyncpg://test:test@localhost/test"
 
         # With feature disabled, should just return early without error
         with patch.object(settings, "feature_background_tasks", False):
-            await check_achievements_task(user_id, db_url)
+            await check_achievements_task(user_id)
 
     @pytest.mark.asyncio
     async def test_invalidate_cache_task_executes(self):
@@ -224,7 +223,7 @@ class TestLoggingBehavior:
 
         with patch.object(settings, "feature_background_tasks", False):
             with patch("src.tasks.background.logger") as mock_logger:
-                await check_achievements_task(uuid4(), "test_url")
+                await check_achievements_task(uuid4())
                 mock_logger.debug.assert_called_once()
                 assert "disabled" in mock_logger.debug.call_args[0][0].lower()
 
@@ -256,31 +255,29 @@ class TestLoggingBehavior:
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
+        mock_session = AsyncMock()
+        mock_factory = MagicMock()
+        mock_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                # Set up mock engine
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch(
+                    "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                    new=AsyncMock(return_value=_make_mock_reconcile_result()),
+                ):
+                    with patch("src.tasks.background.logger") as mock_logger:
+                        await check_achievements_task(user_id)
+                        # Should log info on start
+                        mock_logger.info.assert_called()
 
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    # Set up mock session factory and session
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock()
-                    mock_session_factory.return_value = mock_session
-                    mock_sessionmaker.return_value = mock_session_factory
 
-                    with patch(
-                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                        new=AsyncMock(return_value=_make_mock_reconcile_result()),
-                    ):
-                        with patch("src.tasks.background.logger") as mock_logger:
-                            await check_achievements_task(
-                                user_id, "postgresql+asyncpg://test:test@localhost/test"
-                            )
-                            # Should log info on start
-                            mock_logger.info.assert_called()
-                            # Verify engine was disposed
-                            mock_engine.dispose.assert_called_once()
+def _make_mock_session_factory(mock_session: AsyncMock) -> MagicMock:
+    """Return a callable factory whose context manager yields mock_session."""
+    mock_factory = MagicMock()
+    mock_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+    return mock_factory
 
 
 class TestCheckAchievementsTaskImplementation:
@@ -292,45 +289,32 @@ class TestCheckAchievementsTaskImplementation:
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock()
-                    mock_session_factory.return_value = mock_session
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch(
-                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                        new=AsyncMock(return_value=_make_mock_reconcile_result()),
-                    ):
-                        await check_achievements_task(
-                            user_id, "postgresql+asyncpg://test:test@localhost/test"
-                        )
-
-                    # Verify engine was disposed
-                    mock_engine.dispose.assert_called_once()
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch(
+                    "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                    new=AsyncMock(return_value=_make_mock_reconcile_result()),
+                ):
+                    await check_achievements_task(user_id)
 
     @pytest.mark.asyncio
     async def test_check_achievements_handles_database_error(self):
-        """Test that database connection errors are handled gracefully."""
+        """Test that errors from get_session_factory are handled gracefully."""
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine_creator.side_effect = Exception("Connection failed")
-
+            with patch(
+                "src.tasks.background.get_session_factory",
+                side_effect=RuntimeError("DB not initialized"),
+            ):
                 with patch("src.tasks.background.logger") as mock_logger:
                     # Should not raise - errors are caught and logged
-                    await check_achievements_task(
-                        user_id, "postgresql+asyncpg://test:test@localhost/test"
-                    )
+                    await check_achievements_task(user_id)
 
                     # Should log the error with updated message
                     mock_logger.error.assert_called()
@@ -339,113 +323,86 @@ class TestCheckAchievementsTaskImplementation:
 
     @pytest.mark.asyncio
     async def test_check_achievements_handles_session_error(self):
-        """Test that session errors are handled gracefully."""
+        """Test that reconciler errors inside a session are handled gracefully."""
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_sessionmaker.side_effect = Exception("Session creation failed")
-
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch(
+                    "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                    new=AsyncMock(side_effect=Exception("Reconciler failed")),
+                ):
                     with patch("src.tasks.background.logger") as mock_logger:
                         # Should not raise
-                        await check_achievements_task(
-                            user_id, "postgresql+asyncpg://test:test@localhost/test"
-                        )
+                        await check_achievements_task(user_id)
 
                         # Should log the error
                         mock_logger.error.assert_called()
-                        # Engine should still be disposed
-                        mock_engine.dispose.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_check_achievements_disposes_engine_on_success(self):
-        """Test that engine is properly disposed after successful execution."""
+        """No-op: engine disposal no longer applies (global pool, no per-call engine)."""
+        # The task now uses the global pool; this test verifies commit is called.
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch(
+                    "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                    new=AsyncMock(return_value=_make_mock_reconcile_result()),
+                ):
+                    await check_achievements_task(user_id)
 
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock()
-                    mock_session_factory.return_value = mock_session
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch(
-                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                        new=AsyncMock(return_value=_make_mock_reconcile_result()),
-                    ):
-                        await check_achievements_task(
-                            user_id, "postgresql+asyncpg://test:test@localhost/test"
-                        )
-
-                    # Verify engine.dispose() was called
-                    mock_engine.dispose.assert_awaited_once()
+                mock_session.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_check_achievements_disposes_engine_on_error(self):
-        """Test that engine is disposed even when an error occurs."""
+        """No-op: engine disposal no longer applies (global pool, no per-call engine)."""
+        # Verify that an error in reconcile still results in a logged error (not a raise).
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    # Make session factory raise an error
-                    mock_sessionmaker.side_effect = Exception("Session creation failed")
-
-                    await check_achievements_task(
-                        user_id, "postgresql+asyncpg://test:test@localhost/test"
-                    )
-
-                    # Engine should still be disposed even after error
-                    mock_engine.dispose.assert_awaited_once()
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch(
+                    "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                    new=AsyncMock(side_effect=Exception("Reconciler error")),
+                ):
+                    with patch("src.tasks.background.logger") as mock_logger:
+                        await check_achievements_task(user_id)
+                        mock_logger.error.assert_called()
 
     @pytest.mark.asyncio
-    async def test_check_achievements_creates_engine_with_pool_pre_ping(self):
-        """Test that engine is created with pool_pre_ping=True."""
+    async def test_check_achievements_uses_global_session_factory(self):
+        """Test that get_session_factory() is called (global pool used)."""
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
-        db_url = "postgresql+asyncpg://test:test@localhost/test"
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
+            with patch(
+                "src.tasks.background.get_session_factory", return_value=mock_factory
+            ) as mock_get_factory:
+                with patch(
+                    "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                    new=AsyncMock(return_value=_make_mock_reconcile_result()),
+                ):
+                    await check_achievements_task(user_id)
 
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock()
-                    mock_session_factory.return_value = mock_session
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch(
-                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                        new=AsyncMock(return_value=_make_mock_reconcile_result()),
-                    ):
-                        await check_achievements_task(user_id, db_url)
-
-                    # Verify create_async_engine was called with pool_pre_ping and connect_args
-                    mock_engine_creator.assert_called_once_with(
-                        db_url,
-                        pool_pre_ping=True,
-                        connect_args={},
-                    )
+                mock_get_factory.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_check_achievements_logs_start_and_completion(self):
@@ -453,40 +410,31 @@ class TestCheckAchievementsTaskImplementation:
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch(
+                    "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                    new=AsyncMock(return_value=_make_mock_reconcile_result()),
+                ):
+                    with patch("src.tasks.background.logger") as mock_logger:
+                        await check_achievements_task(user_id)
 
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock()
-                    mock_session_factory.return_value = mock_session
-                    mock_sessionmaker.return_value = mock_session_factory
+                        # Should have at least 2 info logs (start and completion)
+                        assert mock_logger.info.call_count >= 2
 
-                    with patch(
-                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                        new=AsyncMock(return_value=_make_mock_reconcile_result()),
-                    ):
-                        with patch("src.tasks.background.logger") as mock_logger:
-                            await check_achievements_task(
-                                user_id, "postgresql+asyncpg://test:test@localhost/test"
-                            )
+                        # Check start log
+                        start_call = mock_logger.info.call_args_list[0]
+                        assert (
+                            "Starting reconcile (IMMEDIATE) from check_achievements_task"
+                            in start_call[0][0]
+                        )
 
-                            # Should have at least 2 info logs (start and completion)
-                            assert mock_logger.info.call_count >= 2
-
-                            # Check start log
-                            start_call = mock_logger.info.call_args_list[0]
-                            assert (
-                                "Starting reconcile (IMMEDIATE) from check_achievements_task"
-                                in start_call[0][0]
-                            )
-
-                            # Check completion log
-                            completion_call = mock_logger.info.call_args_list[1]
-                            assert "Reconcile complete" in completion_call[0][0]
+                        # Check completion log
+                        completion_call = mock_logger.info.call_args_list[1]
+                        assert "Reconcile complete" in completion_call[0][0]
 
 
 class TestCheckAchievementsTaskReconciler:
@@ -499,32 +447,23 @@ class TestCheckAchievementsTaskReconciler:
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                mock_result = _make_mock_reconcile_result()
+                with patch(
+                    "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                    new=AsyncMock(return_value=mock_result),
+                ) as mock_reconcile:
+                    await check_achievements_task(user_id)
 
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock()
-                    mock_session_factory.return_value = mock_session
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    mock_result = _make_mock_reconcile_result()
-                    with patch(
-                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                        new=AsyncMock(return_value=mock_result),
-                    ) as mock_reconcile:
-                        await check_achievements_task(
-                            user_id, "postgresql+asyncpg://test:test@localhost/test"
-                        )
-
-                        # Reconciler called with session, user_id, IMMEDIATE
-                        mock_reconcile.assert_called_once()
-                        call_args = mock_reconcile.call_args
-                        assert call_args[0][1] == user_id
-                        assert call_args[0][2] == ReconcileMode.IMMEDIATE
+                    # Reconciler called with session, user_id, IMMEDIATE
+                    mock_reconcile.assert_called_once()
+                    call_args = mock_reconcile.call_args
+                    assert call_args[0][1] == user_id
+                    assert call_args[0][2] == ReconcileMode.IMMEDIATE
 
     @pytest.mark.asyncio
     async def test_commits_session_after_reconcile(self):
@@ -532,95 +471,65 @@ class TestCheckAchievementsTaskReconciler:
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                mock_result = _make_mock_reconcile_result(
+                    new_unlocks=["learning_first_word"], leveled_up=False
+                )
+                with patch(
+                    "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                    new=AsyncMock(return_value=mock_result),
+                ):
+                    await check_achievements_task(user_id)
 
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock()
-                    mock_session_factory.return_value = mock_session
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    mock_result = _make_mock_reconcile_result(
-                        new_unlocks=["learning_first_word"], leveled_up=False
-                    )
-                    with patch(
-                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                        new=AsyncMock(return_value=mock_result),
-                    ):
-                        await check_achievements_task(
-                            user_id, "postgresql+asyncpg://test:test@localhost/test"
-                        )
-
-                        # session.commit() called exactly once
-                        mock_session.commit.assert_called_once()
+                # session.commit() called exactly once
+                mock_session.commit.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_engine_disposed_in_finally_on_success(self):
-        """Engine must be disposed in the finally block even on success."""
+        """No engine to dispose; verify session commit still called on success."""
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch(
+                    "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                    new=AsyncMock(return_value=_make_mock_reconcile_result()),
+                ):
+                    await check_achievements_task(user_id)
 
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock()
-                    mock_session_factory.return_value = mock_session
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch(
-                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                        new=AsyncMock(return_value=_make_mock_reconcile_result()),
-                    ):
-                        await check_achievements_task(
-                            user_id, "postgresql+asyncpg://test:test@localhost/test"
-                        )
-
-                    mock_engine.dispose.assert_awaited_once()
+            mock_session.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_engine_disposed_in_finally_on_reconciler_error(self):
-        """Engine must be disposed even when reconciler raises."""
+        """Error in reconciler is caught and logged; task does not raise."""
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch(
+                    "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                    new=AsyncMock(side_effect=RuntimeError("projection failed")),
+                ):
+                    with patch("src.tasks.background.logger") as mock_logger:
+                        # Must not raise
+                        await check_achievements_task(user_id)
 
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock()
-                    mock_session_factory.return_value = mock_session
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch(
-                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                        new=AsyncMock(side_effect=RuntimeError("projection failed")),
-                    ):
-                        with patch("src.tasks.background.logger") as mock_logger:
-                            # Must not raise
-                            await check_achievements_task(
-                                user_id, "postgresql+asyncpg://test:test@localhost/test"
-                            )
-
-                            # Error must be logged with exact message
-                            mock_logger.error.assert_called()
-                            error_call = mock_logger.error.call_args
-                            assert "Reconcile failed in check_achievements_task" in error_call[0][0]
-
-                    # Engine disposed despite the error
-                    mock_engine.dispose.assert_awaited_once()
+                        # Error must be logged with exact message
+                        mock_logger.error.assert_called()
+                        error_call = mock_logger.error.call_args
+                        assert "Reconcile failed in check_achievements_task" in error_call[0][0]
 
     @pytest.mark.asyncio
     async def test_no_reraise_on_reconciler_error(self):
@@ -628,26 +537,17 @@ class TestCheckAchievementsTaskReconciler:
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock()
-                    mock_session_factory.return_value = mock_session
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch(
-                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                        new=AsyncMock(side_effect=ValueError("unexpected")),
-                    ):
-                        # Should complete without raising
-                        await check_achievements_task(
-                            user_id, "postgresql+asyncpg://test:test@localhost/test"
-                        )
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch(
+                    "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                    new=AsyncMock(side_effect=ValueError("unexpected")),
+                ):
+                    # Should complete without raising
+                    await check_achievements_task(user_id)
 
     @pytest.mark.asyncio
     async def test_sse_signal_preserved(self):
@@ -655,31 +555,22 @@ class TestCheckAchievementsTaskReconciler:
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock()
-                    mock_session_factory.return_value = mock_session
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch(
-                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                        new=AsyncMock(return_value=_make_mock_reconcile_result()),
-                    ):
-                        mock_event_bus = AsyncMock()
-                        with patch("src.core.event_bus.dashboard_event_bus", mock_event_bus):
-                            # The SSE block swallows its own exceptions; just verify it's called
-                            # (loop.create_task is synchronous, so signal may not be awaited here)
-                            await check_achievements_task(
-                                user_id, "postgresql+asyncpg://test:test@localhost/test"
-                            )
-                            # No assertion on signal — the block is fire-and-forget and
-                            # create_task only schedules it; we verify the block doesn't raise.
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch(
+                    "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                    new=AsyncMock(return_value=_make_mock_reconcile_result()),
+                ):
+                    mock_event_bus = AsyncMock()
+                    with patch("src.core.event_bus.dashboard_event_bus", mock_event_bus):
+                        # The SSE block swallows its own exceptions; just verify it's called
+                        # (loop.create_task is synchronous, so signal may not be awaited here)
+                        await check_achievements_task(user_id)
+                        # No assertion on signal — the block is fire-and-forget and
+                        # create_task only schedules it; we verify the block doesn't raise.
 
 
 class TestRunReviewSideEffectsReconcileOnce:
@@ -693,7 +584,6 @@ class TestRunReviewSideEffectsReconcileOnce:
 
         user_id = str(uuid4())
         card_record_id = str(uuid4())
-        db_url = "postgresql+asyncpg://test:test@localhost/test"
 
         reconcile_call_count = 0
 
@@ -702,37 +592,29 @@ class TestRunReviewSideEffectsReconcileOnce:
             reconcile_call_count += 1
             return _make_mock_reconcile_result()
 
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
+
         with patch.object(settings, "feature_background_tasks", True):
-            # Mock engine/session for both award_flashcard_xp_task and check_achievements_task
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch(
+                    "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                    new=_counting_reconcile,
+                ):
+                    # XP service mock (award_flashcard_xp_task inner)
+                    with patch("src.services.xp_service.XPService") as mock_xp_cls:
+                        mock_xp = AsyncMock()
+                        mock_xp.award_flashcard_review_xp.return_value = 10
+                        mock_xp_cls.return_value = mock_xp
 
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock()
-                    mock_session_factory.return_value = mock_session
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch(
-                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                        new=_counting_reconcile,
-                    ):
-                        # XP service mock (award_flashcard_xp_task inner)
-                        with patch("src.services.xp_service.XPService") as mock_xp_cls:
-                            mock_xp = AsyncMock()
-                            mock_xp.award_flashcard_review_xp.return_value = 10
-                            mock_xp_cls.return_value = mock_xp
-
-                            await _run_review_side_effects(
-                                user_id=user_id,
-                                card_record_id=card_record_id,
-                                quality=4,
-                                time_taken=3000,
-                                new_status_value="learning",
-                                reviews_before=0,
-                                db_url=db_url,
-                            )
+                        await _run_review_side_effects(
+                            user_id=user_id,
+                            card_record_id=card_record_id,
+                            quality=4,
+                            time_taken=3000,
+                            new_status_value="learning",
+                            reviews_before=0,
+                        )
 
         assert (
             reconcile_call_count == 1
@@ -1237,189 +1119,112 @@ class TestAnalyticsEventsConstant:
 
 
 class TestSessionCleanupOrder:
-    """Test that session is closed before engine is disposed.
+    """Test that session lifecycle is correctly managed via the global pool.
 
-    This is critical to avoid InvalidRequestError: "Method 'close()' can't
-    be called here; method '_connection_for_bind()' is already in progress".
+    Tasks now use `async with get_session_factory()() as session:` so the
+    context manager handles close/rollback.  These tests verify that the
+    global factory is invoked and that errors are caught without raising.
     """
 
     @pytest.mark.asyncio
-    async def test_check_achievements_closes_session_before_engine_dispose(self):
-        """Test that check_achievements_task closes session before engine dispose."""
+    async def test_check_achievements_uses_context_manager_session(self):
+        """check_achievements_task must enter the session context manager."""
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
-        call_order = []
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch(
+                    "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                    new=AsyncMock(return_value=_make_mock_reconcile_result()),
+                ):
+                    await check_achievements_task(user_id)
 
-                async def mock_dispose():
-                    call_order.append("engine.dispose")
-
-                mock_engine.dispose = mock_dispose
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-
-                    async def mock_close():
-                        call_order.append("session.close")
-
-                    mock_session.close = mock_close
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    await check_achievements_task(
-                        user_id, "postgresql+asyncpg://test:test@localhost/test"
-                    )
-
-                    # Verify session.close is called before engine.dispose
-                    assert call_order == ["session.close", "engine.dispose"]
+        # Context manager __aenter__ was called
+        mock_factory.return_value.__aenter__.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_check_achievements_closes_session_before_engine_on_error(self):
-        """Test that session is closed before engine dispose even on error."""
+    async def test_check_achievements_context_manager_exited_on_error(self):
+        """Context manager __aexit__ must be called even when reconciler raises."""
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
-        call_order = []
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch(
+                    "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                    new=AsyncMock(side_effect=RuntimeError("boom")),
+                ):
+                    await check_achievements_task(user_id)
 
-                async def mock_dispose():
-                    call_order.append("engine.dispose")
-
-                mock_engine.dispose = mock_dispose
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-
-                    async def mock_close():
-                        call_order.append("session.close")
-
-                    mock_session.close = mock_close
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    # Patch logger to raise inside the session block to simulate an error
-                    with patch("src.tasks.background.logger") as mock_logger:
-                        call_counter = {"n": 0}
-
-                        def info_side_effect(msg, **kwargs):
-                            call_counter["n"] += 1
-                            if call_counter["n"] >= 2:
-                                raise Exception("Simulated error inside session block")
-
-                        mock_logger.info.side_effect = info_side_effect
-
-                        await check_achievements_task(
-                            user_id, "postgresql+asyncpg://test:test@localhost/test"
-                        )
-
-                    # Session close should still happen before engine dispose
-                    assert call_order == ["session.close", "engine.dispose"]
+        mock_factory.return_value.__aexit__.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_process_answer_side_effects_closes_session_before_engine_dispose(self):
-        """Test that process_answer_side_effects_task closes session before engine dispose."""
+    async def test_process_answer_side_effects_uses_context_manager_session(self):
+        """process_answer_side_effects_task must enter the session context manager."""
         from src.tasks.background import process_answer_side_effects_task
 
         user_id = uuid4()
         question_id = uuid4()
-        call_order = []
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch(
+                    "src.tasks.background._check_and_notify_daily_goal", new_callable=AsyncMock
+                ):
+                    await process_answer_side_effects_task(
+                        user_id=user_id,
+                        question_id=question_id,
+                        language="en",
+                        is_correct=True,
+                        selected_option=1,
+                        time_taken_seconds=5,
+                        deck_category="history",
+                        culture_answers_before=0,
+                    )
 
-                async def mock_dispose():
-                    call_order.append("engine.dispose")
-
-                mock_engine.dispose = mock_dispose
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-
-                    async def mock_close():
-                        call_order.append("session.close")
-
-                    mock_session.close = mock_close
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch(
-                        "src.tasks.background._check_and_notify_daily_goal", new_callable=AsyncMock
-                    ):
-                        await process_answer_side_effects_task(
-                            user_id=user_id,
-                            question_id=question_id,
-                            language="en",
-                            is_correct=True,
-                            selected_option=1,
-                            time_taken_seconds=5,
-                            deck_category="history",
-                            culture_answers_before=0,
-                            db_url="postgresql+asyncpg://test:test@localhost/test",
-                        )
-
-                        assert call_order == ["session.close", "engine.dispose"]
+        mock_factory.return_value.__aenter__.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_create_announcement_notifications_closes_session_before_engine_dispose(self):
-        """Test that create_announcement_notifications_task closes session before engine dispose."""
+    async def test_create_announcement_notifications_uses_context_manager_session(self):
+        """create_announcement_notifications_task must enter the session context manager."""
         from src.tasks.background import create_announcement_notifications_task
 
         campaign_id = uuid4()
-        call_order = []
+        mock_session = AsyncMock()
+
+        # Mock execute to return empty user list
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        mock_session.execute.return_value = mock_result
+
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch(
+                    "src.repositories.announcement.AnnouncementCampaignRepository"
+                ) as mock_repo_class:
+                    mock_repo = AsyncMock()
+                    mock_repo.get.return_value = None
+                    mock_repo_class.return_value = mock_repo
 
-                async def mock_dispose():
-                    call_order.append("engine.dispose")
+                    await create_announcement_notifications_task(
+                        campaign_id=campaign_id,
+                        campaign_title="Test",
+                        campaign_message="Test message",
+                        link_url=None,
+                    )
 
-                mock_engine.dispose = mock_dispose
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-
-                    async def mock_close():
-                        call_order.append("session.close")
-
-                    mock_session.close = mock_close
-
-                    # Mock execute to return empty user list
-                    mock_result = MagicMock()
-                    mock_result.scalars.return_value.all.return_value = []
-                    mock_session.execute.return_value = mock_result
-
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch(
-                        "src.repositories.announcement.AnnouncementCampaignRepository"
-                    ) as mock_repo_class:
-                        mock_repo = AsyncMock()
-                        mock_repo.get.return_value = None
-                        mock_repo_class.return_value = mock_repo
-
-                        await create_announcement_notifications_task(
-                            campaign_id=campaign_id,
-                            campaign_title="Test",
-                            campaign_message="Test message",
-                            link_url=None,
-                            db_url="postgresql+asyncpg://test:test@localhost/test",
-                        )
-
-                        assert call_order == ["session.close", "engine.dispose"]
+        mock_factory.return_value.__aenter__.assert_awaited_once()
 
 
 # =============================================================================
@@ -1427,9 +1232,7 @@ class TestSessionCleanupOrder:
 # =============================================================================
 
 
-def _make_persist_deck_review_kwargs(
-    db_url: str = "postgresql+asyncpg://test:test@localhost/test",
-) -> dict:
+def _make_persist_deck_review_kwargs() -> dict:
     """Return a complete set of kwargs for persist_deck_review_task."""
     from uuid import uuid4
 
@@ -1451,13 +1254,10 @@ def _make_persist_deck_review_kwargs(
         "is_newly_mastered": False,
         "reviews_before": 0,
         "user_email": None,
-        "db_url": db_url,
     }
 
 
-def _make_persist_culture_answer_kwargs(
-    db_url: str = "postgresql+asyncpg://test:test@localhost/test",
-) -> dict:
+def _make_persist_culture_answer_kwargs() -> dict:
     """Return a complete set of kwargs for persist_culture_answer_task."""
     from uuid import uuid4
 
@@ -1476,7 +1276,6 @@ def _make_persist_culture_answer_kwargs(
         "sm2_new_status": "learning",
         "sm2_next_review_date": "2026-03-20",
         "stats_previous_status": "new",
-        "db_url": db_url,
     }
 
 
@@ -1491,42 +1290,36 @@ class TestPersistDeckReviewTask:
 
     @pytest.mark.asyncio
     async def test_skipped_when_disabled(self):
-        """Task exits early without creating an engine when background tasks disabled."""
+        """Task exits early without touching get_session_factory when tasks disabled."""
         from src.tasks.background import persist_deck_review_task
 
         kwargs = _make_persist_deck_review_kwargs()
         with patch.object(settings, "feature_background_tasks", False):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+            with patch("src.tasks.background.get_session_factory") as mock_factory_fn:
                 await persist_deck_review_task(**kwargs)
 
-        mock_engine_creator.assert_not_called()
+        mock_factory_fn.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_creates_engine_and_session(self):
-        """Task must create an async engine and session factory."""
+    async def test_uses_global_session_factory(self):
+        """Task must use the global session factory."""
         from src.tasks.background import persist_deck_review_task
 
-        db_url = "postgresql+asyncpg://test:test@localhost/test"
-        kwargs = _make_persist_deck_review_kwargs(db_url=db_url)
+        kwargs = _make_persist_deck_review_kwargs()
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
+            with patch(
+                "src.tasks.background.get_session_factory", return_value=mock_factory
+            ) as mock_factory_fn:
+                with patch("src.tasks.background._persist_review_core", new_callable=AsyncMock):
+                    with patch(
+                        "src.tasks.background._run_review_side_effects", new_callable=AsyncMock
+                    ):
+                        await persist_deck_review_task(**kwargs)
 
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch("src.tasks.background._persist_review_core", new_callable=AsyncMock):
-                        with patch(
-                            "src.tasks.background._run_review_side_effects", new_callable=AsyncMock
-                        ):
-                            await persist_deck_review_task(**kwargs)
-
-        mock_engine_creator.assert_called_once()
-        mock_sessionmaker.assert_called_once()
+        mock_factory_fn.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_calls_persist_review_core(self):
@@ -1534,24 +1327,18 @@ class TestPersistDeckReviewTask:
         from src.tasks.background import persist_deck_review_task
 
         kwargs = _make_persist_deck_review_kwargs()
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch(
+                    "src.tasks.background._persist_review_core", new_callable=AsyncMock
+                ) as mock_core:
                     with patch(
-                        "src.tasks.background._persist_review_core", new_callable=AsyncMock
-                    ) as mock_core:
-                        with patch(
-                            "src.tasks.background._run_review_side_effects", new_callable=AsyncMock
-                        ):
-                            await persist_deck_review_task(**kwargs)
+                        "src.tasks.background._run_review_side_effects", new_callable=AsyncMock
+                    ):
+                        await persist_deck_review_task(**kwargs)
 
         mock_core.assert_awaited_once()
 
@@ -1561,70 +1348,53 @@ class TestPersistDeckReviewTask:
         from src.tasks.background import persist_deck_review_task
 
         kwargs = _make_persist_deck_review_kwargs()
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch("src.tasks.background._persist_review_core", new_callable=AsyncMock):
-                        with patch(
-                            "src.tasks.background._run_review_side_effects", new_callable=AsyncMock
-                        ):
-                            with patch("src.core.sm2.calculate_sm2") as mock_calc:
-                                await persist_deck_review_task(**kwargs)
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch("src.tasks.background._persist_review_core", new_callable=AsyncMock):
+                    with patch(
+                        "src.tasks.background._run_review_side_effects", new_callable=AsyncMock
+                    ):
+                        with patch("src.core.sm2.calculate_sm2") as mock_calc:
+                            await persist_deck_review_task(**kwargs)
 
         mock_calc.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_disposes_engine_after_completion(self):
-        """Engine must be disposed after successful task completion."""
+    async def test_session_commit_called_after_core(self):
+        """Session commit must be called after _persist_review_core succeeds."""
         from src.tasks.background import persist_deck_review_task
 
         kwargs = _make_persist_deck_review_kwargs()
+        mock_session = AsyncMock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch("src.tasks.background._persist_review_core", new_callable=AsyncMock):
+                    with patch(
+                        "src.tasks.background._run_review_side_effects", new_callable=AsyncMock
+                    ):
+                        await persist_deck_review_task(**kwargs)
 
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch("src.tasks.background._persist_review_core", new_callable=AsyncMock):
-                        with patch(
-                            "src.tasks.background._run_review_side_effects", new_callable=AsyncMock
-                        ):
-                            await persist_deck_review_task(**kwargs)
-
-        mock_engine.dispose.assert_awaited_once()
+        mock_session.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_disposes_engine_on_error(self):
-        """Engine must be disposed even when an error occurs inside the task."""
+    async def test_error_inside_task_does_not_raise(self):
+        """An error from get_session_factory must be caught; task must not raise."""
         from src.tasks.background import persist_deck_review_task
 
         kwargs = _make_persist_deck_review_kwargs()
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_sessionmaker.side_effect = Exception("Session creation failed")
-
-                    # Should not raise — errors are caught internally
-                    await persist_deck_review_task(**kwargs)
-
-        mock_engine.dispose.assert_awaited_once()
+            with patch(
+                "src.tasks.background.get_session_factory",
+                side_effect=RuntimeError("DB not initialized"),
+            ):
+                # Should not raise — errors are caught internally
+                await persist_deck_review_task(**kwargs)
 
 
 class TestPersistCultureAnswerTask:
@@ -1638,68 +1408,71 @@ class TestPersistCultureAnswerTask:
 
     @pytest.mark.asyncio
     async def test_skipped_when_disabled(self):
-        """Task exits early without creating an engine when background tasks disabled."""
+        """Task exits early without touching get_session_factory when tasks disabled."""
         from src.tasks.background import persist_culture_answer_task
 
         kwargs = _make_persist_culture_answer_kwargs()
         with patch.object(settings, "feature_background_tasks", False):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+            with patch("src.tasks.background.get_session_factory") as mock_factory_fn:
                 await persist_culture_answer_task(**kwargs)
 
-        mock_engine_creator.assert_not_called()
+        mock_factory_fn.assert_not_called()
+
+    def _make_full_culture_session_mock(self):
+        """Return a configured mock session for persist_culture_answer_task tests."""
+        mock_session = AsyncMock()
+        mock_stats_obj = MagicMock()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = mock_stats_obj
+        mock_session.execute = AsyncMock(return_value=mock_result)
+        return mock_session, mock_stats_obj
+
+    def _patch_culture_task_deps(
+        self, mock_session, xp_earned=10, xp_bonus=0, reconcile_result=None
+    ):
+        """Return a list of context manager patches for persist_culture_answer_task."""
+        if reconcile_result is None:
+            reconcile_result = MagicMock(new_unlocks=[], leveled_up=False)
+        mock_factory = _make_mock_session_factory(mock_session)
+        return mock_factory
 
     @pytest.mark.asyncio
-    async def test_creates_engine_and_session(self):
-        """Task must create an async engine and session factory."""
+    async def test_uses_global_session_factory(self):
+        """Task must use the global session factory."""
         from src.tasks.background import persist_culture_answer_task
 
-        db_url = "postgresql+asyncpg://test:test@localhost/test"
-        kwargs = _make_persist_culture_answer_kwargs(db_url=db_url)
+        kwargs = _make_persist_culture_answer_kwargs()
+        mock_session, _ = self._make_full_culture_session_mock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
+            with patch(
+                "src.tasks.background.get_session_factory", return_value=mock_factory
+            ) as mock_factory_fn:
+                with patch("src.services.xp_service.XPService") as mock_xp_cls:
+                    mock_xp = AsyncMock()
+                    mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
+                    mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
+                    mock_xp_cls.return_value = mock_xp
 
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_result = MagicMock()
-                    mock_result.scalar_one_or_none.return_value = MagicMock(
-                        easiness_factor=2.5,
-                        interval=1,
-                        repetitions=0,
-                        status=MagicMock(value="new"),
-                    )
-                    mock_session.execute = AsyncMock(return_value=mock_result)
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch("src.services.xp_service.XPService") as mock_xp_cls:
-                        mock_xp = AsyncMock()
-                        mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
-                        mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
-                        mock_xp_cls.return_value = mock_xp
-
+                    with patch(
+                        "src.tasks.background._check_and_notify_daily_goal", new_callable=AsyncMock
+                    ):
                         with patch(
-                            "src.tasks.background._check_and_notify_daily_goal",
+                            "src.services.gamification.reconciler.GamificationReconciler.reconcile",
                             new_callable=AsyncMock,
+                            return_value=MagicMock(new_unlocks=[], leveled_up=False),
                         ):
                             with patch(
-                                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                                new_callable=AsyncMock,
-                                return_value=MagicMock(new_unlocks=[], leveled_up=False),
-                            ):
-                                with patch(
-                                    "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
-                                ) as mock_stats_cls:
-                                    mock_stats_repo = AsyncMock()
-                                    mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
-                                    mock_stats_cls.return_value = mock_stats_repo
+                                "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
+                            ) as mock_stats_cls:
+                                mock_stats_repo = AsyncMock()
+                                mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
+                                mock_stats_cls.return_value = mock_stats_repo
 
-                                    await persist_culture_answer_task(**kwargs)
+                                await persist_culture_answer_task(**kwargs)
 
-        mock_engine_creator.assert_called_once()
-        mock_sessionmaker.assert_called_once()
+        mock_factory_fn.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_applies_precomputed_sm2_values(self):
@@ -1707,47 +1480,36 @@ class TestPersistCultureAnswerTask:
         from src.tasks.background import persist_culture_answer_task
 
         kwargs = _make_persist_culture_answer_kwargs()
-        mock_stats_obj = MagicMock()
+        mock_session, mock_stats_obj = self._make_full_culture_session_mock()
         mock_stats_obj.easiness_factor = 2.5
         mock_stats_obj.interval = 1
         mock_stats_obj.repetitions = 0
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch("src.services.xp_service.XPService") as mock_xp_cls:
+                    mock_xp = AsyncMock()
+                    mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
+                    mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
+                    mock_xp_cls.return_value = mock_xp
 
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_result = MagicMock()
-                    mock_result.scalar_one_or_none.return_value = mock_stats_obj
-                    mock_session.execute = AsyncMock(return_value=mock_result)
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch("src.services.xp_service.XPService") as mock_xp_cls:
-                        mock_xp = AsyncMock()
-                        mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
-                        mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
-                        mock_xp_cls.return_value = mock_xp
-
+                    with patch(
+                        "src.tasks.background._check_and_notify_daily_goal", new_callable=AsyncMock
+                    ):
                         with patch(
-                            "src.tasks.background._check_and_notify_daily_goal",
+                            "src.services.gamification.reconciler.GamificationReconciler.reconcile",
                             new_callable=AsyncMock,
+                            return_value=MagicMock(new_unlocks=[], leveled_up=False),
                         ):
                             with patch(
-                                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                                new_callable=AsyncMock,
-                                return_value=MagicMock(new_unlocks=[], leveled_up=False),
-                            ):
-                                with patch(
-                                    "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
-                                ) as mock_stats_cls:
-                                    mock_stats_repo = AsyncMock()
-                                    mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
-                                    mock_stats_cls.return_value = mock_stats_repo
+                                "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
+                            ) as mock_stats_cls:
+                                mock_stats_repo = AsyncMock()
+                                mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
+                                mock_stats_cls.return_value = mock_stats_repo
 
-                                    await persist_culture_answer_task(**kwargs)
+                                await persist_culture_answer_task(**kwargs)
 
         # Verify SM-2 values were set directly (not recalculated)
         assert mock_stats_obj.easiness_factor == kwargs["sm2_new_ef"]
@@ -1762,15 +1524,12 @@ class TestPersistCultureAnswerTask:
         kwargs = _make_persist_culture_answer_kwargs()
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_sessionmaker.side_effect = Exception("Session creation failed")
-
-                    with patch("src.core.sm2.calculate_sm2") as mock_calc:
-                        await persist_culture_answer_task(**kwargs)
+            with patch(
+                "src.tasks.background.get_session_factory",
+                side_effect=RuntimeError("DB not initialized"),
+            ):
+                with patch("src.core.sm2.calculate_sm2") as mock_calc:
+                    await persist_culture_answer_task(**kwargs)
 
         mock_calc.assert_not_called()
 
@@ -1780,86 +1539,55 @@ class TestPersistCultureAnswerTask:
         from src.tasks.background import persist_culture_answer_task
 
         kwargs = _make_persist_culture_answer_kwargs()
-        mock_stats_obj = MagicMock()
+        mock_session, _ = self._make_full_culture_session_mock()
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch("src.services.xp_service.XPService") as mock_xp_cls:
+                    mock_xp = AsyncMock()
+                    mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
+                    mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
+                    mock_xp_cls.return_value = mock_xp
 
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_result = MagicMock()
-                    mock_result.scalar_one_or_none.return_value = mock_stats_obj
-                    mock_session.execute = AsyncMock(return_value=mock_result)
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch("src.services.xp_service.XPService") as mock_xp_cls:
-                        mock_xp = AsyncMock()
-                        mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
-                        mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
-                        mock_xp_cls.return_value = mock_xp
-
+                    with patch(
+                        "src.tasks.background._check_and_notify_daily_goal", new_callable=AsyncMock
+                    ):
                         with patch(
-                            "src.tasks.background._check_and_notify_daily_goal",
+                            "src.services.gamification.reconciler.GamificationReconciler.reconcile",
                             new_callable=AsyncMock,
+                            return_value=MagicMock(new_unlocks=[], leveled_up=False),
                         ):
                             with patch(
-                                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                                new_callable=AsyncMock,
-                                return_value=MagicMock(new_unlocks=[], leveled_up=False),
-                            ):
-                                with patch(
-                                    "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
-                                ) as mock_stats_cls:
-                                    mock_stats_repo = AsyncMock()
-                                    mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
-                                    mock_stats_cls.return_value = mock_stats_repo
+                                "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
+                            ) as mock_stats_cls:
+                                mock_stats_repo = AsyncMock()
+                                mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
+                                mock_stats_cls.return_value = mock_stats_repo
 
-                                    await persist_culture_answer_task(**kwargs)
+                                await persist_culture_answer_task(**kwargs)
 
         # session.add should be called at least once (for CultureAnswerHistory)
         mock_session.add.assert_called()
 
     @pytest.mark.asyncio
-    async def test_disposes_engine_on_error(self):
-        """Engine must be disposed even when an error occurs."""
+    async def test_error_inside_task_does_not_raise(self):
+        """An error from get_session_factory must be caught; task must not raise."""
         from src.tasks.background import persist_culture_answer_task
 
         kwargs = _make_persist_culture_answer_kwargs()
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_sessionmaker.side_effect = Exception("Session creation failed")
-
-                    # Should not raise — errors are caught internally
-                    await persist_culture_answer_task(**kwargs)
-
-        mock_engine.dispose.assert_awaited_once()
+            with patch(
+                "src.tasks.background.get_session_factory",
+                side_effect=RuntimeError("DB not initialized"),
+            ):
+                # Should not raise — errors are caught internally
+                await persist_culture_answer_task(**kwargs)
 
     # ------------------------------------------------------------------
     # New tests: reconciler cutover (GAMIF-05-05)
     # ------------------------------------------------------------------
-
-    def _make_full_culture_session_mock(self):
-        """Return a configured mock session for persist_culture_answer_task tests."""
-        mock_session = AsyncMock()
-        mock_stats_obj = MagicMock()
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = mock_stats_obj
-        mock_session.execute = AsyncMock(return_value=mock_result)
-        return mock_session, mock_stats_obj
-
-    def _make_culture_engine_sessionmaker(self, mock_session):
-        """Return configured engine/sessionmaker mocks for persist_culture_answer_task."""
-        mock_engine = AsyncMock()
-        mock_session_factory = MagicMock(return_value=mock_session)
-        return mock_engine, mock_session_factory
 
     @pytest.mark.asyncio
     async def test_reconciler_called_with_correct_args(self):
@@ -1869,39 +1597,33 @@ class TestPersistCultureAnswerTask:
 
         kwargs = _make_persist_culture_answer_kwargs()
         user_id = kwargs["user_id"]
-
         mock_session, _ = self._make_full_culture_session_mock()
-        mock_engine, mock_session_factory = self._make_culture_engine_sessionmaker(mock_session)
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine", return_value=mock_engine):
-                with patch(
-                    "src.tasks.background.async_sessionmaker",
-                    return_value=mock_session_factory,
-                ):
-                    with patch("src.services.xp_service.XPService") as mock_xp_cls:
-                        mock_xp = AsyncMock()
-                        mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
-                        mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
-                        mock_xp_cls.return_value = mock_xp
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch("src.services.xp_service.XPService") as mock_xp_cls:
+                    mock_xp = AsyncMock()
+                    mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
+                    mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
+                    mock_xp_cls.return_value = mock_xp
 
+                    with patch(
+                        "src.tasks.background._check_and_notify_daily_goal", new_callable=AsyncMock
+                    ):
                         with patch(
-                            "src.tasks.background._check_and_notify_daily_goal",
+                            "src.services.gamification.reconciler.GamificationReconciler.reconcile",
                             new_callable=AsyncMock,
-                        ):
+                            return_value=MagicMock(new_unlocks=[], leveled_up=False),
+                        ) as mock_reconcile:
                             with patch(
-                                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                                new_callable=AsyncMock,
-                                return_value=MagicMock(new_unlocks=[], leveled_up=False),
-                            ) as mock_reconcile:
-                                with patch(
-                                    "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
-                                ) as mock_stats_cls:
-                                    mock_stats_repo = AsyncMock()
-                                    mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
-                                    mock_stats_cls.return_value = mock_stats_repo
+                                "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
+                            ) as mock_stats_cls:
+                                mock_stats_repo = AsyncMock()
+                                mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
+                                mock_stats_cls.return_value = mock_stats_repo
 
-                                    await persist_culture_answer_task(**kwargs)
+                                await persist_culture_answer_task(**kwargs)
 
         mock_reconcile.assert_awaited_once()
         call_args = mock_reconcile.call_args
@@ -1916,40 +1638,35 @@ class TestPersistCultureAnswerTask:
 
         kwargs = _make_persist_culture_answer_kwargs()
         mock_session, _ = self._make_full_culture_session_mock()
-        mock_engine, mock_session_factory = self._make_culture_engine_sessionmaker(mock_session)
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine", return_value=mock_engine):
-                with patch(
-                    "src.tasks.background.async_sessionmaker",
-                    return_value=mock_session_factory,
-                ):
-                    with patch("src.services.xp_service.XPService") as mock_xp_cls:
-                        mock_xp = AsyncMock()
-                        mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
-                        mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
-                        mock_xp_cls.return_value = mock_xp
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch("src.services.xp_service.XPService") as mock_xp_cls:
+                    mock_xp = AsyncMock()
+                    mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
+                    mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
+                    mock_xp_cls.return_value = mock_xp
 
+                    with patch(
+                        "src.tasks.background._check_and_notify_daily_goal", new_callable=AsyncMock
+                    ):
                         with patch(
-                            "src.tasks.background._check_and_notify_daily_goal",
+                            "src.services.gamification.reconciler.GamificationReconciler.reconcile",
                             new_callable=AsyncMock,
+                            return_value=MagicMock(new_unlocks=[], leveled_up=False),
                         ):
                             with patch(
-                                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                                new_callable=AsyncMock,
-                                return_value=MagicMock(new_unlocks=[], leveled_up=False),
-                            ):
-                                with patch(
-                                    "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
-                                ) as mock_stats_cls:
-                                    mock_stats_repo = AsyncMock()
-                                    mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
-                                    mock_stats_cls.return_value = mock_stats_repo
+                                "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
+                            ) as mock_stats_cls:
+                                mock_stats_repo = AsyncMock()
+                                mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
+                                mock_stats_cls.return_value = mock_stats_repo
 
-                                    with patch(
-                                        "src.services.achievement_service.AchievementService"
-                                    ) as mock_ach_cls:
-                                        await persist_culture_answer_task(**kwargs)
+                                with patch(
+                                    "src.services.achievement_service.AchievementService"
+                                ) as mock_ach_cls:
+                                    await persist_culture_answer_task(**kwargs)
 
         # AchievementService must not be instantiated at all
         mock_ach_cls.assert_not_called()
@@ -1961,38 +1678,33 @@ class TestPersistCultureAnswerTask:
 
         kwargs = _make_persist_culture_answer_kwargs()
         mock_session, _ = self._make_full_culture_session_mock()
-        mock_engine, mock_session_factory = self._make_culture_engine_sessionmaker(mock_session)
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine", return_value=mock_engine):
-                with patch(
-                    "src.tasks.background.async_sessionmaker",
-                    return_value=mock_session_factory,
-                ):
-                    with patch("src.services.xp_service.XPService") as mock_xp_cls:
-                        mock_xp = AsyncMock()
-                        mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
-                        mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
-                        mock_xp_cls.return_value = mock_xp
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch("src.services.xp_service.XPService") as mock_xp_cls:
+                    mock_xp = AsyncMock()
+                    mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
+                    mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
+                    mock_xp_cls.return_value = mock_xp
 
+                    with patch(
+                        "src.tasks.background._check_and_notify_daily_goal", new_callable=AsyncMock
+                    ):
                         with patch(
-                            "src.tasks.background._check_and_notify_daily_goal",
+                            "src.services.gamification.reconciler.GamificationReconciler.reconcile",
                             new_callable=AsyncMock,
+                            side_effect=RuntimeError("reconciler boom"),
                         ):
                             with patch(
-                                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                                new_callable=AsyncMock,
-                                side_effect=RuntimeError("reconciler boom"),
-                            ):
-                                with patch(
-                                    "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
-                                ) as mock_stats_cls:
-                                    mock_stats_repo = AsyncMock()
-                                    mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
-                                    mock_stats_cls.return_value = mock_stats_repo
+                                "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
+                            ) as mock_stats_cls:
+                                mock_stats_repo = AsyncMock()
+                                mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
+                                mock_stats_cls.return_value = mock_stats_repo
 
-                                    # Must not raise — reconciler errors are isolated
-                                    await persist_culture_answer_task(**kwargs)
+                                # Must not raise — reconciler errors are isolated
+                                await persist_culture_answer_task(**kwargs)
 
         # commit must still have been called (answer + XP persisted)
         mock_session.commit.assert_awaited_once()
@@ -2004,40 +1716,34 @@ class TestPersistCultureAnswerTask:
 
         kwargs = _make_persist_culture_answer_kwargs()
         mock_session, _ = self._make_full_culture_session_mock()
-        mock_engine, mock_session_factory = self._make_culture_engine_sessionmaker(mock_session)
-
+        mock_factory = _make_mock_session_factory(mock_session)
         unlocked_ids = ["culture_curious", "perfect_culture_score"]
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine", return_value=mock_engine):
-                with patch(
-                    "src.tasks.background.async_sessionmaker",
-                    return_value=mock_session_factory,
-                ):
-                    with patch("src.services.xp_service.XPService") as mock_xp_cls:
-                        mock_xp = AsyncMock()
-                        mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
-                        mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
-                        mock_xp_cls.return_value = mock_xp
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch("src.services.xp_service.XPService") as mock_xp_cls:
+                    mock_xp = AsyncMock()
+                    mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
+                    mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
+                    mock_xp_cls.return_value = mock_xp
 
+                    with patch(
+                        "src.tasks.background._check_and_notify_daily_goal", new_callable=AsyncMock
+                    ):
                         with patch(
-                            "src.tasks.background._check_and_notify_daily_goal",
+                            "src.services.gamification.reconciler.GamificationReconciler.reconcile",
                             new_callable=AsyncMock,
+                            return_value=MagicMock(new_unlocks=unlocked_ids, leveled_up=True),
                         ):
                             with patch(
-                                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                                new_callable=AsyncMock,
-                                return_value=MagicMock(new_unlocks=unlocked_ids, leveled_up=True),
-                            ):
-                                with patch(
-                                    "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
-                                ) as mock_stats_cls:
-                                    mock_stats_repo = AsyncMock()
-                                    mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
-                                    mock_stats_cls.return_value = mock_stats_repo
+                                "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
+                            ) as mock_stats_cls:
+                                mock_stats_repo = AsyncMock()
+                                mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
+                                mock_stats_cls.return_value = mock_stats_repo
 
-                                    with patch("src.tasks.background.logger") as mock_logger:
-                                        await persist_culture_answer_task(**kwargs)
+                                with patch("src.tasks.background.logger") as mock_logger:
+                                    await persist_culture_answer_task(**kwargs)
 
         # Verify logger.info was called with the achievement details
         info_calls = mock_logger.info.call_args_list
@@ -2068,39 +1774,34 @@ class TestPersistCultureAnswerTask:
 
         kwargs = _make_persist_culture_answer_kwargs()
         mock_session, _ = self._make_full_culture_session_mock()
-        mock_engine, mock_session_factory = self._make_culture_engine_sessionmaker(mock_session)
+        mock_factory = _make_mock_session_factory(mock_session)
 
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine", return_value=mock_engine):
-                with patch(
-                    "src.tasks.background.async_sessionmaker",
-                    return_value=mock_session_factory,
-                ):
-                    with patch("src.services.xp_service.XPService") as mock_xp_cls:
-                        mock_xp = AsyncMock()
-                        mock_xp_culture = AsyncMock(return_value=10)
-                        mock_xp_bonus = AsyncMock(return_value=5)
-                        mock_xp.award_culture_answer_xp = mock_xp_culture
-                        mock_xp.award_first_review_bonus = mock_xp_bonus
-                        mock_xp_cls.return_value = mock_xp
+            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
+                with patch("src.services.xp_service.XPService") as mock_xp_cls:
+                    mock_xp = AsyncMock()
+                    mock_xp_culture = AsyncMock(return_value=10)
+                    mock_xp_bonus = AsyncMock(return_value=5)
+                    mock_xp.award_culture_answer_xp = mock_xp_culture
+                    mock_xp.award_first_review_bonus = mock_xp_bonus
+                    mock_xp_cls.return_value = mock_xp
 
+                    with patch(
+                        "src.tasks.background._check_and_notify_daily_goal", new_callable=AsyncMock
+                    ) as mock_daily_goal:
                         with patch(
-                            "src.tasks.background._check_and_notify_daily_goal",
+                            "src.services.gamification.reconciler.GamificationReconciler.reconcile",
                             new_callable=AsyncMock,
-                        ) as mock_daily_goal:
+                            return_value=MagicMock(new_unlocks=[], leveled_up=False),
+                        ):
                             with patch(
-                                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                                new_callable=AsyncMock,
-                                return_value=MagicMock(new_unlocks=[], leveled_up=False),
-                            ):
-                                with patch(
-                                    "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
-                                ) as mock_stats_cls:
-                                    mock_stats_repo = AsyncMock()
-                                    mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
-                                    mock_stats_cls.return_value = mock_stats_repo
+                                "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
+                            ) as mock_stats_cls:
+                                mock_stats_repo = AsyncMock()
+                                mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
+                                mock_stats_cls.return_value = mock_stats_repo
 
-                                    await persist_culture_answer_task(**kwargs)
+                                await persist_culture_answer_task(**kwargs)
 
         mock_xp_culture.assert_awaited_once()
         call_kwargs = mock_xp_culture.call_args[1]

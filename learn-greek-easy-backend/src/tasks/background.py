@@ -10,7 +10,7 @@ Usage:
     @router.post("/review")
     async def submit_review(background_tasks: BackgroundTasks):
         # ... process review ...
-        background_tasks.add_task(check_achievements_task, user_id, db_url)
+        background_tasks.add_task(check_achievements_task, user_id)
         return response
 """
 
@@ -23,10 +23,11 @@ from uuid import UUID
 if TYPE_CHECKING:
     from src.db.models import WordEntry  # noqa: F401
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.core.logging import get_logger
+from src.db.session import get_session_factory
 
 logger = get_logger(__name__)
 
@@ -44,19 +45,16 @@ async def award_flashcard_xp_task(
     user_id: UUID,
     card_record_id: UUID,
     quality: int,
-    db_url: str,
 ) -> None:
     """Award XP for a V2 flashcard review in the background.
 
     This task runs asynchronously after the review response is sent.
-    It creates its own database connection to avoid issues with
-    connection sharing across async contexts.
+    It uses the global session factory initialised at startup.
 
     Args:
         user_id: UUID of the user
         card_record_id: Card record ID (used as XP transaction source_id)
         quality: SM2 quality rating (0-5)
-        db_url: Database connection URL
     """
     if not is_background_tasks_enabled():
         logger.debug("Background tasks disabled, skipping award_flashcard_xp_task")
@@ -72,19 +70,8 @@ async def award_flashcard_xp_task(
         },
     )
 
-    engine = None
     try:
-        engine = create_async_engine(
-            db_url,
-            pool_pre_ping=True,
-            connect_args={"ssl": "require"} if settings.is_production else {},
-        )
-        async_session_factory = async_sessionmaker(
-            engine, class_=AsyncSession, expire_on_commit=False
-        )
-
-        session = async_session_factory()
-        try:
+        async with get_session_factory()() as session:
             from src.services.xp_service import XPService
 
             xp_service = XPService(session)
@@ -103,8 +90,6 @@ async def award_flashcard_xp_task(
                     "quality": quality,
                 },
             )
-        finally:
-            await session.close()
 
     except Exception as e:
         logger.error(
@@ -116,25 +101,20 @@ async def award_flashcard_xp_task(
             },
             exc_info=True,
         )
-    finally:
-        if engine is not None:
-            await engine.dispose()
 
 
 # DEPRECATED in Phase 5 (GAMIF-05): replaced by GamificationReconciler
-async def check_achievements_task(user_id: UUID, db_url: str) -> None:
+async def check_achievements_task(user_id: UUID) -> None:
     """Check if user has earned new achievements after a review.
 
     This task runs asynchronously after the review response is sent.
     It delegates to GamificationReconciler.reconcile(IMMEDIATE) to compute
     the full projection and write convergent gamification state.
 
-    The task creates its own database connection to avoid issues with
-    connection sharing across async contexts.
+    It uses the global session factory initialised at startup.
 
     Args:
         user_id: UUID of the user to check
-        db_url: Database connection URL
     """
     if not is_background_tasks_enabled():
         logger.debug("Background tasks disabled, skipping check_achievements_task")
@@ -149,19 +129,8 @@ async def check_achievements_task(user_id: UUID, db_url: str) -> None:
         },
     )
 
-    engine = None
     try:
-        engine = create_async_engine(
-            db_url,
-            pool_pre_ping=True,
-            connect_args={"ssl": "require"} if settings.is_production else {},
-        )
-        async_session_factory = async_sessionmaker(
-            engine, class_=AsyncSession, expire_on_commit=False
-        )
-
-        session = async_session_factory()
-        try:
+        async with get_session_factory()() as session:
             from src.services.gamification.reconciler import GamificationReconciler
             from src.services.gamification.types import ReconcileMode
 
@@ -177,8 +146,6 @@ async def check_achievements_task(user_id: UUID, db_url: str) -> None:
                     "leveled_up": result.leveled_up,
                 },
             )
-        finally:
-            await session.close()
 
         # Signal event bus for SSE dashboard refresh
         try:
@@ -203,10 +170,6 @@ async def check_achievements_task(user_id: UUID, db_url: str) -> None:
             extra={"user_id": str(user_id), "error": str(e)},
             exc_info=True,
         )
-    finally:
-        # Always dispose of the engine to clean up connections
-        if engine is not None:
-            await engine.dispose()
 
 
 async def invalidate_cache_task(
@@ -489,7 +452,6 @@ async def _run_review_side_effects(
     time_taken: int,
     new_status_value: str,
     reviews_before: int,
-    db_url: str,
 ) -> None:
     """Run non-critical side effects (XP, daily goal, reconcile, analytics)."""
     from datetime import datetime, timezone
@@ -500,7 +462,6 @@ async def _run_review_side_effects(
             user_id=UUID(user_id),
             card_record_id=UUID(card_record_id),
             quality=quality,
-            db_url=db_url,
         )
     except Exception as e:
         logger.warning(
@@ -509,34 +470,21 @@ async def _run_review_side_effects(
         )
 
     # Check daily goal notification
-    engine2 = None
     try:
-        engine2 = create_async_engine(
-            db_url,
-            pool_pre_ping=True,
-            connect_args={"ssl": "require"} if settings.is_production else {},
-        )
-        factory2 = async_sessionmaker(engine2, class_=AsyncSession, expire_on_commit=False)
-        session2 = factory2()
-        try:
+        async with get_session_factory()() as session2:
             await _check_daily_goal_for_review(
                 session=session2, user_id=user_id, reviews_before=reviews_before
             )
             await session2.commit()
-        finally:
-            await session2.close()
     except Exception as e:
         logger.warning(
             "Daily goal check failed in persist_deck_review_task",
             extra={"user_id": user_id, "error": str(e)},
         )
-    finally:
-        if engine2 is not None:
-            await engine2.dispose()
 
     # Calls GamificationReconciler via the wrapper (Phase 6 will inline this).
     try:
-        await check_achievements_task(user_id=UUID(user_id), db_url=db_url)
+        await check_achievements_task(user_id=UUID(user_id))
     except Exception as e:
         logger.warning(
             "Achievement check failed in persist_deck_review_task",
@@ -580,7 +528,6 @@ async def persist_deck_review_task(
     is_newly_mastered: bool,
     reviews_before: int,
     user_email: str | None,
-    db_url: str,
 ) -> None:
     """Persist a deck review and run all post-review side effects in background.
 
@@ -603,16 +550,8 @@ async def persist_deck_review_task(
     )
 
     # Phase 1: Core DB writes (update stats, create review, mastery event)
-    engine = None
     try:
-        engine = create_async_engine(
-            db_url,
-            pool_pre_ping=True,
-            connect_args={"ssl": "require"} if settings.is_production else {},
-        )
-        factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-        session = factory()
-        try:
+        async with get_session_factory()() as session:
             await _persist_review_core(
                 session,
                 user_id=user_id,
@@ -632,8 +571,6 @@ async def persist_deck_review_task(
                 user_email=user_email,
             )
             await session.commit()
-        finally:
-            await session.close()
 
         logger.info(
             "Deck review persisted successfully",
@@ -650,9 +587,6 @@ async def persist_deck_review_task(
             exc_info=True,
         )
         return
-    finally:
-        if engine is not None:
-            await engine.dispose()
 
     # Phase 2: Non-critical side effects (XP, daily goal, achievements, analytics)
     await _run_review_side_effects(
@@ -662,7 +596,6 @@ async def persist_deck_review_task(
         time_taken=time_taken,
         new_status_value=new_status_value,
         reviews_before=reviews_before,
-        db_url=db_url,
     )
 
 
@@ -675,7 +608,6 @@ async def process_answer_side_effects_task(
     time_taken_seconds: int,
     deck_category: str,
     culture_answers_before: int,
-    db_url: str,
 ) -> None:
     """Process non-critical side effects in background after culture answer submission.
 
@@ -685,8 +617,7 @@ async def process_answer_side_effects_task(
     2. Check daily goal completion and create notification
     3. Award daily goal XP bonus if completed
 
-    The task creates its own database connection to avoid issues with
-    connection sharing across async contexts.
+    It uses the global session factory initialised at startup.
 
     Args:
         user_id: User who answered
@@ -697,7 +628,6 @@ async def process_answer_side_effects_task(
         time_taken_seconds: Time taken in seconds
         deck_category: Category of the deck
         culture_answers_before: Culture answers count before this answer
-        db_url: Database connection URL
     """
     if not is_background_tasks_enabled():
         logger.debug("Background tasks disabled, skipping process_answer_side_effects_task")
@@ -713,20 +643,8 @@ async def process_answer_side_effects_task(
         },
     )
 
-    engine = None
     try:
-        # Create dedicated engine for this background task
-        engine = create_async_engine(
-            db_url,
-            pool_pre_ping=True,
-            connect_args={"ssl": "require"} if settings.is_production else {},
-        )
-        async_session_factory = async_sessionmaker(
-            engine, class_=AsyncSession, expire_on_commit=False
-        )
-
-        session = async_session_factory()
-        try:
+        async with get_session_factory()() as session:
             # Step 1: Record answer history
             from src.db.models import CultureAnswerHistory
 
@@ -758,8 +676,6 @@ async def process_answer_side_effects_task(
             )
 
             await session.commit()
-        finally:
-            await session.close()
 
         logger.info(
             "Answer side effects processed successfully",
@@ -775,9 +691,6 @@ async def process_answer_side_effects_task(
             extra={"user_id": str(user_id), "error": str(e)},
             exc_info=True,
         )
-    finally:
-        if engine is not None:
-            await engine.dispose()
 
 
 async def _check_and_notify_daily_goal(
@@ -899,7 +812,6 @@ async def persist_culture_answer_task(  # noqa: C901
     sm2_new_status: str,
     sm2_next_review_date: str,
     stats_previous_status: str,
-    db_url: str,
 ) -> None:
     """Persist culture answer results using pre-computed SM-2 values.
 
@@ -914,8 +826,7 @@ async def persist_culture_answer_task(  # noqa: C901
     6. Check daily goal via _check_and_notify_daily_goal()
     7. Reconcile gamification state via GamificationReconciler.reconcile(IMMEDIATE)
 
-    The task creates its own database connection to avoid issues with
-    connection sharing across async contexts.
+    It uses the global session factory initialised at startup.
 
     Args:
         user_id: User who answered
@@ -932,7 +843,6 @@ async def persist_culture_answer_task(  # noqa: C901
         sm2_new_status: Pre-computed new CardStatus value string
         sm2_next_review_date: Pre-computed next review date as ISO string
         stats_previous_status: CardStatus value string before this answer
-        db_url: Database connection URL
     """
     if not is_background_tasks_enabled():
         logger.debug("Background tasks disabled, skipping persist_culture_answer_task")
@@ -949,21 +859,9 @@ async def persist_culture_answer_task(  # noqa: C901
     )
 
     start_time = datetime.now(timezone.utc)
-    engine = None
 
     try:
-        # Create dedicated engine for this background task
-        engine = create_async_engine(
-            db_url,
-            pool_pre_ping=True,
-            connect_args={"ssl": "require"} if settings.is_production else {},
-        )
-        async_session_factory = async_sessionmaker(
-            engine, class_=AsyncSession, expire_on_commit=False
-        )
-
-        session = async_session_factory()
-        try:
+        async with get_session_factory()() as session:
             from datetime import date as date_type
 
             from sqlalchemy import select
@@ -1098,8 +996,6 @@ async def persist_culture_answer_task(  # noqa: C901
 
             # Commit all changes
             await session.commit()
-        finally:
-            await session.close()
 
         duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
         logger.info(
@@ -1125,9 +1021,6 @@ async def persist_culture_answer_task(  # noqa: C901
             },
             exc_info=True,
         )
-    finally:
-        if engine is not None:
-            await engine.dispose()
 
 
 async def create_announcement_notifications_task(
@@ -1135,7 +1028,6 @@ async def create_announcement_notifications_task(
     campaign_title: str,
     campaign_message: str,
     link_url: str | None,
-    db_url: str,
 ) -> None:
     """Create notification records for all active users for an announcement campaign.
 
@@ -1143,15 +1035,13 @@ async def create_announcement_notifications_task(
     It creates a Notification record for each active user, stores the campaign_id
     in extra_data, and updates the campaign's total_recipients count.
 
-    The task creates its own database connection to avoid issues with
-    connection sharing across async contexts.
+    It uses the global session factory initialised at startup.
 
     Args:
         campaign_id: UUID of the announcement campaign
         campaign_title: Title for the notification
         campaign_message: Message for the notification
         link_url: Optional URL for the notification action
-        db_url: Database connection URL
     """
     if not is_background_tasks_enabled():
         logger.debug("Background tasks disabled, skipping create_announcement_notifications_task")
@@ -1166,23 +1056,11 @@ async def create_announcement_notifications_task(
     )
 
     start_time = datetime.now(timezone.utc)
-    engine = None
     total_created = 0
     batch_size = 100
 
     try:
-        # Create dedicated engine for this background task
-        engine = create_async_engine(
-            db_url,
-            pool_pre_ping=True,
-            connect_args={"ssl": "require"} if settings.is_production else {},
-        )
-        async_session_factory = async_sessionmaker(
-            engine, class_=AsyncSession, expire_on_commit=False
-        )
-
-        session = async_session_factory()
-        try:
+        async with get_session_factory()() as session:
             # Import here to avoid circular imports
             from sqlalchemy import select
 
@@ -1241,8 +1119,6 @@ async def create_announcement_notifications_task(
 
             # Commit all changes
             await session.commit()
-        finally:
-            await session.close()
 
         duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
         logger.info(
@@ -1264,6 +1140,3 @@ async def create_announcement_notifications_task(
             },
             exc_info=True,
         )
-    finally:
-        if engine is not None:
-            await engine.dispose()

@@ -266,7 +266,6 @@ class TestCreateNewsItemBackgroundDispatch:
         kwargs = mock_task.call_args_list[0].kwargs
         assert str(kwargs["situation_id"]) == situation_id
         assert kwargs["level"] == "b1"
-        assert kwargs["db_url"] is not None
 
     @pytest.mark.asyncio
     async def test_b1_and_a2_dispatch_when_both_a2_fields_present(
@@ -308,7 +307,6 @@ class TestCreateNewsItemBackgroundDispatch:
         assert levels == {"b1", "a2"}
         for kw in calls_kwargs:
             assert str(kw["situation_id"]) == situation_id
-            assert kw["db_url"] is not None
 
     @pytest.mark.asyncio
     async def test_bad_image_url_does_not_dispatch(
@@ -401,7 +399,7 @@ class TestCreateNewsItemBackgroundDispatch:
         monkeypatch.setattr("src.api.v1.admin.settings.feature_background_tasks", True)
         situation_id_holder: list = []
 
-        def fake_task(situation_id, level, db_url):
+        def fake_task(situation_id, level):
             situation_id_holder.append(situation_id)
             loguru_logger.error(
                 "description-audio BG task failed",
@@ -478,7 +476,6 @@ class TestCreateNewsItemBackgroundDispatch:
         assert mock_picture_task.call_count == 1
         kwargs = mock_picture_task.call_args_list[0].kwargs
         assert str(kwargs["situation_id"]) == situation_id
-        assert kwargs["db_url"] is not None
         # Regression guard: description-audio b1 still dispatched
         assert mock_description_audio_task.call_count >= 1
 
@@ -580,7 +577,7 @@ class TestCreateNewsItemBackgroundDispatch:
 
         monkeypatch.setattr("src.api.v1.admin.settings.feature_background_tasks", True)
 
-        def fake_task(situation_id, db_url):
+        def fake_task(situation_id):
             loguru_logger.error(
                 "picture-generation BG task failed",
                 extra={"situation_id": str(situation_id)},

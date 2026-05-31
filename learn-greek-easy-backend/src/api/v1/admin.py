@@ -1461,13 +1461,11 @@ async def create_news_item(
         background_tasks.add_task(
             generate_picture_task,
             situation_id=result.situation_id,
-            db_url=settings.database_url,
         )
         background_tasks.add_task(
             generate_description_audio_task,
             situation_id=result.situation_id,
             level="b1",
-            db_url=settings.database_url,
         )
         # A2 dispatch ONLY when both A2 fields present.
         # validate_a2_pair (schemas/news_item.py:43-50) guarantees they appear
@@ -1477,7 +1475,6 @@ async def create_news_item(
                 generate_description_audio_task,
                 situation_id=result.situation_id,
                 level="a2",
-                db_url=settings.database_url,
             )
 
     return result
@@ -1630,7 +1627,6 @@ async def create_announcement(
         campaign_title=campaign.title,
         campaign_message=campaign.message,
         link_url=campaign.link_url,
-        db_url=settings.database_url,
     )
 
     logger.info(
@@ -3730,15 +3726,17 @@ async def create_and_link_word_entry(
     # Link to deck (idempotent via on_conflict_do_nothing)
     await word_entry_repo.link_to_deck(word_entry.id, body.deck_id)
 
-    # Generate all card types
+    # Generate all card types — sequential on the shared AsyncSession (INFRA-01).
+    # These are writes against one session; a concurrent gather here collided in
+    # _connection_for_bind() exactly like the gamification read path.
     card_service = CardGeneratorService(db)
-    results = await asyncio.gather(
-        card_service.generate_meaning_cards([word_entry], body.deck_id),
-        card_service.generate_plural_form_cards([word_entry], body.deck_id),
-        card_service.generate_sentence_translation_cards([word_entry], body.deck_id),
-        card_service.generate_article_cards([word_entry], body.deck_id),
-        card_service.generate_declension_cards([word_entry], body.deck_id),
-    )
+    results = [
+        await card_service.generate_meaning_cards([word_entry], body.deck_id),
+        await card_service.generate_plural_form_cards([word_entry], body.deck_id),
+        await card_service.generate_sentence_translation_cards([word_entry], body.deck_id),
+        await card_service.generate_article_cards([word_entry], body.deck_id),
+        await card_service.generate_declension_cards([word_entry], body.deck_id),
+    ]
     cards_created = sum(r[0] for r in results)
 
     await db.commit()
