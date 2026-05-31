@@ -139,4 +139,29 @@ describe('CardHead', () => {
       expect(onLangChange).toHaveBeenCalledWith('en');
     });
   });
+
+  describe('Gender label (genderRu)', () => {
+    it('shows English gender label when currentLang=en and gender is present', () => {
+      render(<CardHead {...BASE} gender="masculine" genderRu="Мужской" currentLang="en" />);
+      const label = screen.getByTestId('pf-gender-label');
+      expect(label.textContent).toBe('masculine');
+    });
+
+    it('shows Russian gender label when currentLang=ru and genderRu is present', () => {
+      render(<CardHead {...BASE} gender="masculine" genderRu="Мужской" currentLang="ru" />);
+      const label = screen.getByTestId('pf-gender-label');
+      expect(label.textContent).toBe('Мужской');
+    });
+
+    it('falls back to English gender when currentLang=ru but genderRu is null', () => {
+      render(<CardHead {...BASE} gender="masculine" genderRu={null} currentLang="ru" />);
+      const label = screen.getByTestId('pf-gender-label');
+      expect(label.textContent).toBe('masculine');
+    });
+
+    it('does not render gender label when gender is absent', () => {
+      render(<CardHead {...BASE} gender={null} genderRu={null} currentLang="en" />);
+      expect(screen.queryByTestId('pf-gender-label')).toBeNull();
+    });
+  });
 });

@@ -126,16 +126,30 @@ describe('Answer', () => {
     expect(screen.getByTestId('pf-answer-type-slot')).toBeInTheDocument();
   });
 
-  it('shows example block when sentence_ru is present', () => {
+  it('shows example block with sentence_ru when lang=ru and sentence_ru is present', () => {
     render(
       <Answer
         answerText="house"
         cardType="meaning_el_to_en"
         card={makeCard({ sentence_ru: 'Мой дом большой.' })}
+        lang="ru"
       />
     );
     expect(screen.getByTestId('pf-answer-example')).toBeInTheDocument();
     expect(screen.getByTestId('pf-answer-example-ru')).toHaveTextContent('Мой дом большой.');
+  });
+
+  it('hides sentence_ru when lang=en even when sentence_ru is present', () => {
+    render(
+      <Answer
+        answerText="house"
+        cardType="meaning_el_to_en"
+        card={makeCard({ sentence_ru: 'Мой дом большой.', example_audio_url: null })}
+        lang="en"
+      />
+    );
+    // No example block — no English example field exists, so nothing to show
+    expect(screen.queryByTestId('pf-answer-example')).toBeNull();
   });
 
   it('hides example block when sentence_ru and example_audio_url are absent', () => {

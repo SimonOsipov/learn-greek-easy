@@ -55,6 +55,8 @@ export interface GrammarArticleProps {
   wordWithArticle: string;
   /** Prompt text from front_content.prompt (e.g. "What article?") */
   prompt?: string | null;
+  /** Current card language. No-op for article cards (no RU front data exists). */
+  lang?: 'en' | 'ru';
 }
 
 export interface GrammarPluralProps {
@@ -66,6 +68,8 @@ export interface GrammarPluralProps {
   audioState?: AudioChipState | null;
   /** Prompt text from front_content.prompt */
   prompt?: string | null;
+  /** Current card language. No-op for plural_form cards (no RU front data exists). */
+  lang?: 'en' | 'ru';
 }
 
 // ── article renderer ──────────────────────────────────────────────────────────
@@ -76,7 +80,7 @@ export interface GrammarPluralProps {
  * Shows the stem with an article blank ("???") in place of the leading article.
  * The blank is rendered via .pf-grammar-blank (amber/warning tinted).
  */
-export function GrammarArticle({ wordWithArticle, prompt }: GrammarArticleProps) {
+export function GrammarArticle({ wordWithArticle, prompt, lang: _lang }: GrammarArticleProps) {
   const { stem, hasArticle } = deriveArticleStem(wordWithArticle);
 
   return (
@@ -105,7 +109,7 @@ export function GrammarArticle({ wordWithArticle, prompt }: GrammarArticleProps)
  *
  * Shows the given-form stem (Noto Serif, lang="el") + optional IPA + audio chip.
  */
-export function GrammarPlural({ stem, ipa, audioState, prompt }: GrammarPluralProps) {
+export function GrammarPlural({ stem, ipa, audioState, prompt, lang: _lang }: GrammarPluralProps) {
   return (
     <div className="flex flex-col items-center gap-3 py-4" data-testid="pf-grammar-plural">
       {prompt && <p className="text-center text-sm text-fg2">{prompt}</p>}

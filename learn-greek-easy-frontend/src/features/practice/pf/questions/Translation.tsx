@@ -36,11 +36,15 @@ export interface TranslationElToEnProps {
   gender?: string | null;
   /** Lifted audio state */
   audioState?: AudioChipState | null;
+  /** Current card language. No-op for Translation cards (no RU front data exists yet). */
+  lang?: 'en' | 'ru';
 }
 
 export interface TranslationEnToElProps {
   /** English prompt from front_content.main or front_content.prompt */
   prompt: string;
+  /** Current card language. No-op for Translation cards (no RU front data exists yet). */
+  lang?: 'en' | 'ru';
 }
 
 // ── meaning_el_to_en renderer ─────────────────────────────────────────────────
@@ -52,7 +56,13 @@ export interface TranslationEnToElProps {
  * Article (if gender present): muted prefix via pf-translation-article.
  * IPA: shown only when front_content.sub exists.
  */
-export function TranslationElToEn({ word, ipa, gender, audioState }: TranslationElToEnProps) {
+export function TranslationElToEn({
+  word,
+  ipa,
+  gender,
+  audioState,
+  lang: _lang,
+}: TranslationElToEnProps) {
   const article = gender ? (GENDER_ARTICLE[gender.toLowerCase()] ?? null) : null;
 
   return (
@@ -87,7 +97,7 @@ export function TranslationElToEn({ word, ipa, gender, audioState }: Translation
  *
  * Renders the English prompt in Inter Tight 700 (not Greek Noto Serif).
  */
-export function TranslationEnToEl({ prompt }: TranslationEnToElProps) {
+export function TranslationEnToEl({ prompt, lang: _lang }: TranslationEnToElProps) {
   return (
     <div className="flex flex-col items-center gap-3 py-4" data-testid="pf-translation-en-el">
       <p className="pf-en-prompt">{prompt}</p>

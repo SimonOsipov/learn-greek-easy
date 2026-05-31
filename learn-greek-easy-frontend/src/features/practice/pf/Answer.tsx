@@ -62,6 +62,13 @@ export interface AnswerProps {
    * in the .pf-answer__type-slot. Absent in reveal mode.
    */
   typedResult?: Verdict | null;
+  /**
+   * Current card language selection.
+   * When 'ru', show sentence_ru in the example block (if present).
+   * When 'en', hide sentence_ru (no English example field exists).
+   * Defaults to 'en' to preserve existing behaviour.
+   */
+  lang?: 'en' | 'ru';
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -77,6 +84,7 @@ export function Answer({
   card,
   exampleAudioState,
   typedResult,
+  lang = 'en',
 }: AnswerProps) {
   // Declension suppression: the filled paradigm table IS the answer (PRACT2-1-05)
   if (cardType === 'declension') {
@@ -85,7 +93,9 @@ export function Answer({
 
   const greek = isElAnswer(cardType);
   const exampleAudioUrl = resolveV2CardAudioUrl(card);
-  const hasExample = Boolean(card.sentence_ru || card.example_audio_url);
+  // sentence_ru is only shown when lang === 'ru' (no English equivalent field exists).
+  const showSentenceRu = lang === 'ru' && Boolean(card.sentence_ru);
+  const hasExample = Boolean(showSentenceRu || card.example_audio_url);
 
   return (
     <div className="pf-answer" data-testid="pf-answer">
@@ -110,10 +120,10 @@ export function Answer({
         {typedResult && <TypedResultChip verdict={typedResult} />}
       </div>
 
-      {/* Example block — only when sentence_ru or example_audio_url present */}
+      {/* Example block — sentence_ru shown only in RU mode; audio shown regardless of lang */}
       {hasExample && (
         <div className="pf-answer__example" data-testid="pf-answer-example">
-          {card.sentence_ru && (
+          {showSentenceRu && (
             <p className="pf-answer__example-ru" data-testid="pf-answer-example-ru">
               {card.sentence_ru}
             </p>

@@ -169,10 +169,14 @@ export function V2FlashcardPracticePage() {
       }
     : null;
 
-  // Current UI language — drives EN/RU switch in CardHead
-  const currentLang = (i18n.language?.split('-')[0] ?? 'en') as 'en' | 'ru';
+  // Practice-local card language — decoupled from global i18n.
+  // Initialized once from the UI language (so Russian-UI users start on RU),
+  // but toggling NEVER writes back to i18n.changeLanguage.
+  const [cardLang, setCardLang] = useState<'en' | 'ru'>(
+    i18n.language?.split('-')[0] === 'ru' ? 'ru' : 'en'
+  );
   const handleLangChange = (lang: 'en' | 'ru') => {
-    i18n.changeLanguage(lang);
+    setCardLang(lang);
   };
 
   // Handle rating
@@ -357,10 +361,12 @@ export function V2FlashcardPracticePage() {
         <Answer
           answerText={resolveAnswerText(
             currentCard.card_type,
-            currentCard.back_content as Record<string, unknown>
+            currentCard.back_content as Record<string, unknown>,
+            cardLang
           )}
           cardType={currentCard.card_type}
           card={currentQueueCard}
+          lang={cardLang}
           exampleAudioState={audioState}
         />
       )}
@@ -408,7 +414,7 @@ export function V2FlashcardPracticePage() {
                 posLabel={(front.badge as string | null | undefined) ?? null}
                 gender={(back.gender as string | null | undefined) ?? null}
                 genderRu={(back.gender_ru as string | null | undefined) ?? null}
-                currentLang={currentLang}
+                currentLang={cardLang}
                 onLangChange={handleLangChange}
               />
             );
