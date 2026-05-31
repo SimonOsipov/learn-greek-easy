@@ -4,8 +4,8 @@
  * Covers:
  * - chips single-select, default "all"
  * - CTA href omits param for "all", includes cardType otherwise
- * - counts derived from ProgressMetrics
- * - bar width === `${pct}%`
+ * - counts derived from wordProgress
+ * - bar width driven by wordProgress.progressPct
  * - no UnwiredDot
  */
 
@@ -52,13 +52,37 @@ const mockProgress: ProgressMetrics = {
   completion_percentage: 60,
 };
 
+// Word-level progress fixtures
+const wordProgress40 = {
+  totalWords: 10,
+  masteredWords: 4,
+  inProgressWords: 2,
+  newWords: 4,
+  progressPct: 40, // 1.0*4 + 0.5*2 = 5 / 10 = 50% → but we use explicit value
+};
+
+const wordProgress50 = {
+  totalWords: 10,
+  masteredWords: 5,
+  inProgressWords: 0,
+  newWords: 5,
+  progressPct: 50,
+};
+
 // renderPanel always requires an explicit progress argument to avoid
 // the JS default-parameter ambiguity (passing `undefined` triggers the default).
-function renderPanel(progress: ProgressMetrics | null) {
+function renderPanel(
+  progress: ProgressMetrics | null,
+  wordProgress?: typeof wordProgress40 | undefined
+) {
   const result = render(
     <MemoryRouter>
       <I18nextProvider i18n={i18n}>
-        <DxActionPanel deckId="deck-xyz" progress={progress ?? undefined} />
+        <DxActionPanel
+          deckId="deck-xyz"
+          progress={progress ?? undefined}
+          wordProgress={wordProgress}
+        />
       </I18nextProvider>
     </MemoryRouter>
   );
@@ -148,20 +172,20 @@ describe('DxActionPanel', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/decks/deck-xyz/practice?cardType=plural_form');
   });
 
-  it('bar width reflects mastered / total percentage (8/20 = 40%)', () => {
-    const { container } = renderPanel(mockProgress);
+  it('bar width reflects wordProgress.progressPct (40%)', () => {
+    const { container } = renderPanel(mockProgress, wordProgress40);
     const barFill = within(container).getByTestId('dx-action-bar-fill');
     expect(barFill).toHaveStyle({ width: '40%' });
   });
 
-  it('bar width reflects 50% when cards_mastered=10, total_cards=20', () => {
-    const { container } = renderPanel({ ...mockProgress, cards_mastered: 10, total_cards: 20 });
+  it('bar width reflects wordProgress.progressPct (50%)', () => {
+    const { container } = renderPanel(mockProgress, wordProgress50);
     const barFill = within(container).getByTestId('dx-action-bar-fill');
     expect(barFill).toHaveStyle({ width: '50%' });
   });
 
-  it('bar width is 0% when no progress data', () => {
-    const { container } = renderPanel(null);
+  it('bar width is 0% when no wordProgress (undefined)', () => {
+    const { container } = renderPanel(null, undefined);
     const barFill = within(container).getByTestId('dx-action-bar-fill');
     expect(barFill).toHaveStyle({ width: '0%' });
   });

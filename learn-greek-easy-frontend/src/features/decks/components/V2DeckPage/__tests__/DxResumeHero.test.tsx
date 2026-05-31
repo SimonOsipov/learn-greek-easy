@@ -55,10 +55,19 @@ const mockDeck = makeDeck('main-deck');
 const mockSibling1 = makeDeck('sibling-1');
 const mockSibling2 = makeDeck('sibling-2');
 
-function renderHero(deck: Deck, masteredWords: number, siblings: Deck[]) {
+function renderHero(deck: Deck, masteredWords: number, siblings: Deck[], progressPct?: number) {
+  // Default progressPct to the simple mastered/totalWords calculation to keep
+  // existing test cases consistent with their expected values.
+  const pct =
+    progressPct ?? (deck.cardCount > 0 ? Math.round((masteredWords / deck.cardCount) * 100) : 0);
   return render(
     <I18nextProvider i18n={i18n}>
-      <DxResumeHero deck={deck} masteredWords={masteredWords} siblings={siblings} />
+      <DxResumeHero
+        deck={deck}
+        masteredWords={masteredWords}
+        progressPct={pct}
+        siblings={siblings}
+      />
     </I18nextProvider>
   );
 }
