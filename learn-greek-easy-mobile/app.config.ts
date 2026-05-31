@@ -20,7 +20,9 @@ const VARIANTS: Record<Variant, { name: string; bundleId: string; icon: string }
   },
 };
 
-const variant = (process.env.APP_VARIANT as Variant) ?? 'development';
+const rawVariant = process.env.APP_VARIANT;
+const variant: Variant =
+  rawVariant && rawVariant in VARIANTS ? (rawVariant as Variant) : 'development';
 const { name, bundleId, icon } = VARIANTS[variant];
 
 const config: ExpoConfig = {
