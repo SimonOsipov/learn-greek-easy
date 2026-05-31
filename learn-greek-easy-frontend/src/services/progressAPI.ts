@@ -138,6 +138,9 @@ export interface DeckStatistics {
   average_quality: number;
   average_easiness_factor: number;
   average_interval_days: number;
+  deck_streak_current: number;
+  deck_streak_longest: number;
+  weekly_activity: number[];
 }
 
 /**
