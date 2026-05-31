@@ -81,7 +81,7 @@ describe('deck namespace — EN/RU key-set parity', () => {
 describe('deck.dx — DX-13 new keys present in both locales', () => {
   const DX_KEYS = [
     'dx.vocabularyKicker',
-    'dx.resumeStatTotalCards',
+    'dx.resumeStatTotalWords',
     'dx.resumeStatMastered',
     'dx.resumeStatComplete',
     'dx.coverTagVocabulary',
