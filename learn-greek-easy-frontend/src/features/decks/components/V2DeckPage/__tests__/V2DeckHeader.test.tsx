@@ -8,6 +8,7 @@
  * - DX-07: DxActionPanel is rendered (delegates progress + practice to DxActionPanel)
  * - DX-06: DxMetricStrip is rendered
  * - DX-12: statistics.total_study_time_seconds flows into Time metric (not hardcoded 0)
+ * - PERF-12: getDeckProgressDetail is NOT called by V2DeckHeader (reads from deckStore)
  */
 
 import React from 'react';
@@ -21,6 +22,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import i18n from '@/i18n';
 import { progressAPI } from '@/services/progressAPI';
+import { useDeckStore } from '@/stores/deckStore';
 import type { Deck } from '@/types/deck';
 
 import { V2DeckHeader } from '../V2DeckHeader';
@@ -130,6 +132,54 @@ const mockDeck: Deck = {
   updatedAt: new Date('2025-01-01'),
 };
 
+/**
+ * Seed deckStore with a fake progress detail so V2DeckHeader renders metrics
+ * without firing a real API call. Mirrors what selectDeck() does after fetch.
+ */
+function seedStoreProgressDetail(
+  overrides: Partial<{
+    total_study_time_seconds: number;
+    cards_mastered: number;
+    cards_due: number;
+  }> = {}
+) {
+  useDeckStore.setState({
+    selectedDeckProgressDetail: {
+      deck_id: 'deck-abc',
+      deck_name: 'Test Deck',
+      deck_level: 'A1',
+      deck_description: null,
+      progress: {
+        total_cards: 20,
+        cards_studied: 10,
+        cards_mastered: overrides.cards_mastered ?? 5,
+        cards_new: 10,
+        cards_learning: 5,
+        cards_review: 5,
+        cards_due: overrides.cards_due ?? 3,
+        mastery_percentage: 25,
+        completion_percentage: 50,
+      },
+      statistics: {
+        total_reviews: 80,
+        total_study_time_seconds: overrides.total_study_time_seconds ?? 600,
+        average_quality: 3.2,
+        average_easiness_factor: 2.5,
+        average_interval_days: 5,
+        deck_streak_current: 0,
+        deck_streak_longest: 0,
+        weekly_activity: [],
+      },
+      timeline: {
+        first_studied_at: null,
+        last_studied_at: null,
+        days_active: 0,
+        estimated_completion_days: null,
+      },
+    },
+  });
+}
+
 function renderV2DeckHeader() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -152,6 +202,15 @@ function renderV2DeckHeader() {
 describe('V2DeckHeader', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset store state so each test starts clean
+    useDeckStore.setState({ selectedDeckProgressDetail: null });
+  });
+
+  // ── PERF-12: No duplicate fetch ─────────────────────────────────────────────
+  it('PERF-12: does NOT call getDeckProgressDetail (reads from deckStore instead)', () => {
+    seedStoreProgressDetail();
+    renderV2DeckHeader();
+    expect(progressAPI.getDeckProgressDetail).not.toHaveBeenCalled();
   });
 
   it('renders Start Review button with correct data-testid', () => {
@@ -242,26 +301,7 @@ describe('V2DeckHeader', () => {
   // ── DX-12: total_study_time_seconds flows into Time metric ───────────────
 
   it('DX-12: Time metric shows 60 min when total_study_time_seconds=3600', async () => {
-    (progressAPI.getDeckProgressDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      progress: {
-        total_cards: 20,
-        cards_mastered: 5,
-        cards_new: 5,
-        cards_learning: 5,
-        cards_review: 5,
-        cards_due: 3,
-        cards_studied: 10,
-        mastery_percentage: 25,
-        completion_percentage: 50,
-      },
-      statistics: {
-        total_reviews: 80,
-        total_study_time_seconds: 3600,
-        average_quality: 3.2,
-        average_easiness_factor: 2.5,
-        average_interval_days: 5,
-      },
-    });
+    seedStoreProgressDetail({ total_study_time_seconds: 3600 });
     renderV2DeckHeader();
     await waitFor(() => {
       const timeValue = screen.getByTestId('dx-metric-time-value');
