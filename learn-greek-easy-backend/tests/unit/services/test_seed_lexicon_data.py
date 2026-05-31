@@ -159,19 +159,33 @@ class TestLexiconSeedDataRowCount:
 
 @pytest.mark.unit
 class TestLexiconSeedDataUniqueness:
-    """The (form, lemma, pos) triple must be unique across all entries."""
+    """Each paradigm slot must be a unique row across all entries."""
 
-    def test_no_duplicate_form_lemma_pos(self):
-        """No two entries may share the same (form, lemma, pos) composite key."""
-        seen: set[tuple[str, str, str]] = set()
-        duplicates: list[tuple[str, str, str]] = []
+    def test_no_duplicate_paradigm_slots(self):
+        """No two entries may be identical across the full paradigm-slot key.
+
+        (form, lemma, pos) alone is NOT unique: Greek case syncretism means a
+        single surface form serves multiple cases (e.g. ``σπίτι`` is both
+        nominative and accusative singular of ``σπίτι``). The genuinely unique
+        row key therefore includes ``ptosi``/``number`` (the morphological slot),
+        which catches accidental copy-paste duplicates without rejecting valid
+        syncretic forms.
+        """
+        seen: set[tuple] = set()
+        duplicates: list[tuple] = []
         for entry in LEXICON_SEED_DATA:
-            key = (entry["form"], entry["lemma"], entry["pos"])
+            key = (
+                entry["form"],
+                entry["lemma"],
+                entry["pos"],
+                entry.get("ptosi"),
+                entry.get("number"),
+            )
             if key in seen:
                 duplicates.append(key)
             else:
                 seen.add(key)
-        assert not duplicates, f"Duplicate (form, lemma, pos) entries found: {duplicates}"
+        assert not duplicates, f"Duplicate paradigm-slot entries found: {duplicates}"
 
     def test_noun_paradigm_has_unique_case_number_pairs(self):
         """Within each noun lemma, (ptosi, number) pairs must be unique."""
