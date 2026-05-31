@@ -20,6 +20,8 @@ import type { ProgressMetrics } from '@/services/progressAPI';
 
 import { Kicker } from '../../dx';
 
+import type { deriveWordProgress } from '../../dx';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Card type filters — single source of truth; reused by tests
 // ─────────────────────────────────────────────────────────────────────────────
@@ -39,24 +41,21 @@ const CARD_TYPE_FILTERS = [
 export interface DxActionPanelProps {
   deckId: string;
   progress: ProgressMetrics | undefined;
+  wordProgress?: ReturnType<typeof deriveWordProgress> | undefined;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function DxActionPanel({ deckId, progress }: DxActionPanelProps) {
+export function DxActionPanel({ deckId, progress: _progress, wordProgress }: DxActionPanelProps) {
   const { t } = useTranslation('deck');
   const navigate = useNavigate();
 
   const [selectedCardType, setSelectedCardType] = useState<string>('all');
 
-  // Derive counts from ProgressMetrics
-  const newC = progress?.cards_new ?? 0;
-  const learn = progress?.cards_learning ?? 0;
-  const mast = progress?.cards_mastered ?? 0;
-  const total = progress?.total_cards ?? 0;
-  const pct = total > 0 ? Math.round((mast / total) * 100) : 0;
+  // Word-level progress drives the bar and legend; fall back to 0 when no data yet
+  const pct = wordProgress?.progressPct ?? 0;
 
   const handleStartReview = () => {
     const basePath = `/decks/${deckId}/practice`;
@@ -88,10 +87,14 @@ export function DxActionPanel({ deckId, progress }: DxActionPanelProps) {
         <span data-testid="dx-action-bar-fill" style={{ width: `${pct}%` }} />
       </div>
 
-      {/* Counts legend */}
+      {/* Counts legend — word-level counts */}
       <div className="dx-action-legend">
         <span className="dx-action-legend-item" data-tone="todo">
-          {t('detail.actionCounts', { new: newC, learning: learn, mastered: mast })}
+          {t('detail.actionCounts', {
+            new: wordProgress?.newWords ?? 0,
+            inProgress: wordProgress?.inProgressWords ?? 0,
+            mastered: wordProgress?.masteredWords ?? 0,
+          })}
         </span>
       </div>
 

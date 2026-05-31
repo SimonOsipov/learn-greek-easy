@@ -48,13 +48,22 @@ const mockStatistics: DeckStatistics = {
   weekly_activity: [1, 2, 0, 3, 1, 0, 4],
 };
 
+type WordProgress = {
+  totalWords: number;
+  masteredWords: number;
+  inProgressWords: number;
+  newWords: number;
+  progressPct: number;
+};
+
 function renderStrip(
   progress: ProgressMetrics | undefined,
-  statistics: DeckStatistics | undefined
+  statistics: DeckStatistics | undefined,
+  wordProgress?: WordProgress | undefined
 ) {
   return render(
     <I18nextProvider i18n={i18n}>
-      <DxMetricStrip progress={progress} statistics={statistics} />
+      <DxMetricStrip progress={progress} statistics={statistics} wordProgress={wordProgress} />
     </I18nextProvider>
   );
 }
@@ -114,20 +123,34 @@ describe('DxMetricStrip', () => {
 
   // ── Mastered card ─────────────────────────────────────────────────────────
 
-  it('Mastered card shows cards_mastered/total_cards', () => {
-    renderStrip(mockProgress, mockStatistics);
+  it('Mastered card shows word-level masteredWords/totalWords from wordProgress', () => {
+    const wordProgress = {
+      totalWords: 7,
+      masteredWords: 2,
+      inProgressWords: 4,
+      newWords: 1,
+      progressPct: 43,
+    };
+    renderStrip(mockProgress, mockStatistics, wordProgress);
     const masteredCard = screen.getByTestId('dx-metric-mastered');
     const value = within(masteredCard).getByTestId('dx-metric-mastered-value');
-    // i18n key metricMasteredValue = "{{mastered}}/{{total}}"
-    expect(value.textContent).toContain('15');
-    expect(value.textContent).toContain('50');
+    // i18n key metricMasteredValue = "{{mastered}}/{{total}}" — word-level now
+    expect(value.textContent).toContain('2');
+    expect(value.textContent).toContain('7');
   });
 
-  it('Mastered card shows pct of deck', () => {
-    // 15/50 = 30%
-    renderStrip(mockProgress, mockStatistics);
+  it('Mastered card shows word-level progressPct of deck', () => {
+    // wordProgress drives the % value
+    const wordProgress = {
+      totalWords: 7,
+      masteredWords: 2,
+      inProgressWords: 4,
+      newWords: 1,
+      progressPct: 43,
+    };
+    renderStrip(mockProgress, mockStatistics, wordProgress);
     const masteredCard = screen.getByTestId('dx-metric-mastered');
-    expect(within(masteredCard).getByText(/30%/)).toBeInTheDocument();
+    expect(within(masteredCard).getByText(/43%/)).toBeInTheDocument();
   });
 
   it('Mastered card has NO UnwiredDot', () => {

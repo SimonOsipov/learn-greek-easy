@@ -110,7 +110,7 @@
     },
     "actionEyebrow": "Выберите, что практиковать",
     "actionYourProgress": "Ваш прогресс · {{pct}}%",
-    "actionCounts": "{{new}} новых · {{learning}} изучается · {{mastered}} освоено",
+    "actionCounts": "{{new}} новых · {{inProgress}} изучается · {{mastered}} освоено",
     "metricDueToday": "На сегодня",
     "metricStreakDeck": "Серия · эта колода",
     "metricMastered": "Освоено",

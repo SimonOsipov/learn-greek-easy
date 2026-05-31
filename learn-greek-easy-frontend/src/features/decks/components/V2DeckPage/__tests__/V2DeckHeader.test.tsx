@@ -42,6 +42,70 @@ vi.mock('react-router-dom', async () => {
 vi.mock('@/services/progressAPI', () => ({
   progressAPI: {
     getDeckProgressDetail: vi.fn(),
+    // 4 mastered words out of 8 total → progressPct = 50% (1.0 * 4 / 8)
+    getWordMastery: vi.fn().mockResolvedValue({
+      deck_id: 'deck-abc',
+      items: [
+        // 4 mastered (mastered_count === total_count)
+        {
+          word_entry_id: 'w1',
+          total_count: 3,
+          mastered_count: 3,
+          studied_count: 3,
+          type_progress: [],
+        },
+        {
+          word_entry_id: 'w2',
+          total_count: 3,
+          mastered_count: 3,
+          studied_count: 3,
+          type_progress: [],
+        },
+        {
+          word_entry_id: 'w3',
+          total_count: 3,
+          mastered_count: 3,
+          studied_count: 3,
+          type_progress: [],
+        },
+        {
+          word_entry_id: 'w4',
+          total_count: 3,
+          mastered_count: 3,
+          studied_count: 3,
+          type_progress: [],
+        },
+        // 4 new (studied_count === 0)
+        {
+          word_entry_id: 'w5',
+          total_count: 3,
+          mastered_count: 0,
+          studied_count: 0,
+          type_progress: [],
+        },
+        {
+          word_entry_id: 'w6',
+          total_count: 3,
+          mastered_count: 0,
+          studied_count: 0,
+          type_progress: [],
+        },
+        {
+          word_entry_id: 'w7',
+          total_count: 3,
+          mastered_count: 0,
+          studied_count: 0,
+          type_progress: [],
+        },
+        {
+          word_entry_id: 'w8',
+          total_count: 3,
+          mastered_count: 0,
+          studied_count: 0,
+          type_progress: [],
+        },
+      ],
+    }),
   },
 }));
 
@@ -153,20 +217,9 @@ describe('V2DeckHeader', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/decks/deck-abc/practice?cardType=meaning');
   });
 
-  it('renders completion percentage from API data in action panel bar', async () => {
-    (progressAPI.getDeckProgressDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      progress: {
-        total_cards: 10,
-        cards_mastered: 5,
-        cards_new: 5,
-        cards_learning: 0,
-        cards_review: 0,
-        cards_due: 2,
-        cards_studied: 5,
-        mastery_percentage: 50,
-        completion_percentage: 50,
-      },
-    });
+  it('renders word-level completion percentage from getWordMastery in action panel bar', async () => {
+    // getWordMastery mock (module-level) returns 4 mastered + 4 new out of 8 total
+    // progressPct = round(1.0 * 4 / 8 * 100) = 50%
     renderV2DeckHeader();
     await waitFor(() => {
       const barFill = screen.getByTestId('dx-action-bar-fill');

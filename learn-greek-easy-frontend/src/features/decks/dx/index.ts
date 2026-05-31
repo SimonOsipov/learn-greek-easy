@@ -23,6 +23,9 @@ export type {
 // ── Gradient utilities ───────────────────────────────────────────────────────
 export { deckGradient, deckGradientStack } from './deckGradient';
 
+// ── Word progress helper ─────────────────────────────────────────────────────
+export { deriveWordProgress, MASTERED_WEIGHT, IN_PROGRESS_WEIGHT } from './wordProgress';
+
 // ── Cover primitive ──────────────────────────────────────────────────────────
 export { DxCover } from './DxCover';
 export type { DxCoverProps, DxCoverVariant } from './DxCover';

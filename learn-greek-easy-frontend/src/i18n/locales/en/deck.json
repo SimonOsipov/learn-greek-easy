@@ -110,7 +110,7 @@
     },
     "actionEyebrow": "Pick what to practice",
     "actionYourProgress": "Your progress · {{pct}}%",
-    "actionCounts": "{{new}} new · {{learning}} learning · {{mastered}} mastered",
+    "actionCounts": "{{new}} new · {{inProgress}} in progress · {{mastered}} mastered",
     "metricDueToday": "Due today",
     "metricStreakDeck": "Streak · this deck",
     "metricMastered": "Mastered",
