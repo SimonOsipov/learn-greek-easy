@@ -18,10 +18,12 @@ import type {
  */
 const formatRelativeTime = (date: Date): string => {
   const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  // Compare local calendar days, not elapsed 24h windows, so an activity from
+  // yesterday evening viewed this morning is "Yesterday" rather than "Today".
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diffDays = Math.round((startOfDay(now) - startOfDay(date)) / (1000 * 60 * 60 * 24));
 
-  if (diffDays === 0) return 'Today';
+  if (diffDays <= 0) return 'Today';
   if (diffDays === 1) return 'Yesterday';
   if (diffDays < 7) return `${diffDays} days ago`;
   return date.toLocaleDateString();
@@ -64,7 +66,7 @@ export const transformToAnalyticsDashboardData = (
     deckColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'][index % 6],
     deckType: deck.deck_type || 'vocabulary',
     cardsInDeck: deck.total_cards,
-    cardsNew: deck.total_cards - deck.cards_studied,
+    cardsNew: Math.max(0, deck.total_cards - deck.cards_studied),
     cardsLearning: Math.round(deck.cards_studied * 0.3),
     cardsReview: Math.round(deck.cards_studied * 0.4),
     cardsMastered: deck.cards_mastered,

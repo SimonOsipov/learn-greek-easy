@@ -63,9 +63,16 @@ export const Callback: React.FC = () => {
       // Track OAuth login in PostHog
       const user = useAuthStore.getState().user;
       if (user && typeof posthog?.identify === 'function') {
+        // createdAt may be missing or an Invalid Date (e.g. backend returned a
+        // null/absent created_at); guard before calling toISOString() so we
+        // don't crash the OAuth landing.
+        const createdAtIso =
+          user.createdAt instanceof Date && !Number.isNaN(user.createdAt.getTime())
+            ? user.createdAt.toISOString()
+            : undefined;
         posthog.identify(user.id, {
           email: user.email,
-          created_at: user.createdAt.toISOString(),
+          created_at: createdAtIso,
         });
       }
       if (typeof posthog?.capture === 'function') {

@@ -88,10 +88,13 @@ export function calculateSessionStats(
   accuracyChange: number;
 } {
   return {
-    cardsReviewed: before.cardsNew - after.cardsNew + (before.cardsLearning - after.cardsLearning),
-    cardsLearned: after.cardsLearning - before.cardsLearning,
-    cardsMastered: after.cardsMastered - before.cardsMastered,
-    timeSpent: after.totalTimeSpent - before.totalTimeSpent,
+    cardsReviewed: Math.max(
+      0,
+      before.cardsNew - after.cardsNew + (before.cardsLearning - after.cardsLearning)
+    ),
+    cardsLearned: Math.max(0, after.cardsLearning - before.cardsLearning),
+    cardsMastered: Math.max(0, after.cardsMastered - before.cardsMastered),
+    timeSpent: Math.max(0, after.totalTimeSpent - before.totalTimeSpent),
     accuracyChange: after.accuracy - before.accuracy,
   };
 }

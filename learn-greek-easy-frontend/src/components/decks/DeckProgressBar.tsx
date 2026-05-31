@@ -35,9 +35,9 @@ export const DeckProgressBar: React.FC<DeckProgressBarProps> = ({
         className={`w-full ${height} flex overflow-hidden rounded-full bg-muted`}
         role="progressbar"
         aria-label="Deck learning progress"
-        aria-valuenow={cardsMastered}
+        aria-valuenow={totalCards > 0 ? cardsMastered : 0}
         aria-valuemin={0}
-        aria-valuemax={totalCards}
+        aria-valuemax={totalCards > 0 ? totalCards : 1}
       >
         {/* New Cards Segment */}
         {newPercent > 0 && (
