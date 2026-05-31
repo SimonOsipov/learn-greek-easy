@@ -387,7 +387,7 @@
   },
   "dx": {
     "vocabularyKicker": "Словарь · {{level}}",
-    "resumeStatTotalCards": "Всего карточек",
+    "resumeStatTotalWords": "Всего слов",
     "resumeStatMastered": "Освоено",
     "resumeStatComplete": "Завершено",
     "coverTagVocabulary": "{{level}} · Словарь",

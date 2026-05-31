@@ -10,10 +10,11 @@
 // The cover stack is intentionally omitted on direct deep-links where rawDecks
 // is empty (only selectDeck() ran). Never call fetchDecks() just for siblings.
 
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
 import { getLocalizedDeckDescription, getLocalizedDeckName } from '@/lib/deckLocale';
-import type { ProgressMetrics } from '@/services/progressAPI';
+import { progressAPI } from '@/services/progressAPI';
 import { useDeckStore } from '@/stores/deckStore';
 import type { Deck } from '@/types/deck';
 
@@ -25,7 +26,7 @@ import { DxCover, Kicker } from '../../dx';
 
 export interface DxResumeHeroProps {
   deck: Deck;
-  progress: ProgressMetrics | undefined;
+  masteredWords: number;
   siblings: Deck[];
 }
 
@@ -33,7 +34,7 @@ export interface DxResumeHeroProps {
 // Component
 // ────────────────────────────────────────────────────────────────────────────
 
-export function DxResumeHero({ deck, progress, siblings }: DxResumeHeroProps) {
+export function DxResumeHero({ deck, masteredWords, siblings }: DxResumeHeroProps) {
   const { t, i18n } = useTranslation('deck');
 
   const localizedName = getLocalizedDeckName(deck, i18n.language);
@@ -41,10 +42,11 @@ export function DxResumeHero({ deck, progress, siblings }: DxResumeHeroProps) {
   const greekSubtitle = deck.titleGreek;
   const localizedDescription = getLocalizedDeckDescription(deck, i18n.language) ?? deck.description;
 
-  // Stats derived from ProgressMetrics contract
-  const totalCards = progress?.total_cards ?? deck.cardCount;
-  const mastered = progress?.cards_mastered ?? 0;
-  const pct = totalCards > 0 ? Math.round((mastered / totalCards) * 100) : 0;
+  // Word-level stats: one "word" = one word entry. deck.cardCount carries the
+  // word-entry count (card_count from the API). Card-level SRS counts live in
+  // DxMetricStrip / DxActionPanel, not here.
+  const totalWords = deck.cardCount;
+  const pct = totalWords > 0 ? Math.round((masteredWords / totalWords) * 100) : 0;
 
   const showStack = siblings.length >= 2;
 
@@ -68,11 +70,11 @@ export function DxResumeHero({ deck, progress, siblings }: DxResumeHeroProps) {
 
           <div className="dx-hero-resume-stats">
             <div className="dx-hero-resume-stat">
-              <b>{totalCards}</b>
-              <span>{t('dx.resumeStatTotalCards')}</span>
+              <b>{totalWords}</b>
+              <span>{t('dx.resumeStatTotalWords')}</span>
             </div>
             <div className="dx-hero-resume-stat">
-              <b>{mastered}</b>
+              <b>{masteredWords}</b>
               <span>{t('dx.resumeStatMastered')}</span>
             </div>
             <div className="dx-hero-resume-stat">
@@ -137,13 +139,24 @@ export function DxResumeHero({ deck, progress, siblings }: DxResumeHeroProps) {
 
 interface DxResumeHeroConnectedProps {
   deck: Deck;
-  progress: ProgressMetrics | undefined;
 }
 
-export function DxResumeHeroConnected({ deck, progress }: DxResumeHeroConnectedProps) {
+export function DxResumeHeroConnected({ deck }: DxResumeHeroConnectedProps) {
   const siblings = useDeckStore((s) => s.rawDecks)
     .filter((d) => d.id !== deck.id)
     .slice(0, 2);
 
-  return <DxResumeHero deck={deck} progress={progress} siblings={siblings} />;
+  // Word-level mastery: a word counts as mastered only when all of its cards
+  // are mastered. Shares the React Query cache with WordBrowser (same queryKey),
+  // so this adds no extra network request.
+  const { data: wordMastery } = useQuery({
+    queryKey: ['wordMastery', deck.id],
+    queryFn: () => progressAPI.getWordMastery(deck.id),
+  });
+
+  const masteredWords = (wordMastery?.items ?? []).filter(
+    (m) => m.total_count > 0 && m.mastered_count === m.total_count
+  ).length;
+
+  return <DxResumeHero deck={deck} masteredWords={masteredWords} siblings={siblings} />;
 }

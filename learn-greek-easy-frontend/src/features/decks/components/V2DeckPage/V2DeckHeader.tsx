@@ -36,7 +36,7 @@ export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
   return (
     <div className="space-y-4">
       {/* DX-05: Resume hero replaces the old cover-image card */}
-      <DxResumeHeroConnected deck={deck} progress={progressData?.progress} />
+      <DxResumeHeroConnected deck={deck} />
 
       {/* DX-06: Metric strip — Due / Streak / Mastered / Time on deck */}
       <DxMetricStrip progress={progressData?.progress} statistics={progressData?.statistics} />

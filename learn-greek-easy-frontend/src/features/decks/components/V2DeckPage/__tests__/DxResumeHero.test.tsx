@@ -5,8 +5,8 @@
  * - 3 covers render when siblings.length >= 2
  * - Cover stack omitted when rawDecks empty (deep-link) / siblings < 2
  * - Left column still renders when stack is hidden
- * - Stat values come from ProgressMetrics (total_cards / cards_mastered / pct)
- * - Fallback to deck.cardCount when progress undefined
+ * - Stats are word-based: Total words = deck.cardCount, Mastered = masteredWords,
+ *   Complete % = round(masteredWords / totalWords * 100)
  * - Greek subtitle has lang="el" and is not italic
  * - Front cover foot width === `${pct}%`
  */
@@ -18,7 +18,6 @@ import { I18nextProvider } from 'react-i18next';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import i18n from '@/i18n';
-import type { ProgressMetrics } from '@/services/progressAPI';
 import type { Deck } from '@/types/deck';
 
 import { DxResumeHero } from '../DxResumeHero';
@@ -56,22 +55,10 @@ const mockDeck = makeDeck('main-deck');
 const mockSibling1 = makeDeck('sibling-1');
 const mockSibling2 = makeDeck('sibling-2');
 
-const mockProgress: ProgressMetrics = {
-  total_cards: 40,
-  cards_studied: 20,
-  cards_mastered: 10,
-  cards_due: 5,
-  cards_new: 20,
-  cards_learning: 5,
-  cards_review: 5,
-  mastery_percentage: 25,
-  completion_percentage: 50,
-};
-
-function renderHero(deck: Deck, progress: ProgressMetrics | undefined, siblings: Deck[]) {
+function renderHero(deck: Deck, masteredWords: number, siblings: Deck[]) {
   return render(
     <I18nextProvider i18n={i18n}>
-      <DxResumeHero deck={deck} progress={progress} siblings={siblings} />
+      <DxResumeHero deck={deck} masteredWords={masteredWords} siblings={siblings} />
     </I18nextProvider>
   );
 }
@@ -86,70 +73,70 @@ describe('DxResumeHero', () => {
   });
 
   it('renders 3 covers when siblings.length >= 2', () => {
-    const { container } = renderHero(mockDeck, mockProgress, [mockSibling1, mockSibling2]);
+    const { container } = renderHero(mockDeck, 10, [mockSibling1, mockSibling2]);
 
     const covers = container.querySelectorAll('.dx-cover');
     expect(covers.length).toBe(3);
   });
 
   it('omits the cover stack when siblings < 2', () => {
-    const { container } = renderHero(mockDeck, mockProgress, [mockSibling1]);
+    const { container } = renderHero(mockDeck, 10, [mockSibling1]);
 
     const stack = container.querySelector('.dx-cover-stack');
     expect(stack).not.toBeInTheDocument();
   });
 
   it('omits the cover stack when rawDecks empty (deep-link / siblings = [])', () => {
-    const { container } = renderHero(mockDeck, mockProgress, []);
+    const { container } = renderHero(mockDeck, 10, []);
 
     const stack = container.querySelector('.dx-cover-stack');
     expect(stack).not.toBeInTheDocument();
   });
 
   it('left column still renders when cover stack is hidden', () => {
-    renderHero(mockDeck, mockProgress, []);
+    renderHero(mockDeck, 10, []);
 
     // The kicker should always be present
     expect(screen.getByText(/Vocabulary/)).toBeInTheDocument();
     // Stats labels should be present
-    expect(screen.getByText('Total cards')).toBeInTheDocument();
+    expect(screen.getByText('Total words')).toBeInTheDocument();
     expect(screen.getByText('Mastered')).toBeInTheDocument();
     expect(screen.getByText('Complete')).toBeInTheDocument();
   });
 
-  it('stat values come from ProgressMetrics', () => {
-    const { container } = renderHero(mockDeck, mockProgress, [mockSibling1, mockSibling2]);
+  it('stat values are word-based (Total words / Mastered words / %)', () => {
+    const { container } = renderHero(mockDeck, 10, [mockSibling1, mockSibling2]);
 
     // Query the stats section directly
     const statsEl = container.querySelector('.dx-hero-resume-stats');
     expect(statsEl).toBeTruthy();
 
-    // total_cards = 40
+    // totalWords = deck.cardCount = 50
     const bTags = statsEl!.querySelectorAll('b');
-    expect(bTags[0].textContent).toBe('40');
-    // cards_mastered = 10
+    expect(bTags[0].textContent).toBe('50');
+    // masteredWords = 10
     expect(bTags[1].textContent).toBe('10');
-    // pct = round(10/40 * 100) = 25%
-    expect(bTags[2].textContent).toContain('25');
+    // pct = round(10/50 * 100) = 20%
+    expect(bTags[2].textContent).toContain('20');
   });
 
-  it('falls back to deck.cardCount when progress is undefined', () => {
-    const { container } = renderHero(mockDeck, undefined, [mockSibling1, mockSibling2]);
+  it('shows 0 mastered / 0% when no words are mastered', () => {
+    const { container } = renderHero(mockDeck, 0, [mockSibling1, mockSibling2]);
 
     const statsEl = container.querySelector('.dx-hero-resume-stats');
     expect(statsEl).toBeTruthy();
 
     const bTags = statsEl!.querySelectorAll('b');
-    // deck.cardCount = 50
+    // totalWords = deck.cardCount = 50
     expect(bTags[0].textContent).toBe('50');
-    // mastered = 0
+    // masteredWords = 0
     expect(bTags[1].textContent).toBe('0');
     // pct = 0%
     expect(bTags[2].textContent).toContain('0');
   });
 
   it('Greek subtitle has lang="el" and is not italic', () => {
-    renderHero(mockDeck, mockProgress, []);
+    renderHero(mockDeck, 10, []);
 
     const el = screen.getByText('Ελληνικά main-deck');
     expect(el).toHaveAttribute('lang', 'el');
@@ -161,19 +148,19 @@ describe('DxResumeHero', () => {
   });
 
   it('front cover foot width equals pct%', () => {
-    const { container } = renderHero(mockDeck, mockProgress, [mockSibling1, mockSibling2]);
+    const { container } = renderHero(mockDeck, 10, [mockSibling1, mockSibling2]);
 
     // The front cover is dx-cover-3; its .dx-cover-bar span should have width = pct%
     const frontCover = container.querySelector('.dx-cover-3');
     expect(frontCover).toBeTruthy();
     const barFill = frontCover!.querySelector('.dx-cover-bar span') as HTMLElement;
     expect(barFill).toBeTruthy();
-    // pct = round(10/40 * 100) = 25
-    expect(barFill.style.width).toBe('25%');
+    // pct = round(10/50 * 100) = 20
+    expect(barFill.style.width).toBe('20%');
   });
 
-  it('front cover foot shows 0% when progress is undefined', () => {
-    const { container } = renderHero(mockDeck, undefined, [mockSibling1, mockSibling2]);
+  it('front cover foot shows 0% when no words are mastered', () => {
+    const { container } = renderHero(mockDeck, 0, [mockSibling1, mockSibling2]);
 
     const frontCover = container.querySelector('.dx-cover-3');
     expect(frontCover).toBeTruthy();
@@ -207,7 +194,7 @@ describe('DxResumeHero', () => {
         titleGreek: 'Ελληνικό Λεξιλόγιο', // must be shown (differs from nameEn)
       });
 
-      renderHero(deck, undefined, []);
+      renderHero(deck, 0, []);
 
       const el = document.querySelector('.dx-hero-resume-el');
       expect(el).toBeInTheDocument();
@@ -223,7 +210,7 @@ describe('DxResumeHero', () => {
         titleGreek: 'Greek A1 Vocabulary', // equal → hidden
       });
 
-      renderHero(deck, undefined, []);
+      renderHero(deck, 0, []);
 
       const el = document.querySelector('.dx-hero-resume-el');
       expect(el).not.toBeInTheDocument();
@@ -235,7 +222,7 @@ describe('DxResumeHero', () => {
         titleGreek: '',
       });
 
-      renderHero(deck, undefined, []);
+      renderHero(deck, 0, []);
 
       const el = document.querySelector('.dx-hero-resume-el');
       expect(el).not.toBeInTheDocument();
@@ -249,7 +236,7 @@ describe('DxResumeHero', () => {
         titleGreek: 'Ελληνικό Λεξιλόγιο',
       });
 
-      const { container } = renderHero(deck, mockProgress, [mockSibling1, mockSibling2]);
+      const { container } = renderHero(deck, 10, [mockSibling1, mockSibling2]);
 
       const coverEl = container.querySelector('.dx-cover-3 .dx-cover-el');
       expect(coverEl).toBeInTheDocument();
@@ -264,7 +251,7 @@ describe('DxResumeHero', () => {
         titleGreek: 'Greek A1 Vocabulary', // equal → hidden
       });
 
-      const { container } = renderHero(deck, mockProgress, [mockSibling1, mockSibling2]);
+      const { container } = renderHero(deck, 10, [mockSibling1, mockSibling2]);
 
       const coverEl = container.querySelector('.dx-cover-3 .dx-cover-el');
       expect(coverEl).not.toBeInTheDocument();
@@ -278,7 +265,7 @@ describe('DxResumeHero', () => {
         titleGreek: 'Ελληνικό Λεξιλόγιο',
       });
 
-      const { container } = renderHero(deck, mockProgress, [mockSibling1, mockSibling2]);
+      const { container } = renderHero(deck, 10, [mockSibling1, mockSibling2]);
 
       // Heading site
       expect(container.querySelector('.dx-hero-resume-el')).toBeInTheDocument();
@@ -293,7 +280,7 @@ describe('DxResumeHero', () => {
         titleGreek: 'Greek A1 Vocabulary',
       });
 
-      const { container } = renderHero(deck, mockProgress, [mockSibling1, mockSibling2]);
+      const { container } = renderHero(deck, 10, [mockSibling1, mockSibling2]);
 
       expect(container.querySelector('.dx-hero-resume-el')).not.toBeInTheDocument();
       expect(container.querySelector('.dx-cover-3 .dx-cover-el')).not.toBeInTheDocument();

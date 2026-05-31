@@ -387,7 +387,7 @@
   },
   "dx": {
     "vocabularyKicker": "Vocabulary · {{level}}",
-    "resumeStatTotalCards": "Total cards",
+    "resumeStatTotalWords": "Total words",
     "resumeStatMastered": "Mastered",
     "resumeStatComplete": "Complete",
     "coverTagVocabulary": "{{level}} · Vocabulary",
