@@ -7,6 +7,10 @@ interface AuthState {
   user: User | null;
   isLoading: boolean;
   error: string | null;
+  // Auth actions
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
   cleanup: () => void;
 }
 
@@ -42,6 +46,36 @@ export const useAuthStore = create<AuthState>((set) => {
     user: null,
     isLoading: true,
     error: null,
+
+    signIn: async (email: string, password: string) => {
+      set({ error: null });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        // error.message is a safe Supabase API message (not a raw credential).
+        set({ error: error.message });
+      }
+      // session/user update is handled by onAuthStateChange — not set here.
+    },
+
+    signUp: async (email: string, password: string) => {
+      set({ error: null });
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        set({ error: error.message });
+      }
+      // session/user update is handled by onAuthStateChange — not set here.
+    },
+
+    signOut: async () => {
+      set({ error: null });
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        set({ error: error.message });
+      }
+      // Storage adapter removes the persisted session; onAuthStateChange fires
+      // with a null session and clears session/user in state.
+    },
+
     cleanup: () => {
       _unsubscribe?.();
       _unsubscribe = null;
