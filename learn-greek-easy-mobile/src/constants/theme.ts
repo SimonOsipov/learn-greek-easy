@@ -1,9 +1,12 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * CANONICAL COLOR SYSTEM: NativeWind + src/global.css tokens.
+ * For NEW components, use className with tokens from global.css (bg-bg, text-fg, bg-primary, etc.)
+ * and dark: variants — not the Colors object below.
+ *
+ * The Colors object here is LEGACY SDK-56-template chrome, kept only for the existing
+ * StyleSheet-based template screens (themed-text / themed-view / use-theme).
+ * It will be removed once those screens are ported in MOB-03+.
  */
-
-import '@/global.css';
 
 import { Platform } from 'react-native';
 
