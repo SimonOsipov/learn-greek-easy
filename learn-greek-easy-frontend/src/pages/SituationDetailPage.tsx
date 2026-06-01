@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAudioTimeMs } from '@/hooks/useAudioTimeMs';
 import { useLanguage } from '@/hooks/useLanguage';
 import { track } from '@/lib/analytics';
-import { buildSrcSet } from '@/lib/imageVariants';
+import { buildSrcSet, recoverDerivativeError } from '@/lib/imageVariants';
 import { exerciseAPI } from '@/services/exerciseAPI';
 import type { ExerciseModality, ExerciseQueue, ExerciseQueueItem } from '@/services/exerciseAPI';
 import { situationAPI } from '@/services/situationAPI';
@@ -388,6 +388,7 @@ export const SituationDetailPage: React.FC = () => {
                   height={450}
                   className="aspect-video w-full object-cover"
                   loading="lazy"
+                  onError={recoverDerivativeError}
                 />
               </div>
             ) : (

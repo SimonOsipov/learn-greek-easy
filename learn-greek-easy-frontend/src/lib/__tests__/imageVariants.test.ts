@@ -7,11 +7,14 @@
  * - buildSrcSet: sorted by width ascending
  * - pickBestSrc: selects closest width >= target
  * - pickBestSrc: falls back to originalUrl when no variants
+ * - recoverDerivativeError: drops srcset once so the browser reloads the original src
  */
+
+import type { SyntheticEvent } from 'react';
 
 import { describe, expect, it } from 'vitest';
 
-import { buildSrcSet, pickBestSrc } from '../imageVariants';
+import { buildSrcSet, pickBestSrc, recoverDerivativeError } from '../imageVariants';
 
 describe('buildSrcSet', () => {
   it('returns undefined when variants is null', () => {
@@ -91,5 +94,29 @@ describe('pickBestSrc', () => {
 
   it('picks largest width when target exceeds all variants', () => {
     expect(pickBestSrc(variants, 2000, originalUrl)).toBe('https://example.com/img_1600w.webp');
+  });
+});
+
+describe('recoverDerivativeError', () => {
+  // Minimal stub of the SyntheticEvent shape the handler reads.
+  const makeEvent = (img: Partial<HTMLImageElement>) =>
+    ({ currentTarget: img as HTMLImageElement }) as SyntheticEvent<HTMLImageElement>;
+
+  it('clears srcset and marks fallback on the first error when a srcset is present', () => {
+    const img = { srcset: 'https://x/img_800w.webp 800w', dataset: {} as DOMStringMap };
+    const recovered = recoverDerivativeError(makeEvent(img));
+    expect(recovered).toBe(true);
+    expect(img.srcset).toBe('');
+    expect(img.dataset.derivativeFallback).toBe('done');
+  });
+
+  it('returns false (terminal) when there is no srcset to drop', () => {
+    const img = { srcset: '', dataset: {} as DOMStringMap };
+    expect(recoverDerivativeError(makeEvent(img))).toBe(false);
+  });
+
+  it('returns false (terminal) when it has already fallen back once', () => {
+    const img = { srcset: '', dataset: { derivativeFallback: 'done' } as DOMStringMap };
+    expect(recoverDerivativeError(makeEvent(img))).toBe(false);
   });
 });

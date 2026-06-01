@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { type SyntheticEvent, useEffect, useRef, useState } from 'react';
 
 import { ImageOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Skeleton } from '@/components/ui/skeleton';
-import { buildSrcSet, type ImageVariants } from '@/lib/imageVariants';
+import { buildSrcSet, recoverDerivativeError, type ImageVariants } from '@/lib/imageVariants';
 import { getSentry, isSentryLoaded, queueMessage } from '@/lib/sentry-queue';
 import { cn } from '@/lib/utils';
 
@@ -40,7 +40,10 @@ export function PictureOption({
     setImgState('loaded');
   };
 
-  const handleError = () => {
+  const handleError = (event: SyntheticEvent<HTMLImageElement>) => {
+    // A missing derivative width 404s first — fall back to the original before erroring.
+    if (recoverDerivativeError(event)) return;
+
     setImgState('error');
 
     // Fire Sentry once per URL to avoid duplicate reports

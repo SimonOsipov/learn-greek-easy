@@ -7,6 +7,8 @@
  * so components fall back to the original `src` URL.
  */
 
+import type { SyntheticEvent } from 'react';
+
 /** Record<width, presignedUrl> as returned by the API (e.g. { 400: '...', 800: '...', 1600: '...' }) */
 export type ImageVariants = Record<number, string> | null | undefined;
 
@@ -47,4 +49,26 @@ export function pickBestSrc(
   // Pick the smallest width >= targetWidth, or the largest available.
   const best = widths.find((w) => w >= targetWidth) ?? widths[widths.length - 1];
   return variants[best] ?? originalUrl;
+}
+
+/**
+ * `onError` handler for responsive `<img>` elements that use a derivative `srcset`.
+ *
+ * A derivative width can legitimately not exist in S3 — derivatives are never
+ * upscaled, so a source image narrower than the selected width has no derivative
+ * at that width (e.g. a 600px-wide image has no `_800w`). The backend presigns all
+ * widths unconditionally, so the browser may pick a candidate that 404s. Because
+ * `src` is not a `srcset` candidate, the image then breaks instead of using the
+ * original. Dropping `srcset` forces the browser to re-select and load `src`.
+ *
+ * @returns `true` when a fallback to the original `src` was triggered; `false` when
+ *   the image had already fallen back (or carried no `srcset`) — a terminal failure
+ *   the caller may surface as an error state.
+ */
+export function recoverDerivativeError(event: SyntheticEvent<HTMLImageElement>): boolean {
+  const img = event.currentTarget;
+  if (img.dataset.derivativeFallback === 'done' || !img.srcset) return false;
+  img.dataset.derivativeFallback = 'done';
+  img.srcset = ''; // re-runs the browser's image selection → loads the original `src`
+  return true;
 }
