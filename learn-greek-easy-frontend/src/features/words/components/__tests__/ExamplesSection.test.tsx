@@ -147,6 +147,18 @@ describe('ExamplesSection', () => {
       render(<ExamplesSection examples={mockExamples} />);
       expect(screen.getByText('Examples')).toBeInTheDocument();
     });
+
+    it('renders "In context" eyebrow above the section title', () => {
+      render(<ExamplesSection examples={mockExamples} />);
+      expect(screen.getByTestId('examples-eyebrow')).toBeInTheDocument();
+      expect(screen.getByTestId('examples-eyebrow')).toHaveTextContent('In context');
+    });
+
+    it('renders "In context" eyebrow in empty state too', () => {
+      render(<ExamplesSection examples={null} />);
+      expect(screen.getByTestId('examples-eyebrow')).toBeInTheDocument();
+      expect(screen.getByTestId('examples-eyebrow')).toHaveTextContent('In context');
+    });
   });
 
   describe('Example Display', () => {

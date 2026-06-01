@@ -88,7 +88,6 @@ describe('deck.dx — DX-13 new keys present in both locales', () => {
     'dx.weekHeatLabel',
     'dx.donutRingLabel',
     'dx.unwiredTooltip',
-    'dx.unwiredExtraGloss',
     'dx.unwiredHeatmap',
     'dx.unwiredExampleTag',
     'dx.unwiredCollocations',
@@ -96,7 +95,6 @@ describe('deck.dx — DX-13 new keys present in both locales', () => {
     'dx.unwiredAudioGroup',
     'dx.premiumContent',
     'dx.masteryStatus',
-    'wordReference.extraGlossPlaceholder',
   ];
 
   for (const key of DX_KEYS) {

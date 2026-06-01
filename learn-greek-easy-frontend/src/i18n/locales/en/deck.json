@@ -357,8 +357,7 @@
     "groupCardCount": "{{n}} cards",
     "cardsViewToggleLabel": "Cards view",
     "cardsViewGrid": "Grid view",
-    "cardsViewList": "List view",
-    "extraGlossPlaceholder": "Additional usage notes coming soon."
+    "cardsViewList": "List view"
   },
   "practice": {
     "title": "Practice",
@@ -395,7 +394,6 @@
     "weekHeatLabel": "This week",
     "donutRingLabel": "cards mastered",
     "unwiredTooltip": "Placeholder — not yet connected to backend data.",
-    "unwiredExtraGloss": "Extra gloss — placeholder, not yet connected to backend data.",
     "unwiredHeatmap": "Practice heatmap — placeholder, not yet connected to backend data.",
     "unwiredExampleTag": "Example type — placeholder, not yet connected to backend tag taxonomy.",
     "unwiredCollocations": "Collocations — not yet connected to backend data.",

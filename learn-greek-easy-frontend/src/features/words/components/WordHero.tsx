@@ -3,8 +3,7 @@
 // DX-09: Radial-panel hero header for WordReferencePage.
 // Consumes dx.css (.dx-w-hero*) + atoms from @/features/decks/dx.
 //
-// Placeholders (both danger/red, per Red-Dot Inventory):
-//   R4 — enExtra: absent on WordEntryResponse → placeholder italic gloss + UnwiredDot
+// Placeholders (danger/red, per Red-Dot Inventory):
 //   R3 — WeekHeat: no per-word practice heatmap backend yet → static heat + UnwiredDot
 // DonutRing: real data (masteredCards / totalCards) — NO dot.
 
@@ -146,13 +145,6 @@ export function WordHero({
         <div className="dx-w-en" data-testid="word-translation">
           {displayTranslation}
         </div>
-
-        {/* Extra gloss — absent from API → placeholder with R4 UnwiredDot (danger) */}
-        <UnwiredDot tone="danger" aria-label={t('deck:dx.unwiredExtraGloss')}>
-          <p className="dx-w-en-extra" data-testid="word-en-extra">
-            {t('deck:wordReference.extraGlossPlaceholder')}
-          </p>
-        </UnwiredDot>
 
         {/* Hero bottom: voice-speed + stats */}
         <div className="dx-w-hero-bottom">
