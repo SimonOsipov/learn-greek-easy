@@ -173,12 +173,10 @@ describe('MockExamPage', () => {
 
       render(<MockExamPage />);
 
-      await waitFor(() => {
-        expect(screen.getByTestId('mock-exam-page')).toBeInTheDocument();
-      });
-
+      // History items render only after statistics resolve; mock-exam-page is
+      // present during loading, so wait for the text itself, not the container.
       // formatTime(0) → { minutes: 0, seconds: 0 }
-      expect(screen.getByText('0m 0s')).toBeInTheDocument();
+      expect(await screen.findByText('0m 0s')).toBeInTheDocument();
     });
 
     it('renders 1m 30s for a history item with 90 seconds taken', async () => {
@@ -201,12 +199,10 @@ describe('MockExamPage', () => {
 
       render(<MockExamPage />);
 
-      await waitFor(() => {
-        expect(screen.getByTestId('mock-exam-page')).toBeInTheDocument();
-      });
-
+      // History items render only after statistics resolve; mock-exam-page is
+      // present during loading, so wait for the text itself, not the container.
       // formatTime(90) → { minutes: 1, seconds: 30 }
-      expect(screen.getByText('1m 30s')).toBeInTheDocument();
+      expect(await screen.findByText('1m 30s')).toBeInTheDocument();
     });
 
     it('renders 60m 0s for a history item with 3600 seconds taken', async () => {
@@ -229,12 +225,10 @@ describe('MockExamPage', () => {
 
       render(<MockExamPage />);
 
-      await waitFor(() => {
-        expect(screen.getByTestId('mock-exam-page')).toBeInTheDocument();
-      });
-
+      // History items render only after statistics resolve; mock-exam-page is
+      // present during loading, so wait for the text itself, not the container.
       // formatTime(3600) → { minutes: 60, seconds: 0 }
-      expect(screen.getByText('60m 0s')).toBeInTheDocument();
+      expect(await screen.findByText('60m 0s')).toBeInTheDocument();
     });
   });
 
@@ -393,12 +387,10 @@ describe('MockExamPage', () => {
 
       render(<MockExamPage />);
 
-      await waitFor(() => {
-        expect(screen.getByTestId('mock-exam-page')).toBeInTheDocument();
-      });
-
+      // EmptyHistoryState renders only after stats settle; mock-exam-page is
+      // present during loading, so wait for the text itself, not the container.
       // recent_exams undefined → EmptyHistoryState renders
-      expect(screen.getByText(/haven't taken any exams yet/i)).toBeInTheDocument();
+      expect(await screen.findByText(/haven't taken any exams yet/i)).toBeInTheDocument();
     });
 
     it('still shows stats grid with zeroed values when stats is null', async () => {
@@ -407,12 +399,10 @@ describe('MockExamPage', () => {
 
       render(<MockExamPage />);
 
-      await waitFor(() => {
-        expect(screen.getByTestId('mock-exam-page')).toBeInTheDocument();
-      });
-
+      // Stats grid renders only after stats settle; mock-exam-page is present
+      // during loading, so wait for the value itself, not the container.
       // stats?.total_exams ?? 0 → "0" for total exams
-      expect(screen.getByText('0')).toBeInTheDocument();
+      expect(await screen.findByText('0')).toBeInTheDocument();
       // stats?.total_exams is falsy so pass rate / average / best show "N/A"
       const naElements = screen.getAllByText('N/A');
       expect(naElements.length).toBeGreaterThanOrEqual(3);
