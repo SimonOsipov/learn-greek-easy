@@ -8,7 +8,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { CompletionPill } from '@/components/ui/completion-pill';
-import { buildSrcSet } from '@/lib/imageVariants';
+import { buildSrcSet, recoverDerivativeError } from '@/lib/imageVariants';
 import type { SituationListItem } from '@/types/situation';
 
 import { SITUATION_STATUS_BADGE_CLASSES } from './situationBadges';
@@ -87,6 +87,7 @@ export const SituationCard: React.FC<SituationCardProps> = ({ item, onRequestDel
             width={400}
             height={300}
             loading="lazy"
+            onError={recoverDerivativeError}
           />
           <div className="sit-thumb-meta">
             <span className={SITUATION_STATUS_BADGE_CLASSES[item.status]}>

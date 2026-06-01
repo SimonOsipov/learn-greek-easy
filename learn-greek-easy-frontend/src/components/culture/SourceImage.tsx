@@ -2,7 +2,7 @@ import { type FC, useEffect, useState } from 'react';
 
 import { ExternalLink } from 'lucide-react';
 
-import { buildSrcSet, type ImageVariants } from '@/lib/imageVariants';
+import { buildSrcSet, recoverDerivativeError, type ImageVariants } from '@/lib/imageVariants';
 import { cn } from '@/lib/utils';
 
 export interface SourceImageProps {
@@ -52,7 +52,10 @@ export const SourceImage: FC<SourceImageProps> = ({
         height={140}
         className="h-[140px] w-full object-cover"
         loading="lazy"
-        onError={() => setHasError(true)}
+        onError={(event) => {
+          // Fall back to the original on a missing derivative width before hiding the image.
+          if (!recoverDerivativeError(event)) setHasError(true);
+        }}
         data-testid="source-image"
       />
       <div

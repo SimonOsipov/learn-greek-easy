@@ -1,6 +1,6 @@
 import { ExternalLink } from 'lucide-react';
 
-import { buildSrcSet, type ImageVariants } from '@/lib/imageVariants';
+import { buildSrcSet, recoverDerivativeError, type ImageVariants } from '@/lib/imageVariants';
 import { cn } from '@/lib/utils';
 
 interface SourceCardProps {
@@ -49,6 +49,7 @@ export const SourceCard: React.FC<SourceCardProps> = ({
           height={450}
           className="aspect-video w-full object-cover"
           loading="lazy"
+          onError={recoverDerivativeError}
         />
       )}
       <div className="flex items-center gap-2 px-4 py-3 text-sm">

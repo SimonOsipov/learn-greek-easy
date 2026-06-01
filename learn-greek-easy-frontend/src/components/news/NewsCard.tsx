@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
 import { track } from '@/lib/analytics';
-import { buildSrcSet } from '@/lib/imageVariants';
+import { buildSrcSet, recoverDerivativeError } from '@/lib/imageVariants';
 import { clearActivePlayer, registerActivePlayer } from '@/lib/newsAudioCoordinator';
 import { cn } from '@/lib/utils';
 import type { NewsCountry, NewsItemResponse } from '@/services/adminAPI';
@@ -176,6 +176,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
             height={450}
             className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
             loading="lazy"
+            onError={recoverDerivativeError}
           />
         )}
 
