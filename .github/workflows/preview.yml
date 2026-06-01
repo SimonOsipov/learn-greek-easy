@@ -65,17 +65,116 @@ jobs:
           fi
 
   # =============================================================================
+  # JOB 0b: Detect Changed Areas (MOB-01a)
+  # Purpose: Split mobile changes from web changes so a mobile-only PR runs ONLY
+  # the mobile job and skips the web suite + web preview deploy.
+  # web = any non-mobile change (backend/frontend/.github/docs/root) — safe default.
+  # mobile = anything under learn-greek-easy-mobile/.
+  # =============================================================================
+  changes:
+    name: Detect Changed Areas
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+    steps:
+      - name: Filter changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            mobile:
+              - 'learn-greek-easy-mobile/**'
+            web:
+              - '**'
+              - '!learn-greek-easy-mobile/**'
+
+  # =============================================================================
   # JOB 1: CI Tests
   # Purpose: Run existing CI tests first (lint, unit, integration, E2E)
   # This job uses the reusable workflow defined in test.yml
-  # Only runs when full test conditions are met
+  # Only runs when full test conditions are met AND web files changed (MOB-01a)
   # =============================================================================
   ci-tests:
     name: CI Tests
-    needs: should-run-full
-    if: needs.should-run-full.outputs.run_full == 'true'
+    needs: [should-run-full, changes]
+    if: needs.should-run-full.outputs.run_full == 'true' && needs.changes.outputs.web == 'true'
     uses: ./.github/workflows/test.yml
     secrets: inherit
+
+  # =============================================================================
+  # JOB 1b: Mobile CI (MOB-01a)
+  # Purpose: tsc + lint for the Expo app. Runs only when mobile files changed.
+  # No jest here — the Jest-Expo harness arrives in MOB-07 (added to CI in MOB-08).
+  # =============================================================================
+  mobile-ci:
+    name: Mobile CI (tsc + lint)
+    needs: [should-run-full, changes]
+    if: needs.should-run-full.outputs.run_full == 'true' && needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: learn-greek-easy-mobile/package-lock.json
+
+      - name: Install dependencies
+        working-directory: learn-greek-easy-mobile
+        run: npm ci
+
+      - name: TypeScript check (tsc --noEmit)
+        working-directory: learn-greek-easy-mobile
+        run: npx tsc --noEmit
+
+      - name: ESLint (expo lint)
+        working-directory: learn-greek-easy-mobile
+        run: npm run lint
+
+  # =============================================================================
+  # JOB 1c: CI Gate (MOB-01a) — the single REQUIRED status check
+  # Purpose: Always runs and reports one definitive pass/fail, regardless of which
+  # pipeline(s) ran. Replaces `CI Tests / Frontend tsc -b` as the required check so
+  # mobile-only PRs (where the web suite is skipped) are not blocked by an absent
+  # web check. Passes iff each pipeline that SHOULD have run succeeded.
+  # =============================================================================
+  ci-gate:
+    name: CI Gate
+    needs: [should-run-full, changes, ci-tests, mobile-ci]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate required pipelines
+        run: |
+          run_full="${{ needs.should-run-full.outputs.run_full }}"
+          web="${{ needs.changes.outputs.web }}"
+          mobile="${{ needs.changes.outputs.mobile }}"
+          ci="${{ needs.ci-tests.result }}"
+          mob="${{ needs.mobile-ci.result }}"
+          echo "run_full=$run_full web=$web mobile=$mobile ci-tests=$ci mobile-ci=$mob"
+
+          if [ "$run_full" != "true" ]; then
+            echo "Draft PR (run_full=$run_full) — no required pipelines. CI Gate passes."
+            exit 0
+          fi
+
+          fail=0
+          if [ "$web" = "true" ] && [ "$ci" != "success" ]; then
+            echo "::error::Web CI was required (web changed) but its result is '$ci'"
+            fail=1
+          fi
+          if [ "$mobile" = "true" ] && [ "$mob" != "success" ]; then
+            echo "::error::Mobile CI was required (mobile changed) but its result is '$mob'"
+            fail=1
+          fi
+          if [ "$fail" = "1" ]; then
+            exit 1
+          fi
+          echo "CI Gate passed (web=$web ci-tests=$ci, mobile=$mobile mobile-ci=$mob)"
 
   # =============================================================================
   # JOB: Backend Coverage Comment
@@ -1235,8 +1334,8 @@ jobs:
   # =============================================================================
   report-results:
     name: Report Results
-    needs: [ci-tests, should-deploy, should-run-full, deploy, health-check, seed-database, k6-performance, accessibility, lighthouse]
-    if: always() && needs.should-run-full.outputs.run_full == 'true' && needs.should-deploy.outputs.deploy == 'true'
+    needs: [ci-tests, should-deploy, should-run-full, changes, deploy, health-check, seed-database, k6-performance, accessibility, lighthouse]
+    if: always() && needs.should-run-full.outputs.run_full == 'true' && needs.changes.outputs.web == 'true' && needs.should-deploy.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Post or Update PR Comment
