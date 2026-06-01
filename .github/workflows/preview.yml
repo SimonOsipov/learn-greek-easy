@@ -94,6 +94,11 @@ jobs:
             web:
               - '**'
               - '!learn-greek-easy-mobile/**'
+              # Docs-only changes don't need the web test suite / preview deploy.
+              # (A mixed code+docs PR still runs web: code files pass these negations.)
+              - '!**/*.md'
+              - '!docs/**'
+              - '!**/docs/**'
 
   # =============================================================================
   # JOB 1: CI Tests
