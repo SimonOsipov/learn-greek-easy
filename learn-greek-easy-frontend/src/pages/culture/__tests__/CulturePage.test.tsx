@@ -615,8 +615,16 @@ describe('Resume hero recency + sentence (CULT2-2)', () => {
 
     const { container } = render(<CulturePage />);
 
+    // Page still loads (culture-title renders outside the loading gate)
+    expect(await screen.findByTestId('culture-title')).toBeInTheDocument();
+
+    // The resume-hero description renders only once the data Promise.all settles
+    // and isLoading flips false — wait for it to populate before asserting
+    // (culture-title alone is present during loading and would race).
     await waitFor(() => {
-      expect(screen.getByTestId('culture-title')).toBeInTheDocument();
+      expect(container.querySelector('.dx-hero-resume-desc')?.textContent ?? '').toContain(
+        '8 of 20 questions'
+      );
     });
     const desc = container.querySelector('.dx-hero-resume-desc')?.textContent ?? '';
     expect(desc).toContain('8 of 20 questions');
