@@ -93,3 +93,37 @@ Use `npx expo start --ios` to open directly in the iOS simulator.
    ```
 
    **First verified dev-client build:** [`81fbd3cf`](https://expo.dev/accounts/sams-team/projects/greeklish-app/builds/81fbd3cf-a886-40c3-98c2-7d8e109b6688) — booted on the iOS 26.4 simulator with a working Expo dev menu.
+
+## CI / CD (mobile vs web split)
+
+Mobile CI is **separated from the web pipeline** by path (MOB-01a). A `dorny/paths-filter`
+job classifies each change as `mobile` (`learn-greek-easy-mobile/**`) and/or `web`
+(anything else):
+
+- **Mobile-only PR** → runs only the `Mobile CI (tsc + lint)` job (`npx tsc --noEmit`
+  + `expo lint`). The web test suite and the web preview deployment are **skipped**.
+- **Web PR** → runs the full web suite unchanged. A PR touching both runs both.
+- **Mobile-only merge to `main`** → the backend/frontend production deploy is **skipped**
+  (there is no mobile deploy yet — EAS Update lands in MOB-08).
+
+The single required status check is **`CI Gate`** — an always-running aggregator that
+passes iff each pipeline that *should* run (web and/or mobile) succeeded. This replaces
+the web-only `CI Tests / Frontend tsc -b` so mobile-only PRs aren't blocked by a web
+check that never runs.
+
+**Branch protection (one-time, owner-only):** make `CI Gate` the required check and drop
+`Frontend tsc -b`:
+
+```bash
+gh api -X PATCH repos/SimonOsipov/learn-greek-easy/branches/main/protection/required_status_checks \
+  -F 'strict=true' -f 'checks[][context]=CI Gate'
+```
+
+(Or GitHub → Settings → Branches → `main` → Require status checks → add **CI Gate**,
+remove **Frontend tsc -b**.) Do this after `CI Gate` first reports green on the PR and
+before merging, so mobile-only PRs stay mergeable.
+
+> Not yet wired (MOB-08): mobile `jest` in CI, EAS preview builds + Maestro on PRs, EAS
+> Update channels, and the OTA-vs-native release rules. `expo lint`/`tsc` config and the
+> ambient `globals.d.ts` CSS declaration are temporary scaffolding — NativeWind (MOB-02)
+> supplies its own CSS types.
