@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import type { Session, User } from '@supabase/supabase-js';
+import * as WebBrowser from 'expo-web-browser';
+import { makeRedirectUri } from 'expo-auth-session';
+import { getQueryParams } from 'expo-auth-session/build/QueryParams';
 import { supabase } from '@/lib/supabase';
+
+// Complete any pending browser auth sessions on module load.
+WebBrowser.maybeCompleteAuthSession();
 
 interface AuthState {
   session: Session | null;
@@ -11,6 +17,7 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   cleanup: () => void;
 }
 
@@ -74,6 +81,43 @@ export const useAuthStore = create<AuthState>((set) => {
       }
       // Storage adapter removes the persisted session; onAuthStateChange fires
       // with a null session and clears session/user in state.
+    },
+
+    signInWithGoogle: async () => {
+      set({ error: null });
+      try {
+        const redirectTo = makeRedirectUri();
+
+        // Step 1: get the OAuth URL from Supabase (skipBrowserRedirect so we
+        // can open it ourselves with expo-web-browser).
+        const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo, skipBrowserRedirect: true },
+        });
+        if (oauthError) throw oauthError;
+
+        // Step 2: open the browser and wait for the redirect back to our app.
+        const res = await WebBrowser.openAuthSessionAsync(data.url ?? '', redirectTo);
+        if (res.type !== 'success') return;
+
+        // Step 3: extract tokens from the redirect URL and hand them to
+        // Supabase. detectSessionInUrl is false so we must do this explicitly.
+        const { params, errorCode } = getQueryParams(res.url);
+        if (errorCode) throw new Error(errorCode);
+
+        const { access_token, refresh_token } = params;
+        if (!access_token) return;
+
+        // setSession triggers onAuthStateChange which updates session/user.
+        await supabase.auth.setSession({
+          access_token,
+          refresh_token: refresh_token ?? '',
+        });
+      } catch (err: unknown) {
+        // Sanitize: surface only the message string, never token values.
+        const message = err instanceof Error ? err.message : 'Google sign-in failed';
+        set({ error: message });
+      }
     },
 
     cleanup: () => {
