@@ -1218,14 +1218,6 @@
   color: hsl(var(--fg));
   margin: 2px 0 0;
 }
-.dx-w-en-extra {
-  font-size: 13.5px;
-  color: hsl(var(--fg-3));
-  font-style: italic;
-  margin: 4px 0 0;
-  max-width: 580px;
-  line-height: 1.5;
-}
 .dx-w-hero-bottom {
   display: flex;
   align-items: center;
@@ -1287,6 +1279,47 @@
 .dx-tab-ring[data-state='active'] {
   outline: 2px solid hsl(var(--primary));
   outline-offset: -1px;
+}
+
+/* ── Case-forms table typography ─────────────────────────────────────────────
+   DXCF-01: drift-free replacements for arbitrary Tailwind values in
+   ConjugationTable and DeclensionTable.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Eyebrow label above the section title (no leading dot — contrast with .dx-kicker) */
+.dx-caseforms-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: hsl(var(--fg-3));
+}
+
+/* Column header cells (Singular / Plural / tense names) */
+.dx-caseforms-col {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: hsl(var(--fg-3));
+}
+
+/* Row label cells (case names / person labels) */
+.dx-caseforms-rowlabel {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: hsl(var(--fg-3));
+}
+
+/* Gender pill text inside badge chips */
+.dx-gender-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 /* ── Section card (.dx-section*) ─────────────────────────────────────────────
@@ -1374,13 +1407,15 @@
 .dx-example-el {
   font-family: 'Noto Serif', Georgia, serif;
   font-size: 17px;
-  font-weight: 500;
+  font-weight: 600;
   font-style: normal;
   color: hsl(var(--fg));
   line-height: 1.35;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex: 1 1 0;
+  min-width: 0;
 }
 .dx-example-en {
   font-size: 13.5px;

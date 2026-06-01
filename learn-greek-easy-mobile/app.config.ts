@@ -2,7 +2,13 @@ import { ExpoConfig } from 'expo/config';
 
 type Variant = 'development' | 'preview' | 'production';
 
-const VARIANTS: Record<Variant, { name: string; bundleId: string; icon: string }> = {
+type VariantConfig = {
+  name: string;
+  bundleId: string;
+  icon: string;
+};
+
+const VARIANTS: Record<Variant, VariantConfig> = {
   production: {
     name: 'Greeklish',
     bundleId: 'eu.greeklish.app',
@@ -24,6 +30,12 @@ const rawVariant = process.env.APP_VARIANT;
 const variant: Variant =
   rawVariant && rawVariant in VARIANTS ? (rawVariant as Variant) : 'development';
 const { name, bundleId, icon } = VARIANTS[variant];
+
+// Supabase config comes from EAS environment variables (server-side, scoped per environment)
+// for cloud builds, or from a gitignored local .env for local development.
+// src/lib/config.ts throws at app runtime if these are missing.
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
 const config: ExpoConfig = {
   name,
@@ -66,6 +78,7 @@ const config: ExpoConfig = {
         },
       },
     ],
+    ['expo-web-browser', { experimentalLauncherActivity: false }],
   ],
   experiments: {
     typedRoutes: true,
@@ -76,6 +89,8 @@ const config: ExpoConfig = {
     eas: {
       projectId: 'e1737431-1c87-45df-b1db-b171fa9da410',
     },
+    supabaseUrl,
+    supabaseAnonKey,
   },
   owner: 'sams-team',
 };

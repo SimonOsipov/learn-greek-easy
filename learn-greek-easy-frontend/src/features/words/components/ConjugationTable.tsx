@@ -76,7 +76,7 @@ export function ConjugationTable({ grammarData }: ConjugationTableProps) {
   const renderImperativeTable = () => (
     <Card className="overflow-hidden">
       <CardHeader className="bg-muted/50 px-4 py-3">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+        <CardTitle className="dx-caseforms-col">
           {t('grammar.verbConjugation.imperative.title')}
         </CardTitle>
       </CardHeader>
@@ -84,20 +84,20 @@ export function ConjugationTable({ grammarData }: ConjugationTableProps) {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center font-bold">
+              <TableHead className="dx-caseforms-col h-auto bg-muted/50 px-4 py-2 text-center">
                 {t('grammar.verbConjugation.imperative.singular')}
               </TableHead>
-              <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center font-bold">
+              <TableHead className="dx-caseforms-col h-auto bg-muted/50 px-4 py-2 text-center">
                 {t('grammar.verbConjugation.imperative.plural')}
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             <TableRow className="hover:bg-transparent">
-              <TableCell className="px-4 py-3 text-center text-foreground">
+              <TableCell className="px-4 py-3 text-center font-serif text-base font-semibold text-foreground">
                 {grammarData.imperative_2s || na}
               </TableCell>
-              <TableCell className="px-4 py-3 text-center text-foreground">
+              <TableCell className="px-4 py-3 text-center font-serif text-base font-semibold text-foreground">
                 {grammarData.imperative_2p || na}
               </TableCell>
             </TableRow>
@@ -113,8 +113,8 @@ export function ConjugationTable({ grammarData }: ConjugationTableProps) {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="h-auto bg-muted/50 px-4 py-2 font-bold" />
-              <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center font-bold">
+              <TableHead className="h-auto bg-muted/50 px-4 py-2" />
+              <TableHead className="dx-caseforms-col h-auto bg-muted/50 px-4 py-2 text-center">
                 {t(`grammar.verbConjugation.tenses.${tense}`)}
               </TableHead>
             </TableRow>
@@ -124,10 +124,10 @@ export function ConjugationTable({ grammarData }: ConjugationTableProps) {
               const value = getConjugation(grammarData, tense, person);
               return (
                 <TableRow key={person} className="hover:bg-transparent">
-                  <TableCell className="bg-muted/50 px-4 py-2 font-medium text-muted-foreground">
+                  <TableCell className="dx-caseforms-rowlabel bg-muted/50 px-4 py-2">
                     {personLabels[person]}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-center text-foreground">
+                  <TableCell className="px-4 py-3 text-center font-serif text-base font-semibold text-foreground">
                     {value || na}
                   </TableCell>
                 </TableRow>
@@ -140,11 +140,12 @@ export function ConjugationTable({ grammarData }: ConjugationTableProps) {
   );
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg">{t('grammar.sections.conjugation')}</CardTitle>
+    <Card className="rounded-2xl border px-1 py-1">
+      <CardHeader className="px-6 pb-2 pt-5">
+        <p className="dx-caseforms-eyebrow mb-1">{t('grammar.sections.conjugation')}</p>
+        <h3 className="dx-section-h">{t('grammar.sections.conjugation')}</h3>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-6 pb-5">
         <Tabs value={selectedTense} onValueChange={(v) => setSelectedTense(v as Tense)}>
           <div className="overflow-x-auto">
             <TabsList className="inline-flex w-full min-w-max">
