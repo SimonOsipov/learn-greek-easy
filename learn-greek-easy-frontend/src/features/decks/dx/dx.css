@@ -1407,13 +1407,15 @@
 .dx-example-el {
   font-family: 'Noto Serif', Georgia, serif;
   font-size: 17px;
-  font-weight: 500;
+  font-weight: 600;
   font-style: normal;
   color: hsl(var(--fg));
   line-height: 1.35;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex: 1 1 0;
+  min-width: 0;
 }
 .dx-example-en {
   font-size: 13.5px;

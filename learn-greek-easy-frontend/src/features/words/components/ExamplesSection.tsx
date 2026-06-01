@@ -70,7 +70,10 @@ export function ExamplesSection({ examples, wordEntryId, deckId, speed }: Exampl
   if (!examples || examples.length === 0) {
     return (
       <div className="dx-section" data-testid="examples-section">
-        <div className="dx-section-head">
+        <div className="dx-section-eyebrow">
+          <span className="dx-kicker" data-testid="examples-eyebrow">
+            {t('grammar.examples.eyebrow')}
+          </span>
           <h3 className="dx-section-h">{t('grammar.examples.title')}</h3>
         </div>
         <p className="text-sm text-muted-foreground">{t('grammar.examples.noExamples')}</p>
@@ -80,7 +83,10 @@ export function ExamplesSection({ examples, wordEntryId, deckId, speed }: Exampl
 
   return (
     <div className="dx-section" data-testid="examples-section">
-      <div className="dx-section-head">
+      <div className="dx-section-eyebrow">
+        <span className="dx-kicker" data-testid="examples-eyebrow">
+          {t('grammar.examples.eyebrow')}
+        </span>
         <h3 className="dx-section-h">{t('grammar.examples.title')}</h3>
       </div>
       <div className="dx-examples">
@@ -95,36 +101,33 @@ export function ExamplesSection({ examples, wordEntryId, deckId, speed }: Exampl
           return (
             <div key={index} className="dx-example">
               <div className="dx-example-head">
-                {/* Type tag with R5 amber UnwiredDot — tag text is children so the
-                    wrapper has a natural bounding box and Playwright can see it */}
+                {/* Greek sentence + audio speaker (flex-grow group) */}
+                <p className="dx-example-el" lang="el">
+                  {example.greek}
+                  {example.audio_url && (
+                    <SpeakerButton
+                      audioUrl={example.audio_url}
+                      size="sm"
+                      speed={speed}
+                      onPlay={() =>
+                        track('example_audio_played', {
+                          word_entry_id: wordEntryId ?? '',
+                          example_id: example.id ?? '',
+                          context: 'reference',
+                          deck_id: deckId ?? '',
+                          playback_speed: 1,
+                        })
+                      }
+                    />
+                  )}
+                </p>
+                {/* Type tag with R5 amber UnwiredDot — right-aligned */}
                 <span className="dx-example-tag" data-testid="example-tag">
                   <UnwiredDot tone="amber" aria-label={t('deck:dx.unwiredExampleTag')}>
                     {tag}
                   </UnwiredDot>
                 </span>
-                {/* Audio speaker */}
-                {example.audio_url && (
-                  <SpeakerButton
-                    audioUrl={example.audio_url}
-                    size="sm"
-                    speed={speed}
-                    onPlay={() =>
-                      track('example_audio_played', {
-                        word_entry_id: wordEntryId ?? '',
-                        example_id: example.id ?? '',
-                        context: 'reference',
-                        deck_id: deckId ?? '',
-                        playback_speed: 1,
-                      })
-                    }
-                  />
-                )}
               </div>
-
-              {/* Greek sentence */}
-              <p className="dx-example-el" lang="el">
-                {example.greek}
-              </p>
 
               {/* Locale-appropriate translation */}
               {exampleTranslation && <p className="dx-example-en">{exampleTranslation}</p>}
