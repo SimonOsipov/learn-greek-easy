@@ -29,9 +29,17 @@ export class LargeSecureStore {
   async getItem(key: string) {
     const encrypted = await AsyncStorage.getItem(key);
     if (!encrypted) {
-      return encrypted;
+      return null;
     }
-    return await this._decrypt(key, encrypted);
+    try {
+      return await this._decrypt(key, encrypted);
+    } catch {
+      // Corrupted blob or key/ciphertext mismatch — treat as a cache miss so a
+      // bad persisted value can not strand auth bootstrap. Clear both stores for
+      // this key and return null. (No logging — never emit key/ciphertext.)
+      await this.removeItem(key);
+      return null;
+    }
   }
 
   async removeItem(key: string) {

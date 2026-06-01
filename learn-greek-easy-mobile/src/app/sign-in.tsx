@@ -20,6 +20,7 @@ export default function SignInScreen() {
 
   const { session, user, isLoading } = useAuth();
   const error = useAuthStore((s) => s.error);
+  const isSubmitting = useAuthStore((s) => s.isSubmitting);
   const signIn = useAuthStore((s) => s.signIn);
   const signUp = useAuthStore((s) => s.signUp);
   const signOut = useAuthStore((s) => s.signOut);
@@ -67,7 +68,7 @@ export default function SignInScreen() {
             autoCapitalize="none"
             autoComplete="email"
             autoCorrect={false}
-            editable={!isLoading}
+            editable={!isLoading && !isSubmitting}
           />
           <TextInput
             className="rounded-lg bg-card border border-input px-4 py-3 text-fg text-base placeholder:text-fg3"
@@ -78,12 +79,12 @@ export default function SignInScreen() {
             autoCapitalize="none"
             autoComplete="current-password"
             autoCorrect={false}
-            editable={!isLoading}
+            editable={!isLoading && !isSubmitting}
           />
         </View>
 
         {/* Loading indicator */}
-        {isLoading ? (
+        {(isLoading || isSubmitting) ? (
           <View className="items-center py-2">
             <ActivityIndicator className="text-primary" />
           </View>
@@ -94,7 +95,7 @@ export default function SignInScreen() {
           <Pressable
             className="rounded-lg bg-primary px-4 py-3 items-center active:opacity-80 disabled:opacity-50"
             onPress={() => signIn(email, password)}
-            disabled={isLoading}
+            disabled={isLoading || isSubmitting}
             accessibilityRole="button"
             accessibilityLabel="Sign in"
           >
@@ -104,7 +105,7 @@ export default function SignInScreen() {
           <Pressable
             className="rounded-lg bg-accent px-4 py-3 items-center active:opacity-80 disabled:opacity-50"
             onPress={() => signUp(email, password)}
-            disabled={isLoading}
+            disabled={isLoading || isSubmitting}
             accessibilityRole="button"
             accessibilityLabel="Sign up"
           >
@@ -114,7 +115,7 @@ export default function SignInScreen() {
           <Pressable
             className="rounded-lg bg-card border border-line-2 px-4 py-3 items-center active:opacity-80 disabled:opacity-50"
             onPress={() => signInWithGoogle()}
-            disabled={isLoading}
+            disabled={isLoading || isSubmitting}
             accessibilityRole="button"
             accessibilityLabel="Continue with Google"
           >
@@ -124,7 +125,7 @@ export default function SignInScreen() {
           <Pressable
             className="rounded-lg bg-bg-2 border border-line px-4 py-3 items-center active:opacity-80 disabled:opacity-50"
             onPress={() => signOut()}
-            disabled={isLoading}
+            disabled={isLoading || isSubmitting}
             accessibilityRole="button"
             accessibilityLabel="Sign out"
           >

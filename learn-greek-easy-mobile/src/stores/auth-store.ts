@@ -12,6 +12,7 @@ interface AuthState {
   session: Session | null;
   user: User | null;
   isLoading: boolean;
+  isSubmitting: boolean;
   error: string | null;
   // Auth actions
   signIn: (email: string, password: string) => Promise<void>;
@@ -40,51 +41,73 @@ export const useAuthStore = create<AuthState>((set) => {
   _unsubscribe = () => subscription.unsubscribe();
 
   // Populate state from persisted session (resolves immediately if cached).
-  supabase.auth.getSession().then(({ data: { session } }) => {
+  supabase.auth.getSession().then(({ data: { session }, error }) => {
+    if (error) {
+      // Restore failed — reset loading so UI is never stuck. Do not log the
+      // error (it may contain token data); surface only a generic message.
+      set({ isLoading: false, error: 'Failed to restore session' });
+      return;
+    }
     set({
       session,
       user: session?.user ?? null,
       isLoading: false,
     });
+  }).catch(() => {
+    // Unexpected rejection — guarantee isLoading is cleared.
+    set({ isLoading: false, error: 'Failed to restore session' });
   });
 
   return {
     session: null,
     user: null,
     isLoading: true,
+    isSubmitting: false,
     error: null,
 
     signIn: async (email: string, password: string) => {
-      set({ error: null });
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        // error.message is a safe Supabase API message (not a raw credential).
-        set({ error: error.message });
+      set({ error: null, isSubmitting: true });
+      try {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          // error.message is a safe Supabase API message (not a raw credential).
+          set({ error: error.message });
+        }
+        // session/user update is handled by onAuthStateChange — not set here.
+      } finally {
+        set({ isSubmitting: false });
       }
-      // session/user update is handled by onAuthStateChange — not set here.
     },
 
     signUp: async (email: string, password: string) => {
-      set({ error: null });
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) {
-        set({ error: error.message });
+      set({ error: null, isSubmitting: true });
+      try {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) {
+          set({ error: error.message });
+        }
+        // session/user update is handled by onAuthStateChange — not set here.
+      } finally {
+        set({ isSubmitting: false });
       }
-      // session/user update is handled by onAuthStateChange — not set here.
     },
 
     signOut: async () => {
-      set({ error: null });
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        set({ error: error.message });
+      set({ error: null, isSubmitting: true });
+      try {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          set({ error: error.message });
+        }
+        // Storage adapter removes the persisted session; onAuthStateChange fires
+        // with a null session and clears session/user in state.
+      } finally {
+        set({ isSubmitting: false });
       }
-      // Storage adapter removes the persisted session; onAuthStateChange fires
-      // with a null session and clears session/user in state.
     },
 
     signInWithGoogle: async () => {
-      set({ error: null });
+      set({ error: null, isSubmitting: true });
       try {
         const redirectTo = makeRedirectUri();
 
@@ -117,6 +140,8 @@ export const useAuthStore = create<AuthState>((set) => {
         // Sanitize: surface only the message string, never token values.
         const message = err instanceof Error ? err.message : 'Google sign-in failed';
         set({ error: message });
+      } finally {
+        set({ isSubmitting: false });
       }
     },
 

@@ -7,7 +7,7 @@ The app uses the scheme `learngreekeasymobile` (defined in `app.config.ts`).
 The OAuth flow (AUTH-07) builds its redirect URI via `expo-auth-session`'s `makeRedirectUri()`.
 For a dev-client or standalone build this resolves to the scheme-based URL:
 
-```
+```text
 learngreekeasymobile://
 ```
 
