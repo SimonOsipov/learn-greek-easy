@@ -111,6 +111,11 @@ jobs:
         uses: dorny/paths-filter@v3
         id: filter
         with:
+          # 'every' = a file must match ALL patterns in a filter to count. Without it
+          # (default 'some'), '**' matches every file so `web` was always true. With
+          # 'every', a mobile file matches '**' but fails '!learn-greek-easy-mobile/**',
+          # so a mobile-only push yields web=false.
+          predicate-quantifier: 'every'
           filters: |
             web:
               - '**'
