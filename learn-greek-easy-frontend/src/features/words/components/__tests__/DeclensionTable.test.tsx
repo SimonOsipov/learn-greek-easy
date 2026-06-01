@@ -105,19 +105,25 @@ describe('NounDeclensionTable', () => {
       expect(screen.getByText('Case Forms')).toBeInTheDocument();
     });
 
-    it('displays gender badge for masculine nouns', () => {
+    it('renders the "Declension" eyebrow above the case-forms title', () => {
+      render(<NounDeclensionTable grammarData={mockNounData} />);
+
+      expect(screen.getByText('Declension')).toBeInTheDocument();
+    });
+
+    it('displays gender pill for masculine nouns', () => {
       render(<NounDeclensionTable grammarData={mockNounData} />);
 
       expect(screen.getByText('Masculine')).toBeInTheDocument();
     });
 
-    it('displays gender badge for feminine nouns', () => {
+    it('displays gender pill for feminine nouns', () => {
       render(<NounDeclensionTable grammarData={mockFeminineNounData} />);
 
       expect(screen.getByText('Feminine')).toBeInTheDocument();
     });
 
-    it('displays gender badge for neuter nouns', () => {
+    it('displays gender pill for neuter nouns', () => {
       render(<NounDeclensionTable grammarData={mockNeuterNounData} />);
 
       expect(screen.getByText('Neuter')).toBeInTheDocument();
@@ -333,10 +339,12 @@ describe('AdjectiveDeclensionTable', () => {
   });
 
   describe('Section Header', () => {
-    it('renders declension section title', () => {
+    it('renders declension section title and eyebrow', () => {
       render(<AdjectiveDeclensionTable grammarData={mockAdjectiveData} />);
 
-      expect(screen.getByText('Declension')).toBeInTheDocument();
+      // Both eyebrow <p> and CardTitle render "Declension"
+      const items = screen.getAllByText('Declension');
+      expect(items.length).toBeGreaterThanOrEqual(2);
     });
   });
 });

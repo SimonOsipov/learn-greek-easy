@@ -162,10 +162,19 @@ describe('ConjugationTable', () => {
   });
 
   describe('Section Header', () => {
-    it('renders conjugation section title', () => {
+    it('renders conjugation section title and eyebrow', () => {
       render(<ConjugationTable grammarData={mockVerbData} />);
 
-      expect(screen.getByText('Conjugation')).toBeInTheDocument();
+      // Both eyebrow <p> and CardTitle render "Conjugation"
+      const items = screen.getAllByText('Conjugation');
+      expect(items.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('does not render a gender pill (verbs have no gender)', () => {
+      render(<ConjugationTable grammarData={mockVerbData} />);
+
+      // No gender badge/pill should appear in the conjugation table
+      expect(screen.queryByTestId('gender-badge')).not.toBeInTheDocument();
     });
   });
 
@@ -173,8 +182,9 @@ describe('ConjugationTable', () => {
     it('renders within a Card component', () => {
       render(<ConjugationTable grammarData={mockVerbData} />);
 
-      // The conjugation table should be inside a Card
-      const card = screen.getByText('Conjugation').closest('[class*="card"]');
+      // Both eyebrow and CardTitle render "Conjugation"; pick the last one (CardTitle)
+      const items = screen.getAllByText('Conjugation');
+      const card = items[items.length - 1].closest('[class*="card"]');
       expect(card).toBeInTheDocument();
     });
   });

@@ -10,7 +10,6 @@ import { useState } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
-import { GenderBadge } from '@/components/review/grammar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollableTable } from '@/components/ui/scrollable-table';
 import {
@@ -81,33 +80,67 @@ function extractNounCaseData(grammarData: NounDataAny): CaseRow[] {
 // Noun Declension Table
 // ============================================
 
+// ============================================
+// Local Gender Pill (noun/adjective tables only — does NOT modify shared GenderBadge)
+// ============================================
+
+const GENDER_PILL_VARIANT: Record<string, string> = {
+  masculine: 'badge b-blue',
+  feminine: 'badge b-red',
+  neuter: 'badge b-gray',
+};
+
+interface LocalGenderPillProps {
+  gender: string;
+  label: string;
+}
+
+function LocalGenderPill({ gender, label }: LocalGenderPillProps) {
+  const variant = GENDER_PILL_VARIANT[gender] ?? 'badge b-gray';
+  return (
+    <span className={`${variant} font-mono text-[10px] uppercase tracking-wider`}>{label}</span>
+  );
+}
+
+// ============================================
+
 export function NounDeclensionTable({ grammarData }: NounDeclensionTableProps) {
   const { t } = useTranslation('review');
   const na = t('grammar.nounDeclension.notAvailable');
 
   const caseData = extractNounCaseData(grammarData);
+  const hasGender =
+    grammarData.gender && (GENDERS as readonly string[]).includes(grammarData.gender);
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className="rounded-2xl border px-1 py-1">
+      <CardHeader className="px-6 pb-2 pt-5">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">{t('grammar.sections.caseForms')}</CardTitle>
-          {grammarData.gender && (GENDERS as readonly string[]).includes(grammarData.gender) && (
-            <GenderBadge gender={grammarData.gender} />
+          <p className="font-mono text-[10.5px] font-semibold uppercase tracking-widest text-muted-foreground">
+            {t('grammar.sections.declension')}
+          </p>
+          {hasGender && (
+            <LocalGenderPill
+              gender={grammarData.gender!}
+              label={t(`grammar.nounDeclension.genders.${grammarData.gender}`)}
+            />
           )}
         </div>
+        <CardTitle className="font-display text-[18px] font-bold -tracking-tight">
+          {t('grammar.sections.caseForms')}
+        </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-6 pb-5">
         <ScrollableTable>
           <div className="min-w-[300px] overflow-hidden rounded-md border">
             <Table className="table-fixed">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="h-auto w-[35%] bg-muted/50 px-4 py-2 font-bold" />
-                  <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center font-bold">
+                  <TableHead className="h-auto w-[35%] bg-muted/50 px-4 py-2" />
+                  <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                     {t('grammar.nounDeclension.singular')}
                   </TableHead>
-                  <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center font-bold">
+                  <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                     {t('grammar.nounDeclension.plural')}
                   </TableHead>
                 </TableRow>
@@ -115,13 +148,13 @@ export function NounDeclensionTable({ grammarData }: NounDeclensionTableProps) {
               <TableBody>
                 {caseData.map(({ case: caseKey, singular, plural }) => (
                   <TableRow key={caseKey} className="hover:bg-transparent">
-                    <TableCell className="bg-muted/50 px-4 py-2 font-medium">
+                    <TableCell className="bg-muted/50 px-4 py-2 text-[13.5px] font-semibold text-muted-foreground">
                       {t(`grammar.nounDeclension.cases.${caseKey}`)}
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-center text-foreground">
+                    <TableCell className="px-4 py-3 text-center font-serif text-base font-semibold text-foreground">
                       {singular || na}
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-center text-foreground">
+                    <TableCell className="px-4 py-3 text-center font-serif text-base font-semibold text-foreground">
                       {plural || na}
                     </TableCell>
                   </TableRow>
@@ -217,20 +250,21 @@ interface GenderTableProps {
 function GenderTable({ gender, data, na, t }: GenderTableProps) {
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="bg-primary/10 px-4 py-2">
-        <CardTitle className="text-sm font-semibold text-primary">
-          {t(`grammar.adjectiveDeclension.genders.${gender}`)}
-        </CardTitle>
+      <CardHeader className="bg-muted/50 px-4 py-2">
+        <LocalGenderPill
+          gender={gender}
+          label={t(`grammar.adjectiveDeclension.genders.${gender}`)}
+        />
       </CardHeader>
       <CardContent className="p-0">
         <Table className="table-fixed">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="h-auto w-[35%] bg-muted/50 px-4 py-2" />
-              <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center">
+              <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 {t('grammar.nounDeclension.singular')}
               </TableHead>
-              <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center">
+              <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 {t('grammar.nounDeclension.plural')}
               </TableHead>
             </TableRow>
@@ -238,13 +272,13 @@ function GenderTable({ gender, data, na, t }: GenderTableProps) {
           <TableBody>
             {CASES.map((caseKey) => (
               <TableRow key={caseKey} className="hover:bg-transparent">
-                <TableCell className="bg-muted/50 px-4 py-2 font-medium">
+                <TableCell className="bg-muted/50 px-4 py-2 text-[13.5px] font-semibold text-muted-foreground">
                   {t(`grammar.nounDeclension.cases.${caseKey}`)}
                 </TableCell>
-                <TableCell className="px-4 py-2 text-center text-foreground">
+                <TableCell className="px-4 py-2 text-center font-serif text-base font-semibold text-foreground">
                   {data[caseKey].singular || na}
                 </TableCell>
-                <TableCell className="px-4 py-2 text-center text-foreground">
+                <TableCell className="px-4 py-2 text-center font-serif text-base font-semibold text-foreground">
                   {data[caseKey].plural || na}
                 </TableCell>
               </TableRow>
@@ -265,11 +299,16 @@ export function AdjectiveDeclensionTable({ grammarData }: AdjectiveDeclensionTab
   const hasComparison = grammarData.comparative || grammarData.superlative;
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg">{t('grammar.sections.declension')}</CardTitle>
+    <Card className="rounded-2xl border px-1 py-1">
+      <CardHeader className="px-6 pb-2 pt-5">
+        <p className="mb-1 font-mono text-[10.5px] font-semibold uppercase tracking-widest text-muted-foreground">
+          {t('grammar.sections.declension')}
+        </p>
+        <CardTitle className="font-display text-[18px] font-bold -tracking-tight">
+          {t('grammar.sections.declension')}
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 px-6 pb-5">
         {/* Gender tabs */}
         <Tabs value={selectedGender} onValueChange={(v) => setSelectedGender(v as Gender)}>
           <div className="overflow-x-auto">
