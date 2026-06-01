@@ -13,6 +13,11 @@ learngreekeasymobile://
 
 This value must be allow-listed in the Supabase dashboard for each project.
 
+> **Note:** The Supabase URL and anon key are no longer committed in `app.config.ts`.
+> They are provided via env vars (`SUPABASE_URL` / `SUPABASE_ANON_KEY`) — see
+> [docs/mobile-app.md](../../docs/mobile-app.md) for setup instructions (EAS env vars
+> for cloud builds; a local `.env` for dev).
+
 ---
 
 ## Manual Step 1 — Supabase Dashboard: Add Redirect URL
