@@ -47,7 +47,7 @@ Environment → Supabase project mapping:
 
 Create a gitignored `learn-greek-easy-mobile/.env` with the dev values:
 
-```
+```bash
 SUPABASE_URL=https://nyiyljmtbnvykbpdjfjq.supabase.co
 SUPABASE_ANON_KEY=<dev anon key>
 ```
