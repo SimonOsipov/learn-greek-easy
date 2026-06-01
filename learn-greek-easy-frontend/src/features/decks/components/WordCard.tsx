@@ -213,7 +213,7 @@ export const WordCard: React.FC<WordCardProps> = ({
     <Card
       data-testid="word-card"
       className={cn(
-        'relative overflow-hidden transition-all duration-200',
+        'relative h-full overflow-hidden transition-all duration-200',
         isClickable && 'cursor-pointer hover:border-primary hover:shadow-md'
       )}
       onClick={isClickable ? onClick : undefined}
@@ -222,7 +222,7 @@ export const WordCard: React.FC<WordCardProps> = ({
       onKeyDown={isClickable ? handleKeyDown : undefined}
       aria-label={`${lemma} - ${displayTranslation}`}
     >
-      <CardContent className="px-4 pb-4 pt-4">
+      <CardContent className="flex h-full flex-col px-4 pb-4 pt-4">
         {/* Head row: gender kicker (optional) + POS chip + mastery dot */}
         <div className="dx-word-card-head">
           <div className="flex items-center gap-2">
@@ -251,7 +251,7 @@ export const WordCard: React.FC<WordCardProps> = ({
         </div>
 
         {/* Main content - centered */}
-        <div className="flex flex-col items-center space-y-2 text-center">
+        <div className="flex flex-col space-y-2">
           {/* Greek lemma — Noto Serif, lang=el, not italic */}
           <h3
             data-testid="word-card-lemma"
@@ -277,7 +277,7 @@ export const WordCard: React.FC<WordCardProps> = ({
           </p>
 
           {/* Bottom mastery dots */}
-          <div className="pt-2">
+          <div className="mt-auto pt-2">
             <MasteryDots
               dots={
                 typeProgress && typeProgress.length > 0
