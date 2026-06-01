@@ -59,9 +59,8 @@ export default function SignInScreen() {
         {/* Credentials inputs */}
         <View className="gap-3">
           <TextInput
-            className="rounded-lg bg-card border border-input px-4 py-3 text-fg text-base"
+            className="rounded-lg bg-card border border-input px-4 py-3 text-fg text-base placeholder:text-fg3"
             placeholder="Email"
-            placeholderTextColor="hsl(var(--fg-3))"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -71,9 +70,8 @@ export default function SignInScreen() {
             editable={!isLoading}
           />
           <TextInput
-            className="rounded-lg bg-card border border-input px-4 py-3 text-fg text-base"
+            className="rounded-lg bg-card border border-input px-4 py-3 text-fg text-base placeholder:text-fg3"
             placeholder="Password"
-            placeholderTextColor="hsl(var(--fg-3))"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
