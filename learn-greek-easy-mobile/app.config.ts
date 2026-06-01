@@ -6,43 +6,36 @@ type VariantConfig = {
   name: string;
   bundleId: string;
   icon: string;
-  supabaseUrl: string;
-  supabaseAnonKey: string;
 };
-
-const DEV_SUPABASE_URL = 'https://nyiyljmtbnvykbpdjfjq.supabase.co';
-const DEV_SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55aXlsam10Ym52eWticGRqZmpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwNzgwODIsImV4cCI6MjA4NjY1NDA4Mn0.gYDkCtg7cMAAhp_S1tJEeKWRpD1nfBpAG4EV-PhkDKg';
 
 const VARIANTS: Record<Variant, VariantConfig> = {
   production: {
     name: 'Greeklish',
     bundleId: 'eu.greeklish.app',
     icon: './assets/images/icon.png',
-    supabaseUrl: 'https://qduwfsuybkqsginndguz.supabase.co',
-    supabaseAnonKey:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkdXdmc3V5Ymtxc2dpbm5kZ3V6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwNzM5MjEsImV4cCI6MjA4NjY0OTkyMX0.NpDnp3acY57GBg0oTHLHP60TXlviZQ5dOSgQJaS4otQ',
   },
   preview: {
     name: 'Greeklish (Preview)',
     bundleId: 'eu.greeklish.app.preview',
     icon: './assets/images/icon.png',
-    supabaseUrl: DEV_SUPABASE_URL,
-    supabaseAnonKey: DEV_SUPABASE_ANON_KEY,
   },
   development: {
     name: 'Greeklish (Dev)',
     bundleId: 'eu.greeklish.app.dev',
     icon: './assets/images/icon.png',
-    supabaseUrl: DEV_SUPABASE_URL,
-    supabaseAnonKey: DEV_SUPABASE_ANON_KEY,
   },
 };
 
 const rawVariant = process.env.APP_VARIANT;
 const variant: Variant =
   rawVariant && rawVariant in VARIANTS ? (rawVariant as Variant) : 'development';
-const { name, bundleId, icon, supabaseUrl, supabaseAnonKey } = VARIANTS[variant];
+const { name, bundleId, icon } = VARIANTS[variant];
+
+// Supabase config comes from EAS environment variables (server-side, scoped per environment)
+// for cloud builds, or from a gitignored local .env for local development.
+// src/lib/config.ts throws at app runtime if these are missing.
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
 const config: ExpoConfig = {
   name,
