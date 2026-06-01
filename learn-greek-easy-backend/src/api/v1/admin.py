@@ -813,6 +813,7 @@ async def get_deck(
 async def upload_deck_cover_image(
     deck_id: UUID,
     file: UploadFile,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> DeckAdminResponse:
@@ -844,13 +845,13 @@ async def upload_deck_cover_image(
     if not uploaded:
         raise HTTPException(status_code=500, detail="Failed to upload cover image")
 
-    # Generate WebP derivatives alongside the original (PERF-10).
-    # Failures are swallowed inside maybe_generate_derivatives — upload succeeds regardless.
-    await asyncio.to_thread(maybe_generate_derivatives, s3_key, data, file.content_type)
-
     deck.cover_image_s3_key = s3_key
     await db.commit()
     await db.refresh(deck)
+
+    # Generate WebP derivatives after the DB commit — fire-and-forget (PERF-10).
+    # Failures are swallowed inside maybe_generate_derivatives — upload succeeds regardless.
+    background_tasks.add_task(maybe_generate_derivatives, s3_key, data, file.content_type)
 
     # Delete old key only after commit — if commit fails, the row still
     # references the old object and we must not orphan it.
@@ -4798,6 +4799,7 @@ async def update_situation_picture(
 async def upload_situation_picture(
     situation_id: UUID,
     file: UploadFile,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ) -> PictureNested:
     """Upload a PNG/JPEG/WebP image directly to replace the generated picture."""
@@ -4835,12 +4837,13 @@ async def upload_situation_picture(
     if not uploaded:
         raise HTTPException(status_code=500, detail="Failed to upload picture")
 
-    # Generate WebP derivatives alongside the original (PERF-10).
-    await asyncio.to_thread(maybe_generate_derivatives, s3_key, data, file.content_type)
-
     picture.image_s3_key = s3_key
     await db.commit()
     await db.refresh(picture)
+
+    # Generate WebP derivatives after the DB commit — fire-and-forget (PERF-10).
+    # Failures are swallowed inside maybe_generate_derivatives — upload succeeds regardless.
+    background_tasks.add_task(maybe_generate_derivatives, s3_key, data, file.content_type)
 
     if prior_key and prior_key != s3_key:
         try:

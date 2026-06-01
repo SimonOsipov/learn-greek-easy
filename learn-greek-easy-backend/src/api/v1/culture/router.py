@@ -23,7 +23,6 @@ Admin Endpoints (superuser only):
 - DELETE /culture/questions/{question_id} - Delete a question
 """
 
-import asyncio
 import hashlib
 from typing import Optional
 from uuid import UUID
@@ -175,6 +174,8 @@ async def list_culture_decks(
     # PERF-08: short private TTL cache — deck list is user-specific (includes progress)
     # so must be private. 60s avoids repeat fetches within the same browse session.
     response.headers["Cache-Control"] = "private, max-age=60"
+    # Vary on Accept-Language so a private cache doesn't reuse one locale's payload for another.
+    response.headers["Vary"] = "Accept-Language"
 
     return await service.list_decks(
         page=page,
@@ -442,6 +443,8 @@ async def get_question_queue(
     # 30s is safe: SM-2 scheduling is date-granular, so within-session freshness
     # is preserved. Force-practice bypasses stale concerns via explicit intent.
     response.headers["Cache-Control"] = "private, max-age=30"
+    # Vary on Accept-Language so a private cache doesn't reuse one locale's payload for another.
+    response.headers["Vary"] = "Accept-Language"
 
     return await service.get_question_queue(
         user_id=current_user.id,
@@ -912,6 +915,7 @@ async def delete_culture_deck(
 async def upload_culture_deck_cover_image(
     deck_id: UUID,
     file: UploadFile,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> CultureDeckAdminResponse:
@@ -943,12 +947,13 @@ async def upload_culture_deck_cover_image(
     if not uploaded:
         raise HTTPException(status_code=500, detail="Failed to upload cover image")
 
-    # Generate WebP derivatives alongside the original (PERF-10).
-    await asyncio.to_thread(maybe_generate_derivatives, s3_key, data, file.content_type)
-
     deck.cover_image_s3_key = s3_key
     await db.commit()
     await db.refresh(deck)
+
+    # Generate WebP derivatives after the DB commit — fire-and-forget (PERF-10).
+    # Failures are swallowed inside maybe_generate_derivatives — upload succeeds regardless.
+    background_tasks.add_task(maybe_generate_derivatives, s3_key, data, file.content_type)
 
     # Delete old key only after commit — if commit fails, the row still
     # references the old object and we must not orphan it.

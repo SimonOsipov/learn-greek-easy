@@ -87,7 +87,11 @@ def _derivative_exists(client: Any, bucket: str, derivative_key: str) -> bool:
 
 
 def _plan_dry_run(client: Any, bucket: str, key: str, counters: _Counters) -> None:
-    """Log planned derivative keys for *key* without writing (dry-run path)."""
+    """Log planned derivative keys for *key* without writing (dry-run path).
+
+    Applies the same "skip if derivative already exists" logic as the live path so
+    the reported count matches what a live run would actually generate.
+    """
     head = client.head_object(Bucket=bucket, Key=key)
     content_type = head.get("ContentType", "")
     if content_type not in _IMAGE_CONTENT_TYPES:
@@ -97,8 +101,12 @@ def _plan_dry_run(client: Any, bucket: str, key: str, counters: _Counters) -> No
     base_without_ext = posixpath.splitext(key)[0]
     for width in DERIVATIVE_WIDTHS:
         derivative_key = f"{base_without_ext}_{width}w.webp"
-        logger.info(f"[DRY RUN] {key!r} -> would generate {derivative_key!r}")
-        counters.generated += 1
+        if _derivative_exists(client, bucket, derivative_key):
+            logger.debug(f"[DRY RUN] Skipping {derivative_key!r} — already exists")
+            counters.skipped_exists += 1
+        else:
+            logger.info(f"[DRY RUN] {key!r} -> would generate {derivative_key!r}")
+            counters.generated += 1
 
 
 def _process_live(

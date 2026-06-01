@@ -5,6 +5,7 @@ This service handles:
 - Presigned URL generation for responses
 """
 
+import asyncio
 from typing import Optional
 from uuid import UUID, uuid4
 
@@ -381,8 +382,9 @@ class NewsItemService:
         if not success:
             raise ValueError("Failed to upload image to S3")
         # Generate WebP derivatives alongside the original (PERF-10).
+        # Offloaded to a thread so the sync call doesn't block the event loop.
         # Failures are swallowed inside maybe_generate_derivatives.
-        maybe_generate_derivatives(s3_key, image_bytes, content_type)
+        await asyncio.to_thread(maybe_generate_derivatives, s3_key, image_bytes, content_type)
         return s3_key
 
     @staticmethod

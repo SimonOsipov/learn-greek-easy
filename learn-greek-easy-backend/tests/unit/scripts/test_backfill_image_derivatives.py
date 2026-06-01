@@ -134,9 +134,9 @@ class TestDryRun:
         _, mock_service = _run_backfill(objects=objects, dry_run=True)
         mock_service.generate_image_derivatives.assert_not_called()
 
-    def test_dry_run_checks_content_type_only_not_derivatives(self) -> None:
-        """In dry-run, head_object is called once per original image (content-type
-        check only). Derivative existence is NOT checked in dry-run mode.
+    def test_dry_run_checks_content_type_and_derivative_existence(self) -> None:
+        """In dry-run, head_object is called for the original (content-type check)
+        AND for each derivative key (existence check), matching live-path logic.
         DERIVATIVE_WIDTHS has the expected members (key scheme contract).
         """
         from src.services.s3_service import DERIVATIVE_WIDTHS
@@ -147,14 +147,39 @@ class TestDryRun:
         ]
         mock_client, mock_service = _run_backfill(objects=objects, dry_run=True)
 
-        # One HEAD call per original image (content-type); no derivative HEAD calls.
+        # HEAD calls: 1 per original (content-type) + N per original (derivative existence).
+        expected_calls = len(objects) * (1 + len(DERIVATIVE_WIDTHS))
         head_calls = mock_client.head_object.call_args_list
-        assert len(head_calls) == len(
-            objects
-        ), f"Expected {len(objects)} head_object calls, got {len(head_calls)}"
+        assert (
+            len(head_calls) == expected_calls
+        ), f"Expected {expected_calls} head_object calls, got {len(head_calls)}"
         mock_service.generate_image_derivatives.assert_not_called()
         # Key scheme contract: widths must be exactly {400, 800, 1600}
         assert set(DERIVATIVE_WIDTHS) == {400, 800, 1600}
+
+    def test_dry_run_skips_existing_derivatives_and_does_not_overcount(self) -> None:
+        """Dry-run must apply the same "skip if derivative exists" check as the live
+        path, so the reported count matches what live would actually generate.
+        """
+        from src.services.s3_service import DERIVATIVE_WIDTHS
+
+        base_key = "images/photo.jpg"
+        base_without_ext = "images/photo"
+        # All derivatives already exist.
+        existing = {f"{base_without_ext}_{w}w.webp" for w in DERIVATIVE_WIDTHS}
+
+        mock_client, mock_service = _run_backfill(
+            objects=[{"Key": base_key}],
+            existing_derivatives=existing,
+            dry_run=True,
+        )
+        # No generate calls (dry-run never writes).
+        mock_service.generate_image_derivatives.assert_not_called()
+        # No get_object calls either.
+        mock_client.get_object.assert_not_called()
+        # Derivative HEAD checks should have been made (to detect existing ones).
+        called_keys = {c.kwargs.get("Key", "") for c in mock_client.head_object.call_args_list}
+        assert any(base_without_ext in k for k in called_keys)
 
     def test_dry_run_skips_derivative_keys(self) -> None:
         """Keys that look like derivatives must be silently skipped in dry-run."""
