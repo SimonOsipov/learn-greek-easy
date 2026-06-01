@@ -424,3 +424,47 @@ New classes in `src/index.css` for the Culture hub (`CulturePage` / `CultureHero
 | `.cx-whatsnew-l` | "In Culture" eyebrow label, first child of the what's-new strip. JetBrains Mono 10.5px/700, `letter-spacing: 0.1em`, uppercase, `hsl(var(--fg-3))`, with a small green `::before` dot (`hsl(var(--success))` + soft `0.18` alpha ring). |
 
 **Design system delta (CULT2-2):** adds `.cx-cta-primary` and `.cx-whatsnew-l`; no tokens introduced.
+
+---
+
+## Mobile (NativeWind)
+
+Mobile token infrastructure added in MOB-02. NativeWind v4 on React Native / Expo.
+
+### Copy-first model
+
+Mobile mirrors the web **App palette only** with web token-name parity. The same utility classes (`bg-primary`, `text-fg`, `text-fg2`, `text-fg3`, `border-line`, `bg-card`, `bg-bg`, `bg-bg-2`, etc.) work identically on mobile and web.
+
+**Important:** Web token changes must be **manually mirrored** to `learn-greek-easy-mobile/src/global.css` until a shared config lands. This is intentional — a shared monorepo config is out of scope for MOB-02.
+
+### Where mobile tokens live
+
+| File | Role |
+|---|---|
+| `learn-greek-easy-mobile/src/global.css` | CSS custom properties under `:root` (light) and `.dark` (dark), plus `@tailwind` directives. Source of truth for mobile HSL channel values. |
+| `learn-greek-easy-mobile/tailwind.config.js` | Named Tailwind utilities mapping to `hsl(var(--token))`, `darkMode: 'class'`, `presets: [nativewind/preset]`. |
+
+**Naming quirk:** `fg2` / `fg3` are dashless in mobile `tailwind.config.js` (map to `--fg-2` / `--fg-3`), while `bg-2`, `line-2`, `primary-2` keep their dashes. This mirrors what the web Tailwind config exposes and lets NativeWind resolve the CSS vars at runtime.
+
+**Border radius:** `borderRadius` values in `learn-greek-easy-mobile/tailwind.config.js` are hardcoded `px` (e.g. `lg: 14px`). NativeWind does not evaluate CSS `calc()` for border-radius on native; all radius tokens are concrete pixel values.
+
+### Excluded palettes
+
+The following palettes are **not ported** to mobile and must not be added to `learn-greek-easy-mobile/src/global.css` or `tailwind.config.js`:
+
+- Landing (`--landing-*`)
+- Practice (`--practice-*`)
+- Founders (`--founders-*`)
+- Tense (`--tense-*`)
+- Situations thumbnail (`--sit-thumb-*`)
+- Charts (`--chart-*`)
+
+### Dark mode
+
+`app.config.ts` sets `userInterfaceStyle: 'automatic'` so the OS system preference drives the theme. NativeWind's `dark:` variant follows that system theme automatically — no manual toggle is wired or needed. The `.dark` class is applied by NativeWind's color-scheme runtime.
+
+### Known follow-ups
+
+**(a) Template screens + `constants/theme.ts` Colors:** The SDK-56 Expo template ships `ThemedText`, `ThemedView`, and a `constants/theme.ts` `Colors` object using raw hex. These are still active and pending migration in MOB-03+. Do not remove them in MOB-02.
+
+**(b) Font parity deferred:** `global.css` maps `--font-display`, `--font-serif`, `--font-mono`, and `--font-rounded`, but the corresponding font files are not yet bundled via `expo-font`. Type renders with system fallbacks until a later story loads them explicitly.
