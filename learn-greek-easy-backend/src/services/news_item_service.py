@@ -460,11 +460,12 @@ class NewsItemService:
         image_url = self.s3_service.generate_presigned_url(
             situation.source_image_s3_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
         )
-        image_variants = (
+        _raw_image_variants = (
             self.s3_service.get_derivative_presigned_urls(situation.source_image_s3_key)
             if situation.source_image_s3_key
             else None
         )
+        image_variants = _raw_image_variants if isinstance(_raw_image_variants, dict) else None
         audio_url = self.s3_service.generate_presigned_url(description.audio_s3_key)
         audio_a2_url = self.s3_service.generate_presigned_url(description.audio_a2_s3_key)
 

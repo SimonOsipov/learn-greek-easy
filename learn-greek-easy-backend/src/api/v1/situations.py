@@ -233,8 +233,9 @@ async def get_situation(
         source_image_url = s3.generate_presigned_url(
             situation.source_image_s3_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
         )
+        _raw_source_variants = s3.get_derivative_presigned_urls(situation.source_image_s3_key)
         source_image_variants = (
-            s3.get_derivative_presigned_urls(situation.source_image_s3_key) or None
+            _raw_source_variants if isinstance(_raw_source_variants, dict) else None
         )
 
     # Picture (presigned only when generated)
@@ -248,7 +249,10 @@ async def get_situation(
         picture_url = s3.generate_presigned_url(
             situation.picture.image_s3_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
         )
-        picture_variants = s3.get_derivative_presigned_urls(situation.picture.image_s3_key) or None
+        _raw_picture_variants = s3.get_derivative_presigned_urls(situation.picture.image_s3_key)
+        picture_variants = (
+            _raw_picture_variants if isinstance(_raw_picture_variants, dict) else None
+        )
 
     return LearnerSituationDetailResponse(
         id=situation.id,

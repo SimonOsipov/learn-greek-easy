@@ -5009,8 +5009,9 @@ async def list_situations(
         picture_image_variants: dict[int, str] | None = None
         if s.picture is not None and s.picture.image_s3_key:
             picture_image_url = s3_svc.generate_presigned_url(s.picture.image_s3_key)
+            _raw_pic_variants = s3_svc.get_derivative_presigned_urls(s.picture.image_s3_key)
             picture_image_variants = (
-                s3_svc.get_derivative_presigned_urls(s.picture.image_s3_key) or None
+                _raw_pic_variants if isinstance(_raw_pic_variants, dict) else None
             )
 
         items.append(

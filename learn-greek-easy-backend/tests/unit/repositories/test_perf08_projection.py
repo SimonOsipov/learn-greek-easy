@@ -13,7 +13,15 @@ from sqlalchemy import inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstanceState
 
-from src.db.models import CardRecord, CardType, CultureDeck, CultureQuestion, Deck, DeckLevel
+from src.db.models import (
+    CardRecord,
+    CardType,
+    CultureDeck,
+    CultureQuestion,
+    Deck,
+    DeckLevel,
+    PartOfSpeech,
+)
 from src.repositories.card_record import _GET_BY_DECK_COLUMNS as CARD_RECORD_PROJECTED
 from src.repositories.card_record import CardRecordRepository
 from src.repositories.culture_question import _GET_BY_DECK_COLUMNS as CULTURE_Q_PROJECTED
@@ -74,15 +82,19 @@ async def v2_deck(db_session: AsyncSession) -> Deck:
 
 
 @pytest.fixture
-async def word_entry(db_session: AsyncSession, v2_deck: Deck):
-    """Minimal WordEntry fixture."""
+async def word_entry(db_session: AsyncSession):
+    """Minimal WordEntry fixture.
+
+    WordEntry has no deck_id column; decks are linked via the DeckWordEntry
+    association table. Only owner_id, lemma, part_of_speech, and translation_en
+    are required here.
+    """
     from src.db.models import WordEntry
 
     we = WordEntry(
-        deck_id=v2_deck.id,
-        greek_word="σπίτι",
+        lemma="σπίτι",
+        part_of_speech=PartOfSpeech.NOUN,
         translation_en="house",
-        level="A1",
         is_active=True,
     )
     db_session.add(we)

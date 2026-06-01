@@ -193,9 +193,10 @@ def _build_select_picture_payload(
             raise InsufficientDistractorPoolError(
                 f"failed to presign image for situation {sp.situation_id}"
             )
-        variants = (
-            s3.get_derivative_presigned_urls(sp.image_s3_key) or None if sp.image_s3_key else None
+        _raw_variants = (
+            s3.get_derivative_presigned_urls(sp.image_s3_key) if sp.image_s3_key else None
         )
+        variants = _raw_variants if isinstance(_raw_variants, dict) else None
         options.append(PictureMatchOption(option_index=idx, image_url=url, image_variants=variants))
     return SelectPictureFromDescriptionPayload(
         prompt_description=anchor_description.text_el,

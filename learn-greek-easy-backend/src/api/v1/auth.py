@@ -270,27 +270,29 @@ async def logout_all(
 async def get_me(
     request: Request,
     current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ) -> UserProfileResponse:
     """Get the current authenticated user's profile.
 
     Returns the user's profile information including their settings.
     Requires a valid JWT access token in the Authorization header.
 
-    The get_current_user dependency always returns a User with settings
-    eager-loaded (via selectinload on all paths in get_or_create_user),
-    so no additional DB query is needed here.
+    Reloads user from database to ensure clean session state and avoid
+    MissingGreenlet errors when serializing ORM objects across async contexts.
 
     The user's settings (daily_goal, email_notifications) are included
     in the response for convenience.
 
     Args:
-        current_user: The authenticated user with settings eager-loaded
+        current_user: The authenticated user (injected via dependency)
+        db: Database session (injected)
 
     Returns:
         UserProfileResponse: User profile with embedded settings
 
     Raises:
         HTTPException(401): If not authenticated or token invalid
+        HTTPException(404): If user no longer exists (rare edge case)
 
     Example Request:
         GET /api/v1/auth/me
@@ -316,7 +318,12 @@ async def get_me(
             }
         }
     """
-    return _build_user_profile_response(current_user, auth_provider=_extract_auth_provider(request))
+    # Reload user with settings to ensure clean session state
+    stmt = select(User).options(selectinload(User.settings)).where(User.id == current_user.id)
+    result = await db.execute(stmt)
+    user = result.scalar_one()
+
+    return _build_user_profile_response(user, auth_provider=_extract_auth_provider(request))
 
 
 @router.patch(

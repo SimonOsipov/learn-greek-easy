@@ -622,7 +622,7 @@ class TestGetSituationDetail:
     ):
         """get_situation returns presigned URLs for description audio."""
         mock_s3_service.generate_presigned_url.side_effect = (
-            lambda key: f"https://s3.example.com/{key}"
+            lambda key, **kwargs: f"https://s3.example.com/{key}"
         )
 
         situation = await SituationFactory.create()
@@ -679,7 +679,7 @@ class TestGetSituationDetail:
     ):
         """get_situation returns presigned image_url when picture has image_s3_key."""
         mock_s3_service.generate_presigned_url.side_effect = (
-            lambda key: f"https://s3.example.com/{key}"
+            lambda key, **kwargs: f"https://s3.example.com/{key}"
         )
 
         situation = await SituationFactory.create()
@@ -710,7 +710,7 @@ class TestUploadSituationPicture:
         """Uploading a valid PNG sets image_s3_key and returns presigned image_url."""
         mock_s3_service.upload_object.return_value = True
         mock_s3_service.generate_presigned_url.side_effect = (
-            lambda key: f"https://s3.example.com/{key}"
+            lambda key, **kwargs: f"https://s3.example.com/{key}"
         )
         mock_s3_service.get_extension_for_content_type = lambda ct: (
             "png" if ct == "image/png" else "jpg"
