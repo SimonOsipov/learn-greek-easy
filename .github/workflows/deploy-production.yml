@@ -91,12 +91,40 @@ jobs:
           exit $TSC_EXIT
 
   # =============================================================================
+  # JOB 1c: Detect Changed Areas (MOB-01a)
+  # Purpose: A mobile-only merge to main must NOT redeploy backend/frontend.
+  # web = any non-mobile change. On push, paths-filter diffs against the previous
+  # main commit, so `web` reflects what the merged PR actually changed.
+  # =============================================================================
+  changes:
+    name: Detect Changed Areas
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Filter changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            web:
+              - '**'
+              - '!learn-greek-easy-mobile/**'
+
+  # =============================================================================
   # JOB 2: Deploy Backend
   # Purpose: Deploy backend service and wait for health check
+  # Skipped on mobile-only merges (web == false) — MOB-01a.
   # =============================================================================
   deploy-backend:
     name: Deploy Backend
-    needs: [pre-deploy-check, tsc-build]
+    needs: [pre-deploy-check, tsc-build, changes]
+    if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     container: ghcr.io/railwayapp/cli:latest
     environment:

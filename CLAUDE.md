@@ -173,3 +173,5 @@ Update this file when features are merged, phases change, or key decisions are m
 - [Supabase Database](docs/supabase-database.md) - Database credentials, connectivity, and migration guide
 - [Analytics Events](docs/analytics-events.md) - PostHog event naming, when to create, and implementation patterns
 - [Testing](docs/testing.md) - Test strategy, fixtures, factories, coverage, and CI/CD
+- [Mobile App](docs/mobile-app.md) - Expo dev client, APP_VARIANT variants, EAS build commands, verification
+- [Mobile CI/CD](docs/mobile-ci.md) - Mobile vs web pipeline split, CI Gate required check, branch protection
