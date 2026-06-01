@@ -4,8 +4,8 @@
  * Acceptance criteria:
  * 1. is-playing class present on onPlayStateChange(true) / absent on (false)
  * 2. DonutRing done=masteredCards / total=totalCards + NO dot
- * 3. exactly TWO UnwiredDots in the hero (R4 extra-gloss + R3 WeekHeat),
- *    both with danger tone + correct aria-label
+ * 3. exactly ONE UnwiredDot in the hero (R3 WeekHeat),
+ *    with danger tone + correct aria-label
  * 4. voice-speed change calls setPersistedAudioSpeed
  * 5. Greek headline lang="el" + not italic
  * 6. back link → /decks/:deckId
@@ -245,28 +245,19 @@ describe('WordHero — DX-09', () => {
     });
   });
 
-  describe('3. Exactly TWO UnwiredDots, both danger tone', () => {
-    it('renders exactly 2 UnwiredDots', () => {
+  describe('3. Exactly ONE UnwiredDot (R3 WeekHeat), danger tone', () => {
+    it('renders exactly 1 UnwiredDot', () => {
       renderHero();
       const dots = screen.getAllByTestId('unwired-dot');
-      expect(dots).toHaveLength(2);
+      expect(dots).toHaveLength(1);
     });
 
-    it('both UnwiredDots have tone="danger"', () => {
+    it('UnwiredDot has tone="danger"', () => {
       renderHero();
       const dots = screen.getAllByTestId('unwired-dot');
       dots.forEach((dot) => {
         expect(dot).toHaveAttribute('data-tone', 'danger');
       });
-    });
-
-    it('R4 extra-gloss UnwiredDot has correct aria-label', () => {
-      renderHero();
-      const dots = screen.getAllByTestId('unwired-dot');
-      const extraGlossDot = dots.find((d) =>
-        d.getAttribute('aria-label')?.toLowerCase().includes('extra gloss')
-      );
-      expect(extraGlossDot).toBeDefined();
     });
 
     it('R3 WeekHeat UnwiredDot has correct aria-label', () => {
@@ -282,12 +273,6 @@ describe('WordHero — DX-09', () => {
       renderHero();
       const heat = screen.getByTestId('week-heat');
       expect(heat.closest('[data-testid="unwired-dot"]')).not.toBeNull();
-    });
-
-    it('extra-gloss placeholder paragraph is inside an UnwiredDot', () => {
-      renderHero();
-      const extra = screen.getByTestId('word-en-extra');
-      expect(extra.closest('[data-testid="unwired-dot"]')).not.toBeNull();
     });
   });
 

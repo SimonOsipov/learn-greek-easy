@@ -1218,14 +1218,6 @@
   color: hsl(var(--fg));
   margin: 2px 0 0;
 }
-.dx-w-en-extra {
-  font-size: 13.5px;
-  color: hsl(var(--fg-3));
-  font-style: italic;
-  margin: 4px 0 0;
-  max-width: 580px;
-  line-height: 1.5;
-}
 .dx-w-hero-bottom {
   display: flex;
   align-items: center;

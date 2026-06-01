@@ -317,25 +317,10 @@ test.describe('DX-15: Word Reference — UnwiredDot presence (R3-R8)', () => {
     const hero = page.locator('[data-testid="word-hero"]');
     await expect(hero).toBeVisible({ timeout: 10000 });
 
-    // R3: UnwiredDot wrapping WeekHeat in the hero stats area
+    // R3: UnwiredDot wrapping WeekHeat in the hero stats area (R4 extra-gloss removed)
     const heroUnwiredDots = hero.locator('[data-testid="unwired-dot"]');
-    // Hero has R4 (extra gloss) + R3 (WeekHeat) = at least 2 dots
     const dotCount = await heroUnwiredDots.count();
-    expect(dotCount).toBeGreaterThanOrEqual(2);
-  });
-
-  test('DX-15.7: R4 — extra gloss placeholder UnwiredDot visible', async ({ page }) => {
-    await navigateToWordReference(page);
-
-    const hero = page.locator('[data-testid="word-hero"]');
-    await expect(hero).toBeVisible({ timeout: 10000 });
-
-    // R4: extra-gloss dot — wraps the extra translation placeholder
-    const extraGloss = page.locator('[data-testid="word-en-extra"]');
-    await expect(extraGloss).toBeVisible();
-    // The extra gloss is inside an UnwiredDot wrapper
-    const closestDot = extraGloss.locator('xpath=ancestor::*[@data-testid="unwired-dot"][1]');
-    await expect(closestDot).toBeVisible();
+    expect(dotCount).toBe(1);
   });
 
   test('DX-15.8: R5 — example tag amber UnwiredDot visible', async ({ page }) => {
