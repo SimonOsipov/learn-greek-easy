@@ -137,6 +137,7 @@ class CultureDeckService:
     async def _build_localized_deck_response(
         self,
         deck: "CultureDeck",
+        question_count: int,
         locale: str,
         user_id: Optional[UUID] = None,
     ) -> CultureDeckResponse:
@@ -144,16 +145,18 @@ class CultureDeckService:
 
         Args:
             deck: CultureDeck model instance
+            question_count: Precomputed question count (caller must batch via
+                get_batch_question_counts before the loop to avoid N+1).
             locale: Target locale (en, el, ru)
             user_id: Optional user UUID for progress
 
         Returns:
             CultureDeckResponse with single-language content
         """
-        # Get question count
-        question_count = await self.deck_repo.count_questions(deck.id)
-
-        # Get progress if user is authenticated
+        # Get progress if user is authenticated.
+        # Progress stays per-deck: no batch helper covers the full
+        # (has_started + count_by_status + last_practiced_at) triple.
+        # The COUNT N+1 is eliminated by the precomputed question_count.
         progress = None
         if user_id:
             progress = await self._get_deck_progress(user_id, deck.id)
@@ -281,10 +284,17 @@ class CultureDeckService:
         )
         total = await self.deck_repo.count_active(category=category)
 
+        # Batch-fetch all question counts in one query to avoid N+1.
+        deck_ids = [deck.id for deck in decks]
+        question_counts = await self.deck_repo.get_batch_question_counts(deck_ids)
+
         # Build response for each deck with locale
         deck_responses = []
         for deck in decks:
-            response = await self._build_localized_deck_response(deck, normalized_locale, user_id)
+            count = question_counts.get(deck.id, 0)
+            response = await self._build_localized_deck_response(
+                deck, count, normalized_locale, user_id
+            )
             deck_responses.append(response)
 
         logger.info(

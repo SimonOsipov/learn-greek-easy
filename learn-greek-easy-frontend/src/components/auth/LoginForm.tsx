@@ -42,9 +42,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import log from '@/lib/logger';
 import { supabase } from '@/lib/supabaseClient';
-import { authAPI } from '@/services/authAPI';
 import { useAuthStore } from '@/stores/authStore';
-import type { User } from '@/types/auth';
 
 /**
  * Login form validation schema
@@ -109,9 +107,8 @@ export const LoginForm: React.FC = () => {
   /**
    * Handle form submission
    * 1. Authenticate with Supabase via signInWithPassword
-   * 2. Fetch user profile from backend
-   * 3. Update auth store with user data
-   * 4. Navigate to dashboard
+   * 2. Let checkAuth fetch the profile and populate the store (deduplicated)
+   * 3. Navigate to dashboard
    */
   const onSubmit = async (data: LoginFormData) => {
     setFormError(null);
@@ -134,55 +131,29 @@ export const LoginForm: React.FC = () => {
         throw new Error('Authentication failed - no user returned');
       }
 
-      log.info('[LoginForm] Supabase login successful, fetching profile');
+      log.info('[LoginForm] Supabase login successful, fetching profile via store');
 
-      // Step 2: Fetch profile from backend to populate auth store
-      const profileResponse = await authAPI.getProfile();
+      // Step 2: Let the store's checkAuth populate user state.
+      // checkAuth is deduplicated — concurrent calls share one in-flight request.
+      // We bypass the freshness window here by resetting _profileFetchedAt to 0
+      // on logout (ensured in authStore), so after a fresh login this always fetches.
+      await useAuthStore.getState().checkAuth();
 
-      // Step 3: Transform to User type and set in auth store
-      const user: User = {
-        id: profileResponse.id,
-        email: profileResponse.email,
-        name: profileResponse.full_name || profileResponse.email.split('@')[0],
-        avatar: profileResponse.avatar_url || undefined,
-        role: profileResponse.effective_role ?? (profileResponse.is_superuser ? 'admin' : 'free'),
-        preferences: {
-          language: 'en',
-          dailyGoal: profileResponse.settings?.daily_goal || 20,
-          notifications: profileResponse.settings?.email_notifications ?? true,
-          theme: profileResponse.settings?.theme || 'light',
-        },
-        stats: {
-          streak: 0,
-          wordsLearned: 0,
-          totalXP: 0,
-          joinedDate: new Date(profileResponse.created_at),
-        },
-        createdAt: new Date(profileResponse.created_at),
-        updatedAt: new Date(profileResponse.updated_at),
-        authProvider: profileResponse.auth_provider ?? undefined,
-      };
-
-      // Track with PostHog
-      if (typeof posthog?.identify === 'function') {
-        posthog.identify(user.id, {
-          email: user.email,
-          created_at: user.createdAt.toISOString(),
-        });
+      // Step 3: PostHog tracking (identify already done inside checkAuth)
+      const storeUser = useAuthStore.getState().user;
+      if (storeUser) {
+        if (typeof posthog?.identify === 'function') {
+          posthog.identify(storeUser.id, {
+            email: storeUser.email,
+            created_at: storeUser.createdAt.toISOString(),
+          });
+        }
+        if (typeof posthog?.capture === 'function') {
+          posthog.capture('user_logged_in', {
+            method: 'email',
+          });
+        }
       }
-      if (typeof posthog?.capture === 'function') {
-        posthog.capture('user_logged_in', {
-          method: 'email',
-        });
-      }
-
-      // Step 4: Update auth store
-      useAuthStore.setState({
-        user,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      });
 
       log.info('[LoginForm] Successfully authenticated via Supabase');
 

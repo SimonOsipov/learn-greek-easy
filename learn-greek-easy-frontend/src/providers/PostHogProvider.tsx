@@ -1,7 +1,4 @@
-import { type ReactNode, useEffect, useState } from 'react';
-
-import posthog from 'posthog-js';
-import { PostHogProvider as PHProvider } from 'posthog-js/react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE, type SupportedLanguage } from '@/i18n';
 import { reportAPIError } from '@/lib/errorReporting';
@@ -49,54 +46,73 @@ interface PostHogProviderProps {
  * - person_profiles: 'identified_only' - Only create profiles for identified users
  * - autocapture: false - Manual events only for precise control
  * - disable_session_recording: true - Enable later if needed
+ *
+ * posthog-js is loaded via dynamic import so it does not block the entry chunk.
+ * The PHProvider component (from posthog-js/react) is rendered once posthog is
+ * initialized; children are always rendered during the async bootstrap phase.
  */
 export function PostHogProvider({ children }: PostHogProviderProps) {
-  const [initialized, setInitialized] = useState(false);
+  // Holds the resolved PHProvider component from posthog-js/react + the posthog instance
+  const [phState, setPhState] = useState<{
+    PHProvider: React.ComponentType<{ client: import('posthog-js').PostHog; children: ReactNode }>;
+    posthogInstance: import('posthog-js').PostHog;
+  } | null>(null);
+
+  // Guard against double-init in StrictMode
+  const initStarted = useRef(false);
 
   useEffect(() => {
-    // Initialize only if conditions are met
-    if (!shouldInitializePostHog(POSTHOG_KEY, ENVIRONMENT)) {
-      return;
-    }
+    if (initStarted.current) return;
+    if (!shouldInitializePostHog(POSTHOG_KEY, ENVIRONMENT)) return;
 
-    try {
-      // POSTHOG_KEY is guaranteed to be defined here due to shouldInitializePostHog check
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      posthog.init(POSTHOG_KEY!, {
-        api_host: POSTHOG_HOST,
-        person_profiles: 'identified_only',
-        capture_pageview: true,
-        capture_pageleave: true,
-        autocapture: false, // Manual events only for control
-        disable_session_recording: true, // Enable later if needed
-        loaded: (posthogInstance) => {
-          // Register super properties that will be included in all events
-          posthogInstance.register({
-            environment: ENVIRONMENT,
-            app_version: import.meta.env.VITE_APP_VERSION || '1.0.0',
-            interface_language: getStoredLanguage(),
+    initStarted.current = true;
+
+    // Dynamically import posthog-js so it stays out of the entry chunk.
+    Promise.all([import('posthog-js'), import('posthog-js/react')])
+      .then(([{ default: posthog }, { PostHogProvider: PHProviderModule }]) => {
+        try {
+          // POSTHOG_KEY is guaranteed non-null by shouldInitializePostHog above
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          posthog.init(POSTHOG_KEY!, {
+            api_host: POSTHOG_HOST,
+            person_profiles: 'identified_only',
+            capture_pageview: true,
+            capture_pageleave: true,
+            autocapture: false, // Manual events only for control
+            disable_session_recording: true, // Enable later if needed
+            loaded: (posthogInstance) => {
+              // Register super properties included in all events
+              posthogInstance.register({
+                environment: ENVIRONMENT,
+                app_version: import.meta.env.VITE_APP_VERSION || '1.0.0',
+                interface_language: getStoredLanguage(),
+              });
+              setPhState({ PHProvider: PHProviderModule, posthogInstance });
+            },
+            before_send: (event) => {
+              // Filter out test users
+              const userId = event?.properties?.$user_id;
+              if (isTestUser(userId)) {
+                return null; // Don't send
+              }
+              return event;
+            },
           });
-          setInitialized(true);
-        },
-        before_send: (event) => {
-          // Filter out test users
-          const userId = event?.properties?.$user_id;
-          if (isTestUser(userId)) {
-            return null; // Don't send
-          }
-          return event;
-        },
+        } catch (error) {
+          reportAPIError(error, { operation: 'initializePostHog' });
+          // Continue without PostHog - graceful degradation
+        }
+      })
+      .catch((error) => {
+        reportAPIError(error, { operation: 'initializePostHog' });
       });
-    } catch (error) {
-      reportAPIError(error, { operation: 'initializePostHog' });
-      // Continue without PostHog - graceful degradation
-    }
   }, []);
 
-  // Always render children, provider is optional
-  if (!shouldInitializePostHog(POSTHOG_KEY, ENVIRONMENT) || !initialized) {
+  // Always render children; wrap with PHProvider once posthog is initialized
+  if (!phState) {
     return <>{children}</>;
   }
 
-  return <PHProvider client={posthog}>{children}</PHProvider>;
+  const { PHProvider, posthogInstance } = phState;
+  return <PHProvider client={posthogInstance}>{children}</PHProvider>;
 }

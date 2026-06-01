@@ -212,7 +212,7 @@ class TestAssemblePictureMatchPayload:
         anchor_url = "https://cdn.example.com/anchor.jpg"
         distractor_url = "https://cdn.example.com/distractor.jpg"
 
-        def presign(key: str) -> str:
+        def presign(key: str, **kwargs: object) -> str:
             return anchor_url if key == "situations/anchor.jpg" else distractor_url
 
         mock_s3 = MagicMock()

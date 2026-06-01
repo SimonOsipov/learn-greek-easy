@@ -213,6 +213,11 @@ class NewsItemResponse(BaseModel):
     # Publication status (NADM-25)
     status: NewsItemStatus
 
+    # WebP derivative URLs keyed by pixel-width (PERF-10).
+    # None / empty dict = derivatives not yet generated (PERF-11 will backfill).
+    # Frontend falls back to image_url when absent.
+    image_variants: Optional[dict[int, str]] = Field(None, description="WebP derivatives by width")
+
     # Linked situation summary — non-optional (every NewsItem has a Situation via NOT NULL FK).
     # On the detail endpoint this is fully populated (role/turn/exercise/audio aggregates).
     # On the list endpoint the same field is present with zero aggregates (dialog not loaded).

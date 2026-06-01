@@ -8,6 +8,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { CompletionPill } from '@/components/ui/completion-pill';
+import { buildSrcSet } from '@/lib/imageVariants';
 import type { SituationListItem } from '@/types/situation';
 
 import { SITUATION_STATUS_BADGE_CLASSES } from './situationBadges';
@@ -77,7 +78,16 @@ export const SituationCard: React.FC<SituationCardProps> = ({ item, onRequestDel
       {/* Thumbnail */}
       {item.picture_image_url ? (
         <div className="sit-thumb">
-          <img className="sit-thumb-img" src={item.picture_image_url} alt="" loading="lazy" />
+          <img
+            className="sit-thumb-img"
+            src={item.picture_image_url ?? undefined}
+            srcSet={buildSrcSet(item.picture_image_variants)}
+            sizes="(max-width: 640px) 50vw, 200px"
+            alt=""
+            width={400}
+            height={300}
+            loading="lazy"
+          />
           <div className="sit-thumb-meta">
             <span className={SITUATION_STATUS_BADGE_CLASSES[item.status]}>
               {t(`situations.status.${item.status}`)}

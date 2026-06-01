@@ -210,6 +210,7 @@ from src.services.s3_service import (
     MAX_DECK_IMAGE_SIZE_BYTES,
     S3Service,
     get_s3_service,
+    maybe_generate_derivatives,
 )
 from src.services.situation_picture_service import (
     PictureGenerationError,
@@ -812,6 +813,7 @@ async def get_deck(
 async def upload_deck_cover_image(
     deck_id: UUID,
     file: UploadFile,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> DeckAdminResponse:
@@ -846,6 +848,10 @@ async def upload_deck_cover_image(
     deck.cover_image_s3_key = s3_key
     await db.commit()
     await db.refresh(deck)
+
+    # Generate WebP derivatives after the DB commit — fire-and-forget (PERF-10).
+    # Failures are swallowed inside maybe_generate_derivatives — upload succeeds regardless.
+    background_tasks.add_task(maybe_generate_derivatives, s3_key, data, file.content_type)
 
     # Delete old key only after commit — if commit fails, the row still
     # references the old object and we must not orphan it.
@@ -4793,6 +4799,7 @@ async def update_situation_picture(
 async def upload_situation_picture(
     situation_id: UUID,
     file: UploadFile,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ) -> PictureNested:
     """Upload a PNG/JPEG/WebP image directly to replace the generated picture."""
@@ -4833,6 +4840,10 @@ async def upload_situation_picture(
     picture.image_s3_key = s3_key
     await db.commit()
     await db.refresh(picture)
+
+    # Generate WebP derivatives after the DB commit — fire-and-forget (PERF-10).
+    # Failures are swallowed inside maybe_generate_derivatives — upload succeeds regardless.
+    background_tasks.add_task(maybe_generate_derivatives, s3_key, data, file.content_type)
 
     if prior_key and prior_key != s3_key:
         try:
@@ -4998,8 +5009,13 @@ async def list_situations(
             roles = [row[0] for row in roles_result.all()]
 
         picture_image_url: str | None = None
+        picture_image_variants: dict[int, str] | None = None
         if s.picture is not None and s.picture.image_s3_key:
             picture_image_url = s3_svc.generate_presigned_url(s.picture.image_s3_key)
+            _raw_pic_variants = s3_svc.get_derivative_presigned_urls(s.picture.image_s3_key)
+            picture_image_variants = (
+                _raw_pic_variants if isinstance(_raw_pic_variants, dict) else None
+            )
 
         items.append(
             SituationListItem(
@@ -5028,6 +5044,7 @@ async def list_situations(
                 dialog_lines_count=lines_count,
                 roles=roles,
                 picture_image_url=picture_image_url,
+                picture_image_variants=picture_image_variants,
                 audio_duration_seconds=s.dialog.audio_duration_seconds if s.dialog else None,
                 source_title_en=s.source_title_en,
                 source_country=s.description.country if s.description else None,

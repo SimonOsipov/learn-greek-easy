@@ -17,6 +17,13 @@ from src.core.dependencies import get_current_superuser, get_current_user, get_c
 from src.core.exceptions import ForbiddenException, UnauthorizedException
 from src.core.supabase_auth import SupabaseUserClaims
 
+
+class _FakeState:
+    """Minimal request.state stand-in: getattr raises AttributeError for missing keys."""
+
+    pass
+
+
 # ============================================================================
 # Test Fixtures
 # ============================================================================
@@ -24,9 +31,14 @@ from src.core.supabase_auth import SupabaseUserClaims
 
 @pytest.fixture
 def mock_request():
-    """Create a mock FastAPI request."""
+    """Create a mock FastAPI request with a real State-like object.
+
+    Using _FakeState (a plain object) instead of MagicMock() ensures that
+    getattr(request.state, "current_user", None) returns None until the
+    dependency explicitly writes it — matching FastAPI's runtime behaviour.
+    """
     request = MagicMock(spec=Request)
-    request.state = MagicMock()
+    request.state = _FakeState()
     return request
 
 
@@ -167,6 +179,82 @@ class TestGetCurrentUser:
             await get_current_user(mock_request, valid_credentials, mock_db)
 
             assert mock_request.state.user_email == mock_user.email
+
+    @pytest.mark.asyncio
+    async def test_memoizes_user_on_request_state(
+        self, mock_request, valid_credentials, valid_claims, mock_user
+    ):
+        """Two resolutions on the SAME request invoke get_or_create_user exactly once.
+
+        The second call short-circuits at the request.state.current_user check
+        and never touches the DB or token verification again.
+        """
+        mock_db = AsyncMock()
+
+        with (
+            patch("src.core.dependencies.verify_supabase_token") as mock_verify,
+            patch("src.core.dependencies.get_or_create_user") as mock_get_or_create,
+        ):
+            mock_verify.return_value = valid_claims
+            mock_get_or_create.return_value = mock_user
+
+            # First resolution: full path through token verify + DB lookup
+            user1 = await get_current_user(mock_request, valid_credentials, mock_db)
+            # Second resolution on the SAME request object: short-circuit fires
+            user2 = await get_current_user(mock_request, valid_credentials, mock_db)
+
+        assert user1 is mock_user
+        assert user2 is mock_user
+        # get_or_create_user must have been called exactly once
+        mock_get_or_create.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_distinct_requests_resolve_independently(
+        self, valid_credentials, valid_claims, mock_user
+    ):
+        """Two DISTINCT request objects each resolve the user independently.
+
+        Per-request memo must NOT leak across request boundaries.
+        """
+        mock_db = AsyncMock()
+
+        request_a = MagicMock(spec=Request)
+        request_a.state = _FakeState()
+        request_b = MagicMock(spec=Request)
+        request_b.state = _FakeState()
+
+        with (
+            patch("src.core.dependencies.verify_supabase_token") as mock_verify,
+            patch("src.core.dependencies.get_or_create_user") as mock_get_or_create,
+        ):
+            mock_verify.return_value = valid_claims
+            mock_get_or_create.return_value = mock_user
+
+            user_a = await get_current_user(request_a, valid_credentials, mock_db)
+            user_b = await get_current_user(request_b, valid_credentials, mock_db)
+
+        assert user_a is mock_user
+        assert user_b is mock_user
+        # Each distinct request triggers its own DB lookup
+        assert mock_get_or_create.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_sets_current_user_on_request_state(
+        self, mock_request, valid_credentials, valid_claims, mock_user
+    ):
+        """Resolved user is stored on request.state.current_user after first resolution."""
+        mock_db = AsyncMock()
+
+        with (
+            patch("src.core.dependencies.verify_supabase_token") as mock_verify,
+            patch("src.core.dependencies.get_or_create_user") as mock_get_or_create,
+        ):
+            mock_verify.return_value = valid_claims
+            mock_get_or_create.return_value = mock_user
+
+            await get_current_user(mock_request, valid_credentials, mock_db)
+
+        assert mock_request.state.current_user is mock_user
 
 
 # ============================================================================

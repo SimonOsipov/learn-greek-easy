@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from sqlalchemy.exc import OperationalError
 
-from src.schemas.health import ComponentStatus, HealthStatus, StripeHealth
+from src.schemas.health import ComponentStatus, HealthStatus
 
 # ============================================================================
 # Test Fixtures
@@ -382,7 +382,6 @@ class TestGetHealthStatus:
     """Tests for get_health_status function."""
 
     @pytest.mark.asyncio
-    @patch("src.services.health_service.check_stripe_health")
     @patch("src.services.health_service.check_memory_health")
     @patch("src.services.health_service.check_redis_health_component")
     @patch("src.services.health_service.check_database_health")
@@ -391,7 +390,6 @@ class TestGetHealthStatus:
         mock_db: MagicMock,
         mock_redis: MagicMock,
         mock_memory: MagicMock,
-        mock_stripe: MagicMock,
     ):
         """Test health status when all components are healthy."""
         from src.schemas.health import ComponentHealth, MemoryHealth
@@ -413,10 +411,6 @@ class TestGetHealthStatus:
             percent=25.0,
             message="Memory usage normal",
         )
-        mock_stripe.return_value = StripeHealth(
-            status="ok",
-            message="Stripe API reachable",
-        )
 
         response, status_code = await get_health_status()
 
@@ -424,7 +418,6 @@ class TestGetHealthStatus:
         assert status_code == 200
 
     @pytest.mark.asyncio
-    @patch("src.services.health_service.check_stripe_health")
     @patch("src.services.health_service.check_memory_health")
     @patch("src.services.health_service.check_redis_health_component")
     @patch("src.services.health_service.check_database_health")
@@ -433,7 +426,6 @@ class TestGetHealthStatus:
         mock_db: MagicMock,
         mock_redis: MagicMock,
         mock_memory: MagicMock,
-        mock_stripe: MagicMock,
     ):
         """Test health status returns 503 when DB is unhealthy."""
         from src.schemas.health import ComponentHealth, MemoryHealth
@@ -455,10 +447,6 @@ class TestGetHealthStatus:
             percent=25.0,
             message="Memory usage normal",
         )
-        mock_stripe.return_value = StripeHealth(
-            status="ok",
-            message="Stripe API reachable",
-        )
 
         response, status_code = await get_health_status()
 
@@ -466,7 +454,6 @@ class TestGetHealthStatus:
         assert status_code == 503
 
     @pytest.mark.asyncio
-    @patch("src.services.health_service.check_stripe_health")
     @patch("src.services.health_service.check_memory_health")
     @patch("src.services.health_service.check_redis_health_component")
     @patch("src.services.health_service.check_database_health")
@@ -475,7 +462,6 @@ class TestGetHealthStatus:
         mock_db: MagicMock,
         mock_redis: MagicMock,
         mock_memory: MagicMock,
-        mock_stripe: MagicMock,
     ):
         """Test health status returns degraded when Redis is unhealthy."""
         from src.schemas.health import ComponentHealth, MemoryHealth
@@ -497,10 +483,6 @@ class TestGetHealthStatus:
             percent=25.0,
             message="Memory usage normal",
         )
-        mock_stripe.return_value = StripeHealth(
-            status="ok",
-            message="Stripe API reachable",
-        )
 
         response, status_code = await get_health_status()
 
@@ -508,7 +490,6 @@ class TestGetHealthStatus:
         assert status_code == 200  # Degraded is still OK for health checks
 
     @pytest.mark.asyncio
-    @patch("src.services.health_service.check_stripe_health")
     @patch("src.services.health_service.check_memory_health")
     @patch("src.services.health_service.check_redis_health_component")
     @patch("src.services.health_service.check_database_health")
@@ -517,7 +498,6 @@ class TestGetHealthStatus:
         mock_db: MagicMock,
         mock_redis: MagicMock,
         mock_memory: MagicMock,
-        mock_stripe: MagicMock,
     ):
         """Test health status handles exceptions from checks."""
         from src.schemas.health import ComponentHealth, MemoryHealth
@@ -535,10 +515,6 @@ class TestGetHealthStatus:
             percent=25.0,
             message="Memory usage normal",
         )
-        mock_stripe.return_value = StripeHealth(
-            status="ok",
-            message="Stripe API reachable",
-        )
 
         with patch("src.services.health_service.logger"):
             response, status_code = await get_health_status()
@@ -552,14 +528,19 @@ class TestGetHealthStatus:
     @patch("src.services.health_service.check_memory_health")
     @patch("src.services.health_service.check_redis_health_component")
     @patch("src.services.health_service.check_database_health")
-    async def test_get_health_status_stripe_error_returns_degraded(
+    async def test_get_health_status_stripe_not_called_in_aggregate(
         self,
         mock_db: MagicMock,
         mock_redis: MagicMock,
         mock_memory: MagicMock,
         mock_stripe: MagicMock,
     ):
-        """Test health status returns degraded when Stripe is unhealthy."""
+        """Stripe health check must NOT be called in the aggregate health poll (PERF-01).
+
+        Stripe makes a synchronous external API call; including it in the readiness/liveness
+        aggregate would add latency and external-service dependency to every health probe.
+        The response should carry stripe=None when called via the aggregate path.
+        """
         from src.schemas.health import ComponentHealth, MemoryHealth
         from src.services.health_service import get_health_status
 
@@ -579,15 +560,13 @@ class TestGetHealthStatus:
             percent=25.0,
             message="Memory usage normal",
         )
-        mock_stripe.return_value = StripeHealth(
-            status="error",
-            message="Stripe API error: Connection failed",
-        )
 
         response, status_code = await get_health_status()
 
-        assert response.status == HealthStatus.DEGRADED
-        assert status_code == 200  # Degraded is still OK for health checks
+        mock_stripe.assert_not_called()
+        assert response.checks.stripe is None
+        assert response.status == HealthStatus.HEALTHY
+        assert status_code == 200
 
 
 # ============================================================================

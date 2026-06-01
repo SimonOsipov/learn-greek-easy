@@ -28,7 +28,9 @@ BASE_URL = "/api/v1/admin/situations"
 def mock_s3_service():
     with patch("src.api.v1.admin.get_s3_service") as mock_get:
         mock_s3 = MagicMock()
-        mock_s3.generate_presigned_url.side_effect = lambda key: f"https://s3.example.com/{key}"
+        mock_s3.generate_presigned_url.side_effect = (
+            lambda key, **kwargs: f"https://s3.example.com/{key}"
+        )
         mock_s3.delete_object.return_value = True
         mock_get.return_value = mock_s3
         yield mock_s3

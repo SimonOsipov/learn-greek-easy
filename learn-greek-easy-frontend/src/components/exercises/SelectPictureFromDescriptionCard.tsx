@@ -129,6 +129,7 @@ export function SelectPictureFromDescriptionCard({
           >
             <PictureOption
               imageUrl={opt.image_url}
+              imageVariants={opt.image_variants}
               optionIndex={i}
               exerciseId={exerciseId}
               alt={t('exercises.session.pictureMatch.optionLabel', { number: i + 1 })}

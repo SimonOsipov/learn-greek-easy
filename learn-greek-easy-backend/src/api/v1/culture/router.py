@@ -72,6 +72,7 @@ from src.services.s3_service import (
     MAX_DECK_IMAGE_SIZE_BYTES,
     S3Service,
     get_s3_service,
+    maybe_generate_derivatives,
 )
 from src.tasks import is_background_tasks_enabled, persist_culture_answer_task
 
@@ -137,6 +138,7 @@ router = APIRouter(
     },
 )
 async def list_culture_decks(
+    response: Response,  # injected for Cache-Control header
     page: int = Query(default=1, ge=1, description="Page number (starting from 1)"),
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page (max 100)"),
     category: Optional[str] = Query(
@@ -168,6 +170,12 @@ async def list_culture_decks(
     """
     service = CultureDeckService(db)
     user_id = current_user.id
+
+    # PERF-08: short private TTL cache — deck list is user-specific (includes progress)
+    # so must be private. 60s avoids repeat fetches within the same browse session.
+    response.headers["Cache-Control"] = "private, max-age=60"
+    # Vary on Accept-Language so a private cache doesn't reuse one locale's payload for another.
+    response.headers["Vary"] = "Accept-Language"
 
     return await service.list_decks(
         page=page,
@@ -389,6 +397,7 @@ async def get_categories(
     },
 )
 async def get_question_queue(
+    response: Response,  # injected for Cache-Control header
     deck_id: UUID,
     limit: int = Query(default=10, ge=1, le=50, description="Max questions to return"),
     include_new: bool = Query(default=True, description="Include new (unstudied) questions"),
@@ -429,6 +438,13 @@ async def get_question_queue(
         GET /api/v1/culture/decks/{deck_id}/questions?limit=10&include_new=true
     """
     service = CultureQuestionService(db)
+
+    # PERF-08: short private TTL cache — queue is user-specific (due/new per user).
+    # 30s is safe: SM-2 scheduling is date-granular, so within-session freshness
+    # is preserved. Force-practice bypasses stale concerns via explicit intent.
+    response.headers["Cache-Control"] = "private, max-age=30"
+    # Vary on Accept-Language so a private cache doesn't reuse one locale's payload for another.
+    response.headers["Vary"] = "Accept-Language"
 
     return await service.get_question_queue(
         user_id=current_user.id,
@@ -899,6 +915,7 @@ async def delete_culture_deck(
 async def upload_culture_deck_cover_image(
     deck_id: UUID,
     file: UploadFile,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> CultureDeckAdminResponse:
@@ -933,6 +950,10 @@ async def upload_culture_deck_cover_image(
     deck.cover_image_s3_key = s3_key
     await db.commit()
     await db.refresh(deck)
+
+    # Generate WebP derivatives after the DB commit — fire-and-forget (PERF-10).
+    # Failures are swallowed inside maybe_generate_derivatives — upload succeeds regardless.
+    background_tasks.add_task(maybe_generate_derivatives, s3_key, data, file.content_type)
 
     # Delete old key only after commit — if commit fails, the row still
     # references the old object and we must not orphan it.

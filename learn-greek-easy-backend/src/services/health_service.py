@@ -195,11 +195,11 @@ async def get_health_status() -> Tuple[HealthResponse, int]:
     Returns:
         Tuple of (HealthResponse, HTTP status code)
     """
-    # Run all checks in parallel
-    db_check, redis_check, stripe_check = await asyncio.gather(
+    # Run all checks in parallel (Stripe excluded from the aggregate health poll —
+    # it makes a synchronous external API call and should not block liveness/readiness)
+    db_check, redis_check = await asyncio.gather(
         check_database_health(),
         check_redis_health_component(),
-        check_stripe_health(),
         return_exceptions=True,
     )
 
@@ -220,20 +220,12 @@ async def get_health_status() -> Tuple[HealthResponse, int]:
             message=f"Check failed: {str(redis_check)}",
         )
 
-    if isinstance(stripe_check, Exception):
-        logger.error("Stripe health check failed with exception", exc_info=stripe_check)
-        stripe_check = StripeHealth(
-            status="error",
-            message=f"Unexpected error: {str(stripe_check)}",
-        )
-
     # Get memory status (synchronous)
     memory_check = check_memory_health()
 
     # Determine overall status
     # Database is critical - if unhealthy, system is unhealthy
     # Redis is non-critical - if unhealthy, system is degraded
-    # Stripe is non-critical - if unhealthy, system is degraded
     # Memory warning doesn't affect overall status
 
     # At this point, checks are guaranteed to be their respective types
@@ -243,9 +235,7 @@ async def get_health_status() -> Tuple[HealthResponse, int]:
     if db_check.status == ComponentStatus.UNHEALTHY:
         overall_status = HealthStatus.UNHEALTHY
         http_status = 503
-    elif redis_check.status == ComponentStatus.UNHEALTHY or (
-        isinstance(stripe_check, StripeHealth) and stripe_check.status == "error"
-    ):
+    elif redis_check.status == ComponentStatus.UNHEALTHY:
         overall_status = HealthStatus.DEGRADED
         http_status = 200  # Degraded is still "okay" for basic health checks
     else:
@@ -262,7 +252,7 @@ async def get_health_status() -> Tuple[HealthResponse, int]:
             database=db_check,
             redis=redis_check,
             memory=memory_check,
-            stripe=stripe_check if isinstance(stripe_check, StripeHealth) else None,
+            stripe=None,  # Not polled in the aggregate; call check_stripe_health() explicitly if needed
         ),
     )
 

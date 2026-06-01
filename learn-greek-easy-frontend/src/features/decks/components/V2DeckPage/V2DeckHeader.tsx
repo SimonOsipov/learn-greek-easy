@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
 import { progressAPI } from '@/services/progressAPI';
+import { useDeckStore } from '@/stores/deckStore';
 import type { Deck } from '@/types/deck';
 
 import { DxActionPanel } from './DxActionPanel';
@@ -25,14 +26,16 @@ interface V2DeckHeaderProps {
  * - DX-05 resume hero (DxResumeHeroConnected) replacing the old cover-image card
  * - DX-06 metric strip (DxMetricStrip) — Due / Streak / Mastered / Time on deck
  * - DX-07 action panel (DxActionPanel) with gradient progress bar, chip selector, CTA
+ *
+ * Progress detail is read from deckStore (populated by selectDeck()) to avoid a
+ * duplicate /progress/decks/{id} request — the store already fetches this data
+ * during deck selection. PERF-12.
  */
 export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
   useTranslation('deck'); // keep namespace registered at this level
 
-  const { data: progressData } = useQuery({
-    queryKey: ['deckProgress', deck.id],
-    queryFn: () => progressAPI.getDeckProgressDetail(deck.id),
-  });
+  // Read progress detail from the store (fetched by selectDeck()) — no extra request.
+  const progressData = useDeckStore((s) => s.selectedDeckProgressDetail);
 
   // Word mastery query — shares TanStack cache key with DxResumeHeroConnected
   // and WordBrowser, so at most ONE network request is made per deck.

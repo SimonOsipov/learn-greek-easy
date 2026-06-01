@@ -118,6 +118,8 @@ class PictureMatchOption(BaseModel):
     option_index: int = Field(ge=0, le=3)
     image_url: str | None = None
     description_text: str | None = None
+    # WebP derivative URLs keyed by pixel-width (PERF-10); None until PERF-11 backfills.
+    image_variants: dict[int, str] | None = None
 
     @model_validator(mode="after")
     def exactly_one_of(self) -> "PictureMatchOption":

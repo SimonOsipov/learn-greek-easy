@@ -45,7 +45,7 @@ from src.db.models import (
     MockExamStatus,
 )
 from src.repositories.mock_exam import MockExamRepository
-from src.services.s3_service import S3Service, get_s3_service
+from src.services.s3_service import IMAGE_PRESIGN_EXPIRY_SECONDS, S3Service, get_s3_service
 from src.services.xp_service import XPService
 
 logger = get_logger(__name__)
@@ -512,7 +512,9 @@ class MockExamService:
         """
         image_url = None
         if question.image_key:
-            image_url = self.s3_service.generate_presigned_url(question.image_key)
+            image_url = self.s3_service.generate_presigned_url(
+                question.image_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
+            )
 
         # Build options array
         options = [question.option_a, question.option_b]

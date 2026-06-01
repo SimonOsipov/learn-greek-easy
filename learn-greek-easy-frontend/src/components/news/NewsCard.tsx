@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
 import { track } from '@/lib/analytics';
+import { buildSrcSet } from '@/lib/imageVariants';
 import { clearActivePlayer, registerActivePlayer } from '@/lib/newsAudioCoordinator';
 import { cn } from '@/lib/utils';
 import type { NewsCountry, NewsItemResponse } from '@/services/adminAPI';
@@ -163,11 +164,20 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         data-testid={`news-card-${article.id}`}
         aria-label={`${title} - ${t('dashboard.news.readMore')}`}
       >
-        {/* Background Image */}
-        <div
-          className="absolute inset-0 bg-cover bg-center transition-transform group-hover:scale-105"
-          style={{ backgroundImage: article.image_url ? `url(${article.image_url})` : undefined }}
-        />
+        {/* Background image — converted from CSS background to <img> for srcset + lazy load (PERF-10). */}
+        {article.image_url && (
+          <img
+            src={article.image_url}
+            srcSet={buildSrcSet(article.image_variants)}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
+            alt=""
+            aria-hidden="true"
+            width={800}
+            height={450}
+            className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
+            loading="lazy"
+          />
+        )}
 
         {/* Photo overlay gradient — uses theme-invariant landing-header-bg per design doc. */}
         <div

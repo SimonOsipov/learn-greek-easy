@@ -21,7 +21,7 @@ from src.services.word_entry_response import (
 def mock_s3_service():
     """Mock S3 service that returns presigned URLs for non-empty keys."""
     mock = MagicMock(spec=S3Service)
-    mock.generate_presigned_url.side_effect = lambda key: (
+    mock.generate_presigned_url.side_effect = lambda key, **kwargs: (
         f"https://s3.example.com/presigned/{key}" if key else None
     )
     return mock
