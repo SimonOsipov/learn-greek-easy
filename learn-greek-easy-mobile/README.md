@@ -85,3 +85,11 @@ Use `npx expo start --ios` to open directly in the iOS simulator.
    ```
 
    Expected: app boots showing the Greeklish (Dev) name, and the Expo dev menu appears on Cmd+D. Requires an iOS simulator runtime installed locally (`xcode-select --install` + Xcode Simulator runtimes).
+
+   To install a finished cloud build on a booted simulator without rebuilding:
+
+   ```bash
+   eas build:run -p ios --id <build-id>
+   ```
+
+   **First verified dev-client build:** [`81fbd3cf`](https://expo.dev/accounts/sams-team/projects/greeklish-app/builds/81fbd3cf-a886-40c3-98c2-7d8e109b6688) — booted on the iOS 26.4 simulator with a working Expo dev menu.

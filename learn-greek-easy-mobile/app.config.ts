@@ -36,6 +36,9 @@ const config: ExpoConfig = {
   ios: {
     icon: './assets/expo.icon',
     bundleIdentifier: bundleId,
+    infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
+    },
   },
   android: {
     package: bundleId,
