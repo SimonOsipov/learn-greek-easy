@@ -49,7 +49,10 @@ export const DeckCard: React.FC<DeckCardProps> = ({
 
   // Derived progress values — R9 resolved: progress is wired via store
   const pct = deck.progress ? calculateCompletionPercentage(deck.progress) : 0;
-  const complete = pct >= 100;
+  // Bar % stays coverage-based for all decks. "Complete" reflects MASTERY for
+  // culture decks (honor the transform's mastery-based status), but stays
+  // coverage-based for vocabulary decks (unchanged). See CULT2-3 / CHR-01.
+  const complete = isCultureDeck ? deck.progress?.status === 'completed' : pct >= 100;
   const mastered = deck.progress?.cardsMastered ?? 0;
   const cards = deck.cardCount;
 

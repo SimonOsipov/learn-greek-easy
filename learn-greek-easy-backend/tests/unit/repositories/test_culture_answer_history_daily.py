@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.constants import MAX_ANSWER_TIME_SECONDS
 from src.db.models import CultureAnswerHistory, CultureDeck, CultureQuestion, User
 from src.repositories.culture_answer_history import CultureAnswerHistoryRepository
 
@@ -55,6 +56,7 @@ def _answer(
     *,
     created_at: datetime,
     is_correct: bool = True,
+    time_taken_seconds: int = 10,
 ) -> CultureAnswerHistory:
     return CultureAnswerHistory(
         user_id=user_id,
@@ -62,7 +64,7 @@ def _answer(
         language="en",
         is_correct=is_correct,
         selected_option=1,
-        time_taken_seconds=10,
+        time_taken_seconds=time_taken_seconds,
         deck_category="history",
         created_at=created_at,
     )
@@ -316,3 +318,109 @@ class TestCountDistinctLanguages:
         repo = CultureAnswerHistoryRepository(db_session)
         result = await repo.count_distinct_languages(sample_user.id)
         assert result == 3
+
+
+class TestGetStudyTimeThisWeek:
+    """CULT2-3 / CHR-05: rolling trailing-7-day culture study time."""
+
+    @pytest.mark.asyncio
+    async def test_empty_user_returns_zero(
+        self,
+        db_session: AsyncSession,
+        sample_user: User,
+    ) -> None:
+        repo = CultureAnswerHistoryRepository(db_session)
+        assert await repo.get_study_time_this_week(sample_user.id) == 0
+
+    @pytest.mark.asyncio
+    async def test_sums_only_answers_within_trailing_7_days(
+        self,
+        db_session: AsyncSession,
+        sample_user: User,
+    ) -> None:
+        """Answers in the last 7 days count; an 8-day-old answer is excluded."""
+        _, question = await _make_culture_context(db_session)
+        now = datetime.now(timezone.utc)
+        # In window: 2 days ago (30s) + 6 days ago (20s) = 50
+        db_session.add(
+            _answer(
+                sample_user.id,
+                question.id,
+                created_at=now - timedelta(days=2),
+                time_taken_seconds=30,
+            )
+        )
+        db_session.add(
+            _answer(
+                sample_user.id,
+                question.id,
+                created_at=now - timedelta(days=6),
+                time_taken_seconds=20,
+            )
+        )
+        # Outside window: 8 days ago → excluded
+        db_session.add(
+            _answer(
+                sample_user.id,
+                question.id,
+                created_at=now - timedelta(days=8),
+                time_taken_seconds=99,
+            )
+        )
+        await db_session.flush()
+
+        repo = CultureAnswerHistoryRepository(db_session)
+        assert await repo.get_study_time_this_week(sample_user.id) == 50
+
+    @pytest.mark.asyncio
+    async def test_caps_each_answer_at_max(
+        self,
+        db_session: AsyncSession,
+        sample_user: User,
+    ) -> None:
+        """A single outlier answer is capped at MAX_ANSWER_TIME_SECONDS."""
+        _, question = await _make_culture_context(db_session)
+        now = datetime.now(timezone.utc)
+        db_session.add(
+            _answer(
+                sample_user.id,
+                question.id,
+                created_at=now - timedelta(days=1),
+                time_taken_seconds=500,
+            )
+        )
+        await db_session.flush()
+
+        repo = CultureAnswerHistoryRepository(db_session)
+        assert await repo.get_study_time_this_week(sample_user.id) == MAX_ANSWER_TIME_SECONDS
+
+    @pytest.mark.asyncio
+    async def test_isolates_by_user(
+        self,
+        db_session: AsyncSession,
+        sample_user: User,
+        sample_user_with_settings: User,
+    ) -> None:
+        """Only the requested user's answers are summed."""
+        _, question = await _make_culture_context(db_session)
+        now = datetime.now(timezone.utc)
+        db_session.add(
+            _answer(
+                sample_user.id,
+                question.id,
+                created_at=now - timedelta(days=1),
+                time_taken_seconds=15,
+            )
+        )
+        db_session.add(
+            _answer(
+                sample_user_with_settings.id,
+                question.id,
+                created_at=now - timedelta(days=1),
+                time_taken_seconds=40,
+            )
+        )
+        await db_session.flush()
+
+        repo = CultureAnswerHistoryRepository(db_session)
+        assert await repo.get_study_time_this_week(sample_user.id) == 15

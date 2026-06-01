@@ -138,6 +138,80 @@ describe('DeckCard', () => {
       const badge = screen.getByTestId('deck-card-status-badge');
       expect(badge.textContent?.toLowerCase()).toContain('complete');
     });
+
+    // ── CULT2-3 / CHR-01: culture "Complete" reflects MASTERY, not coverage ──
+    it('culture deck: coverage 100% but 0 mastered (status in-progress) is NOT "Complete"', () => {
+      // The exact prod bug (Jul'25): every question answered once, none mastered.
+      // cardsLearning=24, cardsMastered=0 → coverage pct=100, but status='in-progress'.
+      const deck = createMockDeck({
+        category: 'culture',
+        progress: {
+          deckId: 'test-deck-1',
+          status: 'in-progress',
+          cardsTotal: 24,
+          cardsNew: 0,
+          cardsLearning: 24,
+          cardsReview: 0,
+          cardsMastered: 0,
+          dueToday: 0,
+          streak: 0,
+          totalTimeSpent: 60,
+          accuracy: 50,
+        },
+      });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} isCultureDeck />);
+      const badge = screen.getByTestId('deck-card-status-badge');
+      expect(badge.textContent?.toLowerCase()).toContain('progress');
+      // Shows the progress bar, not the complete pill.
+      expect(screen.getByTestId('deck-card-progress')).toBeInTheDocument();
+      expect(screen.queryByTestId('deck-card-complete')).not.toBeInTheDocument();
+    });
+
+    it('culture deck: status "completed" (fully mastered) shows "Complete"', () => {
+      const deck = createMockDeck({
+        category: 'culture',
+        progress: {
+          deckId: 'test-deck-1',
+          status: 'completed',
+          cardsTotal: 24,
+          cardsNew: 0,
+          cardsLearning: 0,
+          cardsReview: 0,
+          cardsMastered: 24,
+          dueToday: 0,
+          streak: 5,
+          totalTimeSpent: 300,
+          accuracy: 95,
+        },
+      });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} isCultureDeck />);
+      const badge = screen.getByTestId('deck-card-status-badge');
+      expect(badge.textContent?.toLowerCase()).toContain('complete');
+      expect(screen.getByTestId('deck-card-complete')).toBeInTheDocument();
+    });
+
+    it('vocabulary deck: coverage 100% still shows "Complete" regardless of status (unchanged)', () => {
+      // Regression guard: the mastery rule is culture-scoped; vocab stays coverage-based.
+      const deck = createMockDeck({
+        category: 'vocabulary',
+        progress: {
+          deckId: 'test-deck-1',
+          status: 'in-progress',
+          cardsTotal: 50,
+          cardsNew: 0,
+          cardsLearning: 30,
+          cardsReview: 0,
+          cardsMastered: 20,
+          dueToday: 0,
+          streak: 2,
+          totalTimeSpent: 120,
+          accuracy: 80,
+        },
+      });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      const badge = screen.getByTestId('deck-card-status-badge');
+      expect(badge.textContent?.toLowerCase()).toContain('complete');
+    });
   });
 
   // ── Progress bar (DX-04 R2) ──────────────────────────────────────────────

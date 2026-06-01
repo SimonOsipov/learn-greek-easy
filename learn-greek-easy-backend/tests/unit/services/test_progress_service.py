@@ -68,6 +68,7 @@ def _setup_dashboard_mocks(
     culture_mastered=0,
     last_review_date=None,
     daily_stats=None,
+    culture_weekly_study_time=0,
 ):
     """Wire default AsyncMock return values on mocked repo instances."""
     if vocab_status is None:
@@ -103,6 +104,7 @@ def _setup_dashboard_mocks(
     canswer.count_answers_today = AsyncMock(return_value=culture_answers_today)
     canswer.get_total_study_time = AsyncMock(return_value=0)
     canswer.get_study_time_today = AsyncMock(return_value=0)
+    canswer.get_study_time_this_week = AsyncMock(return_value=culture_weekly_study_time)
     canswer.get_unique_dates = AsyncMock(return_value=[])
     canswer.get_all_unique_dates = AsyncMock(return_value=[])
 
@@ -232,6 +234,40 @@ class TestGetDashboardStats:
 
         # 50 mastered out of 50 studied = 100%
         assert result.overview.overall_mastery_percentage == 100.0
+
+    async def test_culture_weekly_study_time_surfaced(self, mock_db, mock_user_id):
+        """CULT2-3 / CHR-05: overview exposes the culture rolling-7-day study time."""
+        patches = _make_full_repo_patches()
+        with (
+            patches[0] as s_cls,
+            patches[1] as r_cls,
+            patches[2] as cs_cls,
+            patches[3] as ca_cls,
+            patches[4] as me_cls,
+            patches[5],
+            patches[6],
+            patches[7],
+            patches[8],
+            patches[9] as ex_cls,
+            patches[10],
+            patches[11],
+            patches[12],
+        ):
+            _setup_dashboard_mocks(
+                s_cls,
+                r_cls,
+                cs_cls,
+                ca_cls,
+                me_cls,
+                ex_cls,
+                culture_weekly_study_time=540,
+            )
+            service = ProgressService(mock_db)
+            result = await service.get_dashboard_stats(mock_user_id)
+
+        # Sourced from culture_answer_repo.get_study_time_this_week (culture-only).
+        assert result.overview.culture_weekly_study_time_seconds == 540
+        ca_cls.return_value.get_study_time_this_week.assert_awaited_once_with(mock_user_id)
 
     async def test_recent_activity_built_from_daily_stats(self, mock_db, mock_user_id):
         """recent_activity list is built from card_review_repo.get_daily_stats rows."""

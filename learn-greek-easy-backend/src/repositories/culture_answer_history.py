@@ -8,7 +8,7 @@ into the dashboard, including:
 - Daily stats for trends
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy import delete, func, select
@@ -77,6 +77,31 @@ class CultureAnswerHistoryRepository(BaseRepository[CultureAnswerHistory]):
         )
         result = await self.db.execute(query)
         return result.scalar() or 0
+
+    async def get_study_time_this_week(self, user_id: UUID) -> int:
+        """Get culture study time in seconds over the trailing 7 days (rolling).
+
+        Sums ``time_taken_seconds`` from culture *practice* answers created in
+        the last 7x24h, capping each answer at ``MAX_ANSWER_TIME_SECONDS``.
+        Mock-exam time is excluded by construction: mock answers are written to
+        the mock-exam tables, never to ``culture_answer_history``.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Total study time in seconds for the trailing 7 days (capped per answer)
+        """
+        cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+        # Cap each answer's time at MAX_ANSWER_TIME_SECONDS to handle outliers
+        capped_time = func.least(CultureAnswerHistory.time_taken_seconds, MAX_ANSWER_TIME_SECONDS)
+        query = (
+            select(func.coalesce(func.sum(capped_time), 0))
+            .where(CultureAnswerHistory.user_id == user_id)
+            .where(CultureAnswerHistory.created_at >= cutoff)
+        )
+        result = await self.db.execute(query)
+        return int(result.scalar() or 0)
 
     async def get_total_study_time(self, user_id: UUID) -> int:
         """Get total study time in seconds from all culture answers.
