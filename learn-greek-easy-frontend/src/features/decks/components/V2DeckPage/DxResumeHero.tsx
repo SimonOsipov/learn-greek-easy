@@ -4,11 +4,14 @@
 //
 // Layout:
 //   Left  (.dx-hero-resume-l): kicker, title, Greek subtitle, description, 3 stats
-//   Right (.dx-cover-stack): 2 dimmed sibling covers + this deck's front cover
-//                             Hidden when siblings.length < 2 or at ≤1100px.
+//   Right (.dx-cover-stack): this deck's front cover + 2 dimmed sibling covers.
+//                             The whole column is hidden at ≤1100px (CSS).
 //
-// The cover stack is intentionally omitted on direct deep-links where rawDecks
-// is empty (only selectDeck() ran). Never call fetchDecks() just for siblings.
+// The front cover (this deck) ALWAYS renders, so the hero is never empty on a
+// direct deep-link. The 2 sibling covers depend on rawDecks, which is only
+// populated by fetchDecks() (the /decks index). On direct deep-links rawDecks is
+// empty, so the siblings are intentionally omitted — we never call fetchDecks()
+// just for siblings (egress guardrail). The front cover still shows.
 
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -49,7 +52,7 @@ export function DxResumeHero({ deck, masteredWords, progressPct, siblings }: DxR
   const totalWords = deck.cardCount;
   const pct = progressPct;
 
-  const showStack = siblings.length >= 2;
+  const showSiblings = siblings.length >= 2;
 
   return (
     <div className="dx-hero-resume">
@@ -86,48 +89,52 @@ export function DxResumeHero({ deck, masteredWords, progressPct, siblings }: DxR
         </div>
 
         {/* ── Right column: cover stack ────────────────────────────── */}
-        {showStack && (
-          <div className="dx-cover-stack">
-            {/* Behind sibling 1 — rotated −6°, opacity ~.5 */}
-            <DxCover deck={siblings[0]} variant="stack-1" className="dx-cover dx-cover-1">
-              <span className="dx-cover-tag">
-                {t('dx.coverTagVocabulary', { level: siblings[0].level })}
-              </span>
-              <div className="dx-cover-title">
-                {getLocalizedDeckName(siblings[0], i18n.language)}
-              </div>
-            </DxCover>
-
-            {/* Behind sibling 2 — rotated +4°, opacity ~.65 */}
-            <DxCover deck={siblings[1]} variant="stack-2" className="dx-cover dx-cover-2">
-              <span className="dx-cover-tag">
-                {t('dx.coverTagVocabulary', { level: siblings[1].level })}
-              </span>
-              <div className="dx-cover-title">
-                {getLocalizedDeckName(siblings[1], i18n.language)}
-              </div>
-            </DxCover>
-
-            {/* Front cover — this deck, with progress foot */}
-            <DxCover deck={deck} variant="stack-front" className="dx-cover dx-cover-3">
-              <span className="dx-cover-tag">
-                {t('dx.coverTagVocabulary', { level: deck.level })}
-              </span>
-              <div className="dx-cover-title">{localizedName}</div>
-              {greekSubtitle && greekSubtitle !== localizedName && (
-                <div className="dx-cover-el" lang="el">
-                  {greekSubtitle}
-                </div>
-              )}
-              <div className="dx-cover-foot">
-                <span className="dx-cover-pct">{pct}%</span>
-                <span className="dx-cover-bar">
-                  <span style={{ width: `${pct}%` }} />
+        {/* The front cover always renders; the 2 dimmed siblings appear only
+            when rawDecks is populated (siblings.length >= 2). See header note. */}
+        <div className="dx-cover-stack">
+          {showSiblings && (
+            <>
+              {/* Behind sibling 1 — rotated −6°, opacity ~.5 */}
+              <DxCover deck={siblings[0]} variant="stack-1" className="dx-cover dx-cover-1">
+                <span className="dx-cover-tag">
+                  {t('dx.coverTagVocabulary', { level: siblings[0].level })}
                 </span>
+                <div className="dx-cover-title">
+                  {getLocalizedDeckName(siblings[0], i18n.language)}
+                </div>
+              </DxCover>
+
+              {/* Behind sibling 2 — rotated +4°, opacity ~.65 */}
+              <DxCover deck={siblings[1]} variant="stack-2" className="dx-cover dx-cover-2">
+                <span className="dx-cover-tag">
+                  {t('dx.coverTagVocabulary', { level: siblings[1].level })}
+                </span>
+                <div className="dx-cover-title">
+                  {getLocalizedDeckName(siblings[1], i18n.language)}
+                </div>
+              </DxCover>
+            </>
+          )}
+
+          {/* Front cover — this deck, with progress foot. Always rendered. */}
+          <DxCover deck={deck} variant="stack-front" className="dx-cover dx-cover-3">
+            <span className="dx-cover-tag">
+              {t('dx.coverTagVocabulary', { level: deck.level })}
+            </span>
+            <div className="dx-cover-title">{localizedName}</div>
+            {greekSubtitle && greekSubtitle !== localizedName && (
+              <div className="dx-cover-el" lang="el">
+                {greekSubtitle}
               </div>
-            </DxCover>
-          </div>
-        )}
+            )}
+            <div className="dx-cover-foot">
+              <span className="dx-cover-pct">{pct}%</span>
+              <span className="dx-cover-bar">
+                <span style={{ width: `${pct}%` }} />
+              </span>
+            </div>
+          </DxCover>
+        </div>
       </div>
     </div>
   );

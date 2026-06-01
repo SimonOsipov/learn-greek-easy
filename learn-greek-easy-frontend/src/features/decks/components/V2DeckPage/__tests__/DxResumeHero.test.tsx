@@ -3,8 +3,9 @@
  *
  * Covers:
  * - 3 covers render when siblings.length >= 2
- * - Cover stack omitted when rawDecks empty (deep-link) / siblings < 2
- * - Left column still renders when stack is hidden
+ * - Front cover always renders; sibling covers omitted when rawDecks empty
+ *   (deep-link) / siblings < 2
+ * - Left column renders alongside the front cover
  * - Stats are word-based: Total words = deck.cardCount, Mastered = masteredWords,
  *   Complete % = round(masteredWords / totalWords * 100)
  * - Greek subtitle has lang="el" and is not italic
@@ -13,7 +14,7 @@
 
 import React from 'react';
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -88,25 +89,35 @@ describe('DxResumeHero', () => {
     expect(covers.length).toBe(3);
   });
 
-  it('omits the cover stack when siblings < 2', () => {
+  it('renders only the front cover (no siblings) when siblings < 2', () => {
     const { container } = renderHero(mockDeck, 10, [mockSibling1]);
 
-    const stack = container.querySelector('.dx-cover-stack');
-    expect(stack).not.toBeInTheDocument();
+    // The stack container and the front cover always render…
+    expect(container.querySelector('.dx-cover-stack')).toBeInTheDocument();
+    expect(container.querySelector('.dx-cover-3')).toBeInTheDocument();
+    // …but the dimmed sibling covers are omitted.
+    expect(container.querySelector('.dx-cover-1')).not.toBeInTheDocument();
+    expect(container.querySelector('.dx-cover-2')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('.dx-cover').length).toBe(1);
   });
 
-  it('omits the cover stack when rawDecks empty (deep-link / siblings = [])', () => {
+  it('renders the front cover on deep-link (rawDecks empty / siblings = [])', () => {
     const { container } = renderHero(mockDeck, 10, []);
 
-    const stack = container.querySelector('.dx-cover-stack');
-    expect(stack).not.toBeInTheDocument();
+    // Front cover shows so the hero is never empty; siblings stay omitted.
+    expect(container.querySelector('.dx-cover-stack')).toBeInTheDocument();
+    expect(container.querySelector('.dx-cover-3')).toBeInTheDocument();
+    expect(container.querySelectorAll('.dx-cover').length).toBe(1);
   });
 
-  it('left column still renders when cover stack is hidden', () => {
-    renderHero(mockDeck, 10, []);
+  it('left column renders alongside the front cover', () => {
+    const { container } = renderHero(mockDeck, 10, []);
 
-    // The kicker should always be present
-    expect(screen.getByText(/Vocabulary/)).toBeInTheDocument();
+    // The kicker should always be present in the left column (the front cover
+    // also carries a "Vocabulary" tag now, so scope the query to avoid a match
+    // on both).
+    const leftCol = container.querySelector('.dx-hero-resume-l') as HTMLElement;
+    expect(within(leftCol).getByText(/Vocabulary/)).toBeInTheDocument();
     // Stats labels should be present
     expect(screen.getByText('Total words')).toBeInTheDocument();
     expect(screen.getByText('Mastered')).toBeInTheDocument();
@@ -145,9 +156,12 @@ describe('DxResumeHero', () => {
   });
 
   it('Greek subtitle has lang="el" and is not italic', () => {
-    renderHero(mockDeck, 10, []);
+    const { container } = renderHero(mockDeck, 10, []);
 
-    const el = screen.getByText('Ελληνικά main-deck');
+    // Scope to the left-column heading: the front cover overlay also renders
+    // the same Greek text in a .dx-cover-el now that it always shows.
+    const el = container.querySelector('.dx-hero-resume-el') as HTMLElement;
+    expect(el).toHaveTextContent('Ελληνικά main-deck');
     expect(el).toHaveAttribute('lang', 'el');
     // The CSS sets font-style: normal; test at the element level via class
     expect(el.className).toContain('dx-hero-resume-el');

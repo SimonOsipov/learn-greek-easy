@@ -311,11 +311,7 @@ test.describe('Dark Mode - Theme Persists on Logout', () => {
   }
 
   test('DM-12: should keep theme after logout', async ({ page }) => {
-    // Clear theme at the start
     await page.goto('/dashboard');
-    await verifyAuthSucceeded(page, '/dashboard');
-    await page.evaluate(() => localStorage.removeItem('theme'));
-    await page.reload();
     await verifyAuthSucceeded(page, '/dashboard');
 
     // Wait for dashboard to load
@@ -323,9 +319,17 @@ test.describe('Dark Mode - Theme Persists on Logout', () => {
       timeout: 15000,
     });
 
-    // Set to dark theme
-    await page.getByTestId('theme-switcher').click();
-    await expect(page.locator('html')).toHaveClass(/dark/);
+    const html = page.locator('html');
+
+    // The account may already be in either theme, and the backend preference is
+    // reapplied on auth load — so clearing localStorage does NOT reliably force a
+    // light start (a single toggle would then land on light, not dark). Normalize
+    // to dark deterministically without assuming the starting state. (Same pattern
+    // as DM-13's normalize-to-light.)
+    if (!(await html.evaluate((el) => el.classList.contains('dark')))) {
+      await page.getByTestId('theme-switcher').click();
+    }
+    await expect(html).toHaveClass(/dark/);
 
     // Logout via UI
     await logoutViaUI(page);
@@ -333,8 +337,11 @@ test.describe('Dark Mode - Theme Persists on Logout', () => {
     // Should be on landing page (app redirects to / after logout)
     await expect(page.getByTestId('landing-page')).toBeVisible({ timeout: 10000 });
 
+    // Wait for any theme transition to complete before asserting
+    await expect(html).not.toHaveClass(/theme-transition/, { timeout: 5000 });
+
     // Theme should still be dark after logout
-    await expect(page.locator('html')).toHaveClass(/dark/);
+    await expect(html).toHaveClass(/dark/);
 
     // Verify localStorage still has dark theme
     const theme = await page.evaluate(() => localStorage.getItem('theme'));
