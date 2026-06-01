@@ -97,9 +97,7 @@ interface LocalGenderPillProps {
 
 function LocalGenderPill({ gender, label }: LocalGenderPillProps) {
   const variant = GENDER_PILL_VARIANT[gender] ?? 'badge b-gray';
-  return (
-    <span className={`${variant} font-mono text-[10px] uppercase tracking-wider`}>{label}</span>
-  );
+  return <span className={`${variant} dx-gender-pill`}>{label}</span>;
 }
 
 // ============================================
@@ -116,9 +114,7 @@ export function NounDeclensionTable({ grammarData }: NounDeclensionTableProps) {
     <Card className="rounded-2xl border px-1 py-1">
       <CardHeader className="px-6 pb-2 pt-5">
         <div className="flex items-center justify-between">
-          <p className="font-mono text-[10.5px] font-semibold uppercase tracking-widest text-muted-foreground">
-            {t('grammar.sections.declension')}
-          </p>
+          <p className="dx-caseforms-eyebrow">{t('grammar.sections.declension')}</p>
           {hasGender && (
             <LocalGenderPill
               gender={grammarData.gender!}
@@ -126,9 +122,7 @@ export function NounDeclensionTable({ grammarData }: NounDeclensionTableProps) {
             />
           )}
         </div>
-        <CardTitle className="font-display text-[18px] font-bold -tracking-tight">
-          {t('grammar.sections.caseForms')}
-        </CardTitle>
+        <h3 className="dx-section-h">{t('grammar.sections.caseForms')}</h3>
       </CardHeader>
       <CardContent className="px-6 pb-5">
         <ScrollableTable>
@@ -137,10 +131,10 @@ export function NounDeclensionTable({ grammarData }: NounDeclensionTableProps) {
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="h-auto w-[35%] bg-muted/50 px-4 py-2" />
-                  <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <TableHead className="dx-caseforms-col h-auto bg-muted/50 px-4 py-2 text-center">
                     {t('grammar.nounDeclension.singular')}
                   </TableHead>
-                  <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <TableHead className="dx-caseforms-col h-auto bg-muted/50 px-4 py-2 text-center">
                     {t('grammar.nounDeclension.plural')}
                   </TableHead>
                 </TableRow>
@@ -148,7 +142,7 @@ export function NounDeclensionTable({ grammarData }: NounDeclensionTableProps) {
               <TableBody>
                 {caseData.map(({ case: caseKey, singular, plural }) => (
                   <TableRow key={caseKey} className="hover:bg-transparent">
-                    <TableCell className="bg-muted/50 px-4 py-2 text-[13.5px] font-semibold text-muted-foreground">
+                    <TableCell className="dx-caseforms-rowlabel bg-muted/50 px-4 py-2">
                       {t(`grammar.nounDeclension.cases.${caseKey}`)}
                     </TableCell>
                     <TableCell className="px-4 py-3 text-center font-serif text-base font-semibold text-foreground">
@@ -261,10 +255,10 @@ function GenderTable({ gender, data, na, t }: GenderTableProps) {
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="h-auto w-[35%] bg-muted/50 px-4 py-2" />
-              <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <TableHead className="dx-caseforms-col h-auto bg-muted/50 px-4 py-2 text-center">
                 {t('grammar.nounDeclension.singular')}
               </TableHead>
-              <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <TableHead className="dx-caseforms-col h-auto bg-muted/50 px-4 py-2 text-center">
                 {t('grammar.nounDeclension.plural')}
               </TableHead>
             </TableRow>
@@ -272,7 +266,7 @@ function GenderTable({ gender, data, na, t }: GenderTableProps) {
           <TableBody>
             {CASES.map((caseKey) => (
               <TableRow key={caseKey} className="hover:bg-transparent">
-                <TableCell className="bg-muted/50 px-4 py-2 text-[13.5px] font-semibold text-muted-foreground">
+                <TableCell className="dx-caseforms-rowlabel bg-muted/50 px-4 py-2">
                   {t(`grammar.nounDeclension.cases.${caseKey}`)}
                 </TableCell>
                 <TableCell className="px-4 py-2 text-center font-serif text-base font-semibold text-foreground">
@@ -301,12 +295,8 @@ export function AdjectiveDeclensionTable({ grammarData }: AdjectiveDeclensionTab
   return (
     <Card className="rounded-2xl border px-1 py-1">
       <CardHeader className="px-6 pb-2 pt-5">
-        <p className="mb-1 font-mono text-[10.5px] font-semibold uppercase tracking-widest text-muted-foreground">
-          {t('grammar.sections.declension')}
-        </p>
-        <CardTitle className="font-display text-[18px] font-bold -tracking-tight">
-          {t('grammar.sections.declension')}
-        </CardTitle>
+        <p className="dx-caseforms-eyebrow mb-1">{t('grammar.sections.declension')}</p>
+        <h3 className="dx-section-h">{t('grammar.sections.declension')}</h3>
       </CardHeader>
       <CardContent className="space-y-6 px-6 pb-5">
         {/* Gender tabs */}

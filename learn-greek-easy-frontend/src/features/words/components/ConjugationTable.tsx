@@ -76,7 +76,7 @@ export function ConjugationTable({ grammarData }: ConjugationTableProps) {
   const renderImperativeTable = () => (
     <Card className="overflow-hidden">
       <CardHeader className="bg-muted/50 px-4 py-3">
-        <CardTitle className="font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <CardTitle className="dx-caseforms-col">
           {t('grammar.verbConjugation.imperative.title')}
         </CardTitle>
       </CardHeader>
@@ -84,10 +84,10 @@ export function ConjugationTable({ grammarData }: ConjugationTableProps) {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <TableHead className="dx-caseforms-col h-auto bg-muted/50 px-4 py-2 text-center">
                 {t('grammar.verbConjugation.imperative.singular')}
               </TableHead>
-              <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <TableHead className="dx-caseforms-col h-auto bg-muted/50 px-4 py-2 text-center">
                 {t('grammar.verbConjugation.imperative.plural')}
               </TableHead>
             </TableRow>
@@ -114,7 +114,7 @@ export function ConjugationTable({ grammarData }: ConjugationTableProps) {
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="h-auto bg-muted/50 px-4 py-2" />
-              <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <TableHead className="dx-caseforms-col h-auto bg-muted/50 px-4 py-2 text-center">
                 {t(`grammar.verbConjugation.tenses.${tense}`)}
               </TableHead>
             </TableRow>
@@ -124,7 +124,7 @@ export function ConjugationTable({ grammarData }: ConjugationTableProps) {
               const value = getConjugation(grammarData, tense, person);
               return (
                 <TableRow key={person} className="hover:bg-transparent">
-                  <TableCell className="bg-muted/50 px-4 py-2 text-[13.5px] font-semibold text-muted-foreground">
+                  <TableCell className="dx-caseforms-rowlabel bg-muted/50 px-4 py-2">
                     {personLabels[person]}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-center font-serif text-base font-semibold text-foreground">
@@ -142,12 +142,8 @@ export function ConjugationTable({ grammarData }: ConjugationTableProps) {
   return (
     <Card className="rounded-2xl border px-1 py-1">
       <CardHeader className="px-6 pb-2 pt-5">
-        <p className="mb-1 font-mono text-[10.5px] font-semibold uppercase tracking-widest text-muted-foreground">
-          {t('grammar.sections.conjugation')}
-        </p>
-        <CardTitle className="font-display text-[18px] font-bold -tracking-tight">
-          {t('grammar.sections.conjugation')}
-        </CardTitle>
+        <p className="dx-caseforms-eyebrow mb-1">{t('grammar.sections.conjugation')}</p>
+        <h3 className="dx-section-h">{t('grammar.sections.conjugation')}</h3>
       </CardHeader>
       <CardContent className="px-6 pb-5">
         <Tabs value={selectedTense} onValueChange={(v) => setSelectedTense(v as Tense)}>
