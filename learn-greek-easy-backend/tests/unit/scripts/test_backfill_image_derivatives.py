@@ -188,12 +188,15 @@ class TestDryRun:
             {"Key": "images/photo.jpg"},
         ]
         mock_client, _ = _run_backfill(objects=objects, dry_run=True)
-        # head_object should only be called for photo.jpg, not for the derivative key itself
+        # photo_400w.webp is itself a derivative, so it is skipped as a SOURCE:
+        # no derivatives-of-derivatives (photo_400w_<width>w.webp) are ever computed.
+        # (photo_400w.webp may still appear in HEAD calls as photo.jpg's derivative-
+        #  existence check, which is expected after the dry-run existence-skip fix.)
         called_keys = {
             c.kwargs.get("Key", c.args[1] if len(c.args) > 1 else "")
             for c in mock_client.head_object.call_args_list
         }
-        assert "images/photo_400w.webp" not in called_keys
+        assert not any(k.startswith("images/photo_400w_") for k in called_keys)
 
     def test_dry_run_skips_non_image_content_type(self) -> None:
         """Audio objects must be skipped without counting as errors."""
