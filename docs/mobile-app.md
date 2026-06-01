@@ -18,16 +18,47 @@ resolved in `app.config.ts`:
 Each variant installs as a separate app (distinct bundle IDs), so dev / preview / prod
 coexist on one device or simulator.
 
-## Config approach — no `.env`
+## Supabase config — environment variables
 
-All per-environment config lives committed in `app.config.ts`, keyed by `APP_VARIANT`.
-EAS sets that variable at build time via the `env` block in each `eas.json` profile —
-there is no `.env` file to create or manage.
+Supabase credentials (`SUPABASE_URL` and `SUPABASE_ANON_KEY`) are **not committed** to
+source. `app.config.ts` reads them from `process.env` and exposes them via `extra`;
+`src/lib/config.ts` throws a descriptive error at app runtime if either value is missing.
 
-These values are intentionally client-public: a mobile binary can be decompiled, so there
-is nothing to hide in `app.config.ts`. The only real secret in the epic (the EAS CI token)
-lives in GitHub Actions secrets and is wired in MOB-08. Future stories add committed
-Supabase credentials (MOB-03) and the API URL (MOB-05) into the same variant map.
+### Cloud builds (EAS)
+
+Values are **EAS environment variables** (server-side, scoped per environment). Each
+`eas.json` build profile maps to an EAS environment via the `"environment"` key. The
+maintainer must create them once:
+
+```bash
+eas env:create --environment development --name SUPABASE_URL --value https://nyiyljmtbnvykbpdjfjq.supabase.co --visibility sensitive
+eas env:create --environment development --name SUPABASE_ANON_KEY --value <dev anon key> --visibility sensitive
+eas env:create --environment preview --name SUPABASE_URL --value https://nyiyljmtbnvykbpdjfjq.supabase.co --visibility sensitive
+eas env:create --environment preview --name SUPABASE_ANON_KEY --value <dev anon key> --visibility sensitive
+eas env:create --environment production --name SUPABASE_URL --value https://qduwfsuybkqsginndguz.supabase.co --visibility sensitive
+eas env:create --environment production --name SUPABASE_ANON_KEY --value <prod anon key> --visibility sensitive
+```
+
+Environment → Supabase project mapping:
+- `development` + `preview` → **DEV** Supabase project (`nyiyljmtbnvykbpdjfjq`)
+- `production` → **PROD** Supabase project (`qduwfsuybkqsginndguz`)
+
+### Local development
+
+Create a gitignored `learn-greek-easy-mobile/.env` with the dev values:
+
+```
+SUPABASE_URL=https://nyiyljmtbnvykbpdjfjq.supabase.co
+SUPABASE_ANON_KEY=<dev anon key>
+```
+
+Alternatively, run `eas env:pull --environment development` to generate it automatically.
+
+### CI (tsc + lint)
+
+The `Mobile CI` tsc and lint checks do **not** need these env vars — `app.config.ts`
+evaluates without side-effects when the values are `undefined`, and the accessor only
+throws at app runtime.
 
 ## EAS build commands per profile
 
