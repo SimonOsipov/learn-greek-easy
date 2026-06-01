@@ -66,6 +66,7 @@ const config: ExpoConfig = {
         },
       },
     ],
+    ['expo-web-browser', { experimentalLauncherActivity: false }],
   ],
   experiments: {
     typedRoutes: true,
