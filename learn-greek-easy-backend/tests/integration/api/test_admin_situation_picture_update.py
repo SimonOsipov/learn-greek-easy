@@ -513,7 +513,7 @@ class TestPictureUpdateImageUrl:
     ):
         """When picture has image_s3_key, response image_url is the presigned URL."""
         mock_s3_service.generate_presigned_url.side_effect = (
-            lambda key: f"https://s3.example.com/{key}"
+            lambda key, **kwargs: f"https://s3.example.com/{key}"
         )
 
         situation = await SituationFactory.create()

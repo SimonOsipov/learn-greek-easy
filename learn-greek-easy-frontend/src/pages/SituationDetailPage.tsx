@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAudioTimeMs } from '@/hooks/useAudioTimeMs';
 import { useLanguage } from '@/hooks/useLanguage';
 import { track } from '@/lib/analytics';
+import { buildSrcSet } from '@/lib/imageVariants';
 import { exerciseAPI } from '@/services/exerciseAPI';
 import type { ExerciseModality, ExerciseQueue, ExerciseQueueItem } from '@/services/exerciseAPI';
 import { situationAPI } from '@/services/situationAPI';
@@ -369,6 +370,7 @@ export const SituationDetailPage: React.FC = () => {
               <SourceCard
                 sourceUrl={situation.source_url}
                 sourceImageUrl={situation.source_image_url}
+                sourceImageVariants={situation.source_image_variants}
                 sourceTitle={situation.source_title}
               />
             ) : (
@@ -379,8 +381,13 @@ export const SituationDetailPage: React.FC = () => {
               <div className="overflow-hidden rounded-lg border bg-muted/40">
                 <img
                   src={situation.picture_url}
+                  srcSet={buildSrcSet(situation.picture_variants)}
+                  sizes="(max-width: 768px) 100vw, 50vw"
                   alt={scenarioTitle}
+                  width={800}
+                  height={450}
                   className="aspect-video w-full object-cover"
+                  loading="lazy"
                 />
               </div>
             ) : (

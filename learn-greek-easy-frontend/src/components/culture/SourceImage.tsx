@@ -2,11 +2,14 @@ import { type FC, useEffect, useState } from 'react';
 
 import { ExternalLink } from 'lucide-react';
 
+import { buildSrcSet, type ImageVariants } from '@/lib/imageVariants';
 import { cn } from '@/lib/utils';
 
 export interface SourceImageProps {
   /** Image URL to display. Component returns null if empty/undefined. */
   imageUrl: string;
+  /** WebP derivative URLs (PERF-10). Falls back to imageUrl when absent. */
+  imageVariants?: ImageVariants;
   /** Article title displayed in the badge overlay */
   title?: string;
   /** Source article URL. When provided, wraps component in <a> tag. */
@@ -19,6 +22,7 @@ export interface SourceImageProps {
 
 export const SourceImage: FC<SourceImageProps> = ({
   imageUrl,
+  imageVariants,
   title,
   sourceUrl,
   onSourceClick,
@@ -41,7 +45,11 @@ export const SourceImage: FC<SourceImageProps> = ({
     <>
       <img
         src={imageUrl}
+        srcSet={buildSrcSet(imageVariants)}
+        sizes="(max-width: 768px) 100vw, 50vw"
         alt=""
+        width={800}
+        height={140}
         className="h-[140px] w-full object-cover"
         loading="lazy"
         onError={() => setHasError(true)}

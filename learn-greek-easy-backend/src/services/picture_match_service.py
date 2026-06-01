@@ -33,7 +33,7 @@ from src.schemas.exercise_payload import (
     SelectDescriptionFromPicturePayload,
     SelectPictureFromDescriptionPayload,
 )
-from src.services.s3_service import get_s3_service
+from src.services.s3_service import IMAGE_PRESIGN_EXPIRY_SECONDS, get_s3_service
 
 logger = get_logger(__name__)
 
@@ -186,12 +186,18 @@ def _build_select_picture_payload(
     s3 = get_s3_service()
     options: list[PictureMatchOption] = []
     for idx, (sp, _sd) in enumerate(candidates):
-        url = s3.generate_presigned_url(sp.image_s3_key)
+        url = s3.generate_presigned_url(
+            sp.image_s3_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
+        )
         if not url:
             raise InsufficientDistractorPoolError(
                 f"failed to presign image for situation {sp.situation_id}"
             )
-        options.append(PictureMatchOption(option_index=idx, image_url=url))
+        _raw_variants = (
+            s3.get_derivative_presigned_urls(sp.image_s3_key) if sp.image_s3_key else None
+        )
+        variants = _raw_variants if isinstance(_raw_variants, dict) else None
+        options.append(PictureMatchOption(option_index=idx, image_url=url, image_variants=variants))
     return SelectPictureFromDescriptionPayload(
         prompt_description=anchor_description.text_el,
         options=options,
@@ -207,7 +213,9 @@ def _build_select_description_payload(
 ) -> SelectDescriptionFromPicturePayload:
     """Build SELECT_DESCRIPTION_FROM_PICTURE payload: prompt = anchor image, options = texts."""
     s3 = get_s3_service()
-    anchor_url = s3.generate_presigned_url(anchor_picture.image_s3_key)
+    anchor_url = s3.generate_presigned_url(
+        anchor_picture.image_s3_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
+    )
     if not anchor_url:
         raise InsufficientDistractorPoolError(
             f"failed to presign anchor image for situation {anchor_situation_id}"

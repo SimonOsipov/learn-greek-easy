@@ -230,7 +230,9 @@ class TestLoadDescriptionEnrichment:
 
         service = ExerciseSM2Service(mock_db_session)
         with patch("src.services.exercise_sm2_service.get_s3_service") as mock_s3:
-            mock_s3.return_value.generate_presigned_url.side_effect = lambda k: f"https://cdn/{k}"
+            mock_s3.return_value.generate_presigned_url.side_effect = (
+                lambda k, **kwargs: f"https://cdn/{k}"
+            )
             result = await service.load_description_enrichment([exercise.id])
 
         data = result[exercise.id]
@@ -246,7 +248,9 @@ class TestLoadDescriptionEnrichment:
 
         service = ExerciseSM2Service(mock_db_session)
         with patch("src.services.exercise_sm2_service.get_s3_service") as mock_s3:
-            mock_s3.return_value.generate_presigned_url.side_effect = lambda k: f"https://cdn/{k}"
+            mock_s3.return_value.generate_presigned_url.side_effect = (
+                lambda k, **kwargs: f"https://cdn/{k}"
+            )
             result = await service.load_description_enrichment([exercise.id])
 
         data = result[exercise.id]
@@ -266,7 +270,9 @@ class TestLoadDescriptionEnrichment:
 
         service = ExerciseSM2Service(mock_db_session)
         with patch("src.services.exercise_sm2_service.get_s3_service") as mock_s3:
-            mock_s3.return_value.generate_presigned_url.side_effect = lambda k: f"https://cdn/{k}"
+            mock_s3.return_value.generate_presigned_url.side_effect = (
+                lambda k, **kwargs: f"https://cdn/{k}"
+            )
             result = await service.load_description_enrichment([exercise.id])
 
         data = result[exercise.id]
@@ -282,7 +288,9 @@ class TestLoadDescriptionEnrichment:
 
         service = ExerciseSM2Service(mock_db_session)
         with patch("src.services.exercise_sm2_service.get_s3_service") as mock_s3:
-            mock_s3.return_value.generate_presigned_url.side_effect = lambda k: f"https://cdn/{k}"
+            mock_s3.return_value.generate_presigned_url.side_effect = (
+                lambda k, **kwargs: f"https://cdn/{k}"
+            )
             result = await service.load_description_enrichment([exercise.id])
 
         data = result[exercise.id]
@@ -303,7 +311,9 @@ class TestLoadDescriptionEnrichment:
 
         service = ExerciseSM2Service(mock_db_session)
         with patch("src.services.exercise_sm2_service.get_s3_service") as mock_s3:
-            mock_s3.return_value.generate_presigned_url.side_effect = lambda k: f"https://cdn/{k}"
+            mock_s3.return_value.generate_presigned_url.side_effect = (
+                lambda k, **kwargs: f"https://cdn/{k}"
+            )
             result = await service.load_description_enrichment([exercise.id])
 
         data = result[exercise.id]

@@ -887,7 +887,9 @@ class TestBuildQueueItem:
 
         if question.image_key:
             assert result.image_url == "https://s3.example.com/presigned-url"
-            mock_s3_service.generate_presigned_url.assert_called_with(question.image_key)
+            mock_s3_service.generate_presigned_url.assert_called_with(
+                question.image_key, expiry_seconds=2592000
+            )
 
     @pytest.mark.asyncio
     async def test_generates_presigned_url_for_audio(

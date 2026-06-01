@@ -19,7 +19,7 @@ import { reportAPIError } from '@/lib/errorReporting';
 import { deckAPI } from '@/services/deckAPI';
 import type { DeckDetailResponse, DeckLevel, DeckResponse } from '@/services/deckAPI';
 import { progressAPI } from '@/services/progressAPI';
-import type { DeckProgressSummary } from '@/services/progressAPI';
+import type { DeckProgressDetailResponse, DeckProgressSummary } from '@/services/progressAPI';
 import type { Deck, DeckFilters, DeckProgress } from '@/types/deck';
 
 /**
@@ -175,6 +175,9 @@ interface DeckState {
   /** Currently selected deck for detail view */
   selectedDeck: Deck | null;
 
+  /** Raw progress detail for the selected deck — consumed by V2DeckHeader to avoid a duplicate API call */
+  selectedDeckProgressDetail: DeckProgressDetailResponse | null;
+
   /** Active filter settings */
   filters: DeckStoreFilters;
 
@@ -217,6 +220,7 @@ export const useDeckStore = create<DeckState>()(
       rawDecks: [],
       totalDecks: 0,
       selectedDeck: null,
+      selectedDeckProgressDetail: null,
       filters: DEFAULT_FILTERS,
       isLoading: false,
       error: null,
@@ -352,6 +356,7 @@ export const useDeckStore = create<DeckState>()(
 
           set({
             selectedDeck: deck,
+            selectedDeckProgressDetail: progressResponse ?? null,
             isLoading: false,
             error: null,
           });
@@ -375,7 +380,7 @@ export const useDeckStore = create<DeckState>()(
        * Clear the currently selected deck
        */
       clearSelection: () => {
-        set({ selectedDeck: null });
+        set({ selectedDeck: null, selectedDeckProgressDetail: null });
       },
 
       /**

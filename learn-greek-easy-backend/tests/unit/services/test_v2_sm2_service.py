@@ -454,7 +454,9 @@ class TestV2SM2ServiceAudioEnrichment:
         self._mock_db_execute(mock_db_session, [we])
 
         mock_s3 = MagicMock()
-        mock_s3.generate_presigned_url.side_effect = lambda key: f"https://s3.example.com/{key}"
+        mock_s3.generate_presigned_url.side_effect = (
+            lambda key, **kwargs: f"https://s3.example.com/{key}"
+        )
 
         service = V2SM2Service(mock_db_session)
         with patch("src.services.v2_sm2_service.get_s3_service", return_value=mock_s3):
@@ -482,7 +484,7 @@ class TestV2SM2ServiceAudioEnrichment:
         self._mock_db_execute(mock_db_session, [we])
 
         mock_s3 = MagicMock()
-        mock_s3.generate_presigned_url.side_effect = lambda key: (
+        mock_s3.generate_presigned_url.side_effect = lambda key, **kwargs: (
             f"https://s3.example.com/{key}" if key else None
         )
 
@@ -506,7 +508,7 @@ class TestV2SM2ServiceAudioEnrichment:
         self._mock_db_execute(mock_db_session, [we])
 
         mock_s3 = MagicMock()
-        mock_s3.generate_presigned_url.side_effect = lambda key: (
+        mock_s3.generate_presigned_url.side_effect = lambda key, **kwargs: (
             f"https://s3.example.com/{key}" if key else None
         )
 
@@ -527,7 +529,9 @@ class TestV2SM2ServiceAudioEnrichment:
         self._mock_db_execute(mock_db_session, [we])
 
         mock_s3 = MagicMock()
-        mock_s3.generate_presigned_url.side_effect = lambda key: f"https://s3.example.com/{key}"
+        mock_s3.generate_presigned_url.side_effect = (
+            lambda key, **kwargs: f"https://s3.example.com/{key}"
+        )
 
         service = V2SM2Service(mock_db_session)
         with patch("src.services.v2_sm2_service.get_s3_service", return_value=mock_s3):
@@ -549,7 +553,7 @@ class TestV2SM2ServiceAudioEnrichment:
         self._mock_db_execute(mock_db_session, [we])
 
         mock_s3 = MagicMock()
-        mock_s3.generate_presigned_url.side_effect = lambda key: (
+        mock_s3.generate_presigned_url.side_effect = lambda key, **kwargs: (
             f"https://s3.example.com/{key}" if key else None
         )
 

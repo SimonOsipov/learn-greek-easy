@@ -50,7 +50,7 @@ from src.services.openrouter_service import OpenRouterService
 from src.services.picture_match_exercise_service import (
     reconcile_picture_match_exercises_for_situation,
 )
-from src.services.s3_service import S3Service
+from src.services.s3_service import S3Service, maybe_generate_derivatives
 
 logger = get_logger(__name__)
 
@@ -177,6 +177,9 @@ async def upload_picture_to_s3(
     )
     if not success:
         raise PictureUploadError("S3 upload failed")
+    # Generate WebP derivatives alongside the original (PERF-10).
+    # Failures are swallowed inside maybe_generate_derivatives.
+    await asyncio.to_thread(maybe_generate_derivatives, s3_key, image_bytes, "image/png")
     return s3_key
 
 

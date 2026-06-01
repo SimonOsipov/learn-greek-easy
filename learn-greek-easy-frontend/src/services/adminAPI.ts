@@ -616,6 +616,8 @@ export interface NewsItemResponse {
   /** Publication status (NADM-25): draft = hidden, published = visible to learners */
   status: 'draft' | 'published';
   linked_situation: LinkedSituationSummary | null;
+  /** WebP derivative URLs keyed by pixel-width (PERF-10); null until PERF-11 backfills. */
+  image_variants: Record<number, string> | null;
 }
 
 /**

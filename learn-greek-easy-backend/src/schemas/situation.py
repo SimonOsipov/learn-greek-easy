@@ -112,6 +112,7 @@ class SituationListItem(BaseModel):
     dialog_lines_count: int = 0
     roles: list[str] = []
     picture_image_url: str | None = None
+    picture_image_variants: dict[int, str] | None = None
     audio_duration_seconds: float | None = None
     source_title_en: str | None = None
     source_country: NewsCountry | None = None

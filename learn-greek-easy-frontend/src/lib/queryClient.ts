@@ -16,7 +16,10 @@ export const queryClient = new QueryClient({
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 30 * 60 * 1000, // 30 minutes
       retry: 1,
-      refetchOnWindowFocus: true, // changed from previous `false`
+      // PERF-08: disabled globally — culture/study payloads are large (12 k/9.8 k calls
+      // were driven by per-focus refetches). Enable per-hook where real-time freshness
+      // is required (e.g. admin mutation flows that invalidate on success).
+      refetchOnWindowFocus: false,
       refetchInterval: false,
     },
   },

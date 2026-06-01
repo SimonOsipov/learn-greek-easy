@@ -66,3 +66,8 @@ class LearnerSituationDetailResponse(BaseModel):
     source_image_url: str | None = None
     picture_url: str | None = None
     source_title: str | None = None
+    # WebP derivative URLs keyed by pixel-width (PERF-10).
+    # None / empty dict = derivatives not yet generated (PERF-11 will backfill).
+    # Frontend falls back to picture_url / source_image_url when absent.
+    picture_variants: dict[int, str] | None = None
+    source_image_variants: dict[int, str] | None = None

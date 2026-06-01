@@ -1,4 +1,3 @@
-import posthog from 'posthog-js';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
@@ -7,6 +6,41 @@ import { queryClient } from '@/lib/queryClient';
 import { supabase } from '@/lib/supabaseClient';
 import { authAPI, type ProfileUpdateRequest } from '@/services/authAPI';
 import type { User, AuthError } from '@/types/auth';
+
+// posthog-js is imported lazily to keep it out of the entry chunk.
+// See PostHogProvider.tsx for the main init; here we access the singleton
+// via dynamic import only inside async store actions where it may already be loaded.
+let _posthogModule: typeof import('posthog-js') | null = null;
+function getPosthog() {
+  return _posthogModule?.default ?? null;
+}
+// Pre-warm the posthog chunk after the module is ready (non-blocking).
+import('posthog-js')
+  .then((mod) => {
+    _posthogModule = mod;
+  })
+  .catch(() => {});
+
+/**
+ * In-flight guard: if checkAuth is already in progress, callers share the
+ * same Promise instead of issuing a second GET /auth/me.
+ */
+let _checkAuthInflight: Promise<void> | null = null;
+
+/**
+ * Freshness window (ms). If the profile was fetched within this window, skip
+ * the refetch. 30 s is short enough that stale data is unlikely (typical
+ * navigation takes <1 s), but long enough to absorb all duplicate calls that
+ * occur within a single page-load cycle (AuthProvider + LoginForm, etc.).
+ */
+const PROFILE_FRESHNESS_MS = 30_000;
+
+/**
+ * Timestamp (Date.now()) of the most recent successful getProfile() call.
+ * Stored at module level so it survives Zustand re-renders but does NOT get
+ * persisted to localStorage (no stale-cache risk across sessions).
+ */
+let _profileFetchedAt = 0;
 
 interface AuthState {
   // State
@@ -41,8 +75,9 @@ export const useAuthStore = create<AuthState>()(
       // Logout action
       logout: async () => {
         // Track logout event before reset
-        if (typeof posthog?.capture === 'function') {
-          posthog.capture('user_logged_out');
+        const _ph = getPosthog();
+        if (typeof _ph?.capture === 'function') {
+          _ph.capture('user_logged_out');
         }
 
         // Sign out via Supabase (clears session)
@@ -51,7 +86,10 @@ export const useAuthStore = create<AuthState>()(
           reportAPIError(error, { operation: 'logout', endpoint: 'supabase.auth.signOut' });
         }
 
-        // Clear all auth data
+        // Clear auth data + dedup state so next login fetches fresh profile
+        _checkAuthInflight = null;
+        _profileFetchedAt = 0;
+
         set({
           user: null,
           isAuthenticated: false,
@@ -62,8 +100,8 @@ export const useAuthStore = create<AuthState>()(
         queryClient.removeQueries({ queryKey: ['analytics'] });
 
         // Reset PostHog identity so next session is anonymous
-        if (typeof posthog?.reset === 'function') {
-          posthog.reset();
+        if (typeof _ph?.reset === 'function') {
+          _ph.reset();
         }
       },
 
@@ -174,85 +212,113 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      // Check auth on app load
+      // Check auth on app load — deduplicated via in-flight guard + freshness window
       checkAuth: async (options?: { signal?: AbortSignal }) => {
-        const signal = options?.signal;
+        // --- In-flight guard ---
+        // If another checkAuth call is already in flight, share that Promise
+        // instead of issuing a second GET /auth/me.
+        if (_checkAuthInflight !== null) {
+          return _checkAuthInflight;
+        }
 
-        // Check Supabase session
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session) {
-          set({ isAuthenticated: false, isLoading: false });
+        // --- Freshness window ---
+        // If we successfully fetched the profile very recently (< 30 s ago)
+        // AND the store already holds a user, skip the refetch entirely.
+        const { user } = get();
+        if (user !== null && Date.now() - _profileFetchedAt < PROFILE_FRESHNESS_MS) {
           return;
         }
 
-        const { isAuthenticated } = get();
-        if (!isAuthenticated) {
-          set({ isLoading: true });
-        }
+        const signal = options?.signal;
 
-        try {
-          const profileResponse = await authAPI.getProfile({ signal });
+        // Wrap the actual fetch in a Promise we store so concurrent callers
+        // can attach to it rather than spawning their own requests.
+        _checkAuthInflight = (async () => {
+          try {
+            // Check Supabase session
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
 
-          // Check if aborted after the call
-          if (signal?.aborted) {
-            return;
-          }
+            if (!session) {
+              set({ isAuthenticated: false, isLoading: false });
+              return;
+            }
 
-          // Transform backend user response to frontend User type
-          const user: User = {
-            id: profileResponse.id,
-            email: profileResponse.email,
-            name: profileResponse.full_name || profileResponse.email.split('@')[0],
-            avatar: profileResponse.avatar_url || undefined,
-            role:
-              profileResponse.effective_role ?? (profileResponse.is_superuser ? 'admin' : 'free'),
-            preferences: {
-              language: 'en',
-              dailyGoal: profileResponse.settings?.daily_goal || 20,
-              notifications: profileResponse.settings?.email_notifications ?? true,
-              theme: profileResponse.settings?.theme || 'light',
-            },
-            stats: {
-              streak: 0,
-              wordsLearned: 0,
-              totalXP: 0,
-              joinedDate: new Date(profileResponse.created_at),
-            },
-            createdAt: new Date(profileResponse.created_at),
-            updatedAt: new Date(profileResponse.updated_at),
-            authProvider: profileResponse.auth_provider ?? undefined,
-            tourCompletedAt: profileResponse.settings?.tour_completed_at ?? undefined,
-          };
+            const { isAuthenticated } = get();
+            if (!isAuthenticated) {
+              set({ isLoading: true });
+            }
 
-          // Re-identify user to ensure PostHog session continuity
-          if (typeof posthog?.identify === 'function') {
-            posthog.identify(user.id, {
-              email: user.email,
-              created_at: user.createdAt.toISOString(),
+            const profileResponse = await authAPI.getProfile({ signal });
+
+            // Check if aborted after the call
+            if (signal?.aborted) {
+              return;
+            }
+
+            // Transform backend user response to frontend User type
+            const fetchedUser: User = {
+              id: profileResponse.id,
+              email: profileResponse.email,
+              name: profileResponse.full_name || profileResponse.email.split('@')[0],
+              avatar: profileResponse.avatar_url || undefined,
+              role:
+                profileResponse.effective_role ?? (profileResponse.is_superuser ? 'admin' : 'free'),
+              preferences: {
+                language: 'en',
+                dailyGoal: profileResponse.settings?.daily_goal || 20,
+                notifications: profileResponse.settings?.email_notifications ?? true,
+                theme: profileResponse.settings?.theme || 'light',
+              },
+              stats: {
+                streak: 0,
+                wordsLearned: 0,
+                totalXP: 0,
+                joinedDate: new Date(profileResponse.created_at),
+              },
+              createdAt: new Date(profileResponse.created_at),
+              updatedAt: new Date(profileResponse.updated_at),
+              authProvider: profileResponse.auth_provider ?? undefined,
+              tourCompletedAt: profileResponse.settings?.tour_completed_at ?? undefined,
+            };
+
+            // Record successful fetch time for freshness tracking
+            _profileFetchedAt = Date.now();
+
+            // Re-identify user to ensure PostHog session continuity
+            const _phCheck = getPosthog();
+            if (typeof _phCheck?.identify === 'function') {
+              _phCheck.identify(fetchedUser.id, {
+                email: fetchedUser.email,
+                created_at: fetchedUser.createdAt.toISOString(),
+              });
+            }
+
+            set({
+              user: fetchedUser,
+              isAuthenticated: true,
+              isLoading: false,
             });
-          }
+          } catch (error) {
+            // Check if request was aborted
+            if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
+              return;
+            }
 
-          set({
-            user,
-            isAuthenticated: true,
-            isLoading: false,
-          });
-        } catch (error) {
-          // Check if request was aborted
-          if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
-            return;
+            // Session exists but profile fetch failed - clear auth state
+            set({
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+          } finally {
+            // Always release the in-flight guard so future calls can proceed
+            _checkAuthInflight = null;
           }
+        })();
 
-          // Session exists but profile fetch failed - clear auth state
-          set({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
-          });
-        }
+        return _checkAuthInflight;
       },
 
       // Clear error

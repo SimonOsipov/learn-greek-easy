@@ -5,9 +5,38 @@ from uuid import UUID
 from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import load_only
 
 from src.db.models import CardRecord, CardType
 from src.repositories.base import BaseRepository
+
+# ---------------------------------------------------------------------------
+# Columns projected by get_by_deck (admin/list path only — not the hot V2 path)
+#
+# EXCLUDED (proven unused by all callers of get_by_deck):
+#   - front_content   large JSONB, not accessed by any caller of this method
+#   - back_content    large JSONB, not accessed by any caller of this method
+#
+# INCLUDED: all other columns used by CardRecordResponse and/or test assertions.
+#   id, word_entry_id, deck_id, card_type, tier, variant_key, is_active,
+#   created_at, updated_at
+#
+# Note: get_by_deck is not in the hot production path (never called from the
+# V2 service layer — only used in tests and admin workflows). The V2 hot path
+# (get_new_cards / selectinload on CardRecordStatistics) returns full entities
+# because v2_sm2_service accesses front_content and back_content.
+# ---------------------------------------------------------------------------
+_GET_BY_DECK_COLUMNS = [
+    CardRecord.id,
+    CardRecord.word_entry_id,
+    CardRecord.deck_id,
+    CardRecord.card_type,
+    CardRecord.tier,
+    CardRecord.variant_key,
+    CardRecord.is_active,
+    CardRecord.created_at,
+    CardRecord.updated_at,
+]
 
 
 class CardRecordRepository(BaseRepository[CardRecord]):
@@ -32,6 +61,10 @@ class CardRecordRepository(BaseRepository[CardRecord]):
     ) -> list[CardRecord]:
         """Get card records for a deck with optional filters.
 
+        Column projection: excludes front_content and back_content (large JSONB)
+        since no caller of this method accesses those fields. Use BaseRepository.get()
+        for single-record access where full content is needed.
+
         Args:
             deck_id: Deck UUID (required)
             card_type: Optional filter by CardType enum value
@@ -42,8 +75,17 @@ class CardRecordRepository(BaseRepository[CardRecord]):
 
         Returns:
             List of CardRecord ordered by created_at
+
+        MissingGreenlet safety:
+            Callers MUST NOT access front_content or back_content on the returned
+            objects — those columns are not loaded and will trigger MissingGreenlet
+            in async SQLAlchemy.
         """
-        query = select(CardRecord).where(CardRecord.deck_id == deck_id)
+        query = (
+            select(CardRecord)
+            .options(load_only(*_GET_BY_DECK_COLUMNS))
+            .where(CardRecord.deck_id == deck_id)
+        )
 
         if card_type is not None:
             query = query.where(CardRecord.card_type == card_type)

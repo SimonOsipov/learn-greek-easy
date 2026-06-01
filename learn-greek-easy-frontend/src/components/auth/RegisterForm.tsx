@@ -48,9 +48,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import log from '@/lib/logger';
 import { supabase } from '@/lib/supabaseClient';
-import { authAPI } from '@/services/authAPI';
 import { useAuthStore } from '@/stores/authStore';
-import type { User } from '@/types/auth';
 
 import type { FieldErrors } from 'react-hook-form';
 
@@ -166,53 +164,27 @@ export const RegisterForm: React.FC = () => {
         return;
       }
 
-      // If auto-confirm is on (dev), user is logged in immediately
+      // If auto-confirm is on (dev), user is logged in immediately.
+      // Reuse the store's checkAuth to fetch + populate user (deduplicated).
       if (authData.session) {
-        log.info('[RegisterForm] Auto-confirmed, fetching profile');
-        // Fetch profile and set in store
-        const profileResponse = await authAPI.getProfile();
-        const user: User = {
-          id: profileResponse.id,
-          email: profileResponse.email,
-          name: profileResponse.full_name || profileResponse.email.split('@')[0],
-          avatar: profileResponse.avatar_url || undefined,
-          role: profileResponse.effective_role ?? (profileResponse.is_superuser ? 'admin' : 'free'),
-          preferences: {
-            language: 'en',
-            dailyGoal: profileResponse.settings?.daily_goal || 20,
-            notifications: profileResponse.settings?.email_notifications ?? true,
-            theme: profileResponse.settings?.theme || 'light',
-          },
-          stats: {
-            streak: 0,
-            wordsLearned: 0,
-            totalXP: 0,
-            joinedDate: new Date(profileResponse.created_at),
-          },
-          createdAt: new Date(profileResponse.created_at),
-          updatedAt: new Date(profileResponse.updated_at),
-          authProvider: profileResponse.auth_provider ?? undefined,
-        };
+        log.info('[RegisterForm] Auto-confirmed, fetching profile via store');
+        await useAuthStore.getState().checkAuth();
 
-        // Track with PostHog
-        if (typeof posthog?.identify === 'function') {
-          posthog.identify(user.id, {
-            email: user.email,
-            created_at: user.createdAt.toISOString(),
-          });
+        const storeUser = useAuthStore.getState().user;
+        if (storeUser) {
+          // Track with PostHog (identify already done inside checkAuth)
+          if (typeof posthog?.identify === 'function') {
+            posthog.identify(storeUser.id, {
+              email: storeUser.email,
+              created_at: storeUser.createdAt.toISOString(),
+            });
+          }
+          if (typeof posthog?.capture === 'function') {
+            posthog.capture('user_signed_up', {
+              method: 'email',
+            });
+          }
         }
-        if (typeof posthog?.capture === 'function') {
-          posthog.capture('user_signed_up', {
-            method: 'email',
-          });
-        }
-
-        useAuthStore.setState({
-          user,
-          isAuthenticated: true,
-          isLoading: false,
-          error: null,
-        });
 
         log.info('[RegisterForm] Successfully registered and logged in');
         navigate('/dashboard');

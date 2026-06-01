@@ -32,7 +32,7 @@ from src.schemas.learner_situation import (
     LearnerSituationListResponse,
 )
 from src.services.exercise_sm2_service import ExerciseSM2Service
-from src.services.s3_service import get_s3_service
+from src.services.s3_service import IMAGE_PRESIGN_EXPIRY_SECONDS, get_s3_service
 
 router = APIRouter(
     responses={
@@ -134,7 +134,9 @@ async def list_situations(
             exercise_total=exercise_total or 0,
             exercise_completed=exercise_completed or 0,
             source_image_url=(
-                s3.generate_presigned_url(situation.source_image_s3_key)
+                s3.generate_presigned_url(
+                    situation.source_image_s3_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
+                )
                 if situation.source_image_s3_key
                 else None
             ),
@@ -226,17 +228,31 @@ async def get_situation(
 
     # Source metadata
     source_image_url: str | None = None
+    source_image_variants: dict[int, str] | None = None
     if situation.source_image_s3_key:
-        source_image_url = s3.generate_presigned_url(situation.source_image_s3_key)
+        source_image_url = s3.generate_presigned_url(
+            situation.source_image_s3_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
+        )
+        _raw_source_variants = s3.get_derivative_presigned_urls(situation.source_image_s3_key)
+        source_image_variants = (
+            _raw_source_variants if isinstance(_raw_source_variants, dict) else None
+        )
 
     # Picture (presigned only when generated)
     picture_url: str | None = None
+    picture_variants: dict[int, str] | None = None
     if (
         situation.picture is not None
         and situation.picture.status == PictureStatus.GENERATED
         and situation.picture.image_s3_key
     ):
-        picture_url = s3.generate_presigned_url(situation.picture.image_s3_key)
+        picture_url = s3.generate_presigned_url(
+            situation.picture.image_s3_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
+        )
+        _raw_picture_variants = s3.get_derivative_presigned_urls(situation.picture.image_s3_key)
+        picture_variants = (
+            _raw_picture_variants if isinstance(_raw_picture_variants, dict) else None
+        )
 
     return LearnerSituationDetailResponse(
         id=situation.id,
@@ -252,6 +268,8 @@ async def get_situation(
         source_image_url=source_image_url,
         picture_url=picture_url,
         source_title=situation.source_title_en,
+        picture_variants=picture_variants,
+        source_image_variants=source_image_variants,
     )
 
 

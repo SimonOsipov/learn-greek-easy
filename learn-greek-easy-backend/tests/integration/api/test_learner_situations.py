@@ -317,7 +317,9 @@ class TestLearnerSituationListEndpoint:
         await db_session.flush()
 
         mock_s3 = MagicMock()
-        mock_s3.generate_presigned_url.side_effect = lambda key: f"https://s3.example.com/{key}"
+        mock_s3.generate_presigned_url.side_effect = (
+            lambda key, **kwargs: f"https://s3.example.com/{key}"
+        )
 
         with patch("src.api.v1.situations.get_s3_service", return_value=mock_s3):
             response = await client.get(LIST_URL, headers=auth_headers)
@@ -489,7 +491,9 @@ class TestLearnerSituationDetailPictureUrl:
         await db_session.flush()
 
         mock_s3 = MagicMock()
-        mock_s3.generate_presigned_url.side_effect = lambda key: f"https://s3.example.com/{key}"
+        mock_s3.generate_presigned_url.side_effect = (
+            lambda key, **kwargs: f"https://s3.example.com/{key}"
+        )
         with patch("src.api.v1.situations.get_s3_service", return_value=mock_s3):
             response = await client.get(_detail_url(situation.id), headers=auth_headers)
 
