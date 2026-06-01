@@ -187,6 +187,10 @@ class TestCultureQuestionGetByDeckProjection:
     ) -> None:
         """embedding column is NOT loaded (excluded from projection to save egress)."""
         repo = CultureQuestionRepository(db_session)
+        # Detach setup instances so the projected query materializes a fresh row,
+        # otherwise the identity map returns the fully-loaded object and the
+        # load_only deferral is not observable.
+        db_session.expunge_all()
         results = await repo.get_by_deck(culture_deck.id)
         assert len(results) == 1
         q = results[0]
@@ -209,6 +213,7 @@ class TestCultureQuestionGetByDeckProjection:
     ) -> None:
         """source_article_url is NOT loaded (excluded from projection)."""
         repo = CultureQuestionRepository(db_session)
+        db_session.expunge_all()
         results = await repo.get_by_deck(culture_deck.id)
         q = results[0]
 
@@ -300,6 +305,7 @@ class TestCardRecordGetByDeckProjection:
     ) -> None:
         """front_content (large JSONB) is NOT loaded via get_by_deck."""
         repo = CardRecordRepository(db_session)
+        db_session.expunge_all()
         results = await repo.get_by_deck(v2_deck.id)
         cr = results[0]
 
@@ -318,6 +324,7 @@ class TestCardRecordGetByDeckProjection:
     ) -> None:
         """back_content (large JSONB) is NOT loaded via get_by_deck."""
         repo = CardRecordRepository(db_session)
+        db_session.expunge_all()
         results = await repo.get_by_deck(v2_deck.id)
         cr = results[0]
 
