@@ -83,6 +83,7 @@ export function DxMetricStrip({ progress, statistics, wordProgress }: DxMetricSt
             <span className="dx-stat-value">{statistics?.deck_streak_current ?? 0}</span>
             <small>{t('detail.metricStreakLabel')}</small>
           </div>
+          <div className="dx-metric-trend is-flat">{t('detail.metricStreakSub')}</div>
         </div>
       </div>
 
