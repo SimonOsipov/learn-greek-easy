@@ -20,7 +20,7 @@ export function getPostHogConfig(): { apiKey: string | undefined; host: string }
     | undefined;
   return {
     apiKey: extra?.posthogApiKey, // undefined when unset — no throw
-    host: extra?.posthogHost ?? 'https://us.i.posthog.com', // US region — matches Greekly project id 108020
+    host: extra?.posthogHost ?? 'https://eu.i.posthog.com', // EU region — Greekly project id 108020 (prod ingests to eu)
   };
 }
 

@@ -34,7 +34,7 @@ automatically `development`, `preview`, or `production` per EAS build profile.
 
 - **Org**: Learn Greek Easy
 - **Project**: Greekly (id: `108020`)
-- **Host**: `https://us.i.posthog.com` (US region)
+- **Host**: `https://eu.i.posthog.com` (EU region — project 108020 ingests to EU; matches the web `VITE_POSTHOG_HOST`)
 
 The default host is applied by `getPostHogConfig()` in `src/lib/config.ts` when
 `POSTHOG_HOST` is not set. Pass `process.env.POSTHOG_HOST` through `app.config.ts`
@@ -52,7 +52,7 @@ section is for `APP_VARIANT` only.
 |----------|----------|-------|
 | `SENTRY_DSN` | Yes (builds) | From Sentry project settings. Blank locally = no-op. |
 | `POSTHOG_API_KEY` | Yes (builds) | From PostHog project settings. Blank locally = no-op. |
-| `POSTHOG_HOST` | Optional | Defaults to `https://us.i.posthog.com` when unset. |
+| `POSTHOG_HOST` | Optional | Defaults to `https://eu.i.posthog.com` (EU) when unset. |
 
 `app.config.ts` reads these via `process.env.*` and surfaces them under `extra`.
 `src/lib/config.ts` helpers (`getSentryConfig`, `getPostHogConfig`) read them at
