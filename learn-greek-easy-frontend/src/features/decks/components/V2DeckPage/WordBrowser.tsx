@@ -111,6 +111,8 @@ interface FilterPillsProps {
   activeFilter: WordFilterStatus;
   counts: FilterCounts;
   onFilterChange: (filter: WordFilterStatus) => void;
+  /** Optional content rendered at the right end of the filter row (e.g. results count). */
+  trailing?: React.ReactNode;
 }
 
 const FILTER_OPTIONS: { value: WordFilterStatus; labelKey: string }[] = [
@@ -120,7 +122,7 @@ const FILTER_OPTIONS: { value: WordFilterStatus; labelKey: string }[] = [
   { value: 'new', labelKey: 'wordBrowser.filters.new' },
 ];
 
-function FilterPills({ activeFilter, counts, onFilterChange }: FilterPillsProps) {
+function FilterPills({ activeFilter, counts, onFilterChange, trailing }: FilterPillsProps) {
   const { t } = useTranslation('deck');
 
   return (
@@ -143,6 +145,12 @@ function FilterPills({ activeFilter, counts, onFilterChange }: FilterPillsProps)
           </button>
         );
       })}
+      {trailing && (
+        <>
+          <span className="flex-1" aria-hidden="true" />
+          {trailing}
+        </>
+      )}
     </div>
   );
 }
@@ -289,25 +297,25 @@ export const WordBrowser: React.FC<WordBrowserProps> = ({ deckId, className }) =
           )}
         </div>
 
-        {/* Filter Pills */}
+        {/* Filter Pills — results count sits at the right end of the same row */}
         <FilterPills
           activeFilter={activeFilter}
           counts={filterCounts}
           onFilterChange={setActiveFilter}
+          trailing={
+            <span className="dx-word-meta">
+              {t('wordBrowser.showing', {
+                count: filteredEntries.length,
+                total,
+              })}
+              <MasteryDotsLegend
+                namespace="deck"
+                legendKey="wordBrowser.masteryDotsLegend"
+                ariaLabelKey="wordBrowser.masteryDotsInfo"
+              />
+            </span>
+          }
         />
-
-        {/* Results Count */}
-        <p className="dx-word-meta">
-          {t('wordBrowser.showing', {
-            count: filteredEntries.length,
-            total,
-          })}
-          <MasteryDotsLegend
-            namespace="deck"
-            legendKey="wordBrowser.masteryDotsLegend"
-            ariaLabelKey="wordBrowser.masteryDotsInfo"
-          />
-        </p>
       </div>
 
       {/* Content */}
