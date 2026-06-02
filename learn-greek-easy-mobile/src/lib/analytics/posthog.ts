@@ -2,6 +2,8 @@ import Constants from 'expo-constants';
 import PostHog from 'posthog-react-native';
 
 import { getPostHogConfig, getSentryConfig } from '@/lib/config';
+import { isTestUser } from '@/utils/analytics';
+import { scrubPii } from './scrub';
 
 const { apiKey, host } = getPostHogConfig();
 
@@ -16,6 +18,15 @@ if (apiKey) {
     captureAppLifecycleEvents: true,
     // RN form is camelCase: personProfiles (not web's person_profiles)
     personProfiles: 'identified_only',
+    before_send: (event) => {
+      if (!event) return event;
+      // Test-user filter FIRST — RN has no $user_id on CaptureEvent; use distinct id from client.
+      if (isTestUser(_client?.getDistinctId())) return null;
+      if (event.properties) {
+        event.properties = scrubPii(event.properties) as typeof event.properties;
+      }
+      return event;
+    },
   });
 }
 
