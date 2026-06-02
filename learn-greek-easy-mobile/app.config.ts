@@ -49,6 +49,15 @@ const config: ExpoConfig = {
   name,
   slug: 'greeklish-app',
   version: '1.0.0',
+  // runtimeVersion policy = appVersion: every native build at version "1.0.0" gets
+  // runtime version "1.0.0", so a JS-only OTA is only delivered to binaries with a
+  // matching runtime version. Any native-module / config change must bump the app
+  // version and produce a new build — it can never ship over OTA. This is the
+  // OTA-vs-native safety boundary. (fingerprint policy is still experimental — avoid.)
+  runtimeVersion: { policy: 'appVersion' },
+  updates: {
+    url: 'https://u.expo.dev/e1737431-1c87-45df-b1db-b171fa9da410',
+  },
   orientation: 'portrait',
   icon,
   scheme: 'learngreekeasymobile',
