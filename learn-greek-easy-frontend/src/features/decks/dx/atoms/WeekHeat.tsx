@@ -56,7 +56,7 @@ export function WeekHeat({
             .join(' ')}
           data-h={h}
           title={`${dayLabels[i] ?? ''} · ${h} session${h === 1 ? '' : 's'}`}
-          aria-label={`${dayLabels[i] ?? ''}: ${h} sessions${i === todayIdx ? ' (today)' : ''}`}
+          aria-label={`${dayLabels[i] ?? ''}: ${h} session${h === 1 ? '' : 's'}${i === todayIdx ? ' (today)' : ''}`}
         />
       ))}
     </div>

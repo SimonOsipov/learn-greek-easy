@@ -269,8 +269,9 @@ describe('WordHero — DX-09', () => {
     });
 
     it('WeekHeat receives todayIdx', () => {
-      renderHero({ weekHeatTodayIdx: 6 });
-      expect(screen.getByTestId('week-heat')).toHaveAttribute('data-today-idx', '6');
+      // Non-default value so the test fails if WordHero ignores the prop.
+      renderHero({ weekHeatTodayIdx: 2 });
+      expect(screen.getByTestId('week-heat')).toHaveAttribute('data-today-idx', '2');
     });
 
     it('WeekHeat is NOT wrapped in an UnwiredDot', () => {
