@@ -6,7 +6,8 @@ import classes from './animated-icon.module.css';
 const DURATION = 300;
 
 export function AnimatedSplashOverlay({ isReady }: { isReady: boolean }) {
-  return null;
+  if (isReady) return null;
+  return <View style={styles.splashCover} />;
 }
 
 const keyframe = new Keyframe({
@@ -104,5 +105,10 @@ const styles = StyleSheet.create({
     width: 128,
     height: 128,
     position: 'absolute',
+  },
+  splashCover: {
+    ...StyleSheet.absoluteFill,
+    // Matches the native splash (#208AEF) and app.config splash backgroundColor.
+    backgroundColor: '#208AEF',
   },
 });

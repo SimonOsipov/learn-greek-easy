@@ -6,7 +6,7 @@ import { Colors } from '@/constants/theme';
 export default function AppTabs() {
   const scheme = useColorScheme();
   // LEGACY: raw-hex Colors object (constants/theme.ts) — NativeTabs takes color values, not className. Localized here; remove in MOB-03+ legacy-chrome port.
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
 
   return (
     <NativeTabs
