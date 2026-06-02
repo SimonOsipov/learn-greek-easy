@@ -67,6 +67,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
   return {
     ...original,
     useParams: () => mockUseParams(),
+    useNavigate: () => vi.fn(),
     Link: ({ children, to, ...props }: { children: React.ReactNode; to: string }) => (
       <a href={to} {...props}>
         {children}
@@ -74,6 +75,17 @@ vi.mock('react-router-dom', async (importOriginal) => {
     ),
   };
 });
+
+// Mock useWordEntries so RelatedWordsSection renders nothing (avoids QueryClient requirement)
+vi.mock('@/features/decks/hooks/useWordEntries', () => ({
+  useWordEntries: () => ({
+    wordEntries: [],
+    isLoading: true,
+    hasNextPage: false,
+    fetchNextPage: vi.fn(),
+    isFetchingNextPage: false,
+  }),
+}));
 
 // Mock useWordEntry hook
 const mockUseWordEntry = vi.fn();

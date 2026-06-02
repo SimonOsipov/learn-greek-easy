@@ -353,6 +353,7 @@
     "promptSentence": "Переведите предложение",
     "sectionCollocations": "Словосочетания",
     "sectionRelatedWords": "Похожие слова",
+    "relatedWordsEyebrow": "Ещё слова из словаря",
     "groupAudio": "Аудио",
     "groupCardCount": "{{n}} карточек",
     "cardsViewToggleLabel": "Вид карточек",
@@ -397,7 +398,6 @@
     "unwiredHeatmap": "Тепловая карта практики — заглушка, данные ещё не подключены.",
     "unwiredExampleTag": "Тип примера — заглушка, таксономия ещё не подключена.",
     "unwiredCollocations": "Словосочетания — данные ещё не подключены.",
-    "unwiredRelated": "Похожие слова — данные ещё не подключены.",
     "unwiredAudioGroup": "Аудиокарточки — ещё не доступны.",
     "premiumContent": "Премиум контент",
     "masteryStatus": "Статус: {{status}}"
