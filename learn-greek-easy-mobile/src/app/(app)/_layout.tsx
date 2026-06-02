@@ -1,6 +1,7 @@
-import { Stack } from 'expo-router';
+import AppTabs from '@/components/app-tabs';
 
-// Placeholder — replaced by the authenticated shell in SHELL-05 (MOB-04).
+// Authenticated shell. Auth gating lives on the root Stack (SHELL-03);
+// NativeTabs has no .Protected API, so no guard here.
 export default function AppLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return <AppTabs />;
 }
