@@ -363,15 +363,23 @@ test.describe('DX-15: Word Reference — UnwiredDot presence (R3-R8)', () => {
     await expect(collocationsDot).toBeVisible();
   });
 
-  test('DX-15.10: R7 — Related Words section UnwiredDot visible', async ({ page }) => {
+  test('DX-15.10: R7 — Related Words shows clickable same-deck neighbours', async ({ page }) => {
     await navigateToWordReference(page);
 
     const relatedSection = page.locator('[data-testid="related-words-section"]');
     await expect(relatedSection).toBeVisible({ timeout: 10000 });
 
-    // R7: danger UnwiredDot in the related words heading
-    const relatedDot = relatedSection.locator('[data-testid="unwired-dot"]').first();
-    await expect(relatedDot).toBeVisible();
+    // R7: section contains at least one clickable neighbour chip (seed targets first word which has forward neighbours)
+    const chips = relatedSection.locator('[data-testid="related-word-chip"]');
+    await expect(chips.first()).toBeVisible();
+    expect(await chips.count()).toBeGreaterThanOrEqual(1);
+
+    // Clicking the first chip should navigate to a different word
+    const initialUrl = page.url();
+    await chips.first().click();
+    await page.waitForURL((url) => url.toString() !== initialUrl, { timeout: 5000 });
+    expect(page.url()).not.toBe(initialUrl);
+    expect(page.url()).toMatch(/\/decks\/.+\/words\/.+/);
   });
 
   test('DX-15.11: R8 — Audio card group UnwiredDot visible', async ({ page }) => {

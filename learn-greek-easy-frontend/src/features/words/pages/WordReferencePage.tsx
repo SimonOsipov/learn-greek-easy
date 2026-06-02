@@ -370,8 +370,8 @@ export function WordReferencePage() {
             </div>
           )}
 
-          {/* 5. Related words — placeholder, R7 danger dot */}
-          <RelatedWordsSection lemma={wordEntry.lemma} />
+          {/* 5. Related words — same-deck neighbours */}
+          <RelatedWordsSection deckId={deckId ?? ''} wordId={wordId ?? ''} />
         </TabsContent>
 
         {/* ── Cards Tab ─────────────────────────────────────────────────────── */}
