@@ -353,7 +353,23 @@ test.describe('DX-15: Word Reference — UnwiredDot presence (R3-R8)', () => {
     }
   });
 
-  test('DX-15.9: R6 — Collocations section UnwiredDot visible', async ({ page }) => {
+  test('DX-15.9a: R6 — Collocations section hidden by default (flag off)', async ({ page }) => {
+    // No __FF_OVERRIDES__ → flagDefault → false in non-live env → section not rendered
+    await navigateToWordReference(page);
+
+    await expect(page.locator('[data-testid="collocations-section"]')).toHaveCount(0);
+  });
+
+  test('DX-15.9b: R6 — Collocations section and UnwiredDot visible when flag forced ON', async ({
+    page,
+  }) => {
+    // addInitScript runs before page.goto inside navigateToWordReference
+    await page.addInitScript(() => {
+      (window as unknown as { __FF_OVERRIDES__: Record<string, boolean> }).__FF_OVERRIDES__ = {
+        'collocations-enabled': true,
+      };
+    });
+
     await navigateToWordReference(page);
 
     const collocationsSection = page.locator('[data-testid="collocations-section"]');
