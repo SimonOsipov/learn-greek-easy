@@ -165,6 +165,9 @@ describe('DeckCard', () => {
       // Shows the progress bar, not the complete pill.
       expect(screen.getByTestId('deck-card-progress')).toBeInTheDocument();
       expect(screen.queryByTestId('deck-card-complete')).not.toBeInTheDocument();
+      // aria-label announces mastery (0%), not coverage (100%), so AT matches the badge.
+      expect(screen.getByRole('button', { name: /0% completed/i })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /100% completed/i })).not.toBeInTheDocument();
     });
 
     it('culture deck: status "completed" (fully mastered) shows "Complete"', () => {
