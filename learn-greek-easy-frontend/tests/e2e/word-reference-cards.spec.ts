@@ -311,16 +311,17 @@ test.describe('DX-15: Word Reference — audio dxPulse + view toggle + list rows
 });
 
 test.describe('DX-15: Word Reference — UnwiredDot presence (R3-R8)', () => {
-  test('DX-15.6: R3 — hero WeekHeat UnwiredDot visible', async ({ page }) => {
+  test('DX-15.6: R3 — hero WeekHeat is wired (no UnwiredDot)', async ({ page }) => {
     await navigateToWordReference(page);
 
     const hero = page.locator('[data-testid="word-hero"]');
     await expect(hero).toBeVisible({ timeout: 10000 });
 
-    // R3: UnwiredDot wrapping WeekHeat in the hero stats area (R4 extra-gloss removed)
-    const heroUnwiredDots = hero.locator('[data-testid="unwired-dot"]');
-    const dotCount = await heroUnwiredDots.count();
-    expect(dotCount).toBe(1);
+    // R3 is now wired to the per-word practice heatmap endpoint — the WeekHeat
+    // renders real data, so the hero no longer has an UnwiredDot placeholder.
+    await expect(hero.locator('.dx-week')).toBeVisible();
+    const dotCount = await hero.locator('[data-testid="unwired-dot"]').count();
+    expect(dotCount).toBe(0);
   });
 
   test('DX-15.8: R5 — example tag amber UnwiredDot visible', async ({ page }) => {
