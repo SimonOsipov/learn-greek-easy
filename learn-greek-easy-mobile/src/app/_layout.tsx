@@ -7,17 +7,19 @@ import { useAuth } from '@/hooks/use-auth';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const { session } = useAuth();
+  const { session, isLoading } = useAuth();
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Protected guard={!!session}>
-          <Stack.Screen name="(app)" />
-        </Stack.Protected>
-        <Stack.Screen name="(auth)" />
-      </Stack>
+      <AnimatedSplashOverlay isReady={!isLoading} />
+      {!isLoading && (
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Protected guard={!!session}>
+            <Stack.Screen name="(app)" />
+          </Stack.Protected>
+          <Stack.Screen name="(auth)" />
+        </Stack>
+      )}
     </ThemeProvider>
   );
 }
