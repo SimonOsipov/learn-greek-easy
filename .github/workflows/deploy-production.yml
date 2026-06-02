@@ -101,6 +101,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       web: ${{ steps.filter.outputs.web }}
+      mobile: ${{ steps.filter.outputs.mobile }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -125,6 +126,50 @@ jobs:
               - '!**/*.md'
               - '!docs/**'
               - '!**/docs/**'
+            mobile:
+              - 'learn-greek-easy-mobile/**'
+
+  # =============================================================================
+  # JOB 1d: Mobile Production OTA (MOB08-04)
+  # Purpose: Publish an OTA update to the production EAS channel on mobile-
+  # touching merges to main. Non-mobile merges skip this job.
+  # =============================================================================
+  mobile-ota:
+    name: Mobile Production OTA (eas update)
+    needs: [pre-deploy-check, changes]
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: learn-greek-easy-mobile/package-lock.json
+
+      - name: Install dependencies
+        working-directory: learn-greek-easy-mobile
+        run: npm ci
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Publish OTA update to production channel
+        working-directory: learn-greek-easy-mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          eas update \
+            --branch production \
+            --message "main@${{ github.sha }}" \
+            --non-interactive
+        timeout-minutes: 15
 
   # =============================================================================
   # JOB 2: Deploy Backend
