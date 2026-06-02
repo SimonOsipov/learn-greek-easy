@@ -2,6 +2,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, ActivityIndicator } from 'react-native';
 
 import { useDecks } from '@/hooks/use-decks';
+import { ObservabilityDebug } from '@/components/debug/observability-debug';
 
 export default function HomeScreen() {
   const { data, isLoading, error } = useDecks();
@@ -37,6 +38,8 @@ export default function HomeScreen() {
           </View>
         )}
       </View>
+
+      {__DEV__ ? <ObservabilityDebug /> : null}
     </SafeAreaView>
   );
 }
