@@ -54,7 +54,6 @@
     "metricInReview": "На повторении",
     "metricMastered": "Выучено",
     "metricTimeOnDeck": "Время на колоде",
-    "metricTimeUnwired": "Время на колоде — данные ещё не подключены к серверу.",
     "actionEyebrow": "Выберите, что практиковать",
     "actionYourProgress": "Ваш прогресс",
     "actionCounts": "{{new}} новых · {{learning}} в изучении · {{mastered}} выучено",
@@ -62,14 +61,6 @@
     "legendToPractice": "На изучение",
     "legendLearning": "В изучении",
     "legendMastered": "Выучено",
-    "actionTopicLabel": "Тема",
-    "topicUnwired": "Фильтрация по темам — ещё не подключена к серверу.",
-    "topicOnly": "только",
-    "topicAll": "Все",
-    "topicPolitics": "Политика",
-    "topicCulture": "Культура",
-    "topicHistory": "История",
-    "topicGeography": "География",
     "questionsEyebrow": "Вопросы в этой колоде"
   },
   "deck": {

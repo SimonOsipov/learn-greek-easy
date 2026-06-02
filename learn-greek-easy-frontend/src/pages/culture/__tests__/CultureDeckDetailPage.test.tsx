@@ -4,10 +4,10 @@
  * Covers:
  * - null progress -> pct 0, toPractice = total
  * - total = 0 -> pct = 0 (not NaN, progress bar width safe)
- * - topic chip changes CTA label; navigate does NOT include topic param (documented gap)
  * - API fail -> error state shown; retry button triggers re-fetch
  * - loading skeleton while API is pending
  * - not-found state when deckId is absent
+ * - time_on_deck_seconds wired to metric strip (DDR-03)
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -221,11 +221,13 @@ describe('CultureDeckDetailPage', () => {
     expect(panel.textContent).not.toMatch(/NaN/);
   });
 
-  // ── Topic chip: label changes; navigate WITHOUT topic param ──────────────
+  // ── Time on deck metric (DDR-03) ─────────────────────────────────────────
 
-  it('CTA label changes when a topic chip is selected', async () => {
-    const user = userEvent.setup();
-    mockGetById.mockResolvedValue(deckNoProgress);
+  it('shows rounded minutes from time_on_deck_seconds in the metric strip', async () => {
+    mockGetById.mockResolvedValue({
+      ...deckWithProgress,
+      time_on_deck_seconds: 420, // 7 minutes
+    });
 
     render(<CultureDeckDetailPage />);
 
@@ -233,55 +235,12 @@ describe('CultureDeckDetailPage', () => {
       expect(screen.getByTestId('start-practice-button')).toBeInTheDocument();
     });
 
-    // Before any chip click, CTA says "Start Practice" (no progress)
-    expect(screen.getByTestId('start-practice-button').textContent).toMatch(/Start Practice/i);
-
-    // Click the "Politics" chip
-    const politicsChip = screen.getByRole('button', { name: /politics/i });
-    await user.click(politicsChip);
-
-    // CTA label now contains the topic name
-    await waitFor(() => {
-      expect(screen.getByTestId('start-practice-button').textContent).toMatch(/politics/i);
-    });
+    // The metric strip should display "7" (420 / 60 = 7)
+    expect(screen.getByText('7')).toBeInTheDocument();
   });
 
-  it('topic chip selection marks the chip as pressed (aria-pressed)', async () => {
-    const user = userEvent.setup();
-    mockGetById.mockResolvedValue(deckNoProgress);
-
-    render(<CultureDeckDetailPage />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('culture-action-panel')).toBeInTheDocument();
-    });
-
-    // Initially "All" chip is pressed
-    const allChip = screen.getByRole('button', { name: /all/i });
-    expect(allChip).toHaveAttribute('aria-pressed', 'true');
-
-    // Click "History" chip
-    const historyChip = screen.getByRole('button', { name: /history/i });
-    await user.click(historyChip);
-
-    await waitFor(() => {
-      expect(historyChip).toHaveAttribute('aria-pressed', 'true');
-      expect(allChip).toHaveAttribute('aria-pressed', 'false');
-    });
-  });
-
-  /**
-   * DOCUMENTED GAP: The topic chip updates the CTA label but the navigate()
-   * call (onClick of start-practice-button) always navigates to
-   * `/culture/${deckId}/practice` WITHOUT a topic query param.
-   * If topic filtering is wired up on the backend in a future story,
-   * the navigate call should append `?topic=<selectedTopic>`.
-   *
-   * This test pins current behavior so any accidental change is caught.
-   */
-  it('navigate is called WITHOUT topic param even when a non-all topic chip is selected', async () => {
-    const user = userEvent.setup();
-    mockGetById.mockResolvedValue(deckNoProgress);
+  it('shows 0 minutes when time_on_deck_seconds is absent', async () => {
+    mockGetById.mockResolvedValue(deckWithProgress); // no time_on_deck_seconds
 
     render(<CultureDeckDetailPage />);
 
@@ -289,20 +248,8 @@ describe('CultureDeckDetailPage', () => {
       expect(screen.getByTestId('start-practice-button')).toBeInTheDocument();
     });
 
-    // Select the "Politics" topic chip
-    const politicsChip = screen.getByRole('button', { name: /politics/i });
-    await user.click(politicsChip);
-
-    // Click the CTA
-    const cta = screen.getByTestId('start-practice-button');
-    await user.click(cta);
-
-    // navigate must be called with the plain practice URL — no topic param
-    expect(mockNavigate).toHaveBeenCalledWith('/culture/deck-1/practice');
-    // Confirm it does NOT include a topic query string
-    const callArg = mockNavigate.mock.calls[0][0] as string;
-    expect(callArg).not.toContain('topic');
-    expect(callArg).not.toContain('politics');
+    // The metric strip should display "0" when no time data available
+    expect(screen.getByText('0')).toBeInTheDocument();
   });
 
   // ── Successful load ───────────────────────────────────────────────────────

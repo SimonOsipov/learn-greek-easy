@@ -449,3 +449,48 @@ class TestLevelUpDetection:
         mock_ns_instance.notify_level_up.assert_awaited_once()
         call_args = mock_ns_instance.notify_level_up.call_args
         assert call_args.args[1] == 4 or call_args.kwargs.get("new_level") == 4
+
+
+@pytest.mark.unit
+class TestSelfSeedsMissingAchievement:
+    """Reconcile self-seeds parent achievements rows for code-defined IDs.
+
+    Regression for the FK violation that aborted the whole transaction when a
+    code-defined achievement (e.g. ``learning_first_word``) had never been
+    seeded into the ``achievements`` table.
+    """
+
+    async def test_reconcile_self_seeds_missing_achievement(self, db_session: AsyncSession) -> None:
+        user = await _make_user(db_session)
+        # NOTE: deliberately do NOT call _seed_achievement — the parent row is absent.
+        snapshot = _make_snapshot(
+            user.id,
+            unlocked=frozenset({"learning_first_word"}),
+            total_xp=10,
+            current_level=1,
+        )
+
+        with patch(
+            "src.services.gamification.reconciler.GamificationProjection.compute",
+            new=AsyncMock(return_value=snapshot),
+        ):
+            result = await GamificationReconciler.reconcile(
+                db_session, user.id, ReconcileMode.QUIET
+            )
+
+        assert result.new_unlocks == ["learning_first_word"]
+
+        # Parent achievements row was created from the code definition.
+        ach = await db_session.execute(
+            select(Achievement).where(Achievement.id == "learning_first_word")
+        )
+        assert ach.scalar_one().name == "First Word"
+
+        # And the user_achievements row exists (no FK violation).
+        ua = await db_session.execute(
+            select(UserAchievement).where(
+                UserAchievement.user_id == user.id,
+                UserAchievement.achievement_id == "learning_first_word",
+            )
+        )
+        assert ua.scalar_one_or_none() is not None

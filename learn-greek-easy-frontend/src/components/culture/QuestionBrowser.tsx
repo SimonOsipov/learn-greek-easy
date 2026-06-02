@@ -11,9 +11,9 @@ import { MasteryDotsLegend } from '@/components/shared/MasteryDotsLegend';
 import { QuestionLanguageSelector } from '@/components/shared/QuestionLanguageSelector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useQuestionLanguage } from '@/hooks/useQuestionLanguage';
 import { debounce } from '@/lib/utils';
 import { cultureDeckAPI } from '@/services/cultureDeckAPI';
+import { useCultureDeckQuestionLanguage } from '@/stores/cultureDeckQuestionLanguageStore';
 import type { CultureQuestionBrowseItem, CultureQuestionStatus } from '@/types/culture';
 
 import { QuestionCard, QuestionCardSkeleton } from './QuestionCard';
@@ -118,7 +118,7 @@ export const QuestionBrowser: React.FC<QuestionBrowserProps> = ({
   className,
 }) => {
   const { t } = useTranslation('culture');
-  const { questionLanguage, setQuestionLanguage } = useQuestionLanguage();
+  const { questionLanguage, setQuestionLanguage } = useCultureDeckQuestionLanguage();
 
   // Data fetching
   const { data, isLoading, error, refetch } = useQuery({

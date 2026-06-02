@@ -61,7 +61,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation(['culture', 'common']);
-  const [lang, setLang] = useState<CultureLanguage>('en');
+  const [lang, setLang] = useState<CultureLanguage>('el');
   const [newsLevel, setNewsLevelState] = useState<NewsLevel>(getPersistedNewsLevel);
 
   const handleLevelChange = (level: NewsLevel) => {
@@ -139,11 +139,12 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
         {/* ── Loaded content ── */}
         {data &&
           (() => {
-            const showLevelToggle = !!(data.audio_url || data.audio_a2_url);
-            const effectiveAudioUrl =
-              newsLevel === 'a2' && data.audio_a2_url
+            const showLevelToggle = category === 'news' && !!(data.audio_url || data.audio_a2_url);
+            const effectiveAudioUrl = showLevelToggle
+              ? newsLevel === 'a2' && data.audio_a2_url
                 ? data.audio_a2_url
-                : (data.audio_url ?? data.audio_a2_url ?? null);
+                : (data.audio_url ?? data.audio_a2_url ?? null)
+              : (data.audio_url ?? data.audio_a2_url ?? null);
 
             return (
               <>
