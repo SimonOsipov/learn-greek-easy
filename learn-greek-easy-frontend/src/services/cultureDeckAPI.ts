@@ -70,6 +70,7 @@ export interface CultureDeckListResponse {
  * Culture deck detail response from backend
  */
 export interface CultureDeckDetailResponse extends CultureDeckResponse {
+  time_on_deck_seconds?: number;
   questions?: Array<{
     id: string;
     question: LocalizedText;

@@ -197,15 +197,9 @@ export function CultureDeckDetailPage() {
             {
               icon: <Clock className="h-5 w-5" />,
               label: t('culture:detail.metricTimeOnDeck', 'Time on deck'),
-              value: '—',
+              value: Math.round((deck.time_on_deck_seconds ?? 0) / 60),
               sub: t('culture:hub.minutes', 'min'),
               tone: 'violet',
-              // No time-on-deck backend source exists yet
-              unwired: true,
-              unwiredLabel: t(
-                'culture:detail.metricTimeUnwired',
-                'Time on deck — not yet connected to backend data.'
-              ),
             },
           ]}
         />

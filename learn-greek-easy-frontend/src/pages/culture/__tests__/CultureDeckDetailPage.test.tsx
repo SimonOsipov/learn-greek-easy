@@ -305,6 +305,37 @@ describe('CultureDeckDetailPage', () => {
     expect(callArg).not.toContain('politics');
   });
 
+  // ── Time on deck metric (DDR-03) ─────────────────────────────────────────
+
+  it('shows rounded minutes from time_on_deck_seconds in the metric strip', async () => {
+    mockGetById.mockResolvedValue({
+      ...deckWithProgress,
+      time_on_deck_seconds: 420, // 7 minutes
+    });
+
+    render(<CultureDeckDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('start-practice-button')).toBeInTheDocument();
+    });
+
+    // The metric strip should display "7" (420 / 60 = 7)
+    expect(screen.getByText('7')).toBeInTheDocument();
+  });
+
+  it('shows 0 minutes when time_on_deck_seconds is absent', async () => {
+    mockGetById.mockResolvedValue(deckWithProgress); // no time_on_deck_seconds
+
+    render(<CultureDeckDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('start-practice-button')).toBeInTheDocument();
+    });
+
+    // The metric strip should display "0" when no time data available
+    expect(screen.getByText('0')).toBeInTheDocument();
+  });
+
   // ── Successful load ───────────────────────────────────────────────────────
 
   it('renders deck name and action panel after successful API response', async () => {

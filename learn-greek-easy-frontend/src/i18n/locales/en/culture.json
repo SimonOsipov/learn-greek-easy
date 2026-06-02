@@ -54,7 +54,6 @@
     "metricInReview": "In review",
     "metricMastered": "Mastered",
     "metricTimeOnDeck": "Time on deck",
-    "metricTimeUnwired": "Time on deck — not yet connected to backend data.",
     "actionEyebrow": "Pick what to practice",
     "actionYourProgress": "Your progress",
     "actionCounts": "{{new}} new · {{learning}} learning · {{mastered}} mastered",
