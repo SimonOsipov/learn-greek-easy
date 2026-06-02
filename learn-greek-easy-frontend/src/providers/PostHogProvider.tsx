@@ -25,7 +25,7 @@ function getStoredLanguage(): SupportedLanguage {
 }
 
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY;
-const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com';
+const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || 'https://eu.i.posthog.com'; // EU region — Greekly project id 108020 (prod ingests to eu)
 const ENVIRONMENT = import.meta.env.VITE_ENVIRONMENT || 'development';
 
 interface PostHogProviderProps {
