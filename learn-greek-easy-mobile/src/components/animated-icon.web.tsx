@@ -107,7 +107,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   splashCover: {
-    ...StyleSheet.absoluteFill,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     // Matches the native splash (#208AEF) and app.config splash backgroundColor.
     backgroundColor: '#208AEF',
   },
