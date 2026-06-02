@@ -31,11 +31,12 @@ const variant: Variant =
   rawVariant && rawVariant in VARIANTS ? (rawVariant as Variant) : 'development';
 const { name, bundleId, icon } = VARIANTS[variant];
 
-// Supabase config comes from EAS environment variables (server-side, scoped per environment)
-// for cloud builds, or from a gitignored local .env for local development.
-// src/lib/config.ts throws at app runtime if these are missing.
+// Supabase config and the backend API base URL come from EAS environment variables
+// (server-side, scoped per environment) for cloud builds, or from a gitignored local .env
+// for local development. src/lib/config.ts throws at app runtime if these are missing.
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const apiUrl = process.env.API_URL;
 
 const config: ExpoConfig = {
   name,
@@ -91,6 +92,7 @@ const config: ExpoConfig = {
     },
     supabaseUrl,
     supabaseAnonKey,
+    apiUrl,
   },
   owner: 'sams-team',
 };
