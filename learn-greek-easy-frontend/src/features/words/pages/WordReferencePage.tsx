@@ -49,7 +49,7 @@ import {
 } from '../components';
 import { groupCards } from '../components/cardGrouping';
 import { GENDER_ARTICLE_MAP } from '../components/WordHero';
-import { useWordEntry, useWordMastery } from '../hooks';
+import { useWordEntry, useWordHeatmap, useWordMastery } from '../hooks';
 
 import type { CardsView } from '../components/CardsViewToggle';
 import type { CardMasteryItem } from '../hooks';
@@ -203,6 +203,12 @@ export function WordReferencePage() {
     enabled: !!deckId && !!wordId,
   });
 
+  const { heat: weekHeat, todayIdx: weekHeatTodayIdx } = useWordHeatmap({
+    deckId: deckId ?? '',
+    wordEntryId: wordId ?? '',
+    enabled: !!deckId && !!wordId,
+  });
+
   const groupedCards = useMemo(() => groupCards(masteryCards), [masteryCards]);
   // Summary totals EXCLUDE the synthetic Audio placeholder (isPlaceholder=true)
   const realCards = masteryCards; // masteryCards never includes audio — placeholder is synthetic
@@ -302,6 +308,8 @@ export function WordReferencePage() {
         article={article}
         masteredCards={masteredCards}
         totalCards={totalCards}
+        weekHeat={weekHeat}
+        weekHeatTodayIdx={weekHeatTodayIdx}
         audioSpeed={audioSpeed}
         onSpeedChange={handleSpeedChange}
         onReportError={() => setIsReportModalOpen(true)}

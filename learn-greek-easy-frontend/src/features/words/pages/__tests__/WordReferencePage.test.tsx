@@ -99,6 +99,13 @@ vi.mock('../../hooks', () => ({
     isError: false,
     refetch: vi.fn(),
   }),
+  useWordHeatmap: () => ({
+    heat: [0, 0, 0, 0, 0, 0, 0],
+    todayIdx: 6,
+    isLoading: false,
+    error: null,
+    isError: false,
+  }),
 }));
 
 // Import component after mocks

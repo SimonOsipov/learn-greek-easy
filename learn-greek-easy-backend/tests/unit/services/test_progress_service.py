@@ -879,9 +879,13 @@ class TestGetDeckProgressDetail:
         assert result.statistics.weekly_activity == [0, 0, 0, 0, 0, 0, 0]
 
     async def test_get_deck_progress_detail_weekly_assembly_slot(self, mock_db, mock_user_id):
-        """weekly_activity is a 7-element list, Mon=index 0, Wed=index 2."""
+        """weekly_activity is a 7-element rolling list of bucketed intensities.
+
+        Oldest=index 0, today=index 6. Raw counts are bucketed GitHub-style:
+        4 reviews -> level 2, 1 review -> level 1.
+        """
         today = datetime.now(timezone.utc).date()
-        week_start = today - timedelta(days=today.weekday())  # Monday
+        week_start = today - timedelta(days=6)  # rolling 7-day window start
 
         weekly_mock = {
             week_start: 4,
@@ -916,13 +920,13 @@ class TestGetDeckProgressDetail:
 
         wa = result.statistics.weekly_activity
         assert len(wa) == 7
-        assert wa[0] == 4  # Monday
-        assert wa[2] == 1  # Wednesday
+        assert wa[0] == 2  # window start (6 days ago): 4 reviews -> level 2
+        assert wa[2] == 1  # start + 2 days: 1 review -> level 1
         assert wa[1] == 0
         assert wa[3] == 0
         assert wa[4] == 0
         assert wa[5] == 0
-        assert wa[6] == 0
+        assert wa[6] == 0  # today
 
     async def test_get_deck_progress_detail_total_study_time_unchanged(self, mock_db, mock_user_id):
         """total_study_time_seconds in statistics equals the value from get_deck_review_stats."""

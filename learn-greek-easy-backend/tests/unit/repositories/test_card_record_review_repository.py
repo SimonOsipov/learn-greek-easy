@@ -817,3 +817,119 @@ class TestGetDeckStudyDays:
 
         assert result == {date(2024, 1, 2): 1}
         assert date(2024, 1, 3) not in result
+
+
+class TestGetWordRollingActivity:
+    @pytest.mark.asyncio
+    async def test_get_word_rolling_activity_per_day_counts(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        v2_deck: Deck,
+        word_entry: WordEntry,
+        card_record: CardRecord,
+    ) -> None:
+        """Per-day review counts are correct for a single word within the window."""
+        start = date(2024, 1, 1)
+        end = date(2024, 1, 7)
+
+        # 1 review on 2024-01-01, 2 reviews on 2024-01-03
+        for ts in (
+            datetime(2024, 1, 1, 10, 0, 0, tzinfo=timezone.utc),
+            datetime(2024, 1, 3, 9, 0, 0, tzinfo=timezone.utc),
+            datetime(2024, 1, 3, 15, 0, 0, tzinfo=timezone.utc),
+        ):
+            db_session.add(_make_review(test_user.id, card_record.id, reviewed_at=ts))
+        # Out-of-window review must be excluded
+        db_session.add(
+            _make_review(
+                test_user.id,
+                card_record.id,
+                reviewed_at=datetime(2024, 1, 8, 0, 0, 0, tzinfo=timezone.utc),
+            )
+        )
+        await db_session.flush()
+
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_word_rolling_activity(
+            test_user.id, v2_deck.id, word_entry.id, start, end
+        )
+
+        assert result == {date(2024, 1, 1): 1, date(2024, 1, 3): 2}
+
+    @pytest.mark.asyncio
+    async def test_get_word_rolling_activity_word_isolation(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        v2_deck: Deck,
+        word_entry: WordEntry,
+        card_record: CardRecord,
+    ) -> None:
+        """Reviews of a different word in the SAME deck are not counted."""
+        start = date(2024, 1, 1)
+        end = date(2024, 1, 7)
+
+        # Second word + card in the same deck
+        word_b = WordEntry(
+            owner_id=None,
+            lemma="γάτα",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="cat",
+            is_active=True,
+        )
+        db_session.add(word_b)
+        await db_session.flush()
+        db_session.add(DeckWordEntry(deck_id=v2_deck.id, word_entry_id=word_b.id))
+        card_b = CardRecord(
+            word_entry_id=word_b.id,
+            deck_id=v2_deck.id,
+            card_type=CardType.MEANING_EL_TO_EN,
+            variant_key="default",
+            front_content={"card_type": "meaning_el_to_en", "prompt": "Translate", "main": "γάτα"},
+            back_content={"card_type": "meaning_el_to_en", "answer": "cat"},
+        )
+        db_session.add(card_b)
+        await db_session.flush()
+        await db_session.refresh(card_b)
+
+        # 1 review for the target word, 3 for word B — only the target counts
+        db_session.add(
+            _make_review(
+                test_user.id,
+                card_record.id,
+                reviewed_at=datetime(2024, 1, 2, 10, 0, 0, tzinfo=timezone.utc),
+            )
+        )
+        for _ in range(3):
+            db_session.add(
+                _make_review(
+                    test_user.id,
+                    card_b.id,
+                    reviewed_at=datetime(2024, 1, 3, 10, 0, 0, tzinfo=timezone.utc),
+                )
+            )
+        await db_session.flush()
+
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_word_rolling_activity(
+            test_user.id, v2_deck.id, word_entry.id, start, end
+        )
+
+        assert result == {date(2024, 1, 2): 1}
+        assert date(2024, 1, 3) not in result
+
+    @pytest.mark.asyncio
+    async def test_get_word_rolling_activity_empty_returns_empty_dict(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        v2_deck: Deck,
+        word_entry: WordEntry,
+    ) -> None:
+        """No reviews for the word returns an empty dict."""
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_word_rolling_activity(
+            test_user.id, v2_deck.id, word_entry.id, date(2024, 1, 1), date(2024, 1, 7)
+        )
+        assert result == {}

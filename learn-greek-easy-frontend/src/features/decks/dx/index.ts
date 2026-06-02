@@ -8,7 +8,16 @@
 // Vite does not reliably inject for routes that reach it via a static import.
 
 // ── Atoms (from dx/atoms sub-barrel) ────────────────────────────────────────
-export { Kicker, TypeChip, DonutRing, WeekHeat, Breadcrumb, UnwiredDot, DxSvgDefs } from './atoms';
+export {
+  Kicker,
+  TypeChip,
+  DonutRing,
+  WeekHeat,
+  rollingDayLabels,
+  Breadcrumb,
+  UnwiredDot,
+  DxSvgDefs,
+} from './atoms';
 export type {
   KickerProps,
   DxTone,

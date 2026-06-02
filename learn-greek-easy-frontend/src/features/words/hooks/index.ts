@@ -17,3 +17,5 @@ export type {
   CardMasteryItem,
   MasteryStatus,
 } from './useWordMastery';
+export { useWordHeatmap } from './useWordHeatmap';
+export type { UseWordHeatmapOptions, UseWordHeatmapResult } from './useWordHeatmap';
