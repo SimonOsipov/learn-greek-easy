@@ -21,22 +21,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Breadcrumb, Kicker, UnwiredDot } from '@/features/decks/dx';
+import { Breadcrumb, Kicker } from '@/features/decks/dx';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { cultureDeckAPI } from '@/services/cultureDeckAPI';
 import type { CultureDeckDetailResponse } from '@/services/cultureDeckAPI';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Topic chips — no backend data per question, rendered as non-functional UI
-// ─────────────────────────────────────────────────────────────────────────────
-
-const TOPIC_CHIPS = [
-  { value: 'all', labelKey: 'detail.topicAll' },
-  { value: 'politics', labelKey: 'detail.topicPolitics' },
-  { value: 'culture', labelKey: 'detail.topicCulture' },
-  { value: 'history', labelKey: 'detail.topicHistory' },
-  { value: 'geography', labelKey: 'detail.topicGeography' },
-] as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main page
@@ -50,7 +38,6 @@ export function CultureDeckDetailPage() {
   const [deck, setDeck] = useState<CultureDeckDetailResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedTopic, setSelectedTopic] = useState<string>('all');
 
   const fetchDeck = React.useCallback(() => {
     if (!deckId) return;
@@ -103,14 +90,9 @@ export function CultureDeckDetailPage() {
   const toPractice = newQ + learning;
 
   const hasProgress = mastered > 0 || learning > 0;
-  const ctaLabel =
-    selectedTopic === 'all'
-      ? hasProgress
-        ? t('culture:practice.continuePractice', 'Continue Practice')
-        : t('culture:practice.startPractice', 'Start Practice')
-      : hasProgress
-        ? `${t('culture:practice.continuePractice', 'Continue Practice')} · ${t(`culture:detail.topic${selectedTopic.charAt(0).toUpperCase() + selectedTopic.slice(1)}`, selectedTopic)} ${t('culture:detail.topicOnly', 'only')}`
-        : `${t('culture:practice.startPractice', 'Start Practice')} · ${t(`culture:detail.topic${selectedTopic.charAt(0).toUpperCase() + selectedTopic.slice(1)}`, selectedTopic)} ${t('culture:detail.topicOnly', 'only')}`;
+  const ctaLabel = hasProgress
+    ? t('culture:practice.continuePractice', 'Continue Practice')
+    : t('culture:practice.startPractice', 'Start Practice');
 
   // CultureHero expects a Deck-compatible object
   const coverDeck = {
@@ -197,15 +179,9 @@ export function CultureDeckDetailPage() {
             {
               icon: <Clock className="h-5 w-5" />,
               label: t('culture:detail.metricTimeOnDeck', 'Time on deck'),
-              value: '—',
+              value: Math.round((deck.time_on_deck_seconds ?? 0) / 60),
               sub: t('culture:hub.minutes', 'min'),
               tone: 'violet',
-              // No time-on-deck backend source exists yet
-              unwired: true,
-              unwiredLabel: t(
-                'culture:detail.metricTimeUnwired',
-                'Time on deck — not yet connected to backend data.'
-              ),
             },
           ]}
         />
@@ -260,34 +236,6 @@ export function CultureDeckDetailPage() {
             <span className="dx-action-legend-item" data-tone="master">
               {t('culture:detail.legendMastered', 'Mastered')}
             </span>
-          </div>
-
-          {/* Topic chips — not wired to filter; red-dot flags row as placeholder */}
-          <div className="dx-action-want">
-            <p className="dx-action-want-l">
-              {t('culture:detail.actionTopicLabel', 'Topic')}
-              {/* Red dot on the chip row — topic data does not exist per-question */}
-              <UnwiredDot
-                tone="danger"
-                aria-label={t(
-                  'culture:detail.topicUnwired',
-                  'Topic filtering — not yet connected to backend data.'
-                )}
-              />
-            </p>
-            <div className="dx-action-want-chips">
-              {TOPIC_CHIPS.map(({ value, labelKey }) => (
-                <button
-                  key={value}
-                  type="button"
-                  className="dx-action-want-chip"
-                  aria-pressed={selectedTopic === value}
-                  onClick={() => setSelectedTopic(value)}
-                >
-                  {t(`culture:${labelKey}`, value.charAt(0).toUpperCase() + value.slice(1))}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Full-width primary CTA */}
@@ -365,11 +313,6 @@ const LoadingSkeleton: React.FC = () => {
               <Skeleton className="h-4 w-48" />
               <Skeleton className="h-6 w-64" />
               <Skeleton className="h-2 w-full" />
-              <div className="flex gap-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-9 w-24 rounded-full" />
-                ))}
-              </div>
               <Skeleton className="h-12 w-full rounded-xl" />
             </div>
           </CardContent>

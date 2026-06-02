@@ -424,3 +424,110 @@ class TestGetStudyTimeThisWeek:
 
         repo = CultureAnswerHistoryRepository(db_session)
         assert await repo.get_study_time_this_week(sample_user.id) == 15
+
+
+class TestGetStudyTimeForDeck:
+    """DDR-01: per-deck study time aggregation."""
+
+    @pytest.mark.asyncio
+    async def test_empty_returns_zero(
+        self,
+        db_session: AsyncSession,
+        sample_user: User,
+    ) -> None:
+        """No answers for user → 0."""
+        deck, _ = await _make_culture_context(db_session)
+        repo = CultureAnswerHistoryRepository(db_session)
+        result = await repo.get_study_time_for_deck(sample_user.id, deck.id)
+        assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_sums_answers_for_deck(
+        self,
+        db_session: AsyncSession,
+        sample_user: User,
+    ) -> None:
+        """Sum of answer times for the target deck's questions."""
+        deck, question = await _make_culture_context(db_session)
+        now = datetime.now(timezone.utc)
+        db_session.add(_answer(sample_user.id, question.id, created_at=now, time_taken_seconds=30))
+        db_session.add(_answer(sample_user.id, question.id, created_at=now, time_taken_seconds=20))
+        await db_session.flush()
+
+        repo = CultureAnswerHistoryRepository(db_session)
+        assert await repo.get_study_time_for_deck(sample_user.id, deck.id) == 50
+
+    @pytest.mark.asyncio
+    async def test_caps_answer_at_max(
+        self,
+        db_session: AsyncSession,
+        sample_user: User,
+    ) -> None:
+        """A single answer with time > MAX_ANSWER_TIME_SECONDS contributes exactly MAX."""
+        deck, question = await _make_culture_context(db_session)
+        now = datetime.now(timezone.utc)
+        db_session.add(
+            _answer(sample_user.id, question.id, created_at=now, time_taken_seconds=9999)
+        )
+        await db_session.flush()
+
+        repo = CultureAnswerHistoryRepository(db_session)
+        assert (
+            await repo.get_study_time_for_deck(sample_user.id, deck.id) == MAX_ANSWER_TIME_SECONDS
+        )
+
+    @pytest.mark.asyncio
+    async def test_cross_deck_isolation(
+        self,
+        db_session: AsyncSession,
+        sample_user: User,
+    ) -> None:
+        """Answers for deck B are excluded from deck A's total."""
+        deck_a, question_a = await _make_culture_context(db_session)
+        deck_b, question_b = await _make_culture_context(db_session)
+        now = datetime.now(timezone.utc)
+
+        # 25s on deck A, 50s on deck B
+        db_session.add(
+            _answer(sample_user.id, question_a.id, created_at=now, time_taken_seconds=25)
+        )
+        db_session.add(
+            _answer(sample_user.id, question_b.id, created_at=now, time_taken_seconds=50)
+        )
+        await db_session.flush()
+
+        repo = CultureAnswerHistoryRepository(db_session)
+        assert await repo.get_study_time_for_deck(sample_user.id, deck_a.id) == 25
+        assert await repo.get_study_time_for_deck(sample_user.id, deck_b.id) == 50
+
+    @pytest.mark.asyncio
+    async def test_orphan_question_excluded(
+        self,
+        db_session: AsyncSession,
+        sample_user: User,
+    ) -> None:
+        """Answer to a CultureQuestion with deck_id IS NULL is excluded."""
+        from src.db.models import CultureQuestion as CQ
+
+        deck, _ = await _make_culture_context(db_session)
+        # Create a question with deck_id=None (orphan)
+        orphan_q = CQ(
+            deck_id=None,
+            question_text={"en": "Orphan?", "el": "Ορφανό;"},
+            option_a={"en": "A", "el": "Α"},
+            option_b={"en": "B", "el": "Β"},
+            option_c={"en": "C", "el": "Γ"},
+            option_d={"en": "D", "el": "Δ"},
+            correct_option=1,
+        )
+        db_session.add(orphan_q)
+        await db_session.flush()
+        await db_session.refresh(orphan_q)
+
+        now = datetime.now(timezone.utc)
+        db_session.add(_answer(sample_user.id, orphan_q.id, created_at=now, time_taken_seconds=100))
+        await db_session.flush()
+
+        repo = CultureAnswerHistoryRepository(db_session)
+        # deck has no answers, orphan answer should not appear under deck
+        assert await repo.get_study_time_for_deck(sample_user.id, deck.id) == 0
