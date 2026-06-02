@@ -38,6 +38,7 @@ from src.schemas.deck import (
 from src.services.s3_service import S3Service, get_s3_service
 from src.services.word_entry_response import word_entry_to_response
 from src.tasks.background import invalidate_cache_task
+from src.utils.heatmap import bucket_heatmap_intensity
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -841,21 +842,6 @@ async def get_word_mastery(
     return WordMasteryResponse(deck_id=deck_id, items=items)
 
 
-def _heatmap_intensity(count: int) -> int:
-    """Map a raw daily review count to a GitHub-style intensity level (0–5)."""
-    if count <= 0:
-        return 0
-    if count <= 2:
-        return 1
-    if count <= 4:
-        return 2
-    if count <= 7:
-        return 3
-    if count <= 12:
-        return 4
-    return 5
-
-
 @router.get(
     "/{deck_id}/word-heatmap/{word_entry_id}",
     response_model=WordHeatmapResponse,
@@ -882,7 +868,7 @@ async def get_word_heatmap(
         start_utc=start,
         end_utc=today,
     )
-    heat = [_heatmap_intensity(counts.get(start + timedelta(days=i), 0)) for i in range(7)]
+    heat = [bucket_heatmap_intensity(counts.get(start + timedelta(days=i), 0)) for i in range(7)]
     return WordHeatmapResponse(word_entry_id=word_entry_id, heat=heat, today_idx=6)
 
 

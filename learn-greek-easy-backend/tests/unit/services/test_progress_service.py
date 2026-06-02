@@ -879,7 +879,11 @@ class TestGetDeckProgressDetail:
         assert result.statistics.weekly_activity == [0, 0, 0, 0, 0, 0, 0]
 
     async def test_get_deck_progress_detail_weekly_assembly_slot(self, mock_db, mock_user_id):
-        """weekly_activity is a 7-element rolling list: oldest=index 0, today=index 6."""
+        """weekly_activity is a 7-element rolling list of bucketed intensities.
+
+        Oldest=index 0, today=index 6. Raw counts are bucketed GitHub-style:
+        4 reviews -> level 2, 1 review -> level 1.
+        """
         today = datetime.now(timezone.utc).date()
         week_start = today - timedelta(days=6)  # rolling 7-day window start
 
@@ -916,8 +920,8 @@ class TestGetDeckProgressDetail:
 
         wa = result.statistics.weekly_activity
         assert len(wa) == 7
-        assert wa[0] == 4  # window start (6 days ago)
-        assert wa[2] == 1  # start + 2 days
+        assert wa[0] == 2  # window start (6 days ago): 4 reviews -> level 2
+        assert wa[2] == 1  # start + 2 days: 1 review -> level 1
         assert wa[1] == 0
         assert wa[3] == 0
         assert wa[4] == 0

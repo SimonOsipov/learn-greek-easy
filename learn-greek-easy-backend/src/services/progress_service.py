@@ -40,6 +40,7 @@ from src.services.gamification.streak import (
     compute_exercise_streak,
     compute_vocabulary_streak,
 )
+from src.utils.heatmap import bucket_heatmap_intensity
 
 _DATETIME_MIN_UTC = datetime.min.replace(tzinfo=timezone.utc)
 
@@ -511,7 +512,10 @@ class ProgressService:
             user_id, deck_id, week_start, week_end
         )
 
-        weekly_activity = [weekly_counts.get(week_start + timedelta(days=i), 0) for i in range(7)]
+        weekly_activity = [
+            bucket_heatmap_intensity(weekly_counts.get(week_start + timedelta(days=i), 0))
+            for i in range(7)
+        ]
         deck_streak_current = _compute_streak_from_dates(deck_dates_desc)
         deck_streak_longest = _longest_streak_from_dates(sorted(deck_dates_desc))
 
