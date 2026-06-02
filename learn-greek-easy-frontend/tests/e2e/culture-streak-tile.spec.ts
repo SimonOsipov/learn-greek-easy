@@ -39,7 +39,7 @@ test.describe('Culture page — Streak metric tile', () => {
     await expect(streakTile.getByTestId('unwired-dot')).toHaveCount(0);
   });
 
-  test('this-week tile is still unwired (sanity: test discriminates wired vs unwired)', async ({
+  test('this-week tile is wired: shows numeric minutes, min suffix, and no unwired-dot', async ({
     page,
   }) => {
     await page.goto('/culture');
@@ -47,12 +47,20 @@ test.describe('Culture page — Streak metric tile', () => {
     const strip = page.getByTestId('culture-metric-strip');
     await expect(strip).toBeVisible({ timeout: 15000 });
 
-    // The "This week" tile has unwired: true in CulturePage metrics config.
+    // The "This week" tile is wired to dashboard.overview.culture_weekly_study_time_seconds (CHR-07).
     const thisWeekTile = strip
       .locator('.dx-metric')
       .filter({ has: page.getByText('This week', { exact: true }) });
 
     await expect(thisWeekTile).toHaveCount(1);
-    await expect(thisWeekTile.getByTestId('unwired-dot')).toHaveCount(1);
+
+    // Value region renders a number of minutes (may be 0 — depends on activity in the last 7 days).
+    await expect(thisWeekTile.locator('.dx-metric-v')).toContainText(/\d+/);
+
+    // "min" suffix is rendered in the <small> element.
+    await expect(thisWeekTile.locator('.dx-metric-v small')).toHaveText(/min/i);
+
+    // The tile is now wired — must NOT contain an unwired-dot indicator.
+    await expect(thisWeekTile.getByTestId('unwired-dot')).toHaveCount(0);
   });
 });
