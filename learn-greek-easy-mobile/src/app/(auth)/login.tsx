@@ -35,9 +35,8 @@ export default function LoginScreen() {
         {/* Input fields — bound to local state only, no auth action */}
         <View className="gap-3">
           <TextInput
-            className="rounded-lg bg-card border border-input px-4 py-3 text-fg text-base"
+            className="rounded-lg bg-card border border-input px-4 py-3 text-fg text-base placeholder:text-fg3"
             placeholder="Email"
-            placeholderTextColor="var(--fg3)"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -46,9 +45,8 @@ export default function LoginScreen() {
             autoCorrect={false}
           />
           <TextInput
-            className="rounded-lg bg-card border border-input px-4 py-3 text-fg text-base"
+            className="rounded-lg bg-card border border-input px-4 py-3 text-fg text-base placeholder:text-fg3"
             placeholder="Password"
-            placeholderTextColor="var(--fg3)"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
