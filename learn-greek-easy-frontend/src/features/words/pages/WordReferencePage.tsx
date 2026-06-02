@@ -11,7 +11,7 @@
  *     2. Examples (real, with derived tag + R5 amber dot)
  *     3. Collocations (R6 danger dot, placeholder)
  *     4. Note callout (real from grammar_data.notes, amber lightbulb)
- *     5. Related words (R7 danger dot, placeholder)
+ *     5. Related words (same-deck neighbour chips, navigates to sibling word)
  * - Active tab trigger has a primary ring (.dx-tab-ring)
  * - Cards tab with word mastery summary
  */
@@ -370,8 +370,8 @@ export function WordReferencePage() {
             </div>
           )}
 
-          {/* 5. Related words — placeholder, R7 danger dot */}
-          <RelatedWordsSection lemma={wordEntry.lemma} />
+          {/* 5. Related words — same-deck neighbours */}
+          <RelatedWordsSection deckId={deckId ?? ''} wordId={wordId ?? ''} />
         </TabsContent>
 
         {/* ── Cards Tab ─────────────────────────────────────────────────────── */}

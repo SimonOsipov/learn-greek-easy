@@ -352,7 +352,8 @@
     "promptPlural": "What is the plural?",
     "promptSentence": "Translate this sentence",
     "sectionCollocations": "Collocations",
-    "sectionRelatedWords": "Related Words",
+    "sectionRelatedWords": "Related words",
+    "relatedWordsEyebrow": "Vocabulary network",
     "groupAudio": "Audio",
     "groupCardCount": "{{n}} cards",
     "cardsViewToggleLabel": "Cards view",
@@ -397,7 +398,6 @@
     "unwiredHeatmap": "Practice heatmap — placeholder, not yet connected to backend data.",
     "unwiredExampleTag": "Example type — placeholder, not yet connected to backend tag taxonomy.",
     "unwiredCollocations": "Collocations — not yet connected to backend data.",
-    "unwiredRelated": "Related words — not yet connected to backend data.",
     "unwiredAudioGroup": "Audio cards — not yet available.",
     "premiumContent": "Premium content",
     "masteryStatus": "Mastery: {{status}}"
