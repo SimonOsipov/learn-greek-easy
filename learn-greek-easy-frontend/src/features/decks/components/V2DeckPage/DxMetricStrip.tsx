@@ -10,21 +10,9 @@ import { useTranslation } from 'react-i18next';
 
 import type { DeckStatistics, ProgressMetrics } from '@/services/progressAPI';
 
-import { WeekHeat } from '../../dx';
+import { WeekHeat, rollingDayLabels } from '../../dx';
 
 import type { deriveWordProgress } from '../../dx';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** Mon=0 … Sun=6 — matches WeekHeat DAY_LABELS index. */
-function getTodayIdx(): number {
-  // getDay() returns 0=Sun, 1=Mon … 6=Sat
-  // Remap to Mon=0 … Sun=6
-  const d = new Date().getDay();
-  return d === 0 ? 6 : d - 1;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Props
@@ -45,7 +33,6 @@ export function DxMetricStrip({ progress, statistics, wordProgress }: DxMetricSt
 
   const due = progress?.cards_due ?? 0;
   const timeMin = Math.round((statistics?.total_study_time_seconds ?? 0) / 60);
-  const todayIdx = getTodayIdx();
 
   // Mastered card uses word-level counts when available
   const mastered = wordProgress?.masteredWords ?? 0;
@@ -114,7 +101,8 @@ export function DxMetricStrip({ progress, statistics, wordProgress }: DxMetricSt
           </div>
           <WeekHeat
             heat={statistics?.weekly_activity ?? [0, 0, 0, 0, 0, 0, 0]}
-            todayIdx={todayIdx}
+            todayIdx={6}
+            dayLabels={rollingDayLabels()}
             label={t('dx.weekHeatLabel')}
           />
         </div>

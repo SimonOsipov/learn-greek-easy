@@ -10,7 +10,7 @@ export type { TypeChipProps } from './TypeChip';
 export { DonutRing } from './DonutRing';
 export type { DonutRingProps } from './DonutRing';
 
-export { WeekHeat } from './WeekHeat';
+export { WeekHeat, rollingDayLabels } from './WeekHeat';
 export type { WeekHeatProps } from './WeekHeat';
 
 export { Breadcrumb } from './Breadcrumb';

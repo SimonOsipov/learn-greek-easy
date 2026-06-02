@@ -495,8 +495,10 @@ class ProgressService:
             raise ForbiddenException()
 
         today = datetime.now(timezone.utc).date()
-        week_start = today - timedelta(days=today.weekday())  # Monday (weekday Mon=0)
-        week_end = week_start + timedelta(days=6)  # Sunday
+        # Rolling 7-day window (today inclusive, oldest first) — consistent with the
+        # per-word heatmap and dashboard recent_activity. Index 6 is always today.
+        week_start = today - timedelta(days=6)
+        week_end = today
 
         # Sequential on the shared AsyncSession (INFRA-01).
         vocab_status = await self.card_stats_repo.count_by_status(user_id, deck_id)

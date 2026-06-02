@@ -91,6 +91,7 @@ vi.mock('@/features/decks/dx', () => ({
       WeekHeat
     </div>
   ),
+  rollingDayLabels: () => ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
   UnwiredDot: ({
     children,
     tone,

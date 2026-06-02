@@ -11,6 +11,23 @@ export interface WeekHeatProps {
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
+const WEEKDAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']; // getUTCDay(): Sun=0
+
+/**
+ * Weekday initials for a rolling 7-day window ending today (UTC), oldest first.
+ * Index 6 is today. Computed in UTC to match backend UTC date bucketing.
+ * Pass to WeekHeat's `dayLabels` for rolling (non-calendar-week) windows.
+ */
+export function rollingDayLabels(): string[] {
+  const now = new Date();
+  const todayUtcMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const dayMs = 24 * 60 * 60 * 1000;
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(todayUtcMs - (6 - i) * dayMs);
+    return WEEKDAY_INITIALS[d.getUTCDay()];
+  });
+}
+
 /**
  * WeekHeat — 7-cell heatmap.
  * Renders EXACTLY 7 cells regardless of heat array length (pad/slice).

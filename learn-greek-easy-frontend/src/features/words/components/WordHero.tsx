@@ -15,7 +15,7 @@ import { Link } from 'react-router-dom';
 import { ReportErrorButton } from '@/components/card-errors';
 import { GenderBadge, PartOfSpeechBadge } from '@/components/review/grammar';
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
-import { DonutRing, DxSvgDefs, WeekHeat } from '@/features/decks/dx';
+import { DonutRing, DxSvgDefs, WeekHeat, rollingDayLabels } from '@/features/decks/dx';
 import '@/features/decks/dx/dx.css';
 import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
@@ -30,20 +30,6 @@ const GENDER_ARTICLE_MAP: Record<string, string> = {
   feminine: 'η',
   neuter: 'το',
 };
-
-// Weekday initials for the rolling 7-day window ending today (UTC), oldest first.
-// Computed in UTC to match the backend's UTC date bucketing.
-const WEEKDAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']; // getUTCDay(): Sun=0
-
-function rollingDayLabels(): string[] {
-  const now = new Date();
-  const todayUtcMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  const dayMs = 24 * 60 * 60 * 1000;
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(todayUtcMs - (6 - i) * dayMs);
-    return WEEKDAY_INITIALS[d.getUTCDay()];
-  });
-}
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
