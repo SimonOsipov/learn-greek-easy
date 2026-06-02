@@ -1,4 +1,5 @@
 import '@/global.css';
+import * as Sentry from '@sentry/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { DarkTheme, DefaultTheme, ThemeProvider, Stack } from 'expo-router';
 import { useColorScheme } from 'react-native';
@@ -6,12 +7,15 @@ import { useColorScheme } from 'react-native';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { useAuth } from '@/hooks/use-auth';
 import { queryClient } from '@/lib/query-client';
+import { initSentry } from '@/lib/sentry';
+
+initSentry();
 
 // Declare (app) as the anchor so Stack.Protected falls through to (auth)/login
 // when guard=false, instead of landing on the default root index.
 export const unstable_settings = { anchor: '(app)' };
 
-export default function RootLayout() {
+function RootLayout() {
   const colorScheme = useColorScheme();
   const { session, isLoading } = useAuth();
 
@@ -33,3 +37,5 @@ export default function RootLayout() {
     </QueryClientProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);

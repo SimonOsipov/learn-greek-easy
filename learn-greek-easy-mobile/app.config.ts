@@ -87,6 +87,14 @@ const config: ExpoConfig = {
       },
     ],
     ['expo-web-browser', { experimentalLauncherActivity: false }],
+    [
+      '@sentry/react-native/expo',
+      {
+        organization: 'greekly',
+        project: 'greeklish-mobile',
+        url: 'https://de.sentry.io/',
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,
