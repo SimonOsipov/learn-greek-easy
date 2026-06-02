@@ -15,7 +15,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.constants import MAX_ANSWER_TIME_SECONDS
-from src.db.models import CultureAnswerHistory
+from src.db.models import CultureAnswerHistory, CultureQuestion
 from src.repositories.base import BaseRepository
 
 
@@ -99,6 +99,25 @@ class CultureAnswerHistoryRepository(BaseRepository[CultureAnswerHistory]):
             select(func.coalesce(func.sum(capped_time), 0))
             .where(CultureAnswerHistory.user_id == user_id)
             .where(CultureAnswerHistory.created_at >= cutoff)
+        )
+        result = await self.db.execute(query)
+        return int(result.scalar() or 0)
+
+    async def get_study_time_for_deck(self, user_id: UUID, deck_id: UUID) -> int:
+        """Total capped study time (seconds) for a user across one deck's questions.
+
+        culture_answer_history has no deck_id, so JOIN to CultureQuestion on
+        question_id and filter by CultureQuestion.deck_id. Each answer is capped
+        at MAX_ANSWER_TIME_SECONDS. Mock-exam time is excluded by construction
+        (it is never written to culture_answer_history).
+        """
+        capped_time = func.least(CultureAnswerHistory.time_taken_seconds, MAX_ANSWER_TIME_SECONDS)
+        query = (
+            select(func.coalesce(func.sum(capped_time), 0))
+            .select_from(CultureAnswerHistory)
+            .join(CultureQuestion, CultureAnswerHistory.question_id == CultureQuestion.id)
+            .where(CultureAnswerHistory.user_id == user_id)
+            .where(CultureQuestion.deck_id == deck_id)
         )
         result = await self.db.execute(query)
         return int(result.scalar() or 0)
