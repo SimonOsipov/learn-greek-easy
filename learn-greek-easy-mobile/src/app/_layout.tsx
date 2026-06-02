@@ -5,6 +5,10 @@ import { useColorScheme } from 'react-native';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { useAuth } from '@/hooks/use-auth';
 
+// Declare (app) as the anchor so Stack.Protected falls through to (auth)/login
+// when guard=false, instead of landing on the default root index.
+export const unstable_settings = { anchor: '(app)' };
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const { session, isLoading } = useAuth();
