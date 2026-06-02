@@ -39,14 +39,14 @@ vi.mock('@/services/cultureDeckAPI', () => ({
 
 const { mockSetQuestionLanguage, questionLanguageRef } = vi.hoisted(() => ({
   mockSetQuestionLanguage: vi.fn(),
-  questionLanguageRef: { current: 'en' as 'el' | 'en' | 'ru' },
+  // Default is now 'el' (DDR-06: deck-detail defaults to Greek)
+  questionLanguageRef: { current: 'el' as 'el' | 'en' | 'ru' },
 }));
 
-vi.mock('@/hooks/useQuestionLanguage', () => ({
-  useQuestionLanguage: () => ({
+vi.mock('@/stores/cultureDeckQuestionLanguageStore', () => ({
+  useCultureDeckQuestionLanguage: () => ({
     questionLanguage: questionLanguageRef.current,
     setQuestionLanguage: mockSetQuestionLanguage,
-    resetToDefault: vi.fn(),
   }),
 }));
 
@@ -146,7 +146,7 @@ function renderBrowser(props: { deckId: string; totalQuestions: number }) {
 describe('QuestionBrowser', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    questionLanguageRef.current = 'en';
+    questionLanguageRef.current = 'el';
     vi.useFakeTimers({ shouldAdvanceTime: true });
   });
 
@@ -198,6 +198,8 @@ describe('QuestionBrowser', () => {
 
   describe('Search', () => {
     it('filters questions by text with 300ms debounce', async () => {
+      // Set to EN so we can search English text (verifies debounce, not default language)
+      questionLanguageRef.current = 'en';
       vi.mocked(cultureDeckAPI.browseQuestions).mockResolvedValue(
         makeBrowseResponse(mockQuestions)
       );
@@ -227,6 +229,8 @@ describe('QuestionBrowser', () => {
     });
 
     it('search is case-insensitive', async () => {
+      // Set to EN so we can search English text (verifies case-insensitivity, not default language)
+      questionLanguageRef.current = 'en';
       vi.mocked(cultureDeckAPI.browseQuestions).mockResolvedValue(
         makeBrowseResponse(mockQuestions)
       );
@@ -410,6 +414,42 @@ describe('QuestionBrowser', () => {
     });
   });
 
+  describe('Default Language (DDR-06)', () => {
+    it('defaults to EL on first mount', async () => {
+      vi.mocked(cultureDeckAPI.browseQuestions).mockResolvedValue(
+        makeBrowseResponse(mockQuestions)
+      );
+
+      renderBrowser({ deckId: 'deck-1', totalQuestions: 4 });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('question-grid')).toBeInTheDocument();
+      });
+
+      // Cards should render Greek text (EL default)
+      expect(screen.getByText('Ελλάδα ερώτηση')).toBeInTheDocument();
+    });
+
+    it('uses the scoped store (not global questionLanguageStore)', async () => {
+      vi.mocked(cultureDeckAPI.browseQuestions).mockResolvedValue(
+        makeBrowseResponse(mockQuestions)
+      );
+
+      renderBrowser({ deckId: 'deck-1', totalQuestions: 4 });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('question-grid')).toBeInTheDocument();
+      });
+
+      // The component should call the scoped store setter when language changes
+      const langGroup = screen.getByRole('group', { name: /Question Language/i });
+      const enButton = within(langGroup).getByRole('button', { name: /EN/i });
+      await userEvent.click(enButton);
+
+      expect(mockSetQuestionLanguage).toHaveBeenCalledWith('en');
+    });
+  });
+
   describe('Language Selector', () => {
     it('renders LanguageSelector pill in the filter row', async () => {
       vi.mocked(cultureDeckAPI.browseQuestions).mockResolvedValue(
@@ -430,15 +470,13 @@ describe('QuestionBrowser', () => {
       const langButtons = within(langGroup).getAllByRole('button');
       expect(langButtons).toHaveLength(3);
 
-      // EN should be pressed (default from mock)
-      const enButton = within(langGroup).getByRole('button', { name: /EN/i });
-      expect(enButton).toHaveAttribute('aria-pressed', 'true');
+      // EL should be pressed (deck-detail defaults to Greek — DDR-06)
+      const elButton = within(langGroup).getByRole('button', { name: /Greek/i });
+      expect(elButton).toHaveAttribute('aria-pressed', 'true');
     });
 
     it('filters search results using the selected question language', async () => {
-      // Override hook to return Greek
-      questionLanguageRef.current = 'el';
-
+      // Default is already 'el' (DDR-06), so no override needed
       vi.mocked(cultureDeckAPI.browseQuestions).mockResolvedValue(
         makeBrowseResponse(mockQuestions)
       );
@@ -475,9 +513,9 @@ describe('QuestionBrowser', () => {
         expect(cards).toHaveLength(4);
       });
 
-      // Verify cards show English text (default mock language is 'en')
-      expect(screen.getByText('Greece question one')).toBeInTheDocument();
-      expect(screen.getByText('Cyprus question two')).toBeInTheDocument();
+      // Verify cards show Greek text (deck-detail defaults to 'el' — DDR-06)
+      expect(screen.getByText('Ελλάδα ερώτηση')).toBeInTheDocument();
+      expect(screen.getByText('Κύπρος ερώτηση')).toBeInTheDocument();
     });
   });
 });

@@ -120,9 +120,10 @@ describe('QuestionDetailDialog', () => {
       vi.mocked(cultureDeckAPI.getQuestionDetail).mockResolvedValue(makeDetailResponse());
       renderDialog();
 
+      // Default language is now EL (DDR-06)
       await waitFor(() => {
         expect(screen.getByTestId('question-detail-text')).toHaveTextContent(
-          'What is the capital of Greece?'
+          'Ποια είναι η πρωτεύουσα;'
         );
       });
 
@@ -344,6 +345,23 @@ describe('QuestionDetailDialog', () => {
       await waitFor(() => {
         expect(cultureDeckAPI.getQuestionDetail).toHaveBeenCalledTimes(2);
       });
+    });
+  });
+
+  describe('Default Language (DDR-06)', () => {
+    it('opens in Greek (EL) by default', async () => {
+      vi.mocked(cultureDeckAPI.getQuestionDetail).mockResolvedValue(makeDetailResponse());
+      renderDialog();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('question-detail-text')).toHaveTextContent(
+          'Ποια είναι η πρωτεύουσα;'
+        );
+      });
+
+      // EL button should be active (aria-pressed=true)
+      const elButton = screen.getByRole('button', { name: /greek/i });
+      expect(elButton).toHaveAttribute('aria-pressed', 'true');
     });
   });
 

@@ -61,7 +61,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation(['culture', 'common']);
-  const [lang, setLang] = useState<CultureLanguage>('en');
+  const [lang, setLang] = useState<CultureLanguage>('el');
   const [newsLevel, setNewsLevelState] = useState<NewsLevel>(getPersistedNewsLevel);
 
   const handleLevelChange = (level: NewsLevel) => {
