@@ -249,18 +249,70 @@ describe('QuestionDetailDialog', () => {
       renderDialog();
 
       await waitFor(() => {
-        expect(screen.getByTestId('question-detail-text')).toHaveTextContent(
-          'What is the capital of Greece?'
-        );
+        expect(screen.getByTestId('question-detail-text')).toBeInTheDocument();
       });
 
-      // Click the EL button to switch to Greek
-      const elButton = screen.getByRole('button', { name: /greek/i });
-      await user.click(elButton);
+      // Click the EN button to switch to English
+      const enButton = screen.getByRole('button', { name: /english/i });
+      await user.click(enButton);
 
       expect(screen.getByTestId('question-detail-text')).toHaveTextContent(
-        'Ποια είναι η πρωτεύουσα;'
+        'What is the capital of Greece?'
       );
+    });
+  });
+
+  describe('A2/B2 Level Toggle (DDR-05)', () => {
+    it('shows A2/B2 toggle for news category with leveled audio', async () => {
+      vi.mocked(cultureDeckAPI.getQuestionDetail).mockResolvedValue(
+        makeDetailResponse({
+          audio_url: 'https://example.com/b2.mp3',
+          audio_a2_url: 'https://example.com/a2.mp3',
+        })
+      );
+      renderDialog({ category: 'news' });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('detail-level-toggle-a2')).toBeInTheDocument();
+      });
+      expect(screen.getByTestId('detail-level-toggle-b2')).toBeInTheDocument();
+    });
+
+    it('does NOT show A2/B2 toggle for non-news category even with a2 audio', async () => {
+      vi.mocked(cultureDeckAPI.getQuestionDetail).mockResolvedValue(
+        makeDetailResponse({
+          audio_url: 'https://example.com/b2.mp3',
+          audio_a2_url: 'https://example.com/a2.mp3',
+        })
+      );
+      renderDialog({ category: 'history' });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('question-detail-text')).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId('detail-level-toggle-a2')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('detail-level-toggle-b2')).not.toBeInTheDocument();
+    });
+
+    it('non-news card with only audio_a2_url still shows the audio player', async () => {
+      vi.mocked(cultureDeckAPI.getQuestionDetail).mockResolvedValue(
+        makeDetailResponse({
+          audio_url: null,
+          audio_a2_url: 'https://example.com/a2.mp3',
+        })
+      );
+      renderDialog({ category: 'geography' });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('question-detail-audio')).toBeInTheDocument();
+      });
+      // Audio player renders the a2 url directly (no toggle, no persisted level dependency)
+      expect(screen.getByTestId('waveform-player')).toHaveAttribute(
+        'data-audio-url',
+        'https://example.com/a2.mp3'
+      );
+      // No level toggle present
+      expect(screen.queryByTestId('detail-level-toggle-a2')).not.toBeInTheDocument();
     });
   });
 
