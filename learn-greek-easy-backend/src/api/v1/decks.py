@@ -5,6 +5,7 @@ listing decks with pagination and filtering.
 """
 
 from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -17,6 +18,7 @@ from src.core.exceptions import DeckNotFoundException, ForbiddenException
 from src.core.localization import get_localized_deck_content
 from src.db.dependencies import get_db
 from src.db.models import Deck, DeckLevel, PartOfSpeech, User
+from src.repositories.card_record_review import CardRecordReviewRepository
 from src.repositories.card_record_statistics import CardRecordStatisticsRepository
 from src.repositories.deck import DeckRepository
 from src.repositories.word_entry import WordEntryRepository
@@ -29,6 +31,7 @@ from src.schemas.deck import (
     DeckSearchResponse,
     DeckUpdate,
     DeckWordEntriesResponse,
+    WordHeatmapResponse,
     WordMasteryItem,
     WordMasteryResponse,
 )
@@ -836,6 +839,51 @@ async def get_word_mastery(
         for wid, types in grouped.items()
     ]
     return WordMasteryResponse(deck_id=deck_id, items=items)
+
+
+def _heatmap_intensity(count: int) -> int:
+    """Map a raw daily review count to a GitHub-style intensity level (0–5)."""
+    if count <= 0:
+        return 0
+    if count <= 2:
+        return 1
+    if count <= 4:
+        return 2
+    if count <= 7:
+        return 3
+    if count <= 12:
+        return 4
+    return 5
+
+
+@router.get(
+    "/{deck_id}/word-heatmap/{word_entry_id}",
+    response_model=WordHeatmapResponse,
+    summary="Get per-word rolling 7-day practice heatmap",
+)
+async def get_word_heatmap(
+    deck_id: UUID,
+    word_entry_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> WordHeatmapResponse:
+    deck = await DeckRepository(db).get(deck_id)
+    if deck is None or not deck.is_active:
+        raise DeckNotFoundException(deck_id=str(deck_id))
+    if deck.owner_id is not None and deck.owner_id != current_user.id:
+        raise ForbiddenException(detail="You do not have permission to access this deck")
+
+    today = datetime.now(timezone.utc).date()
+    start = today - timedelta(days=6)  # rolling 7-day window, today inclusive
+    counts = await CardRecordReviewRepository(db).get_word_rolling_activity(
+        user_id=current_user.id,
+        deck_id=deck_id,
+        word_entry_id=word_entry_id,
+        start_utc=start,
+        end_utc=today,
+    )
+    heat = [_heatmap_intensity(counts.get(start + timedelta(days=i), 0)) for i in range(7)]
+    return WordHeatmapResponse(word_entry_id=word_entry_id, heat=heat, today_idx=6)
 
 
 @router.patch(

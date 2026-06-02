@@ -221,6 +221,18 @@ class WordMasteryResponse(BaseModel):
     items: list[WordMasteryItem]
 
 
+class WordHeatmapResponse(BaseModel):
+    """Rolling 7-day practice heatmap for a single word entry.
+
+    ``heat`` holds 7 GitHub-style intensity levels (0–5), oldest first:
+    index 0 is 6 days ago and index 6 (``today_idx``) is today, bucketed in UTC.
+    """
+
+    word_entry_id: UUID
+    heat: list[int] = Field(..., min_length=7, max_length=7)
+    today_idx: int = Field(..., ge=0, le=6)
+
+
 # Import at the end to avoid circular dependencies
 from src.schemas.word_entry import WordEntryResponse  # noqa: E402
 

@@ -900,3 +900,29 @@ class TestGetDeckAuthorizationUnit:
             assert data["success"] is False
             assert data["error"]["code"] == "FORBIDDEN"
             assert "permission" in data["error"]["message"].lower()
+
+
+class TestHeatmapIntensity:
+    """Unit tests for the GitHub-style heatmap intensity bucketing."""
+
+    @pytest.mark.parametrize(
+        "count,expected",
+        [
+            (0, 0),
+            (-3, 0),
+            (1, 1),
+            (2, 1),
+            (3, 2),
+            (4, 2),
+            (5, 3),
+            (7, 3),
+            (8, 4),
+            (12, 4),
+            (13, 5),
+            (100, 5),
+        ],
+    )
+    def test_bucket_boundaries(self, count: int, expected: int) -> None:
+        from src.api.v1.decks import _heatmap_intensity
+
+        assert _heatmap_intensity(count) == expected

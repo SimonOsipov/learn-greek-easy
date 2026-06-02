@@ -262,6 +262,16 @@ export interface WordMasteryItem {
 }
 
 /**
+ * Rolling 7-day practice heatmap for a single word entry.
+ * `heat` holds 7 intensity levels (0–5), oldest first; `today_idx` (=6) is today.
+ */
+export interface WordHeatmapResponse {
+  word_entry_id: string;
+  heat: number[];
+  today_idx: number;
+}
+
+/**
  * Parameters for deck progress list
  */
 export interface DeckProgressListParams {
@@ -344,5 +354,12 @@ export const progressAPI = {
     return api.get<{ deck_id: string; items: WordMasteryItem[] }>(
       `/api/v1/decks/${deckId}/word-mastery`
     );
+  },
+
+  /**
+   * Get the rolling 7-day practice heatmap for a single word in a deck
+   */
+  getWordHeatmap: async (deckId: string, wordEntryId: string): Promise<WordHeatmapResponse> => {
+    return api.get<WordHeatmapResponse>(`/api/v1/decks/${deckId}/word-heatmap/${wordEntryId}`);
   },
 };

@@ -3,9 +3,8 @@
 // DX-09: Radial-panel hero header for WordReferencePage.
 // Consumes dx.css (.dx-w-hero*) + atoms from @/features/decks/dx.
 //
-// Placeholders (danger/red, per Red-Dot Inventory):
-//   R3 — WeekHeat: no per-word practice heatmap backend yet → static heat + UnwiredDot
-// DonutRing: real data (masteredCards / totalCards) — NO dot.
+// WeekHeat: real per-word rolling 7-day practice heatmap (weekHeat / weekHeatTodayIdx).
+// DonutRing: real data (masteredCards / totalCards). Neither has an UnwiredDot.
 
 import { useState } from 'react';
 
@@ -16,7 +15,7 @@ import { Link } from 'react-router-dom';
 import { ReportErrorButton } from '@/components/card-errors';
 import { GenderBadge, PartOfSpeechBadge } from '@/components/review/grammar';
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
-import { DonutRing, DxSvgDefs, UnwiredDot, WeekHeat } from '@/features/decks/dx';
+import { DonutRing, DxSvgDefs, WeekHeat } from '@/features/decks/dx';
 import '@/features/decks/dx/dx.css';
 import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
@@ -32,6 +31,20 @@ const GENDER_ARTICLE_MAP: Record<string, string> = {
   neuter: 'το',
 };
 
+// Weekday initials for the rolling 7-day window ending today (UTC), oldest first.
+// Computed in UTC to match the backend's UTC date bucketing.
+const WEEKDAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']; // getUTCDay(): Sun=0
+
+function rollingDayLabels(): string[] {
+  const now = new Date();
+  const todayUtcMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const dayMs = 24 * 60 * 60 * 1000;
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(todayUtcMs - (6 - i) * dayMs);
+    return WEEKDAY_INITIALS[d.getUTCDay()];
+  });
+}
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 export interface WordHeroProps {
@@ -41,6 +54,10 @@ export interface WordHeroProps {
   article?: string;
   masteredCards: number;
   totalCards: number;
+  /** Rolling 7-day practice heatmap (intensity 0–5, oldest first). */
+  weekHeat?: number[];
+  /** Index of today within weekHeat (0–6). */
+  weekHeatTodayIdx?: number;
   audioSpeed: AudioSpeed;
   onSpeedChange: (s: AudioSpeed) => void;
   onReportError: () => void;
@@ -55,6 +72,8 @@ export function WordHero({
   article,
   masteredCards,
   totalCards,
+  weekHeat,
+  weekHeatTodayIdx,
   audioSpeed,
   onSpeedChange,
   onReportError,
@@ -167,12 +186,14 @@ export function WordHero({
             </div>
           </div>
 
-          {/* Stats: WeekHeat (R3, placeholder) + DonutRing (real) */}
+          {/* Stats: WeekHeat (real, rolling 7-day) + DonutRing (real) */}
           <div className="dx-w-hero-stats">
-            {/* R3 — per-word practice heatmap not yet in backend */}
-            <UnwiredDot tone="danger" aria-label={t('deck:dx.unwiredHeatmap')}>
-              <WeekHeat heat={[1, 2, 0, 3, 1, 0, 0]} label={t('deck:dx.weekHeatLabel')} />
-            </UnwiredDot>
+            <WeekHeat
+              heat={weekHeat}
+              todayIdx={weekHeatTodayIdx}
+              dayLabels={rollingDayLabels()}
+              label={t('deck:dx.weekHeatLabel')}
+            />
 
             {/* Real mastery data — NO UnwiredDot */}
             <DonutRing

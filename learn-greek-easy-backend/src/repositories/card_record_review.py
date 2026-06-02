@@ -440,6 +440,56 @@ class CardRecordReviewRepository(BaseRepository[CardRecordReview]):
             out[d] = row.review_count
         return out
 
+    async def get_word_rolling_activity(
+        self,
+        user_id: UUID,
+        deck_id: UUID,
+        word_entry_id: UUID,
+        start_utc: date,
+        end_utc: date,
+    ) -> dict[date, int]:
+        """Return {UTC date: review count} for one word in a deck within [start, end].
+
+        Mirrors :meth:`get_deck_weekly_activity` but narrows to a single word
+        entry. Used to build the per-word practice heatmap.
+
+        Args:
+            user_id: User UUID.
+            deck_id: Deck UUID (scopes the word to this deck's cards).
+            word_entry_id: Word entry UUID.
+            start_utc: Start of the date range (inclusive, UTC).
+            end_utc: End of the date range (inclusive, UTC).
+
+        Returns:
+            Dict mapping date to review count for days with activity. Empty dict
+            if no reviews exist in the given range.
+        """
+        stmt = (
+            select(
+                func.date(CardRecordReview.reviewed_at).label("review_date"),
+                func.count(CardRecordReview.id).label("review_count"),
+            )
+            .join(CardRecord, CardRecordReview.card_record_id == CardRecord.id)
+            .where(
+                CardRecordReview.user_id == user_id,
+                CardRecord.deck_id == deck_id,
+                CardRecord.word_entry_id == word_entry_id,
+                func.date(CardRecordReview.reviewed_at) >= start_utc,
+                func.date(CardRecordReview.reviewed_at) <= end_utc,
+            )
+            .group_by(func.date(CardRecordReview.reviewed_at))
+        )
+        result = await self.db.execute(stmt)
+        out: dict[date, int] = {}
+        for row in result.all():
+            d = (
+                datetime.strptime(row.review_date, "%Y-%m-%d").date()
+                if isinstance(row.review_date, str)
+                else row.review_date
+            )
+            out[d] = row.review_count
+        return out
+
     async def get_session_aggregates(self, user_id: UUID) -> list[SessionAgg]:
         """Return per-session aggregates for all reviews by a user.
 

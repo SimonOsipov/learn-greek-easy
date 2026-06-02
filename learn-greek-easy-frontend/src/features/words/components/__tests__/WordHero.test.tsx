@@ -4,8 +4,7 @@
  * Acceptance criteria:
  * 1. is-playing class present on onPlayStateChange(true) / absent on (false)
  * 2. DonutRing done=masteredCards / total=totalCards + NO dot
- * 3. exactly ONE UnwiredDot in the hero (R3 WeekHeat),
- *    with danger tone + correct aria-label
+ * 3. WeekHeat renders real rolling heatmap data, NO UnwiredDot in the hero
  * 4. voice-speed change calls setPersistedAudioSpeed
  * 5. Greek headline lang="el" + not italic
  * 6. back link → /decks/:deckId
@@ -82,8 +81,13 @@ vi.mock('@/features/decks/dx', () => ({
       DonutRing
     </div>
   ),
-  WeekHeat: ({ heat, label }: { heat?: number[]; label?: string }) => (
-    <div data-testid="week-heat" data-label={label}>
+  WeekHeat: ({ heat, label, todayIdx }: { heat?: number[]; label?: string; todayIdx?: number }) => (
+    <div
+      data-testid="week-heat"
+      data-label={label}
+      data-heat={JSON.stringify(heat ?? null)}
+      data-today-idx={todayIdx}
+    >
       WeekHeat
     </div>
   ),
@@ -158,6 +162,8 @@ interface RenderOpts {
   audioSpeed?: AudioSpeed;
   overrides?: Partial<WordEntryResponse>;
   deckId?: string;
+  weekHeat?: number[];
+  weekHeatTodayIdx?: number;
 }
 
 function renderHero({
@@ -166,6 +172,8 @@ function renderHero({
   audioSpeed = 1,
   overrides = {},
   deckId = 'deck-1',
+  weekHeat = [0, 1, 2, 3, 4, 5, 2],
+  weekHeatTodayIdx = 6,
 }: RenderOpts = {}) {
   const onSpeedChange = vi.fn();
   const onReportError = vi.fn();
@@ -179,6 +187,8 @@ function renderHero({
       displayTranslation="to write"
       masteredCards={masteredCards}
       totalCards={totalCards}
+      weekHeat={weekHeat}
+      weekHeatTodayIdx={weekHeatTodayIdx}
       audioSpeed={audioSpeed}
       onSpeedChange={onSpeedChange}
       onReportError={onReportError}
@@ -245,34 +255,27 @@ describe('WordHero — DX-09', () => {
     });
   });
 
-  describe('3. Exactly ONE UnwiredDot (R3 WeekHeat), danger tone', () => {
-    it('renders exactly 1 UnwiredDot', () => {
+  describe('3. WeekHeat — real rolling heatmap, no UnwiredDot', () => {
+    it('renders NO UnwiredDot in the hero', () => {
       renderHero();
-      const dots = screen.getAllByTestId('unwired-dot');
-      expect(dots).toHaveLength(1);
+      expect(screen.queryAllByTestId('unwired-dot')).toHaveLength(0);
     });
 
-    it('UnwiredDot has tone="danger"', () => {
-      renderHero();
-      const dots = screen.getAllByTestId('unwired-dot');
-      dots.forEach((dot) => {
-        expect(dot).toHaveAttribute('data-tone', 'danger');
-      });
+    it('WeekHeat receives the real heat array', () => {
+      renderHero({ weekHeat: [1, 0, 3, 0, 5, 2, 4] });
+      const heat = screen.getByTestId('week-heat');
+      expect(heat).toHaveAttribute('data-heat', JSON.stringify([1, 0, 3, 0, 5, 2, 4]));
     });
 
-    it('R3 WeekHeat UnwiredDot has correct aria-label', () => {
-      renderHero();
-      const dots = screen.getAllByTestId('unwired-dot');
-      const heatDot = dots.find((d) =>
-        d.getAttribute('aria-label')?.toLowerCase().includes('heatmap')
-      );
-      expect(heatDot).toBeDefined();
+    it('WeekHeat receives todayIdx', () => {
+      renderHero({ weekHeatTodayIdx: 6 });
+      expect(screen.getByTestId('week-heat')).toHaveAttribute('data-today-idx', '6');
     });
 
-    it('WeekHeat is inside an UnwiredDot', () => {
+    it('WeekHeat is NOT wrapped in an UnwiredDot', () => {
       renderHero();
       const heat = screen.getByTestId('week-heat');
-      expect(heat.closest('[data-testid="unwired-dot"]')).not.toBeNull();
+      expect(heat.closest('[data-testid="unwired-dot"]')).toBeNull();
     });
   });
 
