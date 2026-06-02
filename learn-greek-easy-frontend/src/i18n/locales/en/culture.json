@@ -61,14 +61,6 @@
     "legendToPractice": "To practice",
     "legendLearning": "Learning",
     "legendMastered": "Mastered",
-    "actionTopicLabel": "Topic",
-    "topicUnwired": "Topic filtering — not yet connected to backend data.",
-    "topicOnly": "only",
-    "topicAll": "All",
-    "topicPolitics": "Politics",
-    "topicCulture": "Culture",
-    "topicHistory": "History",
-    "topicGeography": "Geography",
     "questionsEyebrow": "Questions in this deck"
   },
   "deck": {
