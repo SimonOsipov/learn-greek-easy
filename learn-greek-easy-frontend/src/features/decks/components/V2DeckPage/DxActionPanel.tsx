@@ -68,12 +68,19 @@ export function DxActionPanel({ deckId, progress: _progress, wordProgress }: DxA
 
   return (
     <div className="dx-action" data-testid="dx-action-panel">
-      {/* Header: eyebrow kicker */}
-      <Kicker tone="primary">{t('detail.actionEyebrow')}</Kicker>
-
-      {/* Progress head: title + percentage */}
+      {/* Progress head: eyebrow + title on the left, word-level counts on the right */}
       <div className="dx-action-head">
-        <h3 className="dx-action-h">{t('detail.actionYourProgress', { pct })}</h3>
+        <div className="dx-section-eyebrow">
+          <Kicker tone="primary">{t('detail.actionEyebrow')}</Kicker>
+          <h3 className="dx-action-h">{t('detail.actionYourProgress', { pct })}</h3>
+        </div>
+        <span className="dx-action-pct">
+          {t('detail.actionCounts', {
+            new: wordProgress?.newWords ?? 0,
+            inProgress: wordProgress?.inProgressWords ?? 0,
+            mastered: wordProgress?.masteredWords ?? 0,
+          })}
+        </span>
       </div>
 
       {/* Single gradient progress bar */}
@@ -85,17 +92,6 @@ export function DxActionPanel({ deckId, progress: _progress, wordProgress }: DxA
         aria-valuemax={100}
       >
         <span data-testid="dx-action-bar-fill" style={{ width: `${pct}%` }} />
-      </div>
-
-      {/* Counts legend — word-level counts */}
-      <div className="dx-action-legend">
-        <span className="dx-action-legend-item" data-tone="todo">
-          {t('detail.actionCounts', {
-            new: wordProgress?.newWords ?? 0,
-            inProgress: wordProgress?.inProgressWords ?? 0,
-            mastered: wordProgress?.masteredWords ?? 0,
-          })}
-        </span>
       </div>
 
       {/* Card-type chip selector */}
