@@ -65,6 +65,7 @@ function defaultHook(overrides = {}) {
 describe('RelatedWordsSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
     mockUseWordEntries.mockReturnValue(defaultHook());
   });
 
@@ -86,9 +87,10 @@ describe('RelatedWordsSection', () => {
     expect(greekSpans).toEqual(['word-1', 'word-3', 'word-4']);
   });
 
-  // (b) clicking a chip calls navigate with the correct URL
+  // (b) clicking a chip calls navigate with the correct URL and scrolls to top
   it('clicking a chip calls navigate to the sibling word URL', async () => {
     const user = userEvent.setup();
+    const scrollToSpy = vi.spyOn(window, 'scrollTo');
     const { entries, currentId } = makeDeck(3, 1); // middle of [0,1,2]
     mockUseWordEntries.mockReturnValue(defaultHook({ wordEntries: entries }));
 
@@ -100,6 +102,7 @@ describe('RelatedWordsSection', () => {
     expect(mockNavigate).toHaveBeenCalledOnce();
     // First chip in ascending deck order is w0
     expect(mockNavigate).toHaveBeenCalledWith('/decks/deck42/words/w0');
+    expect(scrollToSpy).toHaveBeenCalledWith({ top: 0 });
   });
 
   // (c) no UnwiredDot and no placeholder dashes
