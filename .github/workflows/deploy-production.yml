@@ -167,6 +167,7 @@ jobs:
         run: |
           eas update \
             --branch production \
+            --environment production \
             --message "main@${{ github.sha }}" \
             --non-interactive
         timeout-minutes: 15
