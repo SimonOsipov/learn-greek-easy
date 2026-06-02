@@ -65,7 +65,10 @@ export function RelatedWordsSection({ deckId, wordId }: RelatedWordsSectionProps
 
   return (
     <div className="dx-section" data-testid="related-words-section">
-      <div className="dx-section-head">
+      <div className="dx-section-eyebrow">
+        <span className="dx-kicker" data-testid="related-words-eyebrow">
+          {t('wordReference.relatedWordsEyebrow')}
+        </span>
         <h3 className="dx-section-h">{t('wordReference.sectionRelatedWords')}</h3>
       </div>
       <div className="dx-related" data-testid="related-words-chips">

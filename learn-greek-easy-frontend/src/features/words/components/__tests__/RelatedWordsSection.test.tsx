@@ -184,6 +184,18 @@ describe('RelatedWordsSection', () => {
     expect(screen.getByTestId('related-words-chips')).toBeInTheDocument();
   });
 
+  // eyebrow kicker renders above the heading
+  it('renders the "Vocabulary network" eyebrow kicker above the heading', () => {
+    const { entries, currentId } = makeDeck(3, 1);
+    mockUseWordEntries.mockReturnValue(defaultHook({ wordEntries: entries }));
+
+    render(<RelatedWordsSection deckId="deck1" wordId={currentId} />);
+
+    const eyebrow = screen.getByTestId('related-words-eyebrow');
+    expect(eyebrow).toBeInTheDocument();
+    expect(eyebrow).toHaveTextContent('Vocabulary network');
+  });
+
   // Greek chip text carries lang="el"
   it('Greek chip text carries lang="el"', () => {
     const { entries, currentId } = makeDeck(3, 1);
