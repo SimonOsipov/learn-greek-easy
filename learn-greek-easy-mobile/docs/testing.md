@@ -106,7 +106,10 @@ user journey. Visual regression (Sherlo/Storybook) is deferred by product decisi
 
 ## CI status
 
-Unit/component tests and the Maestro smoke flow run **locally only** at this stage.
-Wiring them into CI and EAS (automated Maestro on PRs, EAS Update channels, OTA release
-rules) is owned by **MOB-08**. See [docs/mobile-ci.md](../../docs/mobile-ci.md) §"Not yet
-wired (MOB-08)" for the full list of deferred CI work.
+Unit/component tests (`npm test`) run in the `mobile-ci` job inside the `CI Gate` required
+check on every PR that touches `learn-greek-easy-mobile/**`.
+
+The Maestro smoke flow runs **locally only** during normal development; it also runs
+automatically in the on-demand `mobile-native-build.yml` workflow (triggered by the
+`needs-native-build` PR label or `workflow_dispatch`) — see
+[docs/mobile-ci.md](../../docs/mobile-ci.md) §"Mobile delivery — OTA vs native".

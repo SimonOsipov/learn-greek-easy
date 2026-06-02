@@ -8,15 +8,16 @@ The following checks are required on `main` and must pass before merging:
 
 | Check name | Workflow | Skip mechanic |
 |------------|----------|---------------|
-| `Frontend tsc -b` | `test.yml` (`tsc-build` job) | None — TS errors must be 0 to merge |
+| `CI Gate` | `preview.yml` (`ci-gate` aggregator job) | None — aggregates web + mobile checks; must pass to merge |
 
-Add `Frontend tsc -b` under **Settings → Branches → Branch protection rules → Require status checks** in GitHub to enforce this gate.
+Add `CI Gate` under **Settings → Branches → Branch protection rules → Require status checks** in GitHub to enforce this gate.
 
 ## Available Labels
 
 | Label | Effect |
 |-------|--------|
 | `skip-k6` | Skip k6 performance tests |
+| `needs-native-build` | Trigger the on-demand EAS local iOS build + Maestro smoke workflow (`mobile-native-build.yml`) |
 
 > **Note:** `skip-visual` label exists but has no effect — visual regression tests are currently disabled (being reorganized).
 
