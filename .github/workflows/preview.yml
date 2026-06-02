@@ -116,10 +116,10 @@ jobs:
   # =============================================================================
   # JOB 1b: Mobile CI (MOB-01a)
   # Purpose: tsc + lint for the Expo app. Runs only when mobile files changed.
-  # No jest here — the Jest-Expo harness arrives in MOB-07 (added to CI in MOB-08).
+  # Mobile PR gate: TypeScript check + expo lint + jest-expo unit tests (folded into CI Gate).
   # =============================================================================
   mobile-ci:
-    name: Mobile CI (tsc + lint)
+    name: Mobile CI (tsc + lint + test)
     needs: [should-run-full, changes]
     if: needs.should-run-full.outputs.run_full == 'true' && needs.changes.outputs.mobile == 'true'
     runs-on: ubuntu-latest
@@ -145,6 +145,10 @@ jobs:
       - name: ESLint (expo lint)
         working-directory: learn-greek-easy-mobile
         run: npm run lint
+
+      - name: Jest (jest-expo)
+        working-directory: learn-greek-easy-mobile
+        run: npx jest --ci
 
   # =============================================================================
   # JOB 1c: CI Gate (MOB-01a) — the single REQUIRED status check
