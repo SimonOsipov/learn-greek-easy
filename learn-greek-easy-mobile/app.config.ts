@@ -38,6 +38,13 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 const apiUrl = process.env.API_URL;
 
+// Observability env vars — optional. src/lib/config.ts returns undefined (no throw) when absent.
+// POSTHOG_HOST is passed through raw; the helper in config.ts applies the US default when undefined.
+const sentryDsn = process.env.SENTRY_DSN;
+const posthogApiKey = process.env.POSTHOG_API_KEY;
+const posthogHost = process.env.POSTHOG_HOST;
+const environment = variant; // 'development' | 'preview' | 'production'
+
 const config: ExpoConfig = {
   name,
   slug: 'greeklish-app',
@@ -80,6 +87,14 @@ const config: ExpoConfig = {
       },
     ],
     ['expo-web-browser', { experimentalLauncherActivity: false }],
+    [
+      '@sentry/react-native/expo',
+      {
+        organization: 'greekly',
+        project: 'greeklish-mobile',
+        url: 'https://de.sentry.io/',
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,
@@ -93,6 +108,10 @@ const config: ExpoConfig = {
     supabaseUrl,
     supabaseAnonKey,
     apiUrl,
+    sentryDsn,
+    posthogApiKey,
+    posthogHost,
+    environment,
   },
   owner: 'sams-team',
 };

@@ -1,5 +1,29 @@
 import Constants from 'expo-constants';
 
+// NOTE: getSentryConfig and getPostHogConfig intentionally deviate from the
+// throw-on-missing pattern of getSupabaseConfig/getApiConfig below. Observability
+// must degrade to a no-op when keys are absent — it must never crash the app.
+
+export function getSentryConfig(): { dsn: string | undefined; environment: string } {
+  const extra = Constants.expoConfig?.extra as
+    | { sentryDsn?: string; environment?: string }
+    | undefined;
+  return {
+    dsn: extra?.sentryDsn, // undefined when unset — no throw
+    environment: extra?.environment ?? 'development',
+  };
+}
+
+export function getPostHogConfig(): { apiKey: string | undefined; host: string } {
+  const extra = Constants.expoConfig?.extra as
+    | { posthogApiKey?: string; posthogHost?: string }
+    | undefined;
+  return {
+    apiKey: extra?.posthogApiKey, // undefined when unset — no throw
+    host: extra?.posthogHost ?? 'https://eu.i.posthog.com', // EU region — Greekly project id 108020 (prod ingests to eu)
+  };
+}
+
 export function getSupabaseConfig(): { supabaseUrl: string; supabaseAnonKey: string } {
   const extra = Constants.expoConfig?.extra as
     | { supabaseUrl?: string; supabaseAnonKey?: string }
