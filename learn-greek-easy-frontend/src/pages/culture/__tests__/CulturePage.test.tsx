@@ -389,6 +389,7 @@ const dashboardWith5Streak = {
     overall_mastery_percentage: 0,
     culture_questions_mastered: 0,
     total_study_time_seconds: 0,
+    culture_weekly_study_time_seconds: 600,
   },
   today: {
     reviews_completed: 0,
@@ -442,10 +443,14 @@ describe('Culture streak tile (STRK-07)', () => {
     // No UnwiredDot inside the Streak tile — the Streak metric is wired
     expect(within(streakTile!).queryByTestId('unwired-dot')).not.toBeInTheDocument();
 
-    // Sanity: the "This week" tile (unwired) still carries an UnwiredDot
+    // CULT2-3 / CHR-04: Streak tile now carries the "keep it going" subtext
+    expect(within(streakTile!).getByText('keep it going')).toBeInTheDocument();
+
+    // CULT2-3 / CHR-07: the "This week" tile is now wired (600s → 10 min) with no UnwiredDot
     const thisWeekTile = allTiles.find((tile) => within(tile).queryByText('This week') !== null);
     expect(thisWeekTile).toBeDefined();
-    expect(within(thisWeekTile!).getByTestId('unwired-dot')).toBeInTheDocument();
+    expect(within(thisWeekTile!).getByText('10')).toBeInTheDocument();
+    expect(within(thisWeekTile!).queryByTestId('unwired-dot')).not.toBeInTheDocument();
   });
 
   it('shows 0 and page still renders when getDashboard rejects', async () => {

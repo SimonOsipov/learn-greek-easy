@@ -102,7 +102,7 @@ export const CulturePage: React.FC = () => {
           value: String(resumeDeck.progress?.cardsLearning ?? 0),
         },
         {
-          label: t('list.complete', 'Complete %'),
+          label: t('hub.metricMastery', 'Mastered'),
           value: `${resumePct}%`,
         },
       ]
@@ -149,6 +149,8 @@ export const CulturePage: React.FC = () => {
       label: t('hub.metricStreak', 'Streak'),
       value: String(dashboard?.streak.culture_current_streak ?? 0),
       sub: t('hub.days', 'days'),
+      trend: t('hub.metricStreakTrend', 'keep it going'),
+      trendTone: 'flat' as const,
       tone: 'amber' as const,
     },
     {
@@ -168,13 +170,11 @@ export const CulturePage: React.FC = () => {
     {
       icon: <Clock size={18} aria-hidden />,
       label: t('hub.metricWeek', 'This week'),
-      value: '0',
+      value: String(Math.floor((dashboard?.overview.culture_weekly_study_time_seconds ?? 0) / 60)),
       sub: t('hub.minutes', 'min'),
-      trend: t('hub.metricWeekTrend', 'No culture source yet'),
+      trend: t('hub.metricWeekTrend', 'last 7 days'),
       trendTone: 'flat' as const,
       tone: 'violet' as const,
-      unwired: true,
-      unwiredLabel: 'This week minutes — not yet connected to backend data.',
     },
   ];
 

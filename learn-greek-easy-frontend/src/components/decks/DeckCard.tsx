@@ -49,7 +49,17 @@ export const DeckCard: React.FC<DeckCardProps> = ({
 
   // Derived progress values — R9 resolved: progress is wired via store
   const pct = deck.progress ? calculateCompletionPercentage(deck.progress) : 0;
-  const complete = pct >= 100;
+  // Bar % stays coverage-based for all decks. "Complete" reflects MASTERY for
+  // culture decks (honor the transform's mastery-based status), but stays
+  // coverage-based for vocabulary decks (unchanged). See CULT2-3 / CHR-01.
+  const complete = isCultureDeck ? deck.progress?.status === 'completed' : pct >= 100;
+  // For culture decks "completed" means MASTERY (see CHR-01), so announce the
+  // mastery percentage to assistive tech — otherwise a 100%-coverage / 0-mastered
+  // deck would read as "100% completed" while the badge says "In progress".
+  const ariaPct =
+    isCultureDeck && deck.progress && deck.progress.cardsTotal > 0
+      ? Math.round((deck.progress.cardsMastered / deck.progress.cardsTotal) * 100)
+      : Math.round(pct);
   const mastered = deck.progress?.cardsMastered ?? 0;
   const cards = deck.cardCount;
 
@@ -100,7 +110,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
         aria-label={t(isLocked ? 'list.deckCardAriaLabelLocked' : 'list.deckCardAriaLabel', {
           name: localizedName,
           level,
-          pct: Math.round(pct),
+          pct: ariaPct,
         })}
       >
         {/* Action buttons (edit/delete) - visible on hover */}
@@ -197,7 +207,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
       aria-label={t(isLocked ? 'list.deckCardAriaLabelLocked' : 'list.deckCardAriaLabel', {
         name: localizedName,
         level,
-        pct: Math.round(pct),
+        pct: ariaPct,
       })}
     >
       <DxCover deck={deck} variant="card">

@@ -27,6 +27,8 @@ export interface OverviewStats {
   accuracy_percentage?: number;
   culture_questions_mastered: number;
   total_study_time_seconds: number;
+  /** Culture practice study time over the trailing 7 days (rolling), in seconds. */
+  culture_weekly_study_time_seconds: number;
 }
 
 /**

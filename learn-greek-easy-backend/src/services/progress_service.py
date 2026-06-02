@@ -76,11 +76,13 @@ class ProgressService:
         total_study_time_vocab = await self.card_review_repo.get_total_study_time(user_id)
         total_study_time_culture = await self.culture_answer_repo.get_total_study_time(user_id)
         total_study_time_mock = await self.mock_exam_repo.get_total_study_time(user_id)
+        weekly_study_time_culture = await self.culture_answer_repo.get_study_time_this_week(user_id)
         culture_mastered_int: int = culture_mastered
         distinct_decks_int: int = distinct_decks
         total_study_time_vocab_int: int = total_study_time_vocab
         total_study_time_culture_int: int = total_study_time_culture
         total_study_time_mock_int: int = total_study_time_mock
+        weekly_study_time_culture_int: int = weekly_study_time_culture
 
         # Group 3: today stats
         reviews_today: int
@@ -119,6 +121,7 @@ class ProgressService:
                 + total_study_time_culture_int
                 + total_study_time_mock_int
             ),
+            culture_weekly_study_time_seconds=weekly_study_time_culture_int,
         )
 
         # Today
