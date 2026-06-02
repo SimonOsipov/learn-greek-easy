@@ -82,12 +82,23 @@ jobs:
         uses: dorny/paths-filter@v3
         id: filter
         with:
+          # 'every' = a file must match ALL patterns in a filter to count.
+          # Without it (default 'some'), the '**' pattern matches every file, so
+          # `web` was always true and a mobile-only PR still ran the web suite.
+          # With 'every', a mobile file matches '**' but fails '!learn-greek-easy-mobile/**',
+          # so a mobile-only diff yields web=false. (mobile filter has one pattern → unaffected.)
+          predicate-quantifier: 'every'
           filters: |
             mobile:
               - 'learn-greek-easy-mobile/**'
             web:
               - '**'
               - '!learn-greek-easy-mobile/**'
+              # Docs-only changes don't need the web test suite / preview deploy.
+              # (A mixed code+docs PR still runs web: code files pass these negations.)
+              - '!**/*.md'
+              - '!docs/**'
+              - '!**/docs/**'
 
   # =============================================================================
   # JOB 1: CI Tests
