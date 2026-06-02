@@ -18,7 +18,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.logging import get_logger
-from src.db.models import UserAchievement, UserXP
+from src.db.models import Achievement, UserAchievement, UserXP
 from src.services.achievement_definitions import get_achievement_by_id
 from src.services.gamification.projection import GamificationProjection
 from src.services.gamification.types import GamificationSnapshot, ReconcileMode
@@ -55,6 +55,37 @@ async def _read_existing_unlocks(db: AsyncSession, user_id: UUID) -> set[str]:
         select(UserAchievement.achievement_id).where(UserAchievement.user_id == user_id)
     )
     return set(result.scalars().all())
+
+
+async def _ensure_achievements_exist(db: AsyncSession, achievement_ids: list[str]) -> None:
+    """Upsert the parent ``achievements`` rows for *achievement_ids* from code defs.
+
+    Achievement definitions are code-only (``achievement_definitions.py``); the
+    ``achievements`` table is their persisted projection. A ``user_achievements``
+    row carries an FK to ``achievements.id``, so a code-defined achievement that
+    has never been seeded would make the user-achievement insert below raise a
+    ``ForeignKeyViolationError`` and poison the whole transaction. Ensure each
+    parent row exists first — idempotent via ``on_conflict_do_nothing`` — so the
+    reconciler stays self-sufficient regardless of seed state.
+    """
+    for ach_id in achievement_ids:
+        ach_def = get_achievement_by_id(ach_id)
+        if ach_def is None:
+            continue
+        stmt = (
+            pg_insert(Achievement)
+            .values(
+                id=ach_def.id,
+                name=ach_def.name,
+                description=ach_def.description,
+                category=ach_def.category,
+                icon=ach_def.icon,
+                threshold=ach_def.threshold,
+                xp_reward=ach_def.xp_reward,
+            )
+            .on_conflict_do_nothing(index_elements=["id"])
+        )
+        await db.execute(stmt)
 
 
 async def _get_or_create_user_xp(db: AsyncSession, user_id: UUID) -> UserXP:
@@ -188,6 +219,11 @@ class GamificationReconciler:
 
         # 3. Diff: achievements present in projection but absent from DB
         candidate_ids: list[str] = sorted(snapshot.unlocked - existing_unlocks)
+
+        # 3a. Ensure parent achievements rows exist before inserting user_achievements,
+        # otherwise a not-yet-seeded code-defined achievement triggers an FK violation
+        # that aborts the entire transaction.
+        await _ensure_achievements_exist(db, candidate_ids)
 
         # 4. Write achievements — RETURNING limits notifications to rows actually inserted.
         # Two concurrent reconciles can both compute the same candidate_ids; using RETURNING
