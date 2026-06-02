@@ -5,6 +5,7 @@ appId: eu.greeklish.app.dev
 ---
 - launchApp:
     clearState: true
+# Maestro has no "label" selector — a React Native accessibilityLabel is
+# surfaced through the standard text matcher, so "Sign in" is asserted as text.
 - assertVisible: "Welcome back"
-- assertVisible:
-    label: "Sign in"
+- assertVisible: "Sign in"
