@@ -4,6 +4,8 @@ import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
 import { getQueryParams } from 'expo-auth-session/build/QueryParams';
 import { supabase } from '@/lib/supabase';
+import { identifyUser, resetIdentity } from '@/lib/analytics';
+import { setSentryUser } from '@/lib/sentry';
 
 // Complete any pending browser auth sessions on module load.
 WebBrowser.maybeCompleteAuthSession();
@@ -31,6 +33,13 @@ export const useAuthStore = create<AuthState>((set) => {
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (session) {
+      identifyUser(session.user.id);
+      setSentryUser(session.user.id);
+    } else {
+      resetIdentity();
+      setSentryUser(null);
+    }
     set({
       session,
       user: session?.user ?? null,

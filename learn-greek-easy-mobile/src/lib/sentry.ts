@@ -34,3 +34,7 @@ export function initSentry(): void {
 export function captureException(error: unknown): void {
   Sentry.captureException(error);
 }
+
+export function setSentryUser(userId: string | null): void {
+  Sentry.setUser(userId ? { id: userId } : null); // id only, never email/username/PII
+}
