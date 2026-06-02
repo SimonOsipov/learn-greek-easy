@@ -25,7 +25,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import CultureDeckNotFoundException
 from src.core.logging import get_logger
-from src.repositories import CultureDeckRepository, CultureQuestionStatsRepository
+from src.repositories import (
+    CultureAnswerHistoryRepository,
+    CultureDeckRepository,
+    CultureQuestionStatsRepository,
+)
 from src.schemas.culture import (
     CultureDeckAdminResponse,
     CultureDeckCreate,
@@ -74,6 +78,7 @@ class CultureDeckService:
         self.db = db
         self.deck_repo = CultureDeckRepository(db)
         self.stats_repo = CultureQuestionStatsRepository(db)
+        self.answer_history_repo = CultureAnswerHistoryRepository(db)
 
     # =========================================================================
     # Helper Methods
@@ -191,6 +196,7 @@ class CultureDeckService:
         question_count: int,
         progress: Optional[CultureDeckProgress],
         locale: str,
+        time_on_deck_seconds: int = 0,
     ) -> CultureDeckDetailResponse:
         """Build a localized CultureDeckDetailResponse.
 
@@ -228,6 +234,7 @@ class CultureDeckService:
             created_at=deck.created_at,
             updated_at=deck.updated_at,
             cover_image_url=cover_image_url,
+            time_on_deck_seconds=time_on_deck_seconds,
         )
 
     # =========================================================================
@@ -352,10 +359,14 @@ class CultureDeckService:
         # Get question count
         question_count = await self.deck_repo.count_questions(deck_id)
 
-        # Get progress if user is authenticated
+        # Get progress and time-on-deck if user is authenticated
         progress = None
+        time_on_deck_seconds = 0
         if user_id:
             progress = await self._get_deck_progress(user_id, deck_id)
+            time_on_deck_seconds = await self.answer_history_repo.get_study_time_for_deck(
+                user_id, deck_id
+            )
 
         logger.info(
             "Culture deck retrieved successfully",
@@ -367,7 +378,7 @@ class CultureDeckService:
         )
 
         return self._build_localized_detail_response(
-            deck, question_count, progress, normalized_locale
+            deck, question_count, progress, normalized_locale, time_on_deck_seconds
         )
 
     async def get_categories(self) -> list[str]:

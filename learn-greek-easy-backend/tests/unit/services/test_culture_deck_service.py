@@ -318,6 +318,11 @@ class TestCultureDeckServiceGetDeck:
             patch.object(
                 service.deck_repo, "count_questions", new_callable=AsyncMock
             ) as mock_count_q,
+            patch.object(
+                service.answer_history_repo,
+                "get_study_time_for_deck",
+                new_callable=AsyncMock,
+            ) as mock_time_on_deck,
         ):
             mock_get.return_value = mock_deck
             mock_count_q.return_value = 50
@@ -328,7 +333,9 @@ class TestCultureDeckServiceGetDeck:
             assert result.id == deck_id
             assert result.question_count == 50
             assert result.is_active is True
+            assert result.time_on_deck_seconds == 0
             mock_get.assert_awaited_once_with(deck_id)
+            mock_time_on_deck.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_get_deck_not_found(self, mock_db_session: MagicMock):
@@ -397,6 +404,12 @@ class TestCultureDeckServiceGetDeck:
             patch.object(
                 service.stats_repo, "get_last_practiced_at", new_callable=AsyncMock
             ) as mock_last,
+            patch.object(
+                service.answer_history_repo,
+                "get_study_time_for_deck",
+                new_callable=AsyncMock,
+                return_value=420,
+            ) as mock_time_on_deck,
         ):
             mock_get.return_value = mock_deck
             mock_count_q.return_value = 30
@@ -413,6 +426,8 @@ class TestCultureDeckServiceGetDeck:
 
             assert result.progress is not None
             assert result.progress.questions_mastered == 15
+            assert result.time_on_deck_seconds == 420
+            mock_time_on_deck.assert_awaited_once_with(user_id, deck_id)
 
 
 class TestCultureDeckServiceCategories:

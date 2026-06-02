@@ -133,6 +133,9 @@ class CultureDeckDetailResponse(CultureDeckResponse):
     is_active: bool = Field(..., description="Whether deck is active")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
+    time_on_deck_seconds: int = Field(
+        0, ge=0, description="Total study time on this deck in seconds for the authenticated user"
+    )
 
 
 class CultureDeckListResponse(BaseModel):
