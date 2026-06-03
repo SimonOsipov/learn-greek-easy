@@ -51,6 +51,7 @@ import { AlertCircle, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '@/hooks/use-auth';
 import { useAuthStore } from '@/stores/auth-store';
 import { GoogleIcon } from '@/components/icons/GoogleIcon';
+import { track } from '@/lib/analytics';
 
 // ---------------------------------------------------------------------------
 // lucide icon cssInterop — maps className → style → color prop.
@@ -148,13 +149,24 @@ export default function LoginScreen() {
     if (!formValid) return;
     if (mode === 'signin') {
       await signIn(email, password);
-      // Success: root guard (_layout.tsx) navigates out of (auth) once session
-      // appears via onAuthStateChange. LOGIN-09A will add analytics here.
+      if (!useAuthStore.getState().error) {
+        track('user_logged_in', { method: 'email' });
+      }
     } else {
       await signUp(email, password);
-      // Same success path — root guard handles navigation.
+      if (!useAuthStore.getState().error) {
+        track('user_signed_up', { method: 'email' });
+      }
     }
   }
+
+  // Google handler — wraps store action to fire analytics on success.
+  const handleGoogle = async () => {
+    await signInWithGoogle();
+    if (!useAuthStore.getState().error) {
+      track('user_logged_in', { method: 'oauth_google' });
+    }
+  };
 
   return (
     <ImageBackground
@@ -404,7 +416,7 @@ export default function LoginScreen() {
                 {/* Google glass button */}
                 <Pressable
                   className="w-14 h-12 rounded-[13px] bg-on-photo/14 border border-on-photo/22 items-center justify-center"
-                  onPress={signInWithGoogle}
+                  onPress={handleGoogle}
                   accessibilityLabel="Continue with Google"
                   accessibilityRole="button"
                 >
