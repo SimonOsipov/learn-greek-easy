@@ -43,6 +43,13 @@
   --border-strong: var(--line-2);
   --destructive-foreground: 0 0% 100%;
   --radius: 14px;
+
+  /* Mobile over-photo surface (theme-invariant; mobile-only) — see MOB-09 */
+  --on-photo-fg: 0 0% 100%;          /* pure white — over-photo text + glass fills/borders via /opacity */
+  --on-photo-scrim: 225 43% 5%;      /* rgba(8,11,20) — scrim + segmented track via /opacity */
+  --on-photo-active-fg: 222 31% 9%;  /* #0b1220 — segmented active label on the white thumb */
+  --danger-soft: 0 96% 90%;          /* #fecaca — error banner text */
+  --danger-softer: 0 93% 82%;        /* #fca5a5 — inline field-error message */
 }
 
 .dark {

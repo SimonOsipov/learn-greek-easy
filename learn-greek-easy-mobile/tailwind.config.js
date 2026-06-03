@@ -31,6 +31,11 @@ module.exports = {
         ring: 'hsl(var(--ring))',
         'destructive-foreground': 'hsl(var(--destructive-foreground))',
         'border-strong': 'hsl(var(--border-strong))',
+        'on-photo': 'hsl(var(--on-photo-fg))',
+        'on-photo-scrim': 'hsl(var(--on-photo-scrim))',
+        'on-photo-active': 'hsl(var(--on-photo-active-fg))',
+        'danger-soft': 'hsl(var(--danger-soft))',
+        'danger-softer': 'hsl(var(--danger-softer))',
       },
       borderRadius: {
         sm: '10px',
