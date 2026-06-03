@@ -49,6 +49,18 @@ const config: ExpoConfig = {
   name,
   slug: 'greeklish-app',
   version: '1.0.0',
+  // runtimeVersion policy = appVersion: runtimeVersion is derived from the app
+  // `version` string, so a JS-only OTA is only delivered to binaries whose build
+  // carried a matching runtimeVersion. eas update ships JS only — a native-module /
+  // config change always requires a new build. The OTA-vs-native boundary therefore
+  // holds as long as the release process bumps `version` before a native-affecting
+  // build (note: eas.json sets appVersionSource: "remote", which manages build/version
+  // codes remotely but does NOT change this `version` string — bumping it is a
+  // release-process step). (fingerprint policy is still experimental — avoid.)
+  runtimeVersion: { policy: 'appVersion' },
+  updates: {
+    url: 'https://u.expo.dev/e1737431-1c87-45df-b1db-b171fa9da410',
+  },
   orientation: 'portrait',
   icon,
   scheme: 'learngreekeasymobile',

@@ -33,9 +33,82 @@ gh api -X PATCH repos/SimonOsipov/learn-greek-easy/branches/main/protection/requ
 remove **Frontend tsc -b**.) Do this after `CI Gate` first reports green on the PR and
 before merging, so mobile-only PRs stay mergeable.
 
-## Not yet wired (MOB-08)
+## EAS authentication — EXPO_TOKEN
 
-Mobile `jest` in CI, EAS preview builds + Maestro on PRs, EAS Update channels, and the
-OTA-vs-native release rules are deferred to MOB-08. The `eslint.config.js` / `tsc` setup and
-the ambient `globals.d.ts` CSS declaration are temporary scaffolding — NativeWind (MOB-02)
-supplies its own CSS types and replaces the declaration.
+`EXPO_TOKEN` is a GitHub Actions **repository** secret (Settings → Secrets and variables →
+Actions → Repository secrets). It holds an Expo access token scoped to the `@sams-team` org
+and the `greeklish-app` project. Use a robot/org token rather than a personal full-access
+token (least-privilege principle).
+
+**Consumed by two workflows** — referenced only as `${{ secrets.EXPO_TOKEN }}`; the value is
+never echoed or logged:
+
+- `deploy-production.yml` — the `mobile-ota` job (`eas update --branch production ...`)
+- `mobile-native-build.yml` — the on-demand job (`eas build --local ...`)
+
+The repo is public, so the token value must never be committed, printed, or pasted anywhere in
+code, docs, or comments.
+
+**Creating the token:** tokens must be minted in the Expo dashboard (Account/Org → Access
+Tokens) — there is no CLI command to create them. Create the token there first, then add it to
+GitHub:
+
+```bash
+gh secret set EXPO_TOKEN --repo SimonOsipov/learn-greek-easy
+# paste the token value at the prompt — do NOT use -b "value" on the command line
+```
+
+**Rotation:** revoke the old token in the Expo dashboard (Account/Org → Access Tokens), create
+a new one with the same scope, then re-run the `gh secret set` command above. No code change
+is needed — both consuming workflows read the secret by name at runtime.
+
+## Mobile delivery — OTA vs native
+
+Not every change needs a full App Store / TestFlight release. The decision rule:
+
+| Change type | Delivery path |
+|-------------|---------------|
+| JS / TS / asset-only (no native modules, no SDK bump, no config-plugin change) | **OTA update** — `eas update` ships automatically via the `mobile-ota` job in `deploy-production.yml` on merge to `main`. No store review required. |
+| New native module, Expo SDK bump, config-plugin change, or anything that bumps `runtimeVersion` | **Native build required** — trigger the on-demand `mobile-native-build.yml` workflow; eventual store release is required. |
+
+### runtimeVersion semantics
+
+The `runtimeVersion` policy is `appVersion` (tied to the native binary's `version` field in
+`app.config.ts`). An OTA update is only delivered to installed builds whose `runtimeVersion`
+matches the update's. This is the safety boundary: if a change requires a new binary at a
+bumped version it can never be delivered over OTA to the existing binary — the runtimes won't
+match.
+
+**When OTA is NOT safe:** any change that touches native code, adds a native module, bumps the
+Expo SDK, or modifies a config plugin will change the `runtimeVersion`. Those changes must go
+through a native rebuild; publishing them as OTA will result in the update being silently
+ignored by all installed builds.
+
+### Channels
+
+Two EAS channels exist, each linked to a same-named branch:
+
+| Channel | Branch | Purpose |
+|---------|--------|----------|
+| `production` | `production` | What merge-to-`main` publishes to (live users) |
+| `preview` | `preview` | Preview / internal distribution environment |
+
+Authentication for both OTA and native-build workflows uses the `EXPO_TOKEN` secret — see
+[§ EAS authentication — EXPO_TOKEN](#eas-authentication--expo_token) above.
+
+### Triggering an on-demand native build
+
+Two ways to trigger `mobile-native-build.yml`:
+
+1. **Label on a PR:** add the `needs-native-build` label — the workflow runs automatically.
+2. **Manual dispatch:** GitHub → Actions → "Mobile Native Build (on-demand)" →
+   Run workflow (or `gh workflow run mobile-native-build.yml`).
+
+The workflow runs `eas build --local --profile development --platform ios` on `macos-latest`
+and executes the Maestro smoke flow against the resulting build.
+
+## Scaffolding note
+
+The `eslint.config.js` / `tsc` setup and the ambient `globals.d.ts` CSS declaration are
+temporary scaffolding — NativeWind (MOB-02) supplies its own CSS types and replaces the
+declaration.
