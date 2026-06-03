@@ -1,91 +1,86 @@
 /**
- * Placeholder login UI only.
+ * LOGIN-04 (MOB-09) — over-photo login SHELL.
  *
- * Real auth (Supabase sign-in / Google OAuth) is owned by MOB-03
- * (see src/app/sign-in.tsx and the auth-store / use-auth hooks).
- * This file is the redirect target for the root Stack protected guard
- * (SHELL-03) when the user is signed out. Auth wiring is intentionally
- * absent here so that MOB-03 can own it without coupling to this screen.
+ * Renders the hero background, gradient scrim, brand row, and heading block.
+ * Mode state, input fields, CTA, and social login arrive in later subtasks.
  *
- * Styling: NativeWind App-palette tokens only — no raw hex, no StyleSheet,
- * no arbitrary [value] Tailwind classes.
+ * Design tokens: on-photo palette + App primary only.
+ * The ONLY sanctioned raw-literal color values are the three gradient stops
+ * below (commented inline) — expo-linear-gradient colors[] cannot accept
+ * NativeWind class references.
  */
-import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ImageBackground, ScrollView, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  // Placeholder toggle — real sign-in is MOB-03's responsibility.
-
   return (
-    <SafeAreaView className="flex-1 bg-bg">
-      <ScrollView
-        contentContainerClassName="flex-grow px-6 py-10 gap-5"
-        keyboardShouldPersistTaps="handled"
+    <ImageBackground
+      source={require('@/assets/images/cyprus-hero.webp')}
+      resizeMode="cover"
+      className="flex-1"
+    >
+      {/* Sanctioned raw-literal exception (MOB-09): expo-linear-gradient colors[] cannot take a NativeWind class. */}
+      <LinearGradient
+        colors={['rgba(8,11,20,0.28)', 'rgba(8,11,20,0.55)', 'rgba(8,11,20,0.94)']}
+        locations={[0, 0.42, 1]}
+        className="flex-1"
       >
-        {/* Header */}
-        <View className="items-center mb-2">
-          <Text className="text-fg text-2xl font-semibold">Welcome back</Text>
-          <Text className="text-fg2 text-sm mt-1">Sign in to continue learning Greek</Text>
-        </View>
+        <SafeAreaView className="flex-1">
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerClassName="flex-1 px-[22px]"
+          >
+            {/* Brand row */}
+            <View className="flex-row items-center gap-3 mt-4">
+              {/* Monogram tile */}
+              <View
+                className="w-[38px] h-[38px] rounded-[11px] bg-primary items-center justify-center"
+                style={{
+                  shadowColor: 'hsl(222 95% 63%)',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.45,
+                  shadowRadius: 8,
+                  elevation: 4,
+                }}
+              >
+                <Text
+                  className="text-on-photo text-[17px]"
+                  style={{ fontFamily: 'SplineSans_700Bold' }}
+                >
+                  Ελ
+                </Text>
+              </View>
 
-        {/* Input fields — bound to local state only, no auth action */}
-        <View className="gap-3">
-          <TextInput
-            className="rounded-lg bg-card border border-input px-4 py-3 text-fg text-base placeholder:text-fg3"
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-            autoCorrect={false}
-          />
-          <TextInput
-            className="rounded-lg bg-card border border-input px-4 py-3 text-fg text-base placeholder:text-fg3"
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            autoComplete="current-password"
-            autoCorrect={false}
-          />
-        </View>
+              {/* Wordmark */}
+              <Text
+                className="text-on-photo text-[16px]"
+                style={{ fontFamily: 'SplineSans_600SemiBold' }}
+              >
+                Greeklish
+              </Text>
+            </View>
 
-        {/* Primary affordance — onPress is a no-op placeholder.
-            Real Supabase sign-in is MOB-03's job. */}
-        <Pressable
-          className="rounded-lg bg-primary px-4 py-3 items-center active:opacity-80"
-          onPress={() => { /* no-op — real sign-in is MOB-03's responsibility */ }}
-          accessibilityRole="button"
-          accessibilityLabel="Sign in"
-        >
-          <Text className="text-card font-semibold text-base">Sign in</Text>
-        </Pressable>
+            {/* Spacer — pushes heading block to bottom */}
+            <View className="flex-1" />
 
-        {/* Divider */}
-        <View className="flex-row items-center gap-3">
-          <View className="flex-1 h-px bg-line" />
-          <Text className="text-fg2 text-xs">or</Text>
-          <View className="flex-1 h-px bg-line" />
-        </View>
-
-        {/* Google affordance — no-op placeholder */}
-        <Pressable
-          className="rounded-lg bg-card border border-line-2 px-4 py-3 items-center active:opacity-80"
-          onPress={() => {
-            // no-op — real Google OAuth is MOB-03's responsibility
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Continue with Google"
-        >
-          <Text className="text-fg font-semibold text-base">Continue with Google</Text>
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+            {/* Heading block */}
+            <View className="mb-8 gap-[6px]">
+              <Text
+                className="text-on-photo text-[29px] tracking-tight"
+                style={{ fontFamily: 'InterTight_700Bold' }}
+              >
+                Welcome back
+              </Text>
+              <Text
+                className="text-on-photo/72 text-[13.5px] font-sans"
+              >
+                Sign in to continue your Greek journey.
+              </Text>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </LinearGradient>
+    </ImageBackground>
   );
 }
