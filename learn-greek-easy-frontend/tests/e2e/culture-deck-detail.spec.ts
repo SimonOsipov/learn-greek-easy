@@ -229,40 +229,30 @@ test.describe('Culture deck detail — visual polish (CULT2-5)', () => {
 
     // QuestionBrowser renders both the counter and the QuestionLanguageSelector
     // inside a shared <div class="flex flex-wrap items-center gap-3"> (the right
-    // pole of the filter row). Assert co-containment: the counter <p> and the
-    // language selector buttons must have a common ancestor within question-browser
-    // that also contains the filter pills row.
+    // pole of the filter row). Assert co-containment by proving both elements share
+    // the SAME immediate parent element — not just that each independently has some
+    // ancestor with flex+gap-3 classes (which could be two different containers).
 
     // The counter is a <p> element that contains "Showing" (EN UI locale).
     // Use a text-based locator scoped inside the question browser.
     const counter = questionBrowser.locator('p', { hasText: 'Showing' });
     await expect(counter).toBeVisible({ timeout: 10000 });
 
-    // The Greek language pill button inside the browser (always rendered).
-    const langSelector = questionBrowser.getByRole('button', { name: 'Greek' });
-    await expect(langSelector).toBeVisible();
+    // The QuestionLanguageSelector (pill variant) renders a <div role="group"> wrapper
+    // around all language buttons. We locate it by its ARIA role — this is locale-safe
+    // because the group element itself uses role="group" (not a translated text label),
+    // and does not depend on which language name ("Greek", "Ελληνικά", etc.) is displayed.
+    const langSelectorGroup = questionBrowser.locator('[role="group"]').first();
+    await expect(langSelectorGroup).toBeVisible();
 
-    // Assert co-containment: both elements must share the same immediate parent.
-    // Evaluate: get the parent element of the counter and check that the language
-    // selector button is a descendant of that same parent.
-    const counterParentContainsLangSelector = await counter.evaluate((counterEl) => {
+    // Assert true co-containment: the counter's immediate parent must contain the
+    // language selector group as a direct child — proving they share the SAME container,
+    // not merely that each has some independent ancestor with flex+gap-3 classes.
+    const sameParent = await counter.evaluate((counterEl) => {
       const parent = counterEl.parentElement;
       if (!parent) return false;
-      // The shared right-pole div has class "flex flex-wrap items-center gap-3"
-      return parent.classList.contains('flex') && parent.classList.contains('gap-3');
+      return parent.querySelector('[role="group"]') !== null;
     });
-    expect(counterParentContainsLangSelector).toBe(true);
-
-    // Also assert the language selector is a sibling/descendant of the same parent.
-    const langSelectorInSameParent = await langSelector.evaluate((btnEl) => {
-      // Walk up to the closest .flex.gap-3 container
-      let el: Element | null = btnEl;
-      while (el) {
-        if (el.classList.contains('flex') && el.classList.contains('gap-3')) return true;
-        el = el.parentElement;
-      }
-      return false;
-    });
-    expect(langSelectorInSameParent).toBe(true);
+    expect(sameParent).toBe(true);
   });
 });
