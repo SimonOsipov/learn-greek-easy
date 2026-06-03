@@ -46,12 +46,10 @@ class TestExampleSentence:
             greek="Καλημέρα σας!",
             english="Good morning!",
             russian="Доброе утро!",
-            context="formal greeting",
         )
         assert example.greek == "Καλημέρα σας!"
         assert example.english == "Good morning!"
         assert example.russian == "Доброе утро!"
-        assert example.context == "formal greeting"
 
     def test_valid_example_greek_only(self):
         """Test example with only required greek field."""
@@ -59,29 +57,12 @@ class TestExampleSentence:
         assert example.greek == "Γεια σου!"
         assert example.english == ""
         assert example.russian == ""
-        assert example.context is None
 
     def test_english_and_russian_default_to_empty_string(self):
         """Test that english and russian default to empty string."""
         example = ExampleSentence(id="ex_test1", greek="Τι κάνεις;")
         assert example.english == ""
         assert example.russian == ""
-
-    def test_context_optional(self):
-        """Test context field is optional and defaults to None."""
-        example = ExampleSentence(id="ex_test1", greek="Ευχαριστώ")
-        assert example.context is None
-
-    def test_context_max_length(self):
-        """Test context max length of 200 characters."""
-        # Valid at boundary
-        example = ExampleSentence(id="ex_test1", greek="Test", context="a" * 200)
-        assert len(example.context) == 200
-
-        # Over boundary rejected
-        with pytest.raises(ValidationError) as exc_info:
-            ExampleSentence(id="ex_test1", greek="Test", context="a" * 201)
-        assert "string_too_long" in str(exc_info.value).lower()
 
     def test_greek_required(self):
         """Test that greek field is required."""
@@ -141,13 +122,11 @@ class TestExampleSentence:
             greek="Αυτό είναι ένα σπίτι.",
             english="This is a house.",
             russian="Это дом.",
-            context="Describing a building",
         )
         assert example.id == "ex_spiti1"
         assert example.greek == "Αυτό είναι ένα σπίτι."
         assert example.english == "This is a house."
         assert example.russian == "Это дом."
-        assert example.context == "Describing a building"
 
     def test_example_sentence_requires_id(self):
         """Test that ExampleSentence.id is required."""

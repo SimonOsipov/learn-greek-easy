@@ -60,7 +60,6 @@ async def test_word_entry(db_session: AsyncSession, test_deck: Deck) -> WordEntr
                 "greek": "Το σπίτι είναι μεγάλο.",
                 "english": "The house is big.",
                 "russian": "Дом большой.",
-                "context": None,
             }
         ],
         is_active=True,
@@ -218,7 +217,6 @@ class TestWordEntryInlineUpdateSchema:
                     "greek": "Το σπίτι είναι μεγάλο.",
                     "english": "The house is big.",
                     "russian": None,
-                    "context": None,
                 }
             ]
         )
@@ -421,7 +419,6 @@ class TestUpdateWordEntryEndpoint:
                         "greek": "Το σπίτι μας είναι μεγάλο.",
                         "english": "Our house is big.",
                         "russian": None,
-                        "context": None,
                     }
                 ]
             },

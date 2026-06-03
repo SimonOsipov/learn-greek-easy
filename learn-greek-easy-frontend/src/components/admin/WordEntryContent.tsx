@@ -486,16 +486,6 @@ function ExampleCard({ example, index }: { example: WordEntryExampleSentence; in
           <p className="mt-0.5 pl-3.5 text-sm">{hasRussian ? example.russian : <NotSet />}</p>
         </div>
       </div>
-
-      {/* Context — only shown when present */}
-      {example.context && (
-        <div>
-          <span className="text-xs text-muted-foreground">
-            {t('wordEntryContent.exampleContext')}
-          </span>
-          <p className="text-sm">{example.context}</p>
-        </div>
-      )}
     </div>
   );
 }

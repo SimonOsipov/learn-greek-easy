@@ -1,11 +1,7 @@
 /**
  * ExamplesSection Component Tests
  *
- * Updated for DX-10:
- * - Component re-skinned to .dx-section card
- * - Each example has a .dx-example-tag + R5 amber UnwiredDot
- * - mapContextToTag logic tested (derived vs placeholder)
- * - Original bindings (example.context, example.audio_url) preserved
+ * DX-10: component re-skinned to .dx-section card; example.audio_url binding preserved.
  */
 
 import userEvent from '@testing-library/user-event';
@@ -15,7 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WordEntryExampleSentence } from '@/services/wordEntryAPI';
 
-import { ExamplesSection, mapContextToTag } from '../ExamplesSection';
+import { ExamplesSection } from '../ExamplesSection';
 
 // Mock SpeakerButton — captures callbacks and exposes via test buttons
 vi.mock('@/components/ui/SpeakerButton', () => ({
@@ -42,16 +38,6 @@ vi.mock('@/components/ui/SpeakerButton', () => ({
   },
 }));
 
-// Mock UnwiredDot — renders marker span with children for assertions
-vi.mock('@/features/decks/dx', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  UnwiredDot: ({ tone, 'aria-label': ariaLabel, children }: any) => (
-    <span data-testid="unwired-dot" data-tone={tone} aria-label={ariaLabel}>
-      {children}
-    </span>
-  ),
-}));
-
 // Mock analytics module
 vi.mock('@/lib/analytics', () => ({
   track: vi.fn(),
@@ -64,14 +50,12 @@ const mockExamples: WordEntryExampleSentence[] = [
     greek: 'Το σπίτι μου είναι μικρό.',
     english: 'My house is small.',
     russian: 'Мой дом маленький.',
-    context: 'daily life',
   },
   {
     id: 'ex-2',
     greek: 'Μένω σε ένα μεγάλο σπίτι.',
     english: 'I live in a big house.',
     russian: 'Я живу в большом доме.',
-    context: null,
   },
 ];
 
@@ -94,47 +78,6 @@ const exampleWithoutEnglish: WordEntryExampleSentence[] = [
 
 beforeEach(() => {
   vi.clearAllMocks();
-});
-
-// ============================================
-// mapContextToTag unit tests
-// ============================================
-
-describe('mapContextToTag', () => {
-  it('returns simple/derived=false when context is null', () => {
-    expect(mapContextToTag(null)).toEqual({ tag: 'simple', derived: false });
-  });
-
-  it('returns simple/derived=false when context is undefined', () => {
-    expect(mapContextToTag(undefined)).toEqual({ tag: 'simple', derived: false });
-  });
-
-  it('returns simple/derived=false for non-matching context', () => {
-    expect(mapContextToTag('daily life')).toEqual({ tag: 'simple', derived: false });
-  });
-
-  it('returns comparative/derived=true when context contains "comparative"', () => {
-    expect(mapContextToTag('comparative adjective')).toEqual({ tag: 'comparative', derived: true });
-  });
-
-  it('returns comparative/derived=true when context contains "comparison"', () => {
-    expect(mapContextToTag('for comparison purposes')).toEqual({
-      tag: 'comparative',
-      derived: true,
-    });
-  });
-
-  it('returns locative/derived=true when context contains "locative"', () => {
-    expect(mapContextToTag('locative case')).toEqual({ tag: 'locative', derived: true });
-  });
-
-  it('returns locative/derived=true when context contains "location"', () => {
-    expect(mapContextToTag('describes a location')).toEqual({ tag: 'locative', derived: true });
-  });
-
-  it('returns locative/derived=true when context contains "place"', () => {
-    expect(mapContextToTag('talking about a place')).toEqual({ tag: 'locative', derived: true });
-  });
 });
 
 // ============================================
@@ -176,31 +119,6 @@ describe('ExamplesSection', () => {
       render(<ExamplesSection examples={mockExamples} />);
       expect(screen.getByText('My house is small.')).toBeInTheDocument();
       expect(screen.queryByText('Мой дом маленький.')).not.toBeInTheDocument();
-    });
-
-    it('renders a .dx-example-tag for each example', () => {
-      render(<ExamplesSection examples={mockExamples} />);
-      const tags = screen.getAllByTestId('example-tag');
-      expect(tags).toHaveLength(2);
-    });
-
-    it('renders an amber UnwiredDot (R5) for each example', () => {
-      render(<ExamplesSection examples={mockExamples} />);
-      const dots = screen.getAllByTestId('unwired-dot');
-      expect(dots.length).toBeGreaterThanOrEqual(2);
-      // all per-example dots are amber
-      dots.forEach((dot) => {
-        expect(dot).toHaveAttribute('data-tone', 'amber');
-      });
-    });
-
-    it('example tag shows "simple" when context is null (placeholder)', () => {
-      render(<ExamplesSection examples={mockExamples} />);
-      // both examples map to 'simple' (context='daily life' → simple; context=null → simple)
-      const tags = screen.getAllByTestId('example-tag');
-      tags.forEach((tag) => {
-        expect(tag).toHaveTextContent('simple');
-      });
     });
   });
 
@@ -334,20 +252,16 @@ describe('ExamplesSection — Audio SpeakerButton integration (reference)', () =
     expect(buttons).toHaveLength(1);
   });
 
-  it('4. context field still bound — audio buttons visible alongside example tags', () => {
-    const examplesWithContext: WordEntryExampleSentence[] = [
+  it('4. audio button rendered for example with audio_url', () => {
+    const examplesWithAudioOnly: WordEntryExampleSentence[] = [
       {
         id: 'ex-c',
         greek: 'Παράδειγμα.',
         english: 'Example.',
-        context: 'formal',
         audio_url: 'https://cdn.example.com/exc.mp3',
       },
     ];
-    render(<ExamplesSection examples={examplesWithContext} />);
-    // tag is rendered (context 'formal' → 'simple' placeholder)
-    expect(screen.getByTestId('example-tag')).toBeInTheDocument();
-    // audio button is rendered
+    render(<ExamplesSection examples={examplesWithAudioOnly} />);
     expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
   });
 
