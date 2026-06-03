@@ -230,35 +230,35 @@ export const QuestionBrowser: React.FC<QuestionBrowserProps> = ({
           )}
         </div>
 
-        {/* Filter Pills + Language Selector */}
+        {/* Filter Pills + Results Counter + Language Selector */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <FilterPills
             activeFilter={activeFilter}
             counts={filterCounts}
             onFilterChange={setActiveFilter}
           />
-          <QuestionLanguageSelector
-            value={questionLanguage}
-            onChange={setQuestionLanguage}
-            variant="pill"
-            size="sm"
-          />
-        </div>
-
-        {/* Results Counter */}
-        {!isLoading && (
-          <p className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-            {t('deck.showingQuestions', {
-              shown: filteredQuestions.length,
-              total: totalQuestions,
-            })}
-            <MasteryDotsLegend
-              namespace="culture"
-              legendKey="deck.masteryDotsLegend"
-              ariaLabelKey="deck.masteryDotsInfo"
+          <div className="flex flex-wrap items-center gap-3">
+            {!isLoading && (
+              <p className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                {t('deck.showingQuestions', {
+                  shown: filteredQuestions.length,
+                  total: totalQuestions,
+                })}
+                <MasteryDotsLegend
+                  namespace="culture"
+                  legendKey="deck.masteryDotsLegend"
+                  ariaLabelKey="deck.masteryDotsInfo"
+                />
+              </p>
+            )}
+            <QuestionLanguageSelector
+              value={questionLanguage}
+              onChange={setQuestionLanguage}
+              variant="pill"
+              size="sm"
             />
-          </p>
-        )}
+          </div>
+        </div>
       </div>
 
       {/* Content */}
