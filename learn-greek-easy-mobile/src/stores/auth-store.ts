@@ -21,6 +21,7 @@ interface AuthState {
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  clearError: () => void;
   cleanup: () => void;
 }
 
@@ -153,6 +154,8 @@ export const useAuthStore = create<AuthState>((set) => {
         set({ isSubmitting: false });
       }
     },
+
+    clearError: () => set({ error: null }),
 
     cleanup: () => {
       _unsubscribe?.();
