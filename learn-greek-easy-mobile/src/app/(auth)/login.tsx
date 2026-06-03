@@ -137,8 +137,8 @@ export default function LoginScreen() {
   const headingTitle = mode === 'signin' ? 'Welcome back' : 'Start learning Greek';
   const headingSubtitle =
     mode === 'signin'
-      ? 'Sign in to continue your Greek journey.'
-      : 'Create your account to get started.';
+      ? 'Sign in to keep your streak going.'
+      : 'Create an account — it takes a minute.';
 
   // CTA label and submitting label by mode — true ellipsis U+2026 per spec.
   const ctaLabel = mode === 'signin' ? 'Sign in' : 'Create account';
@@ -181,19 +181,22 @@ export default function LoginScreen() {
       resizeMode="cover"
       className="flex-1"
     >
-      {/* Sanctioned raw-literal exception (MOB-09): expo-linear-gradient colors[] cannot take a NativeWind class. */}
+      {/* Sanctioned raw-literal exception (MOB-09): expo-linear-gradient colors[] cannot take a NativeWind class.
+          Rendered as an absolute-fill overlay (a SIBLING, not a wrapper) so the form still renders even if the
+          native ExpoLinearGradient view is momentarily unavailable (e.g. dev-client native module not yet linked). */}
       <LinearGradient
         colors={['rgba(8,11,20,0.28)', 'rgba(8,11,20,0.55)', 'rgba(8,11,20,0.94)']}
         locations={[0, 0.42, 1]}
-        className="flex-1"
-      >
-        <SafeAreaView className="flex-1">
+        pointerEvents="none"
+        className="absolute inset-0"
+      />
+      <SafeAreaView className="flex-1">
           <ScrollView
             keyboardShouldPersistTaps="handled"
             contentContainerClassName="flex-1 px-[22px]"
           >
             {/* Brand row */}
-            <View className="flex-row items-center gap-3 mt-4">
+            <View className="flex-row items-center gap-[10px] mt-4">
               {/* Monogram tile */}
               <View
                 className="w-[38px] h-[38px] rounded-[11px] bg-primary items-center justify-center"
@@ -222,18 +225,11 @@ export default function LoginScreen() {
               </Text>
             </View>
 
-            {/* Spacer — pushes bottom group to bottom */}
-            <View className="flex-1" />
+            {/* Spacer — capped so it doesn't balloon on tall devices (design frame is 300x640). */}
+            <View className="flex-1 max-h-[200px]" />
 
-            {/* Segmented control */}
-            <SegmentedControl
-              mode={mode}
-              thumbProgress={thumbProgress}
-              onModeChange={handleModeChange}
-            />
-
-            {/* Heading block */}
-            <View className="mt-5 mb-6 gap-[6px]">
+            {/* Heading block — design order: heading ABOVE the segmented control */}
+            <View className="mb-4 gap-[6px]">
               <Text
                 className="text-on-photo text-[29px] tracking-tight"
                 style={{ fontFamily: 'InterTight_700Bold' }}
@@ -243,6 +239,15 @@ export default function LoginScreen() {
               <Text className="text-on-photo/72 text-[13.5px] font-sans">
                 {headingSubtitle}
               </Text>
+            </View>
+
+            {/* Segmented control */}
+            <View className="mb-[14px]">
+              <SegmentedControl
+                mode={mode}
+                thumbProgress={thumbProgress}
+                onModeChange={handleModeChange}
+              />
             </View>
 
             {/* Input fields + CTA */}
@@ -460,7 +465,6 @@ export default function LoginScreen() {
             <View className="mb-8" />
           </ScrollView>
         </SafeAreaView>
-      </LinearGradient>
     </ImageBackground>
   );
 }
