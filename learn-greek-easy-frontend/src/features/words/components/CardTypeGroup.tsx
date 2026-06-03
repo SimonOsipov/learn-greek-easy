@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { TypeChip, UnwiredDot } from '@/features/decks/dx';
+import { TypeChip } from '@/features/decks/dx';
 import { track } from '@/lib/analytics';
 
 import { CardRow } from './CardRow';
@@ -18,17 +18,15 @@ export interface CardTypeGroupProps {
   totalCount: number;
   wordEntryId: string;
   deckId: string;
-  tone: 'primary' | 'violet' | 'cyan' | 'amber';
-  isPlaceholder?: boolean;
+  tone: 'primary' | 'violet' | 'cyan';
   view?: CardsView;
 }
 
 /**
- * CardTypeGroup — renders one card group (translation / grammar / declension / audio).
+ * CardTypeGroup — renders one card group (translation / grammar / declension).
  *
  * - Accent tint + colored square marker via `.dx-cards-group[data-group]` CSS
  * - TypeChip shows "{n} cards"
- * - Audio group (isPlaceholder) shows an UnwiredDot with danger tone
  * - view='grid' → MiniFlipCard grid (default), view='list' → CardRow list
  */
 export function CardTypeGroup({
@@ -40,7 +38,6 @@ export function CardTypeGroup({
   wordEntryId,
   deckId,
   tone,
-  isPlaceholder = false,
   view = 'grid',
 }: CardTypeGroupProps) {
   const { t } = useTranslation('deck');
@@ -54,33 +51,23 @@ export function CardTypeGroup({
       <div className="dx-cards-group-head" data-testid={`card-group-header-${groupKey}`}>
         <h4 className="dx-cards-group-h">{t(`wordReference.${i18nKey}`)}</h4>
         <div className="inline-flex items-center gap-2.5">
-          {!isPlaceholder && (
-            <span className="dx-cards-group-count">
-              {t('wordReference.groupMastered', {
-                mastered: masteredCount,
-                total: totalCount,
-              })}
-            </span>
-          )}
-          {isPlaceholder ? (
-            /* Audio group: UnwiredDot wraps the chip; dot uses danger tone (R8) */
-            <UnwiredDot tone="danger" aria-label={t('dx.unwiredAudioGroup')}>
-              <TypeChip tone={tone}>{t('wordReference.groupAudio')}</TypeChip>
-            </UnwiredDot>
-          ) : (
-            <TypeChip tone={tone}>
-              {t('wordReference.groupCardCount', {
-                n: totalCount,
-                defaultValue: '{{n}} cards',
-              })}
-            </TypeChip>
-          )}
+          <span className="dx-cards-group-count">
+            {t('wordReference.groupMastered', {
+              mastered: masteredCount,
+              total: totalCount,
+            })}
+          </span>
+          <TypeChip tone={tone}>
+            {t('wordReference.groupCardCount', {
+              n: totalCount,
+              defaultValue: '{{n}} cards',
+            })}
+          </TypeChip>
         </div>
       </div>
 
       {/* Card content */}
-      {!isPlaceholder &&
-        cards.length > 0 &&
+      {cards.length > 0 &&
         (view === 'list' ? (
           <div className="dx-cards-list-view">
             {cards.map((card) => (
