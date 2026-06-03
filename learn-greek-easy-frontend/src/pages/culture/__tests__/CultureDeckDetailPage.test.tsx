@@ -306,4 +306,37 @@ describe('CultureDeckDetailPage', () => {
       expect(screen.getByTestId('breadcrumb')).toBeInTheDocument();
     });
   });
+
+  // ── Metric tile descriptor second lines (DVP-02) ─────────────────────────
+
+  it('renders descriptor trend lines for all four metric tiles', async () => {
+    mockGetById.mockResolvedValue(deckWithProgress);
+
+    render(<CultureDeckDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('culture-metric-strip')).toBeInTheDocument();
+    });
+
+    // Tile 0: To practice — "new + learning"
+    expect(screen.getByText('new + learning')).toBeInTheDocument();
+    // Tile 1: In review — "working memory"
+    expect(screen.getByText('working memory')).toBeInTheDocument();
+    // Tile 3: Time on deck — "all-time"
+    expect(screen.getByText('all-time')).toBeInTheDocument();
+  });
+
+  it('renders mastered tile trend as "{pct}% of deck" for known mastered/total', async () => {
+    // deckWithProgress: mastered=4, total=10 → pct = Math.round(4/10*100) = 40
+    mockGetById.mockResolvedValue(deckWithProgress);
+
+    render(<CultureDeckDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('culture-metric-strip')).toBeInTheDocument();
+    });
+
+    // Tile 2: Mastered — "40% of deck"
+    expect(screen.getByText('40% of deck')).toBeInTheDocument();
+  });
 });
