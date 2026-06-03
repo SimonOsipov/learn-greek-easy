@@ -427,6 +427,28 @@ New classes in `src/index.css` for the Culture hub (`CulturePage` / `CultureHero
 
 ---
 
+### Mobile over-photo surface
+
+Mobile-only tokens added in MOB-09. These 5 tokens are **theme-invariant** — identical in light and dark, with no `.dark` overrides — because they are used exclusively over full-bleed photography on the login screen where the ambient theme does not apply.
+
+| Token | HSL | Purpose |
+|---|---|---|
+| `--on-photo-fg` | `0 0% 100%` | Pure white — over-photo text and glass fill/border tints via `/opacity` |
+| `--on-photo-scrim` | `225 43% 5%` | Near-black (`rgba(8,11,20)`) — scrim overlay and segmented control track via `/opacity` |
+| `--on-photo-active-fg` | `222 31% 9%` | Dark navy (`#0b1220`) — segmented active label on the white thumb |
+| `--danger-soft` | `0 96% 90%` | `#fecaca` — error banner text |
+| `--danger-softer` | `0 93% 82%` | `#fca5a5` — inline field-error message |
+
+Tailwind utilities: `text-on-photo`, `bg-on-photo/10`, `border-on-photo/22`, `bg-on-photo-scrim/42`, `text-on-photo-active`, `text-danger-soft`, `text-danger-softer`.
+
+The error-banner fill and border reuse the existing `danger` token (`bg-danger/18 border-danger/55`). The sanctioned raw-literal color values on the login screen are:
+
+1. The 3 `expo-linear-gradient` scrim stops (`rgba(8,11,20,…)`) — `expo-linear-gradient`'s `colors[]` prop cannot accept a NativeWind class (LOGIN-04).
+2. The Google brand "G" colors in `GoogleIcon.tsx` (`#4285F4`/`#34A853`/`#FBBC05`/`#EA4335`) — brand asset, must not be recolored.
+3. RN-API color props that cannot accept a NativeWind class: `placeholderTextColor` (white at 50% opacity, = `--on-photo-fg`/50), `shadowColor` (a brighter-than-`--primary` glow, `hsl(222 95% 63%)`), and `ActivityIndicator color` (opaque white, = `--on-photo-fg`). Documented in `login.tsx` as `ON_PHOTO_PLACEHOLDER`, `ON_PHOTO_FG`, and `PRIMARY_GLOW`.
+
+---
+
 ## Mobile (NativeWind)
 
 Mobile token infrastructure added in MOB-02. NativeWind v4 on React Native / Expo.

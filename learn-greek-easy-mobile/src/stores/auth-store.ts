@@ -20,7 +20,8 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: () => Promise<boolean>;
+  clearError: () => void;
   cleanup: () => void;
 }
 
@@ -130,7 +131,7 @@ export const useAuthStore = create<AuthState>((set) => {
 
         // Step 2: open the browser and wait for the redirect back to our app.
         const res = await WebBrowser.openAuthSessionAsync(data.url ?? '', redirectTo);
-        if (res.type !== 'success') return;
+        if (res.type !== 'success') return false;
 
         // Step 3: extract tokens from the redirect URL and hand them to
         // Supabase. detectSessionInUrl is false so we must do this explicitly.
@@ -138,21 +139,25 @@ export const useAuthStore = create<AuthState>((set) => {
         if (errorCode) throw new Error(errorCode);
 
         const { access_token, refresh_token } = params;
-        if (!access_token) return;
+        if (!access_token) return false;
 
         // setSession triggers onAuthStateChange which updates session/user.
         await supabase.auth.setSession({
           access_token,
           refresh_token: refresh_token ?? '',
         });
+        return true;
       } catch (err: unknown) {
         // Sanitize: surface only the message string, never token values.
         const message = err instanceof Error ? err.message : 'Google sign-in failed';
         set({ error: message });
+        return false;
       } finally {
         set({ isSubmitting: false });
       }
     },
+
+    clearError: () => set({ error: null }),
 
     cleanup: () => {
       _unsubscribe?.();

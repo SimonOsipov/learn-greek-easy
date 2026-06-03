@@ -47,6 +47,10 @@ jobs:
         # --local: no cloud build minutes. development profile -> ios.simulator:true,
         # bundle id eu.greeklish.app.dev (matches .maestro/smoke.yaml appId).
         # Simulator build => no signing => no Apple Developer Program needed.
+        # NOTE: This native build is currently BLOCKED by an upstream Expo SDK 56
+        # issue — the precompiled `[CP-User] Build ExpoModulesJSI xcframework` script
+        # fails on the runner, and building from source also fails. Tracked in the
+        # MOB story "Native iOS Build + On-Device Visual Testing". Opt-in, not a gate.
         run: |
           eas build --local \
             --non-interactive \
