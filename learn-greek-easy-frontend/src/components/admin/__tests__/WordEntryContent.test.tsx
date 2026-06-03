@@ -73,7 +73,6 @@ const createMockWordEntry = (overrides = {}) => ({
       greek: 'Το σπίτι είναι μεγάλο.',
       english: 'The house is big.',
       russian: 'Дом большой.',
-      context: 'everyday',
       audio_key: null,
       audio_url: null,
       audio_status: 'ready' as const,
@@ -315,7 +314,6 @@ describe('WordEntryContent', () => {
               greek: 'Το σπίτι είναι μεγάλο.',
               english: '',
               russian: null,
-              context: null,
               audio_key: null,
               audio_url: null,
             },
@@ -343,7 +341,6 @@ describe('WordEntryContent', () => {
               greek: 'Το σπίτι είναι μεγάλο.',
               english: 'The house is big.',
               russian: '',
-              context: null,
               audio_key: null,
               audio_url: null,
             },
@@ -358,34 +355,6 @@ describe('WordEntryContent', () => {
       const exampleCard = screen.getByTestId('word-entry-content-example-0');
       expect(exampleCard).toHaveTextContent('Russian');
       expect(exampleCard).toHaveTextContent('Not set');
-    });
-
-    it('renders example Context when non-null', () => {
-      renderComponent();
-      expect(screen.getByTestId('word-entry-content-example-0')).toHaveTextContent('everyday');
-    });
-
-    it('omits example Context when null', () => {
-      (useWordEntry as Mock).mockReturnValue({
-        wordEntry: createMockWordEntry({
-          examples: [
-            {
-              id: 'ex-1',
-              greek: 'Το σπίτι είναι μεγάλο.',
-              english: 'The house is big.',
-              russian: null,
-              context: null,
-              audio_key: null,
-              audio_url: null,
-            },
-          ],
-        }),
-        isLoading: false,
-        isError: false,
-        refetch: vi.fn(),
-      });
-      renderComponent();
-      expect(screen.getByTestId('word-entry-content-example-0')).not.toHaveTextContent('Context');
     });
 
     it('shows no-examples state when examples is null', () => {
@@ -491,7 +460,6 @@ describe('WordEntryContent', () => {
               greek: 'Το σπίτι είναι μεγάλο.',
               english: 'The house is big.',
               russian: null,
-              context: null,
               audio_key: null,
               audio_url: null,
               // no audio_status
@@ -550,7 +518,6 @@ describe('WordEntryContent', () => {
               greek: 'Το σπίτι είναι μεγάλο.',
               english: 'The house is big.',
               russian: null,
-              context: null,
               audio_key: null,
               audio_url: null,
               audio_status: 'missing' as const,
