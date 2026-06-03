@@ -1,13 +1,16 @@
 /**
- * LOGIN-07 (MOB-09) — inline email validation + formValid gating.
+ * LOGIN-08 (MOB-09) — primary CTA, auth store wiring + friendly error banner.
  *
- * Builds on LOGIN-06 email + password glass fields. Adds:
- *  - EMAIL_RE regex for basic email validation
- *  - emailError state (show-flag: set on blur when email is non-empty + invalid)
- *  - Danger border on email container when emailError
- *  - Inline error row (AlertCircle + message) under email field when emailError
- *  - formValid derived flag (emailValid && password.length >= 6) — consumed by LOGIN-08 CTA
- *  - Clear emailError + server error on edit (email onChangeText); clear server error on password edit
+ * Builds on LOGIN-07 (inline email validation + formValid). Adds:
+ *  - Store bindings: isSubmitting, error, signIn, signUp (narrow individual selectors)
+ *  - useAuth() for isLoading
+ *  - Primary CTA: Pressable, bg-primary, disabled when !formValid (opacity-50, no shadow)
+ *  - Submitting state: ActivityIndicator + "Signing in…" / "Creating account…" labels
+ *  - Both TextInputs set editable={false} while isSubmitting || isLoading
+ *  - Glass danger banner above fields when store error is set
+ *  - Danger border on BOTH inputs when store error is set
+ *  - Friendly error mapping: "Invalid login credentials" → user-facing copy (curly apostrophe)
+ *  - Removed void formValid; — formValid now gates the CTA directly
  *
  * Icon coloring: cssInterop maps className → style → color prop for lucide icons.
  * This is the same nativeStyleToProp pattern used by react-native-css-interop itself
@@ -26,16 +29,26 @@
  *
  * Design tokens: on-photo + danger palette only; no new raw color literals.
  * The ONLY sanctioned raw-literal color values are the three gradient stops
- * (commented inline) — expo-linear-gradient colors[] cannot accept NativeWind classes.
+ * (commented inline) and the monogram shadow glow — expo-linear-gradient
+ * colors[] and RN shadow cannot accept NativeWind classes.
  */
 import { useState } from 'react';
-import { ImageBackground, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  ImageBackground,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { cssInterop } from 'nativewind';
 import { AlertCircle, Eye, EyeOff } from 'lucide-react-native';
 
+import { useAuth } from '@/hooks/use-auth';
 import { useAuthStore } from '@/stores/auth-store';
 
 // ---------------------------------------------------------------------------
@@ -57,13 +70,28 @@ cssInterop(EyeOff, { className: { target: 'style', nativeStyleToProp: { color: t
 const ON_PHOTO_PLACEHOLDER = 'rgba(255,255,255,0.5)'; // --on-photo-fg / 50
 
 // ---------------------------------------------------------------------------
+// Monogram shadow glow — sanctioned raw-literal; RN shadow cannot take a class.
+// Same hue as --primary (222 95% 63%).
+// ---------------------------------------------------------------------------
+const PRIMARY_GLOW = 'hsl(222 95% 63%)';
+
+// ---------------------------------------------------------------------------
 // Email validation — basic pattern: local@domain.tld (no over-engineering).
 // ---------------------------------------------------------------------------
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+
+  // Narrow individual selectors — avoids new-object memoization pitfalls.
   const clearError = useAuthStore((s) => s.clearError);
+  const isSubmitting = useAuthStore((s) => s.isSubmitting);
+  const error = useAuthStore((s) => s.error);
+  const signIn = useAuthStore((s) => s.signIn);
+  const signUp = useAuthStore((s) => s.signUp);
+
+  // isLoading from useAuth() (mirrors sign-in.tsx pattern).
+  const { isLoading } = useAuth();
 
   // Field state
   const [email, setEmail] = useState('');
@@ -75,10 +103,19 @@ export default function LoginScreen() {
   const [emailError, setEmailError] = useState(false);
 
   // Derived validation — independent of the show-flag so formValid is accurate
-  // even before blur (LOGIN-08 CTA consumes formValid).
+  // even before blur. Gates the CTA directly (void formValid placeholder removed).
   const emailValid = EMAIL_RE.test(email);
-  const formValid = emailValid && password.length >= 6; // consumed by LOGIN-08 CTA
-  void formValid; // consumed by LOGIN-08 CTA — suppress unused-var lint
+  const formValid = emailValid && password.length >= 6;
+
+  // ---------------------------------------------------------------------------
+  // Friendly error mapping — translate raw Supabase message to user copy.
+  // Curly apostrophe U+2019 in "doesn't" per spec.
+  // ---------------------------------------------------------------------------
+  const friendlyError = error
+    ? error.includes('Invalid login credentials')
+      ? "That email or password doesn’t match. Give it another try."
+      : error
+    : null;
 
   // thumb position: 0 = left (signin), 1 = right (signup).
   const thumbProgress = useSharedValue(0);
@@ -96,6 +133,26 @@ export default function LoginScreen() {
     mode === 'signin'
       ? 'Sign in to continue your Greek journey.'
       : 'Create your account to get started.';
+
+  // CTA label and submitting label by mode — true ellipsis U+2026 per spec.
+  const ctaLabel = mode === 'signin' ? 'Sign in' : 'Create account';
+  const submittingLabel = mode === 'signin' ? 'Signing in…' : 'Creating account…';
+
+  // Whether inputs should be locked (submitting or initial session load).
+  const inputsLocked = isSubmitting || isLoading;
+
+  // Press handler — guards on formValid so double-tap can't fire.
+  async function handleCTAPress() {
+    if (!formValid) return;
+    if (mode === 'signin') {
+      await signIn(email, password);
+      // Success: root guard (_layout.tsx) navigates out of (auth) once session
+      // appears via onAuthStateChange. LOGIN-09A will add analytics here.
+    } else {
+      await signUp(email, password);
+      // Same success path — root guard handles navigation.
+    }
+  }
 
   return (
     <ImageBackground
@@ -120,7 +177,7 @@ export default function LoginScreen() {
               <View
                 className="w-[38px] h-[38px] rounded-[11px] bg-primary items-center justify-center"
                 style={{
-                  shadowColor: 'hsl(222 95% 63%)',
+                  shadowColor: PRIMARY_GLOW,
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.45,
                   shadowRadius: 8,
@@ -167,8 +224,21 @@ export default function LoginScreen() {
               </Text>
             </View>
 
-            {/* Input fields */}
-            <View className="gap-[11px] mb-8">
+            {/* Input fields + CTA */}
+            <View className="gap-[11px]">
+              {/* Glass danger banner — shown above fields when store error is set */}
+              {friendlyError ? (
+                <View className="flex-row items-center gap-2 bg-danger/18 border border-danger/55 rounded-[13px] px-3 py-3">
+                  <AlertCircle className="text-danger-soft" size={15} />
+                  <Text
+                    className="text-danger-soft text-[12.5px] flex-1"
+                    style={{ fontFamily: 'SplineSans_500Medium' }}
+                  >
+                    {friendlyError}
+                  </Text>
+                </View>
+              ) : null}
+
               {/* Email field */}
               <View className="gap-[6px]">
                 <Text
@@ -177,10 +247,10 @@ export default function LoginScreen() {
                 >
                   Email
                 </Text>
-                {/* Glass input container — danger border when emailError */}
+                {/* Glass input container — danger border when emailError or server error */}
                 <View
                   className={`h-[47px] rounded-[13px] bg-on-photo/10 border justify-center px-4 ${
-                    emailError ? 'border-danger/70' : 'border-on-photo/22'
+                    emailError || error ? 'border-danger/70' : 'border-on-photo/22'
                   }`}
                 >
                   <TextInput
@@ -191,6 +261,7 @@ export default function LoginScreen() {
                     autoCapitalize="none"
                     autoComplete="email"
                     autoCorrect={false}
+                    editable={!inputsLocked}
                     value={email}
                     onChangeText={(text) => {
                       setEmail(text);
@@ -238,14 +309,19 @@ export default function LoginScreen() {
                   )}
                 </View>
 
-                {/* Glass input container */}
-                <View className="h-[47px] rounded-[13px] bg-on-photo/10 border border-on-photo/22 flex-row items-center px-4">
+                {/* Glass input container — danger border when server error */}
+                <View
+                  className={`h-[47px] rounded-[13px] bg-on-photo/10 border flex-row items-center px-4 ${
+                    error ? 'border-danger/70' : 'border-on-photo/22'
+                  }`}
+                >
                   <TextInput
                     className="text-on-photo text-[15px] flex-1"
                     placeholder="••••••••"
                     placeholderTextColor={ON_PHOTO_PLACEHOLDER}
                     secureTextEntry={!showPassword}
                     autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                    editable={!inputsLocked}
                     value={password}
                     onChangeText={(text) => {
                       setPassword(text);
@@ -267,7 +343,51 @@ export default function LoginScreen() {
                   </Pressable>
                 </View>
               </View>
+
+              {/* Primary CTA */}
+              <Pressable
+                className={`mt-3.5 h-[50px] rounded-[13px] bg-primary items-center justify-center flex-row gap-2 ${
+                  !formValid ? 'opacity-50' : ''
+                }`}
+                style={
+                  formValid
+                    ? {
+                        shadowColor: PRIMARY_GLOW,
+                        shadowOffset: { width: 0, height: 3 },
+                        shadowOpacity: 0.4,
+                        shadowRadius: 10,
+                        elevation: 5,
+                      }
+                    : undefined
+                }
+                onPress={handleCTAPress}
+                disabled={!formValid}
+                accessibilityRole="button"
+                accessibilityLabel={ctaLabel}
+              >
+                {isSubmitting ? (
+                  <>
+                    <ActivityIndicator size={17} color="white" />
+                    <Text
+                      className="text-on-photo text-[15.5px]"
+                      style={{ fontFamily: 'SplineSans_600SemiBold' }}
+                    >
+                      {submittingLabel}
+                    </Text>
+                  </>
+                ) : (
+                  <Text
+                    className="text-on-photo text-[15.5px]"
+                    style={{ fontFamily: 'SplineSans_600SemiBold' }}
+                  >
+                    {ctaLabel}
+                  </Text>
+                )}
+              </Pressable>
             </View>
+
+            {/* Bottom spacing */}
+            <View className="mb-8" />
           </ScrollView>
         </SafeAreaView>
       </LinearGradient>
