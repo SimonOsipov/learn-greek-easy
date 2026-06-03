@@ -285,7 +285,7 @@ jobs:
       needs.should-deploy.outputs.deploy == 'true' &&
       needs.ci-tests.result == 'success'
     runs-on: ubuntu-latest
-    container: ghcr.io/railwayapp/cli:latest
+    container: ghcr.io/railwayapp/cli:4.66.0
     outputs:
       frontend_url: ${{ steps.urls.outputs.frontend_url }}
       environment_id: ${{ steps.urls.outputs.environment_id }}

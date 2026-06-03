@@ -182,7 +182,7 @@ jobs:
     needs: [pre-deploy-check, tsc-build, changes]
     if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
-    container: ghcr.io/railwayapp/cli:latest
+    container: ghcr.io/railwayapp/cli:4.66.0
     environment:
       name: production
       # Backend is private - no public URL, accessed via frontend proxy
@@ -244,7 +244,7 @@ jobs:
     name: Deploy Frontend
     needs: deploy-backend  # Sequential dependency - waits for backend deployment
     runs-on: ubuntu-latest
-    container: ghcr.io/railwayapp/cli:latest
+    container: ghcr.io/railwayapp/cli:4.66.0
     environment:
       name: production
       url: ${{ env.PROD_FRONTEND_URL }}
