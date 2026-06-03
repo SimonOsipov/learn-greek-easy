@@ -147,9 +147,12 @@ export default function LoginScreen() {
   // Whether inputs should be locked (submitting or initial session load).
   const inputsLocked = isSubmitting || isLoading;
 
-  // Press handler — guards on formValid so double-tap can't fire.
+  // In-flight guard — prevents double-tap dispatching duplicate requests.
+  const inFlight = isSubmitting || isLoading;
+
+  // Press handler — guards on formValid and inFlight so double-tap can't fire.
   async function handleCTAPress() {
-    if (!formValid) return;
+    if (!formValid || inFlight) return;
     if (mode === 'signin') {
       await signIn(email, password);
       if (!useAuthStore.getState().error) {
@@ -163,10 +166,11 @@ export default function LoginScreen() {
     }
   }
 
-  // Google handler — wraps store action to fire analytics on success.
+  // Google handler — wraps store action to fire analytics on explicit success.
   const handleGoogle = async () => {
-    await signInWithGoogle();
-    if (!useAuthStore.getState().error) {
+    if (inFlight) return;
+    const ok = await signInWithGoogle();
+    if (ok) {
       track('user_logged_in', { method: 'oauth_google' });
     }
   };
@@ -368,10 +372,10 @@ export default function LoginScreen() {
               {/* Primary CTA */}
               <Pressable
                 className={`mt-3.5 h-[50px] rounded-[13px] bg-primary items-center justify-center flex-row gap-2 ${
-                  !formValid ? 'opacity-50' : ''
+                  !formValid || inFlight ? 'opacity-50' : ''
                 }`}
                 style={
-                  formValid
+                  formValid && !inFlight
                     ? {
                         shadowColor: PRIMARY_GLOW,
                         shadowOffset: { width: 0, height: 3 },
@@ -382,7 +386,7 @@ export default function LoginScreen() {
                     : undefined
                 }
                 onPress={handleCTAPress}
-                disabled={!formValid}
+                disabled={!formValid || inFlight}
                 accessibilityRole="button"
                 accessibilityLabel={ctaLabel}
               >
@@ -422,8 +426,9 @@ export default function LoginScreen() {
               <View className="flex-row items-center justify-center gap-3">
                 {/* Google glass button */}
                 <Pressable
-                  className="w-14 h-12 rounded-[13px] bg-on-photo/14 border border-on-photo/22 items-center justify-center"
+                  className={`w-14 h-12 rounded-[13px] bg-on-photo/14 border border-on-photo/22 items-center justify-center${inFlight ? ' opacity-50' : ''}`}
                   onPress={handleGoogle}
+                  disabled={inFlight}
                   accessibilityLabel="Continue with Google"
                   accessibilityRole="button"
                 >

@@ -458,8 +458,8 @@ describe('LoginScreen', () => {
     });
 
     it('fires track("user_logged_in", { method: "oauth_google" }) on successful Google sign-in', async () => {
-      // signInWithGoogle resolves with no error (error remains null from resetState)
-      mockState.signInWithGoogle.mockImplementation(async () => {});
+      // signInWithGoogle resolves true → explicit success signal
+      mockState.signInWithGoogle.mockResolvedValue(true);
       render(<LoginScreen />);
 
       await act(async () => {
@@ -467,6 +467,18 @@ describe('LoginScreen', () => {
       });
 
       expect(mockTrack).toHaveBeenCalledWith('user_logged_in', { method: 'oauth_google' });
+    });
+
+    it('does NOT fire track when Google sign-in is cancelled (resolves false)', async () => {
+      // signInWithGoogle resolves false → user cancelled OAuth browser
+      mockState.signInWithGoogle.mockResolvedValue(false);
+      render(<LoginScreen />);
+
+      await act(async () => {
+        fireEvent.press(screen.getByRole('button', { name: 'Continue with Google' }));
+      });
+
+      expect(mockTrack).not.toHaveBeenCalled();
     });
   });
 });

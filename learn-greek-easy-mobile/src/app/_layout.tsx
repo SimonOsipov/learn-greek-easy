@@ -30,7 +30,7 @@ initSentry();
 export const unstable_settings = { anchor: '(app)' };
 
 function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     SplineSans_400Regular,
     SplineSans_500Medium,
     SplineSans_600SemiBold,
@@ -39,9 +39,18 @@ function RootLayout() {
     InterTight_700Bold,
   });
 
+  // Proceed even if fonts fail — system fonts are the graceful fallback.
+  const fontsReady = fontsLoaded || !!fontError;
+
   const colorScheme = useColorScheme();
   const { session, isLoading } = useAuth();
   const posthog = getPostHog();
+
+  useEffect(() => {
+    if (fontError) {
+      Sentry.captureException(fontError);
+    }
+  }, [fontError]);
 
   useEffect(() => {
     registerSuperProperties(colorScheme ?? 'light');
@@ -49,8 +58,8 @@ function RootLayout() {
 
   const tree = (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay isReady={!isLoading && fontsLoaded} />
-      {!isLoading && fontsLoaded && (
+      <AnimatedSplashOverlay isReady={!isLoading && fontsReady} />
+      {!isLoading && fontsReady && (
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Protected guard={!!session}>
             <Stack.Screen name="(app)" />
