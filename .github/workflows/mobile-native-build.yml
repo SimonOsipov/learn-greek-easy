@@ -47,12 +47,17 @@ jobs:
         # --local: no cloud build minutes. development profile -> ios.simulator:true,
         # bundle id eu.greeklish.app.dev (matches .maestro/smoke.yaml appId).
         # Simulator build => no signing => no Apple Developer Program needed.
-        # Build precompiled Expo modules (e.g. ExpoModulesJSI) from source in CI:
-        # the SDK 56 precompiled-xcframework build script fails on the runner.
-        # Scoped to this smoke job only — local dev + EAS builds keep precompiled speed.
-        # See https://docs.expo.dev/guides/prebuilt-expo-modules/
+        # Build everything from source in CI: the SDK 56 precompiled-xcframework
+        # build script ([CP-User] Build ExpoModulesJSI xcframework) fails on the runner.
+        # Expo modules AND React Native Core must be consistent — a source-built
+        # ExpoModulesJSI cannot resolve a prebuilt RN Core's headers (jsi/jsi.h, etc.),
+        # so disable BOTH precompiled paths. Scoped to this smoke job only — local dev
+        # + EAS builds keep their precompiled speed. No useFrameworks:static here, so
+        # full source build is safe. See https://docs.expo.dev/guides/prebuilt-expo-modules/
         env:
-          EXPO_USE_PRECOMPILED_MODULES: "0"
+          EXPO_USE_PRECOMPILED_MODULES: "0"   # Expo modules from source
+          RCT_USE_PREBUILT_RNCORE: "0"        # React Native Core from source
+          RCT_USE_RN_DEP: "0"                 # React Native Dependencies from source
         run: |
           eas build --local \
             --non-interactive \
