@@ -141,7 +141,7 @@ describe('QuestionDetailDialog', () => {
 
       await waitFor(() => {
         const correctOption = screen.getByTestId('option-0');
-        expect(correctOption.className).toContain('border-practice-correct');
+        expect(correctOption.className).toContain('is-correct');
       });
     });
   });

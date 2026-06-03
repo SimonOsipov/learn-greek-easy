@@ -3,7 +3,7 @@
 // Resume / summary hero panel for Culture screens.
 //
 // Layout mirrors .dx-hero-resume: radial-gradient panel + optional cover stack.
-// Generic via props so hub, deck-detail, and readiness can all use it.
+// Generic via props so the hub and deck-detail can both use it.
 
 import React from 'react';
 
