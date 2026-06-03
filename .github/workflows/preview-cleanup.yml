@@ -18,7 +18,7 @@ jobs:
   cleanup:
     name: Stop Preview Services
     runs-on: ubuntu-latest
-    container: ghcr.io/railwayapp/cli:latest
+    container: ghcr.io/railwayapp/cli:4.66.0
     outputs:
       existed: ${{ steps.check-env.outputs.exists }}
       env_name: ${{ steps.check-env.outputs.env_name }}
