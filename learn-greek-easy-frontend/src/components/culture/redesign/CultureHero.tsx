@@ -3,7 +3,7 @@
 // Resume / summary hero panel for Culture screens.
 //
 // Layout mirrors .dx-hero-resume: radial-gradient panel + optional cover stack.
-// Generic via props so hub, deck-detail, and readiness can all use it.
+// Generic via props so the hub and deck-detail can both use it.
 
 import React from 'react';
 
@@ -77,7 +77,8 @@ export function CultureHero({
   coverFootLabel,
   coverFootPct,
 }: CultureHeroProps) {
-  const showStack = !!coverDeck && siblingDecks.length >= 2;
+  const showFront = !!coverDeck;
+  const showSiblings = siblingDecks.length >= 2;
 
   return (
     <div className="dx-hero-resume">
@@ -125,19 +126,23 @@ export function CultureHero({
         </div>
 
         {/* ── Right column: cover stack ──────────────────────────────── */}
-        {showStack && coverDeck && (
+        {showFront && coverDeck && (
           <div className="dx-cover-stack">
-            {/* Behind sibling 1 — rotated −6°, opacity ~.5 */}
-            <DxCover deck={siblingDecks[0]} variant="stack-1" className="dx-cover dx-cover-1">
-              <span className="dx-cover-tag">{siblingDecks[0].title}</span>
-            </DxCover>
+            {showSiblings && (
+              <>
+                {/* Behind sibling 1 — rotated −6°, opacity ~.5 */}
+                <DxCover deck={siblingDecks[0]} variant="stack-1" className="dx-cover dx-cover-1">
+                  <span className="dx-cover-tag">{siblingDecks[0].title}</span>
+                </DxCover>
 
-            {/* Behind sibling 2 — rotated +4°, opacity ~.65 */}
-            <DxCover deck={siblingDecks[1]} variant="stack-2" className="dx-cover dx-cover-2">
-              <span className="dx-cover-tag">{siblingDecks[1].title}</span>
-            </DxCover>
+                {/* Behind sibling 2 — rotated +4°, opacity ~.65 */}
+                <DxCover deck={siblingDecks[1]} variant="stack-2" className="dx-cover dx-cover-2">
+                  <span className="dx-cover-tag">{siblingDecks[1].title}</span>
+                </DxCover>
+              </>
+            )}
 
-            {/* Front cover — main deck with optional progress foot */}
+            {/* Front cover — main deck with optional progress foot. Always rendered. */}
             <DxCover deck={coverDeck} variant="stack-front" className="dx-cover dx-cover-3">
               <div className="dx-cover-title">{title}</div>
               {greekSubtitle && (

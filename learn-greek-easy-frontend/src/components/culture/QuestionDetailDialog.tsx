@@ -216,12 +216,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                       <div
                         key={index}
                         data-testid={`option-${index}`}
-                        className={cn(
-                          'cx-modal-option',
-                          isCorrect
-                            ? 'is-correct border-practice-correct bg-practice-correct-soft'
-                            : ''
-                        )}
+                        className={cn('cx-modal-option', isCorrect ? 'is-correct' : '')}
                       >
                         <span className="cx-modal-option-k">{letter}.</span>
                         <span>{getLocalizedText(option, lang)}</span>

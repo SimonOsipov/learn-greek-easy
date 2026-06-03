@@ -163,18 +163,24 @@ export function CultureDeckDetailPage() {
               label: t('culture:detail.metricToPractice', 'To practice'),
               value: toPractice,
               tone: 'primary',
+              trend: t('culture:detail.metricToPracticeSub', 'new + learning'),
+              trendTone: 'flat' as const,
             },
             {
               icon: <RotateCcw className="h-5 w-5" />,
               label: t('culture:detail.metricInReview', 'In review'),
               value: learning,
               tone: 'amber',
+              trend: t('culture:detail.metricInReviewSub', 'working memory'),
+              trendTone: 'flat' as const,
             },
             {
               icon: <Trophy className="h-5 w-5" />,
               label: t('culture:detail.metricMastered', 'Mastered'),
               value: `${mastered}/${total}`,
               tone: 'green',
+              trend: t('culture:detail.metricMasteredSub', '{{pct}}% of deck', { pct }),
+              trendTone: 'flat' as const,
             },
             {
               icon: <Clock className="h-5 w-5" />,
@@ -182,6 +188,8 @@ export function CultureDeckDetailPage() {
               value: Math.round((deck.time_on_deck_seconds ?? 0) / 60),
               sub: t('culture:hub.minutes', 'min'),
               tone: 'violet',
+              trend: t('culture:detail.metricTimeOnDeckSub', 'all-time'),
+              trendTone: 'flat' as const,
             },
           ]}
         />
@@ -361,7 +369,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ error, onRetry }) => {
 
       <Card>
         <CardContent className="py-12 pt-6 text-center">
-          <AlertCircle className="mx-auto mb-4 h-16 w-16 text-practice-incorrect" />
+          <AlertCircle className="mx-auto mb-4 h-16 w-16 text-destructive" />
           <h2 className="mb-2 text-xl font-semibold text-foreground">
             {t('detail.error.failedToLoad')}
           </h2>
