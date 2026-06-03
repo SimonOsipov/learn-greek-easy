@@ -50,6 +50,7 @@ import { AlertCircle, Eye, EyeOff } from 'lucide-react-native';
 
 import { useAuth } from '@/hooks/use-auth';
 import { useAuthStore } from '@/stores/auth-store';
+import { GoogleIcon } from '@/components/icons/GoogleIcon';
 
 // ---------------------------------------------------------------------------
 // lucide icon cssInterop — maps className → style → color prop.
@@ -89,6 +90,7 @@ export default function LoginScreen() {
   const error = useAuthStore((s) => s.error);
   const signIn = useAuthStore((s) => s.signIn);
   const signUp = useAuthStore((s) => s.signUp);
+  const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
 
   // isLoading from useAuth() (mirrors sign-in.tsx pattern).
   const { isLoading } = useAuth();
@@ -384,6 +386,33 @@ export default function LoginScreen() {
                   </Text>
                 )}
               </Pressable>
+
+              {/* Divider — "or continue with" */}
+              <View className="flex-row items-center my-3">
+                <View className="flex-1 h-px bg-on-photo/18" />
+                <Text
+                  className="text-on-photo/55 text-[11.5px] mx-3"
+                  style={{ fontFamily: 'SplineSans_500Medium' }}
+                >
+                  or continue with
+                </Text>
+                <View className="flex-1 h-px bg-on-photo/18" />
+              </View>
+
+              {/* Social row — Google only (Apple deferred to MOB-10) */}
+              <View className="flex-row items-center justify-center gap-3">
+                {/* Google glass button */}
+                <Pressable
+                  className="w-14 h-12 rounded-[13px] bg-on-photo/14 border border-on-photo/22 items-center justify-center"
+                  onPress={signInWithGoogle}
+                  accessibilityLabel="Continue with Google"
+                  accessibilityRole="button"
+                >
+                  <GoogleIcon size={20} />
+                </Pressable>
+
+                {/* TODO(MOB-10): Apple sign-in — needs signInWithApple + expo-apple-authentication + iOS capability */}
+              </View>
             </View>
 
             {/* Bottom spacing */}
