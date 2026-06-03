@@ -26,7 +26,6 @@ export interface WordEntryExampleSentence {
   greek: string;
   english?: string;
   russian?: string;
-  context?: string | null;
   audio_key?: string | null;
   audio_url?: string | null;
   audio_status?: AudioStatus;
@@ -104,7 +103,6 @@ export interface ExampleSentenceUpdatePayload {
   greek: string;
   english?: string | null;
   russian?: string | null;
-  context?: string | null;
 }
 
 export interface WordEntryInlineUpdatePayload {

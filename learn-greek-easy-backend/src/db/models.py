@@ -785,7 +785,7 @@ class WordEntry(Base, TimestampMixin):
         JSON,
         nullable=True,
         server_default=text("'[]'::jsonb"),
-        comment="Usage examples: [{id?, greek, english, russian?, context?}, ...]",
+        comment="Usage examples: [{id?, greek, english, russian?}, ...]",
     )
 
     # Audio reference

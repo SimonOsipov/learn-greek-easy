@@ -207,7 +207,6 @@ class TestWordEntryToResponseAudioStatus:
                 "greek": "Το σπίτι μου",
                 "english": "My house",
                 "russian": "",
-                "context": None,
                 "audio_key": "word-audio/uuid/ex_1.mp3",
                 "audio_status": "ready",
             }
@@ -227,7 +226,6 @@ class TestWordEntryToResponseAudioStatus:
                 "greek": "Το σπίτι μου",
                 "english": "My house",
                 "russian": "",
-                "context": None,
                 "audio_key": None,
                 "audio_status": "generating",
                 "audio_generating_since": stale_ts,

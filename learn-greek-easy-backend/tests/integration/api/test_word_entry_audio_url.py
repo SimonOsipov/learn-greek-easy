@@ -38,7 +38,6 @@ class TestWordEntryAudioUrlEndpoints:
                     "greek": "Το σπίτι μου",
                     "english": "My house",
                     "russian": "",
-                    "context": None,
                     "audio_key": "word-audio/test-uuid/ex_1.mp3",
                 }
             ],

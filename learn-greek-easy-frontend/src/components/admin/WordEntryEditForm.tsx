@@ -32,7 +32,6 @@ const exampleSchema = z.object({
   greek: z.string().min(1),
   english: z.string().optional().or(z.literal('')),
   russian: z.string().optional().or(z.literal('')),
-  context: z.string().optional().or(z.literal('')),
 });
 
 const wordEntryEditSchema = z.object({
@@ -81,7 +80,6 @@ export function WordEntryEditForm({
       greek: ex.greek,
       english: ex.english ?? '',
       russian: ex.russian ?? '',
-      context: ex.context ?? '',
     })),
   };
 
@@ -126,7 +124,6 @@ export function WordEntryEditForm({
           greek: ex.greek,
           english: ex.english || null,
           russian: ex.russian || null,
-          context: ex.context || null,
         }));
       }
 
@@ -342,20 +339,6 @@ export function WordEntryEditForm({
                           <FormLabel>{t('wordEntryEdit.fieldExampleRussian')}</FormLabel>
                           <FormControl>
                             <Input {...field} data-testid={`word-entry-example-${index}-russian`} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name={`examples.${index}.context`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t('wordEntryEdit.fieldExampleContext')}</FormLabel>
-                          <FormControl>
-                            <Input {...field} data-testid={`word-entry-example-${index}-context`} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

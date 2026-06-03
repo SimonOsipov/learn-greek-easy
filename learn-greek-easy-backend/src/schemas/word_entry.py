@@ -92,11 +92,6 @@ class ExampleSentence(BaseModel):
         max_length=1000,
         description="Russian translation",
     )
-    context: Optional[str] = Field(
-        default=None,
-        max_length=200,
-        description="Optional context (e.g., 'formal', 'colloquial')",
-    )
     audio_key: Optional[str] = Field(
         default=None,
         max_length=500,
@@ -119,7 +114,6 @@ class ExampleSentenceResponse(BaseModel):
     greek: str = Field(..., description="Example sentence in Greek")
     english: str = Field(default="", description="English translation")
     russian: str = Field(default="", description="Russian translation")
-    context: Optional[str] = Field(default=None, description="Optional context")
     audio_key: Optional[str] = Field(
         default=None,
         description="S3 key for example sentence audio file",

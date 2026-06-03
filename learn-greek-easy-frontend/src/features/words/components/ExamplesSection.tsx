@@ -5,13 +5,11 @@
  * Shows Greek sentences with English and Russian translations.
  *
  * DX-10: re-skinned as a .dx-section card.
- * Each example has a derived type tag (.dx-example-tag) + R5 amber UnwiredDot.
  */
 
 import { useTranslation } from 'react-i18next';
 
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
-import { UnwiredDot } from '@/features/decks/dx';
 import { track } from '@/lib/analytics';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
 import type { WordEntryExampleSentence } from '@/services/wordEntryAPI';
@@ -29,42 +27,12 @@ export interface ExamplesSectionProps {
   speed?: AudioSpeed;
 }
 
-export type ExampleTag = 'simple' | 'comparative' | 'locative';
-
-/**
- * Maps the free-text `context` field to one of three ExampleTag values.
- * Since the backend has no tag taxonomy, this is always derived=false
- * (we use 'simple' as placeholder) unless the context matches a known keyword.
- *
- * derived=true  -> context contained a recognisable keyword
- * derived=false -> fell back to 'simple' placeholder
- */
-export function mapContextToTag(context?: string | null): {
-  tag: ExampleTag;
-  derived: boolean;
-} {
-  if (!context) return { tag: 'simple', derived: false };
-  const lower = context.toLowerCase();
-  if (lower.includes('comparative') || lower.includes('comparison')) {
-    return { tag: 'comparative', derived: true };
-  }
-  if (
-    lower.includes('locative') ||
-    lower.includes('location') ||
-    lower.includes('place') ||
-    lower.includes('where')
-  ) {
-    return { tag: 'locative', derived: true };
-  }
-  return { tag: 'simple', derived: false };
-}
-
 // ============================================
 // Component
 // ============================================
 
 export function ExamplesSection({ examples, wordEntryId, deckId, speed }: ExamplesSectionProps) {
-  const { t, i18n } = useTranslation(['review', 'deck']);
+  const { t, i18n } = useTranslation('review');
 
   // Handle empty/null examples
   if (!examples || examples.length === 0) {
@@ -96,7 +64,6 @@ export function ExamplesSection({ examples, wordEntryId, deckId, speed }: Exampl
             example.russian,
             i18n.language
           );
-          const { tag } = mapContextToTag(example.context);
 
           return (
             <div key={index} className="dx-example">
@@ -121,12 +88,6 @@ export function ExamplesSection({ examples, wordEntryId, deckId, speed }: Exampl
                     />
                   )}
                 </p>
-                {/* Type tag with R5 amber UnwiredDot — right-aligned */}
-                <span className="dx-example-tag" data-testid="example-tag">
-                  <UnwiredDot tone="amber" aria-label={t('deck:dx.unwiredExampleTag')}>
-                    {tag}
-                  </UnwiredDot>
-                </span>
               </div>
 
               {/* Locale-appropriate translation */}

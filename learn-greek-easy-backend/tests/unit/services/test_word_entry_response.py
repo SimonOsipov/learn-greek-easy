@@ -47,7 +47,6 @@ def sample_entry():
             "greek": "Το σπίτι μου",
             "english": "My house",
             "russian": "Мой дом",
-            "context": None,
             "audio_key": "word-audio/uuid/ex_1.mp3",
         }
     ]
@@ -101,7 +100,6 @@ class TestWordEntryToResponse:
                 "greek": "Το σπίτι μου",
                 "english": "",
                 "russian": "",
-                "context": None,
                 "audio_key": None,
             }
         ]
@@ -118,7 +116,6 @@ class TestWordEntryToResponse:
                 "greek": "With key",
                 "english": "",
                 "russian": "",
-                "context": None,
                 "audio_key": "word-audio/uuid/ex_1.mp3",
             },
             {
@@ -126,7 +123,6 @@ class TestWordEntryToResponse:
                 "greek": "Without key",
                 "english": "",
                 "russian": "",
-                "context": None,
                 "audio_key": None,
             },
         ]

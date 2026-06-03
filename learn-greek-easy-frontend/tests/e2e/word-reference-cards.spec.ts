@@ -324,35 +324,6 @@ test.describe('DX-15: Word Reference — UnwiredDot presence (R3-R8)', () => {
     expect(dotCount).toBe(0);
   });
 
-  test('DX-15.8: R5 — example tag amber UnwiredDot visible', async ({ page }) => {
-    await navigateToWordReference(page);
-
-    // Switch to word-info tab (default) and check examples section
-    await expect(page.getByTestId('word-reference-tab-word-info')).toHaveAttribute(
-      'data-state',
-      'active'
-    );
-
-    const examplesSection = page.locator('[data-testid="examples-section"]');
-    await expect(examplesSection).toBeVisible({ timeout: 10000 });
-
-    // R5: amber UnwiredDot on each example tag
-    const exampleTag = page.locator('[data-testid="example-tag"]').first();
-    const hasExampleTag = await exampleTag.isVisible({ timeout: 5000 }).catch(() => false);
-    if (hasExampleTag) {
-      const tagDot = exampleTag.locator('[data-testid="unwired-dot"]').first();
-      // Or the example tag itself may be the dot's sibling — check parent
-      const parentDot = page
-        .locator('[data-testid="example-tag"]')
-        .first()
-        .locator('xpath=ancestor::*[@data-testid="unwired-dot"][1]')
-        .or(
-          page.locator('[data-testid="example-tag"]').first().locator('[data-testid="unwired-dot"]')
-        );
-      await expect(tagDot.or(parentDot).first()).toBeVisible();
-    }
-  });
-
   test('DX-15.9a: R6 — Collocations section hidden by default (flag off)', async ({ page }) => {
     // No __FF_OVERRIDES__ → flagDefault → false in non-live env → section not rendered
     await navigateToWordReference(page);
