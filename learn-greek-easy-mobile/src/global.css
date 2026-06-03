@@ -3,9 +3,15 @@
 @tailwind utilities;
 
 :root {
+  /* --font-display: Spline Sans body stack — backs font-sans utility.
+     The registered RN font family name is SplineSans_400Regular (loaded via useFonts). */
   --font-display:
     Spline Sans, Inter, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji,
     Segoe UI Symbol, Noto Color Emoji;
+  /* --font-heading: Inter Tight display stack — backs font-heading utility.
+     The registered RN font family name is InterTight_700Bold (loaded via useFonts). */
+  --font-heading:
+    Inter Tight, Inter, ui-sans-serif, system-ui, sans-serif;
   --font-mono:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
   --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;

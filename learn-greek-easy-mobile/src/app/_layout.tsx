@@ -1,6 +1,17 @@
 import '@/global.css';
+import {
+  SplineSans_400Regular,
+  SplineSans_500Medium,
+  SplineSans_600SemiBold,
+  SplineSans_700Bold,
+} from '@expo-google-fonts/spline-sans';
+import {
+  InterTight_600SemiBold,
+  InterTight_700Bold,
+} from '@expo-google-fonts/inter-tight';
 import * as Sentry from '@sentry/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, ThemeProvider, Stack } from 'expo-router';
 import { PostHogProvider } from 'posthog-react-native';
 import { useEffect } from 'react';
@@ -19,6 +30,15 @@ initSentry();
 export const unstable_settings = { anchor: '(app)' };
 
 function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    SplineSans_400Regular,
+    SplineSans_500Medium,
+    SplineSans_600SemiBold,
+    SplineSans_700Bold,
+    InterTight_600SemiBold,
+    InterTight_700Bold,
+  });
+
   const colorScheme = useColorScheme();
   const { session, isLoading } = useAuth();
   const posthog = getPostHog();
@@ -29,8 +49,8 @@ function RootLayout() {
 
   const tree = (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay isReady={!isLoading} />
-      {!isLoading && (
+      <AnimatedSplashOverlay isReady={!isLoading && fontsLoaded} />
+      {!isLoading && fontsLoaded && (
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Protected guard={!!session}>
             <Stack.Screen name="(app)" />

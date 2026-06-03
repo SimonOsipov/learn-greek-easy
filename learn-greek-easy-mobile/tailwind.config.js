@@ -41,7 +41,10 @@ module.exports = {
         '3xl': '26px',
       },
       fontFamily: {
-        sans: 'var(--font-display)',
+        // Spline Sans body stack — loaded via useFonts as SplineSans_400Regular etc.
+        sans: 'SplineSans_400Regular',
+        // Inter Tight display/heading — loaded via useFonts as InterTight_700Bold etc.
+        heading: 'InterTight_700Bold',
         serif: 'var(--font-serif)',
         mono: 'var(--font-mono)',
         rounded: 'var(--font-rounded)',
