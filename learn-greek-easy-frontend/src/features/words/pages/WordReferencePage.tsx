@@ -28,7 +28,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useFlag } from '@/hooks';
 import { track } from '@/lib/analytics';
+import { FLAGS } from '@/lib/flags';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
 import { cn } from '@/lib/utils';
 import type { AdjectiveData, AdverbData, NounDataAny, VerbData } from '@/types/grammar';
@@ -209,6 +211,8 @@ export function WordReferencePage() {
     enabled: !!deckId && !!wordId,
   });
 
+  const showCollocations = useFlag(FLAGS.collocations);
+
   const groupedCards = useMemo(() => groupCards(masteryCards), [masteryCards]);
   // Summary totals EXCLUDE the synthetic Audio placeholder (isPlaceholder=true)
   const realCards = masteryCards; // masteryCards never includes audio — placeholder is synthetic
@@ -364,7 +368,7 @@ export function WordReferencePage() {
           />
 
           {/* 3. Collocations — placeholder, R6 danger dot */}
-          <CollocationsSection lemma={wordEntry.lemma} />
+          {showCollocations && <CollocationsSection lemma={wordEntry.lemma} />}
 
           {/* 4. Note callout — REAL from grammar_data.notes, amber lightbulb, no dot */}
           {notes && (

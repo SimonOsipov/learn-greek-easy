@@ -231,6 +231,11 @@ vi.mock('posthog-js', () => ({
     people: {
       set: vi.fn(),
     },
+    isFeatureEnabled: vi.fn(() => undefined),
+    getFeatureFlag: vi.fn(() => undefined),
+    getFeatureFlagPayload: vi.fn(() => undefined),
+    onFeatureFlags: vi.fn(() => () => {}),
+    reloadFeatureFlags: vi.fn(),
   },
 }));
 

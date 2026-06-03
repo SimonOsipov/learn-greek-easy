@@ -16,6 +16,8 @@ export { useDeckPerformance } from './useDeckPerformance';
 export { useStudyStreak } from './useStudyStreak';
 export { useTrackEvent } from './useTrackEvent';
 export type { AnalyticsEventName, EventProperties } from './useTrackEvent';
+export { useFlag, useFlagVariant, useFlagPayload } from './useFlag';
+export type { FlagKey } from '@/lib/flags';
 
 // Utility hooks
 export { usePremiumAccess } from './usePremiumAccess';

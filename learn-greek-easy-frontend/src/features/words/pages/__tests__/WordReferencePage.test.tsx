@@ -811,3 +811,41 @@ describe('WordReferencePage — DX-11 Cards tab', () => {
     expect(screen.queryByTestId('cards-summary-bar')).not.toBeInTheDocument();
   });
 });
+
+// ============================================
+// FF-03: Collocations gate tests (useFlag integration)
+// ============================================
+
+describe('WordReferencePage — Collocations feature-flag gate', () => {
+  // The real useFlag runs here (imported from @/hooks, not mocked).
+  // In the test environment, flagDefault('collocations-enabled') === false.
+  // Use window.__FF_OVERRIDES__ to control the gate.
+
+  beforeEach(() => {
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeMasculineNoun(),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+  });
+
+  afterEach(() => {
+    delete window.__FF_OVERRIDES__;
+  });
+
+  it('collocations-section is NOT rendered when flag is off (default in test env)', () => {
+    // No override → flagDefault → false in test env
+    renderPage();
+
+    expect(screen.queryByTestId('collocations-section')).not.toBeInTheDocument();
+  });
+
+  it('collocations-section IS rendered when flag is forced ON via __FF_OVERRIDES__', () => {
+    window.__FF_OVERRIDES__ = { 'collocations-enabled': true };
+
+    renderPage();
+
+    expect(screen.getByTestId('collocations-section')).toBeInTheDocument();
+  });
+});

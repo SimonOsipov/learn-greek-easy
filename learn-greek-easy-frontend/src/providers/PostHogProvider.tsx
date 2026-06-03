@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE, type SupportedLanguage } from '@/i18n';
 import { reportAPIError } from '@/lib/errorReporting';
+import { FLAG_BOOTSTRAP } from '@/lib/flags';
 import { isTestUser, shouldInitializePostHog } from '@/utils/analytics';
 
 /**
@@ -80,6 +81,7 @@ export function PostHogProvider({ children }: PostHogProviderProps) {
             capture_pageleave: true,
             autocapture: false, // Manual events only for control
             disable_session_recording: true, // Enable later if needed
+            bootstrap: { featureFlags: FLAG_BOOTSTRAP },
             loaded: (posthogInstance) => {
               // Register super properties included in all events
               posthogInstance.register({
