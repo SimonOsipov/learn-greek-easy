@@ -312,7 +312,11 @@ export default function LoginScreen() {
                     Password
                   </Text>
                   {mode === 'signin' && (
-                    <Pressable>
+                    <Pressable
+                      onPress={() => {
+                        // TODO(MOB-10): password reset
+                      }}
+                    >
                       <Text
                         className="text-on-photo text-[12px]"
                         style={{ fontFamily: 'SplineSans_600SemiBold' }}
@@ -425,6 +429,23 @@ export default function LoginScreen() {
 
                 {/* TODO(MOB-10): Apple sign-in — needs signInWithApple + expo-apple-authentication + iOS capability */}
               </View>
+
+              {/* Legal footer — signup only */}
+              {mode === 'signup' && (
+                <Text className="text-center text-[11px] text-on-photo/55 mt-3.5">
+                  {'By creating an account you agree to our '}
+                  {/* TODO(MOB-09): wire Terms screen */}
+                  <Text className="text-on-photo/85 underline" onPress={() => {}}>
+                    Terms
+                  </Text>
+                  {' and '}
+                  {/* TODO(MOB-09): wire Privacy screen */}
+                  <Text className="text-on-photo/85 underline" onPress={() => {}}>
+                    Privacy Policy
+                  </Text>
+                  {'.'}
+                </Text>
+              )}
             </View>
 
             {/* Bottom spacing */}
