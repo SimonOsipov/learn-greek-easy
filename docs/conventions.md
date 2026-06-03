@@ -50,3 +50,33 @@ Architectural decisions and established patterns. All agents (Feature, Architect
 | Factories | Inherit BaseFactory, async create, flush not commit | docs/testing.md |
 | Markers | 19 markers in pyproject.toml, --strict-markers enforced | docs/testing.md |
 | DB isolation | db_session wraps each test in rolled-back transaction | docs/testing.md |
+
+## Logging
+
+| Decision | Convention | Reference |
+|----------|-----------|-----------|
+| Backend logger | `get_logger(__name__)` from `src.core.logging` (Loguru) — never `print` or stdlib `logging` | docs/logging.md |
+| Structured context | Pass context as kwargs (`logger.info("msg", action=..., user_id=...)`), not f-strings | docs/logging.md |
+| Context propagation | `request_id` / `user_id` auto-bound by middleware + auth dependency — don't pass manually | docs/logging.md |
+| Aggregation | Logs flow to Sentry Logs; JSON in prod, colorized in dev | docs/logging.md |
+| Never log | Passwords, JWT tokens, API keys, emails, PII | docs/logging.md |
+
+## Analytics (PostHog)
+
+| Decision | Convention | Reference |
+|----------|-----------|-----------|
+| Event naming | `{domain}_{entity}_{action}`, snake_case, past-tense action | docs/analytics-events.md |
+| No admin events | Admin panel actions are not product analytics — never instrument them | docs/analytics-events.md |
+| Errors → Sentry | Error tracking uses Sentry, not PostHog | docs/analytics-events.md |
+| Create-event test | Only add an event if it informs a stated product decision | docs/analytics-events.md |
+| Forbidden prefixes | No `my_`, `admin_`, or `page_` prefixes | docs/analytics-events.md |
+
+## Design System
+
+| Decision | Convention | Reference |
+|----------|-----------|-----------|
+| Source of truth | All color/spacing/radius/shadow/font/animation values come from the design system; unlisted values don't ship | docs/design-system.md |
+| No raw hex | Use HSL tokens (`hsl(var(--token))`), not raw hex / `rgba(...)` / arbitrary Tailwind values | docs/design-system.md |
+| Reuse primitives | Compose existing `src/components/ui/*` (shadcn) — don't re-implement Dialog/Popover/Select/etc. | docs/design-system.md |
+| New tokens/animations | Add to `src/index.css` + `tailwind.config.js` AND update the design-system doc in the same PR | docs/design-system.md |
+| Three palettes | App / Landing / Practice palettes are distinct — don't cross them | docs/design-system.md |
