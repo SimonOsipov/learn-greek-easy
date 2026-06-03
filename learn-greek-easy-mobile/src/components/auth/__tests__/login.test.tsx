@@ -456,5 +456,17 @@ describe('LoginScreen', () => {
 
       expect(mockTrack).not.toHaveBeenCalled();
     });
+
+    it('fires track("user_logged_in", { method: "oauth_google" }) on successful Google sign-in', async () => {
+      // signInWithGoogle resolves with no error (error remains null from resetState)
+      mockState.signInWithGoogle.mockImplementation(async () => {});
+      render(<LoginScreen />);
+
+      await act(async () => {
+        fireEvent.press(screen.getByRole('button', { name: 'Continue with Google' }));
+      });
+
+      expect(mockTrack).toHaveBeenCalledWith('user_logged_in', { method: 'oauth_google' });
+    });
   });
 });

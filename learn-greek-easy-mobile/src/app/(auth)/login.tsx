@@ -64,17 +64,20 @@ cssInterop(Eye, { className: { target: 'style', nativeStyleToProp: { color: true
 cssInterop(EyeOff, { className: { target: 'style', nativeStyleToProp: { color: true } } });
 
 // ---------------------------------------------------------------------------
-// --on-photo-fg is theme-invariant pure white (0 0% 100%).
-// This constant is the single source for placeholder / similar RN props that
-// cannot accept a NativeWind className.  Tied to --on-photo-fg in global.css.
-// /50 opacity = 128/255 ≈ 0.5
+// Sanctioned RN-API color literals (MOB-09)
+// These RN props (placeholderTextColor, shadowColor, ActivityIndicator color)
+// accept only a color value, not a NativeWind className, so the on-photo/primary
+// tokens can't be used here. Documented in docs/design-system.md.
 // ---------------------------------------------------------------------------
+
+// --on-photo-fg / 50 — white at 50% opacity for placeholder text.
 const ON_PHOTO_PLACEHOLDER = 'rgba(255,255,255,0.5)'; // --on-photo-fg / 50
 
-// ---------------------------------------------------------------------------
-// Monogram shadow glow — sanctioned raw-literal; RN shadow cannot take a class.
-// Same hue as --primary (222 95% 63%).
-// ---------------------------------------------------------------------------
+// --on-photo-fg (0 0% 100%) — opaque white for ActivityIndicator color prop.
+const ON_PHOTO_FG = '#ffffff'; // = --on-photo-fg (0 0% 100%); RN ActivityIndicator color prop can't take a NativeWind class
+
+// PRIMARY_GLOW: shadowColor for the brand glow. RN shadowColor can't take a NativeWind class.
+// Intentionally a brighter, more-saturated value than --primary (221 83% 53%) to read as a glow over the photo.
 const PRIMARY_GLOW = 'hsl(222 95% 63%)';
 
 // ---------------------------------------------------------------------------
@@ -385,7 +388,7 @@ export default function LoginScreen() {
               >
                 {isSubmitting ? (
                   <>
-                    <ActivityIndicator size={17} color="white" />
+                    <ActivityIndicator size={17} color={ON_PHOTO_FG} />
                     <Text
                       className="text-on-photo text-[15.5px]"
                       style={{ fontFamily: 'SplineSans_600SemiBold' }}
