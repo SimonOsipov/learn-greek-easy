@@ -1,10 +1,13 @@
 /**
- * LOGIN-06 (MOB-09) — email + password glass input fields.
+ * LOGIN-07 (MOB-09) — inline email validation + formValid gating.
  *
- * Builds on LOGIN-05 over-photo shell + segmented control + heading. Adds:
- *  - Local email, password, showPassword state
- *  - Glass email input (label + TextInput)
- *  - Glass password input (label + "Forgot?" link in signin mode + TextInput + eye toggle)
+ * Builds on LOGIN-06 email + password glass fields. Adds:
+ *  - EMAIL_RE regex for basic email validation
+ *  - emailError state (show-flag: set on blur when email is non-empty + invalid)
+ *  - Danger border on email container when emailError
+ *  - Inline error row (AlertCircle + message) under email field when emailError
+ *  - formValid derived flag (emailValid && password.length >= 6) — consumed by LOGIN-08 CTA
+ *  - Clear emailError + server error on edit (email onChangeText); clear server error on password edit
  *
  * Icon coloring: cssInterop maps className → style → color prop for lucide icons.
  * This is the same nativeStyleToProp pattern used by react-native-css-interop itself
@@ -21,7 +24,7 @@
  *
  * Animation: react-native-reanimated useSharedValue + withTiming (180ms).
  *
- * Design tokens: on-photo palette only; no new raw color literals.
+ * Design tokens: on-photo + danger palette only; no new raw color literals.
  * The ONLY sanctioned raw-literal color values are the three gradient stops
  * (commented inline) — expo-linear-gradient colors[] cannot accept NativeWind classes.
  */
@@ -31,7 +34,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { cssInterop } from 'nativewind';
-import { Eye, EyeOff } from 'lucide-react-native';
+import { AlertCircle, Eye, EyeOff } from 'lucide-react-native';
 
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -41,6 +44,7 @@ import { useAuthStore } from '@/stores/auth-store';
 // uses for ActivityIndicator internally. This lets us write
 // <Eye className="text-on-photo/60" /> without any raw color literals.
 // ---------------------------------------------------------------------------
+cssInterop(AlertCircle, { className: { target: 'style', nativeStyleToProp: { color: true } } });
 cssInterop(Eye, { className: { target: 'style', nativeStyleToProp: { color: true } } });
 cssInterop(EyeOff, { className: { target: 'style', nativeStyleToProp: { color: true } } });
 
@@ -52,14 +56,29 @@ cssInterop(EyeOff, { className: { target: 'style', nativeStyleToProp: { color: t
 // ---------------------------------------------------------------------------
 const ON_PHOTO_PLACEHOLDER = 'rgba(255,255,255,0.5)'; // --on-photo-fg / 50
 
+// ---------------------------------------------------------------------------
+// Email validation — basic pattern: local@domain.tld (no over-engineering).
+// ---------------------------------------------------------------------------
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function LoginScreen() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const clearError = useAuthStore((s) => s.clearError);
 
-  // Field state (wired to submit in LOGIN-07+)
+  // Field state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Email validation show-flag: set true on blur when email is non-empty + invalid.
+  // Cleared on edit so the error disappears as soon as the user starts correcting.
+  const [emailError, setEmailError] = useState(false);
+
+  // Derived validation — independent of the show-flag so formValid is accurate
+  // even before blur (LOGIN-08 CTA consumes formValid).
+  const emailValid = EMAIL_RE.test(email);
+  const formValid = emailValid && password.length >= 6; // consumed by LOGIN-08 CTA
+  void formValid; // consumed by LOGIN-08 CTA — suppress unused-var lint
 
   // thumb position: 0 = left (signin), 1 = right (signup).
   const thumbProgress = useSharedValue(0);
@@ -158,7 +177,12 @@ export default function LoginScreen() {
                 >
                   Email
                 </Text>
-                <View className="h-[47px] rounded-[13px] bg-on-photo/10 border border-on-photo/22 justify-center px-4">
+                {/* Glass input container — danger border when emailError */}
+                <View
+                  className={`h-[47px] rounded-[13px] bg-on-photo/10 border justify-center px-4 ${
+                    emailError ? 'border-danger/70' : 'border-on-photo/22'
+                  }`}
+                >
                   <TextInput
                     className="text-on-photo text-[15px] flex-1"
                     placeholder="you@example.com"
@@ -168,9 +192,28 @@ export default function LoginScreen() {
                     autoComplete="email"
                     autoCorrect={false}
                     value={email}
-                    onChangeText={setEmail}
+                    onChangeText={(text) => {
+                      setEmail(text);
+                      setEmailError(false); // clear validation error while correcting
+                      clearError(); // clear any server error
+                    }}
+                    onBlur={() => {
+                      // Only show the error after blur and only when non-empty + invalid
+                      if (email.length > 0 && !EMAIL_RE.test(email)) {
+                        setEmailError(true);
+                      }
+                    }}
                   />
                 </View>
+                {/* Inline email error message — shown only after blur + invalid */}
+                {emailError && (
+                  <View className="flex-row items-center gap-1">
+                    <AlertCircle className="text-danger-softer" size={13} />
+                    <Text className="text-danger-softer text-[12px]">
+                      Enter a valid email address.
+                    </Text>
+                  </View>
+                )}
               </View>
 
               {/* Password field */}
@@ -204,7 +247,10 @@ export default function LoginScreen() {
                     secureTextEntry={!showPassword}
                     autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
                     value={password}
-                    onChangeText={setPassword}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      clearError(); // clear any server error
+                    }}
                   />
                   {/* Eye toggle — touch target >=44x44 via hitSlop (icon 20px + 12px each side = 44px) */}
                   <Pressable
