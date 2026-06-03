@@ -1,31 +1,65 @@
 /**
- * LOGIN-05 (MOB-09) — mode state + segmented signin/signup control.
+ * LOGIN-06 (MOB-09) — email + password glass input fields.
  *
- * Builds on LOGIN-04 over-photo shell. Adds:
- *  - mode: 'signin' | 'signup' state
- *  - Glass segmented control (animated sliding thumb via Reanimated, ~180ms)
- *  - Heading copy swaps by mode
- *  - clearError called on mode switch; email/password preserved (added LOGIN-06)
+ * Builds on LOGIN-05 over-photo shell + segmented control + heading. Adds:
+ *  - Local email, password, showPassword state
+ *  - Glass email input (label + TextInput)
+ *  - Glass password input (label + "Forgot?" link in signin mode + TextInput + eye toggle)
+ *
+ * Icon coloring: cssInterop maps className → style → color prop for lucide icons.
+ * This is the same nativeStyleToProp pattern used by react-native-css-interop itself
+ * (see node_modules/react-native-css-interop/src/runtime/components.ts).
+ *
+ * placeholderTextColor: --on-photo-fg is theme-invariant pure white (0 0% 100%).
+ * We derive the placeholder value from that constant so no raw hex is scattered.
+ * See ON_PHOTO_PLACEHOLDER constant below — it ties back to --on-photo-fg / 50.
+ *
+ * Flat translucent View used instead of BlurView: BlurView nests inside a scroll
+ * context here, which can cause a blur-layer z-index glitch on Android and adds
+ * unnecessary composition complexity for a 47px field. The flat bg-on-photo/10
+ * approach is the sanctioned fallback per the spec.
  *
  * Animation: react-native-reanimated useSharedValue + withTiming (180ms).
- * This avoids accessing .current during render, satisfying react-hooks/refs.
  *
- * Design tokens: on-photo palette + App primary only.
+ * Design tokens: on-photo palette only; no new raw color literals.
  * The ONLY sanctioned raw-literal color values are the three gradient stops
- * below (commented inline) — expo-linear-gradient colors[] cannot accept
- * NativeWind class references.
+ * (commented inline) — expo-linear-gradient colors[] cannot accept NativeWind classes.
  */
 import { useState } from 'react';
-import { ImageBackground, Pressable, ScrollView, Text, View } from 'react-native';
+import { ImageBackground, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { cssInterop } from 'nativewind';
+import { Eye, EyeOff } from 'lucide-react-native';
 
 import { useAuthStore } from '@/stores/auth-store';
+
+// ---------------------------------------------------------------------------
+// lucide icon cssInterop — maps className → style → color prop.
+// Pattern: nativeStyleToProp: { color: true } — same as react-native-css-interop
+// uses for ActivityIndicator internally. This lets us write
+// <Eye className="text-on-photo/60" /> without any raw color literals.
+// ---------------------------------------------------------------------------
+cssInterop(Eye, { className: { target: 'style', nativeStyleToProp: { color: true } } });
+cssInterop(EyeOff, { className: { target: 'style', nativeStyleToProp: { color: true } } });
+
+// ---------------------------------------------------------------------------
+// --on-photo-fg is theme-invariant pure white (0 0% 100%).
+// This constant is the single source for placeholder / similar RN props that
+// cannot accept a NativeWind className.  Tied to --on-photo-fg in global.css.
+// /50 opacity = 128/255 ≈ 0.5
+// ---------------------------------------------------------------------------
+const ON_PHOTO_PLACEHOLDER = 'rgba(255,255,255,0.5)'; // --on-photo-fg / 50
 
 export default function LoginScreen() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const clearError = useAuthStore((s) => s.clearError);
+
+  // Field state (wired to submit in LOGIN-07+)
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // thumb position: 0 = left (signin), 1 = right (signup).
   const thumbProgress = useSharedValue(0);
@@ -102,7 +136,7 @@ export default function LoginScreen() {
             />
 
             {/* Heading block */}
-            <View className="mt-5 mb-8 gap-[6px]">
+            <View className="mt-5 mb-6 gap-[6px]">
               <Text
                 className="text-on-photo text-[29px] tracking-tight"
                 style={{ fontFamily: 'InterTight_700Bold' }}
@@ -112,6 +146,81 @@ export default function LoginScreen() {
               <Text className="text-on-photo/72 text-[13.5px] font-sans">
                 {headingSubtitle}
               </Text>
+            </View>
+
+            {/* Input fields */}
+            <View className="gap-[11px] mb-8">
+              {/* Email field */}
+              <View className="gap-[6px]">
+                <Text
+                  className="text-on-photo/78 text-[12px]"
+                  style={{ fontFamily: 'SplineSans_500Medium' }}
+                >
+                  Email
+                </Text>
+                <View className="h-[47px] rounded-[13px] bg-on-photo/10 border border-on-photo/22 justify-center px-4">
+                  <TextInput
+                    className="text-on-photo text-[15px] flex-1"
+                    placeholder="you@example.com"
+                    placeholderTextColor={ON_PHOTO_PLACEHOLDER}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    autoCorrect={false}
+                    value={email}
+                    onChangeText={setEmail}
+                  />
+                </View>
+              </View>
+
+              {/* Password field */}
+              <View className="gap-[6px]">
+                {/* Label row: "Password" on left, "Forgot?" on right (signin only) */}
+                <View className="flex-row items-center justify-between">
+                  <Text
+                    className="text-on-photo/78 text-[12px]"
+                    style={{ fontFamily: 'SplineSans_500Medium' }}
+                  >
+                    Password
+                  </Text>
+                  {mode === 'signin' && (
+                    <Pressable>
+                      <Text
+                        className="text-on-photo text-[12px]"
+                        style={{ fontFamily: 'SplineSans_600SemiBold' }}
+                      >
+                        Forgot?
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+
+                {/* Glass input container */}
+                <View className="h-[47px] rounded-[13px] bg-on-photo/10 border border-on-photo/22 flex-row items-center px-4">
+                  <TextInput
+                    className="text-on-photo text-[15px] flex-1"
+                    placeholder="••••••••"
+                    placeholderTextColor={ON_PHOTO_PLACEHOLDER}
+                    secureTextEntry={!showPassword}
+                    autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                    value={password}
+                    onChangeText={setPassword}
+                  />
+                  {/* Eye toggle — touch target >=44x44 via hitSlop (icon 20px + 12px each side = 44px) */}
+                  <Pressable
+                    onPress={() => setShowPassword((prev) => !prev)}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                    accessibilityRole="button"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="text-on-photo/60" size={20} />
+                    ) : (
+                      <Eye className="text-on-photo/60" size={20} />
+                    )}
+                  </Pressable>
+                </View>
+              </View>
             </View>
           </ScrollView>
         </SafeAreaView>
