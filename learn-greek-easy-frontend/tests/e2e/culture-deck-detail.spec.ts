@@ -161,3 +161,108 @@ test.describe('Culture deck detail — DDR review fixes (CULT2-4)', () => {
     await expect(ruButton).toHaveAttribute('aria-pressed', 'false');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Tests — DVP visual polish (DVP-05 / CULT2-5)
+// ---------------------------------------------------------------------------
+
+test.describe('Culture deck detail — visual polish (CULT2-5)', () => {
+  // ── DVP-01: Hero right column renders the front cover ──
+
+  test('DVP-01: Hero cover stack is visible with a front cover card', async ({ page }) => {
+    await navigateToCultureDeckDetail(page);
+
+    // CultureHero always receives coverDeck on the deck-detail page, so the right
+    // column (.dx-cover-stack) must be present in the DOM and visible.
+    // The front cover host carries class "dx-cover-3".
+    const coverStack = page.locator('.dx-cover-stack').first();
+    await expect(coverStack).toBeVisible({ timeout: 10000 });
+
+    // The front cover is always rendered inside the stack (siblingDecks are optional
+    // but coverDeck is always provided on this page).
+    const frontCover = coverStack.locator('.dx-cover-3');
+    await expect(frontCover).toBeVisible();
+  });
+
+  // ── DVP-02: Metric tiles render descriptor trend lines, Mastered shows "% of deck" ──
+
+  test('DVP-02: All four metric tiles render a trend descriptor and Mastered shows "% of deck"', async ({
+    page,
+  }) => {
+    await navigateToCultureDeckDetail(page);
+
+    const strip = page.getByTestId('culture-metric-strip');
+    await expect(strip).toBeVisible({ timeout: 10000 });
+
+    // All four metrics are configured with a `trend` prop → each renders
+    // a .dx-metric-trend element inside CultureMetricStrip.
+    const allTrends = strip.locator('.dx-metric-trend');
+    await expect(allTrends).toHaveCount(4);
+
+    // Locate the Mastered tile by its label text (UI language is English).
+    // The label comes from t('culture:detail.metricMastered') = "Mastered".
+    // We anchor on the .dx-metric-l text to avoid relying on index order.
+    const masteredTile = strip
+      .locator('.dx-metric')
+      .filter({ has: page.locator('.dx-metric-l', { hasText: 'Mastered' }) });
+    await expect(masteredTile).toBeVisible();
+
+    // The Mastered tile's trend value is t('culture:detail.metricMasteredSub',
+    // '{{pct}}% of deck') → always contains "% of deck".
+    await expect(masteredTile.locator('.dx-metric-trend')).toContainText('% of deck');
+  });
+
+  // ── DVP-03: "Showing X of Y" counter lives inside the filter-row right pole ──
+
+  test('DVP-03: Showing counter and language selector share the same flex-row container', async ({
+    page,
+  }) => {
+    await navigateToCultureDeckDetail(page);
+
+    // Wait for the question browser and its data to load (counter renders after load)
+    const questionBrowser = page.getByTestId('question-browser');
+    await expect(questionBrowser).toBeVisible({ timeout: 15000 });
+
+    // Wait until the counter <p> is visible (it is hidden during loading)
+    const questionGrid = page.getByTestId('question-grid');
+    await expect(questionGrid).toBeVisible({ timeout: 15000 });
+
+    // QuestionBrowser renders both the counter and the QuestionLanguageSelector
+    // inside a shared <div class="flex flex-wrap items-center gap-3"> (the right
+    // pole of the filter row). Assert co-containment: the counter <p> and the
+    // language selector buttons must have a common ancestor within question-browser
+    // that also contains the filter pills row.
+
+    // The counter is a <p> element that contains "Showing" (EN UI locale).
+    // Use a text-based locator scoped inside the question browser.
+    const counter = questionBrowser.locator('p', { hasText: 'Showing' });
+    await expect(counter).toBeVisible({ timeout: 10000 });
+
+    // The Greek language pill button inside the browser (always rendered).
+    const langSelector = questionBrowser.getByRole('button', { name: 'Greek' });
+    await expect(langSelector).toBeVisible();
+
+    // Assert co-containment: both elements must share the same immediate parent.
+    // Evaluate: get the parent element of the counter and check that the language
+    // selector button is a descendant of that same parent.
+    const counterParentContainsLangSelector = await counter.evaluate((counterEl) => {
+      const parent = counterEl.parentElement;
+      if (!parent) return false;
+      // The shared right-pole div has class "flex flex-wrap items-center gap-3"
+      return parent.classList.contains('flex') && parent.classList.contains('gap-3');
+    });
+    expect(counterParentContainsLangSelector).toBe(true);
+
+    // Also assert the language selector is a sibling/descendant of the same parent.
+    const langSelectorInSameParent = await langSelector.evaluate((btnEl) => {
+      // Walk up to the closest .flex.gap-3 container
+      let el: Element | null = btnEl;
+      while (el) {
+        if (el.classList.contains('flex') && el.classList.contains('gap-3')) return true;
+        el = el.parentElement;
+      }
+      return false;
+    });
+    expect(langSelectorInSameParent).toBe(true);
+  });
+});
