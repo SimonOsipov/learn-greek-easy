@@ -369,18 +369,4 @@ test.describe('DX-15: Word Reference — UnwiredDot presence (R3-R8)', () => {
     expect(page.url()).not.toBe(initialUrl);
     expect(page.url()).toMatch(/\/decks\/.+\/words\/.+/);
   });
-
-  test('DX-15.11: R8 — Audio card group UnwiredDot visible', async ({ page }) => {
-    await navigateToWordReference(page);
-    await page.getByTestId('word-reference-tab-cards').click();
-    await expect(page.getByTestId('cards-summary-bar')).toBeVisible({ timeout: 10000 });
-
-    // R8: Audio group is a placeholder; it has an UnwiredDot wrapping the TypeChip
-    const audioGroup = page.locator('[data-testid="card-group-audio"]');
-    const hasAudioGroup = await audioGroup.isVisible({ timeout: 5000 }).catch(() => false);
-    if (hasAudioGroup) {
-      const audioDot = audioGroup.locator('[data-testid="unwired-dot"]').first();
-      await expect(audioDot).toBeVisible();
-    }
-  });
 });

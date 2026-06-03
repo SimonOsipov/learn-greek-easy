@@ -90,7 +90,6 @@ describe('deck.dx — DX-13 new keys present in both locales', () => {
     'dx.unwiredTooltip',
     'dx.unwiredHeatmap',
     'dx.unwiredCollocations',
-    'dx.unwiredAudioGroup',
     'dx.premiumContent',
     'dx.masteryStatus',
   ];

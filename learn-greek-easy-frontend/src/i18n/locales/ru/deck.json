@@ -354,7 +354,6 @@
     "sectionCollocations": "Словосочетания",
     "sectionRelatedWords": "Похожие слова",
     "relatedWordsEyebrow": "Ещё слова из словаря",
-    "groupAudio": "Аудио",
     "groupCardCount": "{{n}} карточек",
     "cardsViewToggleLabel": "Вид карточек",
     "cardsViewGrid": "Сетка",
@@ -397,7 +396,6 @@
     "unwiredTooltip": "Заглушка — данные ещё не подключены.",
     "unwiredHeatmap": "Тепловая карта практики — заглушка, данные ещё не подключены.",
     "unwiredCollocations": "Словосочетания — данные ещё не подключены.",
-    "unwiredAudioGroup": "Аудиокарточки — ещё не доступны.",
     "premiumContent": "Премиум контент",
     "masteryStatus": "Статус: {{status}}"
   }

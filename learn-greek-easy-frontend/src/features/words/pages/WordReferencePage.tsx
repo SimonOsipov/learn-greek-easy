@@ -214,10 +214,8 @@ export function WordReferencePage() {
   const showCollocations = useFlag(FLAGS.collocations);
 
   const groupedCards = useMemo(() => groupCards(masteryCards), [masteryCards]);
-  // Summary totals EXCLUDE the synthetic Audio placeholder (isPlaceholder=true)
-  const realCards = masteryCards; // masteryCards never includes audio — placeholder is synthetic
-  const totalCards = realCards.length;
-  const masteredCards = realCards.filter(
+  const totalCards = masteryCards.length;
+  const masteredCards = masteryCards.filter(
     (c: CardMasteryItem) => c.mastery_status === 'mastered'
   ).length;
 
@@ -401,7 +399,7 @@ export function WordReferencePage() {
                 {t('deck:wordReference.cardsRetry')}
               </Button>
             </div>
-          ) : groupedCards.filter((g) => !g.isPlaceholder).length === 0 ? (
+          ) : groupedCards.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground" data-testid="cards-tab-empty">
               <p className="text-sm">{t('deck:wordReference.cardsEmpty')}</p>
             </div>
@@ -420,7 +418,6 @@ export function WordReferencePage() {
                   masteredCount={group.masteredCount}
                   totalCount={group.totalCount}
                   tone={group.tone}
-                  isPlaceholder={group.isPlaceholder}
                   wordEntryId={wordId ?? ''}
                   deckId={deckId ?? ''}
                   view={cardsView}

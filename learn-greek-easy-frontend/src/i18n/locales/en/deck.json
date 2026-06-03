@@ -354,7 +354,6 @@
     "sectionCollocations": "Collocations",
     "sectionRelatedWords": "Related words",
     "relatedWordsEyebrow": "Vocabulary network",
-    "groupAudio": "Audio",
     "groupCardCount": "{{n}} cards",
     "cardsViewToggleLabel": "Cards view",
     "cardsViewGrid": "Grid view",
@@ -397,7 +396,6 @@
     "unwiredTooltip": "Placeholder — not yet connected to backend data.",
     "unwiredHeatmap": "Practice heatmap — placeholder, not yet connected to backend data.",
     "unwiredCollocations": "Collocations — not yet connected to backend data.",
-    "unwiredAudioGroup": "Audio cards — not yet available.",
     "premiumContent": "Premium content",
     "masteryStatus": "Mastery: {{status}}"
   }
