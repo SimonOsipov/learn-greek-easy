@@ -116,28 +116,6 @@ describe('CardTypeGroup', () => {
     expect(grid).not.toBeInTheDocument();
   });
 
-  it('Audio group shows exactly one UnwiredDot with danger tone', () => {
-    render(
-      <CardTypeGroup
-        groupKey="audio"
-        i18nKey="groupAudio"
-        cards={[]}
-        masteredCount={0}
-        totalCount={0}
-        tone="amber"
-        isPlaceholder={true}
-        wordEntryId="we-1"
-        deckId="deck-1"
-      />
-    );
-    const dots = document.querySelectorAll('.dx-unwired-dot');
-    expect(dots).toHaveLength(1);
-    // danger tone: the marker has no data-tone (danger is default, no attribute set)
-    const marker = dots[0].querySelector('.dx-unwired-dot-marker');
-    expect(marker).toBeInTheDocument();
-    expect(marker).not.toHaveAttribute('data-tone', 'amber');
-  });
-
   it('fires track("word_reference_card_flipped") with to_back on first flip', async () => {
     render(<CardTypeGroup {...defaultProps} />);
     const card = screen.getByTestId('mock-mini-flip-card-meaning_el_to_en');

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Automated execution of a single user story's Backlog subtasks through 4 mandatory quality gates (Architecture → Explore → Execution → QA Verify). Runs in an isolated git worktree so multiple stories can be worked in parallel from separate terminals without colliding.
+Automated execution of a single user story's Backlog subtasks through 4 mandatory per-subtask quality gates (Architecture → Explore → Execution → QA Verify), followed by a story-level visual QA gate (Phase 3.5) that checks the assembled feature against the original objective on the preview deploy. Runs in an isolated git worktree so multiple stories can be worked in parallel from separate terminals without colliding.
 
 **Invocation**: `/ralph <STORY-ID>` (e.g., `/ralph SIT-07`). One story per invocation. To run multiple stories in parallel, open another terminal and invoke `/ralph SIT-09` — each invocation creates its own worktree, branch, and PR.
 
@@ -136,7 +136,9 @@ For each subtask, in dependency order, execute the 4 stages below. Delegate to s
 | Architecture | product-architecture-spec | Always — review/enhance the implementation plan (includes plan self-validation) |
 | Explore | Explore | Always — verify files, patterns, and placement |
 | Execution | product-executor | Always — implement all code changes |
-| QA Verify | product-qa-spec | Always — verify implementation correctness |
+| QA Verify | product-qa-spec | Always — verify implementation correctness (skeptical by default; see the agent's Critique Disposition) |
+
+> A second, **story-level** QA pass runs once after all subtasks complete — see **Phase 3.5: Story-Level Visual QA Gate**.
 
 #### Fallback: If Subagent Spawning Fails
 Read the corresponding agent technical prompt file BEFORE executing the stage yourself:
@@ -176,7 +178,7 @@ Read the corresponding agent technical prompt file BEFORE executing the stage yo
 - **Checkpoint:** `EXECUTION_DONE`
 
 #### Stage 4: QA Verification
-- Spawn a `product-qa-spec` subagent via Task tool
+- Spawn a `product-qa-spec` subagent via Task tool. It runs in its **default critique disposition** (skeptical, anchors on acceptance criteria not the diff, cites evidence per verdict — see `~/.claude/agents/product-qa-spec.md`).
 - Pass it: acceptance criteria, implementation plan, list of changed files, Definition of Done items
 - Backend-only: verify tests pass, model/schema correctness
 - Frontend: use Playwright MCP for visual verification (against the PR's preview deploy URL once available)
@@ -210,11 +212,22 @@ After the FINAL subtask's Stage 4 completes:
    - Agree with comment → fix in code (inside worktree), commit, push
    - Disagree or N/A → skip
 3. After CodeRabbit fixes pushed, monitor CI again until green.
-4. **Move all subtasks to "Done"**:
-   ```
-   For each subtask ID: mcp__backlog__task_edit(id=task_id, status="Done")
-   ```
-5. Output `<promise>ALL_TASKS_COMPLETE</promise>`.
+4. **Proceed to Phase 3.5** below — do NOT move subtasks to "Done" or emit completion until the story-level visual QA gate passes.
+
+### Phase 3.5: Story-Level Visual QA Gate
+
+Runs **once per story**, after CI is green and CodeRabbit is addressed, against the **PR preview deploy** (pre-merge — production only deploys *after* merge, so this is the last gate before merge). A second, independent QA pass at **story altitude**: it verifies the *assembled feature against the original objective*, not per-subtask diffs. This closes the blind spot where every subtask diff passes individually yet the whole feature misses the goal.
+
+1. **Resolve the preview URL** for the PR (same source Stage 4 uses for Playwright). If no preview is live yet, wait for it.
+2. **Read the original acceptance criteria** from the Obsidian parent story (the original objective — NOT the possibly-edited subtask ACs).
+3. **Spawn `product-qa-spec`** (default critique disposition). For **each** acceptance criterion, drive the preview with Playwright and emit `pass | fail` **plus a screenshot** as evidence. A holistic "looks done" is not allowed — every AC needs its own pixel proof.
+   - **Style:** hold the UI to `docs/design-system.md`. A style defect that cites a design-system rule (token drift, wrong `src/components/ui/*` primitive, palette crossing, off-scale spacing) is a real fail. Pure taste with no citable rule → **advisory, escalate to the user, never bounce the executor**.
+4. **Fix loop (cap 2 cycles):** batch ALL fails into one report → spawn `product-executor` to fix inside the worktree → push → redeploy preview → re-verify only the failed ACs. Every bounce must cite an AC id or a design-system rule. After **2** cycles, stop and **escalate remaining fails to the user** — each redeploy is expensive, do not grind.
+5. **Log** to the story's `… QA Debate Log.md` (the same file `/qa-verify` writes, next to the story) under a `## Post-Deploy Visual QA — <date>` section: per-AC verdict, screenshot reference, fix cycles used, and any design-system citations / advisory style notes.
+6. **On PASS** (all original ACs pass, no unresolved bounces):
+   - Move all subtasks to "Done": `For each subtask ID: mcp__backlog__task_edit(id=task_id, status="Done")`
+   - Output `<promise>ALL_TASKS_COMPLETE</promise>`.
+   **On unresolved fails after 2 cycles:** leave subtasks "In Progress", do NOT emit completion, and surface the escalation to the user.
 
 ### Phase 4: Worktree Cleanup
 
@@ -245,7 +258,7 @@ branch: feature/sit-07-description-audio
 worktree_path: /Users/samosipov/Downloads/learn-greek-easy/.claude/worktrees/sit-07
 pr_number: null   # set after FIRST subtask creates the PR
 current_subtask: SIT-07-02
-stage: execution   # architecture | explore | execution | qa-verify
+stage: execution   # architecture | explore | execution | qa-verify | visual-qa
 completed_subtasks:
   - SIT-07-01
 blockers: []
@@ -300,7 +313,8 @@ gh run list --branch "$BRANCH" --limit 1 --json databaseId,status -q '.[0]'
 3. **Subtask status transitions**:
    - Start: "To Do" → "In Progress" (during Phase 0.5)
    - Complete: "In Progress" → "Done" (after CI test checks pass AND CodeRabbit fixes committed)
-4. Output `<promise>ALL_TASKS_COMPLETE</promise>` ONLY after moving subtasks to "Done"
+4. **Story-Level Visual QA Gate (Phase 3.5) must pass** before completion — all original acceptance criteria verified visually on the preview deploy, no unresolved bounces
+5. Output `<promise>ALL_TASKS_COMPLETE</promise>` ONLY after Phase 3.5 passes AND subtasks are moved to "Done"
 
 ---
 
@@ -324,3 +338,6 @@ gh run list --branch "$BRANCH" --limit 1 --json databaseId,status -q '.[0]'
 | Sleeping/polling tightly for CI | Poll every 3 minutes per CI Monitoring Protocol |
 | Waiting indefinitely for stuck E2E shard | Check logs — if only setup steps, treat as passed |
 | Not cleaning up worktree after merge | Run /post-merge-cleanup or `git worktree remove` manually |
+| Bouncing the executor on uncited taste | Style fails must cite a docs/design-system.md rule; pure taste is advisory → escalate to the user |
+| Emitting ALL_TASKS_COMPLETE before Phase 3.5 | The story-level visual QA gate is mandatory before completion |
+| Grinding the visual-QA fix loop past 2 cycles | Cap at 2; escalate unresolved fails to the user (each redeploy is costly) |

@@ -2,13 +2,12 @@ import type { CardRecordType } from '@/services/wordEntryAPI';
 
 import type { CardMasteryItem } from '../hooks';
 
-export type CardGroupKey = 'translation' | 'grammar' | 'declension' | 'audio';
+export type CardGroupKey = 'translation' | 'grammar' | 'declension';
 
-export const GROUP_TONE: Record<CardGroupKey, 'primary' | 'violet' | 'cyan' | 'amber'> = {
+export const GROUP_TONE: Record<CardGroupKey, 'primary' | 'violet' | 'cyan'> = {
   translation: 'primary',
   grammar: 'violet',
   declension: 'cyan',
-  audio: 'amber',
 };
 
 export interface CardGroupDefinition {
@@ -23,8 +22,7 @@ export interface GroupedCards {
   cards: CardMasteryItem[];
   masteredCount: number;
   totalCount: number;
-  tone: 'primary' | 'violet' | 'cyan' | 'amber';
-  isPlaceholder?: boolean;
+  tone: 'primary' | 'violet' | 'cyan';
 }
 
 const CARD_GROUPS: CardGroupDefinition[] = [
@@ -46,7 +44,7 @@ const CARD_GROUPS: CardGroupDefinition[] = [
 ];
 
 export function groupCards(cards: CardMasteryItem[]): GroupedCards[] {
-  const buckets: Record<Exclude<CardGroupKey, 'audio'>, CardMasteryItem[]> = {
+  const buckets: Record<CardGroupKey, CardMasteryItem[]> = {
     translation: [],
     grammar: [],
     declension: [],
@@ -55,15 +53,15 @@ export function groupCards(cards: CardMasteryItem[]): GroupedCards[] {
   for (const card of cards) {
     const group = CARD_GROUPS.find((g) => (g.types as string[]).includes(card.card_type));
     if (group) {
-      buckets[group.key as Exclude<CardGroupKey, 'audio'>].push(card);
+      buckets[group.key].push(card);
     } else {
       // Unknown types fall into grammar catch-all
       buckets.grammar.push(card);
     }
   }
 
-  const realGroups = CARD_GROUPS.map((def) => {
-    const groupItems = buckets[def.key as Exclude<CardGroupKey, 'audio'>];
+  return CARD_GROUPS.map((def) => {
+    const groupItems = buckets[def.key];
     return {
       key: def.key,
       i18nKey: def.i18nKey,
@@ -73,17 +71,4 @@ export function groupCards(cards: CardMasteryItem[]): GroupedCards[] {
       tone: GROUP_TONE[def.key],
     };
   }).filter((g) => g.totalCount > 0);
-
-  // Synthetic Audio placeholder — always appended, excluded from summary totals
-  const audioPlaceholder: GroupedCards = {
-    key: 'audio',
-    i18nKey: 'groupAudio',
-    cards: [],
-    masteredCount: 0,
-    totalCount: 0,
-    tone: GROUP_TONE.audio,
-    isPlaceholder: true,
-  };
-
-  return [...realGroups, audioPlaceholder];
 }
