@@ -23,6 +23,7 @@ import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { useAuth } from '@/hooks/use-auth';
+import { useUserSettings } from '@/hooks/use-user-settings';
 import { getPostHog, registerSuperProperties } from '@/lib/analytics/posthog';
 import { queryClient } from '@/lib/query-client';
 import { initSentry } from '@/lib/sentry';
@@ -32,6 +33,45 @@ initSentry();
 // Declare (app) as the anchor so Stack.Protected falls through to (auth)/login
 // when guard=false, instead of landing on the default root index.
 export const unstable_settings = { anchor: '(app)' };
+
+/**
+ * Inner navigator rendered inside QueryClientProvider + ThemeProvider.
+ * Must be a separate component so useUserSettings() (which calls useQuery)
+ * runs inside the QueryClientProvider — calling it in RootLayout would throw
+ * "No QueryClient set" because the provider is established by RootLayout's
+ * own return value.
+ */
+function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
+  const { session, isLoading } = useAuth();
+  const settingsQuery = useUserSettings(); // enabled: !!session
+
+  // For a signed-out session, settingsQuery is disabled:
+  //   isPending=true (no data ever fetched) BUT isLoading=false
+  //   (isLoading = isPending && isFetching; disabled queries never fetch).
+  // Using isLoading (not isPending) means the gate resolves immediately
+  // when signed out — isPending would hang the splash forever.
+  const onboardingComplete = settingsQuery.data?.tour_completed_at != null;
+  const ready = !isLoading && fontsReady && !settingsQuery.isLoading;
+
+  return (
+    <>
+      <AnimatedSplashOverlay isReady={ready} />
+      {ready && (
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Protected guard={!!session && !onboardingComplete}>
+            <Stack.Screen name="(onboarding)" />
+          </Stack.Protected>
+          <Stack.Protected guard={!!session && onboardingComplete}>
+            <Stack.Screen name="(app)" />
+          </Stack.Protected>
+          <Stack.Protected guard={!session}>
+            <Stack.Screen name="(auth)" />
+          </Stack.Protected>
+        </Stack>
+      )}
+    </>
+  );
+}
 
 function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -49,7 +89,6 @@ function RootLayout() {
   const fontsReady = fontsLoaded || !!fontError;
 
   const colorScheme = useColorScheme();
-  const { session, isLoading } = useAuth();
   const posthog = getPostHog();
 
   useEffect(() => {
@@ -62,19 +101,9 @@ function RootLayout() {
     registerSuperProperties(colorScheme ?? 'light');
   }, [colorScheme]);
 
-  const tree = (
+  const navigator = (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay isReady={!isLoading && fontsReady} />
-      {!isLoading && fontsReady && (
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Protected guard={!!session}>
-            <Stack.Screen name="(app)" />
-          </Stack.Protected>
-          <Stack.Protected guard={!session}>
-            <Stack.Screen name="(auth)" />
-          </Stack.Protected>
-        </Stack>
-      )}
+      <RootNavigator fontsReady={fontsReady} />
     </ThemeProvider>
   );
 
@@ -82,10 +111,10 @@ function RootLayout() {
     <QueryClientProvider client={queryClient}>
       {posthog ? (
         <PostHogProvider client={posthog} autocapture={false}>
-          {tree}
+          {navigator}
         </PostHogProvider>
       ) : (
-        tree
+        navigator
       )}
     </QueryClientProvider>
   );
