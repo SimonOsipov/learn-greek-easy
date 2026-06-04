@@ -4,7 +4,7 @@
 //
 // Renders:
 //   - Check label + answer text (font determined by isElAnswer)
-//   - Optional example block (sentence_ru translation + example audio chip)
+//   - Optional example block (Greek example + EN gloss / RU translation + example audio)
 //   - Inert typed-result chip slot (filled by PRACT2-1-08 type mode)
 //
 // isElAnswer derivation (centralised here):
@@ -15,6 +15,13 @@
 //
 // declension suppression: the filled-table IS the answer for declension;
 //   this component renders nothing for that family (AC #5).
+//
+// Example block gate (PRACT2-3-07, updated Option C):
+//   EN mode: example TEXT block renders iff example_el or example_en is present.
+//   RU mode: example TEXT block renders iff sentence_ru is present.
+//   Audio: the answer speaker renders whenever the resolved audio URL is present —
+//   it is the visible "hear the Greek answer" affordance and does NOT require an
+//   accompanying text example. Only the text block is gated on text presence.
 
 import { Check } from 'lucide-react';
 
@@ -53,8 +60,8 @@ export interface AnswerProps {
   /** The raw StudyQueueCard — for example block and audio URL resolution. */
   card: StudyQueueCard;
   /**
-   * Optional audio chip state for the example audio.
-   * Rendered only when example_audio_url is present on the card.
+   * Optional audio chip state for the example/answer audio.
+   * Rendered whenever the resolved audio URL is present — the text example is not required.
    */
   exampleAudioState?: AudioChipState | null;
   /**
@@ -65,7 +72,7 @@ export interface AnswerProps {
   /**
    * Current card language selection.
    * When 'ru', show sentence_ru in the example block (if present).
-   * When 'en', hide sentence_ru (no English example field exists).
+   * When 'en', show example_el + example_en (if present).
    * Defaults to 'en' to preserve existing behaviour.
    */
   lang?: 'en' | 'ru';
@@ -93,17 +100,28 @@ export function Answer({
 
   const greek = isElAnswer(cardType);
   const exampleAudioUrl = resolveV2CardAudioUrl(card);
-  // sentence_ru is only shown when lang === 'ru' (no English equivalent field exists).
+
+  // sentence_ru is only shown when lang === 'ru'.
   const showSentenceRu = lang === 'ru' && Boolean(card.sentence_ru);
-  // Audio renders only when both url and state are present (matches the child condition below).
+
+  // EN example: show Greek example + EN gloss in EN mode (PRACT2-3-07).
+  const showExampleEn = lang === 'en' && Boolean(card.example_el || card.example_en);
+
+  // Text example present in either mode (gates only the text <p> nodes, not the audio chip).
+  const hasTextExample = showSentenceRu || showExampleEn;
+
+  // The answer speaker renders whenever the resolved audio and its state are present.
+  // Text presence is not required — the chip is the visible "hear the Greek answer" affordance.
   const showExampleAudio = Boolean(exampleAudioUrl && exampleAudioState);
-  const hasExample = showSentenceRu || showExampleAudio;
+
+  const hasExample = hasTextExample || showExampleAudio;
 
   return (
     <div className="pf-answer" data-testid="pf-answer">
-      {/* Check label */}
-      <span className="pf-answer__label" aria-hidden="true">
-        <Check className="pf-answer__check-icon" />
+      {/* Check label — icon aria-hidden; kicker text exposed to AT (PRACT2-3-03) */}
+      <span className="pf-answer__label">
+        <Check className="pf-answer__check-icon" aria-hidden="true" />
+        ANSWER
       </span>
 
       {/* Answer text — Greek or English font */}
@@ -122,15 +140,30 @@ export function Answer({
         {typedResult && <TypedResultChip verdict={typedResult} />}
       </div>
 
-      {/* Example block — sentence_ru shown only in RU mode; audio shown regardless of lang */}
+      {/* Example block — only when there is text (and optionally audio) to show */}
       {hasExample && (
         <div className="pf-answer__example" data-testid="pf-answer-example">
+          {/* RU mode: Russian sentence translation */}
           {showSentenceRu && (
             <p className="pf-answer__example-ru" data-testid="pf-answer-example-ru">
               {card.sentence_ru}
             </p>
           )}
-          {exampleAudioUrl && exampleAudioState && <AudioChip audioState={exampleAudioState} />}
+
+          {/* EN mode: Greek example + English gloss (PRACT2-3-07) */}
+          {showExampleEn && card.example_el && (
+            <p className="pf-answer__example-el" lang="el" data-testid="pf-answer-example-el">
+              {card.example_el}
+            </p>
+          )}
+          {showExampleEn && card.example_en && (
+            <p className="pf-answer__example-en" data-testid="pf-answer-example-en">
+              {card.example_en}
+            </p>
+          )}
+
+          {/* Audio: renders whenever resolved audio is present — it's the "hear the answer" affordance */}
+          {showExampleAudio && exampleAudioState && <AudioChip audioState={exampleAudioState} />}
         </div>
       )}
     </div>

@@ -370,7 +370,19 @@ export function V2FlashcardPracticePage() {
           exampleAudioState={audioState}
         />
       )}
-      <RatingRow onRate={handleRate} isFlipped={isFlipped} />
+      <RatingRow
+        onRate={handleRate}
+        isFlipped={isFlipped}
+        previews={currentQueueCard?.rating_previews}
+      />
+      {/* Press 1–4 hint (PRACT2-3-03) */}
+      <div className="pf-foot-hint">
+        <span>Press </span>
+        <kbd className="pf-kbd">1</kbd>
+        <span>–</span>
+        <kbd className="pf-kbd">4</kbd>
+        <span> to rate</span>
+      </div>
       {activeToast && <Toast interval={activeToast.interval} onDismiss={clearToast} />}
     </>
   );
@@ -432,6 +444,7 @@ export function V2FlashcardPracticePage() {
                         word={(front.main as string) ?? ''}
                         ipa={(front.sub as string | null | undefined) ?? null}
                         audioState={audioState ?? null}
+                        prompt={(front.prompt as string | null | undefined) ?? null}
                       />
                     </>
                   }
@@ -441,7 +454,8 @@ export function V2FlashcardPracticePage() {
             }
 
             if (cardType === 'meaning_en_to_el') {
-              const prompt =
+              // `word` = display word (front.main ?? front.prompt); `prompt` = subtitle
+              const displayWord =
                 (front.main as string | undefined) ?? (front.prompt as string | undefined) ?? '';
               return (
                 <PfCard
@@ -451,7 +465,10 @@ export function V2FlashcardPracticePage() {
                   body={
                     <>
                       {headEl}
-                      <TranslationEnToEl prompt={prompt} />
+                      <TranslationEnToEl
+                        word={displayWord}
+                        prompt={(front.prompt as string | null | undefined) ?? null}
+                      />
                     </>
                   }
                   foot={pfFoot}
@@ -515,6 +532,8 @@ export function V2FlashcardPracticePage() {
                         prompt={translatedPrompt}
                         main={(front.main as string) ?? ''}
                         audioState={audioState ?? null}
+                        ipa={(front.sub as string | null) ?? null}
+                        grammarTag={(front.grammar_tag as string | null) ?? null}
                       />
                     </>
                   }
@@ -551,7 +570,19 @@ export function V2FlashcardPracticePage() {
                         revealed={true}
                       />
                       {/* Answer suppressed for declension (DeclTable IS the answer) */}
-                      <RatingRow onRate={handleRate} isFlipped={isFlipped} />
+                      <RatingRow
+                        onRate={handleRate}
+                        isFlipped={isFlipped}
+                        previews={currentQueueCard?.rating_previews}
+                      />
+                      {/* Press 1–4 hint (PRACT2-3-03) */}
+                      <div className="pf-foot-hint">
+                        <span>Press </span>
+                        <kbd className="pf-kbd">1</kbd>
+                        <span>–</span>
+                        <kbd className="pf-kbd">4</kbd>
+                        <span> to rate</span>
+                      </div>
                       {activeToast && (
                         <Toast interval={activeToast.interval} onDismiss={clearToast} />
                       )}

@@ -255,6 +255,130 @@ describe('V2FlashcardPracticePage', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/decks/deck-123/words/word-456');
   });
 
+  // ── .pf-foot-hint coverage (PRACT2-3-03, AC#2) ──────────────────────────────
+
+  it('renders .pf-foot-hint with keycaps in the shared foot (non-declension card)', () => {
+    const card = {
+      card_record_id: 'cr-1',
+      word_entry_id: 'we-1',
+      deck_id: 'deck-123',
+      deck_name: 'Test Deck',
+      card_type: 'meaning_el_to_en' as const,
+      variant_key: null,
+      front_content: { main: 'νερό', sub: null, prompt: null, badge: null },
+      back_content: { main: 'water', gender: null, gender_ru: null },
+      status: 'due' as const,
+      is_new: false,
+      is_early_practice: false,
+      due_date: null,
+      easiness_factor: null,
+      interval: null,
+      audio_url: null,
+      example_audio_url: null,
+      translation_ru: null,
+      translation_ru_plural: null,
+      sentence_ru: null,
+    };
+    mockStoreState = {
+      ...mockStoreState,
+      isLoading: false,
+      error: null,
+      sessionSummary: null,
+      sessionId: 'sess-1',
+      cards: [card],
+      currentIndex: 0,
+    };
+
+    const { container } = render(<V2FlashcardPracticePage />);
+
+    const hint = container.querySelector('.pf-foot-hint');
+    expect(hint).not.toBeNull();
+    expect(hint?.textContent).toContain('Press');
+    expect(hint?.textContent).toContain('to rate');
+    const keycaps = hint?.querySelectorAll('.pf-kbd');
+    expect(keycaps?.length).toBe(2);
+    expect(keycaps?.[0]?.textContent).toBe('1');
+    expect(keycaps?.[1]?.textContent).toBe('4');
+  });
+
+  it('renders .pf-foot-hint with keycaps in the declension foot', () => {
+    const card = {
+      card_record_id: 'cr-2',
+      word_entry_id: 'we-2',
+      deck_id: 'deck-123',
+      deck_name: 'Test Deck',
+      card_type: 'declension' as const,
+      variant_key: null,
+      front_content: { hint: 'man' },
+      back_content: {
+        declension_table: {
+          gender: 'Masculine',
+          rows: [
+            {
+              case: 'Nominative',
+              singular: 'άντρας',
+              plural: 'άντρες',
+              highlight_singular: false,
+              highlight_plural: false,
+            },
+            {
+              case: 'Genitive',
+              singular: 'άντρα',
+              plural: 'αντρών',
+              highlight_singular: true,
+              highlight_plural: false,
+            },
+            {
+              case: 'Accusative',
+              singular: 'άντρα',
+              plural: 'άντρες',
+              highlight_singular: false,
+              highlight_plural: false,
+            },
+            {
+              case: 'Vocative',
+              singular: 'άντρα',
+              plural: 'άντρες',
+              highlight_singular: false,
+              highlight_plural: false,
+            },
+          ],
+        },
+      },
+      status: 'due' as const,
+      is_new: false,
+      is_early_practice: false,
+      due_date: null,
+      easiness_factor: null,
+      interval: null,
+      audio_url: null,
+      example_audio_url: null,
+      translation_ru: null,
+      translation_ru_plural: null,
+      sentence_ru: null,
+    };
+    mockStoreState = {
+      ...mockStoreState,
+      isLoading: false,
+      error: null,
+      sessionSummary: null,
+      sessionId: 'sess-1',
+      cards: [card],
+      currentIndex: 0,
+    };
+
+    const { container } = render(<V2FlashcardPracticePage />);
+
+    const hint = container.querySelector('.pf-foot-hint');
+    expect(hint).not.toBeNull();
+    expect(hint?.textContent).toContain('Press');
+    expect(hint?.textContent).toContain('to rate');
+    const keycaps = hint?.querySelectorAll('.pf-kbd');
+    expect(keycaps?.length).toBe(2);
+    expect(keycaps?.[0]?.textContent).toBe('1');
+    expect(keycaps?.[1]?.textContent).toBe('4');
+  });
+
   it('invalidates analytics cache exactly once when sessionSummary becomes populated', async () => {
     // Start with no sessionSummary
     mockStoreState = { ...defaultStoreState, startSession: mockStartSession, sessionSummary: null };

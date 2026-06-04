@@ -4,9 +4,9 @@
 //   - sentence_translation, direction el_to_en:
 //       Greek sentence (Noto Serif, lang="el", never italic)
 //       with curly-quote ::before/::after decorations tinted by family,
-//       a prompt label, an AudioChip, and a red-dotted grammar-tag chip.
+//       a prompt label, an AudioChip, and an optional grammar-tag chip.
 //   - sentence_translation, direction en_to_el:
-//       English prompt (Inter Tight 700) with the same grammar-tag chip.
+//       English prompt (Inter Tight 700) with the same optional grammar-tag chip.
 //
 // Direction is derived from front_content.prompt:
 //   'Translate this sentence' → el_to_en (Greek sentence shown)
@@ -14,20 +14,16 @@
 //   (any other / undefined)   → defaults to el_to_en
 //
 // Field bindings (verified against PracticeCard.tsx:394-397 + V2 page):
-//   front_content.prompt → direction key + translated prompt label
-//   front_content.main   → main text (Greek sentence for el_to_en; English for en_to_el)
+//   front_content.prompt      → direction key + translated prompt label
+//   front_content.main        → main text (Greek sentence for el_to_en; English for en_to_el)
+//   front_content.sub         → IPA (optional; no sentence IPA source today)
+//   front_content.grammar_tag → grammar label (optional; no generation source today)
 //
-// Grammar-tag chip:
-//   Sentence cards carry NO structured grammar-label field. The chip is rendered
-//   inert with UnwiredDot tone="danger" — a placeholder signalling that grammar
-//   tagging is not yet wired to backend data. NO fabricated label is shown.
-//
-// dx.css MUST be imported here so .dx-unwired-dot / .dx-unwired-dot-marker rules
-// are present when UnwiredDot renders (mirrors CardHead.tsx precedent).
-
-import '@/features/decks/dx/dx.css';
-
-import { UnwiredDot } from '@/features/decks/dx/atoms/UnwiredDot';
+// Grammar-tag chip (PRACT2-3-09):
+//   Renders .pf-sentence-tag containing the real label ONLY when grammarTag is a
+//   non-empty string. Renders NOTHING when absent — no red dot, no empty placeholder.
+//   No grammar source exists in generated cards today — the chip will be absent for
+//   all current sentence cards, which is the correct AC-satisfying outcome.
 
 import { AudioChip } from '../AudioChip';
 
@@ -42,21 +38,6 @@ type SentenceDirection = 'el_to_en' | 'en_to_el';
 function deriveDirection(prompt: string | null | undefined): SentenceDirection {
   if (prompt === PROMPT_EN_TO_EL) return 'en_to_el';
   return 'el_to_en'; // default: treat as el_to_en (Greek sentence shown)
-}
-
-// ── Grammar-tag chip (inert, red-dotted) ─────────────────────────────────────
-
-/**
- * SentenceGrammarTag — renders an inert grammar-tag chip wrapped in
- * UnwiredDot tone="danger". NO fabricated grammar label is shown.
- * The dot signals that grammar tagging is not yet connected to backend data.
- */
-function SentenceGrammarTag() {
-  return (
-    <span className="pf-sentence-tag" data-testid="pf-sentence-tag">
-      <UnwiredDot tone="danger" aria-label="Grammar tag not yet connected to backend data" />
-    </span>
-  );
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -76,10 +57,23 @@ export interface SentenceProps {
    * For en_to_el: the English text to translate.
    */
   main: string;
+  /**
+   * IPA from front_content.sub (optional).
+   * No IPA source exists for sentence cards today, so this renders absent
+   * gracefully. Wired for future use when sentence IPA is authored.
+   */
+  ipa?: string | null;
   /** Lifted audio state — passed through to AudioChip (el_to_en only). */
   audioState?: AudioChipState | null;
   /** Current card language. No-op for Sentence question front (no RU front data exists). */
   lang?: 'en' | 'ru';
+  /**
+   * Grammar tag label from front_content.grammar_tag (optional).
+   * Renders inside .pf-sentence-tag ONLY when this is a non-empty string.
+   * Renders NOTHING when absent (no red dot, no empty chip).
+   * No grammar source exists in generated cards today — graceful absence is correct.
+   */
+  grammarTag?: string | null;
 }
 
 // ── SentenceElToEn renderer ───────────────────────────────────────────────────
@@ -91,10 +85,11 @@ export interface SentenceProps {
  * Greek text: Noto Serif, lang="el", never italic.
  * Curly-quote decorations (::before/::after) tinted by --pf-c (family colour).
  * Prompt label shown above as a muted instruction.
+ * IPA: renders from `ipa` prop when present (no source today → graceful absence).
  * AudioChip shown when audioState has a URL.
- * Grammar-tag chip: inert red-dotted UnwiredDot (no fabricated label).
+ * Grammar-tag chip: renders .pf-sentence-tag ONLY when grammarTag is a non-empty string.
  */
-export function SentenceElToEn({ prompt, main, audioState }: SentenceProps) {
+export function SentenceElToEn({ prompt, main, audioState, ipa, grammarTag }: SentenceProps) {
   return (
     <div className="flex flex-col items-center gap-3 py-4" data-testid="pf-sentence-el-en">
       {/* Direction instruction label */}
@@ -109,11 +104,22 @@ export function SentenceElToEn({ prompt, main, audioState }: SentenceProps) {
         {main}
       </p>
 
+      {/* IPA — only when present (no source today; renders gracefully absent) */}
+      {ipa && (
+        <p className="pf-ipa" data-testid="pf-ipa">
+          {ipa}
+        </p>
+      )}
+
       {/* Audio chip — only when audioState has a URL */}
       {audioState && <AudioChip audioState={audioState} />}
 
-      {/* Grammar-tag chip — inert, red-dotted, no fabricated label */}
-      <SentenceGrammarTag />
+      {/* Grammar-tag chip — renders ONLY when a real label is present (PRACT2-3-09) */}
+      {grammarTag && (
+        <span className="pf-sentence-tag" data-testid="pf-sentence-tag">
+          {grammarTag}
+        </span>
+      )}
     </div>
   );
 }
@@ -125,9 +131,15 @@ export function SentenceElToEn({ prompt, main, audioState }: SentenceProps) {
  * en_to_el direction.
  *
  * English text: Inter Tight 700.
- * Grammar-tag chip: inert red-dotted UnwiredDot (no fabricated label).
+ * IPA: renders from `ipa` prop when present (no source today → graceful absence).
+ * Grammar-tag chip: renders .pf-sentence-tag ONLY when grammarTag is a non-empty string.
  */
-export function SentenceEnToEl({ prompt, main }: Omit<SentenceProps, 'audioState'>) {
+export function SentenceEnToEl({
+  prompt,
+  main,
+  ipa,
+  grammarTag,
+}: Omit<SentenceProps, 'audioState'>) {
   return (
     <div className="flex flex-col items-center gap-3 py-4" data-testid="pf-sentence-en-el">
       {/* Direction instruction label */}
@@ -140,8 +152,19 @@ export function SentenceEnToEl({ prompt, main }: Omit<SentenceProps, 'audioState
       {/* English text in Inter Tight */}
       <p className="pf-sentence-en-text">{main}</p>
 
-      {/* Grammar-tag chip — inert, red-dotted, no fabricated label */}
-      <SentenceGrammarTag />
+      {/* IPA — only when present (no source today; renders gracefully absent) */}
+      {ipa && (
+        <p className="pf-ipa" data-testid="pf-ipa">
+          {ipa}
+        </p>
+      )}
+
+      {/* Grammar-tag chip — renders ONLY when a real label is present (PRACT2-3-09) */}
+      {grammarTag && (
+        <span className="pf-sentence-tag" data-testid="pf-sentence-tag">
+          {grammarTag}
+        </span>
+      )}
     </div>
   );
 }
@@ -155,14 +178,31 @@ export function SentenceEnToEl({ prompt, main }: Omit<SentenceProps, 'audioState
  * SentenceElToEn or SentenceEnToEl accordingly.
  *
  * Usage in the dispatch block:
- *   <Sentence prompt={front.prompt} main={front.main} audioState={audioState} />
+ *   <Sentence prompt={front.prompt} main={front.main} audioState={audioState}
+ *             ipa={front.sub as string | null}
+ *             grammarTag={front.grammar_tag as string | null} />
  */
-export function Sentence({ prompt, main, audioState, lang: _lang }: SentenceProps) {
+export function Sentence({
+  prompt,
+  main,
+  audioState,
+  ipa,
+  grammarTag,
+  lang: _lang,
+}: SentenceProps) {
   const direction = deriveDirection(prompt as string | null | undefined);
 
   if (direction === 'en_to_el') {
-    return <SentenceEnToEl prompt={prompt} main={main} />;
+    return <SentenceEnToEl prompt={prompt} main={main} ipa={ipa} grammarTag={grammarTag} />;
   }
 
-  return <SentenceElToEn prompt={prompt} main={main} audioState={audioState} />;
+  return (
+    <SentenceElToEn
+      prompt={prompt}
+      main={main}
+      audioState={audioState}
+      ipa={ipa}
+      grammarTag={grammarTag}
+    />
+  );
 }

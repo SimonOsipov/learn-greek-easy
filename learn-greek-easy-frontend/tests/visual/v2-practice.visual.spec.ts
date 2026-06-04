@@ -1101,3 +1101,214 @@ test.describe('PRACT2-2 - Card Width and Family Badge', () => {
     await takeSnapshot(page, 'PRACT2-2 - Card Width 760px and Full Badge - Desktop Dark', testInfo);
   });
 });
+
+// ============================================================================
+// PRACT2-3 Visual Tests
+//
+// Covers the fidelity additions introduced in PRACT2-3:
+//   1. Reveal CTA (.pf-reveal-cta) visible pre-flip; absent/count-0 post-flip.
+//   2. Prompt subtitle (.pf-prompt) visible in question state with direction text.
+//   3. ANSWER kicker (.pf-answer__label) present post-flip.
+//   4. Rating-button interval hints (.pf-rating-btn__hint) visible post-flip with
+//      real formatReviewInterval text (requires rating_previews on the mock card).
+//   5. Foot hint (.pf-foot-hint) present post-flip ("Press 1–4 to rate").
+//
+// All assertions use explicit Playwright expect() calls so CI gates on behaviour,
+// not solely on Chromatic snapshot diffing.
+//
+// Coverage: light + dark for reveal CTA and rating hints.
+// ============================================================================
+
+// ── Mock queue with rating_previews (required for .pf-rating-btn__hint) ──────
+
+/** Standard SM-2 rating previews for a new card (interval = days). */
+const mockRatingPreviews = [
+  { rating: 1, quality: 0, interval: 1, next_review_date: '2026-06-05', new_status: 'learning' },
+  { rating: 2, quality: 2, interval: 1, next_review_date: '2026-06-05', new_status: 'learning' },
+  { rating: 3, quality: 4, interval: 1, next_review_date: '2026-06-05', new_status: 'learning' },
+  { rating: 4, quality: 5, interval: 4, next_review_date: '2026-06-08', new_status: 'review' },
+];
+
+/** mockV2Queue extended to carry rating_previews on the first card. */
+const mockV2QueueWithPreviews = {
+  ...mockV2Queue,
+  cards: [
+    { ...mockV2Card1, rating_previews: mockRatingPreviews },
+    ...mockV2Queue.cards.slice(1),
+  ],
+};
+
+test.describe('PRACT2-3 - Fidelity Additions', () => {
+  // ── Reveal CTA: visible pre-flip, absent post-flip (light) ──────────────────
+
+  test('PRACT2-3 - Reveal CTA visible pre-flip - Desktop Light', async ({ page }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await setupV2PracticeMocks(page, mockV2QueueWithPreviews);
+    await loginForVisualTest(page);
+    await setTheme(page, 'light');
+    await navigateToPractice(page);
+
+    // .pf-reveal-cta must be present before flip
+    await expect(page.locator('.pf-reveal-cta')).toBeVisible();
+
+    await takeSnapshot(page, 'PRACT2-3 - Reveal CTA visible pre-flip - Desktop Light', testInfo);
+  });
+
+  test('PRACT2-3 - Reveal CTA absent post-flip - Desktop Light', async ({ page }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await setupV2PracticeMocks(page, mockV2QueueWithPreviews);
+    await loginForVisualTest(page);
+    await setTheme(page, 'light');
+    await navigateToPractice(page);
+
+    await flipCard(page);
+
+    // .pf-reveal-cta must be gone after flip
+    await expect(page.locator('.pf-reveal-cta')).toHaveCount(0);
+
+    await takeSnapshot(page, 'PRACT2-3 - Reveal CTA absent post-flip - Desktop Light', testInfo);
+  });
+
+  // ── Reveal CTA: visible pre-flip, absent post-flip (dark) ───────────────────
+
+  test('PRACT2-3 - Reveal CTA visible pre-flip - Desktop Dark', async ({ page }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await setupV2PracticeMocks(page, mockV2QueueWithPreviews);
+    await loginForVisualTest(page);
+    await setTheme(page, 'dark');
+    await navigateToPractice(page);
+
+    await expect(page.locator('.pf-reveal-cta')).toBeVisible();
+
+    await takeSnapshot(page, 'PRACT2-3 - Reveal CTA visible pre-flip - Desktop Dark', testInfo);
+  });
+
+  test('PRACT2-3 - Reveal CTA absent post-flip - Desktop Dark', async ({ page }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await setupV2PracticeMocks(page, mockV2QueueWithPreviews);
+    await loginForVisualTest(page);
+    await setTheme(page, 'dark');
+    await navigateToPractice(page);
+
+    await flipCard(page);
+
+    await expect(page.locator('.pf-reveal-cta')).toHaveCount(0);
+
+    await takeSnapshot(page, 'PRACT2-3 - Reveal CTA absent post-flip - Desktop Dark', testInfo);
+  });
+
+  // ── Prompt subtitle: visible in question state with direction text ───────────
+
+  test('PRACT2-3 - Prompt subtitle visible in question state - Desktop Light', async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await setupV2PracticeMocks(page, mockV2QueueWithPreviews);
+    await loginForVisualTest(page);
+    await setTheme(page, 'light');
+    await navigateToPractice(page);
+
+    // .pf-prompt must be visible and contain a direction string
+    await expect(page.locator('.pf-prompt')).toBeVisible();
+    // First card is meaning_el_to_en — subtitle is "Greek → English"
+    await expect(page.locator('.pf-prompt').first()).toContainText(/Greek.*English/);
+
+    await takeSnapshot(
+      page,
+      'PRACT2-3 - Prompt subtitle visible in question state - Desktop Light',
+      testInfo
+    );
+  });
+
+  // ── ANSWER kicker: present post-flip ────────────────────────────────────────
+
+  test('PRACT2-3 - ANSWER kicker present post-flip - Desktop Light', async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await setupV2PracticeMocks(page, mockV2QueueWithPreviews);
+    await loginForVisualTest(page);
+    await setTheme(page, 'light');
+    await navigateToPractice(page);
+
+    await flipCard(page);
+
+    // .pf-answer__label must contain "ANSWER"
+    await expect(page.locator('.pf-answer__label')).toBeVisible();
+    await expect(page.locator('.pf-answer__label')).toContainText('ANSWER');
+
+    await takeSnapshot(page, 'PRACT2-3 - ANSWER kicker present post-flip - Desktop Light', testInfo);
+  });
+
+  // ── Rating-button interval hints: visible post-flip (light) ─────────────────
+
+  test('PRACT2-3 - Rating hints visible post-flip - Desktop Light', async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await setupV2PracticeMocks(page, mockV2QueueWithPreviews);
+    await loginForVisualTest(page);
+    await setTheme(page, 'light');
+    await navigateToPractice(page);
+
+    await flipCard(page);
+
+    // All 4 .pf-rating-btn__hint elements must be visible with non-empty text
+    const hints = page.locator('.pf-rating-btn__hint');
+    await expect(hints).toHaveCount(4);
+    for (let i = 0; i < 4; i++) {
+      await expect(hints.nth(i)).toBeVisible();
+    }
+
+    // Verify specific hint text for rating 1 (interval=1 → "1 day")
+    const forgotHint = page.locator('[data-testid="pf-rating-btn-forgot"] .pf-rating-btn__hint');
+    await expect(forgotHint).toHaveText('1 day');
+
+    // Verify rating 4 (interval=4 → "4 days")
+    const easyHint = page.locator('[data-testid="pf-rating-btn-easy"] .pf-rating-btn__hint');
+    await expect(easyHint).toHaveText('4 days');
+
+    // .pf-foot-hint must also be present post-flip
+    await expect(page.locator('.pf-foot-hint')).toBeVisible();
+
+    await takeSnapshot(
+      page,
+      'PRACT2-3 - Rating hints visible post-flip - Desktop Light',
+      testInfo
+    );
+  });
+
+  // ── Rating-button interval hints: visible post-flip (dark) ──────────────────
+
+  test('PRACT2-3 - Rating hints visible post-flip - Desktop Dark', async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+    await setupV2PracticeMocks(page, mockV2QueueWithPreviews);
+    await loginForVisualTest(page);
+    await setTheme(page, 'dark');
+    await navigateToPractice(page);
+
+    await flipCard(page);
+
+    const hints = page.locator('.pf-rating-btn__hint');
+    await expect(hints).toHaveCount(4);
+    for (let i = 0; i < 4; i++) {
+      await expect(hints.nth(i)).toBeVisible();
+    }
+
+    const forgotHint = page.locator('[data-testid="pf-rating-btn-forgot"] .pf-rating-btn__hint');
+    await expect(forgotHint).toHaveText('1 day');
+
+    const easyHint = page.locator('[data-testid="pf-rating-btn-easy"] .pf-rating-btn__hint');
+    await expect(easyHint).toHaveText('4 days');
+
+    await expect(page.locator('.pf-foot-hint')).toBeVisible();
+
+    await takeSnapshot(
+      page,
+      'PRACT2-3 - Rating hints visible post-flip - Desktop Dark',
+      testInfo
+    );
+  });
+});

@@ -19,7 +19,7 @@ from src.db.models import (
     WordEntry,
 )
 from src.repositories.card_record_statistics import CardRecordStatisticsRepository
-from src.schemas.v2_sm2 import V2ReviewResult, V2StudyQueue, V2StudyQueueCard
+from src.schemas.v2_sm2 import V2RatingPreview, V2ReviewResult, V2StudyQueue, V2StudyQueueCard
 from src.services.s3_service import get_s3_service
 
 logger = get_logger(__name__)
@@ -137,6 +137,26 @@ class V2SM2Service:
             cards=queue_cards,
         )
 
+    # Rating→quality mapping mirrors frontend mapPracticeRatingToQuality
+    _RATING_QUALITY_MAP: dict[int, int] = {1: 0, 2: 2, 3: 4, 4: 5}
+
+    def _rating_previews(self, ef: float, interval: int, repetitions: int) -> list[V2RatingPreview]:
+        """Project SM-2 outcome for each UI rating. Pure computation — no DB writes."""
+        previews: list[V2RatingPreview] = []
+        for rating, quality in self._RATING_QUALITY_MAP.items():
+            result = calculate_sm2(ef, interval, repetitions, quality)
+            next_review_date = calculate_next_review_date(result.new_interval)
+            previews.append(
+                V2RatingPreview(
+                    rating=rating,
+                    quality=quality,
+                    interval=result.new_interval,
+                    next_review_date=next_review_date,
+                    new_status=result.new_status,
+                )
+            )
+        return previews
+
     def _build_card_from_stats(
         self,
         stats: CardRecordStatistics,
@@ -161,6 +181,11 @@ class V2SM2Service:
             interval=stats.interval,
             audio_url=None,
             example_audio_url=None,
+            example_el=None,
+            example_en=None,
+            rating_previews=self._rating_previews(
+                stats.easiness_factor, stats.interval, stats.repetitions
+            ),
         )
 
     def _build_card_from_record(self, card_record: CardRecord) -> V2StudyQueueCard:
@@ -181,6 +206,9 @@ class V2SM2Service:
             interval=None,
             audio_url=None,
             example_audio_url=None,
+            example_el=None,
+            example_en=None,
+            rating_previews=self._rating_previews(2.5, 0, 0),
         )
 
     async def _enrich_with_audio(self, cards: list[V2StudyQueueCard]) -> None:
@@ -203,6 +231,11 @@ class V2SM2Service:
             card.translation_ru = we.translation_ru
             card.translation_ru_plural = we.translation_ru_plural
             card.sentence_ru = self._get_sentence_ru(card, we)
+            # example_el / example_en: populate OUTSIDE audio_key gate so example text
+            # surfaces even when we.audio_key is absent (an example can have text without audio).
+            example_el, example_en = self._get_example_texts(card, we)
+            card.example_el = example_el
+            card.example_en = example_en
             if we.audio_key:
                 card.audio_url = s3.generate_presigned_url(we.audio_key)
                 card.example_audio_url = self._get_example_audio_key(card, we)
@@ -223,6 +256,33 @@ class V2SM2Service:
             if ex.get("id") == example_id:
                 return ex.get("russian")
         return None
+
+    def _get_example_texts(
+        self, card: V2StudyQueueCard, we: WordEntry
+    ) -> tuple[str | None, str | None]:
+        """Return (example_el, example_en) for sentence_translation and cloze cards.
+
+        Direction-agnostic: both fields surface in el_to_target AND target_to_el
+        directions (unlike sentence_ru which is target_to_el only).
+
+        Source: WordEntry.examples JSONB list of {id, greek, english, russian?, audio_key?}.
+        Matching mirrors _get_sentence_ru (sentence_translation) and
+        _get_example_audio_key (cloze).
+        """
+        if card.card_type == CardType.SENTENCE_TRANSLATION:
+            example_id = card.front_content.get("example_id")
+            if not example_id or not we.examples:
+                return None, None
+            for ex in we.examples:
+                if ex.get("id") == example_id:
+                    return ex.get("greek") or None, ex.get("english") or None
+        elif card.card_type == CardType.CLOZE:
+            example_index = card.front_content.get("example_index")
+            if example_index is None or not we.examples or example_index >= len(we.examples):
+                return None, None
+            ex = we.examples[example_index]
+            return ex.get("greek") or None, ex.get("english") or None
+        return None, None
 
     def _get_example_audio_key(self, card: V2StudyQueueCard, we: WordEntry) -> str | None:
         if card.card_type == CardType.SENTENCE_TRANSLATION:

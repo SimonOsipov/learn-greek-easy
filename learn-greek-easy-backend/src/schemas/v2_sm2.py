@@ -7,6 +7,16 @@ from src.constants import MAX_ANSWER_TIME_SECONDS
 from src.db.models import CardStatus
 
 
+class V2RatingPreview(BaseModel):
+    """Projected SM-2 outcome for a single UI rating (pure read-only; no DB writes)."""
+
+    rating: int = Field(..., description="UI rating (1=Forgot, 2=Tough, 3=OK, 4=Easy)")
+    quality: int = Field(..., description="SM-2 quality value (0, 2, 4, or 5)")
+    interval: int = Field(..., description="Projected next interval in days")
+    next_review_date: date = Field(..., description="Projected next review date")
+    new_status: CardStatus = Field(..., description="Projected card status after this rating")
+
+
 class V2StudyQueueCard(BaseModel):
     """Card in the V2 study queue with scheduling metadata.
 
@@ -91,6 +101,20 @@ class V2StudyQueueCard(BaseModel):
     sentence_ru: str | None = Field(
         default=None,
         description="Russian translation of the example sentence (sentence_translation target_to_el only)",
+    )
+    example_el: str | None = Field(
+        default=None,
+        description="Greek example sentence text (from WordEntry.examples[n].greek). "
+        "Populated for sentence_translation and cloze cards where an example exists.",
+    )
+    example_en: str | None = Field(
+        default=None,
+        description="English gloss of the example sentence (from WordEntry.examples[n].english). "
+        "Populated for sentence_translation and cloze cards where an example exists.",
+    )
+    rating_previews: list[V2RatingPreview] = Field(
+        default_factory=list,
+        description="Projected SM-2 outcome for each UI rating (1–4). Pure projection — no DB writes.",
     )
 
 

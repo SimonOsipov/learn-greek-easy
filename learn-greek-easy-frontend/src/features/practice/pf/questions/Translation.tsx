@@ -38,11 +38,15 @@ export interface TranslationElToEnProps {
   audioState?: AudioChipState | null;
   /** Current card language. No-op for Translation cards (no RU front data exists yet). */
   lang?: 'en' | 'ru';
+  /** Direction subtitle from front_content.prompt (PRACT2-3-01). */
+  prompt?: string | null;
 }
 
 export interface TranslationEnToElProps {
-  /** English prompt from front_content.main or front_content.prompt */
-  prompt: string;
+  /** English display word from front_content.main (PRACT2-3-01: renamed from prompt). */
+  word: string;
+  /** Direction subtitle from front_content.prompt (PRACT2-3-01). */
+  prompt?: string | null;
   /** Current card language. No-op for Translation cards (no RU front data exists yet). */
   lang?: 'en' | 'ru';
 }
@@ -62,11 +66,18 @@ export function TranslationElToEn({
   gender,
   audioState,
   lang: _lang,
+  prompt,
 }: TranslationElToEnProps) {
   const article = gender ? (GENDER_ARTICLE[gender.toLowerCase()] ?? null) : null;
 
   return (
     <div className="flex flex-col items-center gap-3 py-4" data-testid="pf-translation-el-en">
+      {/* Direction subtitle — "Greek → English · {prompt}" (PRACT2-3-01) */}
+      <p className="pf-prompt" data-testid="pf-direction-subtitle">
+        {'Greek → English'}
+        {prompt ? ` · ${prompt}` : ''}
+      </p>
+
       {/* Greek word with optional muted article prefix */}
       <p className="pf-translation-word" lang="el">
         {article && (
@@ -95,12 +106,21 @@ export function TranslationElToEn({
 /**
  * TranslationEnToEl — question view for meaning_en_to_el cards.
  *
- * Renders the English prompt in Inter Tight 700 (not Greek Noto Serif).
+ * Renders the English display word in Inter Tight 700 (not Greek Noto Serif).
+ * PRACT2-3-01: `word` prop carries the display word (previously named `prompt`);
+ *   `prompt` now carries the direction subtitle.
  */
-export function TranslationEnToEl({ prompt, lang: _lang }: TranslationEnToElProps) {
+export function TranslationEnToEl({ word, prompt, lang: _lang }: TranslationEnToElProps) {
   return (
     <div className="flex flex-col items-center gap-3 py-4" data-testid="pf-translation-en-el">
-      <p className="pf-en-prompt">{prompt}</p>
+      {/* Direction subtitle — "English → Greek · {prompt}" (PRACT2-3-01) */}
+      <p className="pf-prompt" data-testid="pf-direction-subtitle">
+        {'English → Greek'}
+        {prompt ? ` · ${prompt}` : ''}
+      </p>
+
+      {/* English display word — Inter Tight 700 */}
+      <p className="pf-en-prompt">{word}</p>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 /**
- * pf/questions/Sentence.tsx — unit tests (PRACT2-1-04)
+ * pf/questions/Sentence.tsx — unit tests (PRACT2-1-04, PRACT2-3-10, PRACT2-3-09)
  *
  * Covers:
  * - Sentence (el_to_en): renders Greek sentence with pf-sentence-text class
@@ -8,12 +8,17 @@
  * - Sentence (el_to_en): curly-quote class applied (.pf-sentence-text)
  * - Sentence (el_to_en): AudioChip renders when audioState has url
  * - Sentence (el_to_en): AudioChip absent when audioState is null
- * - Sentence (el_to_en): grammar-tag chip is present
- * - Sentence (el_to_en): grammar-tag chip contains an UnwiredDot (data-testid="unwired-dot")
- * - Sentence (el_to_en): grammar-tag chip does NOT contain fabricated text labels
+ * - Sentence (el_to_en): IPA renders when ipa prop is present (PRACT2-3-10)
+ * - Sentence (el_to_en): IPA absent when ipa prop is not provided (PRACT2-3-10)
+ * - Sentence (el_to_en): grammar-tag chip renders label when grammarTag present (PRACT2-3-09)
+ * - Sentence (el_to_en): grammar-tag chip absent when grammarTag not present (PRACT2-3-09)
+ * - Sentence (el_to_en): no UnwiredDot red dot (PRACT2-3-09)
  * - Sentence (en_to_el): renders English text with pf-sentence-en-text class
  * - Sentence (en_to_el): no lang="el" on the English element
- * - Sentence (en_to_el): grammar-tag chip present with UnwiredDot
+ * - Sentence (en_to_el): IPA renders when ipa prop is present (PRACT2-3-10)
+ * - Sentence (en_to_el): IPA absent when ipa prop is not provided (PRACT2-3-10)
+ * - Sentence (en_to_el): grammar-tag chip renders label when grammarTag present (PRACT2-3-09)
+ * - Sentence (en_to_el): grammar-tag chip absent when grammarTag not present (PRACT2-3-09)
  * - Direction: 'Translate this sentence' → el_to_en container
  * - Direction: 'Translate to Greek' → en_to_el container
  * - Direction: undefined/null prompt defaults to el_to_en
@@ -36,9 +41,6 @@ vi.mock('@/components/ui/SpeakerButton', () => ({
 vi.mock('@/components/ui/AudioSpeedToggle', () => ({
   AudioSpeedToggle: () => <div data-testid="speed-toggle">speed</div>,
 }));
-
-// dx.css import in Sentence.tsx — mock to avoid JSDOM CSS errors
-vi.mock('@/features/decks/dx/dx.css', () => ({}));
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
@@ -113,31 +115,63 @@ describe('SentenceElToEn', () => {
     expect(screen.queryByTestId('pf-audio-chip')).toBeNull();
   });
 
-  it('renders the grammar-tag chip (.pf-sentence-tag)', () => {
-    const { container } = render(
-      <SentenceElToEn prompt="Translate this sentence" main="Ο άντρας τρέχει." />
+  // PRACT2-3-10: IPA renders when ipa prop is present
+  it('renders .pf-ipa when ipa prop is provided', () => {
+    render(
+      <SentenceElToEn
+        prompt="Translate this sentence"
+        main="Ο άντρας τρέχει."
+        ipa="/o ˈan.dras ˈtre.xi/"
+      />
     );
-    expect(container.querySelector('[data-testid="pf-sentence-tag"]')).not.toBeNull();
+    expect(screen.getByTestId('pf-ipa')).not.toBeNull();
+    expect(screen.getByTestId('pf-ipa').textContent).toBe('/o ˈan.dras ˈtre.xi/');
   });
 
-  it('grammar-tag chip contains an UnwiredDot (data-testid="unwired-dot")', () => {
+  it('does NOT render .pf-ipa when ipa prop is absent', () => {
     render(<SentenceElToEn prompt="Translate this sentence" main="Ο άντρας τρέχει." />);
-    expect(screen.getByTestId('unwired-dot')).not.toBeNull();
+    expect(screen.queryByTestId('pf-ipa')).toBeNull();
   });
 
-  it('grammar-tag chip does NOT contain a fabricated grammar label text', () => {
+  it('does NOT render .pf-ipa when ipa prop is null', () => {
+    render(<SentenceElToEn prompt="Translate this sentence" main="Ο άντρας τρέχει." ipa={null} />);
+    expect(screen.queryByTestId('pf-ipa')).toBeNull();
+  });
+
+  // PRACT2-3-09: grammar-tag chip renders real label when grammarTag present
+  it('renders .pf-sentence-tag with label text when grammarTag is provided', () => {
+    render(
+      <SentenceElToEn
+        prompt="Translate this sentence"
+        main="Ο άντρας τρέχει."
+        grammarTag="Locative"
+      />
+    );
+    expect(screen.getByTestId('pf-sentence-tag')).not.toBeNull();
+    expect(screen.getByTestId('pf-sentence-tag').textContent).toBe('Locative');
+  });
+
+  // PRACT2-3-09: grammar-tag chip absent when no grammarTag (dominant case today)
+  it('does NOT render .pf-sentence-tag when grammarTag is absent', () => {
     const { container } = render(
       <SentenceElToEn prompt="Translate this sentence" main="Ο άντρας τρέχει." />
     );
-    const tag = container.querySelector('[data-testid="pf-sentence-tag"]');
-    // The tag should have no meaningful text content (only the UnwiredDot placeholder)
-    // Text content of the dot wrapper itself is empty aside from the marker span
-    const textContent = tag?.textContent ?? '';
-    // Must not contain real grammar terms
-    expect(textContent).not.toContain('Locative');
-    expect(textContent).not.toContain('Comparative');
-    expect(textContent).not.toContain('Accusative');
-    expect(textContent).not.toContain('Genitive');
+    expect(container.querySelector('[data-testid="pf-sentence-tag"]')).toBeNull();
+  });
+
+  it('does NOT render .pf-sentence-tag when grammarTag is null', () => {
+    const { container } = render(
+      <SentenceElToEn prompt="Translate this sentence" main="Ο άντρας τρέχει." grammarTag={null} />
+    );
+    expect(container.querySelector('[data-testid="pf-sentence-tag"]')).toBeNull();
+  });
+
+  // PRACT2-3-09: no red dot (UnwiredDot removed)
+  it('does NOT render an UnwiredDot red dot', () => {
+    const { container } = render(
+      <SentenceElToEn prompt="Translate this sentence" main="Ο άντρας τρέχει." />
+    );
+    expect(container.querySelector('[data-testid="unwired-dot"]')).toBeNull();
   });
 
   it('shows the prompt label when prompt is provided', () => {
@@ -177,16 +211,43 @@ describe('SentenceEnToEl', () => {
     expect(el?.getAttribute('lang')).not.toBe('el');
   });
 
-  it('renders the grammar-tag chip (.pf-sentence-tag)', () => {
+  // PRACT2-3-10: IPA renders when ipa prop is present
+  it('renders .pf-ipa when ipa prop is provided', () => {
+    render(
+      <SentenceEnToEl prompt="Translate to Greek" main="The man runs." ipa="/o ˈan.dras ˈtre.xi/" />
+    );
+    expect(screen.getByTestId('pf-ipa')).not.toBeNull();
+    expect(screen.getByTestId('pf-ipa').textContent).toBe('/o ˈan.dras ˈtre.xi/');
+  });
+
+  it('does NOT render .pf-ipa when ipa prop is absent', () => {
+    render(<SentenceEnToEl prompt="Translate to Greek" main="The man runs." />);
+    expect(screen.queryByTestId('pf-ipa')).toBeNull();
+  });
+
+  // PRACT2-3-09: grammar-tag chip renders real label when grammarTag present
+  it('renders .pf-sentence-tag with label text when grammarTag is provided', () => {
+    render(
+      <SentenceEnToEl prompt="Translate to Greek" main="The man runs." grammarTag="Comparative" />
+    );
+    expect(screen.getByTestId('pf-sentence-tag')).not.toBeNull();
+    expect(screen.getByTestId('pf-sentence-tag').textContent).toBe('Comparative');
+  });
+
+  // PRACT2-3-09: grammar-tag chip absent when no grammarTag
+  it('does NOT render .pf-sentence-tag when grammarTag is absent', () => {
     const { container } = render(
       <SentenceEnToEl prompt="Translate to Greek" main="The man runs." />
     );
-    expect(container.querySelector('[data-testid="pf-sentence-tag"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="pf-sentence-tag"]')).toBeNull();
   });
 
-  it('grammar-tag chip contains an UnwiredDot (data-testid="unwired-dot")', () => {
-    render(<SentenceEnToEl prompt="Translate to Greek" main="The man runs." />);
-    expect(screen.getByTestId('unwired-dot')).not.toBeNull();
+  // PRACT2-3-09: no red dot (UnwiredDot removed)
+  it('does NOT render an UnwiredDot red dot', () => {
+    const { container } = render(
+      <SentenceEnToEl prompt="Translate to Greek" main="The man runs." />
+    );
+    expect(container.querySelector('[data-testid="unwired-dot"]')).toBeNull();
   });
 });
 
@@ -240,5 +301,32 @@ describe('Sentence (direction routing)', () => {
     );
     // en_to_el renderer omits audioState prop
     expect(container.querySelector('[data-testid="pf-audio-chip"]')).toBeNull();
+  });
+
+  // PRACT2-3-09: grammarTag threaded to both directions
+  it('threads grammarTag to el_to_en and renders the chip', () => {
+    render(
+      <Sentence
+        prompt="Translate this sentence"
+        main="Ο άντρας τρέχει."
+        audioState={null}
+        grammarTag="Locative"
+      />
+    );
+    expect(screen.getByTestId('pf-sentence-tag')).not.toBeNull();
+    expect(screen.getByTestId('pf-sentence-tag').textContent).toBe('Locative');
+  });
+
+  it('threads grammarTag to en_to_el and renders the chip', () => {
+    render(
+      <Sentence
+        prompt="Translate to Greek"
+        main="The man runs."
+        audioState={null}
+        grammarTag="Comparative"
+      />
+    );
+    expect(screen.getByTestId('pf-sentence-tag')).not.toBeNull();
+    expect(screen.getByTestId('pf-sentence-tag').textContent).toBe('Comparative');
   });
 });

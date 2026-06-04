@@ -6,6 +6,7 @@
 //   - A tone bar (coloured by the rating's semantic colour)
 //   - A label (Forgot / Tough / OK / Easy)
 //   - A keyboard keycap hint (1 / 2 / 3 / 4)
+//   - An interval hint (projected next review, via rating_previews from PRACT2-3-05)
 //
 // The keyboard handler is NOT added here; it already lives in
 // usePracticeKeyboard (V2FlashcardPracticePage.tsx:204-232), gated on
@@ -18,11 +19,17 @@
 //   OK      → hsl(var(--success))
 //   Easy    → hsl(var(--accent))
 
+import type { RatingPreview } from '@/services/studyAPI';
+
+import { formatReviewInterval } from './Toast';
+
 export interface RatingRowProps {
   /** Callback fired when a rating button is clicked. */
   onRate: (rating: 1 | 2 | 3 | 4) => void;
   /** Whether the card is flipped (buttons disabled when not flipped). */
   isFlipped?: boolean;
+  /** Projected SM-2 intervals per rating, from PRACT2-3-05. When absent, no hint is shown. */
+  previews?: RatingPreview[];
 }
 
 interface RatingOption {
@@ -43,8 +50,12 @@ const RATING_OPTIONS: RatingOption[] = [
  *
  * Keyboard shortcuts (1-4) are handled by usePracticeKeyboard in the page.
  * This component only handles click interactions.
+ *
+ * When `previews` is provided (PRACT2-3-05), each button shows the real
+ * projected next-review interval below the label via `.pf-rating-btn__hint`.
+ * When absent, buttons render label-only (pre-PRACT2-3 behavior).
  */
-export function RatingRow({ onRate, isFlipped = true }: RatingRowProps) {
+export function RatingRow({ onRate, isFlipped = true, previews }: RatingRowProps) {
   return (
     <div
       className="pf-rating-row"
@@ -52,27 +63,36 @@ export function RatingRow({ onRate, isFlipped = true }: RatingRowProps) {
       aria-label="Rate this card"
       data-testid="pf-rating-row"
     >
-      {RATING_OPTIONS.map(({ rating, label, tone }) => (
-        <button
-          key={rating}
-          className={`pf-rating-btn pf-rating-btn--${tone}`}
-          data-tone={tone}
-          data-testid={`pf-rating-btn-${tone}`}
-          onClick={() => onRate(rating)}
-          disabled={!isFlipped}
-          aria-label={`${label} (key ${rating})`}
-          type="button"
-        >
-          {/* Tone bar at the top */}
-          <span className="pf-rating-btn__bar" aria-hidden="true" />
-          {/* Label */}
-          <span className="pf-rating-btn__label">{label}</span>
-          {/* Keycap hint */}
-          <kbd className="pf-rating-btn__key" aria-hidden="true">
-            {rating}
-          </kbd>
-        </button>
-      ))}
+      {RATING_OPTIONS.map(({ rating, label, tone }) => {
+        const preview = previews?.find((p) => p.rating === rating);
+        return (
+          <button
+            key={rating}
+            className={`pf-rating-btn pf-rating-btn--${tone}`}
+            data-tone={tone}
+            data-testid={`pf-rating-btn-${tone}`}
+            onClick={() => onRate(rating)}
+            disabled={!isFlipped}
+            aria-label={`${label} (key ${rating})`}
+            type="button"
+          >
+            {/* Tone bar at the top */}
+            <span className="pf-rating-btn__bar" aria-hidden="true" />
+            {/* Label */}
+            <span className="pf-rating-btn__label">{label}</span>
+            {/* Projected interval hint (PRACT2-3-06) — shown only when previews provided */}
+            {preview && (
+              <span className="pf-rating-btn__hint" aria-hidden="true">
+                {formatReviewInterval(preview.interval)}
+              </span>
+            )}
+            {/* Keycap hint */}
+            <kbd className="pf-rating-btn__key" aria-hidden="true">
+              {rating}
+            </kbd>
+          </button>
+        );
+      })}
     </div>
   );
 }

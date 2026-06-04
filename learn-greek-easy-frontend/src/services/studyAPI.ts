@@ -20,6 +20,18 @@ import type { CardRecordType } from './wordEntryAPI';
 export type CardStatus = 'new' | 'learning' | 'review' | 'mastered';
 
 /**
+ * Projected SM-2 outcome for a single UI rating.
+ * Populated by the backend (PRACT2-3-05); pure read-only projection.
+ */
+export interface RatingPreview {
+  rating: number;
+  quality: number;
+  interval: number;
+  next_review_date: string;
+  new_status: CardStatus;
+}
+
+/**
  * Card in the study queue.
  *
  * Uses card_record_id (the SM-2 record); includes card_type and variant_key.
@@ -44,6 +56,9 @@ export interface StudyQueueCard {
   translation_ru: string | null;
   translation_ru_plural: string | null;
   sentence_ru: string | null;
+  example_el: string | null;
+  example_en: string | null;
+  rating_previews?: RatingPreview[];
 }
 
 /**

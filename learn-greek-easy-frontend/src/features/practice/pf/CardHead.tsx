@@ -83,24 +83,31 @@ export function CardHead({
         {/* POS chip — only when posLabel is present */}
         {posLabel && (
           <span className="pf-pos" data-testid="pf-pos-chip">
+            {/* PRACT2-3-04: order is now `{label lowercase} · {article}` */}
+            {/* POS label — lowercase via .pf-pos__label */}
+            <span className="pf-pos__label">{posLabel}</span>
             {/* Article — gender-tinted when gender present, amber dot when absent */}
             {isNoun && (
               <>
                 {article && normalizedGender ? (
-                  <span
-                    className="pf-pos__article"
-                    data-gender={normalizedGender}
-                    data-testid="pf-article"
-                    lang="el"
-                  >
-                    {article}
-                  </span>
+                  <>
+                    <span className="pf-pos__sep" aria-hidden="true">
+                      ·
+                    </span>
+                    <span
+                      className="pf-pos__article"
+                      data-gender={normalizedGender}
+                      data-testid="pf-article"
+                      lang="el"
+                    >
+                      {article}
+                    </span>
+                  </>
                 ) : (
                   <UnwiredDot tone="amber" aria-label="Gender not available for this card type" />
                 )}
               </>
             )}
-            {posLabel}
             {/* Gender label — shown when gender is present; switches to RU label when available */}
             {activeGender && (
               <span className="pf-pos__gender" data-testid="pf-gender-label">

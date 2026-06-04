@@ -10,6 +10,10 @@
 //     never gated so the card is always visible even under reduced-motion.
 //   - .pf-body (question) / .pf-foot (answer) have stable min-heights so
 //     layout never shifts between question and answer phase.
+//
+// PRACT2-3-02: .pf-foot__inner carries data-hidden/inert/aria-hidden so the
+//   .pf-foot wrapper can hold both the hidden content AND the absolutely-
+//   positioned .pf-reveal-cta overlay without any height change on reveal.
 
 import type { ReactNode } from 'react';
 
@@ -58,19 +62,32 @@ export function Card({ body, foot = null, isFlipped = false, onClick, className 
       {/* Question zone */}
       <div className="pf-body">{body}</div>
 
-      {/* Answer zone — always mounted when foot is provided so layout height is reserved
-          pre-reveal. Visibility is toggled via data-hidden (drives visibility:hidden in
-          pf.css) and inert (removes all tab-stops + pointer interactions while hidden).
-          The real content is present in the DOM, reserving its natural height, so
-          getBoundingClientRect().height on .pf-card is identical before and after flip. */}
+      {/* Answer zone — .pf-foot is position:relative; .pf-foot__inner carries the
+          visibility attrs so the content stays in the DOM reserving natural height.
+          .pf-reveal-cta is absolutely-positioned inside .pf-foot (sibling of
+          .pf-foot__inner) and shown only pre-flip with pointer-events:none so
+          clicks fall through to the card-root flip handler.
+          getBoundingClientRect().height on .pf-card is identical before and after
+          flip (PRACT2-2-01 invariant preserved). */}
       {foot != null && (
-        <div
-          className="pf-foot"
-          data-hidden={!isFlipped ? 'true' : undefined}
-          inert={!isFlipped}
-          aria-hidden={!isFlipped ? true : undefined}
-        >
-          {foot}
+        <div className="pf-foot">
+          {/* Pre-flip reveal CTA — absolutely positioned, pointer-events:none */}
+          {!isFlipped && (
+            <div className="pf-reveal-cta" aria-hidden="true">
+              <span>Tap or press </span>
+              <kbd className="pf-kbd">Space</kbd>
+              <span> to reveal answer</span>
+            </div>
+          )}
+          {/* Inner wrapper carries the visibility attributes (PRACT2-2-01) */}
+          <div
+            className="pf-foot__inner"
+            data-hidden={!isFlipped ? 'true' : undefined}
+            inert={!isFlipped}
+            aria-hidden={!isFlipped ? true : undefined}
+          >
+            {foot}
+          </div>
         </div>
       )}
     </div>

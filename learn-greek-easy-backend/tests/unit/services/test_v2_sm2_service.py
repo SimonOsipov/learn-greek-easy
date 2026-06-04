@@ -4,6 +4,7 @@ from uuid import uuid4
 
 import pytest
 
+from src.core.sm2 import calculate_next_review_date, calculate_sm2
 from src.db.models import CardRecord, CardRecordStatistics, CardStatus, CardType, Deck, WordEntry
 from src.schemas.v2_sm2 import V2ReviewResult, V2StudyQueueCard
 from src.services.v2_sm2_service import V2SM2Service
@@ -39,6 +40,7 @@ def _create_mock_card_record_stats(
     mock_stats.next_review_date = next_review_date
     mock_stats.easiness_factor = 2.5
     mock_stats.interval = 1
+    mock_stats.repetitions = 1
     return mock_stats
 
 
@@ -805,3 +807,93 @@ class TestV2SM2ServicePersistReview:
         mock_capture.assert_called_once()
         call_kwargs = mock_capture.call_args.kwargs
         assert call_kwargs["event"] == "card_mastered_v2"
+
+
+@pytest.mark.unit
+@pytest.mark.sm2
+class TestV2SM2ServiceRatingPreviews:
+    """Tests for _rating_previews helper and its integration into queue card builders."""
+
+    # Rating→quality map under test
+    RATING_QUALITY_MAP = {1: 0, 2: 2, 3: 4, 4: 5}
+
+    def test_rating_quality_map_coverage(self, mock_db_session):
+        """Service exposes all four UI ratings mapped to expected SM-2 quality values."""
+        service = V2SM2Service(mock_db_session)
+        assert service._RATING_QUALITY_MAP == self.RATING_QUALITY_MAP
+
+    def test_reviewed_card_previews_match_calculate_sm2(self, mock_db_session):
+        """Each preview interval/status/date equals calculate_sm2 output for that quality."""
+        ef, interval, repetitions = 2.5, 6, 2
+
+        service = V2SM2Service(mock_db_session)
+        previews = service._rating_previews(ef, interval, repetitions)
+
+        assert len(previews) == 4
+        for preview in previews:
+            expected_quality = self.RATING_QUALITY_MAP[preview.rating]
+            assert preview.quality == expected_quality
+
+            result = calculate_sm2(ef, interval, repetitions, expected_quality)
+            assert preview.interval == result.new_interval
+            assert preview.new_status == result.new_status
+            assert preview.next_review_date == calculate_next_review_date(result.new_interval)
+
+    def test_new_card_previews_use_sm2_defaults(self, mock_db_session):
+        """New card previews are computed with ef=2.5, interval=0, repetitions=0."""
+        service = V2SM2Service(mock_db_session)
+        previews = service._rating_previews(2.5, 0, 0)
+
+        assert len(previews) == 4
+        for preview in previews:
+            expected_quality = self.RATING_QUALITY_MAP[preview.rating]
+            result = calculate_sm2(2.5, 0, 0, expected_quality)
+            assert preview.interval == result.new_interval
+            assert preview.new_status == result.new_status
+
+    def test_new_card_previews_all_approximately_one_day(self, mock_db_session):
+        """With ef=2.5/interval=0/reps=0, all four qualities produce interval=1."""
+        service = V2SM2Service(mock_db_session)
+        previews = service._rating_previews(2.5, 0, 0)
+
+        # SM-2 resets or starts at interval=1 for first review regardless of quality
+        for preview in previews:
+            assert preview.interval == 1, (
+                f"Expected interval=1 for new card, got {preview.interval} "
+                f"(rating={preview.rating}, quality={preview.quality})"
+            )
+
+    def test_build_card_from_stats_populates_rating_previews(self, mock_db_session):
+        """_build_card_from_stats embeds rating_previews sourced from stats.easiness_factor/interval/repetitions."""
+        stats = _create_mock_card_record_stats()
+        stats.easiness_factor = 2.5
+        stats.interval = 1
+        stats.repetitions = 1
+
+        service = V2SM2Service(mock_db_session)
+        card = service._build_card_from_stats(stats, is_early_practice=False)
+
+        assert len(card.rating_previews) == 4
+        # Spot-check rating=3 (quality=4) against direct calculate_sm2 call
+        preview_3 = next(p for p in card.rating_previews if p.rating == 3)
+        expected = calculate_sm2(2.5, 1, 1, 4)
+        assert preview_3.interval == expected.new_interval
+        assert preview_3.new_status == expected.new_status
+
+    def test_build_card_from_record_populates_rating_previews_with_defaults(self, mock_db_session):
+        """_build_card_from_record embeds rating_previews using ef=2.5/interval=0/reps=0; card schema ef/interval stay None."""
+        card_record = _create_mock_new_card_record()
+
+        service = V2SM2Service(mock_db_session)
+        card = service._build_card_from_record(card_record)
+
+        # Schema fields for new card remain None
+        assert card.easiness_factor is None
+        assert card.interval is None
+
+        # Rating previews use SM-2 defaults
+        assert len(card.rating_previews) == 4
+        for preview in card.rating_previews:
+            expected_quality = self.RATING_QUALITY_MAP[preview.rating]
+            result = calculate_sm2(2.5, 0, 0, expected_quality)
+            assert preview.interval == result.new_interval

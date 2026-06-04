@@ -414,6 +414,26 @@ New classes in `src/features/practice/pf/pf.css` (pf-layer scoping, not `src/ind
 | `.pf-streak` | Streak pill: flame + count, `--practice-hard` tint bg, 12px/600. |
 | `.pf-streak__icon` | 14×14 lucide Flame icon inside streak pill. |
 
+### Practice fidelity classes (PRACT2-3)
+
+New classes in `src/features/practice/pf/pf.css` (pf-layer scoping). Token-only — no raw hex.
+
+**Design system delta (PRACT2-3):** adds `.pf-reveal-cta`, `.pf-kbd`, `.pf-prompt`, `.pf-foot-hint`, `.pf-pos__sep`, `.pf-pos__label`, `.pf-rating-btn__hint`, `.pf-answer__example-el`, `.pf-answer__example-en`; no new CSS custom properties introduced (uses existing `--line-2`, `--fg`, `--fg-2`, `--fg-3`, `--success`).
+
+| Class | Role |
+|---|---|
+| `.pf-kbd` | Shared keycap primitive. JetBrains Mono 11px/600, 2–6px padding, `hsl(var(--fg)/0.07)` bg, `hsl(var(--fg)/0.12)` border, 4px radius. Reused by `.pf-reveal-cta` (Space key) and `.pf-foot-hint` (1–4 keys). |
+| `.pf-reveal-cta` | Pre-flip reveal hint overlay. Absolutely positioned at the top of `.pf-foot` (which is `position:relative`). Dashed top border using `hsl(var(--line-2))`; `pointer-events:none` so clicks fall through to the card-root flip handler. Contains `.pf-kbd` for the Space keycap. Hidden post-flip (React conditional render). |
+| `.pf-prompt` | Direction subtitle above the display word on translation cards (`"Greek → English · {prompt}"` / `"English → Greek · {prompt}"`). Mirrors `.pf-sentence-prompt`: Inter Tight 13px, font-weight 500, `hsl(var(--fg-3))`, centered. |
+| `.pf-foot-hint` | "Press 1–4 to rate" hint below the `RatingRow` in both pf feet. Inter Tight 12px/500, `hsl(var(--fg-3))`. Contains `.pf-kbd` keycaps. |
+| `.pf-pos__sep` | Middle-dot separator (`·`) between the POS label and the article in the POS chip. `hsl(var(--fg-3))`, small horizontal margin, weight 400. |
+| `.pf-pos__label` | POS label text node within `.pf-pos`. `text-transform: lowercase` so "Noun" renders as "noun". |
+| `.pf-rating-btn__hint` | Projected next-review interval under each rating-button label (PRACT2-3-06). Inter Tight 10px/500, `line-height:1`, `hsl(var(--fg-3))`; compact so the hint + `.pf-foot-hint` coexist within the 320px `.pf-foot` min-height floor. Text is word-form via `formatReviewInterval` (e.g. "1 day", "1 week"). Rendered only when `rating_previews` is present on the card (graceful absence: label-only). |
+| `.pf-answer__example-el` | Greek example sentence inside `.pf-answer__example` (PRACT2-3-07). Noto Serif 14px/400, `font-style: normal` (never italic), `lang="el"`, `hsl(var(--fg-2))`. Mirrors Greek study-text convention. |
+| `.pf-answer__example-en` | English gloss of the example sentence (PRACT2-3-07). Inter Tight 13px/400, `hsl(var(--fg-3))` — slightly muted vs `.pf-answer__example-el` to visually separate the gloss from the Greek above. |
+
+---
+
 ### Culture hub hero + what's-new strip (cx-, CULT2-2)
 
 New classes in `src/index.css` for the Culture hub (`CulturePage` / `CultureHero`). Token-only — no raw hex.
