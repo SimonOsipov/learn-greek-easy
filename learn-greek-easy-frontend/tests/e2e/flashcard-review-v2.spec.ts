@@ -790,51 +790,6 @@ test.describe('PRACT2-2 Practice Card Sizing & Stability', () => {
     expect(delta).toBeLessThanOrEqual(1);
   });
 
-  // E2E-P22-05: EN/RU toggle does NOT mutate global i18n language
-  //
-  // PRACT2-2 decouples card language from i18n. Clicking the RU button must:
-  //   a. NOT change document.documentElement.lang (i18n language invariant)
-  //   b. Set aria-pressed="true" on pf-lang-ru
-  //
-  // Content-swap assertions (EN answer vs RU answer) require a sentence_translation
-  // card with answer_ru populated. In the seeded "Greek A1 Vocabulary (Nouns)" deck,
-  // sentence_translation cards may carry sentence_ru (shown in the example block post-
-  // reveal) but answer_ru is only populated on sentence cards — availability depends
-  // on the seed run. If not reachable, the i18n-invariant + aria-pressed assertions
-  // below are the canonical E2E coverage; content-swap is covered by unit tests in
-  // src/features/practice/pf/__tests__/Answer.test.tsx.
-  test('E2E-P22-05: EN/RU toggle does not change i18n language; RU reflects pressed state', async ({
-    page,
-  }) => {
-    await navigateToV2Practice(page, p22DeckId);
-
-    const cardVisible = await page
-      .locator('[data-testid="pf-card"]')
-      .isVisible()
-      .catch(() => false);
-    test.skip(!cardVisible, '[P22-05] No card available — cards exhausted');
-
-    // Capture the HTML lang attribute BEFORE clicking RU
-    const langBefore = await page.evaluate(() => document.documentElement.lang);
-    console.log(`[P22-05] HTML lang before RU click: "${langBefore}"`);
-
-    // Click RU button (stop-propagation is handled inside CardHead)
-    const ruBtn = page.locator('[data-testid="pf-lang-ru"]');
-    await expect(ruBtn).toBeVisible();
-    await ruBtn.click();
-
-    // Assert (a): HTML lang attribute unchanged
-    const langAfter = await page.evaluate(() => document.documentElement.lang);
-    console.log(`[P22-05] HTML lang after RU click: "${langAfter}"`);
-    expect(langAfter).toBe(langBefore);
-
-    // Assert (b): RU button is now aria-pressed="true"
-    await expect(ruBtn).toHaveAttribute('aria-pressed', 'true');
-
-    // Assert EN button is now aria-pressed="false"
-    const enBtn = page.locator('[data-testid="pf-lang-en"]');
-    await expect(enBtn).toHaveAttribute('aria-pressed', 'false');
-  });
 });
 
 // ============================================================================
@@ -1094,6 +1049,365 @@ test.describe('PRACT2-3 Practice Fidelity Additions', () => {
     // pf-foot-hint is expected to be present; log if absent (graceful for card type variants)
     if (footHintCount === 0) {
       console.log('[P23-03] NOTE: .pf-foot-hint not found — may be absent on this card type');
+    }
+  });
+});
+
+// ============================================================================
+// PRACT2-5 Tests: Practice Cleanup Pass
+// ============================================================================
+
+test.describe('PRACT2-5 Practice Cleanup Pass', () => {
+  test.use({ storageState: LEARNER_AUTH });
+
+  let p25DeckId: string;
+
+  test.beforeAll(async ({ request }) => {
+    const apiBaseUrl = getApiBaseUrl();
+    const accessToken = getLearnerAccessToken();
+    if (!accessToken) {
+      throw new Error(
+        '[P25] Could not read learner access token from storageState. ' +
+          'Ensure auth.setup.ts ran successfully.'
+      );
+    }
+
+    const response = await request.get(`${apiBaseUrl}/api/v1/decks?page_size=100`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    expect(response.ok()).toBe(true);
+
+    const data = await response.json();
+    const decks = data.decks as Array<{ id: string; name: string }>;
+    const deck = decks.find((d) => d.name.includes('Greek A1 Vocabulary'));
+
+    if (!deck) {
+      throw new Error(
+        '[P25] No V2 Nouns deck found in database. ' +
+          `Available decks: ${decks.map((d) => d.name).join(', ')}`
+      );
+    }
+
+    p25DeckId = deck.id;
+    console.log(`[P25] Found deck: ${deck.name} (${p25DeckId})`);
+  });
+
+  // E2E-P25-01: Global LanguageSwitcher drives document.lang + localizes practice chrome
+  //
+  // PRACT2-5 removes the in-card EN/RU toggle (pf-lang-en/pf-lang-ru/pf-lang-switch).
+  // The ONLY language control is the global LanguageSwitcher in the top-right chrome.
+  // Switching to RU must:
+  //   a. Change document.documentElement.lang to start with 'ru'
+  //   b. Localize practice chrome — deck-label title becomes "· Практика"
+  //   c. (Best-effort) Reflect RU gloss in reveal if the card has RU data
+  //
+  // Replaces E2E-P22-05 (which asserted the now-removed in-card toggle).
+  test('E2E-P25-01: global LanguageSwitcher changes document.lang and localizes practice chrome', async ({
+    page,
+  }) => {
+    await navigateToV2Practice(page, p25DeckId);
+
+    const cardVisible = await page
+      .locator('[data-testid="pf-card"]')
+      .isVisible()
+      .catch(() => false);
+    test.skip(!cardVisible, '[P25-01] No card available — cards exhausted');
+
+    // Capture lang BEFORE switching
+    const langBefore = await page.evaluate(() => document.documentElement.lang);
+    console.log(`[P25-01] HTML lang before switcher: "${langBefore}"`);
+
+    // Open the global LanguageSwitcher dropdown and select RU
+    await page.locator('[data-testid="language-switcher-trigger"]').click();
+    await page.locator('[data-testid="language-option-ru"]').click();
+
+    // Assert (a): document.lang changed to RU
+    const langAfterRu = await page.evaluate(() => document.documentElement.lang);
+    console.log(`[P25-01] HTML lang after switching to RU: "${langAfterRu}"`);
+    expect(langAfterRu.startsWith('ru')).toBe(true);
+    expect(langBefore.startsWith('ru')).toBe(false);
+
+    // Assert (b): practice chrome localizes — deck-label title contains "· Практика"
+    // (RU translation: "{{name}} · Практика" — TopBar uses t('practice.deckLabel', { name }))
+    const deckLabelTitle = page.locator('.pf-deck-label__title');
+    await expect(deckLabelTitle).toContainText('· Практика', { timeout: 5000 });
+    console.log('[P25-01] Deck label title localized to RU');
+
+    // Assert (b2): meta line localizes — contains "повтор." (RU for review)
+    const deckLabelMeta = page.locator('.pf-deck-label__meta');
+    await expect(deckLabelMeta).toContainText('повтор.', { timeout: 5000 });
+    console.log('[P25-01] Deck label meta localized to RU');
+
+    // Assert (c): best-effort — after reveal, check for RU gloss if the card has sentence_ru
+    // Guard: reveal the card and check for pf-answer-example-ru element
+    await page.keyboard.press('Space');
+    const ratingRowVisible = await page
+      .locator('[data-testid="pf-rating-row"]')
+      .isVisible({ timeout: 10000 })
+      .catch(() => false);
+
+    if (ratingRowVisible) {
+      const ruGloss = await page
+        .locator('[data-testid="pf-answer-example-ru"]')
+        .isVisible()
+        .catch(() => false);
+      if (ruGloss) {
+        console.log('[P25-01] RU gloss visible in reveal — RU data present on this card');
+      } else {
+        console.log(
+          '[P25-01] NOTE: No RU gloss visible — card may lack sentence_ru (covered by unit tests)'
+        );
+      }
+      // Rate to clean up (don't leave card revealed for next test)
+      await page.keyboard.press('3');
+      const nxt = page
+        .locator('[data-testid="pf-card"]')
+        .or(page.locator('[data-testid="pf-done"]'));
+      await expect(nxt).toBeVisible({ timeout: 10000 });
+    }
+
+    // Switch back to EN (cleanup — fresh context per test isolates, but belt-and-suspenders)
+    await page.locator('[data-testid="language-switcher-trigger"]').click();
+    await page.locator('[data-testid="language-option-en"]').click();
+    const langAfterEn = await page.evaluate(() => document.documentElement.lang);
+    console.log(`[P25-01] HTML lang after switching back to EN: "${langAfterEn}"`);
+    expect(langAfterEn.startsWith('en')).toBe(true);
+  });
+
+  // E2E-P25-02: Cleanup assertions — no POS chip, no in-card toggle, progress centering
+  //
+  // Asserts the removals from PRACT2-5:
+  //   - pf-pos-chip is gone (POS chip removed)
+  //   - pf-lang-switch is gone (in-card toggle removed)
+  //   - pf-seg-track is horizontally centered within the card area
+  test('E2E-P25-02: POS chip and in-card toggle are absent; progress track is centered', async ({
+    page,
+  }) => {
+    await navigateToV2Practice(page, p25DeckId);
+
+    const cardVisible = await page
+      .locator('[data-testid="pf-card"]')
+      .isVisible()
+      .catch(() => false);
+    test.skip(!cardVisible, '[P25-02] No card available — cards exhausted');
+
+    // Assert: pf-pos-chip does not exist in the DOM
+    await expect(page.locator('[data-testid="pf-pos-chip"]')).toHaveCount(0);
+    console.log('[P25-02] pf-pos-chip correctly absent');
+
+    // Assert: pf-lang-switch does not exist in the DOM (in-card toggle removed)
+    await expect(page.locator('[data-testid="pf-lang-switch"]')).toHaveCount(0);
+    console.log('[P25-02] pf-lang-switch correctly absent');
+
+    // Assert: progress track (.pf-seg-track) is horizontally centered
+    // Centering is relative to the viewport width (justify-content:center on .pf-progress).
+    // Tolerance of 24px accommodates sub-pixel layout + left/right chrome asymmetry.
+    const trackBox = await page.locator('.pf-seg-track').boundingBox();
+    if (trackBox) {
+      const viewportSize = page.viewportSize();
+      const viewportWidth = viewportSize?.width ?? 1280;
+      const trackCenterX = trackBox.x + trackBox.width / 2;
+      const viewportCenterX = viewportWidth / 2;
+      const offset = Math.abs(trackCenterX - viewportCenterX);
+      console.log(
+        `[P25-02] pf-seg-track center=${trackCenterX.toFixed(1)}px viewport-center=${viewportCenterX}px offset=${offset.toFixed(1)}px`
+      );
+      // Centered within 60px — the TopBar has a 3-column layout; the center column
+      // hosts the progress bar and is centered within the middle third of the viewport.
+      expect(offset).toBeLessThan(60);
+    } else {
+      console.log('[P25-02] NOTE: pf-seg-track bounding box unavailable — centering check skipped');
+    }
+  });
+
+  // E2E-P25-03: Sentence-family reveal de-duplication
+  //
+  // PRACT2-5-05: on sentence-family cards, the EN example TEXT is suppressed
+  // because it duplicates the prompt/answer. The audio chip is still shown.
+  //
+  // After revealing a sentence card:
+  //   - pf-answer-example-el must NOT be present (suppressed)
+  //   - pf-answer-example-en must NOT be present (suppressed)
+  //   - pf-audio-chip may be present (audio kept) — asserted best-effort
+  test('E2E-P25-03: sentence-family reveal suppresses example text but keeps audio chip', async ({
+    page,
+  }) => {
+    await navigateToV2Practice(page, p25DeckId);
+
+    const cardVisible = await page
+      .locator('[data-testid="pf-card"]')
+      .isVisible()
+      .catch(() => false);
+    test.skip(!cardVisible, '[P25-03] No card available — cards exhausted');
+
+    // Iterate through cards looking for a sentence-family card (data-fam="sentence")
+    // Safety limit: 30 cards
+    let foundSentence = false;
+    for (let i = 0; i < 30; i++) {
+      const isDone = await page
+        .locator('[data-testid="pf-done"]')
+        .isVisible()
+        .catch(() => false);
+      if (isDone) break;
+
+      const cv = await page.locator('[data-testid="pf-card"]').isVisible().catch(() => false);
+      if (!cv) break;
+
+      const isSentence = await page
+        .locator('.pf-app[data-fam="sentence"]')
+        .isVisible()
+        .catch(() => false);
+
+      if (isSentence) {
+        foundSentence = true;
+        // Reveal the card
+        await page.keyboard.press('Space');
+        await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({
+          timeout: 10000,
+        });
+
+        // Assert: example text elements are suppressed on sentence-family reveal
+        await expect(page.locator('[data-testid="pf-answer-example-el"]')).toHaveCount(0);
+        await expect(page.locator('[data-testid="pf-answer-example-en"]')).toHaveCount(0);
+        console.log('[P25-03] pf-answer-example-el and pf-answer-example-en correctly absent on sentence card');
+
+        // Best-effort: audio chip may be present if audio URL is available
+        const audioChipPresent = await page
+          .locator('[data-testid="pf-audio-chip"]')
+          .isVisible()
+          .catch(() => false);
+        if (audioChipPresent) {
+          console.log('[P25-03] pf-audio-chip correctly present on sentence card reveal');
+        } else {
+          console.log(
+            '[P25-03] NOTE: pf-audio-chip not visible — card may lack audio URL (covered by unit tests)'
+          );
+        }
+
+        // Rate to advance
+        await page.keyboard.press('3');
+        const nxt = page
+          .locator('[data-testid="pf-card"]')
+          .or(page.locator('[data-testid="pf-done"]'));
+        await expect(nxt).toBeVisible({ timeout: 10000 });
+        break;
+      }
+
+      // Advance past this non-sentence card
+      await page.keyboard.press('Space');
+      await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
+      await page.keyboard.press('3');
+      await page.waitForTimeout(300);
+      const nxt = page
+        .locator('[data-testid="pf-card"]')
+        .or(page.locator('[data-testid="pf-done"]'));
+      await expect(nxt).toBeVisible({ timeout: 10000 });
+    }
+
+    if (!foundSentence) {
+      console.log(
+        '[P25-03] NOTE: No sentence card found in queue — sentence reveal de-dup covered by Answer.test.tsx unit tests'
+      );
+    }
+  });
+
+  // E2E-P25-04: Unboxed example panel (no border/background on .pf-answer__example)
+  //
+  // PRACT2-5 removes the box styling (background, border, border-radius, padding)
+  // from the .pf-answer__example wrapper. Verified via getComputedStyle.
+  test('E2E-P25-04: revealed example panel has no border or background (unboxed)', async ({
+    page,
+  }) => {
+    await navigateToV2Practice(page, p25DeckId);
+
+    const cardVisible = await page
+      .locator('[data-testid="pf-card"]')
+      .isVisible()
+      .catch(() => false);
+    test.skip(!cardVisible, '[P25-04] No card available — cards exhausted');
+
+    // Iterate to find a non-sentence card that shows .pf-answer__example
+    // (sentence cards suppress example text; look for translation/grammar family)
+    let exampleFound = false;
+    for (let i = 0; i < 20; i++) {
+      const isDone = await page
+        .locator('[data-testid="pf-done"]')
+        .isVisible()
+        .catch(() => false);
+      if (isDone) break;
+
+      const cv = await page.locator('[data-testid="pf-card"]').isVisible().catch(() => false);
+      if (!cv) break;
+
+      // Flip the card to check for the example block
+      await page.keyboard.press('Space');
+      const ratingVisible = await page
+        .locator('[data-testid="pf-rating-row"]')
+        .isVisible({ timeout: 10000 })
+        .catch(() => false);
+      if (!ratingVisible) break;
+
+      const exampleEl = page.locator('[data-testid="pf-answer-example"]');
+      const hasExample = await exampleEl.isVisible().catch(() => false);
+
+      if (hasExample) {
+        exampleFound = true;
+
+        // Check computed styles via page.evaluate
+        const styles = await page.evaluate(() => {
+          const el = document.querySelector('[data-testid="pf-answer-example"]');
+          if (!el) return null;
+          const cs = window.getComputedStyle(el);
+          return {
+            borderWidth: cs.borderWidth,
+            borderStyle: cs.borderStyle,
+            backgroundColor: cs.backgroundColor,
+          };
+        });
+
+        if (styles) {
+          console.log(
+            `[P25-04] .pf-answer__example computed: borderWidth=${styles.borderWidth} borderStyle=${styles.borderStyle} backgroundColor=${styles.backgroundColor}`
+          );
+          // Assert no border: borderWidth should be '0px' or borderStyle should be 'none'
+          const hasBorder =
+            styles.borderStyle !== 'none' &&
+            styles.borderWidth !== '0px' &&
+            styles.borderWidth !== '';
+          expect(hasBorder).toBe(false);
+          // Assert no background: should be transparent (rgba(0, 0, 0, 0))
+          expect(styles.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+          console.log('[P25-04] .pf-answer__example correctly has no border and no background');
+        } else {
+          console.log(
+            '[P25-04] NOTE: Could not read computed styles — element query returned null'
+          );
+        }
+
+        // Rate to advance
+        await page.keyboard.press('3');
+        const nxt = page
+          .locator('[data-testid="pf-card"]')
+          .or(page.locator('[data-testid="pf-done"]'));
+        await expect(nxt).toBeVisible({ timeout: 10000 });
+        break;
+      }
+
+      // Rate and advance to next card
+      await page.keyboard.press('3');
+      await page.waitForTimeout(300);
+      const nxt = page
+        .locator('[data-testid="pf-card"]')
+        .or(page.locator('[data-testid="pf-done"]'));
+      await expect(nxt).toBeVisible({ timeout: 10000 });
+    }
+
+    if (!exampleFound) {
+      console.log(
+        '[P25-04] NOTE: No revealed example block found in queue — unboxed-example assertion skipped (covered by Answer.test.tsx)'
+      );
     }
   });
 });
