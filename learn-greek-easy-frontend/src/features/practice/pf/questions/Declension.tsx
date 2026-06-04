@@ -60,6 +60,7 @@ export interface DeclensionProps {
   /**
    * The full card record. back_content.declension_table is narrowed locally.
    * front_content.hint is used for the optional English gloss in the lemma row.
+   * front_content.sub is used for the IPA line (when present).
    */
   card: {
     back_content: Record<string, unknown>;
@@ -93,6 +94,10 @@ export function Declension({ card, revealed }: DeclensionProps) {
   const gloss =
     typeof card.front_content['hint'] === 'string' ? (card.front_content['hint'] as string) : null;
 
+  // IPA from front_content.sub (may be absent — backend sets this from we.pronunciation)
+  const ipa =
+    typeof card.front_content['sub'] === 'string' ? (card.front_content['sub'] as string) : null;
+
   if (!table || table.rows.length === 0) {
     // Graceful degradation -- no paradigm data
     return (
@@ -119,6 +124,13 @@ export function Declension({ card, revealed }: DeclensionProps) {
               {gloss}
             </span>
           )}
+        </p>
+      )}
+
+      {/* IPA — only when front_content.sub is present (from we.pronunciation) */}
+      {ipa && (
+        <p className="pf-ipa" data-testid="pf-ipa">
+          {ipa}
         </p>
       )}
 

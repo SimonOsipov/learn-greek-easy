@@ -1,5 +1,5 @@
 /**
- * pf/questions/Sentence.tsx — unit tests (PRACT2-1-04)
+ * pf/questions/Sentence.tsx — unit tests (PRACT2-1-04, PRACT2-3-10, PRACT2-3-09)
  *
  * Covers:
  * - Sentence (el_to_en): renders Greek sentence with pf-sentence-text class
@@ -8,11 +8,15 @@
  * - Sentence (el_to_en): curly-quote class applied (.pf-sentence-text)
  * - Sentence (el_to_en): AudioChip renders when audioState has url
  * - Sentence (el_to_en): AudioChip absent when audioState is null
+ * - Sentence (el_to_en): IPA renders when ipa prop is present (PRACT2-3-10)
+ * - Sentence (el_to_en): IPA absent when ipa prop is not provided (PRACT2-3-10)
  * - Sentence (el_to_en): grammar-tag chip is present
  * - Sentence (el_to_en): grammar-tag chip contains an UnwiredDot (data-testid="unwired-dot")
  * - Sentence (el_to_en): grammar-tag chip does NOT contain fabricated text labels
  * - Sentence (en_to_el): renders English text with pf-sentence-en-text class
  * - Sentence (en_to_el): no lang="el" on the English element
+ * - Sentence (en_to_el): IPA renders when ipa prop is present (PRACT2-3-10)
+ * - Sentence (en_to_el): IPA absent when ipa prop is not provided (PRACT2-3-10)
  * - Sentence (en_to_el): grammar-tag chip present with UnwiredDot
  * - Direction: 'Translate this sentence' → el_to_en container
  * - Direction: 'Translate to Greek' → en_to_el container
@@ -113,6 +117,29 @@ describe('SentenceElToEn', () => {
     expect(screen.queryByTestId('pf-audio-chip')).toBeNull();
   });
 
+  // PRACT2-3-10: IPA renders when ipa prop is present
+  it('renders .pf-ipa when ipa prop is provided', () => {
+    render(
+      <SentenceElToEn
+        prompt="Translate this sentence"
+        main="Ο άντρας τρέχει."
+        ipa="/o ˈan.dras ˈtre.xi/"
+      />
+    );
+    expect(screen.getByTestId('pf-ipa')).not.toBeNull();
+    expect(screen.getByTestId('pf-ipa').textContent).toBe('/o ˈan.dras ˈtre.xi/');
+  });
+
+  it('does NOT render .pf-ipa when ipa prop is absent', () => {
+    render(<SentenceElToEn prompt="Translate this sentence" main="Ο άντρας τρέχει." />);
+    expect(screen.queryByTestId('pf-ipa')).toBeNull();
+  });
+
+  it('does NOT render .pf-ipa when ipa prop is null', () => {
+    render(<SentenceElToEn prompt="Translate this sentence" main="Ο άντρας τρέχει." ipa={null} />);
+    expect(screen.queryByTestId('pf-ipa')).toBeNull();
+  });
+
   it('renders the grammar-tag chip (.pf-sentence-tag)', () => {
     const { container } = render(
       <SentenceElToEn prompt="Translate this sentence" main="Ο άντρας τρέχει." />
@@ -175,6 +202,20 @@ describe('SentenceEnToEl', () => {
     );
     const el = container.querySelector('.pf-sentence-en-text');
     expect(el?.getAttribute('lang')).not.toBe('el');
+  });
+
+  // PRACT2-3-10: IPA renders when ipa prop is present
+  it('renders .pf-ipa when ipa prop is provided', () => {
+    render(
+      <SentenceEnToEl prompt="Translate to Greek" main="The man runs." ipa="/o ˈan.dras ˈtre.xi/" />
+    );
+    expect(screen.getByTestId('pf-ipa')).not.toBeNull();
+    expect(screen.getByTestId('pf-ipa').textContent).toBe('/o ˈan.dras ˈtre.xi/');
+  });
+
+  it('does NOT render .pf-ipa when ipa prop is absent', () => {
+    render(<SentenceEnToEl prompt="Translate to Greek" main="The man runs." />);
+    expect(screen.queryByTestId('pf-ipa')).toBeNull();
   });
 
   it('renders the grammar-tag chip (.pf-sentence-tag)', () => {

@@ -532,6 +532,7 @@ export function V2FlashcardPracticePage() {
                         prompt={translatedPrompt}
                         main={(front.main as string) ?? ''}
                         audioState={audioState ?? null}
+                        ipa={(front.sub as string | null) ?? null}
                       />
                     </>
                   }

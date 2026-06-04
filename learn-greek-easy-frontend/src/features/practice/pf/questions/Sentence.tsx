@@ -76,10 +76,22 @@ export interface SentenceProps {
    * For en_to_el: the English text to translate.
    */
   main: string;
+  /**
+   * IPA from front_content.sub (optional).
+   * No IPA source exists for sentence cards today, so this renders absent
+   * gracefully. Wired for future use when sentence IPA is authored.
+   */
+  ipa?: string | null;
   /** Lifted audio state — passed through to AudioChip (el_to_en only). */
   audioState?: AudioChipState | null;
   /** Current card language. No-op for Sentence question front (no RU front data exists). */
   lang?: 'en' | 'ru';
+  /**
+   * Grammar tag label from front_content.grammar_tag (optional).
+   * Renders inside .pf-sentence-tag when present; renders NOTHING when absent.
+   * No grammar source exists today — this prop is wired for future use.
+   */
+  grammarTag?: string | null;
 }
 
 // ── SentenceElToEn renderer ───────────────────────────────────────────────────
@@ -92,9 +104,10 @@ export interface SentenceProps {
  * Curly-quote decorations (::before/::after) tinted by --pf-c (family colour).
  * Prompt label shown above as a muted instruction.
  * AudioChip shown when audioState has a URL.
+ * IPA: renders from `ipa` prop when present (no source today → graceful absence).
  * Grammar-tag chip: inert red-dotted UnwiredDot (no fabricated label).
  */
-export function SentenceElToEn({ prompt, main, audioState }: SentenceProps) {
+export function SentenceElToEn({ prompt, main, audioState, ipa }: SentenceProps) {
   return (
     <div className="flex flex-col items-center gap-3 py-4" data-testid="pf-sentence-el-en">
       {/* Direction instruction label */}
@@ -108,6 +121,13 @@ export function SentenceElToEn({ prompt, main, audioState }: SentenceProps) {
       <p className="pf-sentence-text" lang="el">
         {main}
       </p>
+
+      {/* IPA — only when present (no source today; renders gracefully absent) */}
+      {ipa && (
+        <p className="pf-ipa" data-testid="pf-ipa">
+          {ipa}
+        </p>
+      )}
 
       {/* Audio chip — only when audioState has a URL */}
       {audioState && <AudioChip audioState={audioState} />}
@@ -125,9 +145,10 @@ export function SentenceElToEn({ prompt, main, audioState }: SentenceProps) {
  * en_to_el direction.
  *
  * English text: Inter Tight 700.
+ * IPA: renders from `ipa` prop when present (no source today → graceful absence).
  * Grammar-tag chip: inert red-dotted UnwiredDot (no fabricated label).
  */
-export function SentenceEnToEl({ prompt, main }: Omit<SentenceProps, 'audioState'>) {
+export function SentenceEnToEl({ prompt, main, ipa }: Omit<SentenceProps, 'audioState'>) {
   return (
     <div className="flex flex-col items-center gap-3 py-4" data-testid="pf-sentence-en-el">
       {/* Direction instruction label */}
@@ -139,6 +160,13 @@ export function SentenceEnToEl({ prompt, main }: Omit<SentenceProps, 'audioState
 
       {/* English text in Inter Tight */}
       <p className="pf-sentence-en-text">{main}</p>
+
+      {/* IPA — only when present (no source today; renders gracefully absent) */}
+      {ipa && (
+        <p className="pf-ipa" data-testid="pf-ipa">
+          {ipa}
+        </p>
+      )}
 
       {/* Grammar-tag chip — inert, red-dotted, no fabricated label */}
       <SentenceGrammarTag />
@@ -155,14 +183,22 @@ export function SentenceEnToEl({ prompt, main }: Omit<SentenceProps, 'audioState
  * SentenceElToEn or SentenceEnToEl accordingly.
  *
  * Usage in the dispatch block:
- *   <Sentence prompt={front.prompt} main={front.main} audioState={audioState} />
+ *   <Sentence prompt={front.prompt} main={front.main} audioState={audioState}
+ *             ipa={front.sub as string | null} grammarTag={front.grammar_tag as string | null} />
  */
-export function Sentence({ prompt, main, audioState, lang: _lang }: SentenceProps) {
+export function Sentence({
+  prompt,
+  main,
+  audioState,
+  ipa,
+  grammarTag: _grammarTag,
+  lang: _lang,
+}: SentenceProps) {
   const direction = deriveDirection(prompt as string | null | undefined);
 
   if (direction === 'en_to_el') {
-    return <SentenceEnToEl prompt={prompt} main={main} />;
+    return <SentenceEnToEl prompt={prompt} main={main} ipa={ipa} />;
   }
 
-  return <SentenceElToEn prompt={prompt} main={main} audioState={audioState} />;
+  return <SentenceElToEn prompt={prompt} main={main} audioState={audioState} ipa={ipa} />;
 }

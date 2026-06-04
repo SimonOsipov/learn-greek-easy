@@ -1,5 +1,5 @@
 /**
- * pf/questions/Declension.tsx -- unit tests (PRACT2-1-05)
+ * pf/questions/Declension.tsx -- unit tests (PRACT2-1-05, PRACT2-3-10)
  *
  * Covers:
  * - Full paradigm: all 4 case rows render
@@ -15,6 +15,8 @@
  * - Lemma row: no italic on Greek span (font-style not italic)
  * - Lemma row: English gloss shown from front_content.hint when present
  * - Lemma row: English gloss absent when front_content.hint not present
+ * - IPA (.pf-ipa) renders when front_content.sub is present (PRACT2-3-10)
+ * - IPA absent when front_content.sub is not provided (PRACT2-3-10)
  * - No red dot (UnwiredDot) is rendered
  * - Graceful degradation: renders without crash when declension_table absent
  * - Graceful degradation: renders without crash when rows is empty
@@ -91,7 +93,7 @@ const ROWS_PL_TARGET = [
   },
 ];
 
-function makeCard(rows: typeof ROWS_SG_TARGET, hint?: string) {
+function makeCard(rows: typeof ROWS_SG_TARGET, hint?: string, sub?: string) {
   return {
     back_content: {
       declension_table: {
@@ -101,6 +103,7 @@ function makeCard(rows: typeof ROWS_SG_TARGET, hint?: string) {
     } as Record<string, unknown>,
     front_content: {
       ...(hint !== undefined ? { hint } : {}),
+      ...(sub !== undefined ? { sub } : {}),
     } as Record<string, unknown>,
   };
 }
@@ -220,6 +223,23 @@ describe('Declension lemma row', () => {
   it('omits English gloss when front_content.hint is absent', () => {
     const { container } = render(<Declension card={makeCard(ROWS_SG_TARGET)} revealed={false} />);
     expect(container.querySelector('[data-testid="pf-decl-gloss"]')).toBeNull();
+  });
+});
+
+// -- IPA (PRACT2-3-10) --------------------------------------------------------
+
+describe('Declension IPA (PRACT2-3-10)', () => {
+  it('renders .pf-ipa when front_content.sub is present', () => {
+    render(
+      <Declension card={makeCard(ROWS_SG_TARGET, undefined, '/ˈan.dras/')} revealed={false} />
+    );
+    expect(screen.getByTestId('pf-ipa')).not.toBeNull();
+    expect(screen.getByTestId('pf-ipa').textContent).toBe('/ˈan.dras/');
+  });
+
+  it('does NOT render .pf-ipa when front_content.sub is absent', () => {
+    const { container } = render(<Declension card={makeCard(ROWS_SG_TARGET)} revealed={false} />);
+    expect(container.querySelector('[data-testid="pf-ipa"]')).toBeNull();
   });
 });
 
