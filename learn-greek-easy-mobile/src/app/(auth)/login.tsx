@@ -22,7 +22,7 @@
  *
  * Flat translucent View used instead of BlurView: BlurView nests inside a scroll
  * context here, which can cause a blur-layer z-index glitch on Android and adds
- * unnecessary composition complexity for a 47px field. The flat bg-on-photo/10
+ * unnecessary composition complexity for a 47px field. The flat bg-on-photo-10
  * approach is the sanctioned fallback per the spec.
  *
  * Animation: react-native-reanimated useSharedValue + withTiming (180ms).
@@ -38,12 +38,15 @@ import {
   ImageBackground,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import Svg, { Path } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { cssInterop } from 'nativewind';
 import { AlertCircle, Eye, EyeOff } from 'lucide-react-native';
@@ -57,7 +60,7 @@ import { track } from '@/lib/analytics';
 // lucide icon cssInterop — maps className → style → color prop.
 // Pattern: nativeStyleToProp: { color: true } — same as react-native-css-interop
 // uses for ActivityIndicator internally. This lets us write
-// <Eye className="text-on-photo/60" /> without any raw color literals.
+// <Eye className="text-on-photo-60" /> without any raw color literals.
 // ---------------------------------------------------------------------------
 cssInterop(AlertCircle, { className: { target: 'style', nativeStyleToProp: { color: true } } });
 cssInterop(Eye, { className: { target: 'style', nativeStyleToProp: { color: true } } });
@@ -124,7 +127,7 @@ export default function LoginScreen() {
     : null;
 
   // thumb position: 0 = left (signin), 1 = right (signup).
-  const thumbProgress = useSharedValue(0);
+  const thumbProgress = useSharedValue(mode === 'signup' ? 1 : 0);
 
   function handleModeChange(next: 'signin' | 'signup') {
     if (next === mode) return;
@@ -181,14 +184,15 @@ export default function LoginScreen() {
       resizeMode="cover"
       className="flex-1"
     >
-      {/* Sanctioned raw-literal exception (MOB-09): expo-linear-gradient colors[] cannot take a NativeWind class.
-          Rendered as an absolute-fill overlay (a SIBLING, not a wrapper) so the form still renders even if the
-          native ExpoLinearGradient view is momentarily unavailable (e.g. dev-client native module not yet linked). */}
+      {/* Scrim gradient over the photo (design §Container). Sized via inline style
+          (StyleSheet.absoluteFill), NOT a NativeWind class: className is not applied to the
+          native ExpoLinearGradient view, so a class-based size silently renders nothing
+          (root cause of the washed-out/blank login). Sibling overlay so the form always renders. */}
       <LinearGradient
         colors={['rgba(8,11,20,0.28)', 'rgba(8,11,20,0.55)', 'rgba(8,11,20,0.94)']}
         locations={[0, 0.42, 1]}
         pointerEvents="none"
-        className="absolute inset-0"
+        style={StyleSheet.absoluteFill}
       />
       <SafeAreaView className="flex-1">
           <ScrollView
@@ -225,8 +229,8 @@ export default function LoginScreen() {
               </Text>
             </View>
 
-            {/* Spacer — capped so it doesn't balloon on tall devices (design frame is 300x640). */}
-            <View className="flex-1 max-h-[200px]" />
+            {/* Spacer — bottom-weights the form per spec (README §Container). */}
+            <View className="flex-1" />
 
             {/* Heading block — design order: heading ABOVE the segmented control */}
             <View className="mb-4 gap-[6px]">
@@ -236,7 +240,7 @@ export default function LoginScreen() {
               >
                 {headingTitle}
               </Text>
-              <Text className="text-on-photo/72 text-[13.5px] font-sans">
+              <Text className="text-on-photo-72 text-[13.5px] font-sans">
                 {headingSubtitle}
               </Text>
             </View>
@@ -254,7 +258,8 @@ export default function LoginScreen() {
             <View className="gap-[11px]">
               {/* Glass danger banner — shown above fields when store error is set */}
               {friendlyError ? (
-                <View className="flex-row items-center gap-2 bg-danger/18 border border-danger/55 rounded-[13px] px-3 py-3">
+                <View className="flex-row items-center gap-2 overflow-hidden border border-danger-55 rounded-[13px] px-3 py-3">
+                  <GlassFill tintClass="bg-danger-18" />
                   <AlertCircle className="text-danger-soft" size={15} />
                   <Text
                     className="text-danger-soft text-[12.5px] flex-1"
@@ -268,17 +273,18 @@ export default function LoginScreen() {
               {/* Email field */}
               <View className="gap-[6px]">
                 <Text
-                  className="text-on-photo/78 text-[12px]"
+                  className="text-on-photo-78 text-[12px]"
                   style={{ fontFamily: 'SplineSans_500Medium' }}
                 >
                   Email
                 </Text>
                 {/* Glass input container — danger border when emailError or server error */}
                 <View
-                  className={`h-[47px] rounded-[13px] bg-on-photo/10 border justify-center px-4 ${
-                    emailError || error ? 'border-danger/70' : 'border-on-photo/22'
+                  className={`h-[47px] rounded-[13px] overflow-hidden border justify-center px-4 ${
+                    emailError || error ? 'border-danger-70' : 'border-on-photo-22'
                   }`}
                 >
+                  <GlassFill />
                   <TextInput
                     className="text-on-photo text-[15px] flex-1"
                     placeholder="you@example.com"
@@ -318,7 +324,7 @@ export default function LoginScreen() {
                 {/* Label row: "Password" on left, "Forgot?" on right (signin only) */}
                 <View className="flex-row items-center justify-between">
                   <Text
-                    className="text-on-photo/78 text-[12px]"
+                    className="text-on-photo-78 text-[12px]"
                     style={{ fontFamily: 'SplineSans_500Medium' }}
                   >
                     Password
@@ -341,10 +347,11 @@ export default function LoginScreen() {
 
                 {/* Glass input container — danger border when server error */}
                 <View
-                  className={`h-[47px] rounded-[13px] bg-on-photo/10 border flex-row items-center px-4 ${
-                    error ? 'border-danger/70' : 'border-on-photo/22'
+                  className={`h-[47px] rounded-[13px] overflow-hidden border flex-row items-center px-4 ${
+                    error ? 'border-danger-70' : 'border-on-photo-22'
                   }`}
                 >
+                  <GlassFill />
                   <TextInput
                     className="text-on-photo text-[15px] flex-1"
                     placeholder="••••••••"
@@ -366,9 +373,9 @@ export default function LoginScreen() {
                     accessibilityRole="button"
                   >
                     {showPassword ? (
-                      <EyeOff className="text-on-photo/60" size={20} />
+                      <EyeOff className="text-on-photo-60" size={20} />
                     ) : (
-                      <Eye className="text-on-photo/60" size={20} />
+                      <Eye className="text-on-photo-60" size={20} />
                     )}
                   </Pressable>
                 </View>
@@ -417,48 +424,61 @@ export default function LoginScreen() {
 
               {/* Divider — "or continue with" */}
               <View className="flex-row items-center my-3">
-                <View className="flex-1 h-px bg-on-photo/18" />
+                <View className="flex-1 h-px bg-on-photo-18" />
                 <Text
-                  className="text-on-photo/55 text-[11.5px] mx-3"
+                  className="text-on-photo-55 text-[11.5px] mx-3"
                   style={{ fontFamily: 'SplineSans_500Medium' }}
                 >
                   or continue with
                 </Text>
-                <View className="flex-1 h-px bg-on-photo/18" />
+                <View className="flex-1 h-px bg-on-photo-18" />
               </View>
 
-              {/* Social row — Google only (Apple deferred to MOB-10) */}
+              {/* Social row — Apple + Google (design §9). Apple visual-only; signInWithApple wired in MOB-10. */}
               <View className="flex-row items-center justify-center gap-3">
+                {/* Apple glass button — visual per design; handler stubbed (MOB-10) */}
+                <Pressable
+                  className={`w-14 h-12 rounded-[13px] overflow-hidden bg-on-photo-14 border border-on-photo-22 items-center justify-center${inFlight ? ' opacity-50' : ''}`}
+                  onPress={() => {
+                    // TODO(MOB-10): signInWithApple (expo-apple-authentication + Supabase Apple provider + iOS capability)
+                  }}
+                  disabled={inFlight}
+                  accessibilityLabel="Continue with Apple"
+                  accessibilityRole="button"
+                >
+                  <GlassFill />
+                  <AppleIcon size={20} />
+                </Pressable>
+
                 {/* Google glass button */}
                 <Pressable
-                  className={`w-14 h-12 rounded-[13px] bg-on-photo/14 border border-on-photo/22 items-center justify-center${inFlight ? ' opacity-50' : ''}`}
+                  className={`w-14 h-12 rounded-[13px] overflow-hidden bg-on-photo-14 border border-on-photo-22 items-center justify-center${inFlight ? ' opacity-50' : ''}`}
                   onPress={handleGoogle}
                   disabled={inFlight}
                   accessibilityLabel="Continue with Google"
                   accessibilityRole="button"
                 >
+                  <GlassFill />
                   <GoogleIcon size={20} />
                 </Pressable>
-
-                {/* TODO(MOB-10): Apple sign-in — needs signInWithApple + expo-apple-authentication + iOS capability */}
               </View>
 
-              {/* Legal footer — signup only */}
-              {mode === 'signup' && (
-                <Text className="text-center text-[11px] text-on-photo/55 mt-3.5">
-                  {'By creating an account you agree to our '}
-                  {/* TODO(MOB-09): wire Terms screen */}
-                  <Text className="text-on-photo/85 underline" onPress={() => {}}>
-                    Terms
-                  </Text>
-                  {' and '}
-                  {/* TODO(MOB-09): wire Privacy screen */}
-                  <Text className="text-on-photo/85 underline" onPress={() => {}}>
-                    Privacy Policy
-                  </Text>
-                  {'.'}
+              {/* Legal footer — shown on BOTH modes so the layout doesn't jump on tab switch */}
+              <Text className="text-center text-[11px] text-on-photo-55 mt-3.5">
+                {mode === 'signup'
+                  ? 'By creating an account you agree to our '
+                  : 'By signing in you agree to our '}
+                {/* TODO(MOB-09): wire Terms screen */}
+                <Text className="text-on-photo-85 underline" onPress={() => {}}>
+                  Terms
                 </Text>
-              )}
+                {' and '}
+                {/* TODO(MOB-09): wire Privacy screen */}
+                <Text className="text-on-photo-85 underline" onPress={() => {}}>
+                  Privacy Policy
+                </Text>
+                {'.'}
+              </Text>
             </View>
 
             {/* Bottom spacing */}
@@ -479,14 +499,52 @@ interface SegmentedControlProps {
   onModeChange: (next: 'signin' | 'signup') => void;
 }
 
+// ---------------------------------------------------------------------------
+// GlassFill — frosted-glass background for on-photo surfaces (README §Glass/blur).
+// A leaf BlurView (absolute) + translucent tint overlay, sitting BEHIND the
+// surface's content. Kept as a LEAF (never wrapping the ScrollView) to avoid the
+// Android blur z-index glitch noted in MOB-09. Parent must be `overflow-hidden`
+// so the blur respects the rounded corners.
+// ---------------------------------------------------------------------------
+function GlassFill({
+  tintClass = 'bg-on-photo-10',
+  intensity = 18,
+}: {
+  tintClass?: string;
+  intensity?: number;
+}) {
+  return (
+    <>
+      <BlurView intensity={intensity} tint="dark" pointerEvents="none" style={StyleSheet.absoluteFill} />
+      <View pointerEvents="none" className={`absolute inset-0 ${tintClass}`} />
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AppleIcon — Apple wordmark glyph, white. Brand asset (not tokenized); path
+// sourced from the MOB-03 design mock (Login Mock.html).
+// ---------------------------------------------------------------------------
+function AppleIcon({ size = 19 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        fill="#ffffff"
+        d="M17.05 12.04c-.03-2.95 2.41-4.37 2.52-4.45-1.38-2.01-3.52-2.29-4.28-2.32-1.82-.18-3.55 1.07-4.48 1.07-.93 0-2.36-1.04-3.88-1.01-2 .03-3.84 1.16-4.87 2.95-2.08 3.6-.53 8.93 1.49 11.86.99 1.43 2.16 3.04 3.7 2.98 1.49-.06 2.05-.96 3.85-.96s2.31.96 3.88.93c1.6-.03 2.62-1.46 3.6-2.91 1.13-1.66 1.6-3.27 1.62-3.36-.04-.02-3.11-1.19-3.15-4.78zM14.4 3.46c.82-.99 1.37-2.36 1.22-3.73-1.18.05-2.6.78-3.45 1.77-.76.87-1.43 2.27-1.25 3.61 1.31.1 2.66-.66 3.48-1.65z"
+      />
+    </Svg>
+  );
+}
+
 function SegmentedControl({ mode, thumbProgress, onModeChange }: SegmentedControlProps) {
   // trackWidth measured via onLayout so the thumb spans exactly half the track.
   const [trackWidth, setTrackWidth] = useState(0);
 
   // Inner padding of 4px (p-1 = 4px); the thumb is (trackWidth / 2 - 4)px wide.
-  // translateX slides from 0 → trackWidth / 2 to land under the right button.
+  // translateX travel = thumbWidth (trackWidth/2 - 4): moves the thumb from the left slot
+  // to the right slot, keeping a symmetric 4px inset on both outer edges (no overflow).
   const thumbWidth = trackWidth > 0 ? trackWidth / 2 - 4 : 0;
-  const halfWidth = trackWidth > 0 ? trackWidth / 2 : 0;
+  const halfWidth = trackWidth > 0 ? trackWidth / 2 - 4 : 0;
 
   const thumbAnimStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: thumbProgress.value * halfWidth }],
@@ -494,14 +552,15 @@ function SegmentedControl({ mode, thumbProgress, onModeChange }: SegmentedContro
 
   return (
     <View
-      className="bg-on-photo-scrim/42 border border-on-photo/22 rounded-md p-1 flex-row"
+      className="overflow-hidden border border-on-photo-22 rounded-md p-1 flex-row"
       onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
       accessibilityRole="tablist"
     >
+      <GlassFill tintClass="bg-on-photo-scrim-42" intensity={24} />
       {/* Animated sliding thumb — absolutely positioned, sits behind labels */}
       {trackWidth > 0 && (
         <Animated.View
-          className="absolute top-1 bottom-1 left-1 bg-on-photo/96 rounded-[9px]"
+          className="absolute top-1 bottom-1 left-1 bg-on-photo-96 rounded-[9px]"
           style={[{ width: thumbWidth }, thumbAnimStyle]}
           pointerEvents="none"
         />
@@ -516,7 +575,7 @@ function SegmentedControl({ mode, thumbProgress, onModeChange }: SegmentedContro
         accessibilityLabel="Sign in"
       >
         <Text
-          className={mode === 'signin' ? 'text-on-photo-active text-[13px]' : 'text-on-photo/66 text-[13px]'}
+          className={mode === 'signin' ? 'text-on-photo-active text-[13px]' : 'text-on-photo-66 text-[13px]'}
           style={{ fontFamily: 'SplineSans_600SemiBold' }}
         >
           Sign in
@@ -532,7 +591,7 @@ function SegmentedControl({ mode, thumbProgress, onModeChange }: SegmentedContro
         accessibilityLabel="Sign up"
       >
         <Text
-          className={mode === 'signup' ? 'text-on-photo-active text-[13px]' : 'text-on-photo/66 text-[13px]'}
+          className={mode === 'signup' ? 'text-on-photo-active text-[13px]' : 'text-on-photo-66 text-[13px]'}
           style={{ fontFamily: 'SplineSans_600SemiBold' }}
         >
           Sign up
