@@ -370,7 +370,11 @@ export function V2FlashcardPracticePage() {
           exampleAudioState={audioState}
         />
       )}
-      <RatingRow onRate={handleRate} isFlipped={isFlipped} />
+      <RatingRow
+        onRate={handleRate}
+        isFlipped={isFlipped}
+        previews={currentQueueCard?.rating_previews}
+      />
       {/* Press 1–4 hint (PRACT2-3-03) */}
       <div className="pf-foot-hint">
         <span>Press </span>
@@ -564,7 +568,11 @@ export function V2FlashcardPracticePage() {
                         revealed={true}
                       />
                       {/* Answer suppressed for declension (DeclTable IS the answer) */}
-                      <RatingRow onRate={handleRate} isFlipped={isFlipped} />
+                      <RatingRow
+                        onRate={handleRate}
+                        isFlipped={isFlipped}
+                        previews={currentQueueCard?.rating_previews}
+                      />
                       {/* Press 1–4 hint (PRACT2-3-03) */}
                       <div className="pf-foot-hint">
                         <span>Press </span>

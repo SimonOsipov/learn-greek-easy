@@ -1171,6 +1171,22 @@
   line-height: 1;
 }
 
+/* Projected interval hint (PRACT2-3-06) — shown below the label when rating_previews present.
+   ~10px, line-height:1, muted --fg-3; compact so hint + .pf-foot-hint fit within
+   the 320px .pf-foot min-height floor. */
+.pf-rating-btn__hint {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+  color: hsl(var(--fg-3));
+  text-align: center;
+}
+
 /* Keycap hint */
 .pf-rating-btn__key {
   font-family: 'JetBrains Mono', monospace;

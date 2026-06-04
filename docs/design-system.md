@@ -418,7 +418,7 @@ New classes in `src/features/practice/pf/pf.css` (pf-layer scoping, not `src/ind
 
 New classes in `src/features/practice/pf/pf.css` (pf-layer scoping). Token-only — no raw hex.
 
-**Design system delta (PRACT2-3):** adds `.pf-reveal-cta`, `.pf-kbd`, `.pf-prompt`, `.pf-foot-hint`, `.pf-pos__sep`, `.pf-pos__label`; no new CSS custom properties introduced (uses existing `--line-2`, `--fg`, `--fg-2`, `--fg-3`, `--success`).
+**Design system delta (PRACT2-3):** adds `.pf-reveal-cta`, `.pf-kbd`, `.pf-prompt`, `.pf-foot-hint`, `.pf-pos__sep`, `.pf-pos__label`, `.pf-rating-btn__hint`; no new CSS custom properties introduced (uses existing `--line-2`, `--fg`, `--fg-2`, `--fg-3`, `--success`).
 
 | Class | Role |
 |---|---|
@@ -428,6 +428,7 @@ New classes in `src/features/practice/pf/pf.css` (pf-layer scoping). Token-only 
 | `.pf-foot-hint` | "Press 1–4 to rate" hint below the `RatingRow` in both pf feet. Inter Tight 12px/500, `hsl(var(--fg-3))`. Contains `.pf-kbd` keycaps. |
 | `.pf-pos__sep` | Middle-dot separator (`·`) between the POS label and the article in the POS chip. `hsl(var(--fg-3))`, small horizontal margin, weight 400. |
 | `.pf-pos__label` | POS label text node within `.pf-pos`. `text-transform: lowercase` so "Noun" renders as "noun". |
+| `.pf-rating-btn__hint` | Projected next-review interval under each rating-button label (PRACT2-3-06). Inter Tight 10px/500, `line-height:1`, `hsl(var(--fg-3))`; compact so the hint + `.pf-foot-hint` coexist within the 320px `.pf-foot` min-height floor. Text is word-form via `formatReviewInterval` (e.g. "1 day", "1 week"). Rendered only when `rating_previews` is present on the card (graceful absence: label-only). |
 
 ---
 
