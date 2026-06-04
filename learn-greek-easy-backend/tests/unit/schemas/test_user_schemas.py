@@ -295,6 +295,93 @@ class TestUserWithSettingsUpdate:
             UserWithSettingsUpdate(full_name="")
 
 
+class TestUserSettingsUpdateProficiencyLevel:
+    """Test UserSettingsUpdate.proficiency_level pattern validation."""
+
+    def test_valid_new(self):
+        """Test 'new' is accepted."""
+        settings = UserSettingsUpdate(proficiency_level="new")
+        assert settings.proficiency_level == "new"
+
+    def test_valid_a1(self):
+        """Test 'A1' is accepted."""
+        settings = UserSettingsUpdate(proficiency_level="A1")
+        assert settings.proficiency_level == "A1"
+
+    def test_valid_a2(self):
+        """Test 'A2' is accepted."""
+        settings = UserSettingsUpdate(proficiency_level="A2")
+        assert settings.proficiency_level == "A2"
+
+    def test_valid_b1(self):
+        """Test 'B1' is accepted."""
+        settings = UserSettingsUpdate(proficiency_level="B1")
+        assert settings.proficiency_level == "B1"
+
+    def test_none_accepted(self):
+        """Test None is accepted (optional field)."""
+        settings = UserSettingsUpdate(proficiency_level=None)
+        assert settings.proficiency_level is None
+
+    def test_invalid_c2_rejected(self):
+        """Test 'C2' is rejected by the pattern."""
+        with pytest.raises(ValidationError) as exc_info:
+            UserSettingsUpdate(proficiency_level="C2")
+        assert "string_pattern_mismatch" in str(exc_info.value).lower()
+
+    def test_invalid_lowercase_a1_rejected(self):
+        """Test 'a1' (lowercase) is rejected — pattern is case-sensitive."""
+        with pytest.raises(ValidationError) as exc_info:
+            UserSettingsUpdate(proficiency_level="a1")
+        assert "string_pattern_mismatch" in str(exc_info.value).lower()
+
+
+class TestUserSettingsUpdateLearningGoal:
+    """Test UserSettingsUpdate.learning_goal pattern validation."""
+
+    def test_valid_travel(self):
+        """Test 'travel' is accepted."""
+        settings = UserSettingsUpdate(learning_goal="travel")
+        assert settings.learning_goal == "travel"
+
+    def test_valid_live(self):
+        """Test 'live' is accepted."""
+        settings = UserSettingsUpdate(learning_goal="live")
+        assert settings.learning_goal == "live"
+
+    def test_valid_work(self):
+        """Test 'work' is accepted."""
+        settings = UserSettingsUpdate(learning_goal="work")
+        assert settings.learning_goal == "work"
+
+    def test_valid_family(self):
+        """Test 'family' is accepted."""
+        settings = UserSettingsUpdate(learning_goal="family")
+        assert settings.learning_goal == "family"
+
+    def test_valid_citizen(self):
+        """Test 'citizen' is accepted."""
+        settings = UserSettingsUpdate(learning_goal="citizen")
+        assert settings.learning_goal == "citizen"
+
+    def test_none_accepted(self):
+        """Test None is accepted (optional field)."""
+        settings = UserSettingsUpdate(learning_goal=None)
+        assert settings.learning_goal is None
+
+    def test_invalid_tourism_rejected(self):
+        """Test 'tourism' is rejected by the pattern."""
+        with pytest.raises(ValidationError) as exc_info:
+            UserSettingsUpdate(learning_goal="tourism")
+        assert "string_pattern_mismatch" in str(exc_info.value).lower()
+
+    def test_invalid_vacation_rejected(self):
+        """Test an arbitrary value is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            UserSettingsUpdate(learning_goal="vacation")
+        assert "string_pattern_mismatch" in str(exc_info.value).lower()
+
+
 class TestAvatarUploadRequest:
     """Test AvatarUploadRequest file_size bounds (gt=0, le=5MB)."""
 
