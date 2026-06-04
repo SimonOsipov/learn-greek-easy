@@ -1124,11 +1124,13 @@ test.describe('PRACT2-5 Practice Cleanup Pass', () => {
     await page.locator('[data-testid="language-option-ru"]').click();
 
     // Assert (a): document.lang changed to RU
-    const langAfterRu = await page.evaluate(() => document.documentElement.lang);
-    console.log(`[P25-01] HTML lang after switching to RU: "${langAfterRu}"`);
     // Pre-condition: seeded learner auth sets language 'en', confirm we started there
     expect(langBefore.startsWith('en')).toBe(true);
-    expect(langAfterRu.startsWith('ru')).toBe(true);
+    // i18next changeLanguage is async — poll until the DOM attribute propagates
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.lang), { timeout: 5000 })
+      .toMatch(/^ru/i);
+    console.log('[P25-01] HTML lang switched to RU (polled)');
 
     // Assert (b): practice chrome localizes — deck-label title contains "· Практика"
     // (RU translation: "{{name}} · Практика" — TopBar uses t('practice.deckLabel', { name }))
@@ -1172,9 +1174,11 @@ test.describe('PRACT2-5 Practice Cleanup Pass', () => {
     // Switch back to EN (cleanup — fresh context per test isolates, but belt-and-suspenders)
     await page.locator('[data-testid="language-switcher-trigger"]').click();
     await page.locator('[data-testid="language-option-en"]').click();
-    const langAfterEn = await page.evaluate(() => document.documentElement.lang);
-    console.log(`[P25-01] HTML lang after switching back to EN: "${langAfterEn}"`);
-    expect(langAfterEn.startsWith('en')).toBe(true);
+    // i18next changeLanguage is async — poll until the DOM attribute propagates
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.lang), { timeout: 5000 })
+      .toMatch(/^en/i);
+    console.log('[P25-01] HTML lang switched back to EN (polled)');
   });
 
   // E2E-P25-02: Cleanup assertions — no POS chip, no in-card toggle, progress centering
@@ -1205,22 +1209,21 @@ test.describe('PRACT2-5 Practice Cleanup Pass', () => {
     // Assert: progress track (.pf-seg-track) is horizontally centered
     // Centering is relative to the viewport width (justify-content:center on .pf-progress).
     // Tolerance of 24px accommodates sub-pixel layout + left/right chrome asymmetry.
-    const trackBox = await page.locator('.pf-seg-track').boundingBox();
-    if (trackBox) {
-      const viewportSize = page.viewportSize();
-      const viewportWidth = viewportSize?.width ?? 1280;
-      const trackCenterX = trackBox.x + trackBox.width / 2;
-      const viewportCenterX = viewportWidth / 2;
-      const offset = Math.abs(trackCenterX - viewportCenterX);
-      console.log(
-        `[P25-02] pf-seg-track center=${trackCenterX.toFixed(1)}px viewport-center=${viewportCenterX}px offset=${offset.toFixed(1)}px`
-      );
-      // Centered within 60px — the TopBar has a 3-column layout; the center column
-      // hosts the progress bar and is centered within the middle third of the viewport.
-      expect(offset).toBeLessThan(60);
-    } else {
-      console.log('[P25-02] NOTE: pf-seg-track bounding box unavailable — centering check skipped');
-    }
+    const track = page.locator('.pf-seg-track');
+    await expect(track).toBeVisible();
+    const trackBox = await track.boundingBox();
+    expect(trackBox).not.toBeNull();
+    const viewportSize = page.viewportSize();
+    const viewportWidth = viewportSize?.width ?? 1280;
+    const trackCenterX = trackBox!.x + trackBox!.width / 2;
+    const viewportCenterX = viewportWidth / 2;
+    const offset = Math.abs(trackCenterX - viewportCenterX);
+    console.log(
+      `[P25-02] pf-seg-track center=${trackCenterX.toFixed(1)}px viewport-center=${viewportCenterX}px offset=${offset.toFixed(1)}px`
+    );
+    // Centered within 60px — the TopBar has a 3-column layout; the center column
+    // hosts the progress bar and is centered within the middle third of the viewport.
+    expect(offset).toBeLessThan(60);
   });
 
   // E2E-P25-03: Sentence-family reveal de-duplication
@@ -1307,11 +1310,7 @@ test.describe('PRACT2-5 Practice Cleanup Pass', () => {
       await expect(nxt).toBeVisible({ timeout: 10000 });
     }
 
-    if (!foundSentence) {
-      console.log(
-        '[P25-03] NOTE: No sentence card found in queue — sentence reveal de-dup covered by Answer.test.tsx unit tests'
-      );
-    }
+    test.skip(!foundSentence, '[P25-03] No sentence-family card in queue — de-dup covered by Answer.test.tsx unit tests');
   });
 
   // E2E-P25-04: Unboxed example panel (no border/background on .pf-answer__example)
@@ -1405,10 +1404,6 @@ test.describe('PRACT2-5 Practice Cleanup Pass', () => {
       await expect(nxt).toBeVisible({ timeout: 10000 });
     }
 
-    if (!exampleFound) {
-      console.log(
-        '[P25-04] NOTE: No revealed example block found in queue — unboxed-example assertion skipped (covered by Answer.test.tsx)'
-      );
-    }
+    test.skip(!exampleFound, '[P25-06] No card with a visible example block in queue — unbox covered by unit/CSS');
   });
 });
