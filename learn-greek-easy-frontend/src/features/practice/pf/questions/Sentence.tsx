@@ -44,6 +44,12 @@ function deriveDirection(prompt: string | null | undefined): SentenceDirection {
 
 export interface SentenceProps {
   /**
+   * Raw, untranslated front_content.prompt. Used ONLY to derive direction
+   * (must never be localized, or el_to_en/en_to_el would invert). The `prompt`
+   * prop carries the localized label for display.
+   */
+  rawPrompt?: string | null;
+  /**
    * Prompt from front_content.prompt.
    * Used to derive direction ('Translate this sentence' → el_to_en;
    * 'Translate to Greek' → en_to_el).
@@ -183,6 +189,7 @@ export function SentenceEnToEl({
  *             grammarTag={front.grammar_tag as string | null} />
  */
 export function Sentence({
+  rawPrompt,
   prompt,
   main,
   audioState,
@@ -190,7 +197,7 @@ export function Sentence({
   grammarTag,
   lang: _lang,
 }: SentenceProps) {
-  const direction = deriveDirection(prompt as string | null | undefined);
+  const direction = deriveDirection((rawPrompt ?? prompt) as string | null | undefined);
 
   if (direction === 'en_to_el') {
     return <SentenceEnToEl prompt={prompt} main={main} ipa={ipa} grammarTag={grammarTag} />;

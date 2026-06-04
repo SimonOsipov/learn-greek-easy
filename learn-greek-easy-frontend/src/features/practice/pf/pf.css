@@ -371,41 +371,6 @@
   flex-shrink: 0;
 }
 
-/* EN/RU language switch */
-.pf-lang {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px 4px;
-  border-radius: 8px;
-  background: hsl(var(--fg) / 0.05);
-}
-
-.pf-lang__btn {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 7px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: hsl(var(--fg-3));
-  cursor: pointer;
-  transition:
-    background 120ms ease,
-    color 120ms ease;
-  line-height: 1.4;
-}
-
-.pf-lang__btn:hover {
-  color: hsl(var(--fg-2));
-}
-
-.pf-lang__btn[aria-pressed='true'] {
-  background: hsl(var(--card));
-  color: hsl(var(--fg));
-  box-shadow: var(--shadow-1);
-}
-
 /* ── Translation renderer ─────────────────────────────────────────────────── */
 
 /* Main Greek word — Noto Serif, large, never italic */

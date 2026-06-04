@@ -379,8 +379,11 @@
     "hard": "Сложно",
     "good": "Хорошо",
     "easy": "Легко",
-    "langEn": "EN",
-    "langRu": "RU"
+    "exit": "Выход",
+    "deckLabel": "{{name}} · Практика",
+    "metaCounts": "{{cards}} карт. · {{review}} повтор. · {{new}} нов.",
+    "promptSentence": "Переведите предложение",
+    "promptToGreek": "Переведите на греческий"
   },
   "skeleton": {
     "loadingCard": "Загрузка карточки"
