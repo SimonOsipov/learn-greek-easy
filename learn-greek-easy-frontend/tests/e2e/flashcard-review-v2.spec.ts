@@ -1126,8 +1126,9 @@ test.describe('PRACT2-5 Practice Cleanup Pass', () => {
     // Assert (a): document.lang changed to RU
     const langAfterRu = await page.evaluate(() => document.documentElement.lang);
     console.log(`[P25-01] HTML lang after switching to RU: "${langAfterRu}"`);
+    // Pre-condition: seeded learner auth sets language 'en', confirm we started there
+    expect(langBefore.startsWith('en')).toBe(true);
     expect(langAfterRu.startsWith('ru')).toBe(true);
-    expect(langBefore.startsWith('ru')).toBe(false);
 
     // Assert (b): practice chrome localizes — deck-label title contains "· Практика"
     // (RU translation: "{{name}} · Практика" — TopBar uses t('practice.deckLabel', { name }))
