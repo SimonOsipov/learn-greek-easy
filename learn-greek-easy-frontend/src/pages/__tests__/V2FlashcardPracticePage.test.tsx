@@ -5,6 +5,7 @@
  * The active card state is exercised via store mocking.
  */
 
+import i18n from 'i18next';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { render, screen, act } from '@/lib/test-utils';
@@ -406,5 +407,55 @@ describe('V2FlashcardPracticePage', () => {
 
     expect(mockInvalidateQueries).toHaveBeenCalledTimes(1);
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['analytics'] });
+  });
+
+  // ── Gloss-reactivity: i18n.language drives cardLang → Answer lang prop ──────
+
+  it('cardLang is ru when i18n language is ru (Answer receives lang=ru)', async () => {
+    // A card with sentence_ru set so we can observe the lang=ru effect on Answer
+    const card = {
+      card_record_id: 'cr-lang',
+      word_entry_id: 'we-lang',
+      deck_id: 'deck-123',
+      deck_name: 'Test Deck',
+      card_type: 'meaning_el_to_en' as const,
+      variant_key: null,
+      front_content: { main: 'σπίτι', sub: null, prompt: null, badge: null },
+      back_content: { main: 'house', gender: null, gender_ru: null },
+      status: 'due' as const,
+      is_new: false,
+      is_early_practice: false,
+      due_date: null,
+      easiness_factor: null,
+      interval: null,
+      audio_url: null,
+      example_audio_url: null,
+      translation_ru: null,
+      translation_ru_plural: null,
+      sentence_ru: 'Мой дом маленький.',
+    };
+    mockStoreState = {
+      ...mockStoreState,
+      isLoading: false,
+      error: null,
+      sessionSummary: null,
+      sessionId: 'sess-lang',
+      cards: [card],
+      currentIndex: 0,
+    };
+
+    await i18n.changeLanguage('ru');
+    const { rerender } = render(<V2FlashcardPracticePage />);
+
+    // With lang='ru', sentence_ru is shown in Answer
+    expect(screen.getByTestId('pf-answer-example-ru')).toHaveTextContent('Мой дом маленький.');
+
+    // Switch back to EN → sentence_ru disappears
+    await act(async () => {
+      await i18n.changeLanguage('en');
+      rerender(<V2FlashcardPracticePage />);
+    });
+    expect(screen.queryByTestId('pf-answer-example-ru')).toBeNull();
+    // afterEach in test-setup ensures i18n is reset to 'en'
   });
 });
