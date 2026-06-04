@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 
 import { OnboardingShell } from '@/components/onboarding/onboarding-shell';
 import { SelectTile } from '@/components/onboarding/select-tile';
+import { track } from '@/lib/analytics';
 import { useOnboardingStore } from '@/stores/onboarding-store';
 import type { Level } from '@/stores/onboarding-store';
 
@@ -22,6 +24,11 @@ export default function LevelScreen() {
   const router = useRouter();
   const level = useOnboardingStore((s) => s.level);
   const setLevel = useOnboardingStore((s) => s.setLevel);
+
+  // Fire once when the Level screen first mounts — marks the start of the flow.
+  useEffect(() => {
+    track('onboarding_flow_started');
+  }, []);
 
   return (
     <OnboardingShell

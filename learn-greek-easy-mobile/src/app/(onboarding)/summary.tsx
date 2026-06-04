@@ -14,11 +14,13 @@
  *
  * Name in title uses font-serif (NotoSerif_400Regular_Italic) via nested <Text>.
  */
+import { useEffect, useRef } from 'react';
 import { View, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { OnboardingShell } from '@/components/onboarding/onboarding-shell';
 import { GlassFill } from '@/components/glass-fill';
+import { track } from '@/lib/analytics';
 import { useOnboardingStore, MINUTES_TO_GOAL } from '@/stores/onboarding-store';
 import type { Level, Goal } from '@/stores/onboarding-store';
 import { useUpdateUserSettings } from '@/hooks/use-user-settings';
@@ -123,6 +125,20 @@ export default function SummaryScreen() {
   const levelLabel = LEVEL_LABELS[resolvedLevel];
   const goalLabel = GOAL_LABELS[resolvedGoal];
   const dailyLabel = `${dailyMinutes} min · ~${cardEstimate} cards`;
+
+  // Fire onboarding_flow_completed exactly once when the mutation succeeds.
+  // Guarded by a ref so React StrictMode double-invocation doesn't double-fire.
+  const completedFired = useRef(false);
+  useEffect(() => {
+    if (isSuccess && !completedFired.current) {
+      completedFired.current = true;
+      track('onboarding_flow_completed', {
+        level: resolvedLevel,
+        goal: resolvedGoal,
+        daily_goal: cardEstimate,
+      });
+    }
+  }, [isSuccess, resolvedLevel, resolvedGoal, cardEstimate]);
 
   const handleSubmit = () => {
     // Wrap mutateAsync (returns Promise<UserProfile>) into the store's expected
