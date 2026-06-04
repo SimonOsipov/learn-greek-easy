@@ -6,7 +6,8 @@
 //   - English font for el_to_en card types
 //   - Example block shown/hidden based on sentence_ru / example_en / example_el
 //   - EN mode: Greek example + EN gloss renders when example_el/example_en present
-//   - EN mode: NO orphan audio chip when example_el/example_en absent (regression)
+//   - EN mode (Option C): audio chip IS visible even without example text (audio-only block)
+//   - EN mode: no example TEXT paragraphs when only audio present (no empty text box)
 //   - RU mode: sentence_ru path unchanged
 //   - Inert typed-result chip slot rendered
 //   - PRACT2-3-03: ✓ ANSWER kicker text present and exposed to AT
@@ -272,8 +273,9 @@ describe('Answer', () => {
     expect(screen.queryByTestId('pf-answer-example-el')).toBeNull();
   });
 
-  // PRACT2-3-07: orphan audio chip regression
-  it('does NOT show example block in EN mode when example_el/en absent but audio_url present', () => {
+  // PRACT2-3-07 / Option C: audio-only example block (no example text, but resolved audio present)
+  // The speaker IS the "hear the Greek answer" affordance — it renders regardless of text presence.
+  it('shows example block with audio chip in EN mode when audio present but example_el/en absent', () => {
     render(
       <Answer
         answerText="house"
@@ -297,9 +299,13 @@ describe('Answer', () => {
         lang="en"
       />
     );
-    // Block must NOT render — no orphan audio chip
-    expect(screen.queryByTestId('pf-answer-example')).toBeNull();
-    expect(screen.queryByTestId('mock-audio-chip')).toBeNull();
+    // Block renders with the audio chip (Option C: speaker is its own affordance)
+    expect(screen.getByTestId('pf-answer-example')).toBeInTheDocument();
+    expect(screen.getByTestId('mock-audio-chip')).toBeInTheDocument();
+    // But no example TEXT paragraphs (no empty text box)
+    expect(screen.queryByTestId('pf-answer-example-el')).toBeNull();
+    expect(screen.queryByTestId('pf-answer-example-en')).toBeNull();
+    expect(screen.queryByTestId('pf-answer-example-ru')).toBeNull();
   });
 
   // ── RU mode unchanged ──────────────────────────────────────────────────────

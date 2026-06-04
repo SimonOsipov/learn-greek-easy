@@ -16,12 +16,12 @@
 // declension suppression: the filled-table IS the answer for declension;
 //   this component renders nothing for that family (AC #5).
 //
-// Example block gate (PRACT2-3-07):
-//   EN mode: block renders iff example_el or example_en is present.
-//   RU mode: block renders iff sentence_ru is present.
-//   Audio: renders ONLY when an example text path is also active (no orphan audio chip).
-//   Specifically: showExampleAudio = audio present AND hasTextExample, so the block
-//   never renders with a lone audio chip and no text.
+// Example block gate (PRACT2-3-07, updated Option C):
+//   EN mode: example TEXT block renders iff example_el or example_en is present.
+//   RU mode: example TEXT block renders iff sentence_ru is present.
+//   Audio: the answer speaker renders whenever the resolved audio URL is present —
+//   it is the visible "hear the Greek answer" affordance and does NOT require an
+//   accompanying text example. Only the text block is gated on text presence.
 
 import { Check } from 'lucide-react';
 
@@ -60,8 +60,8 @@ export interface AnswerProps {
   /** The raw StudyQueueCard — for example block and audio URL resolution. */
   card: StudyQueueCard;
   /**
-   * Optional audio chip state for the example audio.
-   * Rendered only when example_audio_url is present AND a text example is present.
+   * Optional audio chip state for the example/answer audio.
+   * Rendered whenever the resolved audio URL is present — the text example is not required.
    */
   exampleAudioState?: AudioChipState | null;
   /**
@@ -107,12 +107,12 @@ export function Answer({
   // EN example: show Greek example + EN gloss in EN mode (PRACT2-3-07).
   const showExampleEn = lang === 'en' && Boolean(card.example_el || card.example_en);
 
-  // Text example present in either mode (used to gate audio rendering).
+  // Text example present in either mode (gates only the text <p> nodes, not the audio chip).
   const hasTextExample = showSentenceRu || showExampleEn;
 
-  // Audio renders only when both url/state are present AND a text example exists
-  // (prevents the orphan audio chip bug in EN mode with no example text).
-  const showExampleAudio = Boolean(exampleAudioUrl && exampleAudioState && hasTextExample);
+  // The answer speaker renders whenever the resolved audio and its state are present.
+  // Text presence is not required — the chip is the visible "hear the Greek answer" affordance.
+  const showExampleAudio = Boolean(exampleAudioUrl && exampleAudioState);
 
   const hasExample = hasTextExample || showExampleAudio;
 
@@ -162,7 +162,7 @@ export function Answer({
             </p>
           )}
 
-          {/* Audio: only shown alongside a text example (no orphan chip) */}
+          {/* Audio: renders whenever resolved audio is present — it's the "hear the answer" affordance */}
           {showExampleAudio && exampleAudioState && <AudioChip audioState={exampleAudioState} />}
         </div>
       )}
