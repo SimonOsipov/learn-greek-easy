@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from src.db.models import CardStatus
 from src.schemas.card import Example
 from src.schemas.sm2 import StudyQueue, StudyQueueCard, StudyQueueRequest
+from src.schemas.v2_sm2 import V2RatingPreview, V2StudyQueueCard
 
 
 class TestStudyQueueRequest:
@@ -265,3 +266,75 @@ class TestStudyQueue:
         assert queue.total_new == 3
         assert queue.total_early_practice == 2
         assert queue.total_in_queue == 10
+
+
+class TestV2RatingPreview:
+    """Unit tests for V2RatingPreview schema (PRACT2-3-05)."""
+
+    def test_round_trip_serialization(self):
+        """V2RatingPreview should survive a model_validate round-trip."""
+        preview = V2RatingPreview(
+            rating=3,
+            quality=4,
+            interval=1,
+            next_review_date=date(2026, 6, 5),
+            new_status=CardStatus.LEARNING,
+        )
+        data = preview.model_dump()
+        restored = V2RatingPreview.model_validate(data)
+        assert restored.rating == 3
+        assert restored.quality == 4
+        assert restored.interval == 1
+        assert restored.next_review_date == date(2026, 6, 5)
+        assert restored.new_status == CardStatus.LEARNING
+
+    def test_all_rating_values_accepted(self):
+        """V2RatingPreview accepts any of the four UI rating values."""
+        for rating, quality in {1: 0, 2: 2, 3: 4, 4: 5}.items():
+            preview = V2RatingPreview(
+                rating=rating,
+                quality=quality,
+                interval=1,
+                next_review_date=date.today(),
+                new_status=CardStatus.LEARNING,
+            )
+            assert preview.rating == rating
+            assert preview.quality == quality
+
+
+class TestV2StudyQueueCardRatingPreviews:
+    """Unit tests for rating_previews field on V2StudyQueueCard (PRACT2-3-05)."""
+
+    def _make_card(self, **kwargs) -> V2StudyQueueCard:
+        defaults = dict(
+            card_record_id=uuid4(),
+            word_entry_id=uuid4(),
+            deck_id=uuid4(),
+            deck_name="Test Deck",
+            card_type="meaning_el_to_en",
+            variant_key="meaning",
+            front_content={},
+            back_content={},
+            is_new=False,
+        )
+        defaults.update(kwargs)
+        return V2StudyQueueCard(**defaults)
+
+    def test_rating_previews_defaults_to_empty_list(self):
+        """rating_previews should default to [] when not supplied."""
+        card = self._make_card()
+        assert card.rating_previews == []
+
+    def test_rating_previews_accepts_list_of_previews(self):
+        """rating_previews field accepts a list of V2RatingPreview objects."""
+        preview = V2RatingPreview(
+            rating=1,
+            quality=0,
+            interval=1,
+            next_review_date=date.today(),
+            new_status=CardStatus.LEARNING,
+        )
+        card = self._make_card(rating_previews=[preview])
+        assert len(card.rating_previews) == 1
+        assert card.rating_previews[0].rating == 1
+        assert card.rating_previews[0].quality == 0

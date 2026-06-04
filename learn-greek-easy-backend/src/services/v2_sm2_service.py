@@ -19,7 +19,7 @@ from src.db.models import (
     WordEntry,
 )
 from src.repositories.card_record_statistics import CardRecordStatisticsRepository
-from src.schemas.v2_sm2 import V2ReviewResult, V2StudyQueue, V2StudyQueueCard
+from src.schemas.v2_sm2 import V2RatingPreview, V2ReviewResult, V2StudyQueue, V2StudyQueueCard
 from src.services.s3_service import get_s3_service
 
 logger = get_logger(__name__)
@@ -137,6 +137,26 @@ class V2SM2Service:
             cards=queue_cards,
         )
 
+    # Rating→quality mapping mirrors frontend mapPracticeRatingToQuality
+    _RATING_QUALITY_MAP: dict[int, int] = {1: 0, 2: 2, 3: 4, 4: 5}
+
+    def _rating_previews(self, ef: float, interval: int, repetitions: int) -> list[V2RatingPreview]:
+        """Project SM-2 outcome for each UI rating. Pure computation — no DB writes."""
+        previews: list[V2RatingPreview] = []
+        for rating, quality in self._RATING_QUALITY_MAP.items():
+            result = calculate_sm2(ef, interval, repetitions, quality)
+            next_review_date = calculate_next_review_date(result.new_interval)
+            previews.append(
+                V2RatingPreview(
+                    rating=rating,
+                    quality=quality,
+                    interval=result.new_interval,
+                    next_review_date=next_review_date,
+                    new_status=result.new_status,
+                )
+            )
+        return previews
+
     def _build_card_from_stats(
         self,
         stats: CardRecordStatistics,
@@ -161,6 +181,9 @@ class V2SM2Service:
             interval=stats.interval,
             audio_url=None,
             example_audio_url=None,
+            rating_previews=self._rating_previews(
+                stats.easiness_factor, stats.interval, stats.repetitions
+            ),
         )
 
     def _build_card_from_record(self, card_record: CardRecord) -> V2StudyQueueCard:
@@ -181,6 +204,7 @@ class V2SM2Service:
             interval=None,
             audio_url=None,
             example_audio_url=None,
+            rating_previews=self._rating_previews(2.5, 0, 0),
         )
 
     async def _enrich_with_audio(self, cards: list[V2StudyQueueCard]) -> None:
