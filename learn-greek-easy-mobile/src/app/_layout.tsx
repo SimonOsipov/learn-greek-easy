@@ -9,6 +9,10 @@ import {
   InterTight_600SemiBold,
   InterTight_700Bold,
 } from '@expo-google-fonts/inter-tight';
+import {
+  NotoSerif_400Regular,
+  NotoSerif_400Regular_Italic,
+} from '@expo-google-fonts/noto-serif';
 import * as Sentry from '@sentry/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
@@ -37,6 +41,8 @@ function RootLayout() {
     SplineSans_700Bold,
     InterTight_600SemiBold,
     InterTight_700Bold,
+    NotoSerif_400Regular,
+    NotoSerif_400Regular_Italic,
   });
 
   // Proceed even if fonts fail — system fonts are the graceful fallback.

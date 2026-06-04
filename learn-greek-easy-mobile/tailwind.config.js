@@ -55,6 +55,13 @@ module.exports = {
         'danger-70': 'rgba(239,68,68,0.70)',
         'danger-soft': 'hsl(var(--danger-soft))',
         'danger-softer': 'hsl(var(--danger-softer))',
+        // Over-photo "Recommended" badge — brand Cyprus gold (34 100% 52% = rgb(255,149,10)).
+        // Theme-invariant, no .dark override (over-photo surface). MOB-13: no /NN modifier on
+        // var-backed tokens on native — explicit full-color rgba tokens are mandatory.
+        'badge-recommended': 'hsl(var(--badge-recommended))',
+        'badge-recommended-25': 'rgba(255,149,10,0.25)',
+        // Primary at 0.15 alpha for the selected-tile badge flip (221 83% 53% = rgb(59,130,246)).
+        'primary-15': 'rgba(59,130,246,0.15)',
       },
       borderRadius: {
         sm: '10px',
@@ -69,7 +76,9 @@ module.exports = {
         sans: 'SplineSans_400Regular',
         // Inter Tight display/heading — loaded via useFonts as InterTight_700Bold etc.
         heading: 'InterTight_700Bold',
-        serif: 'var(--font-serif)',
+        // Noto Serif italic display — loaded via useFonts as NotoSerif_400Regular_Italic.
+        // Used on the Summary screen for the user's name. font-serif → Noto Serif italic.
+        serif: 'NotoSerif_400Regular_Italic',
         mono: 'var(--font-mono)',
         rounded: 'var(--font-rounded)',
       },
