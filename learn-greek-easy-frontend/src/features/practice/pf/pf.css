@@ -304,7 +304,7 @@
   gap: 12px;
 }
 
-/* Foot / answer phase — stable min-height */
+/* Foot / answer phase — stable min-height; position:relative for .pf-reveal-cta overlay */
 .pf-foot {
   min-height: 320px;
   padding: 20px;
@@ -312,12 +312,19 @@
   flex-direction: column;
   align-items: center;
   gap: 12px;
+  position: relative;
+}
+
+/* Inner wrapper carries visibility attrs (PRACT2-3-02: moved off .pf-foot so
+   the CTA overlay sibling stays visible pre-flip without layout change). */
+.pf-foot__inner {
+  display: contents; /* transparent passthrough — children inherit .pf-foot layout */
 }
 
 /* Pre-reveal: content stays in the DOM (reserving natural height) but is invisible
    and non-interactive. visibility:hidden keeps the box in flow; inert (set via prop
    in Card.tsx) removes focus/pointer access at the browser level. */
-.pf-foot[data-hidden='true'] {
+.pf-foot__inner[data-hidden='true'] {
   visibility: hidden;
 }
 
@@ -1642,4 +1649,135 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+/* =========================================================================
+   PRACT2-3: Practice fidelity — reveal hint, answer kicker, direction
+   subtitle, POS chip re-order. All classes below are new in this story.
+   ========================================================================= */
+
+/* ── Shared keycap primitive (PRACT2-3-02) ───────────────────────────────── */
+
+/* .pf-kbd — keyboard keycap style, reused by reveal hint and foot hint */
+.pf-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: hsl(var(--fg) / 0.07);
+  color: hsl(var(--fg-2));
+  border: 1px solid hsl(var(--fg) / 0.12);
+  letter-spacing: 0.02em;
+}
+
+/* ── In-card reveal hint (PRACT2-3-02) ───────────────────────────────────── */
+
+/* .pf-reveal-cta — absolutely-positioned overlay pinned to top of .pf-foot,
+   shown only pre-flip (rendered by Card.tsx only when !isFlipped).
+   pointer-events:none so clicks fall through to the card-root flip handler. */
+.pf-reveal-cta {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 20px;
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: hsl(var(--fg-3));
+  border-top: 1px dashed hsl(var(--line-2));
+  pointer-events: none; /* click falls through to .pf-card flip handler */
+  flex-wrap: wrap;
+  text-align: center;
+}
+
+/* Reduced-motion guard: no transition on the reveal CTA (it's mounted/unmounted,
+   not animated; this ensures no accidental CSS transition is inherited) */
+@media (prefers-reduced-motion: reduce) {
+  .pf-reveal-cta {
+    transition: none !important;
+  }
+}
+
+/* ── Direction subtitle (PRACT2-3-01) ────────────────────────────────────── */
+
+/* .pf-prompt — direction kicker above word in Translation renderers.
+   Mirrors .pf-sentence-prompt styling. */
+.pf-prompt {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: hsl(var(--fg-3));
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
+/* ── Answer kicker + rating hint (PRACT2-3-03) ───────────────────────────── */
+
+/* .pf-answer__label — restyled to show ANSWER kicker text beside check icon */
+.pf-answer__label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(var(--success));
+}
+
+/* Shrink icon so it baseline-aligns with the ANSWER text */
+.pf-answer__check-icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* .pf-foot-hint — "Press 1–4 to rate" hint below the rating row */
+.pf-foot-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: hsl(var(--fg-3));
+}
+
+/* ── POS chip separator (PRACT2-3-04) ────────────────────────────────────── */
+
+/* .pf-pos__sep — middle dot separator between POS label and article */
+.pf-pos__sep {
+  color: hsl(var(--fg-3));
+  margin: 0 2px;
+  font-weight: 400;
+}
+
+/* .pf-pos__label — POS label text node; lowercase via text-transform */
+.pf-pos__label {
+  text-transform: lowercase;
 }
