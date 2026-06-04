@@ -26,11 +26,21 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.add_column(
         "user_settings",
-        sa.Column("proficiency_level", sa.String(length=10), nullable=True),
+        sa.Column(
+            "proficiency_level",
+            sa.String(length=10),
+            nullable=True,
+            comment="Onboarding self-rated Greek level: 'new', 'A1', 'A2', or 'B1'",
+        ),
     )
     op.add_column(
         "user_settings",
-        sa.Column("learning_goal", sa.String(length=10), nullable=True),
+        sa.Column(
+            "learning_goal",
+            sa.String(length=10),
+            nullable=True,
+            comment="Onboarding motivation: 'travel', 'live', 'work', 'family', or 'citizen'",
+        ),
     )
 
 
