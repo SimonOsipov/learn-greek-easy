@@ -57,12 +57,11 @@ export function SelectTile({
       {!selected && <GlassFill tintClass="bg-on-photo-10" />}
 
       <View className="flex-row items-center px-4 py-[14px] gap-3">
-        {/* Leading icon slot */}
-        {leadingIcon != null && (
-          <View className={selected ? 'text-on-photo-active' : 'text-on-photo'}>
-            {leadingIcon}
-          </View>
-        )}
+        {/* Leading icon slot — icon element must carry its own color className
+            (e.g. <Plane className="text-on-photo-active" />) so the cssInterop
+            color prop maps correctly. A color class on this View has no effect
+            on lucide icon stroke color. */}
+        {leadingIcon != null && <View>{leadingIcon}</View>}
 
         {/* Label + subtitle block */}
         <View className="flex-1 gap-[2px]">
