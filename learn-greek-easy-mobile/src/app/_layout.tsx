@@ -13,6 +13,7 @@ import {
   NotoSerif_400Regular,
   NotoSerif_400Regular_Italic,
 } from '@expo-google-fonts/noto-serif';
+import { SpaceMono_400Regular } from '@expo-google-fonts/space-mono';
 import * as Sentry from '@sentry/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
@@ -83,6 +84,7 @@ function RootLayout() {
     InterTight_700Bold,
     NotoSerif_400Regular,
     NotoSerif_400Regular_Italic,
+    SpaceMono_400Regular,
   });
 
   // Proceed even if fonts fail — system fonts are the graceful fallback.

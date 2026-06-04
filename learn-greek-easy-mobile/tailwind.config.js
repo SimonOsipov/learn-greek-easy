@@ -42,6 +42,7 @@ module.exports = {
         'on-photo-14': 'rgba(255,255,255,0.14)',
         'on-photo-18': 'rgba(255,255,255,0.18)',
         'on-photo-22': 'rgba(255,255,255,0.22)',
+        'on-photo-25': 'rgba(255,255,255,0.25)',
         'on-photo-55': 'rgba(255,255,255,0.55)',
         'on-photo-60': 'rgba(255,255,255,0.60)',
         'on-photo-66': 'rgba(255,255,255,0.66)',
@@ -79,7 +80,7 @@ module.exports = {
         // Noto Serif italic display — loaded via useFonts as NotoSerif_400Regular_Italic.
         // Used on the Summary screen for the user's name. font-serif → Noto Serif italic.
         serif: 'NotoSerif_400Regular_Italic',
-        mono: 'var(--font-mono)',
+        mono: 'SpaceMono_400Regular',
         rounded: 'var(--font-rounded)',
       },
     },
