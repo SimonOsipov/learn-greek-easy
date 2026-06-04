@@ -386,7 +386,7 @@ describe('LoginScreen', () => {
   });
 
   // -------------------------------------------------------------------------
-  // 6. Social buttons: Apple absent / Google present
+  // 6. Social buttons: Apple + Google present (Apple is visual; signInWithApple → MOB-10)
   // -------------------------------------------------------------------------
   describe('social buttons', () => {
     it('Google button is present', () => {
@@ -394,9 +394,9 @@ describe('LoginScreen', () => {
       expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeTruthy();
     });
 
-    it('no Apple button exists', () => {
+    it('Apple button is present', () => {
       render(<LoginScreen />);
-      expect(screen.queryByRole('button', { name: /apple/i })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Continue with Apple' })).toBeTruthy();
     });
   });
 
