@@ -1,11 +1,13 @@
 // src/features/practice/pf/__tests__/Answer.test.tsx
 //
-// Tests for Answer.tsx (PRACT2-1-07):
+// Tests for Answer.tsx (PRACT2-1-07, PRACT2-3-03):
 //   - declension suppression (renders null)
 //   - Greek font / lang="el" for el-answer card types
 //   - English font for el_to_en card types
 //   - Example block shown/hidden based on sentence_ru / example_audio_url
 //   - Inert typed-result chip slot rendered
+//   - PRACT2-3-03: ✓ ANSWER kicker text present and exposed to AT
+//   - PRACT2-3-03: aria-hidden on the Check icon only (not on the span)
 
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
@@ -124,6 +126,30 @@ describe('Answer', () => {
   it('renders inert typed-result chip slot', () => {
     render(<Answer answerText="house" cardType="meaning_el_to_en" card={makeCard()} />);
     expect(screen.getByTestId('pf-answer-type-slot')).toBeInTheDocument();
+  });
+
+  // PRACT2-3-03: ✓ ANSWER kicker
+  it('renders ANSWER kicker text', () => {
+    render(<Answer answerText="house" cardType="meaning_el_to_en" card={makeCard()} />);
+    // The kicker span contains the text "ANSWER"
+    const label = document.querySelector('.pf-answer__label');
+    expect(label?.textContent).toContain('ANSWER');
+  });
+
+  it('ANSWER kicker span is NOT aria-hidden (text exposed to AT)', () => {
+    render(<Answer answerText="house" cardType="meaning_el_to_en" card={makeCard()} />);
+    const label = document.querySelector('.pf-answer__label');
+    expect(label?.getAttribute('aria-hidden')).toBeNull();
+  });
+
+  it('Check icon inside .pf-answer__label has aria-hidden', () => {
+    const { container } = render(
+      <Answer answerText="house" cardType="meaning_el_to_en" card={makeCard()} />
+    );
+    const label = container.querySelector('.pf-answer__label');
+    // The first element child should be the Check svg with aria-hidden
+    const icon = label?.querySelector('svg');
+    expect(icon?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('shows example block with sentence_ru when lang=ru and sentence_ru is present', () => {

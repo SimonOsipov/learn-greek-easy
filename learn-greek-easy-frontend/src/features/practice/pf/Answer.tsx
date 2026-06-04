@@ -101,9 +101,10 @@ export function Answer({
 
   return (
     <div className="pf-answer" data-testid="pf-answer">
-      {/* Check label */}
-      <span className="pf-answer__label" aria-hidden="true">
-        <Check className="pf-answer__check-icon" />
+      {/* Check label — icon aria-hidden; kicker text exposed to AT (PRACT2-3-03) */}
+      <span className="pf-answer__label">
+        <Check className="pf-answer__check-icon" aria-hidden="true" />
+        ANSWER
       </span>
 
       {/* Answer text — Greek or English font */}

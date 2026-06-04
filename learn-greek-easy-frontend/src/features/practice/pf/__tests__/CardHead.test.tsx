@@ -1,5 +1,5 @@
 /**
- * pf/CardHead.tsx — unit tests (PRACT2-1-03)
+ * pf/CardHead.tsx — unit tests (PRACT2-1-03, PRACT2-3-04)
  *
  * Covers:
  * - Renders pf-head container
@@ -11,6 +11,9 @@
  * - EN/RU lang switch renders both buttons
  * - Calls onLangChange with 'en' / 'ru'
  * - Pressed state on active lang button
+ * - PRACT2-3-04: POS label rendered via .pf-pos__label (CSS lowercase)
+ * - PRACT2-3-04: .pf-pos__sep separator present when article present
+ * - PRACT2-3-04: amber UnwiredDot still rendered when gender absent
  */
 
 import React from 'react';
@@ -137,6 +140,30 @@ describe('CardHead', () => {
       render(<CardHead {...BASE} onLangChange={onLangChange} />);
       fireEvent.click(screen.getByTestId('pf-lang-en'));
       expect(onLangChange).toHaveBeenCalledWith('en');
+    });
+  });
+
+  describe('PRACT2-3-04: POS chip lowercase + separator', () => {
+    it('renders POS label via .pf-pos__label element', () => {
+      const { container } = render(<CardHead {...BASE} posLabel="Noun" />);
+      const label = container.querySelector('.pf-pos__label');
+      expect(label).not.toBeNull();
+      expect(label?.textContent).toBe('Noun');
+    });
+
+    it('renders .pf-pos__sep separator when article is present', () => {
+      const { container } = render(<CardHead {...BASE} posLabel="Noun" gender="masculine" />);
+      expect(container.querySelector('.pf-pos__sep')).not.toBeNull();
+    });
+
+    it('does NOT render .pf-pos__sep when gender is absent (amber dot path)', () => {
+      const { container } = render(<CardHead {...BASE} posLabel="Noun" gender={null} />);
+      expect(container.querySelector('.pf-pos__sep')).toBeNull();
+    });
+
+    it('still renders amber UnwiredDot when gender absent (data gate preserved)', () => {
+      render(<CardHead {...BASE} posLabel="Noun" gender={null} />);
+      expect(screen.getByTestId('unwired-dot')).not.toBeNull();
     });
   });
 

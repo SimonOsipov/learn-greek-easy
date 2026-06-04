@@ -1,5 +1,5 @@
 /**
- * pf/questions/Translation.tsx — unit tests (PRACT2-1-03)
+ * pf/questions/Translation.tsx — unit tests (PRACT2-1-03, PRACT2-3-01)
  *
  * Covers:
  * - TranslationElToEn: renders Greek word with pf-translation-word class
@@ -9,8 +9,15 @@
  * - TranslationElToEn: IPA shows when sub present
  * - TranslationElToEn: IPA absent when sub not present
  * - TranslationElToEn: AudioChip renders when audioState has url
- * - TranslationEnToEl: renders prompt with pf-en-prompt class
- * - TranslationEnToEl: no lang="el" on prompt (it's English)
+ * - TranslationElToEn: shows "Greek → English" subtitle (PRACT2-3-01)
+ * - TranslationElToEn: appends "· {prompt}" when prompt is present
+ * - TranslationElToEn: omits "·" segment when prompt is absent
+ * - TranslationEnToEl: renders word with pf-en-prompt class (prop renamed from prompt)
+ * - TranslationEnToEl: no lang="el" on display word (it's English)
+ * - TranslationEnToEl: shows "English → Greek" subtitle (PRACT2-3-01)
+ * - TranslationEnToEl: appends "· {prompt}" when prompt is present
+ * - TranslationEnToEl: omits "·" segment when prompt is absent
+ * - TranslationEnToEl: Greek display word stays Noto Serif / lang="el" — N/A (display word is English)
  */
 
 import React from 'react';
@@ -101,29 +108,78 @@ describe('TranslationElToEn', () => {
     render(<TranslationElToEn word="άντρας" audioState={null} />);
     expect(screen.queryByTestId('pf-audio-chip')).toBeNull();
   });
+
+  // PRACT2-3-01: direction subtitle
+  it('shows "Greek → English" direction subtitle', () => {
+    render(<TranslationElToEn word="άντρας" />);
+    const subtitle = screen.getByTestId('pf-direction-subtitle');
+    expect(subtitle.textContent).toContain('Greek → English');
+  });
+
+  it('appends "· {prompt}" when prompt is provided', () => {
+    render(<TranslationElToEn word="άντρας" prompt="man" />);
+    const subtitle = screen.getByTestId('pf-direction-subtitle');
+    expect(subtitle.textContent).toContain('· man');
+  });
+
+  it('omits "·" segment when prompt is null', () => {
+    render(<TranslationElToEn word="άντρας" prompt={null} />);
+    const subtitle = screen.getByTestId('pf-direction-subtitle');
+    expect(subtitle.textContent).not.toContain('·');
+  });
+
+  it('Greek word still has lang="el" when prompt is provided (no regression)', () => {
+    const { container } = render(<TranslationElToEn word="άντρας" prompt="man" />);
+    const word = container.querySelector('.pf-translation-word');
+    expect(word?.getAttribute('lang')).toBe('el');
+  });
+
+  it('Greek word still has pf-translation-word class (no regression from subtitle addition)', () => {
+    const { container } = render(<TranslationElToEn word="άντρας" prompt="man" />);
+    expect(container.querySelector('.pf-translation-word')).not.toBeNull();
+  });
 });
 
 describe('TranslationEnToEl', () => {
   it('renders test container', () => {
-    const { container } = render(<TranslationEnToEl prompt="man" />);
+    const { container } = render(<TranslationEnToEl word="man" />);
     expect(container.querySelector('[data-testid="pf-translation-en-el"]')).not.toBeNull();
   });
 
-  it('renders the English prompt text', () => {
-    render(<TranslationEnToEl prompt="man" />);
+  it('renders the English display word text', () => {
+    render(<TranslationEnToEl word="man" />);
     expect(screen.getByText('man')).not.toBeNull();
   });
 
   it('applies pf-en-prompt class', () => {
-    const { container } = render(<TranslationEnToEl prompt="man" />);
+    const { container } = render(<TranslationEnToEl word="man" />);
     const el = container.querySelector('.pf-en-prompt');
     expect(el).not.toBeNull();
   });
 
-  it('prompt element does NOT have lang="el" (it is English)', () => {
-    const { container } = render(<TranslationEnToEl prompt="man" />);
+  it('display word element does NOT have lang="el" (it is English)', () => {
+    const { container } = render(<TranslationEnToEl word="man" />);
     const el = container.querySelector('.pf-en-prompt');
-    // lang attribute should not be "el" on the English prompt
+    // lang attribute should not be "el" on the English display word
     expect(el?.getAttribute('lang')).not.toBe('el');
+  });
+
+  // PRACT2-3-01: direction subtitle
+  it('shows "English → Greek" direction subtitle', () => {
+    render(<TranslationEnToEl word="man" />);
+    const subtitle = screen.getByTestId('pf-direction-subtitle');
+    expect(subtitle.textContent).toContain('English → Greek');
+  });
+
+  it('appends "· {prompt}" when prompt is provided', () => {
+    render(<TranslationEnToEl word="man" prompt="a human" />);
+    const subtitle = screen.getByTestId('pf-direction-subtitle');
+    expect(subtitle.textContent).toContain('· a human');
+  });
+
+  it('omits "·" segment when prompt is null', () => {
+    render(<TranslationEnToEl word="man" prompt={null} />);
+    const subtitle = screen.getByTestId('pf-direction-subtitle');
+    expect(subtitle.textContent).not.toContain('·');
   });
 });
