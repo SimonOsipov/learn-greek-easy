@@ -417,15 +417,11 @@ export function V2FlashcardPracticePage() {
           {(() => {
             const cardType = currentQueueCard?.card_type;
             const front = currentCard.front_content as Record<string, unknown>;
-            const back = currentCard.back_content as Record<string, unknown>;
 
             // Shared card head props
             const headEl = (
               <CardHead
                 cardType={cardType ?? ''}
-                posLabel={(front.badge as string | null | undefined) ?? null}
-                gender={(back.gender as string | null | undefined) ?? null}
-                genderRu={(back.gender_ru as string | null | undefined) ?? null}
                 currentLang={cardLang}
                 onLangChange={handleLangChange}
               />
