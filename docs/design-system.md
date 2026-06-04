@@ -427,8 +427,8 @@ New classes in `src/features/practice/pf/pf.css` (pf-layer scoping). Token-only 
 | `.pf-prompt` | Direction subtitle above the display word on translation cards (`"Greek → English · {prompt}"` / `"English → Greek · {prompt}"`). Mirrors `.pf-sentence-prompt`: Inter Tight 13px, font-weight 500, `hsl(var(--fg-3))`, centered. |
 | `.pf-foot-hint` | "Press 1–4 to rate" hint below the `RatingRow` in both pf feet. Inter Tight 12px/500, `hsl(var(--fg-3))`. Contains `.pf-kbd` keycaps. |
 | `.pf-rating-btn__hint` | Projected next-review interval under each rating-button label (PRACT2-3-06). Inter Tight 10px/500, `line-height:1`, `hsl(var(--fg-3))`; compact so the hint + `.pf-foot-hint` coexist within the 320px `.pf-foot` min-height floor. Text is word-form via `formatReviewInterval` (e.g. "1 day", "1 week"). Rendered only when `rating_previews` is present on the card (graceful absence: label-only). |
-| `.pf-answer__example-el` | Greek example sentence inside `.pf-answer__example` (PRACT2-3-07). Noto Serif 14px/400, `font-style: normal` (never italic), `lang="el"`, `hsl(var(--fg-2))`. Mirrors Greek study-text convention. |
-| `.pf-answer__example-en` | English gloss of the example sentence (PRACT2-3-07). Inter Tight 13px/400, `hsl(var(--fg-3))` — slightly muted vs `.pf-answer__example-el` to visually separate the gloss from the Greek above. |
+| `.pf-answer__example-el` | Greek example sentence inside `.pf-answer__example` (PRACT2-3-07). Noto Serif 14px/400, `font-style: normal` (never italic), `lang="el"`, `hsl(var(--fg-2))`. Mirrors Greek study-text convention. Suppressed on sentence-family cards (`sentence_translation`, `cloze`) where the example duplicates the prompt/answer — see PRACT2-5-05. |
+| `.pf-answer__example-en` | English gloss of the example sentence (PRACT2-3-07). Inter Tight 13px/400, `hsl(var(--fg-3))` — slightly muted vs `.pf-answer__example-el` to visually separate the gloss from the Greek above. Suppressed on sentence-family cards (`sentence_translation`, `cloze`) where the example duplicates the prompt/answer — see PRACT2-5-05. |
 
 ---
 
