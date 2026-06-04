@@ -140,6 +140,11 @@ For each subtask, in dependency order, execute the 4 stages below. Delegate to s
 
 > A second, **story-level** QA pass runs once after all subtasks complete — see **Phase 3.5: Story-Level Visual QA Gate**.
 
+#### Mobile stories (`learn-greek-easy-mobile`) — special handling
+- **Iterate with Metro + Fast Refresh, NEVER Release-rebuild-per-change.** Build the Debug dev-client ONCE in the worktree (`npx expo run:ios` — one cold native compile, since Xcode DerivedData is worktree-path-keyed), then keep Metro running. Every JS / NativeWind / `tailwind.config` edit then hot-reloads on the simulator in ~1s. A `--configuration Release` rebuild per change (~10 min each) is the single biggest mobile-RALPH time-sink — `Release` is only for final *unattended* visual capture.
+- **NativeWind opacity gotcha:** never put a `token/NN` opacity modifier on a custom var-backed token — it renders DARK on native (the RN opacity-modifier path is broken; see MOB-13 / project memory). Use an explicit full-color token instead.
+- **No web preview deploy** — the mobile Phase 3.5 gate runs on the iOS simulator and diffs against the design export, not a preview URL (see the Mobile variant in Phase 3.5).
+
 #### Fallback: If Subagent Spawning Fails
 Read the corresponding agent technical prompt file BEFORE executing the stage yourself:
 
@@ -228,6 +233,16 @@ Runs **once per story**, after CI is green and CodeRabbit is addressed, against 
    - Move all subtasks to "Done": `For each subtask ID: mcp__backlog__task_edit(id=task_id, status="Done")`
    - Output `<promise>ALL_TASKS_COMPLETE</promise>`.
    **On unresolved fails after 2 cycles:** leave subtasks "In Progress", do NOT emit completion, and surface the escalation to the user.
+
+#### Phase 3.5 — Mobile variant (`learn-greek-easy-mobile` UI stories)
+
+Mobile has no web preview deploy, so the gate runs on the **iOS simulator** and diffs against the **authoritative design export** — not a URL, and **not** against your own app captures:
+
+1. Bring the app up on a booted simulator via the Metro dev loop (already running from execution) or a Release capture build.
+2. **Compare against the authoritative design export** — `design_handoff_*/screenshots/*` (or the handoff mock rendered at phone size). Comparing the app to *self-generated* screenshots is circular and will false-pass — that is exactly how MOB-09 shipped a degraded login.
+3. Spawn `product-qa-spec` with BOTH the app screenshot AND the design export, **strict / adversarial**. It must flag EVERY deviation: element order, missing elements (a dropped social provider), flat-vs-frosted glass, scrim strength, spacing, copy. A hi-fi handoff silently degraded to a "sanctioned fallback" (flat `View` instead of `BlurView`, dropped button) is a **fail**, never an acceptable shortcut.
+4. **Fidelity is human-confirmed** — do not self-certify a pixel match. Surface app-vs-design-export to the user for the subjective call; only deviations citable against the design export or a `docs/design-system.md` rule bounce the executor.
+5. Log to the story's QA Debate Log as in the web flow.
 
 ### Phase 4: Worktree Cleanup
 
@@ -341,3 +356,8 @@ gh run list --branch "$BRANCH" --limit 1 --json databaseId,status -q '.[0]'
 | Bouncing the executor on uncited taste | Style fails must cite a docs/design-system.md rule; pure taste is advisory → escalate to the user |
 | Emitting ALL_TASKS_COMPLETE before Phase 3.5 | The story-level visual QA gate is mandatory before completion |
 | Grinding the visual-QA fix loop past 2 cycles | Cap at 2; escalate unresolved fails to the user (each redeploy is costly) |
+| Iterating mobile UI with `--configuration Release` rebuilds | Build the Debug dev-client once, then Metro + Fast Refresh (~1s/change) |
+| Mobile visual-QA comparing the app to your own captures | Diff against the authoritative design export (`design_handoff/screenshots`) |
+| Silently degrading a hi-fi mobile design to a "fallback" | Flag every deviation (flat-vs-frost, dropped element) as a fail |
+| Self-certifying a mobile pixel match | Fidelity is human-confirmed — surface app vs design export to the user |
+| `token/NN` opacity modifier on a var-backed mobile token | Renders dark on native — use an explicit full-color token (MOB-13) |
