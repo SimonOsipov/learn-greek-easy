@@ -56,6 +56,8 @@ export interface StudyQueueCard {
   translation_ru: string | null;
   translation_ru_plural: string | null;
   sentence_ru: string | null;
+  example_el: string | null;
+  example_en: string | null;
   rating_previews?: RatingPreview[];
 }
 

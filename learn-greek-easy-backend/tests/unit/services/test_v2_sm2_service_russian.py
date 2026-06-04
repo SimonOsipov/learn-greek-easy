@@ -174,3 +174,166 @@ class TestV2SM2ServiceRussianEnrichment:
             await service._enrich_with_audio([card])
 
         assert card.sentence_ru is None
+
+
+@pytest.mark.unit
+@pytest.mark.sm2
+class TestV2SM2ServiceExampleTextEnrichment:
+    """Unit tests for example_el / example_en fields (PRACT2-3-07).
+
+    These fields carry the Greek example sentence and English gloss onto the
+    card payload so Answer.tsx can render them in EN mode. They are populated
+    direction-agnostically (unlike sentence_ru which is target_to_el only).
+    """
+
+    def _make_card(
+        self, card_type: CardType = CardType.SENTENCE_TRANSLATION, front_content: dict | None = None
+    ) -> V2StudyQueueCard:
+        return V2StudyQueueCard(
+            card_record_id=uuid4(),
+            word_entry_id=uuid4(),
+            deck_id=uuid4(),
+            deck_name="Test Deck",
+            card_type=card_type,
+            variant_key="meaning",
+            front_content=front_content or {},
+            back_content={},
+            is_new=False,
+        )
+
+    def _make_word_entry(
+        self,
+        audio_key: str | None = None,
+        examples: list | None = None,
+    ) -> MagicMock:
+        we = MagicMock(spec=WordEntry)
+        we.audio_key = audio_key
+        we.examples = examples or []
+        we.translation_ru = None
+        we.translation_ru_plural = None
+        return we
+
+    def _mock_db_execute(self, mock_db, word_entries: list) -> None:
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = word_entries
+        mock_db.execute = AsyncMock(return_value=mock_result)
+
+    @pytest.mark.asyncio
+    async def test_example_el_and_en_populated_for_sentence_translation_el_to_target(
+        self, mock_db_session
+    ):
+        """example_el + example_en populated for el_to_target direction (direction-agnostic)."""
+        card = self._make_card(
+            card_type=CardType.SENTENCE_TRANSLATION,
+            front_content={"example_id": "ex1", "direction": "el_to_target"},
+        )
+        we = self._make_word_entry(
+            examples=[
+                {
+                    "id": "ex1",
+                    "greek": "Το σπίτι μου είναι μικρό.",
+                    "english": "My house is small.",
+                    "russian": "Мой дом маленький.",
+                }
+            ]
+        )
+        we.id = card.word_entry_id
+        self._mock_db_execute(mock_db_session, [we])
+
+        service = V2SM2Service(mock_db_session)
+        with patch("src.services.v2_sm2_service.get_s3_service"):
+            await service._enrich_with_audio([card])
+
+        assert card.example_el == "Το σπίτι μου είναι μικρό."
+        assert card.example_en == "My house is small."
+
+    @pytest.mark.asyncio
+    async def test_example_el_and_en_populated_for_sentence_translation_target_to_el(
+        self, mock_db_session
+    ):
+        """example_el + example_en also populated for target_to_el direction."""
+        card = self._make_card(
+            card_type=CardType.SENTENCE_TRANSLATION,
+            front_content={"example_id": "ex1", "direction": "target_to_el"},
+        )
+        we = self._make_word_entry(
+            examples=[
+                {
+                    "id": "ex1",
+                    "greek": "Το σπίτι μου είναι μικρό.",
+                    "english": "My house is small.",
+                }
+            ]
+        )
+        we.id = card.word_entry_id
+        self._mock_db_execute(mock_db_session, [we])
+
+        service = V2SM2Service(mock_db_session)
+        with patch("src.services.v2_sm2_service.get_s3_service"):
+            await service._enrich_with_audio([card])
+
+        assert card.example_el == "Το σπίτι μου είναι μικρό."
+        assert card.example_en == "My house is small."
+
+    @pytest.mark.asyncio
+    async def test_example_fields_none_when_no_matching_example(self, mock_db_session):
+        """example_el + example_en are None when the word entry has no matching example."""
+        card = self._make_card(
+            card_type=CardType.SENTENCE_TRANSLATION,
+            front_content={"example_id": "ex_nonexistent", "direction": "el_to_target"},
+        )
+        we = self._make_word_entry(examples=[{"id": "ex1", "greek": "Γεια", "english": "Hello"}])
+        we.id = card.word_entry_id
+        self._mock_db_execute(mock_db_session, [we])
+
+        service = V2SM2Service(mock_db_session)
+        with patch("src.services.v2_sm2_service.get_s3_service"):
+            await service._enrich_with_audio([card])
+
+        assert card.example_el is None
+        assert card.example_en is None
+
+    @pytest.mark.asyncio
+    async def test_example_fields_none_for_non_sentence_card(self, mock_db_session):
+        """example_el + example_en stay None for non-sentence card types."""
+        card = self._make_card(
+            card_type=CardType.MEANING_EL_TO_EN,
+            front_content={},
+        )
+        we = self._make_word_entry(examples=[{"id": "ex1", "greek": "Γεια", "english": "Hello"}])
+        we.id = card.word_entry_id
+        self._mock_db_execute(mock_db_session, [we])
+
+        service = V2SM2Service(mock_db_session)
+        with patch("src.services.v2_sm2_service.get_s3_service"):
+            await service._enrich_with_audio([card])
+
+        assert card.example_el is None
+        assert card.example_en is None
+
+    @pytest.mark.asyncio
+    async def test_example_fields_populated_when_audio_key_absent(self, mock_db_session):
+        """example_el + example_en populate even when we.audio_key is None.
+
+        CRITICAL: the fields are set OUTSIDE the if we.audio_key: gate so an
+        example with text but no audio still surfaces the text.
+        """
+        card = self._make_card(
+            card_type=CardType.SENTENCE_TRANSLATION,
+            front_content={"example_id": "ex1", "direction": "el_to_target"},
+        )
+        we = self._make_word_entry(
+            audio_key=None,
+            examples=[{"id": "ex1", "greek": "Γεια σου.", "english": "Hello to you."}],
+        )
+        we.id = card.word_entry_id
+        self._mock_db_execute(mock_db_session, [we])
+
+        service = V2SM2Service(mock_db_session)
+        with patch("src.services.v2_sm2_service.get_s3_service"):
+            await service._enrich_with_audio([card])
+
+        assert card.example_el == "Γεια σου."
+        assert card.example_en == "Hello to you."
+        assert card.audio_url is None
+        assert card.example_audio_url is None

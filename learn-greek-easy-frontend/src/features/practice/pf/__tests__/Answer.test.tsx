@@ -1,10 +1,13 @@
 // src/features/practice/pf/__tests__/Answer.test.tsx
 //
-// Tests for Answer.tsx (PRACT2-1-07, PRACT2-3-03):
+// Tests for Answer.tsx (PRACT2-1-07, PRACT2-3-03, PRACT2-3-07):
 //   - declension suppression (renders null)
 //   - Greek font / lang="el" for el-answer card types
 //   - English font for el_to_en card types
-//   - Example block shown/hidden based on sentence_ru / example_audio_url
+//   - Example block shown/hidden based on sentence_ru / example_en / example_el
+//   - EN mode: Greek example + EN gloss renders when example_el/example_en present
+//   - EN mode: NO orphan audio chip when example_el/example_en absent (regression)
+//   - RU mode: sentence_ru path unchanged
 //   - Inert typed-result chip slot rendered
 //   - PRACT2-3-03: ✓ ANSWER kicker text present and exposed to AT
 //   - PRACT2-3-03: aria-hidden on the Check icon only (not on the span)
@@ -45,6 +48,8 @@ function makeCard(overrides: Partial<StudyQueueCard> = {}): StudyQueueCard {
     translation_ru: null,
     translation_ru_plural: null,
     sentence_ru: null,
+    example_el: null,
+    example_en: null,
     ...overrides,
   };
 }
@@ -152,6 +157,8 @@ describe('Answer', () => {
     expect(icon?.getAttribute('aria-hidden')).toBe('true');
   });
 
+  // ── RU mode (sentence_ru path — unchanged) ─────────────────────────────────
+
   it('shows example block with sentence_ru when lang=ru and sentence_ru is present', () => {
     render(
       <Answer
@@ -174,22 +181,99 @@ describe('Answer', () => {
         lang="en"
       />
     );
-    // No example block — no English example field exists, so nothing to show
+    // No example block — no EN example text, so nothing to show
     expect(screen.queryByTestId('pf-answer-example')).toBeNull();
   });
 
-  it('hides example block when sentence_ru and example_audio_url are absent', () => {
+  it('hides example block when all example fields are absent', () => {
     render(
       <Answer
         answerText="house"
         cardType="meaning_el_to_en"
-        card={makeCard({ sentence_ru: null, example_audio_url: null })}
+        card={makeCard({
+          sentence_ru: null,
+          example_audio_url: null,
+          example_el: null,
+          example_en: null,
+        })}
       />
     );
     expect(screen.queryByTestId('pf-answer-example')).toBeNull();
   });
 
-  it('shows example block when example_audio_url is present even without sentence_ru', () => {
+  // ── EN mode: example_el + example_en (PRACT2-3-07) ────────────────────────
+
+  it('shows Greek example in EN mode when example_el is present', () => {
+    render(
+      <Answer
+        answerText="house"
+        cardType="sentence_translation"
+        card={makeCard({
+          card_type: 'sentence_translation',
+          example_el: 'Το σπίτι μου είναι μικρό.',
+          example_en: 'My house is small.',
+        })}
+        lang="en"
+      />
+    );
+    expect(screen.getByTestId('pf-answer-example')).toBeInTheDocument();
+    expect(screen.getByTestId('pf-answer-example-el')).toHaveTextContent(
+      'Το σπίτι μου είναι μικρό.'
+    );
+  });
+
+  it('Greek example element has lang="el"', () => {
+    render(
+      <Answer
+        answerText="house"
+        cardType="sentence_translation"
+        card={makeCard({
+          card_type: 'sentence_translation',
+          example_el: 'Το σπίτι μου είναι μικρό.',
+        })}
+        lang="en"
+      />
+    );
+    const el = screen.getByTestId('pf-answer-example-el');
+    expect(el.getAttribute('lang')).toBe('el');
+  });
+
+  it('shows EN gloss in EN mode when example_en is present', () => {
+    render(
+      <Answer
+        answerText="house"
+        cardType="sentence_translation"
+        card={makeCard({
+          card_type: 'sentence_translation',
+          example_el: 'Το σπίτι μου είναι μικρό.',
+          example_en: 'My house is small.',
+        })}
+        lang="en"
+      />
+    );
+    expect(screen.getByTestId('pf-answer-example-en')).toHaveTextContent('My house is small.');
+  });
+
+  it('shows example block in EN mode when only example_en is present (no example_el)', () => {
+    render(
+      <Answer
+        answerText="house"
+        cardType="sentence_translation"
+        card={makeCard({
+          card_type: 'sentence_translation',
+          example_el: null,
+          example_en: 'My house is small.',
+        })}
+        lang="en"
+      />
+    );
+    expect(screen.getByTestId('pf-answer-example')).toBeInTheDocument();
+    expect(screen.getByTestId('pf-answer-example-en')).toHaveTextContent('My house is small.');
+    expect(screen.queryByTestId('pf-answer-example-el')).toBeNull();
+  });
+
+  // PRACT2-3-07: orphan audio chip regression
+  it('does NOT show example block in EN mode when example_el/en absent but audio_url present', () => {
     render(
       <Answer
         answerText="house"
@@ -198,6 +282,8 @@ describe('Answer', () => {
           card_type: 'sentence_translation',
           sentence_ru: null,
           example_audio_url: 'https://s3.test/ex.mp3',
+          example_el: null,
+          example_en: null,
         })}
         exampleAudioState={{
           audioUrl: 'https://s3.test/ex.mp3',
@@ -208,8 +294,33 @@ describe('Answer', () => {
           speed: 1,
           setSpeed: vi.fn(),
         }}
+        lang="en"
       />
     );
-    expect(screen.getByTestId('pf-answer-example')).toBeInTheDocument();
+    // Block must NOT render — no orphan audio chip
+    expect(screen.queryByTestId('pf-answer-example')).toBeNull();
+    expect(screen.queryByTestId('mock-audio-chip')).toBeNull();
+  });
+
+  // ── RU mode unchanged ──────────────────────────────────────────────────────
+
+  it('RU mode: shows sentence_ru and does NOT show EN example fields', () => {
+    render(
+      <Answer
+        answerText="house"
+        cardType="sentence_translation"
+        card={makeCard({
+          card_type: 'sentence_translation',
+          sentence_ru: 'Мой дом маленький.',
+          example_el: 'Το σπίτι μου είναι μικρό.',
+          example_en: 'My house is small.',
+        })}
+        lang="ru"
+      />
+    );
+    expect(screen.getByTestId('pf-answer-example-ru')).toHaveTextContent('Мой дом маленький.');
+    // EN example elements must not appear in RU mode
+    expect(screen.queryByTestId('pf-answer-example-el')).toBeNull();
+    expect(screen.queryByTestId('pf-answer-example-en')).toBeNull();
   });
 });

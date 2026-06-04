@@ -1110,6 +1110,33 @@
   line-height: 1.4;
 }
 
+/* Greek example sentence in example block (PRACT2-3-07)
+   Noto Serif, lang="el", never italic — matches Greek study-text convention. */
+.pf-answer__example-el {
+  font-family: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
+  font-style: normal;
+  font-size: 14px;
+  font-weight: 400;
+  color: hsl(var(--fg-2));
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* English gloss of the example sentence (PRACT2-3-07)
+   Inter Tight, muted fg-3 to visually distinguish from the Greek above. */
+.pf-answer__example-en {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: hsl(var(--fg-3));
+  text-align: center;
+  line-height: 1.4;
+}
+
 /* ── Rating row ───────────────────────────────────────────────────────────── */
 .pf-rating-row {
   display: grid;
