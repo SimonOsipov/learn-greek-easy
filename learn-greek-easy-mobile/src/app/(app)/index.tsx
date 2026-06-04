@@ -1,17 +1,25 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, ActivityIndicator } from 'react-native';
 
+import { useAuth } from '@/hooks/use-auth';
 import { useDecks } from '@/hooks/use-decks';
 import { ObservabilityDebug } from '@/components/debug/observability-debug';
 
 export default function HomeScreen() {
+  const { user } = useAuth();
   const { data, isLoading, error } = useDecks();
 
   return (
     <SafeAreaView className="flex-1 bg-bg">
-      <View className="m-4 p-4 rounded-lg bg-card border border-line">
-        <Text className="text-fg text-xl font-semibold">Home</Text>
-        <Text className="text-fg2 mt-1 text-sm">Your learning journey starts here.</Text>
+      {/* Login-success confirmation — visible proof the auth gate was passed.
+          Independent of the API call below, so it stays green even when the
+          backend (API_URL) is unset. */}
+      <View className="m-4 p-4 rounded-lg bg-card border border-success items-center">
+        <Text className="text-success text-2xl font-bold">Success! 🎉</Text>
+        <Text className="text-fg mt-1 text-base font-semibold">You’re logged in</Text>
+        {user?.email ? (
+          <Text className="text-fg2 mt-1 text-sm">Signed in as {user.email}</Text>
+        ) : null}
       </View>
 
       <View className="mx-4 p-4 rounded-lg bg-card border border-line">
