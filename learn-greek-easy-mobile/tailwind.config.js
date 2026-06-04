@@ -60,8 +60,8 @@ module.exports = {
         // var-backed tokens on native — explicit full-color rgba tokens are mandatory.
         'badge-recommended': 'hsl(var(--badge-recommended))',
         'badge-recommended-25': 'rgba(255,149,10,0.25)',
-        // Primary at 0.15 alpha for the selected-tile badge flip (221 83% 53% = rgb(59,130,246)).
-        'primary-15': 'rgba(59,130,246,0.15)',
+        // Primary at 0.15 alpha for the selected-tile badge flip (221 83% 53% = rgb(36,99,235)).
+        'primary-15': 'rgba(36,99,235,0.15)',
       },
       borderRadius: {
         sm: '10px',
