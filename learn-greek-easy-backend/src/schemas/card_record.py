@@ -138,6 +138,14 @@ class SentenceTranslationFront(FrontContentBase):
         ...,
         description="Translation direction: Greek-to-target or target-to-Greek",
     )
+    grammar_tag: Optional[str] = Field(
+        default=None,
+        description=(
+            "Optional grammar label for the sentence (e.g. 'Locative', 'Comparative'). "
+            "No generation source exists today — field is None in all generated cards. "
+            "Wired for future use when sentence grammar labels are authored in examples data."
+        ),
+    )
 
 
 class PluralFormFront(FrontContentBase):

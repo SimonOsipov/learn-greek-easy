@@ -533,6 +533,7 @@ export function V2FlashcardPracticePage() {
                         main={(front.main as string) ?? ''}
                         audioState={audioState ?? null}
                         ipa={(front.sub as string | null) ?? null}
+                        grammarTag={(front.grammar_tag as string | null) ?? null}
                       />
                     </>
                   }

@@ -1464,6 +1464,32 @@ class TestGenerateSentenceTranslationCards:
         for card_dict in card_dicts:
             assert card_dict["back_content"]["context"] is None
 
+    @pytest.mark.asyncio
+    async def test_grammar_tag_absent_in_generated_cards(self, service, mock_card_record_repo):
+        """grammar_tag must NOT be fabricated — it is absent (None) in all generated cards.
+
+        PRACT2-3-09: no grammar-label source exists in WordEntry.examples today.
+        The field defaults to None on SentenceTranslationFront. Asserting its
+        absence here prevents future regressions where fabricated labels could slip in.
+        """
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            deck_id=deck_id,
+            examples=[EXAMPLE_WITH_ID_AND_RUSSIAN],
+        )
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+
+        await service.generate_sentence_translation_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 2
+        for card_dict in card_dicts:
+            # grammar_tag must not be present or must be None — never fabricated
+            front = card_dict["front_content"]
+            assert (
+                front.get("grammar_tag") is None
+            ), f"grammar_tag must not be fabricated in generated cards, got: {front.get('grammar_tag')}"
+
 
 # =============================================================================
 # Article Card Test Data
