@@ -297,7 +297,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
             ? 'border bg-muted p-[14px]'
             : isNewsMini
               ? 'rounded-lg bg-white/10 p-2'
-              : 'border border-practice-border bg-practice-bg p-[14px]',
+              : 'border border-border bg-background p-[14px]',
           disabled && (isNewsMini ? 'opacity-40' : 'opacity-50'),
           className
         )}
