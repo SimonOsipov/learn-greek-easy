@@ -383,7 +383,52 @@
     "deckLabel": "{{name}} · Практика",
     "metaCounts": "{{cards}} карт. · {{review}} повтор. · {{new}} нов.",
     "promptSentence": "Переведите предложение",
-    "promptToGreek": "Переведите на греческий"
+    "promptToGreek": "Переведите на греческий",
+    "cardFamily": {
+      "translation": "Перевод",
+      "sentence": "Предложение",
+      "grammar": "Грамматика",
+      "declension": "Склонение",
+      "audio": "Аудио"
+    },
+    "decl": {
+      "sg": "ед.",
+      "pl": "мн."
+    },
+    "rating": {
+      "groupLabel": "Оцените карточку",
+      "ariaKey": "клавиша {{n}}",
+      "forgot": "Забыл",
+      "tough": "Трудно",
+      "ok": "Нормально",
+      "easy": "Легко"
+    },
+    "interval": {
+      "today": "сегодня",
+      "day_one": "{{count}} день",
+      "day_few": "{{count}} дня",
+      "day_many": "{{count}} дней",
+      "week_one": "{{count}} неделя",
+      "week_few": "{{count}} недели",
+      "week_many": "{{count}} недель",
+      "month_one": "{{count}} месяц",
+      "month_few": "{{count}} месяца",
+      "month_many": "{{count}} месяцев",
+      "year_one": "{{count}} год",
+      "year_few": "{{count}} года",
+      "year_many": "{{count}} лет"
+    },
+    "nextIn": "след. через",
+    "nextReviewAria": "Следующий повтор через {{interval}}",
+    "rateHint": {
+      "prefix": "Нажмите",
+      "suffix": "для оценки"
+    },
+    "reveal": {
+      "prefix": "Тапните или нажмите",
+      "spaceKey": "Пробел",
+      "suffix": "чтобы увидеть ответ"
+    }
   },
   "skeleton": {
     "loadingCard": "Загрузка карточки"

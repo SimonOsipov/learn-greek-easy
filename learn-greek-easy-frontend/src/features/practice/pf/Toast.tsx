@@ -12,30 +12,31 @@
 
 import { useEffect, useState } from 'react';
 
+import i18n from 'i18next';
+import { useTranslation } from 'react-i18next';
+
 // ── Interval formatter ────────────────────────────────────────────────────────
 
 /**
- * Formats a whole-day SM-2 interval into a human-readable string.
- * No existing util for this — added here as specified (task implementation plan step 3).
+ * Formats a whole-day SM-2 interval into a localized human-readable string.
  *
- * Examples: 0 → "today", 1 → "1 day", 3 → "3 days",
- *           14 → "2 weeks", 30 → "1 month", 365 → "1 year"
+ * Resolves against the shared i18next singleton (same instance the app and the
+ * test setup initialize), so the `(days)` signature stays unchanged for callers.
+ * Components that render this (Toast, RatingRow) subscribe via useTranslation and
+ * re-render on language change, which re-invokes this with the active language.
+ * i18next picks the correct plural form per `count` (en: one/other, ru: one/few/many).
+ *
+ * Examples (en): 0 → "today", 1 → "1 day", 3 → "3 days",
+ *                14 → "2 weeks", 30 → "1 month", 365 → "1 year"
  */
 export function formatReviewInterval(days: number): string {
-  if (days <= 0) return 'today';
-  if (days === 1) return '1 day';
-  if (days < 7) return `${days} days`;
-  if (days < 14) return '1 week';
-  if (days < 30) {
-    const weeks = Math.round(days / 7);
-    return weeks === 1 ? '1 week' : `${weeks} weeks`;
-  }
-  if (days < 365) {
-    const months = Math.round(days / 30);
-    return months === 1 ? '1 month' : `${months} months`;
-  }
-  const years = Math.round(days / 365);
-  return years === 1 ? '1 year' : `${years} years`;
+  const t = i18n.t.bind(i18n);
+  if (days <= 0) return t('deck:practice.interval.today');
+  if (days < 7) return t('deck:practice.interval.day', { count: days });
+  if (days < 14) return t('deck:practice.interval.week', { count: 1 });
+  if (days < 30) return t('deck:practice.interval.week', { count: Math.round(days / 7) });
+  if (days < 365) return t('deck:practice.interval.month', { count: Math.round(days / 30) });
+  return t('deck:practice.interval.year', { count: Math.round(days / 365) });
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -58,6 +59,7 @@ export interface ToastProps {
  * Auto-dismisses after autoDismissMs (default 3s).
  */
 export function Toast({ interval, autoDismissMs = 3000, onDismiss }: ToastProps) {
+  const { t } = useTranslation('deck');
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
@@ -78,10 +80,10 @@ export function Toast({ interval, autoDismissMs = 3000, onDismiss }: ToastProps)
       className="pf-toast"
       role="status"
       aria-live="polite"
-      aria-label={`Next review in ${intervalText}`}
+      aria-label={t('practice.nextReviewAria', { interval: intervalText })}
       data-testid="pf-toast"
     >
-      <span className="pf-toast__label">next in</span>
+      <span className="pf-toast__label">{t('practice.nextIn')}</span>
       <span className="pf-toast__interval" data-testid="pf-toast-interval">
         {intervalText}
       </span>
