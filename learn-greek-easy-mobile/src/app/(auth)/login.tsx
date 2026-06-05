@@ -45,7 +45,6 @@ import {
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import Svg, { Path } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { cssInterop } from 'nativewind';
@@ -53,6 +52,7 @@ import { AlertCircle, Eye, EyeOff } from 'lucide-react-native';
 
 import { useAuth } from '@/hooks/use-auth';
 import { useAuthStore } from '@/stores/auth-store';
+import { GlassFill } from '@/components/glass-fill';
 import { GoogleIcon } from '@/components/icons/GoogleIcon';
 import { track } from '@/lib/analytics';
 
@@ -497,28 +497,6 @@ interface SegmentedControlProps {
   mode: 'signin' | 'signup';
   thumbProgress: ReturnType<typeof useSharedValue<number>>;
   onModeChange: (next: 'signin' | 'signup') => void;
-}
-
-// ---------------------------------------------------------------------------
-// GlassFill — frosted-glass background for on-photo surfaces (README §Glass/blur).
-// A leaf BlurView (absolute) + translucent tint overlay, sitting BEHIND the
-// surface's content. Kept as a LEAF (never wrapping the ScrollView) to avoid the
-// Android blur z-index glitch noted in MOB-09. Parent must be `overflow-hidden`
-// so the blur respects the rounded corners.
-// ---------------------------------------------------------------------------
-function GlassFill({
-  tintClass = 'bg-on-photo-10',
-  intensity = 18,
-}: {
-  tintClass?: string;
-  intensity?: number;
-}) {
-  return (
-    <>
-      <BlurView intensity={intensity} tint="dark" pointerEvents="none" style={StyleSheet.absoluteFill} />
-      <View pointerEvents="none" className={`absolute inset-0 ${tintClass}`} />
-    </>
-  );
 }
 
 // ---------------------------------------------------------------------------

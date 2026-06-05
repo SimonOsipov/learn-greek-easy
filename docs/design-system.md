@@ -456,8 +456,11 @@ Mobile-only tokens added in MOB-09. These 5 tokens are **theme-invariant** — i
 | `--on-photo-active-fg` | `222 31% 9%` | Dark navy (`#0b1220`) — segmented active label on the white thumb |
 | `--danger-soft` | `0 96% 90%` | `#fecaca` — error banner text |
 | `--danger-softer` | `0 93% 82%` | `#fca5a5` — inline field-error message |
+| `--badge-recommended` | `34 100% 52%` | Brand Cyprus gold — over-photo "Recommended" badge accent (Step 3) |
 
-Tailwind utilities: `text-on-photo`, `bg-on-photo/10`, `border-on-photo/22`, `bg-on-photo-scrim/42`, `text-on-photo-active`, `text-danger-soft`, `text-danger-softer`.
+Tailwind utilities: `text-on-photo`, `bg-on-photo/10`, `border-on-photo/22`, `bg-on-photo-scrim/42`, `text-on-photo-active`, `text-danger-soft`, `text-danger-softer`, `bg-badge-recommended`, `text-badge-recommended`, `bg-badge-recommended-25`.
+
+> **Over-photo single-accent exception:** over-photo surfaces (login/onboarding, i.e. screens fully covered by `cyprus-hero.webp`) may use the brand Cyprus gold (`--badge-recommended`) as a **single accent colour** — this is the sanctioned exception to the three-palette rule (conventions.md:82). All other colour usage on these surfaces must use `--on-photo-*` tokens.
 
 The error-banner fill and border reuse the existing `danger` token (`bg-danger/18 border-danger/55`). The sanctioned raw-literal color values on the login screen are:
 

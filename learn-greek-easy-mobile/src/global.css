@@ -50,6 +50,9 @@
   --on-photo-active-fg: 222 31% 9%;  /* #0b1220 — segmented active label on the white thumb */
   --danger-soft: 0 96% 90%;          /* #fecaca — error banner text */
   --danger-softer: 0 93% 82%;        /* #fca5a5 — inline field-error message */
+  /* Over-photo "Recommended" badge accent — brand Cyprus gold. Theme-invariant (no .dark
+     override) — sanctioned single-accent exception for over-photo surfaces (MOB-14/ONB-01). */
+  --badge-recommended: 34 100% 52%; /* #ff950a — brand Cyprus gold */
 }
 
 .dark {

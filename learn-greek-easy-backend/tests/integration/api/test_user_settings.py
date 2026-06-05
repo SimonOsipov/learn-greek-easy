@@ -125,6 +125,29 @@ class TestUserSettingsUpdate:
         assert data["settings"]["theme"] == "dark"
 
     @pytest.mark.asyncio
+    async def test_update_proficiency_and_learning_goal(
+        self,
+        client: AsyncClient,
+        test_user: User,
+        auth_headers: dict[str, str],
+    ) -> None:
+        """Test updating proficiency_level and learning_goal round-trips correctly."""
+        response = await client.patch(
+            "/api/v1/auth/me",
+            json={
+                "proficiency_level": "A2",
+                "learning_goal": "live",
+                "daily_goal": 20,
+            },
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["settings"]["proficiency_level"] == "A2"
+        assert data["settings"]["learning_goal"] == "live"
+
+    @pytest.mark.asyncio
     async def test_theme_defaults_to_null(
         self,
         client: AsyncClient,
