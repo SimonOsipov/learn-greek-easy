@@ -557,6 +557,22 @@ class UserSettings(Base, TimestampMixin):
         comment="User's preferred theme: 'light' or 'dark'",
     )
 
+    # Onboarding proficiency level
+    proficiency_level: Mapped[str | None] = mapped_column(
+        String(10),
+        nullable=True,
+        default=None,
+        comment="Onboarding self-rated Greek level: 'new', 'A1', 'A2', or 'B1'",
+    )
+
+    # Onboarding learning goal
+    learning_goal: Mapped[str | None] = mapped_column(
+        String(10),
+        nullable=True,
+        default=None,
+        comment="Onboarding motivation: 'travel', 'live', 'work', 'family', or 'citizen'",
+    )
+
     # Tour completion
     tour_completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),

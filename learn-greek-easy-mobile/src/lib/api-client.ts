@@ -36,7 +36,7 @@ export class APIRequestError extends Error {
  * On 401 we throw and let the MOB-03 onAuthStateChange + MOB-04 Stack.Protected
  * gate drive re-auth (prevents an infinite loop).
  */
-async function request<T>(method: string, path: string): Promise<T> {
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const { apiUrl } = getApiConfig();
   const url = `${apiUrl}${path}`;
 
@@ -52,7 +52,11 @@ async function request<T>(method: string, path: string): Promise<T> {
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
-  const response = await fetch(url, { method, headers });
+  const response = await fetch(url, {
+    method,
+    headers,
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  });
 
   if (response.status === 401) {
     throw new APIRequestError({
@@ -80,4 +84,5 @@ async function request<T>(method: string, path: string): Promise<T> {
 
 export const api = {
   get: <T>(path: string): Promise<T> => request<T>('GET', path),
+  patch: <T>(path: string, body: unknown): Promise<T> => request<T>('PATCH', path, body),
 };

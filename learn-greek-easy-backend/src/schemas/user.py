@@ -90,6 +90,16 @@ class UserSettingsUpdate(BaseModel):
         pattern="^(light|dark)$",
         description="User's preferred theme: 'light' or 'dark'",
     )
+    proficiency_level: Optional[str] = Field(
+        None,
+        pattern="^(new|A1|A2|B1)$",
+        description="Onboarding self-rated Greek level: 'new', 'A1', 'A2', or 'B1'",
+    )
+    learning_goal: Optional[str] = Field(
+        None,
+        pattern="^(travel|live|work|family|citizen)$",
+        description="Onboarding motivation: 'travel', 'live', 'work', 'family', or 'citizen'",
+    )
     tour_completed_at: Optional[datetime] = None
 
     @field_validator("preferred_language", mode="before")
@@ -112,6 +122,8 @@ class UserSettingsResponse(BaseModel):
     email_notifications: bool
     preferred_language: Optional[str] = None
     theme: Optional[str] = None
+    proficiency_level: Optional[str] = None
+    learning_goal: Optional[str] = None
     tour_completed_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
@@ -139,6 +151,16 @@ class UserWithSettingsUpdate(BaseModel):
         None,
         pattern="^(light|dark)$",
         description="User's preferred theme: 'light' or 'dark'",
+    )
+    proficiency_level: Optional[str] = Field(
+        None,
+        pattern="^(new|A1|A2|B1)$",
+        description="Onboarding self-rated Greek level: 'new', 'A1', 'A2', or 'B1'",
+    )
+    learning_goal: Optional[str] = Field(
+        None,
+        pattern="^(travel|live|work|family|citizen)$",
+        description="Onboarding motivation: 'travel', 'live', 'work', 'family', or 'citizen'",
     )
     tour_completed_at: Optional[datetime] = None
 
