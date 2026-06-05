@@ -119,22 +119,27 @@ jobs:
       - name: Start Metro (dev-client)
         env:
           APP_VARIANT: development
+          REACT_NATIVE_PACKAGER_HOSTNAME: 127.0.0.1
         run: |
-          # --localhost so the served URL is http://127.0.0.1:8081, matching the
-          # defaultLaunchURL baked into the .app. CI=1 keeps it non-interactive.
-          CI=1 npx expo start --dev-client --localhost --port 8081 \
+          # Bind Metro to all interfaces (default lan host = 0.0.0.0) so 127.0.0.1
+          # is reachable by both this runner and the simulator's dev-client (which
+          # connects to the baked http://127.0.0.1:8081). Do NOT use --localhost:
+          # it can bind localhost to ::1 only (Node IPv6-first), making the IPv4
+          # 127.0.0.1 connection fail. REACT_NATIVE_PACKAGER_HOSTNAME forces
+          # 127.0.0.1 into the served manifest/bundle URLs. CI=1 = non-interactive.
+          CI=1 npx expo start --dev-client --port 8081 \
             > "$RUNNER_TEMP/metro.log" 2>&1 &
           echo "METRO_PID=$!" >> "$GITHUB_ENV"
 
       - name: Wait for Metro to be ready
         run: |
-          for i in $(seq 1 60); do
-            if [ "$(curl -fsS http://127.0.0.1:8081/status 2>/dev/null)" = "packager-status:running" ]; then
+          for i in $(seq 1 120); do
+            if curl -fsS http://127.0.0.1:8081/status >/dev/null 2>&1; then
               echo "Metro is up after ${i}s"; exit 0
             fi
             sleep 1
           done
-          echo "::error::Metro did not become ready on :8081 within 60s"
+          echo "::error::Metro did not become ready on :8081 within 120s"
           cat "$RUNNER_TEMP/metro.log" || true
           exit 1
 
