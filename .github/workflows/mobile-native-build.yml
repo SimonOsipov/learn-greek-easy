@@ -178,28 +178,16 @@ jobs:
           cat "$RUNNER_TEMP/metro.log" || true
           exit 1
 
-      - name: TEMP — dump UI hierarchy + screenshot (diagnosis)
-        run: |
-          sleep 20  # let the app render past the splash overlay
-          echo "===== UI HIERARCHY (maestro) ====="
-          maestro hierarchy 2>&1 | tee "$RUNNER_TEMP/hierarchy.txt" || true
-          echo "===== END UI HIERARCHY ====="
-          xcrun simctl io "$SIM_UDID" screenshot "$RUNNER_TEMP/initial-screen.png" || true
-          ls -la "$RUNNER_TEMP/initial-screen.png" || true
-
       - name: Run Maestro smoke flow
-        continue-on-error: true   # TEMP: allow cache to save while debugging the smoke
         run: maestro test .maestro/smoke.yaml
 
       - name: Upload Maestro debug artifacts
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: maestro-debug
           path: |
             /Users/runner/.maestro/tests/
             ${{ runner.temp }}/metro.log
-            ${{ runner.temp }}/hierarchy.txt
-            ${{ runner.temp }}/initial-screen.png
           if-no-files-found: warn
           retention-days: 5
