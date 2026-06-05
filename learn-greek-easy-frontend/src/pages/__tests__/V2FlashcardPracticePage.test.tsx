@@ -458,4 +458,164 @@ describe('V2FlashcardPracticePage', () => {
     expect(screen.queryByTestId('pf-answer-example-ru')).toBeNull();
     // afterEach in test-setup ensures i18n is reset to 'en'
   });
+
+  // ── RU language-leak regression (all non-sentence card types) ───────────────
+  //
+  // Guards the bug where the new pf framework rendered English on word/grammar
+  // cards for RU users: it ported the sentence-card native-language swap (#563)
+  // but left meaning/article/plural cards showing "Greek → English" + the English
+  // answer/prompt. These render the full page (the integration point that was
+  // broken) so a future renderer that forgets translatePrompt / translation_ru
+  // is caught — not just the isolated component.
+
+  const baseCard = (overrides: Record<string, unknown>) => ({
+    card_record_id: 'cr-ru',
+    word_entry_id: 'we-ru',
+    deck_id: 'deck-123',
+    deck_name: 'Test Deck',
+    variant_key: null,
+    status: 'due' as const,
+    is_new: false,
+    is_early_practice: false,
+    due_date: null,
+    easiness_factor: null,
+    interval: null,
+    audio_url: null,
+    example_audio_url: null,
+    translation_ru: null,
+    translation_ru_plural: null,
+    sentence_ru: null,
+    ...overrides,
+  });
+
+  const renderCardInRu = async (card: Record<string, unknown>) => {
+    mockStoreState = {
+      ...mockStoreState,
+      isLoading: false,
+      error: null,
+      sessionSummary: null,
+      sessionId: 'sess-ru',
+      cards: [card],
+      currentIndex: 0,
+    };
+    await i18n.changeLanguage('ru');
+    return render(<V2FlashcardPracticePage />);
+  };
+
+  it('meaning_el_to_en (RU): Russian direction + Russian answer, no English leak', async () => {
+    await renderCardInRu(
+      baseCard({
+        card_type: 'meaning_el_to_en',
+        front_content: { main: 'η αδερφή', sub: null, prompt: 'What does this mean?', badge: null },
+        back_content: { main: 'sister', gender: null, gender_ru: null },
+        translation_ru: 'сестра',
+      })
+    );
+
+    const subtitle = screen.getByTestId('pf-direction-subtitle');
+    expect(subtitle.textContent).toContain('Греческий → Русский');
+    expect(subtitle.textContent).toContain('Что это значит?');
+    expect(subtitle.textContent).not.toContain('Greek → English');
+
+    // Answer is the Russian translation, not the English back_content.main.
+    expect(screen.getByTestId('pf-answer-text')).toHaveTextContent('сестра');
+    expect(screen.getByTestId('pf-answer-text')).not.toHaveTextContent('sister');
+  });
+
+  it('meaning_el_to_en (RU): falls back to English answer when translation_ru is absent', async () => {
+    await renderCardInRu(
+      baseCard({
+        card_type: 'meaning_el_to_en',
+        front_content: { main: 'το νερό', sub: null, prompt: 'What does this mean?', badge: null },
+        back_content: { main: 'water', gender: null, gender_ru: null },
+        translation_ru: null,
+      })
+    );
+    expect(screen.getByTestId('pf-answer-text')).toHaveTextContent('water');
+  });
+
+  it('meaning_en_to_el (RU): Russian direction + Russian prompt word, no English leak', async () => {
+    await renderCardInRu(
+      baseCard({
+        card_type: 'meaning_en_to_el',
+        front_content: {
+          main: 'sister',
+          sub: null,
+          prompt: 'How do you say this in Greek?',
+          badge: null,
+        },
+        back_content: { answer: 'η αδερφή', gender: null, gender_ru: null },
+        translation_ru: 'сестра',
+      })
+    );
+
+    const subtitle = screen.getByTestId('pf-direction-subtitle');
+    expect(subtitle.textContent).toContain('Русский → Греческий');
+    expect(subtitle.textContent).toContain('Как это сказать по-гречески?');
+    expect(subtitle.textContent).not.toContain('English → Greek');
+
+    // The prompt word is the Russian source, not the English front_content.main.
+    expect(screen.getByText('сестра')).toBeInTheDocument();
+    expect(screen.queryByText('sister')).not.toBeInTheDocument();
+  });
+
+  it('article (RU): prompt is localized', async () => {
+    await renderCardInRu(
+      baseCard({
+        card_type: 'article',
+        front_content: { main: 'ο άντρας', sub: null, prompt: 'What is the article?', badge: null },
+        back_content: { answer: 'ο', gender: 'masculine', gender_ru: 'мужской' },
+      })
+    );
+    expect(screen.getByText('Какой артикль?')).toBeInTheDocument();
+    expect(screen.queryByText('What is the article?')).not.toBeInTheDocument();
+  });
+
+  it('plural_form (RU): prompt is localized', async () => {
+    await renderCardInRu(
+      baseCard({
+        card_type: 'plural_form',
+        front_content: {
+          main: 'το σπίτι',
+          sub: null,
+          prompt: 'What is the plural form?',
+          badge: null,
+        },
+        back_content: { answer: 'τα σπίτια', answer_sub: 'houses', answer_sub_ru: 'дома' },
+      })
+    );
+    expect(screen.getByText('Какая форма множественного числа?')).toBeInTheDocument();
+    expect(screen.queryByText('What is the plural form?')).not.toBeInTheDocument();
+  });
+
+  it('meaning_el_to_en (EN baseline): English direction + answer unchanged', async () => {
+    mockStoreState = {
+      ...mockStoreState,
+      isLoading: false,
+      error: null,
+      sessionSummary: null,
+      sessionId: 'sess-en',
+      cards: [
+        baseCard({
+          card_type: 'meaning_el_to_en',
+          front_content: {
+            main: 'η αδερφή',
+            sub: null,
+            prompt: 'What does this mean?',
+            badge: null,
+          },
+          back_content: { main: 'sister', gender: null, gender_ru: null },
+          translation_ru: 'сестра',
+        }),
+      ],
+      currentIndex: 0,
+    };
+    // i18n defaults to 'en' (afterEach resets it); render directly.
+    render(<V2FlashcardPracticePage />);
+
+    const subtitle = screen.getByTestId('pf-direction-subtitle');
+    expect(subtitle.textContent).toContain('Greek → English');
+    expect(subtitle.textContent).toContain('What does this mean?');
+    expect(screen.getByTestId('pf-answer-text')).toHaveTextContent('sister');
+  });
 });

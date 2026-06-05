@@ -384,6 +384,13 @@
     "metaCounts": "{{cards}} cards · {{review}} review · {{new}} new",
     "promptSentence": "Translate from Greek to English",
     "promptToGreek": "Translate from English to Greek",
+    "promptMeaning": "What does this mean?",
+    "promptHowToSay": "How do you say this in Greek?",
+    "promptArticle": "What is the article?",
+    "promptPlural": "What is the plural form?",
+    "promptSingular": "What is the singular form?",
+    "directionElToNative": "Greek → English",
+    "directionNativeToEl": "English → Greek",
     "cardFamily": {
       "translation": "Translation",
       "sentence": "Sentence",
