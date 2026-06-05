@@ -76,7 +76,18 @@ const config: ExpoConfig = {
       // expo-dev-menu DevMenuPreferences.setup() as the registration default for
       // EXDevMenuIsOnboardingFinished. Unset locally => devs still see onboarding once.
       ...(process.env.CI_DEV_MENU_ONBOARDING_FINISHED === 'true'
-        ? { EXDevMenuIsOnboardingFinished: true }
+        ? {
+            // Suppress the dev-menu onboarding popup (read by DevMenuPreferences as
+            // the EXDevMenuIsOnboardingFinished registration default).
+            EXDevMenuIsOnboardingFinished: true,
+            // With onboarding finished, the dev-menu auto-open condition falls through
+            // to showsAtLaunch, which DEFAULTS TO TRUE on iOS (DevMenuPreferences.setup
+            // registers `showsAtLaunchKey: showsAtLaunchDefault ?? true`). That auto-opens
+            // the TOOLS panel over the app and blocks Maestro. Bake it false so the menu
+            // stays closed on a fresh (clearState reinstall) launch. Unset locally => devs
+            // keep the normal dev menu.
+            EXDevMenuShowsAtLaunch: false,
+          }
         : {}),
     },
   },
