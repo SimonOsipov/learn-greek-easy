@@ -152,8 +152,8 @@ jobs:
       - name: Verify dev-client loads the JS bundle from Metro
         run: |
           xcrun simctl launch "$SIM_UDID" eu.greeklish.app.dev --initialUrl http://127.0.0.1:8081 || true
-          for i in $(seq 1 90); do
-            if grep -qiE 'index\.bundle.*platform=ios|Bundling.*complete|/(index|\.expo/\.virtual-metro-entry)\.bundle' "$RUNNER_TEMP/metro.log"; then
+          for i in $(seq 1 180); do
+            if grep -qiE 'iOS Bundled [0-9]+ ?ms|Bundling complete|\.bundle\?platform=ios|virtual-metro-entry\.bundle' "$RUNNER_TEMP/metro.log"; then
               echo "Metro served the iOS bundle after ${i}s"; exit 0
             fi
             sleep 1
