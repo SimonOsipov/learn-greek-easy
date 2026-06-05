@@ -152,14 +152,29 @@ jobs:
 
       - name: Verify dev-client loads the JS bundle from Metro
         run: |
-          xcrun simctl launch "$SIM_UDID" eu.greeklish.app.dev --initialUrl http://127.0.0.1:8081 || true
-          for i in $(seq 1 180); do
-            if grep -qiE 'iOS Bundled [0-9]+ ?ms|Bundling complete|\.bundle\?platform=ios|virtual-metro-entry\.bundle' "$RUNNER_TEMP/metro.log"; then
-              echo "Metro served the iOS bundle after ${i}s"; exit 0
-            fi
-            sleep 1
+          # The dev-client launch -> bundle-request can race the Metro packager.
+          # Retry the cold launch until Metro actually serves the iOS bundle
+          # (which also warms Metro for the Maestro smoke's clearState relaunch).
+          bundle_served() {
+            grep -qiE 'iOS Bundled [0-9]+ ?ms|Bundling complete|\.bundle\?platform=ios|virtual-metro-entry\.bundle' "$RUNNER_TEMP/metro.log"
+          }
+          for attempt in 1 2 3 4 5; do
+            echo "::group::Launch attempt $attempt"
+            xcrun simctl terminate "$SIM_UDID" eu.greeklish.app.dev 2>/dev/null || true
+            sleep 2
+            xcrun simctl launch "$SIM_UDID" eu.greeklish.app.dev --initialUrl http://127.0.0.1:8081 || true
+            for i in $(seq 1 60); do
+              if bundle_served; then
+                echo "Metro served the iOS bundle (attempt $attempt, ${i}s)"
+                echo "::endgroup::"
+                exit 0
+              fi
+              sleep 1
+            done
+            echo "attempt $attempt: bundle not served within 60s, retrying"
+            echo "::endgroup::"
           done
-          echo "::error::dev-client never requested the JS bundle from Metro (still on launcher menu?)"
+          echo "::error::dev-client never requested the JS bundle from Metro after 5 launch attempts"
           cat "$RUNNER_TEMP/metro.log" || true
           exit 1
 
