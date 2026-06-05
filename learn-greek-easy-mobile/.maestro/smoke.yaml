@@ -5,6 +5,8 @@ appId: eu.greeklish.app.dev
 ---
 - launchApp:
     clearState: true
+    arguments:
+      "--initialUrl": "http://127.0.0.1:8081"
 # Maestro has no "label" selector — a React Native accessibilityLabel is
 # surfaced through the standard text matcher, so "Sign in" is asserted as text.
 - assertVisible: "Welcome back"
