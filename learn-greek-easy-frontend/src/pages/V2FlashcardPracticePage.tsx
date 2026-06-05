@@ -169,14 +169,14 @@ export function V2FlashcardPracticePage() {
       }
     : null;
 
-  // Practice-local card language — decoupled from global i18n.
-  // Initialized once from the UI language (so Russian-UI users start on RU),
-  // but toggling NEVER writes back to i18n.changeLanguage.
-  const [cardLang, setCardLang] = useState<'en' | 'ru'>(
-    i18n.language?.split('-')[0] === 'ru' ? 'ru' : 'en'
-  );
-  const handleLangChange = (lang: 'en' | 'ru') => {
-    setCardLang(lang);
+  // Card gloss language follows the global i18n language (single source of truth).
+  // react-i18next re-renders this component on languageChanged, so this stays reactive.
+  const cardLang: 'en' | 'ru' = i18n.language?.split('-')[0] === 'ru' ? 'ru' : 'en';
+
+  const translatePrompt = (raw: string | null | undefined): string | null => {
+    if (raw === 'Translate this sentence') return t('practice.promptSentence');
+    if (raw === 'Translate to Greek') return t('practice.promptToGreek');
+    return raw ?? null; // fallback: show raw value unchanged
   };
 
   // Handle rating
@@ -417,19 +417,9 @@ export function V2FlashcardPracticePage() {
           {(() => {
             const cardType = currentQueueCard?.card_type;
             const front = currentCard.front_content as Record<string, unknown>;
-            const back = currentCard.back_content as Record<string, unknown>;
 
             // Shared card head props
-            const headEl = (
-              <CardHead
-                cardType={cardType ?? ''}
-                posLabel={(front.badge as string | null | undefined) ?? null}
-                gender={(back.gender as string | null | undefined) ?? null}
-                genderRu={(back.gender_ru as string | null | undefined) ?? null}
-                currentLang={cardLang}
-                onLangChange={handleLangChange}
-              />
-            );
+            const headEl = <CardHead cardType={cardType ?? ''} />;
 
             if (cardType === 'meaning_el_to_en') {
               return (
@@ -519,7 +509,6 @@ export function V2FlashcardPracticePage() {
             }
 
             if (cardType === 'sentence_translation') {
-              const translatedPrompt = (front.prompt as string | null | undefined) ?? null;
               return (
                 <PfCard
                   key={currentCard.id}
@@ -529,7 +518,8 @@ export function V2FlashcardPracticePage() {
                     <>
                       {headEl}
                       <Sentence
-                        prompt={translatedPrompt}
+                        rawPrompt={(front.prompt as string | null | undefined) ?? null}
+                        prompt={translatePrompt(front.prompt as string | null | undefined)}
                         main={(front.main as string) ?? ''}
                         audioState={audioState ?? null}
                         ipa={(front.sub as string | null) ?? null}

@@ -84,6 +84,26 @@ describe('LanguageContext', () => {
     });
   });
 
+  describe('document.documentElement.lang sync', () => {
+    it('should set html lang on mount', () => {
+      renderHook(() => useLanguage(), { wrapper });
+      // After mount the attribute must be a non-empty base subtag
+      expect(document.documentElement.lang).toMatch(/^[a-z]{2}$/);
+    });
+
+    it('should update html lang when language changes', async () => {
+      const { result } = renderHook(() => useLanguage(), { wrapper });
+
+      await act(async () => {
+        await result.current.changeLanguage('ru', 'header');
+      });
+
+      await waitFor(() => {
+        expect(document.documentElement.lang).toBe('ru');
+      });
+    });
+  });
+
   describe('Language Change', () => {
     it('should change language to Russian', async () => {
       const { result } = renderHook(() => useLanguage(), { wrapper });

@@ -379,8 +379,11 @@
     "hard": "Hard",
     "good": "Good",
     "easy": "Easy",
-    "langEn": "EN",
-    "langRu": "RU"
+    "exit": "Exit",
+    "deckLabel": "{{name}} · Practice",
+    "metaCounts": "{{cards}} cards · {{review}} review · {{new}} new",
+    "promptSentence": "Translate this sentence",
+    "promptToGreek": "Translate to Greek"
   },
   "skeleton": {
     "loadingCard": "Loading deck card"

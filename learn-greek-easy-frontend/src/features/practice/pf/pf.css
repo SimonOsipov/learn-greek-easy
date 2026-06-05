@@ -149,6 +149,7 @@
 .pf-seg-track {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 2px;
   width: 100%;
   overflow: hidden;
@@ -368,78 +369,6 @@
   border-radius: 999px;
   background: var(--pf-c, hsl(var(--primary)));
   flex-shrink: 0;
-}
-
-/* POS chip — part-of-speech + optional gender-tinted article */
-.pf-pos {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: hsl(var(--fg-2));
-  background: hsl(var(--fg) / 0.07);
-  padding: 2px 8px;
-  border-radius: 999px;
-}
-
-/* Gender-tinted article within the POS chip */
-.pf-pos__article {
-  font-weight: 700;
-}
-
-.pf-pos__article[data-gender='masculine'] {
-  color: hsl(var(--primary));
-}
-
-.pf-pos__article[data-gender='feminine'] {
-  /* Deviation Justification: feminine pink (340 75% 55% / dark 340 80% 72%) is
-     a sanctioned literal per PRACT2-1 design-token note — no --pf-fem token
-     exists yet; literal HSL is the approved approach until tokenization lands. */
-  color: hsl(340 75% 55%);
-}
-
-.dark .pf-pos__article[data-gender='feminine'] {
-  color: hsl(340 80% 72%);
-}
-
-.pf-pos__article[data-gender='neuter'] {
-  color: hsl(var(--fg-3));
-}
-
-/* EN/RU language switch */
-.pf-lang {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px 4px;
-  border-radius: 8px;
-  background: hsl(var(--fg) / 0.05);
-}
-
-.pf-lang__btn {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 7px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: hsl(var(--fg-3));
-  cursor: pointer;
-  transition:
-    background 120ms ease,
-    color 120ms ease;
-  line-height: 1.4;
-}
-
-.pf-lang__btn:hover {
-  color: hsl(var(--fg-2));
-}
-
-.pf-lang__btn[aria-pressed='true'] {
-  background: hsl(var(--card));
-  color: hsl(var(--fg));
-  box-shadow: var(--shadow-1);
 }
 
 /* ── Translation renderer ─────────────────────────────────────────────────── */
@@ -1089,10 +1018,6 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 10px 16px;
-  border-radius: var(--radius-lg, 20px);
-  background: hsl(var(--fg) / 0.04);
-  border: 1px solid hsl(var(--fg) / 0.08);
   width: 100%;
 }
 
@@ -1809,18 +1734,4 @@
   font-size: 12px;
   font-weight: 500;
   color: hsl(var(--fg-3));
-}
-
-/* ── POS chip separator (PRACT2-3-04) ────────────────────────────────────── */
-
-/* .pf-pos__sep — middle dot separator between POS label and article */
-.pf-pos__sep {
-  color: hsl(var(--fg-3));
-  margin: 0 2px;
-  font-weight: 400;
-}
-
-/* .pf-pos__label — POS label text node; lowercase via text-transform */
-.pf-pos__label {
-  text-transform: lowercase;
 }

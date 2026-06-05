@@ -202,9 +202,9 @@ describe('Answer', () => {
     expect(screen.queryByTestId('pf-answer-example')).toBeNull();
   });
 
-  // ── EN mode: example_el + example_en (PRACT2-3-07) ────────────────────────
+  // ── EN mode: example_el + example_en — sentence-family suppression (PRACT2-5-05) ─
 
-  it('shows Greek example in EN mode when example_el is present', () => {
+  it('suppresses Greek example text on sentence-family cards in EN mode', () => {
     render(
       <Answer
         answerText="house"
@@ -217,13 +217,12 @@ describe('Answer', () => {
         lang="en"
       />
     );
-    expect(screen.getByTestId('pf-answer-example')).toBeInTheDocument();
-    expect(screen.getByTestId('pf-answer-example-el')).toHaveTextContent(
-      'Το σπίτι μου είναι μικρό.'
-    );
+    // Text nodes suppressed on sentence-family (PRACT2-5-05): example_el and example_en absent
+    expect(screen.queryByTestId('pf-answer-example-el')).toBeNull();
+    expect(screen.queryByTestId('pf-answer-example-en')).toBeNull();
   });
 
-  it('Greek example element has lang="el"', () => {
+  it('suppresses Greek example text (lang="el" check) on sentence-family cards in EN mode', () => {
     render(
       <Answer
         answerText="house"
@@ -235,11 +234,10 @@ describe('Answer', () => {
         lang="en"
       />
     );
-    const el = screen.getByTestId('pf-answer-example-el');
-    expect(el.getAttribute('lang')).toBe('el');
+    expect(screen.queryByTestId('pf-answer-example-el')).toBeNull();
   });
 
-  it('shows EN gloss in EN mode when example_en is present', () => {
+  it('suppresses EN gloss on sentence-family cards in EN mode', () => {
     render(
       <Answer
         answerText="house"
@@ -252,10 +250,10 @@ describe('Answer', () => {
         lang="en"
       />
     );
-    expect(screen.getByTestId('pf-answer-example-en')).toHaveTextContent('My house is small.');
+    expect(screen.queryByTestId('pf-answer-example-en')).toBeNull();
   });
 
-  it('shows example block in EN mode when only example_en is present (no example_el)', () => {
+  it('suppresses example block on sentence-family when only example_en is present (no example_el)', () => {
     render(
       <Answer
         answerText="house"
@@ -268,9 +266,113 @@ describe('Answer', () => {
         lang="en"
       />
     );
+    // No text example — example block absent entirely (no audio either in this case)
+    expect(screen.queryByTestId('pf-answer-example-el')).toBeNull();
+    expect(screen.queryByTestId('pf-answer-example-en')).toBeNull();
+  });
+
+  // ── EN mode: positive example coverage on NON-sentence card (meaning_el_to_en) ──
+
+  it('shows Greek example text on meaning card (translation family) in EN mode', () => {
+    render(
+      <Answer
+        answerText="house"
+        cardType="meaning_el_to_en"
+        card={makeCard({
+          card_type: 'meaning_el_to_en',
+          example_el: 'Το σπίτι μου είναι μικρό.',
+          example_en: 'My house is small.',
+        })}
+        lang="en"
+      />
+    );
+    expect(screen.getByTestId('pf-answer-example')).toBeInTheDocument();
+    expect(screen.getByTestId('pf-answer-example-el')).toHaveTextContent(
+      'Το σπίτι μου είναι μικρό.'
+    );
+  });
+
+  it('Greek example element has lang="el" on meaning card', () => {
+    render(
+      <Answer
+        answerText="house"
+        cardType="meaning_el_to_en"
+        card={makeCard({
+          card_type: 'meaning_el_to_en',
+          example_el: 'Το σπίτι μου είναι μικρό.',
+        })}
+        lang="en"
+      />
+    );
+    const el = screen.getByTestId('pf-answer-example-el');
+    expect(el.getAttribute('lang')).toBe('el');
+  });
+
+  it('shows EN gloss on meaning card in EN mode when example_en is present', () => {
+    render(
+      <Answer
+        answerText="house"
+        cardType="meaning_el_to_en"
+        card={makeCard({
+          card_type: 'meaning_el_to_en',
+          example_el: 'Το σπίτι μου είναι μικρό.',
+          example_en: 'My house is small.',
+        })}
+        lang="en"
+      />
+    );
+    expect(screen.getByTestId('pf-answer-example-en')).toHaveTextContent('My house is small.');
+  });
+
+  it('shows example block on meaning card when only example_en is present (no example_el)', () => {
+    render(
+      <Answer
+        answerText="house"
+        cardType="meaning_el_to_en"
+        card={makeCard({
+          card_type: 'meaning_el_to_en',
+          example_el: null,
+          example_en: 'My house is small.',
+        })}
+        lang="en"
+      />
+    );
     expect(screen.getByTestId('pf-answer-example')).toBeInTheDocument();
     expect(screen.getByTestId('pf-answer-example-en')).toHaveTextContent('My house is small.');
     expect(screen.queryByTestId('pf-answer-example-el')).toBeNull();
+  });
+
+  // ── sentence-family de-dup: audio kept, text dropped (PRACT2-5-05) ─────────
+
+  it('sentence-family: audio chip present but example text absent when both example + audio set', () => {
+    render(
+      <Answer
+        answerText="house"
+        cardType="sentence_translation"
+        card={makeCard({
+          card_type: 'sentence_translation',
+          example_el: 'Το σπίτι μου είναι μικρό.',
+          example_en: 'My house is small.',
+          example_audio_url: 'https://s3.test/ex.mp3',
+        })}
+        exampleAudioState={{
+          audioUrl: 'https://s3.test/ex.mp3',
+          isPlaying: false,
+          isLoading: false,
+          error: null,
+          onToggle: vi.fn(),
+          speed: 1,
+          setSpeed: vi.fn(),
+        }}
+        lang="en"
+      />
+    );
+    // Text suppressed on sentence-family
+    expect(screen.queryByTestId('pf-answer-example-el')).toBeNull();
+    expect(screen.queryByTestId('pf-answer-example-en')).toBeNull();
+    // But audio chip still present (audio not gated on family)
+    expect(screen.getByTestId('pf-answer-example')).toBeInTheDocument();
+    expect(screen.getByTestId('mock-audio-chip')).toBeInTheDocument();
   });
 
   // PRACT2-3-07 / Option C: audio-only example block (no example text, but resolved audio present)

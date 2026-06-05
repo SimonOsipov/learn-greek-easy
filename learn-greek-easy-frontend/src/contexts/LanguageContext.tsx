@@ -47,8 +47,12 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [i18nLanguage, setI18nLanguage] = useState<string>(i18n.language);
 
   useEffect(() => {
+    // Set initial html lang attribute on mount
+    document.documentElement.lang = i18n.language?.split('-')[0] || 'en';
+
     const handleLanguageChanged = (lng: string) => {
       setI18nLanguage(lng);
+      document.documentElement.lang = lng?.split('-')[0] || 'en';
     };
     i18n.on('languageChanged', handleLanguageChanged);
     return () => {

@@ -8,6 +8,7 @@
 // Design-system: all colours via pf.css HSL tokens. No raw hex.
 
 import { ChevronLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { LanguageSwitcher } from '@/components/i18n';
 import { ThemeSwitcher } from '@/components/theme';
@@ -57,6 +58,7 @@ export function TopBar({
   showStreak,
   onToggleShowStreak,
 }: TopBarProps) {
+  const { t } = useTranslation('deck');
   const displayName = deckName ?? 'Practice';
   const totalCards = cards.length;
 
@@ -72,13 +74,15 @@ export function TopBar({
           data-testid="pf-exit-button"
         >
           <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-          <span className="sr-only">Exit</span>
+          <span className="sr-only">{t('practice.exit')}</span>
         </Button>
 
         <div className="pf-deck-label min-w-0">
-          <span className="pf-deck-label__title">{displayName} · Practice</span>
+          <span className="pf-deck-label__title">
+            {t('practice.deckLabel', { name: displayName })}
+          </span>
           <span className="pf-deck-label__meta">
-            {totalCards} cards · {totalReview} review · {totalNew} new
+            {t('practice.metaCounts', { cards: totalCards, review: totalReview, new: totalNew })}
           </span>
         </div>
       </div>

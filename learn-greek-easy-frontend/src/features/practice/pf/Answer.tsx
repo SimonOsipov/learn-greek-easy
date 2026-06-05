@@ -22,6 +22,7 @@
 //   Audio: the answer speaker renders whenever the resolved audio URL is present —
 //   it is the visible "hear the Greek answer" affordance and does NOT require an
 //   accompanying text example. Only the text block is gated on text presence.
+//   PRACT2-5-05: on sentence-family cards (sentence_translation, cloze) the EN example TEXT is suppressed (it duplicates the prompt/answer); the audio chip is still shown.
 
 import { Check } from 'lucide-react';
 
@@ -29,6 +30,7 @@ import type { StudyQueueCard } from '@/services/studyAPI';
 import { resolveV2CardAudioUrl } from '@/stores/v2PracticeStore';
 
 import { AudioChip } from './AudioChip';
+import { familyForCardType } from './families';
 import { TypedResultChip } from './TypedInput';
 
 import type { AudioChipState } from './AudioChip';
@@ -101,11 +103,17 @@ export function Answer({
   const greek = isElAnswer(cardType);
   const exampleAudioUrl = resolveV2CardAudioUrl(card);
 
+  // PRACT2-5-05: example TEXT is suppressed on sentence-family cards (it duplicates the prompt/answer).
+  // Scoped to EN example text per the locked decision; showSentenceRu (RU) and the audio chip are intentionally kept.
+  const isSentenceFamily = familyForCardType(cardType) === 'sentence';
+
   // sentence_ru is only shown when lang === 'ru'.
   const showSentenceRu = lang === 'ru' && Boolean(card.sentence_ru);
 
   // EN example: show Greek example + EN gloss in EN mode (PRACT2-3-07).
-  const showExampleEn = lang === 'en' && Boolean(card.example_el || card.example_en);
+  // Suppressed on sentence-family cards where the example duplicates the prompt/answer (PRACT2-5-05).
+  const showExampleEn =
+    lang === 'en' && !isSentenceFamily && Boolean(card.example_el || card.example_en);
 
   // Text example present in either mode (gates only the text <p> nodes, not the audio chip).
   const hasTextExample = showSentenceRu || showExampleEn;

@@ -12,6 +12,7 @@
 import React from 'react';
 
 import { render, screen, fireEvent } from '@testing-library/react';
+import i18n from 'i18next';
 import { describe, it, expect, vi } from 'vitest';
 
 import type { StudyQueueCard } from '@/services/studyAPI';
@@ -109,6 +110,18 @@ describe('TopBar', () => {
       render(<TopBar {...BASE_PROPS} onExit={onExit} />);
       fireEvent.click(screen.getByTestId('pf-exit-button'));
       expect(onExit).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('RU locale meta counts', () => {
+    it('shows RU meta counts (карт. / повтор. / нов.) when language is ru', async () => {
+      await i18n.changeLanguage('ru');
+      render(<TopBar {...BASE_PROPS} />);
+      // RU translation: "{{cards}} карт. · {{review}} повтор. · {{new}} нов."
+      const meta = document.querySelector('.pf-deck-label__meta');
+      expect(meta?.textContent).toMatch(/карт\./);
+      expect(meta?.textContent).toMatch(/повтор\./);
+      // afterEach in test-setup resets language back to 'en'
     });
   });
 });

@@ -303,6 +303,35 @@ describe('Sentence (direction routing)', () => {
     expect(container.querySelector('[data-testid="pf-audio-chip"]')).toBeNull();
   });
 
+  // Direction-integrity: rawPrompt overrides localized prompt for direction derivation (PRACT2-5)
+  it('rawPrompt "Translate to Greek" + localized RU prompt → en_to_el (rawPrompt wins)', () => {
+    const { container } = render(
+      <Sentence
+        rawPrompt="Translate to Greek"
+        prompt="Переведите на греческий"
+        main="The man runs."
+        audioState={null}
+      />
+    );
+    // Direction derives from rawPrompt, not the localized prompt
+    expect(container.querySelector('[data-testid="pf-sentence-en-el"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="pf-sentence-el-en"]')).toBeNull();
+  });
+
+  it('rawPrompt "Translate this sentence" + localized RU prompt → el_to_en (rawPrompt wins)', () => {
+    const { container } = render(
+      <Sentence
+        rawPrompt="Translate this sentence"
+        prompt="Переведите предложение"
+        main="Ο άντρας τρέχει."
+        audioState={null}
+      />
+    );
+    // Direction derives from rawPrompt (not 'Translate to Greek') → el_to_en
+    expect(container.querySelector('[data-testid="pf-sentence-el-en"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="pf-sentence-en-el"]')).toBeNull();
+  });
+
   // PRACT2-3-09: grammarTag threaded to both directions
   it('threads grammarTag to el_to_en and renders the chip', () => {
     render(
