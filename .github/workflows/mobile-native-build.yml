@@ -25,6 +25,12 @@ jobs:
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       CI_DEV_LAUNCH_URL: http://127.0.0.1:8081
+      # CI smoke placeholders so app.config.ts populates expoConfig.extra and the
+      # app boots to the login screen. The smoke makes no real backend call; real
+      # dev/Supabase wiring (test users, reset endpoint) is MOB-15. NOT secrets.
+      SUPABASE_URL: https://placeholder.supabase.co
+      SUPABASE_ANON_KEY: ci-smoke-placeholder-anon-key
+      API_URL: https://placeholder.invalid
     steps:
       - uses: actions/checkout@v5
 
