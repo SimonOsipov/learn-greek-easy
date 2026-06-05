@@ -382,8 +382,8 @@
     "exit": "Выход",
     "deckLabel": "{{name}} · Практика",
     "metaCounts": "{{cards}} карт. · {{review}} повтор. · {{new}} нов.",
-    "promptSentence": "Переведите предложение",
-    "promptToGreek": "Переведите на греческий",
+    "promptSentence": "Переведите с греческого на русский",
+    "promptToGreek": "Переведите с русского на греческий",
     "cardFamily": {
       "translation": "Перевод",
       "sentence": "Предложение",

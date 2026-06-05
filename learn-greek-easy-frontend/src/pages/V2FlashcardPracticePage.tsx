@@ -520,7 +520,16 @@ export function V2FlashcardPracticePage() {
                       <Sentence
                         rawPrompt={(front.prompt as string | null | undefined) ?? null}
                         prompt={translatePrompt(front.prompt as string | null | undefined)}
-                        main={(front.main as string) ?? ''}
+                        main={
+                          // For the native→Greek card, RU users translate FROM Russian,
+                          // not English. Swap the source to sentence_ru when present;
+                          // fall back to the stored English for cards without a RU source.
+                          cardLang === 'ru' &&
+                          front.prompt === 'Translate to Greek' &&
+                          currentQueueCard?.sentence_ru
+                            ? currentQueueCard.sentence_ru
+                            : ((front.main as string) ?? '')
+                        }
                         audioState={audioState ?? null}
                         ipa={(front.sub as string | null) ?? null}
                         grammarTag={(front.grammar_tag as string | null) ?? null}
