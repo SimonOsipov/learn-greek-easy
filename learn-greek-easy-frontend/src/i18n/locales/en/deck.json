@@ -382,8 +382,8 @@
     "exit": "Exit",
     "deckLabel": "{{name}} · Practice",
     "metaCounts": "{{cards}} cards · {{review}} review · {{new}} new",
-    "promptSentence": "Translate this sentence",
-    "promptToGreek": "Translate to Greek",
+    "promptSentence": "Translate from Greek to English",
+    "promptToGreek": "Translate from English to Greek",
     "cardFamily": {
       "translation": "Translation",
       "sentence": "Sentence",
