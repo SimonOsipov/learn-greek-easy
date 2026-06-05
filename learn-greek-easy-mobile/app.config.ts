@@ -70,6 +70,14 @@ const config: ExpoConfig = {
     bundleIdentifier: bundleId,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      // CI-only: mark the dev-menu onboarding as finished so the auto-onboarding
+      // popup (the "This is the developer menu… Continue" modal) doesn't cover the
+      // app on a fresh Maestro clearState reinstall and block the smoke. Read by
+      // expo-dev-menu DevMenuPreferences.setup() as the registration default for
+      // EXDevMenuIsOnboardingFinished. Unset locally => devs still see onboarding once.
+      ...(process.env.CI_DEV_MENU_ONBOARDING_FINISHED === 'true'
+        ? { EXDevMenuIsOnboardingFinished: true }
+        : {}),
     },
   },
   android: {
