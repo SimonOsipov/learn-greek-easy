@@ -14,6 +14,7 @@ import { CardHead } from '../CardHead';
 import { RatingRow } from '../RatingRow';
 import { formatReviewInterval } from '../Toast';
 import { Declension } from '../questions/Declension';
+import { TranslationElToEn, TranslationEnToEl } from '../questions/Translation';
 
 const DECL_CARD = {
   back_content: {
@@ -74,6 +75,20 @@ describe('practice card — Russian locale', () => {
     const lemma = screen.getByTestId('pf-decl-lemma');
     expect(lemma.textContent).toContain('дом');
     expect(lemma.textContent).not.toContain('household');
+  });
+
+  it('TranslationElToEn direction subtitle is Russian (Греческий → Русский)', () => {
+    render(<TranslationElToEn word="αδερφή" />);
+    const subtitle = screen.getByTestId('pf-direction-subtitle');
+    expect(subtitle.textContent).toContain('Греческий → Русский');
+    expect(subtitle.textContent).not.toContain('Greek → English');
+  });
+
+  it('TranslationEnToEl direction subtitle is Russian (Русский → Греческий)', () => {
+    render(<TranslationEnToEl word="сестра" />);
+    const subtitle = screen.getByTestId('pf-direction-subtitle');
+    expect(subtitle.textContent).toContain('Русский → Греческий');
+    expect(subtitle.textContent).not.toContain('English → Greek');
   });
 
   it('Card reveal CTA is translated', () => {

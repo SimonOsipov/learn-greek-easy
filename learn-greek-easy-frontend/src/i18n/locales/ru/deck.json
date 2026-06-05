@@ -384,6 +384,13 @@
     "metaCounts": "{{cards}} карт. · {{review}} повтор. · {{new}} нов.",
     "promptSentence": "Переведите с греческого на русский",
     "promptToGreek": "Переведите с русского на греческий",
+    "promptMeaning": "Что это значит?",
+    "promptHowToSay": "Как это сказать по-гречески?",
+    "promptArticle": "Какой артикль?",
+    "promptPlural": "Какая форма множественного числа?",
+    "promptSingular": "Какая форма единственного числа?",
+    "directionElToNative": "Греческий → Русский",
+    "directionNativeToEl": "Русский → Греческий",
     "cardFamily": {
       "translation": "Перевод",
       "sentence": "Предложение",

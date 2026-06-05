@@ -173,9 +173,22 @@ export function V2FlashcardPracticePage() {
   // react-i18next re-renders this component on languageChanged, so this stays reactive.
   const cardLang: 'en' | 'ru' = i18n.language?.split('-')[0] === 'ru' ? 'ru' : 'en';
 
+  // Map the backend's stored English prompts (card_generator_service.py) to
+  // localized strings. In EN the i18n values match the stored English, so the
+  // display is unchanged; in RU they switch to the native-language prompt.
+  // Sentence prompts ("Translate …") are handled separately above.
+  const PROMPT_KEY_BY_RAW: Record<string, string> = {
+    'Translate this sentence': 'practice.promptSentence',
+    'Translate to Greek': 'practice.promptToGreek',
+    'What does this mean?': 'practice.promptMeaning',
+    'How do you say this in Greek?': 'practice.promptHowToSay',
+    'What is the article?': 'practice.promptArticle',
+    'What is the plural form?': 'practice.promptPlural',
+    'What is the singular form?': 'practice.promptSingular',
+  };
+
   const translatePrompt = (raw: string | null | undefined): string | null => {
-    if (raw === 'Translate this sentence') return t('practice.promptSentence');
-    if (raw === 'Translate to Greek') return t('practice.promptToGreek');
+    if (raw && raw in PROMPT_KEY_BY_RAW) return t(PROMPT_KEY_BY_RAW[raw]);
     return raw ?? null; // fallback: show raw value unchanged
   };
 
@@ -354,16 +367,28 @@ export function V2FlashcardPracticePage() {
     toast && currentQueueCard && toast.forCardId === currentQueueCard.card_record_id ? toast : null;
 
   // Shared pf foot — Answer + RatingRow + Toast (replaces PracticeCard answer section)
-  // resolveAnswerText is used for consistency with judge's answer target
+  // resolveAnswerText is used for consistency with judge's answer target.
+  // meaning_el_to_en stores only the English translation in back_content, so for
+  // RU users we swap in the word-level Russian translation (matches legacy
+  // PracticeCard's displayAnswer); fall back to English when no RU translation exists.
+  const elToEnRuAnswer =
+    cardLang === 'ru' &&
+    currentCard.card_type === 'meaning_el_to_en' &&
+    currentQueueCard?.translation_ru
+      ? currentQueueCard.translation_ru
+      : null;
   const pfFoot = (
     <>
       {currentQueueCard && (
         <Answer
-          answerText={resolveAnswerText(
-            currentCard.card_type,
-            currentCard.back_content as Record<string, unknown>,
-            cardLang
-          )}
+          answerText={
+            elToEnRuAnswer ??
+            resolveAnswerText(
+              currentCard.card_type,
+              currentCard.back_content as Record<string, unknown>,
+              cardLang
+            )
+          }
           cardType={currentCard.card_type}
           card={currentQueueCard}
           lang={cardLang}
@@ -434,7 +459,8 @@ export function V2FlashcardPracticePage() {
                         word={(front.main as string) ?? ''}
                         ipa={(front.sub as string | null | undefined) ?? null}
                         audioState={audioState ?? null}
-                        prompt={(front.prompt as string | null | undefined) ?? null}
+                        prompt={translatePrompt(front.prompt as string | null | undefined)}
+                        lang={cardLang}
                       />
                     </>
                   }
@@ -444,9 +470,15 @@ export function V2FlashcardPracticePage() {
             }
 
             if (cardType === 'meaning_en_to_el') {
-              // `word` = display word (front.main ?? front.prompt); `prompt` = subtitle
+              // `word` = display word (front.main ?? front.prompt); `prompt` = subtitle.
+              // front.main is the English source word; for RU users swap in the
+              // Russian translation so the prompt word matches the "Russian → Greek"
+              // direction. Fall back to English when no RU translation exists.
               const displayWord =
-                (front.main as string | undefined) ?? (front.prompt as string | undefined) ?? '';
+                (cardLang === 'ru' && currentQueueCard?.translation_ru) ||
+                (front.main as string | undefined) ||
+                (front.prompt as string | undefined) ||
+                '';
               return (
                 <PfCard
                   key={currentCard.id}
@@ -457,7 +489,8 @@ export function V2FlashcardPracticePage() {
                       {headEl}
                       <TranslationEnToEl
                         word={displayWord}
-                        prompt={(front.prompt as string | null | undefined) ?? null}
+                        prompt={translatePrompt(front.prompt as string | null | undefined)}
+                        lang={cardLang}
                       />
                     </>
                   }
@@ -477,7 +510,7 @@ export function V2FlashcardPracticePage() {
                       {headEl}
                       <GrammarArticle
                         wordWithArticle={(front.main as string) ?? ''}
-                        prompt={(front.prompt as string | null | undefined) ?? null}
+                        prompt={translatePrompt(front.prompt as string | null | undefined)}
                       />
                     </>
                   }
@@ -499,7 +532,7 @@ export function V2FlashcardPracticePage() {
                         stem={(front.main as string) ?? ''}
                         ipa={(front.sub as string | null | undefined) ?? null}
                         audioState={audioState ?? null}
-                        prompt={(front.prompt as string | null | undefined) ?? null}
+                        prompt={translatePrompt(front.prompt as string | null | undefined)}
                       />
                     </>
                   }

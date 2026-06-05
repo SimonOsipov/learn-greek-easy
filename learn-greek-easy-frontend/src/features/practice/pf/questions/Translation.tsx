@@ -13,6 +13,8 @@
 // For el_to_en, article is derived from back_content.gender via a map
 // (only present on article cards; Translation el_to_en cards carry no article).
 
+import { useTranslation } from 'react-i18next';
+
 import { AudioChip } from '../AudioChip';
 
 import type { AudioChipState } from '../AudioChip';
@@ -68,13 +70,14 @@ export function TranslationElToEn({
   lang: _lang,
   prompt,
 }: TranslationElToEnProps) {
+  const { t } = useTranslation('deck');
   const article = gender ? (GENDER_ARTICLE[gender.toLowerCase()] ?? null) : null;
 
   return (
     <div className="flex flex-col items-center gap-3 py-4" data-testid="pf-translation-el-en">
-      {/* Direction subtitle — "Greek → English · {prompt}" (PRACT2-3-01) */}
+      {/* Direction subtitle — "Greek → English · {prompt}" (RU: "Греческий → Русский") */}
       <p className="pf-prompt" data-testid="pf-direction-subtitle">
-        {'Greek → English'}
+        {t('practice.directionElToNative')}
         {prompt ? ` · ${prompt}` : ''}
       </p>
 
@@ -111,11 +114,12 @@ export function TranslationElToEn({
  *   `prompt` now carries the direction subtitle.
  */
 export function TranslationEnToEl({ word, prompt, lang: _lang }: TranslationEnToElProps) {
+  const { t } = useTranslation('deck');
   return (
     <div className="flex flex-col items-center gap-3 py-4" data-testid="pf-translation-en-el">
-      {/* Direction subtitle — "English → Greek · {prompt}" (PRACT2-3-01) */}
+      {/* Direction subtitle — "English → Greek · {prompt}" (RU: "Русский → Греческий") */}
       <p className="pf-prompt" data-testid="pf-direction-subtitle">
-        {'English → Greek'}
+        {t('practice.directionNativeToEl')}
         {prompt ? ` · ${prompt}` : ''}
       </p>
 

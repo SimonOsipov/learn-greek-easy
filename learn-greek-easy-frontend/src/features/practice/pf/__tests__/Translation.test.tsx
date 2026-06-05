@@ -109,11 +109,11 @@ describe('TranslationElToEn', () => {
     expect(screen.queryByTestId('pf-audio-chip')).toBeNull();
   });
 
-  // PRACT2-3-01: direction subtitle
-  it('shows "Greek → English" direction subtitle', () => {
+  // PRACT2-3-01: direction subtitle (now localized via i18n key; the mock returns the key)
+  it('shows the el→native direction subtitle (localized key)', () => {
     render(<TranslationElToEn word="άντρας" />);
     const subtitle = screen.getByTestId('pf-direction-subtitle');
-    expect(subtitle.textContent).toContain('Greek → English');
+    expect(subtitle.textContent).toContain('practice.directionElToNative');
   });
 
   it('appends "· {prompt}" when prompt is provided', () => {
@@ -164,11 +164,11 @@ describe('TranslationEnToEl', () => {
     expect(el?.getAttribute('lang')).not.toBe('el');
   });
 
-  // PRACT2-3-01: direction subtitle
-  it('shows "English → Greek" direction subtitle', () => {
+  // PRACT2-3-01: direction subtitle (now localized via i18n key; the mock returns the key)
+  it('shows the native→el direction subtitle (localized key)', () => {
     render(<TranslationEnToEl word="man" />);
     const subtitle = screen.getByTestId('pf-direction-subtitle');
-    expect(subtitle.textContent).toContain('English → Greek');
+    expect(subtitle.textContent).toContain('practice.directionNativeToEl');
   });
 
   it('appends "· {prompt}" when prompt is provided', () => {
