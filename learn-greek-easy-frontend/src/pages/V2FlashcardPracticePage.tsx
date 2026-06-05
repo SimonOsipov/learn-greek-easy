@@ -377,11 +377,11 @@ export function V2FlashcardPracticePage() {
       />
       {/* Press 1–4 hint (PRACT2-3-03) */}
       <div className="pf-foot-hint">
-        <span>Press </span>
+        <span>{t('practice.rateHint.prefix')} </span>
         <kbd className="pf-kbd">1</kbd>
         <span>–</span>
         <kbd className="pf-kbd">4</kbd>
-        <span> to rate</span>
+        <span> {t('practice.rateHint.suffix')}</span>
       </div>
       {activeToast && <Toast interval={activeToast.interval} onDismiss={clearToast} />}
     </>
@@ -538,28 +538,26 @@ export function V2FlashcardPracticePage() {
                   key={currentCard.id}
                   onClick={!isFlipped ? flipCard : undefined}
                   isFlipped={isFlipped}
+                  footClassName="pf-foot--declension"
                   body={
                     <>
                       {headEl}
+                      {/* In-place reveal: the target cell fills within THIS table on flip
+                          (revealed follows isFlipped). No second table in the foot. */}
                       <Declension
                         card={{
                           back_content: currentCard.back_content as Record<string, unknown>,
                           front_content: currentCard.front_content as Record<string, unknown>,
                         }}
-                        revealed={false}
+                        revealed={isFlipped}
+                        glossRu={currentQueueCard?.translation_ru ?? null}
                       />
                     </>
                   }
                   foot={
                     <>
-                      <Declension
-                        card={{
-                          back_content: currentCard.back_content as Record<string, unknown>,
-                          front_content: currentCard.front_content as Record<string, unknown>,
-                        }}
-                        revealed={true}
-                      />
-                      {/* Answer suppressed for declension (DeclTable IS the answer) */}
+                      {/* Declension answer is revealed in-place in the body table above;
+                          the foot holds only the rating controls. */}
                       <RatingRow
                         onRate={handleRate}
                         isFlipped={isFlipped}
@@ -567,11 +565,11 @@ export function V2FlashcardPracticePage() {
                       />
                       {/* Press 1–4 hint (PRACT2-3-03) */}
                       <div className="pf-foot-hint">
-                        <span>Press </span>
+                        <span>{t('practice.rateHint.prefix')} </span>
                         <kbd className="pf-kbd">1</kbd>
                         <span>–</span>
                         <kbd className="pf-kbd">4</kbd>
-                        <span> to rate</span>
+                        <span> {t('practice.rateHint.suffix')}</span>
                       </div>
                       {activeToast && (
                         <Toast interval={activeToast.interval} onDismiss={clearToast} />

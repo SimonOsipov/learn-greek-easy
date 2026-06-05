@@ -316,6 +316,15 @@
   position: relative;
 }
 
+/* Declension reveals its answer in-place in the body table, so the foot holds
+   only the rating row + hint. Drop the 320px floor (sized for the old second
+   table) so the card isn't bottom-heavy. The flip-stability invariant is held by
+   the body — the target cell swap (? → form) doesn't change row height — and by
+   the rating row reserving its natural height pre/post flip via visibility:hidden. */
+.pf-foot--declension {
+  min-height: auto;
+}
+
 /* Inner wrapper carries visibility attrs (PRACT2-3-02: moved off .pf-foot so
    the CTA overlay sibling stays visible pre-flip without layout change). */
 .pf-foot__inner {

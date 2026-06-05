@@ -19,6 +19,8 @@
 //   OK      → hsl(var(--success))
 //   Easy    → hsl(var(--accent))
 
+import { useTranslation } from 'react-i18next';
+
 import type { RatingPreview } from '@/services/studyAPI';
 
 import { formatReviewInterval } from './Toast';
@@ -34,15 +36,15 @@ export interface RatingRowProps {
 
 interface RatingOption {
   rating: 1 | 2 | 3 | 4;
-  label: string;
+  /** i18n key suffix under deck:practice.rating.* (also the design-system tone). */
   tone: 'forgot' | 'tough' | 'ok' | 'easy';
 }
 
 const RATING_OPTIONS: RatingOption[] = [
-  { rating: 1, label: 'Forgot', tone: 'forgot' },
-  { rating: 2, label: 'Tough', tone: 'tough' },
-  { rating: 3, label: 'OK', tone: 'ok' },
-  { rating: 4, label: 'Easy', tone: 'easy' },
+  { rating: 1, tone: 'forgot' },
+  { rating: 2, tone: 'tough' },
+  { rating: 3, tone: 'ok' },
+  { rating: 4, tone: 'easy' },
 ];
 
 /**
@@ -56,15 +58,17 @@ const RATING_OPTIONS: RatingOption[] = [
  * When absent, buttons render label-only (pre-PRACT2-3 behavior).
  */
 export function RatingRow({ onRate, isFlipped = true, previews }: RatingRowProps) {
+  const { t } = useTranslation('deck');
   return (
     <div
       className="pf-rating-row"
       role="group"
-      aria-label="Rate this card"
+      aria-label={t('practice.rating.groupLabel')}
       data-testid="pf-rating-row"
     >
-      {RATING_OPTIONS.map(({ rating, label, tone }) => {
+      {RATING_OPTIONS.map(({ rating, tone }) => {
         const preview = previews?.find((p) => p.rating === rating);
+        const label = t(`practice.rating.${tone}`);
         return (
           <button
             key={rating}
@@ -73,7 +77,7 @@ export function RatingRow({ onRate, isFlipped = true, previews }: RatingRowProps
             data-testid={`pf-rating-btn-${tone}`}
             onClick={() => onRate(rating)}
             disabled={!isFlipped}
-            aria-label={`${label} (key ${rating})`}
+            aria-label={`${label} (${t('practice.rating.ariaKey', { n: rating })})`}
             type="button"
           >
             {/* Tone bar at the top */}

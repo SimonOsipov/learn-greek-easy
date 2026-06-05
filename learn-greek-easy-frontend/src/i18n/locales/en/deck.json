@@ -383,7 +383,56 @@
     "deckLabel": "{{name}} · Practice",
     "metaCounts": "{{cards}} cards · {{review}} review · {{new}} new",
     "promptSentence": "Translate this sentence",
-    "promptToGreek": "Translate to Greek"
+    "promptToGreek": "Translate to Greek",
+    "cardFamily": {
+      "translation": "Translation",
+      "sentence": "Sentence",
+      "grammar": "Grammar",
+      "declension": "Declension",
+      "audio": "Audio"
+    },
+    "decl": {
+      "sg": "sg",
+      "pl": "pl"
+    },
+    "rating": {
+      "groupLabel": "Rate this card",
+      "ariaKey": "key {{n}}",
+      "forgot": "Forgot",
+      "tough": "Tough",
+      "ok": "OK",
+      "easy": "Easy"
+    },
+    "interval": {
+      "today": "today",
+      "day_one": "{{count}} day",
+      "day_few": "{{count}} days",
+      "day_many": "{{count}} days",
+      "day_other": "{{count}} days",
+      "week_one": "{{count}} week",
+      "week_few": "{{count}} weeks",
+      "week_many": "{{count}} weeks",
+      "week_other": "{{count}} weeks",
+      "month_one": "{{count}} month",
+      "month_few": "{{count}} months",
+      "month_many": "{{count}} months",
+      "month_other": "{{count}} months",
+      "year_one": "{{count}} year",
+      "year_few": "{{count}} years",
+      "year_many": "{{count}} years",
+      "year_other": "{{count}} years"
+    },
+    "nextIn": "next in",
+    "nextReviewAria": "Next review in {{interval}}",
+    "rateHint": {
+      "prefix": "Press",
+      "suffix": "to rate"
+    },
+    "reveal": {
+      "prefix": "Tap or press",
+      "spaceKey": "Space",
+      "suffix": "to reveal answer"
+    }
   },
   "skeleton": {
     "loadingCard": "Loading deck card"

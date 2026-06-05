@@ -29,6 +29,8 @@
 // Lemma line: "el -- en" where el = rows[0].singular, en = front_content.hint if present.
 // Design tokens: --accent-3 (orange, 32 100% 60%) for the declension family.
 
+import { useTranslation } from 'react-i18next';
+
 // -- Local payload types -------------------------------------------------------
 
 /** Narrowed from back_content (Record<string, unknown>) -- mirrors card_record.py:47-54 */
@@ -71,6 +73,12 @@ export interface DeclensionProps {
    * true  -> answer phase: target cell fills with real form + pf-cell-fill flash.
    */
   revealed: boolean;
+  /**
+   * Word-level Russian gloss (StudyQueueCard.translation_ru). When the UI
+   * language is Russian and this is present, it replaces the English
+   * front_content.hint in the lemma row. Mirrors the article-card pattern.
+   */
+  glossRu?: string | null;
 }
 
 // -- Declension renderer ------------------------------------------------------
@@ -86,13 +94,17 @@ export interface DeclensionProps {
  * When used in the foot, the rating controls are provided by the sibling
  * PracticeCard rendered below this component (see V2FlashcardPracticePage.tsx).
  */
-export function Declension({ card, revealed }: DeclensionProps) {
+export function Declension({ card, revealed, glossRu }: DeclensionProps) {
+  const { t, i18n } = useTranslation(['deck', 'review']);
+  const isRu = i18n.language?.split('-')[0] === 'ru';
   const rawTable = card.back_content['declension_table'];
   const table = isDeclensionTable(rawTable) ? rawTable : null;
 
-  // English gloss from front_content.hint (may be absent)
-  const gloss =
+  // Gloss for the lemma row: prefer the Russian word-level translation when the
+  // UI is Russian, otherwise the English front_content.hint (either may be absent).
+  const enGloss =
     typeof card.front_content['hint'] === 'string' ? (card.front_content['hint'] as string) : null;
+  const gloss = isRu && glossRu ? glossRu : enGloss;
 
   // IPA from front_content.sub (may be absent — backend sets this from we.pronunciation)
   const ipa =
@@ -140,19 +152,23 @@ export function Declension({ card, revealed }: DeclensionProps) {
           <tr>
             <th className="pf-decl-table__th pf-decl-table__th--case" aria-label="Case" />
             <th className="pf-decl-table__th" scope="col">
-              sg
+              {t('practice.decl.sg')}
             </th>
             <th className="pf-decl-table__th" scope="col">
-              pl
+              {t('practice.decl.pl')}
             </th>
           </tr>
         </thead>
         <tbody>
           {table.rows.map((row) => (
             <tr key={row.case} data-testid={`pf-decl-row-${row.case.toLowerCase()}`}>
-              {/* Case label */}
+              {/* Case label — reuse the shared review-namespace case names;
+                  backend sends capitalised English (Nominative…) → lowercase key. */}
               <td className="pf-decl-table__case" scope="row">
-                {row.case}
+                {t(`grammar.nounDeclension.cases.${row.case.toLowerCase()}`, {
+                  ns: 'review',
+                  defaultValue: row.case,
+                })}
               </td>
 
               {/* Singular cell */}
