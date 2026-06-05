@@ -709,7 +709,21 @@ describe('SummaryScreen', () => {
 });
 
 // ===========================================================================
-// 7. Guard derivation (pure logic)
+// 7. Onboarding layout — unstable_settings regression
+// ===========================================================================
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { unstable_settings } = require('@/app/(onboarding)/_layout') as typeof import('@/app/(onboarding)/_layout');
+
+describe('Onboarding layout', () => {
+  it('unstable_settings.initialRouteName is "level" (prevents blank-screen entry)', () => {
+    // Regression: without this setting expo-router renders a blank screen on
+    // entry to the (onboarding) group (no index route, no deterministic start).
+    expect(unstable_settings.initialRouteName).toBe('level');
+  });
+});
+
+// ===========================================================================
+// 9. Guard derivation (pure logic)
 // ===========================================================================
 describe('guard derivation: onboardingComplete', () => {
   it('tour_completed_at null → not complete', () => {
