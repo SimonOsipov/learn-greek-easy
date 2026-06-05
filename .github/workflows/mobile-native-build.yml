@@ -24,6 +24,7 @@ jobs:
         working-directory: learn-greek-easy-mobile
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      CI_DEV_LAUNCH_URL: http://127.0.0.1:8081
     steps:
       - uses: actions/checkout@v5
 
@@ -58,14 +59,31 @@ jobs:
           curl -Ls https://get.maestro.mobile.dev | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
 
+      - name: Compute native fingerprint
+        id: fp
+        run: |
+          HASH="$(node node_modules/@expo/fingerprint/bin/cli.js \
+            fingerprint:generate --platform ios | jq -r .hash)"
+          echo "Native fingerprint: $HASH"
+          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
+
+      - name: Cache native simulator app
+        id: app-cache
+        uses: actions/cache@v4
+        with:
+          path: learn-greek-easy-mobile/build
+          key: ios-app-${{ runner.os }}-xcode26.4-development-${{ steps.fp.outputs.hash }}
+
       - name: Build local dev-profile simulator app
+        if: steps.app-cache.outputs.cache-hit != 'true'
         # --local: no cloud build minutes. development profile -> ios.simulator:true,
         # bundle id eu.greeklish.app.dev (matches .maestro/smoke.yaml appId).
         # Simulator build => no signing => no Apple Developer Program needed.
-        # NOTE: This native build is currently BLOCKED by an upstream Expo SDK 56
-        # issue — the precompiled `[CP-User] Build ExpoModulesJSI xcframework` script
-        # fails on the runner, and building from source also fails. Tracked in the
-        # MOB story "Native iOS Build + On-Device Visual Testing". Opt-in, not a gate.
+        # Resolved: the native build previously failed under Xcode 16.4 (macos-15)
+        # at the precompiled ExpoModulesJSI xcframework script. Fix = macos-26
+        # runner + pinned Xcode 26.4 (steps above) + a Metro-served dev-client
+        # (the development profile sets developmentClient:true, so JS is served at
+        # runtime, not embedded). Opt-in, not a CI Gate.
         run: |
           eas build --local \
             --non-interactive \
@@ -74,9 +92,18 @@ jobs:
             --output ./build.tar.gz
 
       - name: Extract .app
+        if: steps.app-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p build && tar -xzf build.tar.gz -C build
-          APP_PATH=$(find build -maxdepth 2 -name '*.app' | head -n1)
+
+      - name: Resolve APP_PATH
+        run: |
+          APP_PATH="$(find build -maxdepth 2 -name '*.app' | head -n1)"
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::No .app found under build/ (cache-hit=${{ steps.app-cache.outputs.cache-hit }})"
+            exit 1
+          fi
+          echo "Using app: $APP_PATH  (cache-hit=${{ steps.app-cache.outputs.cache-hit }})"
           echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
 
       - name: Boot iOS simulator
@@ -88,6 +115,41 @@ jobs:
 
       - name: Install app on simulator
         run: xcrun simctl install "$SIM_UDID" "$APP_PATH"
+
+      - name: Start Metro (dev-client)
+        env:
+          APP_VARIANT: development
+        run: |
+          # --localhost so the served URL is http://127.0.0.1:8081, matching the
+          # defaultLaunchURL baked into the .app. CI=1 keeps it non-interactive.
+          CI=1 npx expo start --dev-client --localhost --port 8081 \
+            > "$RUNNER_TEMP/metro.log" 2>&1 &
+          echo "METRO_PID=$!" >> "$GITHUB_ENV"
+
+      - name: Wait for Metro to be ready
+        run: |
+          for i in $(seq 1 60); do
+            if [ "$(curl -fsS http://127.0.0.1:8081/status 2>/dev/null)" = "packager-status:running" ]; then
+              echo "Metro is up after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Metro did not become ready on :8081 within 60s"
+          cat "$RUNNER_TEMP/metro.log" || true
+          exit 1
+
+      - name: Verify dev-client loads the JS bundle from Metro
+        run: |
+          xcrun simctl launch "$SIM_UDID" eu.greeklish.app.dev || true
+          for i in $(seq 1 90); do
+            if grep -qiE 'index\.bundle.*platform=ios|Bundling.*complete|/(index|\.expo/\.virtual-metro-entry)\.bundle' "$RUNNER_TEMP/metro.log"; then
+              echo "Metro served the iOS bundle after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::dev-client never requested the JS bundle from Metro (still on launcher menu?)"
+          cat "$RUNNER_TEMP/metro.log" || true
+          exit 1
 
       - name: Run Maestro smoke flow
         run: maestro test .maestro/smoke.yaml

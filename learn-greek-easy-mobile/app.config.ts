@@ -87,6 +87,13 @@ const config: ExpoConfig = {
     favicon: './assets/images/favicon.png',
   },
   plugins: [
+    // CI-only: bake a default Metro URL into the dev-client binary so a cold
+    // launch (incl. Maestro clearState reinstall) auto-connects to Metro and
+    // loads the JS bundle instead of showing the dev-launcher menu. Unset
+    // locally => no behavioral change for developers. See mobile-native-build.yml.
+    ...(process.env.CI_DEV_LAUNCH_URL
+      ? [['expo-dev-client', { defaultLaunchURL: process.env.CI_DEV_LAUNCH_URL }] as [string, Record<string, unknown>]]
+      : []),
     'expo-router',
     [
       'expo-splash-screen',
