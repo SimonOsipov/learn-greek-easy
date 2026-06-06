@@ -407,4 +407,46 @@ describe('RouteGuard — de-gated persisted-session render (PERF-02)', () => {
     // Children must NOT be visible -- no bypass for unauthenticated sessions.
     expect(screen.queryByTestId('route-guard-child')).not.toBeInTheDocument();
   });
+
+  // ADVERSARIAL — pre-hydration no-flash guard
+  // Seed _hasHydrated:false with stale authed fields. selectHasPersistedSession
+  // must return false, so isInitializing starts true and children do NOT paint.
+  // This guards the pre-hydration flash: persisted fields in localStorage could
+  // be truthy while Zustand hasn't yet finished rehydration.
+  it('ADVERSARIAL: pre-hydration store (_hasHydrated=false) shows loading, not children', async () => {
+    // Stale authed fields but NOT yet hydrated — selectHasPersistedSession
+    // requires _hasHydrated:true, so it returns false here.
+    checkAuthSpy = vi.fn(() => new Promise<void>(() => {}));
+    useAuthStore.setState({
+      _hasHydrated: false,
+      isAuthenticated: true,
+      user: { id: 'u1' } as never,
+      isLoading: false,
+      error: null,
+      checkAuth: checkAuthSpy,
+    });
+
+    render(
+      <RouteGuard>
+        <Child />
+      </RouteGuard>
+    );
+
+    // At this point isInitializing was set by the lazy initializer BEFORE any
+    // INITIAL_SESSION event, so the loading screen must be showing immediately.
+    expect(screen.getByTestId('auth-loading')).toBeInTheDocument();
+    expect(screen.queryByTestId('route-guard-child')).not.toBeInTheDocument();
+
+    emit('INITIAL_SESSION');
+
+    // Give the event loop a tick — checkAuth still never resolves.
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Children must STILL not be shown: isInitializing was true at mount
+    // (selector was false) and checkAuth hasn't resolved to flip it.
+    expect(screen.getByTestId('auth-loading')).toBeInTheDocument();
+    expect(screen.queryByTestId('route-guard-child')).not.toBeInTheDocument();
+  });
 });
