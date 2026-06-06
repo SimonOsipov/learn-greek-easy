@@ -124,10 +124,13 @@ def create_test_engine(
     url = database_url or get_test_database_url()
 
     # Set application_name for connection monitoring in pg_stat_activity
-    # This helps identify which pytest-xdist worker owns each connection
+    # This helps identify which pytest-xdist worker owns each connection.
+    # timezone=UTC mirrors production (src/db/session.py startup params) and
+    # prevents day-boundary bucketing bugs from surfacing only in non-UTC locales.
     connect_args = {
         "server_settings": {
             "application_name": f"pytest-{worker_id}",
+            "timezone": "UTC",
         }
     }
 
