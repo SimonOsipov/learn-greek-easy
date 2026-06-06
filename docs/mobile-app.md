@@ -18,11 +18,12 @@ resolved in `app.config.ts`:
 Each variant installs as a separate app (distinct bundle IDs), so dev / preview / prod
 coexist on one device or simulator.
 
-## Supabase config — environment variables
+## Supabase config & API URL — environment variables
 
-Supabase credentials (`SUPABASE_URL` and `SUPABASE_ANON_KEY`) are **not committed** to
-source. `app.config.ts` reads them from `process.env` and exposes them via `extra`;
-`src/lib/config.ts` throws a descriptive error at app runtime if either value is missing.
+Supabase credentials (`SUPABASE_URL` and `SUPABASE_ANON_KEY`) and the backend API base URL
+(`API_URL`) are **not committed** to source. `app.config.ts` reads them from `process.env`
+and exposes them via `extra`; `src/lib/config.ts` throws a descriptive error at app runtime
+if any required value is missing.
 
 ### Cloud builds (EAS)
 
@@ -33,10 +34,13 @@ maintainer must create them once:
 ```bash
 eas env:create --environment development --name SUPABASE_URL --value https://nyiyljmtbnvykbpdjfjq.supabase.co --visibility sensitive
 eas env:create --environment development --name SUPABASE_ANON_KEY --value <dev anon key> --visibility sensitive
+eas env:create --environment development --name API_URL --value <dev backend base url> --visibility sensitive
 eas env:create --environment preview --name SUPABASE_URL --value https://nyiyljmtbnvykbpdjfjq.supabase.co --visibility sensitive
 eas env:create --environment preview --name SUPABASE_ANON_KEY --value <dev anon key> --visibility sensitive
+eas env:create --environment preview --name API_URL --value <preview backend base url> --visibility sensitive
 eas env:create --environment production --name SUPABASE_URL --value https://qduwfsuybkqsginndguz.supabase.co --visibility sensitive
 eas env:create --environment production --name SUPABASE_ANON_KEY --value <prod anon key> --visibility sensitive
+eas env:create --environment production --name API_URL --value <prod backend base url> --visibility sensitive
 ```
 
 Environment → Supabase project mapping:
@@ -50,9 +54,15 @@ Create a gitignored `learn-greek-easy-mobile/.env` with the dev values:
 ```bash
 SUPABASE_URL=https://nyiyljmtbnvykbpdjfjq.supabase.co
 SUPABASE_ANON_KEY=<dev anon key>
+API_URL=<dev backend base url>
 ```
 
 Alternatively, run `eas env:pull --environment development` to generate it automatically.
+
+> **Note:** `npx expo run:ios` (local dev-client builds) reads env vars only from `.env` —
+> EAS cloud env vars are not available locally. The value of `API_URL` is baked into
+> `app.config` `extra` at **Metro start**, so **restart Metro after changing `API_URL`**
+> (a running Metro will not pick up the new value without a restart).
 
 ### CI (tsc + lint)
 
