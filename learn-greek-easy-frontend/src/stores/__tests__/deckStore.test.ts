@@ -24,10 +24,10 @@ import type { Deck, DeckFilters } from '@/types/deck';
 // store API (selectDeck). transformDeckResponse is not exported, so this is the
 // only way to assert the REAL cardCount mapping rather than a re-implementation.
 vi.mock('@/services/deckAPI', () => ({
-  deckAPI: { getById: vi.fn() },
+  deckAPI: { getById: vi.fn(), getList: vi.fn() },
 }));
 vi.mock('@/services/progressAPI', () => ({
-  progressAPI: { getDeckProgressDetail: vi.fn() },
+  progressAPI: { getDeckProgressDetail: vi.fn(), getDeckProgressList: vi.fn() },
 }));
 
 // ---------------------------------------------------------------------------
@@ -321,5 +321,99 @@ describe('transformDeckResponse — cardCount uses word count, not SRS count (#5
     const { selectedDeck } = useDeckStore.getState();
 
     expect(selectedDeck?.cardCount).toBe(SRS_CARD_COUNT);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// deckStore — parallel dispatch / no auth gate (PERF-02-05)
+//
+// Regression guards that lock the parallel-dispatch and no-auth-gate
+// properties of fetchDecks(). These tests will fail under two specific
+// regressions:
+//
+//   A) Sequential-await regression: if fetchDecks() is rewritten to
+//      `await deckAPI.getList(...); await progressAPI.getDeckProgressList(...)`
+//      then while the first promise is pending the second call will NOT have
+//      been made yet, so `getDeckProgressList.mock.calls.length` would be 0
+//      when asserted synchronously — the test fails.
+//
+//   B) Auth-gate regression: if someone adds `if (!isAuthenticated) return;`
+//      or `if (!authInitialized) return;` at the top of fetchDecks(), the
+//      store in its default Zustand state (no auth properties set) would
+//      early-return before ever calling deckAPI.getList(), and
+//      `getList.mock.calls.length` would be 0 — the test fails.
+// ---------------------------------------------------------------------------
+
+import { deckAPI } from '@/services/deckAPI';
+import { progressAPI } from '@/services/progressAPI';
+
+describe('deckStore — parallel dispatch / no auth gate (PERF-02-05)', () => {
+  beforeEach(() => {
+    // Reset all mocks between tests
+    vi.mocked(deckAPI.getList).mockReset();
+    vi.mocked(progressAPI.getDeckProgressList).mockReset();
+    vi.mocked(deckAPI.getById).mockReset();
+    vi.mocked(progressAPI.getDeckProgressDetail).mockReset();
+  });
+
+  // -------------------------------------------------------------------------
+  // Guard A: Promise.all parallel dispatch — both APIs called before either
+  // resolves. This would fail if the impl used sequential awaits:
+  //   await deckAPI.getList(...)          ← pending forever
+  //   await progressAPI.getDeckProgressList(...)  ← never reached
+  // -------------------------------------------------------------------------
+
+  it('calls deckAPI.getList and progressAPI.getDeckProgressList synchronously before either resolves', () => {
+    // Never-resolving promises simulate long-latency calls.
+    // We assert BOTH were called before we give the event loop a tick.
+    vi.mocked(deckAPI.getList).mockReturnValue(new Promise(() => {}));
+    vi.mocked(progressAPI.getDeckProgressList).mockReturnValue(new Promise(() => {}));
+
+    // Invoke without await — we only care about synchronous dispatch
+    useDeckStore.getState().fetchDecks();
+
+    // Both must have been called already (synchronously, inside Promise.all)
+    expect(deckAPI.getList).toHaveBeenCalledTimes(1);
+    expect(progressAPI.getDeckProgressList).toHaveBeenCalledTimes(1);
+  });
+
+  it('dispatches both API calls with the expected params shape', () => {
+    vi.mocked(deckAPI.getList).mockReturnValue(new Promise(() => {}));
+    vi.mocked(progressAPI.getDeckProgressList).mockReturnValue(new Promise(() => {}));
+
+    useDeckStore.getState().fetchDecks();
+
+    // deckAPI.getList receives pagination params
+    expect(deckAPI.getList).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 1, page_size: 50 })
+    );
+    // progressAPI.getDeckProgressList receives pagination params
+    expect(progressAPI.getDeckProgressList).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 1, page_size: 50 })
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // Guard B: No auth gate — fetchDecks() does NOT read any auth state before
+  // calling the API. The store in its default Zustand initial state has no
+  // auth-related flags set. If an `if (!isAuthenticated) return;` guard were
+  // added, getList would never be called.
+  // -------------------------------------------------------------------------
+
+  it('fires deckAPI.getList even with no auth state initialised (no auth gate)', () => {
+    // Confirm store has no auth-gating fields (it never did — this documents
+    // the contract). Default store state is what Zustand initialises with.
+    const storeState = useDeckStore.getState();
+    // The DeckState interface has no auth fields — assert the firing, not absence
+    expect('authInitialized' in storeState).toBe(false);
+    expect('isAuthenticated' in storeState).toBe(false);
+
+    vi.mocked(deckAPI.getList).mockReturnValue(new Promise(() => {}));
+    vi.mocked(progressAPI.getDeckProgressList).mockReturnValue(new Promise(() => {}));
+
+    // Invoke fetchDecks() — must reach the API call with no precondition
+    useDeckStore.getState().fetchDecks();
+
+    expect(deckAPI.getList).toHaveBeenCalledTimes(1);
   });
 });

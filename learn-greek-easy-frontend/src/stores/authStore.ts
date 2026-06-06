@@ -4,6 +4,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { reportAPIError } from '@/lib/errorReporting';
 import { queryClient } from '@/lib/queryClient';
 import { supabase } from '@/lib/supabaseClient';
+import { APIRequestError } from '@/services/api';
 import { authAPI, type ProfileUpdateRequest } from '@/services/authAPI';
 import type { User, AuthError } from '@/types/auth';
 
@@ -41,6 +42,14 @@ const PROFILE_FRESHNESS_MS = 30_000;
  * persisted to localStorage (no stale-cache risk across sessions).
  */
 let _profileFetchedAt = 0;
+
+/**
+ * Generation counter. logout() increments it; an in-flight checkAuth captures
+ * the value at start and skips its state-mutating set()s if the epoch changed
+ * (a logout landed mid-flight). Complements signal.aborted (which covers
+ * RouteGuard unmount) — this covers logout-during-flight on a still-mounted guard.
+ */
+let _authEpoch = 0;
 
 interface AuthState {
   // State
@@ -89,6 +98,7 @@ export const useAuthStore = create<AuthState>()(
         // Clear auth data + dedup state so next login fetches fresh profile
         _checkAuthInflight = null;
         _profileFetchedAt = 0;
+        _authEpoch += 1;
 
         set({
           user: null,
@@ -234,6 +244,7 @@ export const useAuthStore = create<AuthState>()(
         // Wrap the actual fetch in a Promise we store so concurrent callers
         // can attach to it rather than spawning their own requests.
         _checkAuthInflight = (async () => {
+          const epoch = _authEpoch;
           try {
             // Check Supabase session
             const {
@@ -241,6 +252,7 @@ export const useAuthStore = create<AuthState>()(
             } = await supabase.auth.getSession();
 
             if (!session) {
+              if (epoch !== _authEpoch) return;
               set({ isAuthenticated: false, isLoading: false });
               return;
             }
@@ -295,23 +307,30 @@ export const useAuthStore = create<AuthState>()(
               });
             }
 
+            if (epoch !== _authEpoch) return;
             set({
               user: fetchedUser,
               isAuthenticated: true,
               isLoading: false,
             });
           } catch (error) {
-            // Check if request was aborted
+            // Abort is not a real failure — bail without touching state.
             if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
               return;
             }
 
-            // Session exists but profile fetch failed - clear auth state
-            set({
-              user: null,
-              isAuthenticated: false,
-              isLoading: false,
-            });
+            // ALLOW-LIST: clear auth on EXACTLY ONE signal — a confirmed-invalid
+            // session: /auth/me returned 401. (The no-session case is handled earlier,
+            // before the profile fetch.) Every other failure — offline (status 0),
+            // timeout (408), 5xx, or a thrown getSession() — is transient: keep the
+            // persisted session intact and retryable; only release the spinner.
+            if (error instanceof APIRequestError && error.status === 401) {
+              if (epoch !== _authEpoch) return;
+              set({ user: null, isAuthenticated: false, isLoading: false });
+              return;
+            }
+
+            if (get().isLoading) set({ isLoading: false });
           } finally {
             // Always release the in-flight guard so future calls can proceed
             _checkAuthInflight = null;
@@ -350,3 +369,12 @@ export const useAuthStore = create<AuthState>()(
  * Use this to prevent API calls before hydration is complete.
  */
 export const useHasHydrated = () => useAuthStore((state) => state._hasHydrated);
+
+/**
+ * Synchronous, side-effect-free check: do we have a usable persisted session
+ * right now? True only once rehydration completed AND a persisted authenticated
+ * user with an id exists. Lets RouteGuard render protected routes on reload
+ * without awaiting GET /auth/me.
+ */
+export const selectHasPersistedSession = (state: AuthState): boolean =>
+  state._hasHydrated && state.isAuthenticated && !!state.user?.id;

@@ -1,7 +1,7 @@
 import { Suspense, useEffect } from 'react';
 
 import { QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 
 import { AuthRoutesWrapper } from '@/components/auth/AuthRoutesWrapper';
 import { LandingRoute } from '@/components/auth/LandingRoute';
@@ -171,6 +171,11 @@ const UpgradePage = lazyWithRetry(() =>
   import('@/pages/UpgradePage').then((m) => ({ default: m.UpgradePage }))
 );
 
+function CultureSummaryRedirect() {
+  const { deckId } = useParams();
+  return <Navigate to={`/culture/${deckId}/practice`} replace />;
+}
+
 function AppContent() {
   const isAppReady = useAppStore(selectIsReady);
   const setReactHydrated = useAppStore((state) => state.setReactHydrated);
@@ -276,10 +281,7 @@ function AppContent() {
                 </Route>
                 {/* Culture practice pages outside AppLayout for full-screen immersive experience */}
                 <Route path="/culture/:deckId/practice" element={<CulturePracticePage />} />
-                <Route
-                  path="/culture/:deckId/summary"
-                  element={<Navigate to="../practice" replace />}
-                />
+                <Route path="/culture/:deckId/summary" element={<CultureSummaryRedirect />} />
                 {/* Redirect /practice/ to /practice/culture-exam */}
                 <Route
                   path="/practice"

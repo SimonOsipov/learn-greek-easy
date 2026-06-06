@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { APP_NAME } from '@/lib/constants';
 import { supabase } from '@/lib/supabaseClient';
 import { useAppStore } from '@/stores/appStore';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore, selectHasPersistedSession } from '@/stores/authStore';
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -44,7 +44,9 @@ function AuthLoadingScreen() {
 export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const setAuthInitialized = useAppStore((state) => state.setAuthInitialized);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(
+    () => !selectHasPersistedSession(useAuthStore.getState())
+  );
   const hasInitializedRef = useRef(false);
   const initialSessionHandledRef = useRef(false);
 

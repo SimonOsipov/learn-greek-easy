@@ -6,7 +6,7 @@
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import { render as rtlRender, screen, waitFor } from '@testing-library/react';
+import { act, render as rtlRender, screen, waitFor } from '@testing-library/react';
 import { useAuthStore } from '@/stores/authStore';
 
 import { ProtectedRoute } from '../ProtectedRoute';
@@ -496,3 +496,264 @@ describe('Protected Route Integration Tests', () => {
 
 // Import useLocation for testing
 import { useLocation } from 'react-router-dom';
+
+// ---------------------------------------------------------------------------
+// PERF-02-03: AC-4 — persisted authed session passes through ProtectedRoute
+// without the "Checking authentication..." spinner.
+//
+// The ProtectedRoute gate is: if (isLoading || !_hasHydrated) => show spinner.
+// For a persisted authed session at the time RouteGuard renders children:
+//   _hasHydrated = true  (Zustand rehydration complete)
+//   isAuthenticated = true
+//   isLoading = false (checkAuth only sets isLoading:true when !isAuthenticated,
+//                      see authStore.ts — the conditional set is guarded by
+//                      `if (!isAuthenticated) { set({ isLoading: true }); }`)
+// All three conditions satisfied => no spinner, Outlet/children rendered.
+// ---------------------------------------------------------------------------
+describe('PERF-02-03: ProtectedRoute — AC-4 persisted session pass-through', () => {
+  const Outlet = () => <div data-testid="protected-outlet">Protected Content</div>;
+  const Login = () => <div data-testid="login-page">Login</div>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Reset to known baseline; _hasHydrated will be true after persist rehydration
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+    });
+    localStorage.clear();
+  });
+
+  it('AC-4: persisted authed session (_hasHydrated=true, isAuthenticated=true, isLoading=false) renders Outlet without spinner', () => {
+    // Seed the state that matches a persisted, hydrated, authenticated session.
+    // _hasHydrated is already true in test env after persist rehydration (see analysis).
+    useAuthStore.setState({
+      _hasHydrated: true,
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: 'u1',
+        email: 'test@example.com',
+        name: 'Test User',
+        role: 'free',
+        preferences: { language: 'en', dailyGoal: 20, notifications: true, theme: 'light' },
+        stats: { streak: 0, wordsLearned: 0, totalXP: 0, joinedDate: new Date('2025-01-01') },
+        createdAt: new Date('2025-01-01'),
+        updatedAt: new Date('2025-01-01'),
+      },
+      error: null,
+    });
+
+    rtlRender(
+      <MemoryRouter initialEntries={['/app']}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/app"
+            element={
+              <ProtectedRoute>
+                <Outlet />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // Outlet must render immediately — no spinner, no redirect.
+    expect(screen.getByTestId('protected-outlet')).toBeInTheDocument();
+    // The "Checking authentication..." spinner must NOT be shown.
+    expect(screen.queryByText(/checking authentication/i)).not.toBeInTheDocument();
+    // Login page must NOT be shown.
+    expect(screen.queryByTestId('login-page')).not.toBeInTheDocument();
+  });
+
+  it('AC-4 inverse: isLoading=true shows spinner even when authenticated', () => {
+    // Documents that the spinner appears when isLoading is true — proving the
+    // test above is meaningful (if it just suppressed the gate entirely, both
+    // cases would render content).
+    useAuthStore.setState({
+      _hasHydrated: true,
+      isAuthenticated: true,
+      isLoading: true,
+      user: {
+        id: 'u1',
+        email: 'test@example.com',
+        name: 'Test User',
+        role: 'free',
+        preferences: { language: 'en', dailyGoal: 20, notifications: true, theme: 'light' },
+        stats: { streak: 0, wordsLearned: 0, totalXP: 0, joinedDate: new Date('2025-01-01') },
+        createdAt: new Date('2025-01-01'),
+        updatedAt: new Date('2025-01-01'),
+      },
+      error: null,
+    });
+
+    rtlRender(
+      <MemoryRouter initialEntries={['/app']}>
+        <Routes>
+          <Route
+            path="/app"
+            element={
+              <ProtectedRoute>
+                <Outlet />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // Spinner must show because isLoading=true.
+    expect(screen.getByText(/checking authentication/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('protected-outlet')).not.toBeInTheDocument();
+  });
+
+  it('AC-4 inverse: _hasHydrated=false shows spinner even when authenticated', () => {
+    // Documents that _hasHydrated:false triggers the spinner — proving the gate
+    // is actually exercised in the passing test above.
+    useAuthStore.setState({
+      _hasHydrated: false,
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: 'u1',
+        email: 'test@example.com',
+        name: 'Test User',
+        role: 'free',
+        preferences: { language: 'en', dailyGoal: 20, notifications: true, theme: 'light' },
+        stats: { streak: 0, wordsLearned: 0, totalXP: 0, joinedDate: new Date('2025-01-01') },
+        createdAt: new Date('2025-01-01'),
+        updatedAt: new Date('2025-01-01'),
+      },
+      error: null,
+    });
+
+    rtlRender(
+      <MemoryRouter initialEntries={['/app']}>
+        <Routes>
+          <Route
+            path="/app"
+            element={
+              <ProtectedRoute>
+                <Outlet />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // Spinner must show because _hasHydrated=false.
+    expect(screen.getByText(/checking authentication/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('protected-outlet')).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PERF-02-06: T4 / T12 -- reactive redirect after background revalidation
+//
+// Covers two related requirements in one integrated test:
+//
+//   T4  (RouteGuard altitude): background checkAuth returns invalid (401) ->
+//       authStore sets isAuthenticated:false -> redirect to login.
+//
+//   T12 (ProtectedRoute integration altitude): redirect fires ONLY AFTER
+//       revalidation confirms invalid -- NOT immediately at mount (children
+//       were rendered first from the persisted session).
+//
+// The mechanism under test: authStore.checkAuth() on a 401 calls
+//   set({ user: null, isAuthenticated: false, isLoading: false })
+// which triggers a Zustand subscription in ProtectedRoute, causing it to
+// re-render and produce <Navigate to="/login" />.
+//
+// This test uses act() + setState() to simulate the authStore 401 side-effect
+// without needing a real network call, and without an explicit rerender().
+// The redirect must fire reactively from the Zustand subscription, not from
+// a manual rerender triggered by the caller.
+// ---------------------------------------------------------------------------
+describe('PERF-02-06: ProtectedRoute -- T4/T12 reactive redirect on background revalidation invalid', () => {
+  const ProtectedContent = () => <div data-testid="protected-content">Protected Content</div>;
+  const Login = () => <div data-testid="login-page">Login</div>;
+
+  const authedUser = {
+    id: 'u1',
+    email: 'test@example.com',
+    name: 'Test User',
+    role: 'free' as const,
+    preferences: {
+      language: 'en' as const,
+      dailyGoal: 20,
+      notifications: true,
+      theme: 'light' as const,
+    },
+    stats: { streak: 0, wordsLearned: 0, totalXP: 0, joinedDate: new Date('2025-01-01') },
+    createdAt: new Date('2025-01-01'),
+    updatedAt: new Date('2025-01-01'),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+    });
+  });
+
+  it('T4/T12: content renders first from persisted session, then redirects reactively when background checkAuth confirms invalid (401)', async () => {
+    // Phase 1: seed a persisted, hydrated, authenticated session.
+    // This is the state RouteGuard passes to ProtectedRoute after de-gated render.
+    useAuthStore.setState({
+      _hasHydrated: true,
+      isAuthenticated: true,
+      isLoading: false,
+      user: authedUser,
+      error: null,
+    });
+
+    rtlRender(
+      <MemoryRouter initialEntries={['/app']}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/app"
+            element={
+              <ProtectedRoute>
+                <ProtectedContent />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // T11 / AC-4 precondition: content is visible BEFORE any revalidation.
+    // Verifies the redirect has NOT fired prematurely.
+    expect(screen.getByTestId('protected-content')).toBeInTheDocument();
+    expect(screen.queryByTestId('login-page')).not.toBeInTheDocument();
+
+    // Phase 2: simulate background checkAuth completing with 401.
+    // In the real system: authStore.checkAuth() catches APIRequestError{status:401}
+    // and calls: set({ user: null, isAuthenticated: false, isLoading: false }).
+    // We replicate that exact state mutation here.
+    await act(async () => {
+      useAuthStore.setState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
+    });
+
+    // T4 / T12: ProtectedRoute must have reacted to the Zustand state change
+    // and issued a redirect -- WITHOUT an explicit rerender() call.
+    await waitFor(() => {
+      expect(screen.getByTestId('login-page')).toBeInTheDocument();
+      expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
+    });
+  });
+});
