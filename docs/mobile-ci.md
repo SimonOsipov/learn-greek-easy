@@ -6,8 +6,9 @@ change as `mobile` (`learn-greek-easy-mobile/**`) and/or `web` (anything else).
 
 ## Behavior
 
-- **Mobile-only PR** → runs only the `Mobile CI (tsc + lint)` job (`npx tsc --noEmit`
-  + `expo lint`). The web test suite and the web preview deployment are **skipped**.
+- **Mobile-only PR** → runs `Mobile CI (tsc + lint + test)` and `Mobile E2E + Visual Gate`
+  jobs. The web test suite is **skipped**; the web preview deploy runs so the mobile E2E job
+  has a live API to test against.
 - **Web PR** → runs the full web suite unchanged. A PR touching both runs both.
 - **Mobile-only merge to `main`** → the backend/frontend production deploy is **skipped**
   (there is no mobile deploy yet — EAS Update lands in MOB-08).
@@ -44,7 +45,7 @@ token (least-privilege principle).
 never echoed or logged:
 
 - `deploy-production.yml` — the `mobile-ota` job (`eas update --branch production ...`)
-- `mobile-native-build.yml` — the on-demand job (`eas build --local ...`)
+- `preview.yml` — the `mobile-e2e` job (`eas build --local ...`)
 
 The repo is public, so the token value must never be committed, printed, or pasted anywhere in
 code, docs, or comments.
@@ -96,16 +97,14 @@ Two EAS channels exist, each linked to a same-named branch:
 Authentication for both OTA and native-build workflows uses the `EXPO_TOKEN` secret — see
 [§ EAS authentication — EXPO_TOKEN](#eas-authentication--expo_token) above.
 
-### Triggering an on-demand native build
+### Native E2E gate in preview.yml
 
-Two ways to trigger `mobile-native-build.yml`:
+The native build + Maestro flows now run automatically as the `mobile-e2e` job in `preview.yml`
+on every ready mobile-PR. No label or manual dispatch is needed: the job is wired into CI Gate
+and blocks merge if it fails.
 
-1. **Label on a PR:** add the `needs-native-build` label — the workflow runs automatically.
-2. **Manual dispatch:** GitHub → Actions → "Mobile Native Build (on-demand)" →
-   Run workflow (or `gh workflow run mobile-native-build.yml`).
-
-The workflow runs `eas build --local --profile development --platform ios` on `macos-latest`
-and executes the Maestro smoke flow against the resulting build.
+The `mobile-native-build.yml` on-demand workflow has been retired (MOB-15). The
+`needs-native-build` label is now unused.
 
 ## Scaffolding note
 

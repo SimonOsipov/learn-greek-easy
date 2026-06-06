@@ -163,7 +163,7 @@ jobs:
   # =============================================================================
   ci-gate:
     name: CI Gate
-    needs: [should-run-full, changes, ci-tests, mobile-ci]
+    needs: [should-run-full, changes, ci-tests, mobile-ci, mobile-e2e]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -174,7 +174,8 @@ jobs:
           mobile="${{ needs.changes.outputs.mobile }}"
           ci="${{ needs.ci-tests.result }}"
           mob="${{ needs.mobile-ci.result }}"
-          echo "run_full=$run_full web=$web mobile=$mobile ci-tests=$ci mobile-ci=$mob"
+          mobe2e="${{ needs.mobile-e2e.result }}"
+          echo "run_full=$run_full web=$web mobile=$mobile ci-tests=$ci mobile-ci=$mob mobile-e2e=$mobe2e"
 
           if [ "$run_full" != "true" ]; then
             echo "Draft PR (run_full=$run_full) — no required pipelines. CI Gate passes."
@@ -190,10 +191,14 @@ jobs:
             echo "::error::Mobile CI was required (mobile changed) but its result is '$mob'"
             fail=1
           fi
+          if [ "$mobile" = "true" ] && [ "$mobe2e" != "success" ]; then
+            echo "::error::Mobile E2E was required (mobile changed) but its result is '$mobe2e'"
+            fail=1
+          fi
           if [ "$fail" = "1" ]; then
             exit 1
           fi
-          echo "CI Gate passed (web=$web ci-tests=$ci, mobile=$mobile mobile-ci=$mob)"
+          echo "CI Gate passed (web=$web ci-tests=$ci, mobile=$mobile mobile-ci=$mob mobile-e2e=$mobe2e)"
 
   # =============================================================================
   # JOB: Backend Coverage Comment
@@ -652,6 +657,209 @@ jobs:
 
           echo "Database seeded successfully"
           echo "status=success" >> $GITHUB_OUTPUT
+
+  # =============================================================================
+  # JOB 5b: Mobile E2E + Visual Gate (MOB-15)
+  # Purpose: Build the native iOS dev-profile app, start Metro, run Maestro
+  # onboarding + smoke flows against the live dev preview, and verify
+  # the onboarding reset endpoint leaves no residue.
+  # Only runs on mobile PRs; depends on deploy + seed completing successfully.
+  # =============================================================================
+  mobile-e2e:
+    name: Mobile E2E + Visual Gate
+    needs: [deploy, seed-database, changes, should-run-full]
+    if: |
+      always() &&
+      needs.should-run-full.outputs.run_full == 'true' &&
+      needs.changes.outputs.mobile == 'true' &&
+      needs.deploy.result == 'success' &&
+      needs.seed-database.result == 'success'
+    runs-on: macos-26
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: learn-greek-easy-mobile
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      CI_DEV_LAUNCH_URL: http://127.0.0.1:8081
+      CI_DEV_MENU_ONBOARDING_FINISHED: 'true'
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      API_URL: ${{ needs.deploy.outputs.frontend_url }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select Xcode 26.4
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26.4'
+
+      - name: Assert Xcode major version 26
+        run: |
+          XCODE_VERSION="$(xcodebuild -version | head -n1 | awk '{print $2}')"
+          echo "xcodebuild reports: $XCODE_VERSION"
+          MAJOR="${XCODE_VERSION%%.*}"
+          if [ "$MAJOR" != "26" ]; then
+            echo "::error::Expected Xcode major 26, got $XCODE_VERSION — gate cannot proceed (no fallback)."
+            exit 1
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: learn-greek-easy-mobile/package-lock.json
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Install EAS CLI + Maestro
+        run: |
+          npm install -g eas-cli@20.0.0
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Compute native fingerprint
+        id: fp
+        run: |
+          HASH="$(node node_modules/@expo/fingerprint/bin/cli.js \
+            fingerprint:generate --platform ios | jq -r .hash)"
+          echo "Native fingerprint: $HASH"
+          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
+
+      - name: Cache native simulator app
+        id: app-cache
+        uses: actions/cache@v4
+        with:
+          path: learn-greek-easy-mobile/build
+          key: ios-app-${{ runner.os }}-xcode26.4-development-${{ steps.fp.outputs.hash }}
+
+      - name: Build local dev-profile simulator app
+        if: steps.app-cache.outputs.cache-hit != 'true'
+        run: |
+          eas build --local \
+            --non-interactive \
+            --profile development \
+            --platform ios \
+            --output ./build.tar.gz
+
+      - name: Extract .app
+        if: steps.app-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p build && tar -xzf build.tar.gz -C build
+
+      - name: Resolve APP_PATH
+        run: |
+          APP_PATH="$(find build -maxdepth 2 -name '*.app' | head -n1)"
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::No .app found under build/ (cache-hit=${{ steps.app-cache.outputs.cache-hit }})"
+            exit 1
+          fi
+          echo "Using app: $APP_PATH  (cache-hit=${{ steps.app-cache.outputs.cache-hit }})"
+          echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
+
+      - name: Boot iOS simulator
+        run: |
+          DEVICE=$(xcrun simctl list devices available | grep -m1 'iPhone' | grep -oE '\([0-9A-F-]{36}\)' | tr -d '()')
+          echo "SIM_UDID=$DEVICE" >> "$GITHUB_ENV"
+          xcrun simctl boot "$DEVICE" || true
+          xcrun simctl bootstatus "$DEVICE" -b
+
+      - name: Install app on simulator
+        run: xcrun simctl install "$SIM_UDID" "$APP_PATH"
+
+      - name: Reset onboarding state (pre-test)
+        run: |
+          FRONTEND_URL="${{ needs.deploy.outputs.frontend_url }}"
+          echo "=== Resetting onboarding state before test run ==="
+          RESPONSE=$(curl -s -X POST "$FRONTEND_URL/api/v1/test/seed/reset-onboarding")
+          echo "Reset response: $RESPONSE"
+          SUCCESS=$(echo "$RESPONSE" | jq -r '.success')
+          if [ "$SUCCESS" != "true" ]; then
+            echo "::error::Pre-test reset-onboarding failed: $RESPONSE"
+            exit 1
+          fi
+          echo "Onboarding state reset successfully"
+
+      - name: Start Metro (dev-client)
+        env:
+          APP_VARIANT: development
+          REACT_NATIVE_PACKAGER_HOSTNAME: 127.0.0.1
+        run: |
+          CI=1 npx expo start --dev-client --port 8081 \
+            > "$RUNNER_TEMP/metro.log" 2>&1 &
+          echo "METRO_PID=$!" >> "$GITHUB_ENV"
+
+      - name: Wait for Metro to be ready
+        run: |
+          for i in $(seq 1 120); do
+            if curl -fsS http://127.0.0.1:8081/status >/dev/null 2>&1; then
+              echo "Metro is up after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Metro did not become ready on :8081 within 120s"
+          cat "$RUNNER_TEMP/metro.log" || true
+          exit 1
+
+      - name: Verify dev-client loads the JS bundle from Metro
+        run: |
+          bundle_served() {
+            grep -qiE 'iOS Bundled [0-9]+ ?ms|Bundling complete|\.bundle\?platform=ios|virtual-metro-entry\.bundle' "$RUNNER_TEMP/metro.log"
+          }
+          for attempt in 1 2 3 4 5; do
+            echo "::group::Launch attempt $attempt"
+            xcrun simctl terminate "$SIM_UDID" eu.greeklish.app.dev 2>/dev/null || true
+            sleep 2
+            xcrun simctl launch "$SIM_UDID" eu.greeklish.app.dev --initialUrl http://127.0.0.1:8081 || true
+            for i in $(seq 1 60); do
+              if bundle_served; then
+                echo "Metro served the iOS bundle (attempt $attempt, ${i}s)"
+                echo "::endgroup::"
+                exit 0
+              fi
+              sleep 1
+            done
+            echo "attempt $attempt: bundle not served within 60s, retrying"
+            echo "::endgroup::"
+          done
+          echo "::error::dev-client never requested the JS bundle from Metro after 5 launch attempts"
+          cat "$RUNNER_TEMP/metro.log" || true
+          exit 1
+
+      - name: Run Maestro onboarding flow
+        run: maestro test .maestro/onboarding.yaml
+
+      - name: Run Maestro smoke flow
+        run: maestro test .maestro/smoke.yaml
+
+      - name: Reset onboarding state (post-test cleanup)
+        if: always()
+        run: |
+          FRONTEND_URL="${{ needs.deploy.outputs.frontend_url }}"
+          echo "=== Resetting onboarding state after test run ==="
+          RESPONSE=$(curl -s -X POST "$FRONTEND_URL/api/v1/test/seed/reset-onboarding")
+          echo "Reset response: $RESPONSE"
+          # Verify no residue: tour_completed_at must be null in the response
+          TOUR_COMPLETED=$(echo "$RESPONSE" | jq -r '.results.tour_completed_at')
+          if [ "$TOUR_COMPLETED" != "null" ]; then
+            echo "::error::Post-test reset-onboarding left residue: tour_completed_at=$TOUR_COMPLETED"
+            exit 1
+          fi
+          echo "Onboarding state clean (tour_completed_at=null)"
+
+      - name: Upload Maestro debug artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: mobile-e2e-maestro
+          path: |
+            /Users/runner/.maestro/tests/
+            ${{ runner.temp }}/metro.log
+          if-no-files-found: warn
+          retention-days: 7
 
   # =============================================================================
   # JOB 6: K6 Performance Tests
