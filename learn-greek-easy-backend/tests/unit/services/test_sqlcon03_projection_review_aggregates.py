@@ -730,9 +730,15 @@ class TestCountByStatusFold:
         user = await _make_user(db_session)
         deck = await _make_deck(db_session)
 
-        # Only 1 NEW card — other statuses have no rows
+        # Only 1 NEW card with a future review date — other statuses have no rows
         card = await _make_card(db_session, deck.id)
-        await _make_stats(db_session, user.id, card.id, status=CardStatus.NEW)
+        await _make_stats(
+            db_session,
+            user.id,
+            card.id,
+            status=CardStatus.NEW,
+            next_review_date=date.today() + timedelta(days=1),  # not due yet
+        )
 
         repo = CardRecordStatisticsRepository(db_session)
         result = await repo.count_by_status(user.id)
@@ -741,12 +747,8 @@ class TestCountByStatusFold:
         assert result["learning"] == 0
         assert result["review"] == 0
         assert result["mastered"] == 0
-        assert result["due"] == 0  # NEW card: next_review_date=today but new status included
-        # Actually NEW cards: next_review_date is set to today() by default in
-        # get_or_create, but we only count cards with next_review_date <= today
-        # regardless of status — check legacy semantics
-        # (NEW cards with next_review_date=today() are due)
-        # Re-seed with next_review_date in future to prove zero is non-vacuous
+        # Card is not due (next_review_date is tomorrow); verifies zero-init for absent statuses
+        assert result["due"] == 0
         assert set(result.keys()) == {"new", "learning", "review", "mastered", "due"}
 
 
