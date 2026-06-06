@@ -70,7 +70,7 @@ Not every change needs a full App Store / TestFlight release. The decision rule:
 | Change type | Delivery path |
 |-------------|---------------|
 | JS / TS / asset-only (no native modules, no SDK bump, no config-plugin change) | **OTA update** — `eas update` ships automatically via the `mobile-ota` job in `deploy-production.yml` on merge to `main`. No store review required. |
-| New native module, Expo SDK bump, config-plugin change, or anything that bumps `runtimeVersion` | **Native build required** — trigger the on-demand `mobile-native-build.yml` workflow; eventual store release is required. |
+| New native module, Expo SDK bump, config-plugin change, or anything that bumps `runtimeVersion` | **Native build required** — a fresh native binary is needed; build it with `eas build` (see [docs/mobile-app.md](mobile-app.md)) for the eventual store release. (On PRs touching `learn-greek-easy-mobile/**`, the `mobile-e2e` gate job in `preview.yml` already produces a cached dev-profile simulator build automatically; the old on-demand `mobile-native-build.yml` workflow was retired in MOB-15.) |
 
 ### runtimeVersion semantics
 
