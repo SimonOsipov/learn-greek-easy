@@ -4,6 +4,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { reportAPIError } from '@/lib/errorReporting';
 import { queryClient } from '@/lib/queryClient';
 import { supabase } from '@/lib/supabaseClient';
+import { APIRequestError } from '@/services/api';
 import { authAPI, type ProfileUpdateRequest } from '@/services/authAPI';
 import type { User, AuthError } from '@/types/auth';
 
@@ -301,17 +302,22 @@ export const useAuthStore = create<AuthState>()(
               isLoading: false,
             });
           } catch (error) {
-            // Check if request was aborted
+            // Abort is not a real failure — bail without touching state.
             if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
               return;
             }
 
-            // Session exists but profile fetch failed - clear auth state
-            set({
-              user: null,
-              isAuthenticated: false,
-              isLoading: false,
-            });
+            // ALLOW-LIST: clear auth on EXACTLY ONE signal — a confirmed-invalid
+            // session: /auth/me returned 401. (The no-session case is handled earlier,
+            // before the profile fetch.) Every other failure — offline (status 0),
+            // timeout (408), 5xx, or a thrown getSession() — is transient: keep the
+            // persisted session intact and retryable; only release the spinner.
+            if (error instanceof APIRequestError && error.status === 401) {
+              set({ user: null, isAuthenticated: false, isLoading: false });
+              return;
+            }
+
+            if (get().isLoading) set({ isLoading: false });
           } finally {
             // Always release the in-flight guard so future calls can proceed
             _checkAuthInflight = null;
