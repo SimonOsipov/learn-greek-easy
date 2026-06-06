@@ -17,7 +17,7 @@
 
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 
 import { useAppStore } from '@/stores/appStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -217,5 +217,194 @@ describe('RouteGuard', () => {
 
     expect(capturedSignal?.aborted).toBe(true);
     expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PERF-02-03: de-gated persisted-session render tests (stale-while-revalidate)
+// ---------------------------------------------------------------------------
+//
+// NEW behavior contract (not yet implemented):
+//   When selectHasPersistedSession is true at mount, isInitializing starts
+//   FALSE => children render immediately WITHOUT awaiting checkAuth.
+//   checkAuth still runs in the background (exactly once on INITIAL_SESSION).
+//   setAuthInitialized() stays in the finally AFTER checkAuth settles, so
+//   appStore.authInitialized stays false while children are mounted but
+//   checkAuth is still pending.
+//   For unknown/unauthenticated sessions (selector false) the behavior is
+//   unchanged: auth-loading shows, children do not render.
+//
+// RED tests: AC-1 and AC-5 fail today (children don't render until checkAuth
+// resolves -- with a never-resolving spy the child never appears).
+// AC-2 and AC-3 document unchanged behavior (expected to pass today).
+// AC-5b locks the post-condition (also expected to pass today since both
+// children + authInitialized come after resolve in the current impl).
+// ---------------------------------------------------------------------------
+
+describe('RouteGuard — de-gated persisted-session render (PERF-02)', () => {
+  let checkAuthSpy: ReturnType<typeof vi.fn>;
+
+  /** Seed a fully-hydrated, authenticated persisted session. */
+  const seedPersistedSession = (spy: ReturnType<typeof vi.fn>) => {
+    useAuthStore.setState({
+      _hasHydrated: true,
+      isAuthenticated: true,
+      user: { id: 'u1', email: 'test@example.com' } as never,
+      isLoading: false,
+      error: null,
+      checkAuth: spy,
+    });
+  };
+
+  /** Seed an unauthenticated / hydrated session (no persisted user). */
+  const seedUnauthedSession = (spy: ReturnType<typeof vi.fn>) => {
+    useAuthStore.setState({
+      _hasHydrated: true,
+      isAuthenticated: false,
+      user: null,
+      isLoading: false,
+      error: null,
+      checkAuth: spy,
+    });
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authStateCallback = null;
+    useAppStore.getState().reset();
+  });
+
+  afterEach(() => {
+    useAppStore.getState().reset();
+  });
+
+  // AC-1: children render BEFORE checkAuth resolves (the core behavioral change)
+  it('AC-1: renders children immediately for persisted session (no await checkAuth)', async () => {
+    // DEFERRED: never-resolving promise -- children must appear without it settling.
+    checkAuthSpy = vi.fn(() => new Promise<void>(() => {}));
+    seedPersistedSession(checkAuthSpy);
+
+    render(
+      <RouteGuard>
+        <Child />
+      </RouteGuard>
+    );
+
+    emit('INITIAL_SESSION');
+
+    // Children must appear even though checkAuth has NOT resolved.
+    // findBy uses implicit waitFor with a short timeout.
+    const child = await screen.findByTestId('route-guard-child');
+    expect(child).toBeInTheDocument();
+
+    // Loading screen must NOT be shown once children are visible.
+    expect(screen.queryByTestId('auth-loading')).not.toBeInTheDocument();
+  });
+
+  // AC-2: revalidation still fires (unchanged behavior, documents it stays)
+  it('AC-2: checkAuth still runs in background exactly once', async () => {
+    checkAuthSpy = vi.fn(() => new Promise<void>(() => {}));
+    seedPersistedSession(checkAuthSpy);
+
+    render(
+      <RouteGuard>
+        <Child />
+      </RouteGuard>
+    );
+
+    emit('INITIAL_SESSION');
+
+    // Give the event loop a chance to schedule the async call.
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(checkAuthSpy).toHaveBeenCalledTimes(1);
+  });
+
+  // AC-5: authInitialized stays false while children are mounted but checkAuth pending
+  it('AC-5: authInitialized stays false while children are mounted and checkAuth is pending', async () => {
+    checkAuthSpy = vi.fn(() => new Promise<void>(() => {}));
+    seedPersistedSession(checkAuthSpy);
+
+    render(
+      <RouteGuard>
+        <Child />
+      </RouteGuard>
+    );
+
+    emit('INITIAL_SESSION');
+
+    // Children must be present (persisted session => immediate render).
+    const child = await screen.findByTestId('route-guard-child');
+    expect(child).toBeInTheDocument();
+
+    // BUT authInitialized must still be false -- setAuthInitialized() fires
+    // only in the finally block after checkAuth settles.
+    expect(useAppStore.getState().authInitialized).toBe(false);
+  });
+
+  // AC-5b: authInitialized flips true only after checkAuth settles
+  it('AC-5b: authInitialized flips true only after checkAuth resolves', async () => {
+    // Use a manually-controlled deferred so we can resolve it in the test.
+    let resolveCheckAuth!: () => void;
+    checkAuthSpy = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveCheckAuth = resolve;
+        })
+    );
+    seedPersistedSession(checkAuthSpy);
+
+    render(
+      <RouteGuard>
+        <Child />
+      </RouteGuard>
+    );
+
+    emit('INITIAL_SESSION');
+
+    // Wait for children to be present (should be immediate for persisted session).
+    await screen.findByTestId('route-guard-child');
+
+    // authInitialized must still be false while checkAuth is pending.
+    expect(useAppStore.getState().authInitialized).toBe(false);
+
+    // Now resolve checkAuth -- the finally block should flip authInitialized.
+    await act(async () => {
+      resolveCheckAuth();
+      // Drain the microtask queue so the finally block runs.
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(useAppStore.getState().authInitialized).toBe(true);
+    });
+  });
+
+  // AC-3: unknown/unauthenticated session still shows loading (unchanged behavior)
+  it('AC-3: unknown session still shows loading screen, no auth bypass', async () => {
+    checkAuthSpy = vi.fn(() => new Promise<void>(() => {}));
+    seedUnauthedSession(checkAuthSpy);
+
+    render(
+      <RouteGuard>
+        <Child />
+      </RouteGuard>
+    );
+
+    emit('INITIAL_SESSION');
+
+    // Give the event loop a tick.
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Loading must be shown -- selector is false, so isInitializing starts true.
+    expect(screen.getByTestId('auth-loading')).toBeInTheDocument();
+
+    // Children must NOT be visible -- no bypass for unauthenticated sessions.
+    expect(screen.queryByTestId('route-guard-child')).not.toBeInTheDocument();
   });
 });
