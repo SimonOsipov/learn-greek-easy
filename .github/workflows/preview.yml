@@ -12,8 +12,8 @@ on:
         type: number
 
 concurrency:
-  group: preview-${{ github.event.pull_request.number || github.event.inputs.pr_number }}
-  cancel-in-progress: true
+  group: dev-preview-shared
+  cancel-in-progress: false
 
 env:
   PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -283,11 +283,19 @@ jobs:
   # =============================================================================
   deploy:
     name: Deploy
-    needs: [ci-tests, should-deploy, should-run-full]
+    needs: [ci-tests, should-deploy, should-run-full, changes]
     if: |
+      always() &&
       needs.should-run-full.outputs.run_full == 'true' &&
       needs.should-deploy.outputs.deploy == 'true' &&
-      needs.ci-tests.result == 'success'
+      (
+        needs.ci-tests.result == 'success' ||
+        (
+          needs.ci-tests.result == 'skipped' &&
+          needs.changes.outputs.mobile == 'true' &&
+          needs.changes.outputs.web == 'false'
+        )
+      )
     runs-on: ubuntu-latest
     container: ghcr.io/railwayapp/cli:4.66.0
     outputs:
