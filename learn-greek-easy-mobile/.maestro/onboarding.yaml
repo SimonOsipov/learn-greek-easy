@@ -79,8 +79,11 @@ env:
     text: "Start practicing.*"   # regex: trailing space + U+2192 arrow
 
 # POST-ONBOARDING: (app) HOME
+# 90s timeout: the submit does PATCH /auth/me -> ['me'] invalidation -> guard re-route -> home render,
+# a round-trip that can exceed 30s against a COLD-STARTED dev backend (just deployed by the CI deploy job).
+# The success screen renders correctly; it just needs patience on a cold backend.
 - extendedWaitUntil:
     visible: "Success!"          # substring (avoids emoji)
-    timeout: 30000
+    timeout: 90000
 - assertVisible: "Signed in as e2e_beginner@test.com"
 - takeScreenshot: 10-app-home
