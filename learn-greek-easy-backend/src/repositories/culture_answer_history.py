@@ -296,6 +296,48 @@ class CultureAnswerHistoryRepository(BaseRepository[CultureAnswerHistory]):
         result = await self.db.execute(query)
         return [(row.answer_date, int(row.cnt)) for row in result.all()]
 
+    async def get_daily_answer_aggregates(self, user_id: UUID) -> list[tuple[date, int, int]]:
+        """Return per-day (total_count, correct_count) for a user across all time.
+
+        SQLCON-04: replaces three separate round-trips on the GamificationProjection
+        path (get_total_answers + get_correct_answers_count + get_daily_answer_counts)
+        with a single conditional-aggregate GROUP BY query.
+
+        Uses the same ``func.date(created_at)`` bucketing expression as
+        ``get_daily_answer_counts`` so day boundaries are byte-identical (AC3).
+
+        Equivalence proof: ``count(*)`` summed over a complete day-partition equals
+        ``count(*)`` over the whole set (every row has exactly one date bucket, no
+        NULL created_at).  Same for the conditional sum over is_correct.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            List of ``(answer_date, total_count, correct_count)`` tuples ordered
+            chronologically ascending.  Empty list when the user has no answers.
+        """
+        from sqlalchemy import case, literal  # already imported in get_daily_stats
+
+        correct_expr = func.sum(
+            case(
+                (CultureAnswerHistory.is_correct == True, literal(1)),  # noqa: E712
+                else_=literal(0),
+            )
+        )
+        query = (
+            select(
+                func.date(CultureAnswerHistory.created_at).label("answer_date"),
+                func.count().label("total_cnt"),
+                correct_expr.label("correct_cnt"),
+            )
+            .where(CultureAnswerHistory.user_id == user_id)
+            .group_by(func.date(CultureAnswerHistory.created_at))
+            .order_by(func.date(CultureAnswerHistory.created_at).asc())
+        )
+        result = await self.db.execute(query)
+        return [(row.answer_date, int(row.total_cnt), int(row.correct_cnt)) for row in result.all()]
+
     async def get_consecutive_correct_streak(self, user_id: UUID) -> int:
         """Count the current run of correct culture answers from the most recent.
 

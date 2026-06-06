@@ -303,17 +303,21 @@ class GamificationProjection:
                 _gap = (_dates[_i + 1] - _dates[_i]).days
                 if _gap > max_inactive_gap:
                     max_inactive_gap = _gap
-        culture_total: int = await culture_history_repo.get_total_answers(user_id)
-        culture_correct: int = await culture_history_repo.get_correct_answers_count(user_id)
+        # SQLCON-04: collapse get_total_answers + get_correct_answers_count +
+        # get_daily_answer_counts into one conditional-aggregate GROUP BY query.
+        # Derive the two scalars in Python by summing the per-day buckets.
+        # Equivalence: sum(total per day) == count(*) over all rows (complete
+        # day-partition with no NULL created_at).  Same for correct_cnt.
+        culture_daily_agg = await culture_history_repo.get_daily_answer_aggregates(user_id)
+        culture_total: int = sum(total for _, total, _ in culture_daily_agg)
+        culture_correct: int = sum(correct for _, _, correct in culture_daily_agg)
+        culture_daily: list[tuple[date, int]] = [(d, total) for d, total, _ in culture_daily_agg]
         culture_consec: int = await culture_history_repo.get_consecutive_correct_streak(user_id)
         culture_categories: dict[str, tuple[int, int]] = (
             await culture_stats_repo.get_category_mastery_counts(user_id)
         )
         culture_greek: int = await culture_history_repo.count_by_language(user_id, "el")
         culture_languages: int = await culture_history_repo.count_distinct_languages(user_id)
-        culture_daily: list[tuple[date, int]] = await culture_history_repo.get_daily_answer_counts(
-            user_id
-        )
 
         # ----------------------------------------------------------------
         # 3. Fetch daily_goal inline (UserSettings may be absent for new users)
