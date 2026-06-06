@@ -151,23 +151,16 @@ test.describe('Culture Practice Session', () => {
     const deckIdMatch = url.match(/\/culture\/decks\/([^/]+)/);
     const deckId = deckIdMatch ? deckIdMatch[1] : 'unknown';
 
-    // Navigate directly to summary (without active session)
+    // Navigate directly to the summary URL (no active session).
     await page.goto(`/culture/${deckId}/summary`);
 
-    // The /culture/:deckId/summary route is a static redirect to ../practice
-    // (the old session-aware summary page was removed in #273). Wait for the
-    // client-side React Router redirect to settle before asserting the URL,
-    // rather than reading it once after domcontentloaded (which races the redirect).
-    await page.waitForURL(/\/culture\/[^/]+\/(practice|summary|decks)/);
+    // The /culture/:deckId/summary route is a backward-compat redirect to the
+    // per-deck practice page (#273). Regression guard: it MUST land on the
+    // deck-scoped practice URL, not the generic mock-exam hub (/practice/culture-exam).
+    // The old relative `<Navigate to="../practice">` over-stripped to /practice — this asserts the fix.
+    await page.waitForURL(`**/culture/${deckId}/practice`);
 
-    const currentUrl = page.url();
-    const isOnSummary = currentUrl.includes('/summary');
-    const isRedirected =
-      currentUrl.includes('/practice') ||
-      currentUrl.includes('/decks') ||
-      currentUrl.includes('/culture/decks');
-
-    expect(isOnSummary || isRedirected).toBe(true);
+    expect(page.url()).toContain(`/culture/${deckId}/practice`);
   });
 
   test('CULTURE-10.6: MCQ component renders question correctly', async ({ page }) => {
