@@ -249,6 +249,282 @@ describe('authStore — checkAuth in-flight dedup (PERF-03)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// PERF-02-04: checkAuth logout-race epoch guard
+//
+// The NOT-YET-IMPLEMENTED contract:
+//   - A module-level _authEpoch counter (starts at 0).
+//   - logout() increments it alongside the existing reset block.
+//   - checkAuth IIFE captures const epoch = _authEpoch at entry and
+//     guards every state-mutating set with if (epoch !== _authEpoch) return.
+//   - The finally release of _checkAuthInflight is NOT epoch-gated.
+//
+// RED tests today (no epoch guard): the two logout-race cases. The late
+// success-set fires and re-authenticates the user, so those assertions fail.
+// GREEN tests today (guard must not break): happy-path and transient-5xx.
+//
+// Fake-timer strategy: same as the PERF-02 block below — each beforeEach
+// advances perf04FakeEpoch by EPOCH_STEP_04 (60 s) so any _profileFetchedAt
+// stamped by a prior test is already stale, preventing the freshness guard
+// from short-circuiting tests that seed an authed user.
+// ---------------------------------------------------------------------------
+
+const EPOCH_STEP_04 = 60_000; // 60 s > PROFILE_FRESHNESS_MS (30 s)
+let perf04FakeEpoch = Date.now() + 10_000_000; // offset from perf02 to avoid cross-contamination
+
+const minimalProfile04 = {
+  id: 'user-epoch04',
+  email: 'epoch04@test.com',
+  full_name: 'Epoch User',
+  avatar_url: null,
+  is_active: true,
+  is_superuser: false,
+  created_at: '2025-06-01T00:00:00Z',
+  updated_at: '2025-06-01T00:00:00Z',
+};
+
+const preservedUser04 = {
+  id: 'user-epoch04',
+  email: 'epoch04@test.com',
+  name: 'Epoch User',
+  avatar: undefined,
+  role: 'free' as const,
+  preferences: {
+    language: 'en' as const,
+    dailyGoal: 20,
+    notifications: true,
+    theme: 'light' as const,
+  },
+  stats: {
+    streak: 0,
+    wordsLearned: 0,
+    totalXP: 0,
+    joinedDate: new Date('2025-06-01'),
+  },
+  createdAt: new Date('2025-06-01'),
+  updatedAt: new Date('2025-06-01'),
+};
+
+describe('authStore — logout-race epoch guard (PERF-02-04)', () => {
+  const getSession = supabase.auth.getSession as ReturnType<typeof vi.fn>;
+  const getProfile = authAPI.getProfile as ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    // Advance fake clock so _profileFetchedAt from any previous test is stale.
+    perf04FakeEpoch += EPOCH_STEP_04;
+    vi.useFakeTimers();
+    vi.setSystemTime(perf04FakeEpoch);
+
+    vi.clearAllMocks();
+
+    // Reset to unauthenticated baseline; individual tests seed state as needed.
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // -----------------------------------------------------------------------
+  // AC #3 — epoch discards stale success set after logout
+  //
+  // Sequence: authed user -> getProfile held pending -> logout() runs
+  // (epoch++) -> getProfile resolves SUCCESS -> success set must be skipped.
+  //
+  // [EXPECT RED] Without the epoch guard the stale set fires and
+  // re-authenticates the user (isAuthenticated flips to true).
+  // -----------------------------------------------------------------------
+  it('epoch discards stale success set after logout', async () => {
+    // Seed store: user is currently logged in
+    useAuthStore.setState({
+      user: preservedUser04,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+    });
+
+    // Provide a valid session so checkAuth proceeds past the session guard
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok-epoch' } } });
+
+    // Hold getProfile pending so we can interleave logout() in-flight
+    let resolveProfile!: (v: typeof minimalProfile04) => void;
+    const profilePromise = new Promise<typeof minimalProfile04>((res) => {
+      resolveProfile = res;
+    });
+    getProfile.mockReturnValueOnce(profilePromise);
+
+    // Start checkAuth — it will await getProfile and be suspended
+    const checkAuthPromise = useAuthStore.getState().checkAuth();
+
+    // While checkAuth is suspended, logout() — this should increment the epoch
+    await useAuthStore.getState().logout();
+
+    // Verify logout cleared state immediately
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    expect(useAuthStore.getState().user).toBeNull();
+
+    // Now resolve the pending getProfile with a valid profile response
+    resolveProfile(minimalProfile04);
+
+    // Await the suspended checkAuth to complete
+    await checkAuthPromise;
+
+    // Epoch guard must have blocked the stale success set — state stays logged out
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    expect(useAuthStore.getState().user).toBeNull();
+  });
+
+  // -----------------------------------------------------------------------
+  // AC #2 — logout during in-flight revalidation ends logged out
+  //
+  // Identical race from a different angle: start from authed state, trigger
+  // checkAuth, then logout before getProfile resolves. Final state: logged out.
+  //
+  // [EXPECT RED] Without epoch guard the success set fires and user is
+  // re-authenticated.
+  // -----------------------------------------------------------------------
+  it('logout during in-flight revalidation ends logged out', async () => {
+    useAuthStore.setState({
+      user: preservedUser04,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+    });
+
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok-race' } } });
+
+    let resolveProfile!: (v: typeof minimalProfile04) => void;
+    const profilePromise = new Promise<typeof minimalProfile04>((res) => {
+      resolveProfile = res;
+    });
+    getProfile.mockReturnValueOnce(profilePromise);
+
+    // Fire checkAuth but do NOT await it yet
+    const p = useAuthStore.getState().checkAuth();
+
+    // Logout resolves before getProfile does
+    await useAuthStore.getState().logout();
+
+    // Now let the deferred getProfile resolve
+    resolveProfile(minimalProfile04);
+    await p;
+
+    // Must stay logged out regardless of the resolved profile
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    expect(useAuthStore.getState().user).toBeNull();
+  });
+
+  // -----------------------------------------------------------------------
+  // AC #4 — post-checkout checkAuth with no logout sets normally
+  //
+  // Happy path: start unauthed, valid session + 200 profile, NO intervening
+  // logout. The epoch guard must not interfere — success set must apply.
+  //
+  // [EXPECT GREEN] The guard only fires when epoch changes (i.e. logout ran).
+  // -----------------------------------------------------------------------
+  it('post-checkout checkAuth with no logout sets normally', async () => {
+    // Start unauthed
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok-happy' } } });
+    getProfile.mockResolvedValue(minimalProfile04);
+
+    await useAuthStore.getState().checkAuth();
+
+    const state = useAuthStore.getState();
+    expect(state.isAuthenticated).toBe(true);
+    expect(state.user).not.toBeNull();
+    expect(state.user?.id).toBe('user-epoch04');
+    expect(state.isLoading).toBe(false);
+  });
+
+  // -----------------------------------------------------------------------
+  // AC #3 — finally releases inflight guard even after logout
+  //
+  // After a mid-flight logout that discards the success set, the
+  // _checkAuthInflight guard must be released (finally runs) so a
+  // subsequent checkAuth() is not stuck behind a stale promise.
+  //
+  // [EXPECT GREEN] The finally block is NOT epoch-gated so it runs.
+  // -----------------------------------------------------------------------
+  it('finally releases inflight guard even after logout', async () => {
+    useAuthStore.setState({
+      user: preservedUser04,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+    });
+
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok-finally' } } });
+
+    let resolveProfile!: (v: typeof minimalProfile04) => void;
+    const profilePromise = new Promise<typeof minimalProfile04>((res) => {
+      resolveProfile = res;
+    });
+    getProfile.mockReturnValueOnce(profilePromise);
+    // Second call (after the race) needs to succeed too
+    getProfile.mockResolvedValue(minimalProfile04);
+
+    const p = useAuthStore.getState().checkAuth();
+
+    // Logout mid-flight
+    await useAuthStore.getState().logout();
+
+    // Resolve the first (stale) getProfile call
+    resolveProfile(minimalProfile04);
+    await p;
+
+    // At this point _checkAuthInflight must be null (finally ran).
+    // Verify by issuing a second checkAuth — it must issue a fresh getProfile.
+    // Advance the clock so the freshness window does not suppress the second call.
+    perf04FakeEpoch += EPOCH_STEP_04;
+    vi.setSystemTime(perf04FakeEpoch);
+
+    await useAuthStore.getState().checkAuth();
+
+    // getProfile was called at least twice: once for the raced call, once for the fresh call
+    expect(getProfile).toHaveBeenCalledTimes(2);
+  });
+
+  // -----------------------------------------------------------------------
+  // AC #5 — transient 5xx during revalidation keeps persisted session
+  //
+  // Re-affirms PERF-02 behavior under this suite: a 500 from getProfile
+  // (no logout) must preserve the existing authed user. The epoch guard
+  // must not incorrectly discard the preserved state here.
+  //
+  // [EXPECT GREEN] Covered by PERF-02 but re-checked to ensure this suite
+  // setup does not break the preserve path.
+  // -----------------------------------------------------------------------
+  it('transient 5xx during revalidation keeps persisted session', async () => {
+    useAuthStore.setState({
+      user: preservedUser04,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+    });
+
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok-5xx' } } });
+    getProfile.mockRejectedValue(
+      new APIRequestError({
+        status: 500,
+        statusText: 'Internal Server Error',
+        message: 'Internal Server Error',
+      })
+    );
+
+    await useAuthStore.getState().checkAuth();
+
+    const state = useAuthStore.getState();
+    expect(state.user).not.toBeNull();
+    expect(state.user?.id).toBe('user-epoch04');
+    expect(state.isAuthenticated).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // PERF-02-02: checkAuth background revalidation — error-disposition allow-list
 //
 // The NEW (unimplemented) contract:
