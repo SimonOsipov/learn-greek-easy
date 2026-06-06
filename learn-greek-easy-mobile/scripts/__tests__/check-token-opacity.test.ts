@@ -323,4 +323,15 @@ describe('adversarial edge cases (QA Mode B)', () => {
     expect(hits.length).toBeGreaterThan(0);
     expect(hits[0].token).toBe('on-photo-scrim');
   });
+
+  // Adv-5 (CodeRabbit #566): the CLI also walks .css, so a NativeWind `@apply`
+  // with a /NN modifier on a var-backed token in a CSS file is a violation too.
+  it('Adv-5: CSS @apply bg-primary/50 is flagged (covers global.css / CSS modules)', () => {
+    const denylist = parseDenylist(FULL_TAILWIND_SNIPPET);
+    const cssText = '.cta { @apply bg-primary/50; }';
+    const hits = scanContent(denylist, cssText);
+
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits[0].token).toBe('primary');
+  });
 });

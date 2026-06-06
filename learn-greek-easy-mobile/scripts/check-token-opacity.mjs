@@ -7,7 +7,8 @@
  *
  * This script:
  *   1. Parses tailwind.config.js to build a denylist of var-backed token names.
- *   2. Scans src/**\/*.{js,jsx,ts,tsx} for colour-utility/<denylisted-token>/<NN> patterns.
+ *   2. Scans src/**\/*.{js,jsx,ts,tsx,css} for colour-utility/<denylisted-token>/<NN> patterns
+ *      (.css covers NativeWind `@apply bg-primary/50` in global.css / CSS modules).
  *   3. Exits 1 (with remediation advice) if any violations are found; exits 0 if clean.
  *
  * See learn-greek-easy-mobile/docs/design-tokens.md for full decision record.
@@ -133,7 +134,7 @@ export function scanContent(denylist, fileText) {
 // ---------------------------------------------------------------------------
 
 /**
- * Walk src/**\/*.{js,jsx,ts,tsx} (relative to the script's parent directory),
+ * Walk src/**\/*.{js,jsx,ts,tsx,css} (relative to the script's parent directory),
  * scan each file, and exit 1 with remediation advice if any violations are found.
  */
 async function main() {
@@ -150,7 +151,9 @@ async function main() {
     process.exit(0);
   }
 
-  // Walk src/**/*.{js,jsx,ts,tsx}, skip node_modules.
+  // Walk src/**/*.{js,jsx,ts,tsx,css}, skip node_modules.
+  // .css is included so NativeWind `@apply bg-primary/50` in global.css / CSS modules
+  // can't reintroduce the bug uncaught (CodeRabbit #566).
   // Use a manual recursive walk (runtime-independent): fs/promises.glob is Node 22+,
   // and a static import of it throws at link time on Node 20 (CI) — so we avoid it.
   const srcDir = path.join(projectRoot, 'src');
@@ -164,7 +167,7 @@ async function main() {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         if (entry.name !== 'node_modules') walkSync(full);
-      } else if (/\.(js|jsx|ts|tsx)$/.test(entry.name)) {
+      } else if (/\.(js|jsx|ts|tsx|css)$/.test(entry.name)) {
         files.push(full);
       }
     }
