@@ -43,6 +43,14 @@ const PROFILE_FRESHNESS_MS = 30_000;
  */
 let _profileFetchedAt = 0;
 
+/**
+ * Generation counter. logout() increments it; an in-flight checkAuth captures
+ * the value at start and skips its state-mutating set()s if the epoch changed
+ * (a logout landed mid-flight). Complements signal.aborted (which covers
+ * RouteGuard unmount) — this covers logout-during-flight on a still-mounted guard.
+ */
+let _authEpoch = 0;
+
 interface AuthState {
   // State
   user: User | null;
@@ -90,6 +98,7 @@ export const useAuthStore = create<AuthState>()(
         // Clear auth data + dedup state so next login fetches fresh profile
         _checkAuthInflight = null;
         _profileFetchedAt = 0;
+        _authEpoch += 1;
 
         set({
           user: null,
@@ -235,6 +244,7 @@ export const useAuthStore = create<AuthState>()(
         // Wrap the actual fetch in a Promise we store so concurrent callers
         // can attach to it rather than spawning their own requests.
         _checkAuthInflight = (async () => {
+          const epoch = _authEpoch;
           try {
             // Check Supabase session
             const {
@@ -242,6 +252,7 @@ export const useAuthStore = create<AuthState>()(
             } = await supabase.auth.getSession();
 
             if (!session) {
+              if (epoch !== _authEpoch) return;
               set({ isAuthenticated: false, isLoading: false });
               return;
             }
@@ -296,6 +307,7 @@ export const useAuthStore = create<AuthState>()(
               });
             }
 
+            if (epoch !== _authEpoch) return;
             set({
               user: fetchedUser,
               isAuthenticated: true,
@@ -313,6 +325,7 @@ export const useAuthStore = create<AuthState>()(
             // timeout (408), 5xx, or a thrown getSession() — is transient: keep the
             // persisted session intact and retryable; only release the spinner.
             if (error instanceof APIRequestError && error.status === 401) {
+              if (epoch !== _authEpoch) return;
               set({ user: null, isAuthenticated: false, isLoading: false });
               return;
             }
