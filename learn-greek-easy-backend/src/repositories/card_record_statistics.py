@@ -523,6 +523,45 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
         val = result.scalar_one()
         return float(val) if val is not None else 0.0
 
+    async def get_average_ef_and_interval(
+        self,
+        user_id: UUID,
+        deck_id: UUID | None = None,
+    ) -> tuple[float, float]:
+        """Get average easiness factor and average interval in a single round-trip.
+
+        SQLCON-07: Replaces the two separate calls to ``get_average_easiness_factor``
+        and ``get_average_interval`` inside ``get_deck_progress_detail`` with one
+        ``SELECT avg(ef), avg(interval)`` query using the same scoping as each
+        individual method (user_id, optional deck_id via join to card_record).
+
+        Note: This method does NOT filter by ``CardRecord.is_active``, matching
+        the behaviour of the two original methods (neither filters is_active).
+
+        Args:
+            user_id: User UUID.
+            deck_id: Optional deck filter.
+
+        Returns:
+            Tuple of (avg_ef, avg_interval) where avg_ef defaults to 2.5 if no
+            records (matching ``get_average_easiness_factor``) and avg_interval
+            defaults to 0.0 if no records (matching ``get_average_interval``).
+        """
+        conditions = [CardRecordStatistics.user_id == user_id]
+        query = select(
+            func.avg(CardRecordStatistics.easiness_factor).label("avg_ef"),
+            func.avg(CardRecordStatistics.interval).label("avg_interval"),
+        )
+        if deck_id is not None:
+            query = query.join(CardRecord, CardRecordStatistics.card_record_id == CardRecord.id)
+            conditions.append(CardRecord.deck_id == deck_id)
+        query = query.where(*conditions)
+        result = await self.db.execute(query)
+        row = result.one()
+        avg_ef = float(row.avg_ef) if row.avg_ef is not None else 2.5
+        avg_interval = float(row.avg_interval) if row.avg_interval is not None else 0.0
+        return avg_ef, avg_interval
+
     async def count_distinct_decks(self, user_id: UUID) -> int:
         """Count the number of distinct decks a user has card statistics in.
 

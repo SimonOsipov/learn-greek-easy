@@ -614,10 +614,12 @@ class ProgressService:
         week_end = today
 
         # Sequential on the shared AsyncSession (INFRA-01).
+        # SQLCON-07: avg_ef + avg_interval collapsed from 2 round-trips → 1.
         vocab_status = await self.card_stats_repo.count_by_status(user_id, deck_id)
         review_stats = await self.card_review_repo.get_deck_review_stats(user_id, deck_id)
-        avg_ef = await self.card_stats_repo.get_average_easiness_factor(user_id, deck_id)
-        avg_interval = await self.card_stats_repo.get_average_interval(user_id, deck_id)
+        avg_ef, avg_interval = await self.card_stats_repo.get_average_ef_and_interval(
+            user_id, deck_id
+        )
         total_cards = await self.card_record_repo.count_by_deck(deck_id, is_active=True)
         deck_dates_desc = await self.card_review_repo.get_deck_study_days(user_id, deck_id)
         weekly_counts = await self.card_review_repo.get_deck_weekly_activity(

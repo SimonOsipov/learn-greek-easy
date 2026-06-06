@@ -729,8 +729,8 @@ def _setup_deck_detail_mocks(
     stats.count_by_status = AsyncMock(
         return_value={"new": 0, "learning": 0, "review": 0, "mastered": 0, "due": 0}
     )
-    stats.get_average_easiness_factor = AsyncMock(return_value=2.5)
-    stats.get_average_interval = AsyncMock(return_value=1.0)
+    # SQLCON-07: merged into a single round-trip; returns (avg_ef, avg_interval)
+    stats.get_average_ef_and_interval = AsyncMock(return_value=(2.5, 1.0))
 
     review = review_cls.return_value
     review.get_deck_review_stats = AsyncMock(
