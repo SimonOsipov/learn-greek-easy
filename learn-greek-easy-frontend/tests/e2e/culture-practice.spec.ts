@@ -154,13 +154,18 @@ test.describe('Culture Practice Session', () => {
     // Navigate directly to summary (without active session)
     await page.goto(`/culture/${deckId}/summary`);
 
-    // Wait for navigation to complete - either summary page or redirect
-    await page.waitForLoadState('domcontentloaded');
+    // The /culture/:deckId/summary route is a static redirect to ../practice
+    // (the old session-aware summary page was removed in #273). Wait for the
+    // client-side React Router redirect to settle before asserting the URL,
+    // rather than reading it once after domcontentloaded (which races the redirect).
+    await page.waitForURL(/\/culture\/[^/]+\/(practice|summary|decks)/);
 
-    // Should either show summary or redirect to decks (since no active session)
     const currentUrl = page.url();
     const isOnSummary = currentUrl.includes('/summary');
-    const isRedirected = currentUrl.includes('/decks') || currentUrl.includes('/culture/decks');
+    const isRedirected =
+      currentUrl.includes('/practice') ||
+      currentUrl.includes('/decks') ||
+      currentUrl.includes('/culture/decks');
 
     expect(isOnSummary || isRedirected).toBe(true);
   });
