@@ -13,8 +13,7 @@
  * See learn-greek-easy-mobile/docs/design-tokens.md for full decision record.
  */
 
-import { readFileSync } from 'fs';
-import { glob } from 'fs/promises';
+import { readFileSync, readdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 
@@ -152,33 +151,25 @@ async function main() {
   }
 
   // Walk src/**/*.{js,jsx,ts,tsx}, skip node_modules.
+  // Use a manual recursive walk (runtime-independent): fs/promises.glob is Node 22+,
+  // and a static import of it throws at link time on Node 20 (CI) — so we avoid it.
   const srcDir = path.join(projectRoot, 'src');
-  const pattern = `${srcDir}/**/*.{js,jsx,ts,tsx}`;
 
   let allHits = [];
   const files = [];
 
-  // Node 22+ glob; for Node 20 we use a manual recursive walk as fallback.
-  try {
-    for await (const file of glob(pattern, { exclude: (f) => f.includes('node_modules') })) {
-      files.push(file);
-    }
-  } catch {
-    // Fallback: manual recursive walk for older Node versions.
-    const { readdirSync, statSync } = await import('fs');
-    function walkSync(dir) {
-      const entries = readdirSync(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        const full = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-          if (entry.name !== 'node_modules') walkSync(full);
-        } else if (/\.(js|jsx|ts|tsx)$/.test(entry.name)) {
-          files.push(full);
-        }
+  function walkSync(dir) {
+    const entries = readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== 'node_modules') walkSync(full);
+      } else if (/\.(js|jsx|ts|tsx)$/.test(entry.name)) {
+        files.push(full);
       }
     }
-    walkSync(srcDir);
   }
+  walkSync(srcDir);
 
   for (const filePath of files) {
     const fileText = readFileSync(filePath, 'utf8');
