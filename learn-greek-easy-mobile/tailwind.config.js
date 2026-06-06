@@ -22,6 +22,8 @@ module.exports = {
         success: 'hsl(var(--success))',
         warning: 'hsl(var(--warning))',
         danger: 'hsl(var(--danger))',
+        'danger-soft': 'hsl(var(--danger-soft))',
+        'danger-softer': 'hsl(var(--danger-softer))',
         popover: 'hsl(var(--popover))',
         secondary: 'hsl(var(--secondary))',
         muted: 'hsl(var(--muted))',
@@ -34,10 +36,22 @@ module.exports = {
         'on-photo': 'hsl(var(--on-photo-fg))',
         'on-photo-scrim': 'hsl(var(--on-photo-scrim))',
         'on-photo-active': 'hsl(var(--on-photo-active-fg))',
-        // Explicit opacity variants. NativeWind's `/<opacity>` modifier does NOT apply
-        // alpha on native for these var-backed tokens (renders dark) — verified on iOS,
-        // see NativeWind #689 / react-native-css #207. So the design's translucent on-photo
-        // values are defined as full-color tokens (theme-invariant, used without a modifier).
+        // Over-photo "Recommended" badge — brand Cyprus gold (34 100% 52% = rgb(255,149,10)).
+        // Theme-invariant, no .dark override (over-photo surface). MOB-13: no /NN modifier on
+        // var-backed tokens on native — explicit full-color rgba tokens are mandatory.
+        'badge-recommended': 'hsl(var(--badge-recommended))',
+        // === MOB-13 explicit opacity tokens (NativeWind native workaround) — full-colour rgba,
+        // used WITHOUT a /NN modifier (the /NN modifier renders dark on native for var-backed
+        // tokens via unsupported color-mix(). See learn-greek-easy-mobile/docs/design-tokens.md
+        // for the full decision record, root cause, and rejected alternatives). ===
+        //
+        // Decision (NWOPA-02): explicit full-colour <base>-<NN> rgba tokens (NN = integer alpha
+        // percent, value rgba(R,G,B,0.NN)) are canonical for translucent native surfaces.
+        // The /<NN> modifier on var-backed tokens is FORBIDDEN on native (routes through
+        // color-mix() → renders dark). <alpha-value> was REJECTED (MOB-09 / PR #555: still
+        // rendered dark on a clean cache-busted Release build). Element-level opacity-NN /
+        // active:opacity-NN is SAFE/out-of-scope (RN style.opacity — cite login.tsx:387/441/455,
+        // observability-debug.tsx:34/50). NativeWind upgrade DEFERRED pending on-device verify.
         'on-photo-10': 'rgba(255,255,255,0.10)',
         'on-photo-14': 'rgba(255,255,255,0.14)',
         'on-photo-18': 'rgba(255,255,255,0.18)',
@@ -50,19 +64,15 @@ module.exports = {
         'on-photo-78': 'rgba(255,255,255,0.78)',
         'on-photo-85': 'rgba(255,255,255,0.85)',
         'on-photo-96': 'rgba(255,255,255,0.96)',
-        'on-photo-scrim-42': 'rgba(8,11,20,0.42)',
-        'danger-18': 'rgba(239,68,68,0.18)',
+        'on-photo-scrim-42': 'rgba(8,11,20,0.42)',     // --on-photo-scrim 225 43% 5% ≈ rgb(8,11,20)
+        'danger-18': 'rgba(239,68,68,0.18)',            // --danger 0 78% 58% ≈ rgb(239,68,68)
         'danger-55': 'rgba(239,68,68,0.55)',
         'danger-70': 'rgba(239,68,68,0.70)',
-        'danger-soft': 'hsl(var(--danger-soft))',
-        'danger-softer': 'hsl(var(--danger-softer))',
-        // Over-photo "Recommended" badge — brand Cyprus gold (34 100% 52% = rgb(255,149,10)).
-        // Theme-invariant, no .dark override (over-photo surface). MOB-13: no /NN modifier on
-        // var-backed tokens on native — explicit full-color rgba tokens are mandatory.
-        'badge-recommended': 'hsl(var(--badge-recommended))',
-        'badge-recommended-25': 'rgba(255,149,10,0.25)',
+        'badge-recommended-25': 'rgba(255,149,10,0.25)', // --badge-recommended 34 100% 52% = rgb(255,149,10)
         // Primary at 0.15 alpha for the selected-tile badge flip (221 83% 53% = rgb(36,99,235)).
+        // Light-theme value; theme-invariant by design (selected-tile surface shows in light only).
         'primary-15': 'rgba(36,99,235,0.15)',
+        // === end MOB-13 explicit opacity tokens ===
       },
       borderRadius: {
         sm: '10px',

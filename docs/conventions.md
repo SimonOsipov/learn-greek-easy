@@ -76,7 +76,7 @@ Architectural decisions and established patterns. All agents (Feature, Architect
 | Decision | Convention | Reference |
 |----------|-----------|-----------|
 | Source of truth | All color/spacing/radius/shadow/font/animation values come from the design system; unlisted values don't ship | docs/design-system.md |
-| No raw hex | Use HSL tokens (`hsl(var(--token))`), not raw hex / `rgba(...)` / arbitrary Tailwind values | docs/design-system.md |
+| No raw hex | Use HSL tokens (`hsl(var(--token))`), not raw hex / `rgba(...)` / arbitrary Tailwind values. **Mobile carve-out:** under `learn-greek-easy-mobile/**`, explicit `rgba(...)` opacity tokens in `tailwind.config.js` are REQUIRED (not forbidden) for translucent native surfaces — the `/<NN>` modifier on var-backed tokens renders dark on iOS (NativeWind v4 `color-mix()` defect). See [`learn-greek-easy-mobile/docs/design-tokens.md`](../learn-greek-easy-mobile/docs/design-tokens.md) (MOB-13). | docs/design-system.md |
 | Reuse primitives | Compose existing `src/components/ui/*` (shadcn) — don't re-implement Dialog/Popover/Select/etc. | docs/design-system.md |
 | New tokens/animations | Add to `src/index.css` + `tailwind.config.js` AND update the design-system doc in the same PR | docs/design-system.md |
 | Three palettes | App / Landing / Practice palettes are distinct — don't cross them | docs/design-system.md |
