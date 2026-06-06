@@ -12,7 +12,13 @@ from src.services.progress_service import ProgressService
 
 @pytest.fixture
 def mock_db():
-    return MagicMock()
+    db = MagicMock()
+    # _fetch_streak_union_rows calls await self.db.execute(...) twice.
+    # Return a mock result whose .all() yields an empty list (all streaks = 0).
+    _empty_result = MagicMock()
+    _empty_result.all.return_value = []
+    db.execute = AsyncMock(return_value=_empty_result)
+    return db
 
 
 @pytest.fixture
@@ -21,7 +27,12 @@ def mock_user_id():
 
 
 def _make_full_repo_patches():
-    """Return the full set of context manager patches for all repos used by ProgressService."""
+    """Return the full set of context manager patches for all repos used by ProgressService.
+
+    SQLCON-06: compute_*_streak patches removed — get_dashboard_stats no longer
+    delegates to those functions.  db.execute is now an AsyncMock on mock_db
+    (see mock_db fixture) so _fetch_streak_union_rows can be awaited.
+    """
     return (
         patch("src.services.progress_service.CardRecordStatisticsRepository"),
         patch("src.services.progress_service.CardRecordReviewRepository"),
@@ -31,23 +42,7 @@ def _make_full_repo_patches():
         patch("src.services.progress_service.DeckRepository"),
         patch("src.services.progress_service.CardRecordRepository"),
         patch("src.services.progress_service.CultureDeckRepository"),
-        patch(
-            "src.services.progress_service.compute_aggregated_streak",
-            new=AsyncMock(return_value=0),
-        ),
         patch("src.services.progress_service.ExerciseReviewRepository"),
-        patch(
-            "src.services.progress_service.compute_vocabulary_streak",
-            new=AsyncMock(return_value=0),
-        ),
-        patch(
-            "src.services.progress_service.compute_culture_streak",
-            new=AsyncMock(return_value=0),
-        ),
-        patch(
-            "src.services.progress_service.compute_exercise_streak",
-            new=AsyncMock(return_value=0),
-        ),
     )
 
 
@@ -139,11 +134,7 @@ class TestGetDashboardStats:
             patches[5],
             patches[6],
             patches[7],
-            patches[8],
-            patches[9] as ex_cls,
-            patches[10],
-            patches[11],
-            patches[12],
+            patches[8] as ex_cls,
         ):
             _setup_dashboard_mocks(s_cls, r_cls, cs_cls, ca_cls, me_cls, ex_cls)
             service = ProgressService(mock_db)
@@ -167,11 +158,7 @@ class TestGetDashboardStats:
             patches[5],
             patches[6],
             patches[7],
-            patches[8],
-            patches[9] as ex_cls,
-            patches[10],
-            patches[11],
-            patches[12],
+            patches[8] as ex_cls,
         ):
             _setup_dashboard_mocks(
                 s_cls,
@@ -207,11 +194,7 @@ class TestGetDashboardStats:
             patches[5],
             patches[6],
             patches[7],
-            patches[8],
-            patches[9] as ex_cls,
-            patches[10],
-            patches[11],
-            patches[12],
+            patches[8] as ex_cls,
         ):
             _setup_dashboard_mocks(
                 s_cls,
@@ -247,11 +230,7 @@ class TestGetDashboardStats:
             patches[5],
             patches[6],
             patches[7],
-            patches[8],
-            patches[9] as ex_cls,
-            patches[10],
-            patches[11],
-            patches[12],
+            patches[8] as ex_cls,
         ):
             _setup_dashboard_mocks(
                 s_cls,
@@ -285,11 +264,7 @@ class TestGetDashboardStats:
             patches[5],
             patches[6],
             patches[7],
-            patches[8],
-            patches[9] as ex_cls,
-            patches[10],
-            patches[11],
-            patches[12],
+            patches[8] as ex_cls,
         ):
             _setup_dashboard_mocks(
                 s_cls, r_cls, cs_cls, ca_cls, me_cls, ex_cls, daily_stats=daily_rows
@@ -313,11 +288,7 @@ class TestGetDashboardStats:
             patches[5],
             patches[6],
             patches[7],
-            patches[8],
-            patches[9] as ex_cls,
-            patches[10],
-            patches[11],
-            patches[12],
+            patches[8] as ex_cls,
         ):
             _setup_dashboard_mocks(
                 s_cls,
@@ -789,10 +760,6 @@ class TestGetDeckProgressDetail:
             patches[6] as card_rec_cls,
             patches[7],
             patches[8],
-            patches[9],
-            patches[10],
-            patches[11],
-            patches[12],
         ):
             _setup_deck_detail_mocks(
                 stats_cls,
@@ -827,10 +794,6 @@ class TestGetDeckProgressDetail:
             patches[6] as card_rec_cls,
             patches[7],
             patches[8],
-            patches[9],
-            patches[10],
-            patches[11],
-            patches[12],
         ):
             _setup_deck_detail_mocks(
                 stats_cls,
@@ -858,10 +821,6 @@ class TestGetDeckProgressDetail:
             patches[6] as card_rec_cls,
             patches[7],
             patches[8],
-            patches[9],
-            patches[10],
-            patches[11],
-            patches[12],
         ):
             _setup_deck_detail_mocks(
                 stats_cls,
@@ -903,10 +862,6 @@ class TestGetDeckProgressDetail:
             patches[6] as card_rec_cls,
             patches[7],
             patches[8],
-            patches[9],
-            patches[10],
-            patches[11],
-            patches[12],
         ):
             _setup_deck_detail_mocks(
                 stats_cls,
@@ -943,10 +898,6 @@ class TestGetDeckProgressDetail:
             patches[6] as card_rec_cls,
             patches[7],
             patches[8],
-            patches[9],
-            patches[10],
-            patches[11],
-            patches[12],
         ):
             _setup_deck_detail_mocks(
                 stats_cls,

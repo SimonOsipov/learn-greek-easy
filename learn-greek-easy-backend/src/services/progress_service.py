@@ -3,11 +3,19 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
+from typing import Any
 from uuid import UUID
 
+from sqlalchemy import func, literal, select, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import CardStatus
+from src.db.models import (
+    CardRecordReview,
+    CardStatus,
+    CultureAnswerHistory,
+    ExerciseReview,
+    MockExamSession,
+)
 from src.repositories.card_record import CardRecordRepository
 from src.repositories.card_record_review import CardRecordReviewRepository
 from src.repositories.card_record_statistics import CardRecordStatisticsRepository
@@ -33,7 +41,8 @@ from src.schemas.progress import (
     TodayStats,
     TrendsSummary,
 )
-from src.services.gamification.streak import (
+from src.services.gamification.streak import (  # noqa: F401
+    MAX_STREAK_LOOKBACK_DAYS,
     _compute_streak_from_dates,
     _longest_streak_from_dates,
     compute_aggregated_streak,
@@ -142,30 +151,39 @@ class ProgressService:
             ),
         )
 
-        # Streak — all eight values fetched sequentially on the shared session
-        # (INFRA-01). The heavy date-set re-querying here is the top INFRA-04
-        # consolidation target (28 statements -> ~8 via a single tagged UNION).
-        async def _vocab_longest() -> int:
-            dates = await self.card_review_repo.get_all_unique_dates(user_id)
-            return _longest_streak_from_dates(sorted(set(dates)))
+        # Streak — SQLCON-06: replaced 8 sequential awaits (~14 SELECTs) with
+        # 2 tagged UNION ALL queries.  Query A covers the rolling 366-day window
+        # for all current-streak values; Query B covers all-time for longest.
+        # Each query's rows are bucketed into per-source Python sets, then the
+        # pure math helpers (_compute_streak_from_dates / _longest_streak_from_dates)
+        # compute all 8 values.  No delegation to compute_*_streak functions.
+        rolling_rows, all_time_rows = await self._fetch_streak_union_rows(user_id)
 
-        async def _culture_longest() -> int:
-            culture_dates = await self.culture_answer_repo.get_all_unique_dates(user_id)
-            mock_dates = await self.mock_exam_repo.get_all_unique_dates(user_id)
-            return _longest_streak_from_dates(sorted(set(culture_dates) | set(mock_dates)))
+        vocab_set_cur, culture_set_cur, mock_set_cur, exercise_set_cur = self._bucket_streak_rows(
+            rolling_rows
+        )
+        vocab_set_all, culture_set_all, mock_set_all, exercise_set_all = self._bucket_streak_rows(
+            all_time_rows
+        )
 
-        async def _exercise_longest() -> int:
-            dates = await self.exercise_review_repo.get_all_unique_dates(user_id)
-            return _longest_streak_from_dates(sorted(set(dates)))
+        # Current streaks (rolling window, descending sort)
+        current_streak = _compute_streak_from_dates(
+            sorted(vocab_set_cur | culture_set_cur | mock_set_cur, reverse=True)
+        )
+        vocab_current = _compute_streak_from_dates(sorted(vocab_set_cur, reverse=True))
+        culture_current = _compute_streak_from_dates(
+            sorted(culture_set_cur | mock_set_cur, reverse=True)
+        )
+        exercise_current = _compute_streak_from_dates(sorted(exercise_set_cur, reverse=True))
 
-        current_streak = await compute_aggregated_streak(self.db, user_id)
-        longest_streak = await self._get_aggregated_longest_streak(user_id)
-        vocab_current = await compute_vocabulary_streak(self.db, user_id)
-        culture_current = await compute_culture_streak(self.db, user_id)
-        exercise_current = await compute_exercise_streak(self.db, user_id)
-        vocab_longest = await _vocab_longest()
-        culture_longest = await _culture_longest()
-        exercise_longest = await _exercise_longest()
+        # Longest streaks (all-time window, ascending sort)
+        longest_streak = _longest_streak_from_dates(
+            sorted(vocab_set_all | culture_set_all | mock_set_all)
+        )
+        vocab_longest = _longest_streak_from_dates(sorted(vocab_set_all))
+        culture_longest = _longest_streak_from_dates(sorted(culture_set_all | mock_set_all))
+        exercise_longest = _longest_streak_from_dates(sorted(exercise_set_all))
+
         streak = StreakStats(
             current_streak=current_streak,
             longest_streak=longest_streak,
@@ -289,6 +307,93 @@ class ProgressService:
             culture_accuracy=culture_acc_pct,
             combined_accuracy=combined_acc,
         )
+
+    @staticmethod
+    def _bucket_streak_rows(rows: list) -> tuple[set, set, set, set]:
+        """Partition UNION ALL rows into (vocab, culture, mock, exercise) date sets.
+
+        Each row must have attributes ``source`` (str) and ``d`` (date).  Rows
+        with unknown source tags are silently ignored.
+
+        Returns:
+            Tuple of (vocab_set, culture_set, mock_set, exercise_set) where each
+            element is a ``set[date]``.
+        """
+        vocab: set[date] = set()
+        culture: set[date] = set()
+        mock: set[date] = set()
+        exercise: set[date] = set()
+        _buckets = {"vocab": vocab, "culture": culture, "mock": mock, "exercise": exercise}
+        for row in rows:
+            bucket = _buckets.get(row.source)
+            if bucket is not None:
+                bucket.add(row.d)
+        return vocab, culture, mock, exercise
+
+    async def _fetch_streak_union_rows(self, user_id: UUID) -> tuple[list[Any], list[Any]]:
+        """Issue two tagged UNION ALL queries for the streak fan-out.
+
+        Returns (rolling_rows, all_time_rows) where each row has attributes
+        ``source`` (str tag: "vocab" | "culture" | "mock" | "exercise") and
+        ``d`` (date).
+
+        Query A — rolling 366-day window (current-streak inputs):
+            Four branches, each guarded by ``ts >= cutoff``.
+        Query B — all-time window (longest-streak inputs):
+            Same four branches WITHOUT the cutoff predicate.
+
+        Both windows use ``func.date(<ts>)`` for consistent UTC bucketing,
+        matching the existing streak.py branches exactly.
+
+        SQLCON-06: replaces 8 sequential awaits (~14 SELECTs) with exactly
+        2 db.execute calls.
+        """
+        cutoff = datetime.combine(
+            date.today() - timedelta(days=MAX_STREAK_LOOKBACK_DAYS),
+            datetime.min.time(),
+        )
+
+        def _rolling_branch(model: Any, ts_col: Any, source: str) -> Any:
+            return (
+                select(
+                    func.date(ts_col).label("d"),
+                    literal(source).label("source"),
+                )
+                .where(model.user_id == user_id, ts_col >= cutoff)
+                .group_by(func.date(ts_col))
+            )
+
+        def _all_time_branch(model: Any, ts_col: Any, source: str) -> Any:
+            return (
+                select(
+                    func.date(ts_col).label("d"),
+                    literal(source).label("source"),
+                )
+                .where(model.user_id == user_id)
+                .group_by(func.date(ts_col))
+            )
+
+        # Query A: rolling 366-day window — 1 db.execute
+        rolling_union = union_all(
+            _rolling_branch(CardRecordReview, CardRecordReview.reviewed_at, "vocab"),
+            _rolling_branch(CultureAnswerHistory, CultureAnswerHistory.created_at, "culture"),
+            _rolling_branch(MockExamSession, MockExamSession.started_at, "mock"),
+            _rolling_branch(ExerciseReview, ExerciseReview.reviewed_at, "exercise"),
+        )
+        rolling_result = await self.db.execute(rolling_union)
+        rolling_rows: list[Any] = list(rolling_result.all())
+
+        # Query B: all-time window — 1 db.execute
+        all_time_union = union_all(
+            _all_time_branch(CardRecordReview, CardRecordReview.reviewed_at, "vocab"),
+            _all_time_branch(CultureAnswerHistory, CultureAnswerHistory.created_at, "culture"),
+            _all_time_branch(MockExamSession, MockExamSession.started_at, "mock"),
+            _all_time_branch(ExerciseReview, ExerciseReview.reviewed_at, "exercise"),
+        )
+        all_time_result = await self.db.execute(all_time_union)
+        all_time_rows: list[Any] = list(all_time_result.all())
+
+        return rolling_rows, all_time_rows
 
     async def _get_aggregated_longest_streak(self, user_id: UUID) -> int:
         # Sequential on the shared AsyncSession (INFRA-01).
