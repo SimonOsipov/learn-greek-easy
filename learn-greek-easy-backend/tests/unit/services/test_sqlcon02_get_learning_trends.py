@@ -38,14 +38,15 @@ Usage
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from unittest.mock import patch
 from uuid import UUID
 
 import pytest
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import CardStatus
+from src.db.models import CardRecord, CardRecordStatistics, CardStatus, CardType
 from src.repositories.card_record_review import CardRecordReviewRepository
 from src.repositories.card_record_statistics import CardRecordStatisticsRepository
 from src.services.progress_service import ProgressService
@@ -203,6 +204,71 @@ class TestMergeARepository:
         )
 
 
+# UTC timestamps used to place MASTERED rows inside / outside the query windows.
+# IN-WINDOW: falls on _BOUNDARY_EVE → inside [_RANGE_START, _RANGE_END] and
+#             inside the quarter window [2023-12-18, 2024-03-16].
+_MASTERED_IN_WINDOW_TS = datetime(2024, 3, 15, 23, 30, tzinfo=timezone.utc)
+# OUT-OF-WINDOW: clearly before _RANGE_START; also outside the quarter window
+#                (2023-12-18 is the earliest quarter boundary, so pick 2023-06-01).
+_MASTERED_OUT_OF_WINDOW_TS = datetime(2023, 6, 1, 12, 0, tzinfo=timezone.utc)
+
+
+async def _make_mastered_stats(
+    db_session: AsyncSession,
+    user_id: UUID,
+    golden_seed: GoldenSeed,
+    forced_updated_at: datetime,
+    variant_suffix: str,
+) -> CardRecordStatistics:
+    """Seed one MASTERED CardRecordStatistics row and backdate updated_at via raw SQL.
+
+    ``updated_at`` uses a DB server_default (func.now()), so it cannot be
+    overridden at INSERT time through the ORM.  After flush we issue a targeted
+    UPDATE to pin the timestamp to ``forced_updated_at``.
+
+    A new CardRecord with a unique variant_key is created to avoid the
+    (user_id, card_record_id) unique constraint on CardRecordStatistics — the
+    golden seed already owns golden_seed.card_record for the LEARNING row.
+    """
+    # Reuse the existing CardRecord from the golden seed but we need a fresh
+    # CardRecord for a new stats row (unique constraint: user_id + card_record_id).
+    # Create a sibling card with a unique variant_key.
+    new_card = CardRecord(
+        word_entry_id=golden_seed.card_record.word_entry_id,
+        deck_id=golden_seed.card_record.deck_id,
+        card_type=CardType.MEANING_EL_TO_EN,
+        variant_key=f"mastered_test_{variant_suffix}",
+        is_active=True,
+        front_content={"card_type": "meaning_el_to_en", "main": "λόγος"},
+        back_content={"card_type": "meaning_el_to_en", "answer": "word"},
+    )
+    db_session.add(new_card)
+    await db_session.flush()
+    await db_session.refresh(new_card)
+
+    stats = CardRecordStatistics(
+        user_id=user_id,
+        card_record_id=new_card.id,
+        easiness_factor=2.7,
+        interval=30,
+        repetitions=10,
+        status=CardStatus.MASTERED,
+    )
+    db_session.add(stats)
+    await db_session.flush()
+    await db_session.refresh(stats)
+
+    # Override the server-set updated_at via raw SQL so it falls inside/outside
+    # the query window as needed.
+    await db_session.execute(
+        text("UPDATE card_record_statistics " "SET updated_at = :ts " "WHERE id = :sid"),
+        {"ts": forced_updated_at, "sid": stats.id},
+    )
+    await db_session.flush()
+    await db_session.refresh(stats)
+    return stats
+
+
 # =============================================================================
 # Merge B — mastered derivation
 # =============================================================================
@@ -217,10 +283,34 @@ class TestMergeBMasteredDerivation:
         db_session: AsyncSession,
         golden_seed_fixture: GoldenSeed,  # noqa: F811
     ) -> None:
-        """AC5: Python-derived mastered total from per-day rows == the old DB scalar."""
+        """AC5: Python-derived mastered total from per-day rows == the old DB scalar.
+
+        Seeds 1 MASTERED row INSIDE [_RANGE_START, _RANGE_END] and 1 MASTERED
+        row OUTSIDE that range so that:
+        - A broken date-range filter (no BETWEEN) would return 2 instead of 1.
+        - A broken status filter (no status==MASTERED) would return 0.
+        Both failures are discriminated; the test cannot pass vacuously (0 == 0).
+        """
         await assert_session_utc(db_session)
         stats_repo = CardRecordStatisticsRepository(db_session)
         user_id: UUID = golden_seed_fixture.user.id
+
+        # 1 MASTERED row inside the window, 1 outside — expected count = 1.
+        await _make_mastered_stats(
+            db_session,
+            user_id,
+            golden_seed_fixture,
+            forced_updated_at=_MASTERED_IN_WINDOW_TS,
+            variant_suffix="in_window",
+        )
+        await _make_mastered_stats(
+            db_session,
+            user_id,
+            golden_seed_fixture,
+            forced_updated_at=_MASTERED_OUT_OF_WINDOW_TS,
+            variant_suffix="out_of_window",
+        )
+        _EXPECTED_MASTERED = 1
 
         # Legacy approach: separate DB round-trip
         legacy_mastered = await stats_repo.count_cards_mastered_in_range(
@@ -237,6 +327,10 @@ class TestMergeBMasteredDerivation:
             if row["status"] == CardStatus.MASTERED.value
         )
 
+        assert legacy_mastered == _EXPECTED_MASTERED, (
+            f"Legacy scalar returned {legacy_mastered}, expected {_EXPECTED_MASTERED}. "
+            "Check that the in-window MASTERED row's updated_at was correctly backdated."
+        )
         assert (
             derived_mastered == legacy_mastered
         ), f"Derived mastered ({derived_mastered}) != legacy scalar ({legacy_mastered})"
@@ -260,16 +354,45 @@ class TestGetLearningTrendsGolden:
         """summary.cards_mastered in consolidated path equals legacy count_cards_mastered_in_range.
 
         We patch date.today() inside progress_service to _TODAY_FIXED so the
-        quarter window (89 days back) covers the seed boundary dates.
+        quarter window (89 days back = 2023-12-18 … 2024-03-16) covers the seed
+        boundary dates.
+
+        Seeds 1 MASTERED row INSIDE the quarter window (_MASTERED_IN_WINDOW_TS
+        = 2024-03-15) and 1 MASTERED row OUTSIDE that window
+        (_MASTERED_OUT_OF_WINDOW_TS = 2023-06-01) so the assertion is
+        non-vacuous: both legacy scalar and service summary must return 1, not 0.
+        A broken date-range filter would yield 2; a broken status filter 0.
         """
         await assert_session_utc(db_session)
         user_id: UUID = golden_seed_fixture.user.id
+
+        # Seed 1 MASTERED in-window + 1 MASTERED out-of-window.
+        await _make_mastered_stats(
+            db_session,
+            user_id,
+            golden_seed_fixture,
+            forced_updated_at=_MASTERED_IN_WINDOW_TS,
+            variant_suffix="svc_in_window",
+        )
+        await _make_mastered_stats(
+            db_session,
+            user_id,
+            golden_seed_fixture,
+            forced_updated_at=_MASTERED_OUT_OF_WINDOW_TS,
+            variant_suffix="svc_out_of_window",
+        )
+        _EXPECTED_MASTERED = 1
 
         # Legacy mastered count via direct repo call over the same date range
         stats_repo = CardRecordStatisticsRepository(db_session)
         expected_start = _TODAY_FIXED - timedelta(days=90 - 1)  # period="quarter" = 90 days
         legacy_mastered = await stats_repo.count_cards_mastered_in_range(
             user_id, expected_start, _TODAY_FIXED
+        )
+
+        assert legacy_mastered == _EXPECTED_MASTERED, (
+            f"Legacy scalar returned {legacy_mastered}, expected {_EXPECTED_MASTERED}. "
+            "Check that the in-window MASTERED row's updated_at was correctly backdated."
         )
 
         # Service call with patched today — only today() is called in get_learning_trends
@@ -281,6 +404,10 @@ class TestGetLearningTrendsGolden:
         assert result.summary.cards_mastered == legacy_mastered, (
             f"summary.cards_mastered={result.summary.cards_mastered} "
             f"!= legacy={legacy_mastered}"
+        )
+        assert result.summary.cards_mastered == _EXPECTED_MASTERED, (
+            f"summary.cards_mastered={result.summary.cards_mastered} "
+            f"!= expected {_EXPECTED_MASTERED} (vacuous 0==0 guard)"
         )
 
     async def test_daily_stats_review_counts_and_accuracy_match(
