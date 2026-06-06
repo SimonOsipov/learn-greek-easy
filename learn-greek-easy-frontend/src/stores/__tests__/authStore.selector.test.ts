@@ -97,4 +97,42 @@ describe('selectHasPersistedSession', () => {
     // Reaching here without TypeError confirms the selector did not mutate the frozen object.
     expect(typeof first).toBe('boolean');
   });
+
+  // ---------------------------------------------------------------------------
+  // Adversarial / edge cases (Mode B — QA-authored)
+  // ---------------------------------------------------------------------------
+
+  it('returns false when user is undefined (not just null) (edge)', () => {
+    // AuthState.user is typed as User | null but undefined can arrive from
+    // stale / partially-rehydrated persist snapshots.
+    const state = {
+      _hasHydrated: true,
+      isAuthenticated: true,
+      user: undefined,
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(selectHasPersistedSession(state as any)).toBe(false);
+  });
+
+  it('returns false when user object is present but id key is absent (edge)', () => {
+    // A stale snapshot that has a user object but the id field was never set.
+    const state = {
+      _hasHydrated: true,
+      isAuthenticated: true,
+      user: { email: 'x@y.com' }, // id key entirely missing
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(selectHasPersistedSession(state as any)).toBe(false);
+  });
+
+  it('returns false when user.id is undefined (edge)', () => {
+    // id key present but explicitly undefined — !!undefined is false.
+    const state = {
+      _hasHydrated: true,
+      isAuthenticated: true,
+      user: { id: undefined },
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(selectHasPersistedSession(state as any)).toBe(false);
+  });
 });
