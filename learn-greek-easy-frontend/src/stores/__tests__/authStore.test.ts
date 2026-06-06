@@ -247,3 +247,268 @@ describe('authStore — checkAuth in-flight dedup (PERF-03)', () => {
     expect(getProfile).toHaveBeenCalledTimes(1); // still 1
   });
 });
+
+// ---------------------------------------------------------------------------
+// PERF-02-02: checkAuth background revalidation — error-disposition allow-list
+//
+// The NEW (unimplemented) contract:
+//   - Clears auth ONLY on: getSession() returns no session, OR getProfile()
+//     rejects with APIRequestError{status:401}.
+//   - PRESERVES user/isAuthenticated on EVERY other failure: offline (0),
+//     timeout (408), 5xx, or a thrown getSession() (network error).
+//
+// Most "preserve" rows go RED today because the current catch block clears
+// auth on ANY error — that is the exact behaviour being changed by PERF-02.
+//
+// Fake-timer strategy: each beforeEach advances the fake clock by another
+// EPOCH_STEP (60 s), guaranteeing that _profileFetchedAt stamped in any
+// preceding test is always > 30 s in the past. This prevents the freshness
+// guard from short-circuiting tests that seed user:U before calling checkAuth.
+// ---------------------------------------------------------------------------
+
+import { APIRequestError } from '@/services/api';
+
+const preservedUser = {
+  id: 'user-perf02',
+  email: 'preserved@test.com',
+  name: 'Preserved User',
+  avatar: undefined,
+  role: 'free' as const,
+  preferences: {
+    language: 'en' as const,
+    dailyGoal: 20,
+    notifications: true,
+    theme: 'light' as const,
+  },
+  stats: {
+    streak: 0,
+    wordsLearned: 0,
+    totalXP: 0,
+    joinedDate: new Date('2025-01-01'),
+  },
+  createdAt: new Date('2025-01-01'),
+  updatedAt: new Date('2025-01-01'),
+};
+
+const minimalProfile02 = {
+  id: 'user-perf02',
+  email: 'preserved@test.com',
+  full_name: 'Preserved User',
+  avatar_url: null,
+  is_active: true,
+  is_superuser: false,
+  created_at: '2025-01-01T00:00:00Z',
+  updated_at: '2025-01-01T00:00:00Z',
+};
+
+// Each test advances fake clock by EPOCH_STEP ms so _profileFetchedAt
+// from the previous test is always > PROFILE_FRESHNESS_MS (30 s) in the past.
+const EPOCH_STEP = 60_000; // 60 s > 30 s freshness window
+let perf02FakeEpoch = Date.now(); // start at real time, incremented each beforeEach
+
+describe('authStore — checkAuth background revalidation (PERF-02)', () => {
+  const getSession = supabase.auth.getSession as ReturnType<typeof vi.fn>;
+  const getProfile = authAPI.getProfile as ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    // Advance the epoch by one step so any _profileFetchedAt from the prior
+    // test is now stale (more than 30 s ago from the new fake "now").
+    perf02FakeEpoch += EPOCH_STEP;
+    vi.useFakeTimers();
+    vi.setSystemTime(perf02FakeEpoch);
+
+    vi.clearAllMocks();
+
+    // Reset store to unauthenticated baseline before each test.
+    // Tests that need a seeded authed user call setState explicitly.
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // -----------------------------------------------------------------------
+  // AC #2 — success path (start unauthed): session valid, profile 200 ->
+  // store reflects fresh user, isAuthenticated:true, isLoading:false
+  // -----------------------------------------------------------------------
+  it('success updates state (unauthed start, valid session + 200 profile)', async () => {
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
+    getProfile.mockResolvedValue(minimalProfile02);
+
+    await useAuthStore.getState().checkAuth();
+
+    const state = useAuthStore.getState();
+    expect(state.isAuthenticated).toBe(true);
+    expect(state.user).not.toBeNull();
+    expect(state.user?.email).toBe('preserved@test.com');
+    expect(state.isLoading).toBe(false);
+  });
+
+  // -----------------------------------------------------------------------
+  // AC #3, #5 — confirmed-invalid: 401 from /auth/me -> clears auth
+  // -----------------------------------------------------------------------
+  it('401 from /auth/me clears auth', async () => {
+    useAuthStore.setState({
+      user: preservedUser,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+    });
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
+    getProfile.mockRejectedValue(
+      new APIRequestError({ status: 401, statusText: 'Unauthorized', message: 'Unauthorized' })
+    );
+
+    await useAuthStore.getState().checkAuth();
+
+    const state = useAuthStore.getState();
+    expect(state.user).toBeNull();
+    expect(state.isAuthenticated).toBe(false);
+  });
+
+  // -----------------------------------------------------------------------
+  // AC #3, #5 — confirmed-invalid: no session -> clears auth, getProfile not called
+  // -----------------------------------------------------------------------
+  it('no-session clears auth and does not call getProfile', async () => {
+    useAuthStore.setState({
+      user: preservedUser,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+    });
+    getSession.mockResolvedValue({ data: { session: null } });
+
+    await useAuthStore.getState().checkAuth();
+
+    const state = useAuthStore.getState();
+    expect(state.isAuthenticated).toBe(false);
+    expect(getProfile).not.toHaveBeenCalled();
+  });
+
+  // -----------------------------------------------------------------------
+  // AC #4, #6 — transient: offline (status 0) -> PRESERVES session
+  // [EXPECT RED] Current catch clears auth on any non-abort error
+  // -----------------------------------------------------------------------
+  it('offline (status 0) preserves user and isAuthenticated', async () => {
+    useAuthStore.setState({
+      user: preservedUser,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+    });
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
+    getProfile.mockRejectedValue(
+      new APIRequestError({ status: 0, statusText: 'Network Error', message: 'Network Error' })
+    );
+
+    await useAuthStore.getState().checkAuth();
+
+    const state = useAuthStore.getState();
+    expect(state.user).not.toBeNull();
+    expect(state.user?.id).toBe('user-perf02');
+    expect(state.isAuthenticated).toBe(true);
+  });
+
+  // -----------------------------------------------------------------------
+  // AC #4, #6 — transient: timeout (status 408) -> PRESERVES session
+  // [EXPECT RED] Current catch clears auth on any non-abort error
+  // -----------------------------------------------------------------------
+  it('timeout (status 408) preserves user and isAuthenticated', async () => {
+    useAuthStore.setState({
+      user: preservedUser,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+    });
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
+    getProfile.mockRejectedValue(
+      new APIRequestError({
+        status: 408,
+        statusText: 'Request Timeout',
+        message: 'Request Timeout',
+      })
+    );
+
+    await useAuthStore.getState().checkAuth();
+
+    const state = useAuthStore.getState();
+    expect(state.user).not.toBeNull();
+    expect(state.user?.id).toBe('user-perf02');
+    expect(state.isAuthenticated).toBe(true);
+  });
+
+  // -----------------------------------------------------------------------
+  // AC #4, #6 — transient: 5xx (status 500) -> PRESERVES session
+  // [EXPECT RED] Current catch clears auth on any non-abort error
+  // -----------------------------------------------------------------------
+  it('5xx (status 500) preserves user and isAuthenticated', async () => {
+    useAuthStore.setState({
+      user: preservedUser,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+    });
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
+    getProfile.mockRejectedValue(
+      new APIRequestError({
+        status: 500,
+        statusText: 'Internal Server Error',
+        message: 'Internal Server Error',
+      })
+    );
+
+    await useAuthStore.getState().checkAuth();
+
+    const state = useAuthStore.getState();
+    expect(state.user).not.toBeNull();
+    expect(state.user?.id).toBe('user-perf02');
+    expect(state.isAuthenticated).toBe(true);
+  });
+
+  // -----------------------------------------------------------------------
+  // AC #6 — transient: getSession() throws a network error -> PRESERVES session
+  // [EXPECT RED] Current catch clears auth on any non-abort error
+  // -----------------------------------------------------------------------
+  it('getSession() throw (network error) preserves user and isAuthenticated', async () => {
+    useAuthStore.setState({
+      user: preservedUser,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+    });
+    getSession.mockRejectedValue(new Error('Network failure'));
+
+    await useAuthStore.getState().checkAuth();
+
+    const state = useAuthStore.getState();
+    expect(state.user).not.toBeNull();
+    expect(state.user?.id).toBe('user-perf02');
+    expect(state.isAuthenticated).toBe(true);
+  });
+
+  // -----------------------------------------------------------------------
+  // AC #1 — fire-and-forget: checkAuth() called without await returns a Promise;
+  // awaiting it shows the updated state
+  // -----------------------------------------------------------------------
+  it('fire-and-forget: checkAuth() returns a Promise; awaited state is updated', async () => {
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
+    getProfile.mockResolvedValue(minimalProfile02);
+
+    const result = useAuthStore.getState().checkAuth();
+
+    // Immediately after call (before await): result must be a Promise
+    expect(result).toBeInstanceOf(Promise);
+
+    // After awaiting: store must reflect the fetched user
+    await result;
+    const state = useAuthStore.getState();
+    expect(state.isAuthenticated).toBe(true);
+    expect(state.user?.email).toBe('preserved@test.com');
+  });
+});
