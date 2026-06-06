@@ -2,7 +2,7 @@
 
 ## Overview
 
-Automated execution of a single user story's Backlog subtasks through 4 mandatory per-subtask quality gates (Architecture → Explore → Execution → QA Verify), followed by a story-level visual QA gate (Phase 3.5) that checks the assembled feature against the original objective on the preview deploy. Runs in an isolated git worktree so multiple stories can be worked in parallel from separate terminals without colliding.
+Automated execution of a single user story's Backlog subtasks through per-subtask quality gates (Architecture → Explore → Test-Spec* → Execution → QA Verify; *Test-Spec runs only for logic-bearing `Test-first: yes` subtasks), followed by a story-level visual QA gate (Phase 3.5) that checks the assembled feature against the original objective on the preview deploy. Runs in an isolated git worktree so multiple stories can be worked in parallel from separate terminals without colliding.
 
 **Invocation**: `/ralph <STORY-ID>` (e.g., `/ralph SIT-07`). One story per invocation. To run multiple stories in parallel, open another terminal and invoke `/ralph SIT-09` — each invocation creates its own worktree, branch, and PR.
 
@@ -133,10 +133,11 @@ For each subtask, in dependency order, execute the 4 stages below. Delegate to s
 #### Subagent Mapping (MANDATORY)
 | Stage | Subagent Type | Usage |
 |-------|--------------|-------|
-| Architecture | product-architecture-spec | Always — review/enhance the implementation plan (includes plan self-validation) |
+| Architecture | product-architecture-spec | Always — review/enhance the implementation plan (includes plan self-validation + per-subtask `Test-first: yes/no` classification and a Test Specs table for logic-bearing subtasks) |
 | Explore | Explore | Always — verify files, patterns, and placement |
-| Execution | product-executor | Always — implement all code changes |
-| QA Verify | product-qa-spec | Always — verify implementation correctness (skeptical by default; see the agent's Critique Disposition) |
+| Test-Spec | product-qa-spec | **`Test-first: yes` subtasks only** — author the architect's Test Specs as runnable tests and confirm they fail (RED) before any implementation (the agent's Mode A) |
+| Execution | product-executor | Always — implement all code changes; for `Test-first: yes` subtasks, drive the red tests to green |
+| QA Verify | product-qa-spec | Always — verify implementation correctness (skeptical by default; see the agent's Critique Disposition). For test-first subtasks, confirm the AC tests are green + meaningful and add adversarial/edge coverage (the agent's Mode B) |
 
 > A second, **story-level** QA pass runs once after all subtasks complete — see **Phase 3.5: Story-Level Visual QA Gate**.
 
@@ -151,7 +152,8 @@ Read the corresponding agent technical prompt file BEFORE executing the stage yo
 | Stage | Read this file first |
 |-------|---------------------|
 | Architecture | `~/.claude/agents/product-architecture-spec.md` |
-| QA Verify | `~/.claude/agents/product-qa-spec.md` |
+| Test-Spec | `~/.claude/agents/product-qa-spec.md` (Mode A) |
+| QA Verify | `~/.claude/agents/product-qa-spec.md` (Mode B) |
 | Execution | `~/.claude/agents/product-executor.md` |
 | Explore | No file needed — use Glob/Grep/Read directly inside the worktree |
 
@@ -170,9 +172,17 @@ Read the corresponding agent technical prompt file BEFORE executing the stage yo
 - If gaps found, update the Backlog task's implementation_notes via `mcp__backlog__task_edit`
 - **Checkpoint:** `EXPLORE_DONE`
 
+#### Stage 2.5: Test-Spec (`Test-first: yes` subtasks only)
+- **Skip this stage entirely if the subtask is `Test-first: no`** (UI/visual/copy/config — its oracle is the Phase 3.5 visual gate, not unit tests). Run it for `Test-first: yes` subtasks (logic-bearing: services, API contracts, business rules, data models, state machines, validation).
+- Spawn a `product-qa-spec` subagent via Task tool (its **Mode A**), passing `$WORKTREE_PATH` as CWD and the architect's **Test Specs** table from the subtask.
+- It transcribes each Test Spec row into a runnable test (unit / integration / API) and runs the suite to confirm the new tests **FAIL for the right reason** — assertion or not-implemented, NOT import/collection errors. These tests come from the acceptance criteria, authored before implementation, independent of how the executor will build the feature.
+- It commits the red tests inside the worktree.
+- **Checkpoint:** `TESTS_RED`
+
 #### Stage 3: Execution
 - Spawn a `product-executor` subagent via Task tool, passing `$WORKTREE_PATH` as CWD
 - Pass it the COMPLETE Backlog subtask details: acceptance criteria, implementation plan, references, implementation notes
+- For `Test-first: yes` subtasks, instruct it to **drive the Stage 2.5 red tests to green** — implement until they pass, without weakening, skipping, or deleting any red test (if a test itself is wrong, it flags it rather than editing around it). It authors no *new* tests (QA adds those in Stage 4).
 - The executor handles all file reads, edits, and creation **inside the worktree**
 - The executor commits inside the worktree and (per its FIRST/MIDDLE/FINAL `**Order**` logic in `~/.claude/agents/product-executor.md`) handles `git push` and the PR draft/ready transitions
 - After the executor finishes, run tests inside the worktree:
@@ -183,8 +193,9 @@ Read the corresponding agent technical prompt file BEFORE executing the stage yo
 - **Checkpoint:** `EXECUTION_DONE`
 
 #### Stage 4: QA Verification
-- Spawn a `product-qa-spec` subagent via Task tool. It runs in its **default critique disposition** (skeptical, anchors on acceptance criteria not the diff, cites evidence per verdict — see `~/.claude/agents/product-qa-spec.md`).
+- Spawn a `product-qa-spec` subagent via Task tool (its **Mode B**). It runs in its **default critique disposition** (skeptical, anchors on acceptance criteria not the diff, cites evidence per verdict — see `~/.claude/agents/product-qa-spec.md`).
 - Pass it: acceptance criteria, implementation plan, list of changed files, Definition of Done items
+- For `Test-first: yes` subtasks, it confirms the Stage 2.5 AC tests are now **green and still meaningful** (would fail if the behavior regressed), then *adds* the adversarial / edge / negative coverage those AC tests didn't include — it does not re-author the AC tests.
 - Backend-only: verify tests pass, model/schema correctness
 - Frontend: use Playwright MCP for visual verification (against the PR's preview deploy URL once available)
 - If issues found: spawn product-executor to fix, then re-verify
@@ -273,7 +284,7 @@ branch: feature/sit-07-description-audio
 worktree_path: /Users/samosipov/Downloads/learn-greek-easy/.claude/worktrees/sit-07
 pr_number: null   # set after FIRST subtask creates the PR
 current_subtask: SIT-07-02
-stage: execution   # architecture | explore | execution | qa-verify | visual-qa
+stage: execution   # architecture | explore | test-spec | execution | qa-verify | visual-qa
 completed_subtasks:
   - SIT-07-01
 blockers: []
@@ -338,7 +349,10 @@ gh run list --branch "$BRANCH" --limit 1 --json databaseId,status -q '.[0]'
 | Anti-Pattern | Correct Approach |
 |-------------|------------------|
 | Lead doing file edits directly | Delegate to product-executor / Explore subagents |
-| Skipping architecture / explore / QA stages | Every stage is mandatory |
+| Skipping architecture / explore / QA stages | Every stage is mandatory (Test-Spec is mandatory for `Test-first: yes` subtasks, skipped only for `Test-first: no`) |
+| Implementing a logic-bearing subtask before its AC tests are red | Author failing AC tests in Stage 2.5 first (`TESTS_RED`), then the executor drives them green |
+| Weakening, skipping, or deleting a red test to force green | Fix the implementation, not the test; if the test itself is wrong, flag it for architect/QA |
+| Executor authoring its own test coverage | Executor only drives the architect's pre-authored reds to green; QA owns new test coverage (Stage 4) |
 | Working in main checkout | Always work in `$WORKTREE_PATH`; main is the user's space |
 | Mixing subtasks from different stories on one branch | One story per branch, always |
 | Title-parsing Backlog tasks to find a story's subtasks | Use the `story:<slug>` label set by /subtask-generator |
