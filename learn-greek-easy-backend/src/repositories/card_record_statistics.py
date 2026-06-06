@@ -241,21 +241,34 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
     ) -> dict[str, int]:
         """Count card records grouped by SM-2 status.
 
+        SQLCON-03: Rewritten from 2 round-trips to 1 via FILTER aggregate.
+        The ``due`` count is derived by summing per-status due counts in Python
+        (value-identical: the old due query counted ALL active rows with
+        ``next_review_date <= today`` regardless of status, so summing the
+        per-status due counts yields the same total).
+
+        The ``next_review_date <= date.today()`` predicate type is preserved
+        (``date.today()``, NOT UTC now()) to match the original due_query.
+
         Args:
             user_id: User UUID.
-            deck_id: Optional deck filter.
+            deck_id: Optional deck filter (preserves existing optional scoping).
 
         Returns:
             Dict mapping status value strings to counts, plus "due" key.
         """
+        today = date.today()
         query = (
-            select(CardRecordStatistics.status, func.count().label("count"))
+            select(
+                CardRecordStatistics.status,
+                func.count().label("count"),
+                func.count().filter(CardRecordStatistics.next_review_date <= today).label("due"),
+            )
             .join(CardRecord, CardRecordStatistics.card_record_id == CardRecord.id)
             .where(CardRecordStatistics.user_id == user_id)
             .where(CardRecord.is_active.is_(True))
             .group_by(CardRecordStatistics.status)
         )
-
         if deck_id is not None:
             query = query.where(CardRecord.deck_id == deck_id)
 
@@ -268,22 +281,11 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
             "review": 0,
             "mastered": 0,
         }
-        for status, count in rows:
+        total_due = 0
+        for status, count, due in rows:
             counts[status.value] = count
-
-        due_query = (
-            select(func.count())
-            .select_from(CardRecordStatistics)
-            .join(CardRecord, CardRecordStatistics.card_record_id == CardRecord.id)
-            .where(CardRecordStatistics.user_id == user_id)
-            .where(CardRecordStatistics.next_review_date <= date.today())
-            .where(CardRecord.is_active.is_(True))
-        )
-        if deck_id is not None:
-            due_query = due_query.where(CardRecord.deck_id == deck_id)
-
-        due_result = await self.db.execute(due_query)
-        counts["due"] = due_result.scalar_one()
+            total_due += due
+        counts["due"] = total_due
 
         return counts
 

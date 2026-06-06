@@ -752,3 +752,76 @@ class CardRecordReviewRepository(BaseRepository[CardRecordReview]):
         )
         result = await self.db.execute(query)
         return [(row.review_date, int(row.cnt)) for row in result.all()]
+
+    # ------------------------------------------------------------------
+    # SQLCON-03 merged methods — gamification projection path only
+    # ------------------------------------------------------------------
+
+    async def get_projection_review_scalar_agg(self, user_id: UUID) -> dict:
+        """Return scalar aggregates used by GamificationProjection in one query.
+
+        Merges ``get_total_reviews`` (all-time count) and ``get_weekly_accuracy``
+        (last-7-days correct/total) into a single round-trip using conditional
+        aggregate FILTER.
+
+        The weekly cutoff is computed identically to ``get_weekly_accuracy``
+        (Shape 1):
+            ``datetime.combine(date.today() - timedelta(days=7), datetime.min.time())``
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            Dict with keys:
+                ``total_reviews``  (int) — all-time review count
+                ``weekly_correct`` (int) — reviews with quality >= 3 in last 7 days
+                ``weekly_total``   (int) — all reviews in last 7 days
+        """
+        weekly_cutoff = datetime.combine(date.today() - timedelta(days=7), datetime.min.time())
+        query = select(
+            func.count().label("total_reviews"),
+            func.count()
+            .filter(CardRecordReview.reviewed_at >= weekly_cutoff)
+            .label("weekly_total"),
+            func.sum(case((CardRecordReview.quality >= 3, 1), else_=0))
+            .filter(CardRecordReview.reviewed_at >= weekly_cutoff)
+            .label("weekly_correct"),
+        ).where(CardRecordReview.user_id == user_id)
+        result = await self.db.execute(query)
+        row = result.one()
+        return {
+            "total_reviews": int(row.total_reviews),
+            "weekly_correct": int(row.weekly_correct or 0),
+            "weekly_total": int(row.weekly_total or 0),
+        }
+
+    async def get_projection_daily_counts(self, user_id: UUID) -> list:
+        """Return per-day review counts for GamificationProjection in one query.
+
+        Feeds both ``get_daily_review_counts`` and ``get_max_inactive_gap_days``
+        in the projection path — callers drive both from the same result set
+        (Shape 2).  The row ordering (ascending by date) matches
+        ``get_daily_review_counts``, so the gap algorithm (iterate
+        ``range(len(dates)-1)`` in ascending order) is unaffected.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            List of Row objects with attributes ``review_date`` and ``cnt``
+            (int-coerced), ordered chronologically ascending.  Row objects
+            support attribute access (``row.review_date``, ``row.cnt``) and
+            ``_mapping``-based dict conversion for ``assert_rows_equal``.
+            Empty list if the user has no reviews.
+        """
+        query = (
+            select(
+                func.date(CardRecordReview.reviewed_at).label("review_date"),
+                func.count().label("cnt"),
+            )
+            .where(CardRecordReview.user_id == user_id)
+            .group_by(func.date(CardRecordReview.reviewed_at))
+            .order_by(func.date(CardRecordReview.reviewed_at).asc())
+        )
+        result = await self.db.execute(query)
+        return list(result.all())
