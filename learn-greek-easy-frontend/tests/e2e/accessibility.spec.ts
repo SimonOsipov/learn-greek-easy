@@ -190,6 +190,9 @@ test.describe('Accessibility - Protected Pages', () => {
   test('Decks page should have no accessibility violations', async ({ page }) => {
     await page.goto('/decks');
 
+    // Wait for decks page React content to load (not the LCP shell) before scanning.
+    await expect(page.locator('[data-testid="decks-title"]' )).toBeVisible({ timeout: 10000 });
+
     const accessibilityScanResults = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .disableRules(['landmark-one-main', 'page-has-heading-one', 'region'])

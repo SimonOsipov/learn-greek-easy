@@ -47,7 +47,9 @@
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: hsl(var(--fg-3));
+  color: hsl(
+    var(--fg-2)
+  ); /* was --fg-3 (#7f899f, 3.33:1); --fg-2 gives 5.72:1 light / 9.27:1 dark — WCAG AA */
 }
 .dx-kicker::before {
   content: '';
