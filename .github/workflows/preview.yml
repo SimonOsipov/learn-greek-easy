@@ -150,6 +150,10 @@ jobs:
         working-directory: learn-greek-easy-mobile
         run: npx jest --ci
 
+      - name: Token opacity guard (MOB-13)
+        working-directory: learn-greek-easy-mobile
+        run: node scripts/check-token-opacity.mjs
+
   # =============================================================================
   # JOB 1c: CI Gate (MOB-01a) — the single REQUIRED status check
   # Purpose: Always runs and reports one definitive pass/fail, regardless of which
