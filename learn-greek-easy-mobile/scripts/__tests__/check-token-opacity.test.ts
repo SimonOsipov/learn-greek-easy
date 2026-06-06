@@ -251,3 +251,76 @@ describe('scanContent — multi-token and explicit-rgba safety (AC#4)', () => {
     expect(hits[0].line).toBe(2); // line 2 (1-indexed)
   });
 });
+
+// ---------------------------------------------------------------------------
+// Adversarial / edge coverage (Mode B — QA-added, MOB-13 NWOPA-04)
+// ---------------------------------------------------------------------------
+
+describe('adversarial edge cases (QA Mode B)', () => {
+  // Adv-1: longest-first / prefix-collision guard
+  // 'primary-2' and 'primary' are both in the denylist. When the string
+  // 'bg-primary-2/40' is scanned, the hit's token must be 'primary-2'
+  // (longer match wins), not 'primary' (shorter prefix). Also confirms
+  // the full snippet includes the /NN modifier.
+  it('Adv-1: resolves prefix collision — bg-primary-2/40 hits token primary-2 not primary', () => {
+    const denylist = ['primary-2', 'primary'];
+    const fileText = '<View className="bg-primary-2/40" />';
+    const hits = scanContent(denylist, fileText);
+
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits[0].token).toBe('primary-2');
+    // Snippet must contain the full violated class including /NN
+    expect(hits[0].snippet).toContain('bg-primary-2/40');
+  });
+
+  // Adv-2: multiple utilities in one className string → two distinct hits
+  it('Adv-2: returns TWO hits for bg-card/50 and text-fg/80 in one className', () => {
+    const denylist = ['card', 'fg', 'primary'];
+    const fileText = '<View className="rounded-xl bg-card/50 px-2 text-fg/80" />';
+    const hits = scanContent(denylist, fileText);
+
+    expect(hits.length).toBe(2);
+    const tokens = hits.map((h) => h.token).sort();
+    expect(tokens).toEqual(['card', 'fg']);
+  });
+
+  // Adv-3: no false-positive on a substring token with no /NN modifier
+  // Denylist containing 'border' must NOT flag bare 'border' (no /NN) or
+  // 'border-2' style classes (not a color utility match). The /NN suffix
+  // is required for a violation to be reported.
+  it('Adv-3: no false-positive — bare "border" and "border-2" with no /NN not flagged', () => {
+    const denylist = ['border'];
+    // 'border' and 'border-2' have no /NN modifier — must NOT be flagged.
+    const fileText = '<View className="border rounded border-2 border-solid" />';
+    const hits = scanContent(denylist, fileText);
+
+    expect(hits).toHaveLength(0);
+  });
+
+  // Adv-4: explicit-rgba token never matched; var-backed base name IS matched
+  // parseDenylist must exclude 'on-photo-scrim-42' (rgba) but include
+  // 'on-photo-scrim' (hsl var). Then:
+  //   - scanContent on 'bg-on-photo-scrim-42' (no /NN) → empty
+  //   - scanContent on 'bg-on-photo-scrim/42' (/NN on var-backed) → hit
+  it('Adv-4a: parseDenylist excludes on-photo-scrim-42 (rgba) but includes on-photo-scrim (hsl)', () => {
+    const denylist = parseDenylist(FULL_TAILWIND_SNIPPET);
+    expect(denylist).not.toContain('on-photo-scrim-42');
+    expect(denylist).toContain('on-photo-scrim');
+  });
+
+  it('Adv-4b: bg-on-photo-scrim-42 (no /NN, explicit-rgba class) is NOT flagged', () => {
+    const denylist = parseDenylist(FULL_TAILWIND_SNIPPET);
+    const fileText = '<View className="bg-on-photo-scrim-42" />';
+    const hits = scanContent(denylist, fileText);
+    expect(hits).toHaveLength(0);
+  });
+
+  it('Adv-4c: bg-on-photo-scrim/42 (var-backed with /NN) IS flagged as a violation', () => {
+    const denylist = parseDenylist(FULL_TAILWIND_SNIPPET);
+    const fileText = '<View className="bg-on-photo-scrim/42" />';
+    const hits = scanContent(denylist, fileText);
+
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits[0].token).toBe('on-photo-scrim');
+  });
+});
