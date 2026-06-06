@@ -70,6 +70,25 @@ const config: ExpoConfig = {
     bundleIdentifier: bundleId,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      // CI-only: mark the dev-menu onboarding as finished so the auto-onboarding
+      // popup (the "This is the developer menu… Continue" modal) doesn't cover the
+      // app on a fresh Maestro clearState reinstall and block the smoke. Read by
+      // expo-dev-menu DevMenuPreferences.setup() as the registration default for
+      // EXDevMenuIsOnboardingFinished. Unset locally => devs still see onboarding once.
+      ...(process.env.CI_DEV_MENU_ONBOARDING_FINISHED === 'true'
+        ? {
+            // Suppress the dev-menu onboarding popup (read by DevMenuPreferences as
+            // the EXDevMenuIsOnboardingFinished registration default).
+            EXDevMenuIsOnboardingFinished: true,
+            // With onboarding finished, the dev-menu auto-open condition falls through
+            // to showsAtLaunch, which DEFAULTS TO TRUE on iOS (DevMenuPreferences.setup
+            // registers `showsAtLaunchKey: showsAtLaunchDefault ?? true`). That auto-opens
+            // the TOOLS panel over the app and blocks Maestro. Bake it false so the menu
+            // stays closed on a fresh (clearState reinstall) launch. Unset locally => devs
+            // keep the normal dev menu.
+            EXDevMenuShowsAtLaunch: false,
+          }
+        : {}),
     },
   },
   android: {
@@ -87,6 +106,13 @@ const config: ExpoConfig = {
     favicon: './assets/images/favicon.png',
   },
   plugins: [
+    // CI-only: bake a default Metro URL into the dev-client binary so a cold
+    // launch (incl. Maestro clearState reinstall) auto-connects to Metro and
+    // loads the JS bundle instead of showing the dev-launcher menu. Unset
+    // locally => no behavioral change for developers. See mobile-native-build.yml.
+    ...(process.env.CI_DEV_LAUNCH_URL
+      ? [['expo-dev-client', { defaultLaunchURL: process.env.CI_DEV_LAUNCH_URL }] as [string, Record<string, unknown>]]
+      : []),
     'expo-router',
     [
       'expo-splash-screen',
