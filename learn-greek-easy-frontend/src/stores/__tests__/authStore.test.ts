@@ -522,6 +522,103 @@ describe('authStore — logout-race epoch guard (PERF-02-04)', () => {
     expect(state.user?.id).toBe('user-epoch04');
     expect(state.isAuthenticated).toBe(true);
   });
+
+  // -----------------------------------------------------------------------
+  // ADVERSARIAL-1 — epoch guard is generational, not a permanent latch
+  //
+  // Sequence:
+  //   1. Authed user — checkAuth fires, getProfile held pending.
+  //   2. logout() increments epoch (race #1). Late getProfile resolves.
+  //      success-set is blocked by epoch guard. User stays logged out.
+  //   3. A FRESH checkAuth (new epoch captured) fires and resolves success.
+  //      The guard must NOT block it — the store is usable again.
+  //
+  // Proves the guard does not permanently latch the store after a race.
+  // A naive "once burned, always blocked" implementation would fail here.
+  // -----------------------------------------------------------------------
+  it('ADVERSARIAL: epoch guard is generational — fresh checkAuth after logout-race sets normally', async () => {
+    // --- Phase 1: seed an authed user and stage the first race ---
+    useAuthStore.setState({
+      user: preservedUser04,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+    });
+
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok-gen' } } });
+
+    let resolveProfile!: (v: typeof minimalProfile04) => void;
+    const racedProfilePromise = new Promise<typeof minimalProfile04>((res) => {
+      resolveProfile = res;
+    });
+    getProfile.mockReturnValueOnce(racedProfilePromise);
+
+    // Start checkAuth #1 — suspended at getProfile
+    const racedCheckAuth = useAuthStore.getState().checkAuth();
+
+    // --- Phase 2: logout mid-flight (increments epoch) ---
+    await useAuthStore.getState().logout();
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+
+    // Resolve the stale getProfile — epoch guard must discard the set
+    resolveProfile(minimalProfile04);
+    await racedCheckAuth;
+
+    // Still logged out — epoch guard worked
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    expect(useAuthStore.getState().user).toBeNull();
+
+    // --- Phase 3: fresh checkAuth after the race — must succeed ---
+    // Advance clock so freshness window does not suppress the new call
+    perf04FakeEpoch += EPOCH_STEP_04;
+    vi.setSystemTime(perf04FakeEpoch);
+
+    // Fresh session + fresh profile mock for the post-logout call
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok-gen-2' } } });
+    getProfile.mockResolvedValueOnce(minimalProfile04);
+
+    await useAuthStore.getState().checkAuth();
+
+    // The guard is generational — it captures a NEW epoch (post-logout), so
+    // this fresh checkAuth must complete its success set normally.
+    const state = useAuthStore.getState();
+    expect(state.isAuthenticated).toBe(true);
+    expect(state.user?.id).toBe('user-epoch04');
+    expect(state.isLoading).toBe(false);
+  });
+
+  // -----------------------------------------------------------------------
+  // ADVERSARIAL-2 — epoch guard does not block the no-session clear
+  //
+  // When getSession() returns no session with NO intervening logout, epoch
+  // is unchanged, so `epoch !== _authEpoch` is false — the guard does NOT
+  // fire, and the no-session clear (isAuthenticated: false) still applies.
+  //
+  // Ensures the guard is not accidentally inverted to fire when epoch is
+  // unchanged (which would block legitimate clears).
+  // -----------------------------------------------------------------------
+  it('ADVERSARIAL: epoch guard does not block no-session clear when no logout occurred', async () => {
+    // Seed authed state — simulates a stale persisted session the server no
+    // longer recognises (the session cookie expired).
+    useAuthStore.setState({
+      user: preservedUser04,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+    });
+
+    // getSession returns no session — the "revoked token" path
+    getSession.mockResolvedValue({ data: { session: null } });
+
+    // No logout call — epoch is unchanged throughout
+    await useAuthStore.getState().checkAuth();
+
+    const state = useAuthStore.getState();
+    // No-session set must have applied normally (guard did NOT fire)
+    expect(state.isAuthenticated).toBe(false);
+    // getProfile must NOT have been called (short-circuited at no-session guard)
+    expect(getProfile).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------
