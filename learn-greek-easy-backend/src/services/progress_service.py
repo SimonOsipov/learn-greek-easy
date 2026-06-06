@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.db.models import CardStatus
 from src.repositories.card_record import CardRecordRepository
 from src.repositories.card_record_review import CardRecordReviewRepository
 from src.repositories.card_record_statistics import CardRecordStatisticsRepository
@@ -311,11 +312,13 @@ class ProgressService:
         start_date = end_date - timedelta(days=days - 1)
 
         # Sequential on the shared AsyncSession (INFRA-01).
-        vocab_daily = await self.card_review_repo.get_daily_stats(user_id, start_date, end_date)
-        vocab_status_per_day = await self.card_stats_repo.count_cards_by_status_per_day(
+        # SQLCON-02 Merge A: one combined query replaces get_daily_stats +
+        # get_daily_accuracy_stats.  The combined rows serve both vocab_daily_map
+        # and vocab_accuracy_map — they carry all required keys.
+        vocab_combined = await self.card_review_repo.get_daily_vocab_combined_stats(
             user_id, start_date, end_date
         )
-        vocab_accuracy_per_day = await self.card_review_repo.get_daily_accuracy_stats(
+        vocab_status_per_day = await self.card_stats_repo.count_cards_by_status_per_day(
             user_id, start_date, end_date
         )
         culture_status_per_day = await self.culture_stats_repo.count_cards_by_status_per_day(
@@ -324,13 +327,17 @@ class ProgressService:
         culture_accuracy_per_day = await self.culture_stats_repo.get_daily_culture_accuracy_stats(
             user_id, start_date, end_date
         )
-        cards_mastered_in_range = await self.card_stats_repo.count_cards_mastered_in_range(
-            user_id, start_date, end_date
+        # SQLCON-02 Merge B: drop count_cards_mastered_in_range round-trip;
+        # derive the scalar from vocab_status_per_day (already fetched above).
+        cards_mastered_in_range: int = sum(
+            row["count"]
+            for row in vocab_status_per_day
+            if row["status"] == CardStatus.MASTERED.value
         )
 
-        vocab_daily_map = {row["date"]: row for row in vocab_daily}
+        vocab_daily_map = {row["date"]: row for row in vocab_combined}
         vocab_status_map = self._build_vocab_status_map(vocab_status_per_day)
-        vocab_accuracy_map = {row["date"]: row for row in vocab_accuracy_per_day}
+        vocab_accuracy_map = {row["date"]: row for row in vocab_combined}
 
         daily_stats = []
         best_day: date | None = None

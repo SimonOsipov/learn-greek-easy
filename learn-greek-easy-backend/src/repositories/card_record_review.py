@@ -196,6 +196,59 @@ class CardRecordReviewRepository(BaseRepository[CardRecordReview]):
         row = result.one()
         return {"correct": int(row.correct or 0), "total": int(row.total or 0)}
 
+    async def get_daily_vocab_combined_stats(
+        self,
+        user_id: UUID,
+        start_date: date,
+        end_date: date,
+    ) -> list[dict]:
+        """Get per-day vocab stats merging daily counts and accuracy in ONE query.
+
+        This replaces the two-call pattern of get_daily_stats + get_daily_accuracy_stats
+        used in get_learning_trends (SQLCON-02 Merge A).  The accuracy denominator
+        ``total`` equals ``reviews_count`` — both come from the same ``func.count()``
+        so no second count column is emitted.
+
+        Args:
+            user_id: User UUID.
+            start_date: Start of date range (inclusive).
+            end_date: End of date range (inclusive).
+
+        Returns:
+            List of dicts ordered by date asc, each with keys:
+                date, reviews_count, avg_quality, total_time, correct, total.
+            ``total`` == ``reviews_count`` (accuracy denominator reuses the count).
+        """
+        query = (
+            select(
+                func.date(CardRecordReview.reviewed_at).label("date"),
+                func.count().label("reviews_count"),
+                func.avg(CardRecordReview.quality).label("avg_quality"),
+                func.coalesce(func.sum(CardRecordReview.time_taken), 0).label("total_time"),
+                func.sum(case((CardRecordReview.quality >= 3, 1), else_=0)).label("correct"),
+            )
+            .where(
+                CardRecordReview.user_id == user_id,
+                func.date(CardRecordReview.reviewed_at) >= start_date,
+                func.date(CardRecordReview.reviewed_at) <= end_date,
+            )
+            .group_by(func.date(CardRecordReview.reviewed_at))
+            .order_by(func.date(CardRecordReview.reviewed_at))
+        )
+        result = await self.db.execute(query)
+        rows = result.all()
+        return [
+            {
+                "date": row.date,
+                "reviews_count": row.reviews_count,
+                "avg_quality": float(row.avg_quality) if row.avg_quality is not None else 0.0,
+                "total_time": int(row.total_time),
+                "correct": int(row.correct or 0),
+                "total": row.reviews_count,  # denominator reuses the count column
+            }
+            for row in rows
+        ]
+
     async def get_daily_accuracy_stats(
         self,
         user_id: UUID,
