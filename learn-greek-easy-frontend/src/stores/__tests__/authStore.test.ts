@@ -511,4 +511,85 @@ describe('authStore — checkAuth background revalidation (PERF-02)', () => {
     expect(state.isAuthenticated).toBe(true);
     expect(state.user?.email).toBe('preserved@test.com');
   });
+
+  // -----------------------------------------------------------------------
+  // ADVERSARIAL — QA Mode B additions
+  //
+  // These three cases probe the allow-list boundary directly.
+  // A loose impl (clears on 4xx, or clears on !instanceof APIRequestError)
+  // would fail at least one of these.
+  // -----------------------------------------------------------------------
+
+  // ADV-1: 403 is NOT in the allow-list (only 401 is). A 403 from /auth/me
+  // (Forbidden / insufficient role) is not a "your session is invalid" signal —
+  // it means the session IS valid but the resource is off-limits. Must preserve.
+  it('ADVERSARIAL: 403 from /auth/me preserves user and isAuthenticated (allow-list is exactly 401)', async () => {
+    useAuthStore.setState({
+      user: preservedUser,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+    });
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
+    getProfile.mockRejectedValue(
+      new APIRequestError({ status: 403, statusText: 'Forbidden', message: 'Forbidden' })
+    );
+
+    await useAuthStore.getState().checkAuth();
+
+    const state = useAuthStore.getState();
+    expect(state.user).not.toBeNull();
+    expect(state.user?.id).toBe('user-perf02');
+    expect(state.isAuthenticated).toBe(true);
+  });
+
+  // ADV-2: A plain Error (not an APIRequestError) thrown from getProfile must
+  // preserve the session. Guards against an impl that clears on
+  // !(error instanceof APIRequestError) rather than only on status===401.
+  it('ADVERSARIAL: plain Error (non-APIRequestError) from getProfile preserves session', async () => {
+    useAuthStore.setState({
+      user: preservedUser,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+    });
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
+    getProfile.mockRejectedValue(new Error('boom — unexpected JS error'));
+
+    await useAuthStore.getState().checkAuth();
+
+    const state = useAuthStore.getState();
+    expect(state.user).not.toBeNull();
+    expect(state.user?.id).toBe('user-perf02');
+    expect(state.isAuthenticated).toBe(true);
+  });
+
+  // ADV-3: isLoading is released on a transient failure for the UNAUTHENTICATED path.
+  // Scenario: store starts !isAuthenticated, getSession returns a valid session
+  // (so isLoading:true is written at authStore.ts:250), then getProfile rejects with 500.
+  // The spinner must not be stuck — isLoading must end false.
+  it('ADVERSARIAL: isLoading released on transient 500 when started from unauthenticated state', async () => {
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+    });
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
+    getProfile.mockRejectedValue(
+      new APIRequestError({
+        status: 500,
+        statusText: 'Internal Server Error',
+        message: 'Internal Server Error',
+      })
+    );
+
+    await useAuthStore.getState().checkAuth();
+
+    const state = useAuthStore.getState();
+    // Spinner MUST be released.
+    expect(state.isLoading).toBe(false);
+    // isAuthenticated was already false — confirm it stays false (not toggled).
+    expect(state.isAuthenticated).toBe(false);
+  });
 });
