@@ -3,7 +3,7 @@
 from datetime import date
 from uuid import UUID
 
-from sqlalchemy import Date, cast, delete, func, not_, select
+from sqlalchemy import Date, and_, cast, delete, func, not_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -457,47 +457,48 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
         Returns:
             Dict mapping each DeckLevel to a (mastered, total) tuple.
         """
-        # Mastered counts per level (only for cards with stats)
-        mastered_query = (
-            select(
-                Deck.level.label("level"),
-                func.count(CardRecordStatistics.id).label("mastered"),
-            )
-            .join(CardRecord, CardRecordStatistics.card_record_id == CardRecord.id)
-            .join(Deck, CardRecord.deck_id == Deck.id)
-            .where(
-                CardRecordStatistics.user_id == user_id,
-                CardRecordStatistics.status == CardStatus.MASTERED,
-                CardRecord.is_active == True,  # noqa: E712
-                Deck.is_active == True,  # noqa: E712
-            )
-            .group_by(Deck.level)
-        )
-        mastered_result = await self.db.execute(mastered_query)
-        mastered_by_level: dict[DeckLevel, int] = {
-            row.level: row.mastered for row in mastered_result.all()
-        }
-
-        # Total active card counts per level (no user filter — all active cards)
-        total_query = (
+        # SQLCON-08: single round-trip via LEFT JOIN + FILTER aggregate.
+        #
+        # Drive from the GLOBAL side (CardRecord+Deck, active-only) so `total`
+        # stays user-independent.  Pull `mastered` via a LEFT JOIN whose
+        # per-user and per-status predicates live in the JOIN ON clause and a
+        # FILTERed aggregate respectively — never in the global .where().
+        #
+        # Predicate placement (critical):
+        #   CardRecord.is_active / Deck.is_active → global .where()
+        #     (scopes the active universe for BOTH counts)
+        #   CardRecordStatistics.user_id == user_id → outerjoin ON (via and_)
+        #     (must NOT be in .where(); that collapses LEFT JOIN → INNER JOIN,
+        #     dropping unstudied cards from count(CardRecord.id) → silent total
+        #     corruption)
+        #   CardRecordStatistics.status == MASTERED → .filter() on mastered agg
+        #     (matches get_word_mastery_by_deck pattern; not in global .where())
+        query = (
             select(
                 Deck.level.label("level"),
                 func.count(CardRecord.id).label("total"),
+                func.count(CardRecordStatistics.id)
+                .filter(CardRecordStatistics.status == CardStatus.MASTERED)
+                .label("mastered"),
             )
+            .select_from(CardRecord)
             .join(Deck, CardRecord.deck_id == Deck.id)
+            .outerjoin(
+                CardRecordStatistics,
+                and_(
+                    CardRecordStatistics.card_record_id == CardRecord.id,
+                    CardRecordStatistics.user_id == user_id,
+                ),
+            )
             .where(
                 CardRecord.is_active == True,  # noqa: E712
                 Deck.is_active == True,  # noqa: E712
             )
             .group_by(Deck.level)
         )
-        total_result = await self.db.execute(total_query)
-        total_by_level: dict[DeckLevel, int] = {row.level: row.total for row in total_result.all()}
-
-        return {
-            level: (mastered_by_level.get(level, 0), total_by_level.get(level, 0))
-            for level in DeckLevel
-        }
+        result = await self.db.execute(query)
+        rows = {r.level: (r.mastered, r.total) for r in result.all()}
+        return {level: rows.get(level, (0, 0)) for level in DeckLevel}
 
     async def get_average_interval(
         self,
