@@ -350,3 +350,12 @@ export const useAuthStore = create<AuthState>()(
  * Use this to prevent API calls before hydration is complete.
  */
 export const useHasHydrated = () => useAuthStore((state) => state._hasHydrated);
+
+/**
+ * Synchronous, side-effect-free check: do we have a usable persisted session
+ * right now? True only once rehydration completed AND a persisted authenticated
+ * user with an id exists. Lets RouteGuard render protected routes on reload
+ * without awaiting GET /auth/me.
+ */
+export const selectHasPersistedSession = (state: AuthState): boolean =>
+  state._hasHydrated && state.isAuthenticated && !!state.user?.id;
