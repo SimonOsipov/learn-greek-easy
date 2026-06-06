@@ -460,9 +460,11 @@ Mobile-only tokens added in MOB-09. These 5 tokens are **theme-invariant** — i
 
 Tailwind utilities: `text-on-photo`, `bg-on-photo/10`, `border-on-photo/22`, `bg-on-photo-scrim/42`, `text-on-photo-active`, `text-danger-soft`, `text-danger-softer`, `bg-badge-recommended`, `text-badge-recommended`, `bg-badge-recommended-25`.
 
+> **Mobile/native note:** The `/NN` opacity modifier (`bg-on-photo/10`, `border-on-photo/22`, `bg-on-photo-scrim/42`) is valid on **web only**. On **mobile/native** (NativeWind v4), `/NN` on a var-backed token routes through unsupported `color-mix()` and renders dark on iOS. Use the explicit `<base>-<NN>` rgba tokens instead (`bg-on-photo-10`, `border-on-photo-22`, `bg-on-photo-scrim-42`). See [`learn-greek-easy-mobile/docs/design-tokens.md`](../learn-greek-easy-mobile/docs/design-tokens.md) for the full convention (MOB-13).
+
 > **Over-photo single-accent exception:** over-photo surfaces (login/onboarding, i.e. screens fully covered by `cyprus-hero.webp`) may use the brand Cyprus gold (`--badge-recommended`) as a **single accent colour** — this is the sanctioned exception to the three-palette rule (conventions.md:82). All other colour usage on these surfaces must use `--on-photo-*` tokens.
 
-The error-banner fill and border reuse the existing `danger` token (`bg-danger/18 border-danger/55`). The sanctioned raw-literal color values on the login screen are:
+The error-banner fill and border reuse the existing `danger` token (`bg-danger/18 border-danger/55`). On **web** these `/NN` modifiers are fine; on **mobile/native** use `bg-danger-18 border-danger-55` (explicit rgba tokens — see [`learn-greek-easy-mobile/docs/design-tokens.md`](../learn-greek-easy-mobile/docs/design-tokens.md), MOB-13). The sanctioned raw-literal color values on the login screen are:
 
 1. The 3 `expo-linear-gradient` scrim stops (`rgba(8,11,20,…)`) — `expo-linear-gradient`'s `colors[]` prop cannot accept a NativeWind class (LOGIN-04).
 2. The Google brand "G" colors in `GoogleIcon.tsx` (`#4285F4`/`#34A853`/`#FBBC05`/`#EA4335`) — brand asset, must not be recolored.

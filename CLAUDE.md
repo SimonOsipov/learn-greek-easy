@@ -176,3 +176,4 @@ Update this file when features are merged, phases change, or key decisions are m
 - [Mobile App](docs/mobile-app.md) - Expo dev client, APP_VARIANT variants, EAS build commands, verification
 - [Mobile CI/CD](docs/mobile-ci.md) - Mobile vs web pipeline split, CI Gate required check, branch protection
 - [Mobile Testing](learn-greek-easy-mobile/docs/testing.md) - jest-expo + RNTL unit/component tests, Maestro smoke flow, local run instructions
+- [Mobile Design Tokens](learn-greek-easy-mobile/docs/design-tokens.md) - NativeWind v4 native opacity-modifier defect + explicit `<base>-<NN>` rgba convention (MOB-13)
