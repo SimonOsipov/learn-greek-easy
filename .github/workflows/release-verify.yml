@@ -671,6 +671,50 @@ jobs:
           retention-days: 7
 
   # =============================================================================
+  # JOB 5c: Web Verify — Authenticated (RGATE-03)
+  # Purpose: Log in as the seeded e2e_beginner user, confirm the dashboard
+  # renders, and confirm the deck list is non-empty.
+  # Only runs on web PRs; depends on deploy + seed completing successfully.
+  # =============================================================================
+  web-verify:
+    name: Web Verify (authenticated)
+    needs: [deploy, seed-database, changes]
+    if: |
+      needs.changes.outputs.web == 'true' &&
+      needs.deploy.result == 'success' &&
+      needs.seed-database.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: learn-greek-easy-frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: learn-greek-easy-frontend
+        run: npm ci
+      - name: Install Playwright browsers
+        working-directory: learn-greek-easy-frontend
+        run: npx playwright install chromium
+      - name: Run authenticated web verify
+        working-directory: learn-greek-easy-frontend
+        env:
+          FRONTEND_URL: ${{ needs.deploy.outputs.frontend_url }}
+        run: node scripts/release-web-verify.cjs
+      - name: Upload web verify screenshots
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: web-verify-screenshots
+          path: learn-greek-easy-frontend/web-verify-reports/
+          if-no-files-found: warn
+          retention-days: 7
+
+  # =============================================================================
   # JOB 6: K6 Performance Tests
   # Purpose: Run k6 load tests against preview environment
   # Runs by default on ready PRs, skip with 'skip-k6' label
@@ -1215,7 +1259,7 @@ jobs:
   # =============================================================================
   report-results:
     name: Report Results
-    needs: [changes, should-deploy, deploy, health-check, seed-database, k6-performance, accessibility, lighthouse]
+    needs: [changes, should-deploy, deploy, health-check, seed-database, web-verify, k6-performance, accessibility, lighthouse]
     if: always() && needs.changes.outputs.web == 'true' && needs.should-deploy.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     steps:

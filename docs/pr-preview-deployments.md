@@ -103,3 +103,30 @@ After this PR merges to `main`, in-flight PRs that were opened before the merge 
 - Mobile changes → `mobile-ci` must succeed.
 
 `mobile-e2e` and all `release-verify.yml` jobs are **release-gates**, not branch-protection checks. They run only when a release is explicitly triggered (via `ready-to-verify` label or manual dispatch) and do not block PR merge. Do NOT add `release-verify` jobs to branch protection.
+
+## Web Verify (Authenticated Oracle)
+
+The `web-verify` job in `release-verify.yml` provides an authenticated smoke oracle for every web-touching release run. It:
+
+1. Logs in as the seeded `e2e_beginner@test.com` user via the real login form.
+2. Confirms the authenticated dashboard renders (`[data-testid="dashboard"]` visible).
+3. Confirms the deck list is non-empty (`[data-testid="deck-card"]` count ≥ 1).
+
+### Screenshot artifact
+
+Artifact name: **`web-verify-screenshots`**
+
+| File | Captured at |
+|------|-------------|
+| `01-login.png` | Login page loaded, before submission |
+| `02-dashboard.png` | Dashboard after successful login |
+| `03-decks.png` | Decks page with at least one deck card |
+| `99-failure.png` | Page state at the moment of any failure (best-effort) |
+
+RALPH Phase 3.5 consumes these screenshots as part of the visual gate review.
+
+### Path-filter symmetry with mobile-e2e
+
+- **Mobile-only PR** (`changes.outputs.web == 'false'`): `web-verify` is skipped; `mobile-e2e` runs.
+- **Web-only PR** (`changes.outputs.mobile == 'false'`): `mobile-e2e` is skipped; `web-verify` runs.
+- **Mixed PR**: both jobs run in parallel after `seed-database` succeeds.
