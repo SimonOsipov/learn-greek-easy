@@ -174,7 +174,7 @@ async def check_achievements_task(user_id: UUID) -> None:
 
 async def invalidate_cache_task(
     cache_type: str,
-    entity_id: UUID,
+    entity_id: UUID | None,
     user_id: UUID | None = None,
     deck_id: UUID | None = None,
 ) -> None:
@@ -215,9 +215,9 @@ async def invalidate_cache_task(
         cache = get_cache()
         deleted = 0
 
-        if cache_type == "deck":
+        if cache_type == "deck" and entity_id is not None:
             deleted = await cache.invalidate_deck(entity_id)
-        elif cache_type == "card" and deck_id:
+        elif cache_type == "card" and entity_id is not None and deck_id:
             deleted = await cache.invalidate_card(entity_id, deck_id)
         elif cache_type == "progress" and user_id:
             deleted = await cache.invalidate_user_progress(user_id, entity_id)

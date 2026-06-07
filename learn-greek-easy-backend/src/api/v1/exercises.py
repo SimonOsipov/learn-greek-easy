@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -32,6 +32,7 @@ from src.services.picture_match_service import (
     InsufficientDistractorPoolError,
     assemble_picture_match_payload,
 )
+from src.tasks import invalidate_cache_task
 
 router = APIRouter(
     tags=["Exercises"],
@@ -85,6 +86,7 @@ async def get_exercise_queue(
 @router.post("/review", response_model=ExerciseReviewResult)
 async def submit_exercise_review(
     review: ExerciseReviewRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> ExerciseReviewResult:
@@ -96,7 +98,7 @@ async def submit_exercise_review(
     """
     service = ExerciseSM2Service(db)
     try:
-        return await service.process_review(
+        result = await service.process_review(
             user_id=current_user.id,
             exercise_id=review.exercise_id,
             score=review.score,
@@ -105,6 +107,14 @@ async def submit_exercise_review(
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
+
+    background_tasks.add_task(
+        invalidate_cache_task,
+        cache_type="progress",
+        entity_id=None,
+        user_id=current_user.id,
+    )
+    return result
 
 
 @router.get("/{exercise_id}", response_model=ExerciseQueueItem)

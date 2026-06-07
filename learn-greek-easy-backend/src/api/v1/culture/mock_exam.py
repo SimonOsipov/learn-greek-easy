@@ -16,7 +16,7 @@ All endpoints require authentication.
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import get_current_user
@@ -35,6 +35,7 @@ from src.schemas.mock_exam import (
 )
 from src.services import MockExamService
 from src.services.s3_service import IMAGE_PRESIGN_EXPIRY_SECONDS
+from src.tasks import invalidate_cache_task
 
 router = APIRouter(
     prefix="/mock-exam",
@@ -370,6 +371,7 @@ async def create_mock_exam_session(
 async def submit_all_mock_exam_answers(
     session_id: UUID,
     request: MockExamSubmitAllRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> MockExamSubmitAllResponse:
@@ -446,6 +448,13 @@ async def submit_all_mock_exam_answers(
         )
         for ar in result["answer_results"]
     ]
+
+    background_tasks.add_task(
+        invalidate_cache_task,
+        cache_type="progress",
+        entity_id=None,
+        user_id=current_user.id,
+    )
 
     return MockExamSubmitAllResponse(
         session=session_response,

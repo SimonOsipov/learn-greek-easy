@@ -74,7 +74,11 @@ from src.services.s3_service import (
     get_s3_service,
     maybe_generate_derivatives,
 )
-from src.tasks import is_background_tasks_enabled, persist_culture_answer_task
+from src.tasks import (
+    invalidate_cache_task,
+    is_background_tasks_enabled,
+    persist_culture_answer_task,
+)
 
 logger = get_logger(__name__)
 
@@ -610,6 +614,12 @@ async def submit_answer(
                 sm2_new_status=context["sm2_new_status"],
                 sm2_next_review_date=context["sm2_next_review_date"],
                 stats_previous_status=context["stats_previous_status"],
+            )
+            background_tasks.add_task(
+                invalidate_cache_task,
+                cache_type="progress",
+                entity_id=None,
+                user_id=current_user.id,
             )
 
             return response
