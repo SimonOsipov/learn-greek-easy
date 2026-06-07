@@ -975,6 +975,7 @@ class CardRecordStatistics(Base, TimestampMixin):
     __table_args__ = (
         UniqueConstraint("user_id", "card_record_id", name="uq_user_card_record"),
         Index("ix_crs_user_next_review", "user_id", "next_review_date"),
+        Index("ix_crs_user_updated", "user_id", "updated_at"),
     )
 
     # Primary key
@@ -1989,6 +1990,7 @@ class CultureAnswerHistory(Base, TimestampMixin):
     """
 
     __tablename__ = "culture_answer_history"
+    __table_args__ = (Index("ix_cah_user_created", "user_id", "created_at"),)
 
     # Primary key
     id: Mapped[UUID] = mapped_column(
@@ -2064,6 +2066,7 @@ class MockExamSession(Base, TimestampMixin):
     """Mock exam session tracking."""
 
     __tablename__ = "mock_exam_sessions"
+    __table_args__ = (Index("ix_mes_user_started", "user_id", "started_at"),)
 
     id: Mapped[UUID] = mapped_column(
         primary_key=True,

@@ -3,7 +3,7 @@
 from datetime import date
 from uuid import UUID
 
-from sqlalchemy import Date, cast, delete, func, not_, select
+from sqlalchemy import Date, and_, cast, delete, func, not_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -241,21 +241,34 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
     ) -> dict[str, int]:
         """Count card records grouped by SM-2 status.
 
+        SQLCON-03: Rewritten from 2 round-trips to 1 via FILTER aggregate.
+        The ``due`` count is derived by summing per-status due counts in Python
+        (value-identical: the old due query counted ALL active rows with
+        ``next_review_date <= today`` regardless of status, so summing the
+        per-status due counts yields the same total).
+
+        The ``next_review_date <= date.today()`` predicate type is preserved
+        (``date.today()``, NOT UTC now()) to match the original due_query.
+
         Args:
             user_id: User UUID.
-            deck_id: Optional deck filter.
+            deck_id: Optional deck filter (preserves existing optional scoping).
 
         Returns:
             Dict mapping status value strings to counts, plus "due" key.
         """
+        today = date.today()
         query = (
-            select(CardRecordStatistics.status, func.count().label("count"))
+            select(
+                CardRecordStatistics.status,
+                func.count().label("count"),
+                func.count().filter(CardRecordStatistics.next_review_date <= today).label("due"),
+            )
             .join(CardRecord, CardRecordStatistics.card_record_id == CardRecord.id)
             .where(CardRecordStatistics.user_id == user_id)
             .where(CardRecord.is_active.is_(True))
             .group_by(CardRecordStatistics.status)
         )
-
         if deck_id is not None:
             query = query.where(CardRecord.deck_id == deck_id)
 
@@ -268,22 +281,11 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
             "review": 0,
             "mastered": 0,
         }
-        for status, count in rows:
+        total_due = 0
+        for status, count, due in rows:
             counts[status.value] = count
-
-        due_query = (
-            select(func.count())
-            .select_from(CardRecordStatistics)
-            .join(CardRecord, CardRecordStatistics.card_record_id == CardRecord.id)
-            .where(CardRecordStatistics.user_id == user_id)
-            .where(CardRecordStatistics.next_review_date <= date.today())
-            .where(CardRecord.is_active.is_(True))
-        )
-        if deck_id is not None:
-            due_query = due_query.where(CardRecord.deck_id == deck_id)
-
-        due_result = await self.db.execute(due_query)
-        counts["due"] = due_result.scalar_one()
+            total_due += due
+        counts["due"] = total_due
 
         return counts
 
@@ -455,47 +457,48 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
         Returns:
             Dict mapping each DeckLevel to a (mastered, total) tuple.
         """
-        # Mastered counts per level (only for cards with stats)
-        mastered_query = (
-            select(
-                Deck.level.label("level"),
-                func.count(CardRecordStatistics.id).label("mastered"),
-            )
-            .join(CardRecord, CardRecordStatistics.card_record_id == CardRecord.id)
-            .join(Deck, CardRecord.deck_id == Deck.id)
-            .where(
-                CardRecordStatistics.user_id == user_id,
-                CardRecordStatistics.status == CardStatus.MASTERED,
-                CardRecord.is_active == True,  # noqa: E712
-                Deck.is_active == True,  # noqa: E712
-            )
-            .group_by(Deck.level)
-        )
-        mastered_result = await self.db.execute(mastered_query)
-        mastered_by_level: dict[DeckLevel, int] = {
-            row.level: row.mastered for row in mastered_result.all()
-        }
-
-        # Total active card counts per level (no user filter — all active cards)
-        total_query = (
+        # SQLCON-08: single round-trip via LEFT JOIN + FILTER aggregate.
+        #
+        # Drive from the GLOBAL side (CardRecord+Deck, active-only) so `total`
+        # stays user-independent.  Pull `mastered` via a LEFT JOIN whose
+        # per-user and per-status predicates live in the JOIN ON clause and a
+        # FILTERed aggregate respectively — never in the global .where().
+        #
+        # Predicate placement (critical):
+        #   CardRecord.is_active / Deck.is_active → global .where()
+        #     (scopes the active universe for BOTH counts)
+        #   CardRecordStatistics.user_id == user_id → outerjoin ON (via and_)
+        #     (must NOT be in .where(); that collapses LEFT JOIN → INNER JOIN,
+        #     dropping unstudied cards from count(CardRecord.id) → silent total
+        #     corruption)
+        #   CardRecordStatistics.status == MASTERED → .filter() on mastered agg
+        #     (matches get_word_mastery_by_deck pattern; not in global .where())
+        query = (
             select(
                 Deck.level.label("level"),
                 func.count(CardRecord.id).label("total"),
+                func.count(CardRecordStatistics.id)
+                .filter(CardRecordStatistics.status == CardStatus.MASTERED)
+                .label("mastered"),
             )
+            .select_from(CardRecord)
             .join(Deck, CardRecord.deck_id == Deck.id)
+            .outerjoin(
+                CardRecordStatistics,
+                and_(
+                    CardRecordStatistics.card_record_id == CardRecord.id,
+                    CardRecordStatistics.user_id == user_id,
+                ),
+            )
             .where(
                 CardRecord.is_active == True,  # noqa: E712
                 Deck.is_active == True,  # noqa: E712
             )
             .group_by(Deck.level)
         )
-        total_result = await self.db.execute(total_query)
-        total_by_level: dict[DeckLevel, int] = {row.level: row.total for row in total_result.all()}
-
-        return {
-            level: (mastered_by_level.get(level, 0), total_by_level.get(level, 0))
-            for level in DeckLevel
-        }
+        result = await self.db.execute(query)
+        rows = {r.level: (r.mastered, r.total) for r in result.all()}
+        return {level: rows.get(level, (0, 0)) for level in DeckLevel}
 
     async def get_average_interval(
         self,
@@ -520,6 +523,45 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
         result = await self.db.execute(query)
         val = result.scalar_one()
         return float(val) if val is not None else 0.0
+
+    async def get_average_ef_and_interval(
+        self,
+        user_id: UUID,
+        deck_id: UUID | None = None,
+    ) -> tuple[float, float]:
+        """Get average easiness factor and average interval in a single round-trip.
+
+        SQLCON-07: Replaces the two separate calls to ``get_average_easiness_factor``
+        and ``get_average_interval`` inside ``get_deck_progress_detail`` with one
+        ``SELECT avg(ef), avg(interval)`` query using the same scoping as each
+        individual method (user_id, optional deck_id via join to card_record).
+
+        Note: This method does NOT filter by ``CardRecord.is_active``, matching
+        the behaviour of the two original methods (neither filters is_active).
+
+        Args:
+            user_id: User UUID.
+            deck_id: Optional deck filter.
+
+        Returns:
+            Tuple of (avg_ef, avg_interval) where avg_ef defaults to 2.5 if no
+            records (matching ``get_average_easiness_factor``) and avg_interval
+            defaults to 0.0 if no records (matching ``get_average_interval``).
+        """
+        conditions = [CardRecordStatistics.user_id == user_id]
+        query = select(
+            func.avg(CardRecordStatistics.easiness_factor).label("avg_ef"),
+            func.avg(CardRecordStatistics.interval).label("avg_interval"),
+        )
+        if deck_id is not None:
+            query = query.join(CardRecord, CardRecordStatistics.card_record_id == CardRecord.id)
+            conditions.append(CardRecord.deck_id == deck_id)
+        query = query.where(*conditions)
+        result = await self.db.execute(query)
+        row = result.one()
+        avg_ef = float(row.avg_ef) if row.avg_ef is not None else 2.5
+        avg_interval = float(row.avg_interval) if row.avg_interval is not None else 0.0
+        return avg_ef, avg_interval
 
     async def count_distinct_decks(self, user_id: UUID) -> int:
         """Count the number of distinct decks a user has card statistics in.

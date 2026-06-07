@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import Date, cast, delete, func, select
+from sqlalchemy import Date, and_, cast, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import (
@@ -535,6 +535,25 @@ class CultureQuestionStatsRepository(BaseRepository[CultureQuestionStats]):
         - ``total_count``: total number of CultureQuestion rows in that
           category, regardless of whether the user has any stats rows.
 
+        Implementation — 2 round-trips (SQLCON-09):
+
+        Q1 (discovery, unchanged): ``SELECT DISTINCT CultureDeck.category``.
+        Early-returns ``{}`` when no culture decks exist.
+
+        Q2 (merged aggregate): Anchors on ``CultureDeck → CultureQuestion``
+        (LEFT JOIN so empty decks still appear) then LEFT JOINs
+        ``CultureQuestionStats`` with the user_id predicate **in the ON clause**
+        (``AND CultureQuestionStats.user_id == user_id``).  This scopes the
+        outer join so each CultureQuestion matches at most one stats row for
+        the user — safe because ``uq_user_culture_question`` UNIQUE constraint
+        on ``(user_id, question_id)`` in ``CultureQuestionStats`` guarantees
+        no fan-out.  ``total`` counts ``CultureQuestion.id`` (user-independent);
+        ``mastered`` counts ``CultureQuestionStats.id`` filtered to
+        ``status == MASTERED`` via ``.filter(...)`` inside the aggregate (same
+        pattern as ``get_batch_deck_stats`` at ~line 633).
+
+        Net: 3 → 2 round-trips (total+mastered merged; discovery retained).
+
         Args:
             user_id: User UUID.
 
@@ -543,7 +562,7 @@ class CultureQuestionStatsRepository(BaseRepository[CultureQuestionStats]):
             Returns all categories present in the database.  Empty dict if
             there are no culture decks.
         """
-        # Discover all distinct categories in DB (dynamic — not hardcoded)
+        # Q1 — discover all distinct categories in DB (dynamic — not hardcoded)
         categories_query = select(CultureDeck.category).distinct()
         categories_result = await self.db.execute(categories_query)
         all_categories: list[str] = [row.category for row in categories_result.all()]
@@ -551,40 +570,43 @@ class CultureQuestionStatsRepository(BaseRepository[CultureQuestionStats]):
         if not all_categories:
             return {}
 
-        # Total questions per category (join CultureQuestion → CultureDeck)
-        total_query = (
+        # Q2 — merged aggregate: total (user-independent) + mastered (user-scoped)
+        # in a single LEFT JOIN query.
+        #
+        # Anchor: CultureDeck → CultureQuestion (LEFT JOIN keeps decks with no
+        # questions, giving total=0 for empty categories).
+        # Outer join: CultureQuestionStats with user_id pinned in the ON clause
+        # so each question matches ≤1 stats row per user (uniqueness guaranteed
+        # by uq_user_culture_question UNIQUE(user_id, question_id) constraint,
+        # models.py:1908).  count(CultureQuestion.id) is therefore exact.
+        #
+        # mastered uses the `.filter(...)` convention (mirrors get_batch_deck_stats
+        # ~line 633/637) to keep the status predicate inside the aggregate rather
+        # than in a top-level WHERE (which would exclude non-MASTERED rows and
+        # inflate mastered counts relative to total for multi-status users).
+        stats_join_condition = and_(
+            CultureQuestionStats.question_id == CultureQuestion.id,
+            CultureQuestionStats.user_id == user_id,
+        )
+        agg_query = (
             select(
                 CultureDeck.category.label("category"),
                 func.count(CultureQuestion.id).label("total"),
+                func.count(CultureQuestionStats.id)
+                .filter(CultureQuestionStats.status == CardStatus.MASTERED)
+                .label("mastered"),
             )
-            .join(CultureDeck, CultureQuestion.deck_id == CultureDeck.id)
+            .select_from(CultureDeck)
+            .join(CultureQuestion, CultureQuestion.deck_id == CultureDeck.id, isouter=True)
+            .join(CultureQuestionStats, stats_join_condition, isouter=True)
             .group_by(CultureDeck.category)
         )
-        total_result = await self.db.execute(total_query)
-        total_by_cat: dict[str, int] = {row.category: row.total for row in total_result.all()}
-
-        # Mastered questions per category for this user
-        mastered_query = (
-            select(
-                CultureDeck.category.label("category"),
-                func.count(CultureQuestionStats.id).label("mastered"),
-            )
-            .join(CultureQuestion, CultureQuestionStats.question_id == CultureQuestion.id)
-            .join(CultureDeck, CultureQuestion.deck_id == CultureDeck.id)
-            .where(
-                CultureQuestionStats.user_id == user_id,
-                CultureQuestionStats.status == CardStatus.MASTERED,
-            )
-            .group_by(CultureDeck.category)
-        )
-        mastered_result = await self.db.execute(mastered_query)
-        mastered_by_cat: dict[str, int] = {
-            row.category: row.mastered for row in mastered_result.all()
+        agg_result = await self.db.execute(agg_query)
+        by_cat: dict[str, tuple[int, int]] = {
+            row.category: (row.mastered, row.total) for row in agg_result.all()
         }
 
-        return {
-            cat: (mastered_by_cat.get(cat, 0), total_by_cat.get(cat, 0)) for cat in all_categories
-        }
+        return {cat: by_cat.get(cat, (0, 0)) for cat in all_categories}
 
     async def delete_all_by_user_id(self, user_id: UUID) -> int:
         """Delete all culture question stats for a user.
