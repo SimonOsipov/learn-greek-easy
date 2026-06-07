@@ -1,12 +1,15 @@
 """Integration tests for exercise queue and review endpoints."""
 
 from datetime import date, timedelta
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.db.models import User
+from src.tasks import invalidate_cache_task
 from tests.factories.exercise import ExerciseFactory, ExerciseRecordFactory
 from tests.factories.situation import SituationFactory
 from tests.factories.situation_description import (
@@ -321,3 +324,58 @@ class TestExerciseQueueSituationFilter:
         exercise_ids = [e["exercise_id"] for e in data["exercises"]]
         assert str(exercise_listening.id) in exercise_ids
         assert data["total_in_queue"] >= 1
+
+
+# =============================================================================
+# RED tests for PERF-05-04: cache-invalidation wiring
+# =============================================================================
+
+
+@pytest.mark.integration
+class TestExerciseReviewCacheInvalidation:
+    """[RED] Tests verifying that exercise review schedules
+    invalidate_cache_task. Fails until PERF-05-04 wires the hook.
+    """
+
+    @pytest.mark.asyncio
+    async def test_exercise_review_schedules_progress_invalidation(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        test_user: User,
+        db_session: AsyncSession,
+    ):
+        """[RED] POST /api/v1/exercises/review must schedule
+        invalidate_cache_task(cache_type='progress', user_id=<auth user>, entity_id=None)
+        when background tasks are enabled.
+        Fails until the hook is wired in the exercise review endpoint.
+        """
+        # Seed an exercise so the endpoint can succeed (returns 404 otherwise)
+        exercise = await ExerciseFactory.create(session=db_session)
+        await db_session.commit()
+
+        body = {"exercise_id": str(exercise.id), "score": 4, "max_score": 5}
+
+        # Patch BackgroundTasks.add_task at the Starlette class level so all
+        # instances are instrumented. The executor will add BackgroundTasks as a
+        # dependency param and gate the call behind feature_background_tasks;
+        # for now no such call exists so the assertion finds 0.
+        with patch("starlette.background.BackgroundTasks.add_task") as mock_add_task:
+            response = await client.post(REVIEW_URL, json=body, headers=auth_headers)
+
+        assert response.status_code == 200, (
+            f"Endpoint returned {response.status_code}: {response.text}. "
+            "Fix setup so endpoint succeeds before asserting on invalidation."
+        )
+
+        # Filter for invalidate_cache_task calls only
+        invalidation_calls = [
+            c for c in mock_add_task.call_args_list if c.args and c.args[0] is invalidate_cache_task
+        ]
+        assert (
+            len(invalidation_calls) == 1
+        ), f"Expected exactly 1 invalidate_cache_task call, found {len(invalidation_calls)}"
+        call_kwargs = invalidation_calls[0].kwargs
+        assert call_kwargs.get("cache_type") == "progress"
+        assert call_kwargs.get("user_id") == test_user.id
+        assert call_kwargs.get("entity_id") is None
