@@ -38,14 +38,10 @@ export function useDashboard(): DashboardViewModel {
   // -------------------------------------------------------------------------
   const isLoading = progressQuery.isLoading;
 
-  const isError =
-    progressQuery.isError ||
-    trendsQuery.isError ||
-    deckProgressQuery.isError ||
-    newsQuery.isError ||
-    situationsQuery.isError ||
-    profileQuery.isError ||
-    decksQuery.isError;
+  // isError reflects ONLY the critical query (progressQuery) failing — supplementary
+  // failures (news / situations / decks) surface through per-section flags below.
+  // This matches isLoading (also critical-only) and enables section-level degradation.
+  const isError = progressQuery.isError;
 
   // -------------------------------------------------------------------------
   // Greeting — derived from the *local* hour, read inside the hook.
@@ -112,8 +108,10 @@ export function useDashboard(): DashboardViewModel {
   // -------------------------------------------------------------------------
   // First name from profile
   // -------------------------------------------------------------------------
+  // trim() before split so a leading-space name (e.g. " Alice Smith") doesn't
+  // yield an empty string as the first token.
   const firstName = profileQuery.data?.full_name
-    ? (profileQuery.data.full_name.split(' ')[0] ?? null)
+    ? (profileQuery.data.full_name.trim().split(/\s+/)[0] ?? null)
     : null;
 
   // -------------------------------------------------------------------------

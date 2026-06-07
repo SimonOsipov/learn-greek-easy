@@ -81,7 +81,10 @@ export function WeekHeatmap({ heat, todayIndex }: WeekHeatmapProps) {
       {/* 7 cells */}
       {cells.map((bucket, i) => {
         const isToday = i === todayIndex;
-        const opacity = BUCKET_OPACITY[Math.min(Math.max(bucket, 0), 5)];
+        // Round to integer before lookup: a fractional bucket (e.g. 2.7) would
+        // otherwise index into BUCKET_OPACITY as undefined → opacity NaN.
+        const bucketIdx = Math.max(0, Math.min(5, Math.round(bucket)));
+        const opacity = BUCKET_OPACITY[bucketIdx];
 
         return (
           <View

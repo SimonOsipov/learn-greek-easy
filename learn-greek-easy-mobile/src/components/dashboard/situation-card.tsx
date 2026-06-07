@@ -73,7 +73,7 @@ export function SituationCard({ item, onPress }: SituationCardProps) {
         <Text
           testID="situation-card-monogram"
           className="text-on-photo-92 text-[36px] font-extrabold tracking-tight"
-          style={{ fontFamily: 'InterTight_700Bold', color: 'rgba(255,255,255,0.92)' }}
+          style={{ fontFamily: 'InterTight_700Bold' }}
         >
           {mark}
         </Text>

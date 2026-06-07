@@ -154,28 +154,23 @@ describe('buildHeatmap — edge cases', () => {
   });
 
   describe('negative reviews_count — out-of-contract but must not crash', () => {
-    // The spec says counts are clamped to [0,5] buckets. Negative reviews_count is
-    // semantically invalid, but the function must not throw. The current implementation
-    // maps negative counts to bucket 1 (they satisfy `count < 5`), which is a known
-    // ambiguity — the test documents the actual behavior so regressions are caught.
+    // Negative reviews_count is semantically invalid. The implementation now clamps
+    // negative counts to 0 before bucketing, so they correctly map to bucket 0
+    // (same as "no activity") rather than bucket 1 (which would show activity).
     it('negative reviews_count does not throw', () => {
       expect(() =>
         buildHeatmap([{ date: '2024-01-01', reviews_count: -1 }]),
       ).not.toThrow();
     });
 
-    it('negative reviews_count maps to bucket 1 (current behavior — negative < 5 is truthy)', () => {
-      // Document the actual behavior. If the implementation is later corrected to
-      // clamp negatives to 0 → bucket 0, update this test accordingly.
+    it('negative reviews_count maps to bucket 0 (clamped to 0 before bucketing)', () => {
       const result = buildHeatmap([{ date: '2024-01-01', reviews_count: -1 }]);
-      // Current: -1 passes `count < 5` → bucket 1.
-      // NOTE: this is a known spec ambiguity; see QA report notes.
-      expect(result[6]).toBe(1);
+      expect(result[6]).toBe(0);
     });
 
-    it('very negative reviews_count also maps to bucket 1 (same path through if-chain)', () => {
+    it('very negative reviews_count also maps to bucket 0 (same clamp path)', () => {
       const result = buildHeatmap([{ date: '2024-01-01', reviews_count: -1000 }]);
-      expect(result[6]).toBe(1);
+      expect(result[6]).toBe(0);
     });
   });
 

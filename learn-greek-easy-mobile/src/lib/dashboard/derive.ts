@@ -92,11 +92,13 @@ export function buildHeatmap(
   ];
 
   return padded.map((count) => {
-    if (count === 0) return 0;
-    if (count < 5) return 1;
-    if (count < 10) return 2;
-    if (count < 20) return 3;
-    if (count < 50) return 4;
+    // Clamp negative counts to 0 — invalid API data must not map to bucket 1.
+    const c = count < 0 ? 0 : count;
+    if (c === 0) return 0;
+    if (c < 5) return 1;
+    if (c < 10) return 2;
+    if (c < 20) return 3;
+    if (c < 50) return 4;
     return 5;
   });
 }
