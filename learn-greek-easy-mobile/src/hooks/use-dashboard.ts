@@ -80,6 +80,7 @@ export function useDashboard(): DashboardViewModel {
   const studyTimeSeconds = progressQuery.data?.overview.total_study_time_seconds ?? 0;
   const currentStreak = progressQuery.data?.streak.current_streak ?? 0;
   const cardsDueToday = progressQuery.data?.today.cards_due ?? 0;
+  const reviewedToday = progressQuery.data?.today.reviews_completed ?? 0;
 
   // -------------------------------------------------------------------------
   // Decks joined with per-deck progress
@@ -116,16 +117,18 @@ export function useDashboard(): DashboardViewModel {
     : null;
 
   // -------------------------------------------------------------------------
-  // refetchAll — calls every underlying query's refetch
+  // refetchAll — awaits all underlying query refetches in parallel
   // -------------------------------------------------------------------------
-  function refetchAll() {
-    void progressQuery.refetch();
-    void trendsQuery.refetch();
-    void deckProgressQuery.refetch();
-    void newsQuery.refetch();
-    void situationsQuery.refetch();
-    void profileQuery.refetch();
-    void decksQuery.refetch();
+  async function refetchAll(): Promise<void> {
+    await Promise.allSettled([
+      progressQuery.refetch(),
+      trendsQuery.refetch(),
+      deckProgressQuery.refetch(),
+      newsQuery.refetch(),
+      situationsQuery.refetch(),
+      profileQuery.refetch(),
+      decksQuery.refetch(),
+    ]);
   }
 
   // -------------------------------------------------------------------------
@@ -147,6 +150,7 @@ export function useDashboard(): DashboardViewModel {
     studyTimeSeconds,
     currentStreak,
     cardsDueToday,
+    reviewedToday,
     decks,
     news,
     situations,

@@ -281,14 +281,20 @@ describe('WhatsNewChips', () => {
   it('news chip shows correct total count (sum of all country counts)', () => {
     // cyprus=3, greece=2, world=1 → total 6
     renderChips();
-    const chip = screen.getByTestId('whats-new-chip-news');
-    // The chip's children include a Text with value 6
-    const allTexts = chip.findAllByType
-      ? chip.findAllByType('Text' as unknown as React.ComponentType)
-      : [];
-    const rendered = chip.props.children;
-    // As a fallback, check the chip renders at all and contains 6 somewhere in rendered structure
-    expect(rendered).toBeTruthy();
+    // LiveChip renders the count as a separate Text node — getByText finds it
+    // directly in the rendered tree of the WhatsNewChips component
+    expect(screen.getByText('6')).toBeTruthy();
+    // And the chip container is still present
+    expect(screen.getByTestId('whats-new-chip-news')).toBeTruthy();
+  });
+
+  it('news chip count regresses when individual counts change (total=4, not 6)', () => {
+    // Verify the total is computed correctly: cyprus=1, greece=2, world=1 → 4
+    // Set audio_count=0 so the only numeric chip rendered is the news total (avoids collisions).
+    renderChips({ country_counts: { cyprus: 1, greece: 2, world: 1 }, audio_count: 0 });
+    expect(screen.getByText('4')).toBeTruthy();
+    // '6' must NOT be present
+    expect(screen.queryByText('6')).toBeNull();
   });
 
   it('does not render the news chip when totalNews is 0', () => {

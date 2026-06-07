@@ -17,6 +17,18 @@ import { Sparkles, Zap } from 'lucide-react-native';
 import { Shelf } from '@/components/dashboard/shelf';
 import { useToast } from '@/components/ui/toast';
 import { track } from '@/lib/analytics';
+import { GRADIENT_DAILY_MIX } from '@/lib/dashboard/gradients';
+
+// ---------------------------------------------------------------------------
+// Icon color constants (sourced from MOB-13 explicit rgba tokens)
+// ---------------------------------------------------------------------------
+
+// on-photo-96: rgba(255,255,255,0.96) — white icon on gradient surface
+const ICON_ON_PHOTO = 'rgba(255,255,255,0.96)';
+// entry-amber: rgb(246,168,35) — amber accent icon on light card surface
+const ICON_AMBER = 'rgb(246,168,35)';
+// stat-green: rgb(49,196,122) — green accent icon on quick-drill card surface
+const ICON_GREEN = 'rgb(49,196,122)';
 
 // ---------------------------------------------------------------------------
 // Sample data
@@ -74,7 +86,7 @@ function DailyMixCard({ item, onPress }: QuickWinsCardProps) {
       style={{ width: CARD_WIDTH }}
     >
       <LinearGradient
-        colors={['rgb(139,92,246)', 'rgb(79,70,229)']}
+        colors={GRADIENT_DAILY_MIX as unknown as [string, string, ...string[]]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={{ borderRadius: 16, padding: 16, minHeight: 130, position: 'relative', overflow: 'hidden' }}
@@ -82,7 +94,7 @@ function DailyMixCard({ item, onPress }: QuickWinsCardProps) {
         {/* Watermark */}
         <Text
           className="absolute text-on-photo-18 font-extrabold text-[120px] leading-none"
-          style={{ right: -18, top: -10, color: 'rgba(255,255,255,0.18)', fontFamily: 'InterTight_700Bold' }}
+          style={{ right: -18, top: -10, fontFamily: 'InterTight_700Bold' }}
         >
           Α
         </Text>
@@ -90,7 +102,7 @@ function DailyMixCard({ item, onPress }: QuickWinsCardProps) {
           className="w-[30px] h-[30px] rounded-[9px] bg-on-photo-18 items-center justify-center"
         >
           <View style={{ width: 16, height: 16 }}>
-            <Sparkles size={16} color="white" />
+            <Sparkles size={16} color={ICON_ON_PHOTO} />
           </View>
         </View>
         <View className="flex-1 mt-2">
@@ -118,16 +130,15 @@ function WordOfDayCard({ item, onPress }: QuickWinsCardProps) {
     <Pressable
       testID={`quick-wins-card-${item.id}`}
       onPress={onPress}
-      style={{ width: 280 }}
+      style={{ width: CARD_WIDTH }}
       className="rounded-[16px] overflow-hidden bg-bg-2 border border-line p-4 relative"
     >
-      {/* Watermark */}
+      {/* Watermark — dark tint at 6% on light card surface (on-dark-06 token) */}
       <Text
-        className="absolute font-extrabold text-[110px] leading-none"
+        className="absolute text-on-dark-06 font-extrabold text-[110px] leading-none"
         style={{
           right: -16,
           bottom: -22,
-          color: 'rgba(15,23,42,0.06)',
           fontFamily: 'InterTight_700Bold',
         }}
       >
@@ -137,11 +148,11 @@ function WordOfDayCard({ item, onPress }: QuickWinsCardProps) {
       {/* "Word of the day" label */}
       <View className="flex-row items-center gap-1.5 mb-2.5">
         <View style={{ width: 12, height: 12 }}>
-          <Sparkles size={12} color="rgb(246,168,35)" />
+          <Sparkles size={12} color={ICON_AMBER} />
         </View>
         <Text
-          className="text-[10.5px] font-bold uppercase tracking-[0.12em]"
-          style={{ fontFamily: 'SpaceMono_400Regular', color: 'rgb(246,168,35)' }}
+          className="text-entry-amber text-[10.5px] font-bold uppercase tracking-[0.12em]"
+          style={{ fontFamily: 'SpaceMono_400Regular' }}
         >
           Word of the day
         </Text>
@@ -164,13 +175,13 @@ function QuickDrillCard({ item, onPress }: QuickWinsCardProps) {
     <Pressable
       testID={`quick-wins-card-${item.id}`}
       onPress={onPress}
-      style={{ width: CARD_WIDTH, borderRadius: 16, padding: 14, minHeight: 130, backgroundColor: 'rgba(49,196,122,0.14)', borderColor: 'rgba(49,196,122,0.25)', borderWidth: 1 }}
+      className="bg-stat-green-14 border-stat-green-25 border rounded-[16px] p-[14px]"
+      style={{ width: CARD_WIDTH, minHeight: 130 }}
     >
       <View
-        className="w-[30px] h-[30px] rounded-[9px] items-center justify-center"
-        style={{ backgroundColor: 'rgba(49,196,122,0.18)' }}
+        className="w-[30px] h-[30px] rounded-[9px] bg-stat-green-18 items-center justify-center"
       >
-        <Zap size={16} color="rgb(49,196,122)" />
+        <Zap size={16} color={ICON_GREEN} />
       </View>
       <Text
         className="text-fg text-[15px] font-bold tracking-tight leading-tight mt-2 flex-1"

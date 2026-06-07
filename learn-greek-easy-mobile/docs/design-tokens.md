@@ -131,6 +131,10 @@ block. Use them directly without any modifier.
 | `stat-primary-14` | `rgba(36,99,235,0.14)` | `--primary` 221 83% 53% — StatGrid primary tile icon bg (DASH-07) |
 | `stat-violet` | `rgb(187,103,228)` | 280 70% 65% — StatGrid violet tile icon fg (DASH-07) |
 | `stat-violet-14` | `rgba(187,103,228,0.14)` | 280 70% 65% — StatGrid violet tile icon bg (DASH-07) |
+| `on-photo-92` | `rgba(255,255,255,0.92)` | White at 92% — ContinueHero progress fill + kicker text (MOB-16) |
+| `on-dark-06` | `rgba(15,23,42,0.06)` | Dark near-black at 6% — WordOfDayCard watermark tint on light surface (MOB-16) |
+| `stat-green-18` | `rgba(49,196,122,0.18)` | 150 60% 48% — QuickDrill icon badge bg (MOB-16) |
+| `stat-green-25` | `rgba(49,196,122,0.25)` | 150 60% 48% — QuickDrill card border (MOB-16) |
 
 ---
 

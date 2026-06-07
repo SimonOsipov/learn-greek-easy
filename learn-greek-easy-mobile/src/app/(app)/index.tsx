@@ -90,6 +90,7 @@ export default function HomeScreen() {
     firstName,
     currentStreak,
     cardsDueToday,
+    reviewedToday,
     masteredCards,
     studyTimeSeconds,
     heatmap,
@@ -112,14 +113,17 @@ export default function HomeScreen() {
   // the critical progress query is no longer loading.
   const [refreshing, setRefreshing] = useState(false);
 
-  const handleRefresh = useCallback(() => {
+  const isRefreshing = useRef(false);
+  const handleRefresh = useCallback(async () => {
+    if (isRefreshing.current) return;
+    isRefreshing.current = true;
     setRefreshing(true);
-    refetchAll();
-    // The spinner will clear automatically once isLoading transitions back to
-    // false (handled in the effect below via the refreshing+isLoading combo).
-    // React Query doesn't return promises from refetch() in this hook pattern,
-    // so we use a simple timeout floor to avoid an instant spinner flash.
-    setTimeout(() => setRefreshing(false), 1500);
+    try {
+      await refetchAll();
+    } finally {
+      isRefreshing.current = false;
+      setRefreshing(false);
+    }
   }, [refetchAll]);
 
   // ── Analytics: home_screen_viewed ──
@@ -209,18 +213,9 @@ export default function HomeScreen() {
       : 0;
   const heroDueNow = resumeDeck?.cards_due ?? 0;
 
-  // ReviewGoalPair data — read daily_goal from the progress model (cardsDueToday
-  // is the raw due count; daily_goal comes from progressQuery.data.today.daily_goal,
-  // but useDashboard doesn't expose it directly — use cardsDueToday as done count
-  // and a static fallback; actual daily_goal surfaced via the hook's cardsDueToday).
-  // NOTE: useDashboard exposes cardsDueToday as the count of cards due today.
-  // The daily_goal field from the backend today.daily_goal is not separately
-  // surfaced in the view model. Per the design spec the goal card reads
-  // "{cardsDueToday} / {daily_goal} cards today". We use cardsDueToday for both
-  // the "done" value and expose 0 as the reviewed count (no separate tracking
-  // yet). The daily_goal value isn't in the DashboardViewModel — we show
-  // cardsDueToday as the daily target and streak as the stat.
-  const reviewedToday = 0; // reviewed count not in VM; placeholder until a future subtask
+  // ReviewGoalPair — reviewedToday comes from today.reviews_completed in the
+  // progress dashboard response, surfaced via useDashboard().reviewedToday.
+  // cardsDueToday acts as the daily goal target (today.cards_due from the backend).
 
   return (
     <SafeAreaView testID="home-returning" className="flex-1 bg-bg">

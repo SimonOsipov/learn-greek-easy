@@ -45,7 +45,7 @@ export function DeckCard({ deck, onPress }: DeckCardProps) {
   const mastered = deck.progress?.cards_mastered ?? 0;
   const total = deck.card_count;
   const due = deck.progress?.cards_due ?? 0;
-  const progressRatio = total > 0 ? mastered / total : 0;
+  const progressRatio = total > 0 ? Math.max(0, Math.min(1, mastered / total)) : 0;
   const progressPercent: `${number}%` = `${Math.round(progressRatio * 100)}%`;
 
   // First 2 chars of deck name as monogram
@@ -72,7 +72,6 @@ export function DeckCard({ deck, onPress }: DeckCardProps) {
             fontFamily: 'InterTight_700Bold',
             right: -10,
             top: -8,
-            color: 'rgba(255,255,255,0.18)',
           }}
         >
           {mark}
@@ -133,7 +132,7 @@ export function DeckCard({ deck, onPress }: DeckCardProps) {
             <View
               testID="deck-card-progress-fill"
               className="h-full rounded-full bg-on-photo-92"
-              style={{ width: progressPercent, backgroundColor: 'rgba(255,255,255,0.92)' }}
+              style={{ width: progressPercent }}
             />
           </View>
         </View>

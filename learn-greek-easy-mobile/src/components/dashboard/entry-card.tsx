@@ -20,7 +20,8 @@
  * The daily_goal field from the progress dashboard is in cards, not minutes.
  */
 import { View, Text } from 'react-native';
-import type { ReactNode } from 'react';
+import { cloneElement } from 'react';
+import type { ReactNode, ReactElement } from 'react';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -84,6 +85,17 @@ const TONE_CLASSES: Record<
   },
 };
 
+/**
+ * Raw icon color strings per tone — used to inject `color` directly into the
+ * lucide icon element via cloneElement, since React Native Views do NOT inherit
+ * text color from a parent className. Values match the explicit rgba tokens in
+ * tailwind.config.js (entry-violet / entry-amber).
+ */
+const TONE_ICON_COLOR: Record<EntryCardTone, string> = {
+  violet: 'rgb(177,82,224)',  // entry-violet  280 70% 60%
+  amber:  'rgb(246,168,35)',  // entry-amber   38  92% 55%
+};
+
 // ---------------------------------------------------------------------------
 // EntryCard
 // ---------------------------------------------------------------------------
@@ -120,8 +132,14 @@ export function EntryCard({
           testID={`entry-card-icon-${tone}`}
           className={`w-6 h-6 rounded-[7px] items-center justify-center ${T.iconBg}`}
         >
-          <View className={T.iconFg} style={{ width: 13, height: 13 }}>
-            {icon}
+          {/* Inject the tone color directly into the icon element — React Native Views
+              do NOT inherit color from className, so lucide icons need an explicit prop. */}
+          <View style={{ width: 13, height: 13 }}>
+            {icon && typeof icon === 'object' && 'type' in icon
+              ? cloneElement(icon as ReactElement<{ color?: string }>, {
+                  color: TONE_ICON_COLOR[tone],
+                })
+              : icon}
           </View>
         </View>
         {/* Mono kicker */}

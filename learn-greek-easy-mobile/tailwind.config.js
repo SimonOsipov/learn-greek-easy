@@ -63,6 +63,7 @@ module.exports = {
         'on-photo-72': 'rgba(255,255,255,0.72)',
         'on-photo-78': 'rgba(255,255,255,0.78)',
         'on-photo-85': 'rgba(255,255,255,0.85)',
+        'on-photo-92': 'rgba(255,255,255,0.92)',
         'on-photo-96': 'rgba(255,255,255,0.96)',
         'on-photo-scrim-42': 'rgba(8,11,20,0.42)',     // --on-photo-scrim 225 43% 5% ≈ rgb(8,11,20)
         'danger-18': 'rgba(239,68,68,0.18)',            // --danger 0 78% 58% ≈ rgb(239,68,68)
@@ -80,6 +81,9 @@ module.exports = {
         'entry-amber': 'rgb(246,168,35)',            // iconFg — solid accent
         'entry-amber-16': 'rgba(246,168,35,0.16)',  // iconBg — MOB-13 explicit alpha
         'entry-amber-32': 'rgba(246,168,35,0.32)',  // ring/glow — MOB-13 explicit alpha
+        // Scrim dark at 6% alpha — used as watermark tint on light card surfaces
+        // (e.g. WordOfDayCard). Base: 225 40% 12% ≈ rgb(15,23,42) (near-black-blue).
+        'on-dark-06': 'rgba(15,23,42,0.06)',
         // WhatsNew green dot: 150 60% 48% = rgb(49,196,122).
         'whats-new-green': 'rgb(49,196,122)',
         // StatGrid tints (DASH-07): icon-badge fill colours for the 2×2 stat tiles.
@@ -90,6 +94,8 @@ module.exports = {
         'stat-amber-14':  'rgba(246,168,35,0.14)',  // 38 92% 55% — same base as entry-amber
         'stat-green': 'rgb(49,196,122)',             // 150 60% 48% — same base as whats-new-green
         'stat-green-14':  'rgba(49,196,122,0.14)',   // 150 60% 48%
+        'stat-green-18':  'rgba(49,196,122,0.18)',   // 150 60% 48% — QuickDrill icon bg
+        'stat-green-25':  'rgba(49,196,122,0.25)',   // 150 60% 48% — QuickDrill card border
         'stat-primary-14': 'rgba(36,99,235,0.14)',  // --primary 221 83% 53%
         'stat-violet': 'rgb(187,103,228)',           // 280 70% 65%
         'stat-violet-14': 'rgba(187,103,228,0.14)', // 280 70% 65%

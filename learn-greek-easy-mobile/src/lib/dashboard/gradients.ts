@@ -62,6 +62,17 @@ export const GRADIENT_QUICKWIN: readonly [string, string] = [
   'rgb(6,220,238)',   // --accent-2 188 95% 50%
 ] as const;
 
+/**
+ * Daily Mix quick-wins card.
+ * Violet purple → deep indigo.
+ * token source: 270 76% 66% = rgb(139,92,246) (Tailwind violet-500)
+ *               260 66% 59% = rgb(79,70,229)  (Tailwind indigo-600)
+ */
+export const GRADIENT_DAILY_MIX: readonly [string, string] = [
+  'rgb(139,92,246)', // violet-500 — quick-wins daily-mix start
+  'rgb(79,70,229)',  // indigo-600 — quick-wins daily-mix end
+] as const;
+
 // ---------------------------------------------------------------------------
 // Ordered palette — used by gradientForId; exported for test distribution asserts
 // ---------------------------------------------------------------------------

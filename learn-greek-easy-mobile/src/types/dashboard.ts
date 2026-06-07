@@ -25,6 +25,7 @@ export interface ProgressDashboardResponse {
   today: {
     cards_due: number;
     daily_goal: number;
+    reviews_completed: number;
     study_time_seconds: number;
   };
   overview: {
@@ -113,6 +114,8 @@ export interface DashboardViewModel {
   studyTimeSeconds: number;
   currentStreak: number;
   cardsDueToday: number;
+  /** Reviews completed today (from today.reviews_completed on the progress dashboard). */
+  reviewedToday: number;
 
   /** Deck list items joined with per-deck progress data. */
   decks: DeckWithProgress[];
@@ -146,6 +149,6 @@ export interface DashboardViewModel {
   situationsError: boolean;
   decksError: boolean;
 
-  /** Calls refetch() on all underlying queries. */
-  refetchAll: () => void;
+  /** Awaits refetch() on all underlying queries in parallel (Promise.allSettled). */
+  refetchAll: () => Promise<void>;
 }

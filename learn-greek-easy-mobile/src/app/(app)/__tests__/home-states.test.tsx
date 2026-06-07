@@ -128,6 +128,7 @@ function makeReturningSummary(overrides: Record<string, unknown> = {}) {
     firstName: 'Maria',
     currentStreak: 6,
     cardsDueToday: 12,
+    reviewedToday: 5,
     masteredCards: 80,
     studyTimeSeconds: 720,
     heatmap: [0, 1, 2, 3, 0, 5, 2],
@@ -146,7 +147,7 @@ function makeReturningSummary(overrides: Record<string, unknown> = {}) {
     newsError: false,
     situationsError: false,
     decksError: false,
-    refetchAll: jest.fn(),
+    refetchAll: jest.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -197,7 +198,7 @@ describe('DASH-10 — loading state shows DashboardSkeleton', () => {
 // ---------------------------------------------------------------------------
 
 describe('DASH-10 — pull-to-refresh calls refetchAll', () => {
-  it('invoking RefreshControl onRefresh calls refetchAll', () => {
+  it('invoking RefreshControl onRefresh calls refetchAll', async () => {
     const refetchAll = jest.fn();
     mockUseDashboard.mockReturnValue(makeReturningSummary({ refetchAll }));
 
@@ -206,12 +207,13 @@ describe('DASH-10 — pull-to-refresh calls refetchAll', () => {
     // Find the RefreshControl in the rendered tree and invoke its onRefresh
     const refreshControls = UNSAFE_getAllByType(RefreshControl);
     expect(refreshControls.length).toBeGreaterThan(0);
-    const onRefresh = refreshControls[0].props.onRefresh as () => void;
+    const onRefresh = refreshControls[0].props.onRefresh as () => Promise<void>;
     expect(typeof onRefresh).toBe('function');
 
-    // Wrap in act() because onRefresh calls setRefreshing (state update)
-    act(() => {
-      onRefresh();
+    // Wrap in await act(async) because handleRefresh is async — awaiting it ensures
+    // all state updates (setRefreshing true + false) settle within the act boundary.
+    await act(async () => {
+      await onRefresh();
     });
 
     expect(refetchAll).toHaveBeenCalledTimes(1);

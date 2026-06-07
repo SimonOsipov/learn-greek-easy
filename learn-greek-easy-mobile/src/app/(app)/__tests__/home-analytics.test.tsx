@@ -142,6 +142,7 @@ function makeReturningSummary(overrides: Record<string, unknown> = {}) {
     firstName: 'Maria',
     currentStreak: 6,
     cardsDueToday: 12,
+    reviewedToday: 5,
     masteredCards: 80,
     studyTimeSeconds: 720,
     heatmap: [0, 1, 2, 3, 0, 5, 2],
@@ -160,7 +161,7 @@ function makeReturningSummary(overrides: Record<string, unknown> = {}) {
     newsError: false,
     situationsError: false,
     decksError: false,
-    refetchAll: jest.fn(),
+    refetchAll: jest.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }

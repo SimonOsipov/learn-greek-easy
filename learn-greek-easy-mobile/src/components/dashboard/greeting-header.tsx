@@ -13,8 +13,12 @@
  * horizontal padding constant from the design handoff.
  *
  * MOB-13 SAFE: no /NN opacity modifier on any var-backed token.
+ * Avatar bg and text use opaque stop colors from gradients.ts (GRADIENT_HERO)
+ * so no raw rgb() inline strings appear in JSX.
  */
 import { View, Text, Pressable } from 'react-native';
+
+import { GRADIENT_HERO } from '@/lib/dashboard/gradients';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -84,14 +88,13 @@ function Avatar({
       testID="avatar-button"
       onPress={onPress}
       className="w-9 h-9 rounded-full items-center justify-center"
-      style={{ backgroundColor: 'rgb(36,99,235)' }}
-      // rgb(36,99,235) = --primary 221 83% 53% in light theme — the avatar
-      // uses a fixed opaque gradient stop from gradients.ts so no token
-      // opacity modifier is needed (MOB-13 safe).
+      style={{ backgroundColor: GRADIENT_HERO[0] }}
+      // GRADIENT_HERO[0] = 'rgb(36,99,235)' = --primary 221 83% 53%
+      // sourced from gradients.ts (presentation-layer constant, not inline literal).
     >
       <Text
-        className="text-[13px] font-bold tracking-tight"
-        style={{ fontFamily: 'InterTight_700Bold', color: 'rgb(255,255,255)' }}
+        className="text-on-photo-96 text-[13px] font-bold tracking-tight"
+        style={{ fontFamily: 'InterTight_700Bold' }}
         testID="avatar-initials"
       >
         {initials || '?'}

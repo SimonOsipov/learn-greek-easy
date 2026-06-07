@@ -128,12 +128,13 @@ import HomeScreen from '@/app/(app)/index';
 // Shared fixture factories
 // ---------------------------------------------------------------------------
 
-function makeReturningSummary() {
+function makeReturningSummary(overrides: Record<string, unknown> = {}) {
   return {
     greeting: 'morning' as const,
     firstName: 'Maria',
     currentStreak: 6,
     cardsDueToday: 12,
+    reviewedToday: 5,
     masteredCards: 80,
     studyTimeSeconds: 720,
     heatmap: [0, 1, 2, 3, 0, 5, 2],
@@ -152,7 +153,8 @@ function makeReturningSummary() {
     newsError: false,
     situationsError: false,
     decksError: false,
-    refetchAll: jest.fn(),
+    refetchAll: jest.fn().mockResolvedValue(undefined),
+    ...overrides,
   };
 }
 
@@ -325,6 +327,36 @@ describe('HomeScreen — returning-user branch', () => {
   it('does NOT render new-user-start in returning branch', () => {
     render(<HomeScreen />);
     expect(screen.queryByTestId('new-user-start')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3b. reviewedToday flows through to the goal card (non-zero)
+// ---------------------------------------------------------------------------
+
+describe('HomeScreen — reviewedToday non-zero in goal card', () => {
+  it('renders reviewed count (reviewedToday=7) in the goal card title text', () => {
+    mockUseDashboard.mockReturnValue(
+      makeReturningSummary({ reviewedToday: 7, cardsDueToday: 20 }),
+    );
+    render(<HomeScreen />);
+    // The amber goal card title should contain "7" (reviewed count)
+    const goalTitle = screen.getByTestId('entry-card-title-amber');
+    const text: string = goalTitle.props.children ?? '';
+    expect(text).toContain('7');
+    // Should NOT show "0 / 20"
+    expect(text).not.toBe('0 / 20 cards today');
+  });
+
+  it('goal card progress ratio is non-zero when reviewedToday > 0', () => {
+    mockUseDashboard.mockReturnValue(
+      makeReturningSummary({ reviewedToday: 10, cardsDueToday: 20 }),
+    );
+    render(<HomeScreen />);
+    // Goal card renders — check progress fill has non-zero width
+    const progressFill = screen.getByTestId('entry-card-progress-fill-amber');
+    // width="50%" when reviewedToday=10, cardsDueToday=20
+    expect(progressFill.props.style.width).toBe('50%');
   });
 });
 

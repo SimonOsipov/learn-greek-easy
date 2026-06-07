@@ -33,6 +33,12 @@ import { View } from 'react-native';
 
 jest.mock('nativewind');
 
+// expo-router — capture router.push calls to verify QuickWinsShelf does NOT navigate.
+const mockRouterPush = jest.fn();
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: mockRouterPush }),
+}));
+
 // expo-linear-gradient — wrap children in a plain View.
 jest.mock('expo-linear-gradient', () => {
   const { View } = require('react-native');
@@ -364,6 +370,7 @@ describe('Shelf', () => {
 describe('QuickWinsShelf', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRouterPush.mockReset();
   });
 
   it('shows the ComingSoonDot (red-dot eyebrow)', () => {
@@ -379,14 +386,13 @@ describe('QuickWinsShelf', () => {
   });
 
   it('pressing a card fires the toast and does NOT navigate', () => {
-    const routerPush = jest.fn();
     render(<QuickWinsShelf />);
     // Press the Daily Mix card
     fireEvent.press(screen.getByTestId('quick-wins-card-daily-mix'));
     // Toast was called
     expect(mockShowComingSoonToast).toHaveBeenCalledTimes(1);
-    // No navigation was triggered (routerPush is never called)
-    expect(routerPush).not.toHaveBeenCalled();
+    // router.push from expo-router must NOT be called — QuickWinsShelf never navigates
+    expect(mockRouterPush).not.toHaveBeenCalled();
   });
 
   it('pressing multiple cards each fires the toast', () => {

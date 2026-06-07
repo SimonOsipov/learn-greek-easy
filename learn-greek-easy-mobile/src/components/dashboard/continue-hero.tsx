@@ -10,9 +10,10 @@
  *
  * When the resume deck is null the component returns null (parent renders nothing).
  *
- * MOB-13 SAFE: gradient stops use the opaque rgb() literals from gradients.ts
- * (same pattern as login.tsx / onboarding-shell.tsx). No /NN modifier on any
- * var-backed token anywhere in this file.
+ * MOB-13 SAFE: gradient stops use the opaque rgb() literals from gradients.ts.
+ * All translucent white surfaces use explicit <base>-<NN> token classes from
+ * tailwind.config.js (on-photo-22, on-photo-92, on-photo-96). No raw rgba/rgb
+ * inline style values; no /NN modifier on var-backed tokens.
  */
 import { View, Text, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -55,16 +56,9 @@ export interface ContinueHeroProps {
 // Constants
 // ---------------------------------------------------------------------------
 
-// White at ~22% and ~92% alpha — sanctioned raw rgba literals for gradient card
-// surfaces (expo-linear-gradient colors[] cannot accept NativeWind classes).
-// Same approach used in login.tsx and gradients.ts comments.
-const PROGRESS_TRACK = 'rgba(255,255,255,0.22)';
-const PROGRESS_FILL  = 'rgba(255,255,255,0.92)';
-
-// Resume pill: dark blue text on white background — matches the mock exactly.
-// rgb(36,99,235) = --primary 221 83% 53% (same literal as gradients.ts GRADIENT_HERO[0]).
-const RESUME_TEXT_COLOR = 'rgb(36,99,235)';
-const RESUME_BG         = 'rgba(255,255,255,0.96)';
+// Resume pill: primary blue text color — same as gradients.ts GRADIENT_HERO[0].
+// This is a gradient stop color (opaque, from the presentation layer constant).
+const RESUME_TEXT_COLOR = GRADIENT_HERO[0]; // rgb(36,99,235) = --primary 221 83% 53%
 
 // ---------------------------------------------------------------------------
 // ContinueHero
@@ -107,14 +101,11 @@ export function ContinueHero({
         {/* ── CONTINUE kicker ── */}
         <View className="flex-row items-center gap-2 mb-1.5">
           {/* White dot before kicker — mirrors the mock's decorative dot */}
-          <View
-            className="w-1.5 h-1.5 rounded-full"
-            style={{ backgroundColor: PROGRESS_FILL }}
-          />
+          <View className="w-1.5 h-1.5 rounded-full bg-on-photo-92" />
           <Text
             testID="continue-kicker"
-            className="text-[10.5px] uppercase tracking-[0.14em]"
-            style={{ fontFamily: 'SpaceMono_400Regular', color: PROGRESS_FILL }}
+            className="text-on-photo-92 text-[10.5px] uppercase tracking-[0.14em]"
+            style={{ fontFamily: 'SpaceMono_400Regular' }}
           >
             CONTINUE
           </Text>
@@ -123,8 +114,8 @@ export function ContinueHero({
         {/* ── Deck title (Inter Tight) ── */}
         <Text
           testID="continue-deck-title"
-          className="text-[26px] leading-tight font-bold tracking-tight"
-          style={{ fontFamily: 'InterTight_700Bold', color: 'rgb(255,255,255)' }}
+          className="text-on-photo-96 text-[26px] leading-tight font-bold tracking-tight"
+          style={{ fontFamily: 'InterTight_700Bold' }}
           numberOfLines={2}
         >
           {deck.deck_name}
@@ -134,12 +125,8 @@ export function ContinueHero({
         {!!titleEl && (
           <Text
             testID="continue-deck-title-el"
-            className="text-[14px] mt-1 mb-3.5"
-            style={{
-              fontFamily: 'NotoSerif_400Regular',
-              color: PROGRESS_FILL,
-              opacity: 0.82,
-            }}
+            className="text-on-photo-92 text-[14px] mt-1 mb-3.5 opacity-82"
+            style={{ fontFamily: 'NotoSerif_400Regular' }}
           >
             {titleEl}
           </Text>
@@ -148,13 +135,12 @@ export function ContinueHero({
         {/* ── Progress bar ── */}
         <View
           testID="continue-progress-track"
-          className="h-1.5 rounded-full mt-3.5 mb-2.5 overflow-hidden"
-          style={{ backgroundColor: PROGRESS_TRACK }}
+          className="h-1.5 rounded-full mt-3.5 mb-2.5 overflow-hidden bg-on-photo-22"
         >
           <View
             testID="continue-progress-fill"
-            className="h-full rounded-full"
-            style={{ width: progressPercent, backgroundColor: PROGRESS_FILL }}
+            className="h-full rounded-full bg-on-photo-92"
+            style={{ width: progressPercent }}
           />
         </View>
 
@@ -163,19 +149,18 @@ export function ContinueHero({
           {/* cards done / total · N due */}
           <Text
             testID="continue-stats"
-            className="text-[12.5px] font-semibold"
-            style={{ color: PROGRESS_FILL, opacity: 0.9 }}
+            className="text-on-photo-92 text-[12.5px] font-semibold opacity-90"
           >
-            <Text style={{ fontWeight: '700', color: 'rgb(255,255,255)' }}>
+            <Text className="font-bold text-on-photo-96">
               {cardsDone}
             </Text>
-            <Text style={{ opacity: 0.7, color: 'rgb(255,255,255)' }}>
+            <Text className="text-on-photo-96 opacity-70">
               {` / ${cardsTotal} cards · `}
             </Text>
-            <Text style={{ fontWeight: '700', color: 'rgb(255,255,255)' }}>
+            <Text className="font-bold text-on-photo-96">
               {dueNow}
             </Text>
-            <Text style={{ opacity: 0.7, color: 'rgb(255,255,255)' }}>
+            <Text className="text-on-photo-96 opacity-70">
               {' due'}
             </Text>
           </Text>
@@ -184,8 +169,7 @@ export function ContinueHero({
           <Pressable
             testID="continue-resume-button"
             onPress={onResume}
-            className="h-9 px-3.5 rounded-full flex-row items-center gap-1.5"
-            style={{ backgroundColor: RESUME_BG }}
+            className="h-9 px-3.5 rounded-full flex-row items-center gap-1.5 bg-on-photo-96"
             accessibilityRole="button"
             accessibilityLabel="Resume deck"
           >
