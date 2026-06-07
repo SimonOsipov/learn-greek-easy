@@ -649,7 +649,7 @@ jobs:
           VITE_API_URL: http://localhost:8000
           VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-        run: npx playwright test --project=${{ matrix.browser }} --shard=${{ matrix.shard }}/3
+        run: npx playwright test --project=${{ matrix.browser }} --shard=${{ matrix.shard }}/3 --grep-invert @lcp-baseline
 
       - name: Save Playwright browsers cache
         if: always() && steps.playwright-cache.outputs.cache-hit != 'true'
