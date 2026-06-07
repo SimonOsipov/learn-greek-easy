@@ -115,3 +115,25 @@ class TestDatabasePoolWarmMin:
             Settings()
 
         assert "database_pool_warm_min" in str(exc_info.value).lower()
+
+    def test_database_pool_warm_min_equal_to_pool_size_accepted(self, monkeypatch):
+        """warm_min == pool_size is valid — the validator uses strict >, not >=."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("DATABASE_POOL_SIZE", "5")
+        monkeypatch.setenv("DATABASE_POOL_WARM_MIN", "5")
+
+        settings = Settings()
+        assert settings.database_pool_warm_min == 5
+        assert settings.database_pool_size == 5
+
+    def test_database_pool_warm_min_zero_accepted(self, monkeypatch):
+        """warm_min=0 disables warming; the validator must not reject it."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("DATABASE_POOL_WARM_MIN", "0")
+
+        settings = Settings()
+        assert settings.database_pool_warm_min == 0
