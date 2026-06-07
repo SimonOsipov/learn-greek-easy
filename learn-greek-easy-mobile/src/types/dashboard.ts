@@ -8,8 +8,20 @@
  *   GET /api/v1/progress/decks      → DeckProgressListResponse
  */
 
+export interface StreakStats {
+  current_streak: number;
+  longest_streak: number;
+  last_study_date: string | null;
+  vocabulary_current_streak: number;
+  vocabulary_longest_streak: number;
+  culture_current_streak: number;
+  culture_longest_streak: number;
+  exercise_current_streak: number;
+  exercise_longest_streak: number;
+}
+
 export interface ProgressDashboardResponse {
-  streak: number;
+  streak: StreakStats;
   today: {
     cards_due: number;
     daily_goal: number;
@@ -40,6 +52,7 @@ export interface DeckProgressSummary {
   cards_studied: number;
   cards_mastered: number;
   cards_due: number;
+  mastery_percentage: number;
   completion_percentage: number;
   last_studied_at: string | null;
 }

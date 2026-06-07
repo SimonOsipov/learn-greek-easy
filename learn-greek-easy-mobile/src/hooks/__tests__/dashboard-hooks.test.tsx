@@ -133,7 +133,22 @@ describe('useProgressDashboard', () => {
 
   it('calls /api/v1/progress/dashboard when session is present', async () => {
     mockSession = FAKE_SESSION;
-    mockApiGet.mockResolvedValueOnce({ streak: 5, today: {}, overview: {}, recent_activity: [] });
+    mockApiGet.mockResolvedValueOnce({
+      streak: {
+        current_streak: 5,
+        longest_streak: 10,
+        last_study_date: '2026-06-07',
+        vocabulary_current_streak: 3,
+        vocabulary_longest_streak: 7,
+        culture_current_streak: 2,
+        culture_longest_streak: 4,
+        exercise_current_streak: 1,
+        exercise_longest_streak: 3,
+      },
+      today: {},
+      overview: {},
+      recent_activity: [],
+    });
 
     const client = makeClient();
     const { result } = renderHook(() => useProgressDashboard(), {
