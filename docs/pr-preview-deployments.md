@@ -130,3 +130,13 @@ RALPH Phase 3.5 consumes these screenshots as part of the visual gate review.
 - **Mobile-only PR** (`changes.outputs.web == 'false'`): `web-verify` is skipped; `mobile-e2e` runs.
 - **Web-only PR** (`changes.outputs.mobile == 'false'`): `mobile-e2e` is skipped; `web-verify` runs.
 - **Mixed PR**: both jobs run in parallel after `seed-database` succeeds.
+
+## RALPH Phase 3.5 Release Handshake
+
+RALPH's story-level visual QA gate (Phase 3.5 in `RALPH_PROMPT.md`) does not browse shared dev directly. It uses this release flow as a handshake:
+
+1. **Trigger** — add the `ready-to-verify` label (primary) or manually dispatch with `--ref "$BRANCH"` (fallback). Never dispatch `--ref main` before the PR has merged.
+2. **Wait** — the run serializes on the `dev-release-lease`, so RALPH polls / `gh run watch` until it concludes.
+3. **Consume artifacts** — RALPH downloads `web-verify-screenshots` via `gh run download <run-id> -n web-verify-screenshots` and uses each screenshot as per-AC pixel evidence.
+
+The mobile Phase 3.5 gate stays a **local iOS-simulator Maestro run** (no web preview; ~10-min Release rebuild) and is race-safe only via the per-PR namespaced seed user (`e2e_beginner+pr<N>@test.com`, RGATE-05). The release run's `mobile-e2e` job runs in parallel and its `mobile-e2e-maestro` artifact may be consumed opportunistically.

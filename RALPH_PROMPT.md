@@ -33,14 +33,15 @@ Never guess, assume, or reduce functionality. If unclear, ask the user.
 | "This feature is complex, let's disable it" | "This feature is complex, let's implement it properly" |
 | "The bug is hard to fix, let's remove the feature" | "The bug is hard to fix, let's investigate and fix it" |
 
-### 3. CI Test Gate (BLOCKING)
-Cannot output `ALL_TASKS_COMPLETE` until all CI *test* checks pass. Deploy/Smoke are NOT required.
+### 3. CI Test Gate + Release Gate (BLOCKING)
+Cannot output `ALL_TASKS_COMPLETE` until BOTH (a) all CI *test* checks pass on the PR AND (b) a green `release-verify.yml` run completes inside the `dev-release-lease` window (see Phase 3.5). Deploy, Seed, Health/Smoke, Accessibility, K6, and Lighthouse run *inside* that locked release — they are verified there and required for completion.
 
 ```bash
 gh pr checks [PR_NUMBER]
-# Required: Alembic Migration Check, Backend Tests, Unit & Integration Tests,
+# Required (per-push, preview.yml CI Gate): Alembic Migration Check, Backend Tests, Unit & Integration Tests,
 #           E2E Tests (all shards), E2E API Tests, Backend Lint & Format, Frontend Lint & Format
-# NOT required: Deploy, Seed Dev Database, Health and Smoke Tests, Lighthouse, K6, Accessibility
+# Verified inside the locked release-verify.yml run (required for completion, NOT per-push):
+#           Deploy, Seed Dev Database, Health and Smoke Tests, web-verify / mobile-e2e, Accessibility, K6, Lighthouse
 ```
 
 ### 4. ONE Branch, ONE PR per User Story
@@ -219,7 +220,7 @@ The orchestrator never runs `git checkout -b`, `gh pr create`, or `gh pr ready` 
 After the FINAL subtask's Stage 4 completes:
 
 1. **Monitor CI** — poll `gh pr checks [PR_NUMBER]` every 3 minutes (CI Monitoring Protocol below).
-2. **Review CodeRabbit comments** as soon as all *test* checks pass. Don't wait for Deploy/Smoke.
+2. **Review CodeRabbit comments** as soon as all per-push *test* checks pass — CodeRabbit runs before the Phase 3.5 release handshake, so you needn't wait for the locked release to start it.
    ```bash
    gh pr view [PR_NUMBER] --comments
    gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/reviews
@@ -232,22 +233,53 @@ After the FINAL subtask's Stage 4 completes:
 
 ### Phase 3.5: Story-Level Visual QA Gate
 
-Runs **once per story**, after CI is green and CodeRabbit is addressed, against the **PR preview deploy** (pre-merge — production only deploys *after* merge, so this is the last gate before merge). A second, independent QA pass at **story altitude**: it verifies the *assembled feature against the original objective*, not per-subtask diffs. This closes the blind spot where every subtask diff passes individually yet the whole feature misses the goal.
+Runs **once per story**, after CI is green and CodeRabbit is addressed, against the **locked `release-verify.yml` run** on the PR (pre-merge — production only deploys *after* merge, so this is the last gate before merge). A second, independent QA pass at **story altitude**: it verifies the *assembled feature against the original objective*, not per-subtask diffs. This closes the blind spot where every subtask diff passes individually yet the whole feature misses the goal.
 
-1. **Resolve the preview URL** for the PR (same source Stage 4 uses for Playwright). If no preview is live yet, wait for it.
-2. **Read the original acceptance criteria** from the Obsidian parent story (the original objective — NOT the possibly-edited subtask ACs).
-3. **Spawn `product-qa-spec`** (default critique disposition). For **each** acceptance criterion, drive the preview with Playwright and emit `pass | fail` **plus a screenshot** as evidence. A holistic "looks done" is not allowed — every AC needs its own pixel proof.
+This is a **release handshake**, not agent-driven browsing: RALPH triggers the locked `release-verify.yml`, waits for it, and consumes its verification artifacts. It does NOT resolve a preview URL or drive Playwright/Maestro against shared dev directly — all verification runs inside the `dev-release-lease` window so parallel stories never stomp the shared dev environment.
+
+1. **Read the original acceptance criteria** from the Obsidian parent story (the original objective — NOT the possibly-edited subtask ACs).
+2. **Trigger the locked release.**
+   - **PRIMARY — label:** add the `ready-to-verify` label to the PR. The `dispatch-release-verify` shim in `preview.yml` fires `release-verify.yml` at the PR head ref.
+     ```bash
+     gh pr edit "$PR_NUMBER" --add-label ready-to-verify
+     ```
+   - **FALLBACK — manual dispatch with explicit `--ref`** (use if the label shim didn't fire):
+     ```bash
+     BRANCH="$(git -C "$WORKTREE_PATH" rev-parse --abbrev-ref HEAD)"
+     gh workflow run release-verify.yml \
+       --ref "$BRANCH" \
+       -f pr_number="$PR_NUMBER" \
+       -f pr_head_sha="$(git -C "$WORKTREE_PATH" rev-parse HEAD)" \
+       -f pr_head_ref="$BRANCH" \
+       -f pr_labels='[]'
+     ```
+   - **HARD RULE:** NEVER dispatch `release-verify.yml` against `main` before this PR has merged there — `workflow_dispatch` resolves the workflow definition from the target ref, so dispatching `--ref main` pre-merge fails with workflow-not-found (or runs a stale/wrong definition). Always target the PR head branch pre-merge.
+3. **Wait for the release run.** Get the run id, then watch/poll until it concludes (the lease serializes runs, so a queued run may wait for a prior one):
+   ```bash
+   RUN_ID="$(gh run list --workflow release-verify.yml --branch "$BRANCH" --limit 1 --json databaseId -q '.[0].databaseId')"
+   gh run watch "$RUN_ID" --exit-status   # or poll `gh run view "$RUN_ID" --json status,conclusion` per CI Monitoring Protocol
+   ```
+4. **Consume the verification artifacts.** Download the web screenshots (and mobile artifacts on a mobile PR) from the completed run:
+   ```bash
+   gh run download "$RUN_ID" -n web-verify-screenshots -D "$WORKTREE_PATH/.ralph/web-verify"
+   ```
+   The `web-verify-screenshots` artifact (from RGATE-03) contains `01-login.png`, `02-dashboard.png`, `03-decks.png`, and `99-failure.png` (on failure).
+5. **Spawn `product-qa-spec`** (default critique disposition). For **each** acceptance criterion, emit `pass | fail` **plus a screenshot from the consumed artifact** as evidence. A holistic "looks done" is not allowed — every AC needs its own pixel proof drawn from the locked-release artifacts.
    - **Style:** hold the UI to `docs/design-system.md`. A style defect that cites a design-system rule (token drift, wrong `src/components/ui/*` primitive, palette crossing, off-scale spacing) is a real fail. Pure taste with no citable rule → **advisory, escalate to the user, never bounce the executor**.
-4. **Fix loop (cap 2 cycles):** batch ALL fails into one report → spawn `product-executor` to fix inside the worktree → push → redeploy preview → re-verify only the failed ACs. Every bounce must cite an AC id or a design-system rule. After **2** cycles, stop and **escalate remaining fails to the user** — each redeploy is expensive, do not grind.
-5. **Log** to the story's `… QA Debate Log.md` (the same file `/qa-verify` writes, next to the story) under a `## Post-Deploy Visual QA — <date>` section: per-AC verdict, screenshot reference, fix cycles used, and any design-system citations / advisory style notes.
-6. **On PASS** (all original ACs pass, no unresolved bounces):
+6. **Fix loop (cap 2 cycles):** batch ALL fails into one report → spawn `product-executor` to fix inside the worktree → push → **re-trigger the release** (add `ready-to-verify` again if removed, or re-dispatch with `--ref "$BRANCH"`) → **wait** for the new run → **re-consume** its artifacts → re-verify only the failed ACs. Every bounce must cite an AC id or a design-system rule. After **2** cycles, stop and **escalate remaining fails to the user** — each release run holds the dev lease and is expensive, do not grind.
+7. **Log** to the story's `… QA Debate Log.md` (the same file `/qa-verify` writes, next to the story) under a `## Post-Deploy Visual QA — <date>` section: per-AC verdict, screenshot reference (artifact + filename), fix cycles used, the release run id(s), and any design-system citations / advisory style notes.
+8. **On PASS** (all original ACs pass on a green release run, no unresolved bounces):
    - Move all subtasks to "Done": `For each subtask ID: mcp__backlog__task_edit(id=task_id, status="Done")`
    - Output `<promise>ALL_TASKS_COMPLETE</promise>`.
-   **On unresolved fails after 2 cycles:** leave subtasks "In Progress", do NOT emit completion, and surface the escalation to the user.
+   **On unresolved fails after 2 cycles (or a red release run that fix-loops can't green):** leave subtasks "In Progress", do NOT emit completion, and surface the escalation to the user.
 
 #### Phase 3.5 — Mobile variant (`learn-greek-easy-mobile` UI stories)
 
 Mobile has no web preview deploy, so the gate runs on the **iOS simulator** and diffs against the **authoritative design export** — not a URL, and **not** against your own app captures. **No new harness — it reuses the exact same flow files as the CI `mobile-e2e` job** (`.github/workflows/preview.yml`): `.maestro/onboarding.yaml` + `.maestro/smoke.yaml`.
+
+> **Why this stays LOCAL (not a release handshake like web):** mobile has no web preview deploy, and a `--configuration Release` rebuild is ~10 min — so the mobile gate runs Maestro on the orchestrator's own iOS simulator against the dev backend, rather than waiting on `release-verify.yml`. (The CI `mobile-e2e` job inside release-verify still runs in parallel; consume its `mobile-e2e-maestro` artifact opportunistically, but the authoritative mobile gate is this local sim run.)
+>
+> **Race-safety prerequisite (bound to RGATE-05):** this local run is race-safe ONLY because RGATE-05's per-PR seed namespacing is in place — the reset curls and the Maestro `--env` below all target `e2e_beginner+pr<N>@test.com`, and a `seed/all` with that `pr_number` must have provisioned the user first. Do NOT run parallel mobile RALPH stories against shared dev without this namespacing, or they will clobber each other's onboarding state.
 
 1. **Boot RALPH's OWN simulator** (the orchestrator's sim is session-isolated from the user's — boot a fresh one via `xcrun simctl boot` + `bootstatus -b`). Build the cached Debug dev-client ONCE (`npx expo run:ios`, or reuse the one already running from execution) and keep **Metro on `127.0.0.1:8081`** — the flows launch with `--initialUrl http://127.0.0.1:8081`. Point the app at the **dev backend**: `API_URL=https://frontend-dev-8db9.up.railway.app` (same dev frontend the CI job and PR preview use).
 2. **Reset before AND after** via the MOB15-01 endpoint so the run is repeatable and residue-free — exactly as CI does:
@@ -338,7 +370,7 @@ This is a known GitHub Actions slow-start bug. If `gh run view ... --log | head 
 
 "Test checks" = Alembic Migration Check, Backend Tests, Unit & Integration Tests, E2E Tests (all shards), E2E API Tests, Backend Lint & Format, Frontend Lint & Format.
 
-When all green → move on immediately. Do NOT wait for Deploy, Seed Dev Database, Health and Smoke Tests, Lighthouse CI, Accessibility Tests, K6.
+When all per-push test checks are green → proceed to CodeRabbit, then to the Phase 3.5 release handshake. Deploy, Seed Dev Database, Health and Smoke Tests, Lighthouse CI, Accessibility Tests, and K6 are NOT separate per-push checks to wait on here — they run *inside* the locked `release-verify.yml` run that Phase 3.5 triggers, and gate completion there.
 
 ### Get the current run ID
 ```bash
@@ -350,7 +382,7 @@ gh run list --branch "$BRANCH" --limit 1 --json databaseId,status -q '.[0]'
 ## Completion Rules
 
 1. **Local tests green ≠ done** — all CI test checks must pass (see CI Monitoring Protocol)
-2. **Deploy/Smoke are NOT blockers** — CodeRabbit review and task completion don't require them
+2. **A green `release-verify.yml` run IS a blocker** — task completion requires the locked release (Deploy → Seed → Health/Smoke → web-verify / mobile-e2e → A11y/K6/Lighthouse) to pass inside the `dev-release-lease` window. CodeRabbit review may start as soon as per-push test checks pass, but completion is gated on the release run.
 3. **Subtask status transitions**:
    - Start: "To Do" → "In Progress" (during Phase 0.5)
    - Complete: "In Progress" → "Done" (after CI test checks pass AND CodeRabbit fixes committed)
@@ -378,7 +410,7 @@ gh run list --branch "$BRANCH" --limit 1 --json databaseId,status -q '.[0]'
 | Not updating handoff during long runs | Update every 2–3 subtasks |
 | Hiding/disabling features to "fix" bugs | Actually fix the bug; add missing data |
 | Outputting ALL_TASKS_COMPLETE before CI test checks pass | Wait for all test checks to pass |
-| Waiting for Deploy/Smoke before CodeRabbit review | Start CodeRabbit review as soon as test checks pass |
+| Treating Deploy/Smoke/A11y/K6/Lighthouse as never-required | They are required — verified inside the locked `release-verify.yml` run (Phase 3.5). Per-push, start CodeRabbit as soon as test checks pass; completion still needs a green release |
 | Sleeping/polling tightly for CI | Poll every 3 minutes per CI Monitoring Protocol |
 | Waiting indefinitely for stuck E2E shard | Check logs — if only setup steps, treat as passed |
 | Not cleaning up worktree after merge | Run /post-merge-cleanup or `git worktree remove` manually |
@@ -390,3 +422,5 @@ gh run list --branch "$BRANCH" --limit 1 --json databaseId,status -q '.[0]'
 | Silently degrading a hi-fi mobile design to a "fallback" | Flag every deviation (flat-vs-frost, dropped element) as a fail |
 | Self-certifying a mobile pixel match | Fidelity is human-confirmed — surface app vs design export to the user |
 | `token/NN` opacity modifier on a var-backed mobile token | Renders dark on native — use an explicit full-color token (MOB-13) |
+| Driving Playwright/Maestro against shared dev from the agent, outside the lease | Use the Phase 3.5 release handshake — trigger `release-verify.yml` (label or `--ref`), wait, consume its artifacts |
+| Running the mobile reset/flow against the shared `e2e_beginner` user while another story may be mid-release | Use the per-PR namespaced seed user `e2e_beginner+pr<N>@test.com` (RGATE-05); never share the base user across concurrent stories |
