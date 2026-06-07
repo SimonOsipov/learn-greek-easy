@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 _engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
 _keepalive_task: asyncio.Task | None = None
-_KEEPALIVE_INTERVAL_SECONDS = 300  # well inside pool_recycle=3600 and the Supavisor idle window
+_KEEPALIVE_INTERVAL_SECONDS = 300  # refresh warmed connections well inside pool_recycle=3600; keeps them hot against network/Postgres-side drops (Supavisor session mode does not idle-reap: client_idle_timeout defaults to 0)
 
 
 def create_engine() -> AsyncEngine:
