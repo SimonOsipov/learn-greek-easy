@@ -19,6 +19,7 @@ const Hero = () => {
           src={heroImage}
           alt={t('hero.heroImageAlt')}
           loading="eager"
+          fetchPriority="high"
           className="h-full w-full object-cover"
         />
         {/* Dark overlay for text readability */}

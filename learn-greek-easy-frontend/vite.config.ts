@@ -1,6 +1,52 @@
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig, loadEnv, type Plugin, type HtmlTagDescriptor } from 'vite';
+import type { OutputBundle, OutputAsset } from 'rollup';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
+
+/**
+ * Find an emitted asset in the Rollup bundle by matching a suffix of its original source path.
+ * Returns the hashed output fileName (e.g. "assets/img/cyprus-hero-abc123.webp").
+ * Throws if the bundle exists but no asset matches — keeps LCP regressions loud.
+ */
+function findEmittedAsset(bundle: OutputBundle, srcSuffix: string): string {
+  const match = Object.values(bundle).find(
+    (entry): entry is OutputAsset =>
+      entry.type === 'asset' &&
+      entry.originalFileNames.some((p) => p.endsWith(srcSuffix))
+  );
+  if (!match) {
+    throw new Error(`[perf-06 hero preload] ${srcSuffix} not found in bundle`);
+  }
+  return match.fileName;
+}
+
+/** Inject a <link rel="preload"> for the LCP hero image at build time. */
+const heroPreloadPlugin: Plugin = {
+  name: 'hero-preload',
+  transformIndexHtml: {
+    order: 'post',
+    handler(_html, ctx) {
+      // In dev mode ctx.bundle is undefined — skip silently.
+      if (!ctx.bundle) return;
+
+      const fileName = findEmittedAsset(ctx.bundle, 'assets/landing/cyprus-hero.webp');
+
+      const tags: HtmlTagDescriptor[] = [
+        {
+          tag: 'link',
+          injectTo: 'head',
+          attrs: {
+            rel: 'preload',
+            as: 'image',
+            fetchpriority: 'high',
+            href: '/' + fileName,
+          },
+        },
+      ];
+      return tags;
+    },
+  },
+};
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -8,7 +54,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
 
   return {
-    plugins: [react()],
+    plugins: [react(), heroPreloadPlugin],
 
     // Define global constants that are replaced at build time
     define: {
