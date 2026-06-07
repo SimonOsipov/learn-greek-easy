@@ -58,6 +58,38 @@ def mock_engine():
     return engine
 
 
+@pytest.fixture
+def mock_engine_with_connect():
+    """A stand-in async engine that supports both begin() AND connect().
+
+    Used by warm-up and keepalive tests, which call engine.connect() as an
+    async context manager.  begin() is kept identical to mock_engine so both
+    the connectivity-gate path (uses begin()) and the warm-up path (uses
+    connect()) work simultaneously.
+    """
+    engine = MagicMock()
+    engine.dispose = AsyncMock()
+
+    # --- begin() support (connectivity gate in init_db) ---
+    begin_conn = AsyncMock()
+    begin_ctx = AsyncMock()
+    begin_ctx.__aenter__ = AsyncMock(return_value=begin_conn)
+    begin_ctx.__aexit__ = AsyncMock(return_value=None)
+    engine.begin = MagicMock(return_value=begin_ctx)
+
+    # --- connect() support (warm-up and keepalive pings) ---
+    connect_conn = AsyncMock()
+    connect_conn.execute = AsyncMock()
+    connect_ctx = AsyncMock()
+    connect_ctx.__aenter__ = AsyncMock(return_value=connect_conn)
+    connect_ctx.__aexit__ = AsyncMock(return_value=None)
+    # connect() is called N times; each call returns a fresh context manager.
+    # We reuse the same object — the call count on engine.connect tracks usage.
+    engine.connect = MagicMock(return_value=connect_ctx)
+
+    return engine
+
+
 def _patch_env(*, is_testing: bool, is_production: bool):
     """Patch the read-only is_testing / is_production properties on Settings.
 
@@ -353,3 +385,346 @@ class TestGetSession:
         gen = session_module.get_session()
         with pytest.raises(RuntimeError, match="Database not initialized"):
             await gen.__anext__()
+
+
+# ============================================================================
+# PERF-07-02: init_db() Pool Warm-up Tests
+# ============================================================================
+
+
+class TestInitDbWarmup:
+    """Tests for the pool warm-up path added by PERF-07-02.
+
+    init_db gains an optional warm_min parameter.  When non-testing and
+    warm_min > 0 the implementation opens warm_min connections (engine.connect())
+    and issues SELECT 1 on each one.  In testing mode, or when warm_min=0,
+    no connect() calls are made.
+    """
+
+    @pytest.mark.asyncio
+    async def test_init_db_opens_warm_min_connections(self, mock_engine_with_connect):
+        """Non-testing + warm_min=5 → engine.connect() called exactly 5 times."""
+        testing_patch, production_patch = _patch_env(is_testing=False, is_production=True)
+        factory = MagicMock()
+
+        with testing_patch, production_patch:
+            with patch("src.db.session.create_engine", return_value=mock_engine_with_connect):
+                with patch("src.db.session.create_session_factory", return_value=factory):
+                    # Patch create_task to a no-op so no background task leaks.
+                    with patch("asyncio.create_task"):
+                        # warm_min=5 is passed explicitly; this will fail with TypeError
+                        # until the implementation adds the parameter — correct RED.
+                        await session_module.init_db(warm_min=5)
+
+        assert mock_engine_with_connect.connect.call_count == 5
+
+    @pytest.mark.asyncio
+    async def test_init_db_runs_select1_on_each_warm_conn(self, mock_engine_with_connect):
+        """Each warmed connection's execute() is awaited with a SELECT 1 text clause."""
+        testing_patch, production_patch = _patch_env(is_testing=False, is_production=True)
+        factory = MagicMock()
+
+        with testing_patch, production_patch:
+            with patch("src.db.session.create_engine", return_value=mock_engine_with_connect):
+                with patch("src.db.session.create_session_factory", return_value=factory):
+                    with patch("asyncio.create_task"):
+                        await session_module.init_db(warm_min=3)
+
+        # execute() must have been awaited once per warm connection
+        connect_conn = mock_engine_with_connect.connect.return_value.__aenter__.return_value
+        assert connect_conn.execute.await_count == 3
+
+        # Each call must have been a text("SELECT 1") — inspect the first arg's text
+        for call_args in connect_conn.execute.await_args_list:
+            arg = call_args[0][0]
+            assert str(arg) == "SELECT 1", f"Expected SELECT 1 text clause, got: {arg!r}"
+
+    @pytest.mark.asyncio
+    async def test_init_db_warmup_noop_in_testing(self, mock_engine_with_connect):
+        """is_testing=True → engine.connect() is NEVER called (only begin() is used)."""
+        testing_patch, production_patch = _patch_env(is_testing=True, is_production=False)
+        factory = MagicMock()
+
+        with testing_patch, production_patch:
+            with patch("src.db.session.create_engine", return_value=mock_engine_with_connect):
+                with patch("src.db.session.create_session_factory", return_value=factory):
+                    # In testing mode init_db() currently has no warm_min param — this
+                    # call uses the default (no warm_min arg) so it works pre- and
+                    # post-implementation for the testing branch.
+                    await session_module.init_db()
+
+        assert mock_engine_with_connect.connect.call_count == 0
+
+    @pytest.mark.asyncio
+    async def test_init_db_warmup_failure_nonfatal(self, mock_engine_with_connect):
+        """A warm-up connect()/execute() failure is non-fatal: init_db() must not raise.
+
+        The connectivity gate (engine.begin()) succeeds.  Only the warm-up
+        engine.connect() calls raise — this tests that the soft try/except
+        around warm-up prevents startup failure.
+        """
+        testing_patch, production_patch = _patch_env(is_testing=False, is_production=True)
+        factory = MagicMock()
+
+        # Make the warm-up connection's execute raise to simulate a transient error.
+        connect_conn = mock_engine_with_connect.connect.return_value.__aenter__.return_value
+        connect_conn.execute = AsyncMock(side_effect=Exception("transient warm-up error"))
+
+        with testing_patch, production_patch:
+            with patch("src.db.session.create_engine", return_value=mock_engine_with_connect):
+                with patch("src.db.session.create_session_factory", return_value=factory):
+                    with patch("asyncio.create_task"):
+                        # Must NOT raise even though warm-up connections fail.
+                        await session_module.init_db(warm_min=2)
+
+        # Engine and factory globals must be set — startup completed despite the failure.
+        assert session_module._engine is mock_engine_with_connect
+        assert session_module._session_factory is factory
+
+
+# ============================================================================
+# PERF-07-03: Keepalive Task Tests
+# ============================================================================
+
+
+class TestKeepalive:
+    """Tests for the background keepalive task added by PERF-07-03.
+
+    init_db() starts an asyncio.Task that periodically pings the pool.
+    close_db() must cancel and await it.  The loop must survive transient
+    ping errors without dying.
+    """
+
+    @pytest.mark.asyncio
+    async def test_init_db_starts_keepalive_task(self, mock_engine_with_connect):
+        """Non-testing + warm_min>0 → _keepalive_task is a live asyncio.Task."""
+        import asyncio
+
+        testing_patch, production_patch = _patch_env(is_testing=False, is_production=True)
+        factory = MagicMock()
+
+        # Access the attribute name at runtime so collection succeeds pre-implementation.
+        try:
+            with testing_patch, production_patch:
+                with patch("src.db.session.create_engine", return_value=mock_engine_with_connect):
+                    with patch("src.db.session.create_session_factory", return_value=factory):
+                        with patch("src.db.session.settings") as mock_settings:
+                            mock_settings.database_pool_warm_min = 1
+                            mock_settings.is_testing = False
+                            mock_settings.is_production = True
+                            mock_settings.database_url = "postgresql+asyncpg://test/test"
+                            mock_settings.debug = False
+                            mock_settings.database_pool_size = 5
+                            mock_settings.database_max_overflow = 10
+                            mock_settings.database_pool_timeout = 30
+                            # Let the real create_task run (don't patch it) so we get a real Task.
+                            await session_module.init_db(warm_min=1)
+
+            task = session_module._keepalive_task  # AttributeError if not implemented → RED
+            assert isinstance(task, asyncio.Task), f"Expected asyncio.Task, got {type(task)}"
+            assert not task.done(), "Keepalive task should still be running"
+        finally:
+            # Cancel to avoid 300s-sleeping task leaking across tests.
+            task = getattr(session_module, "_keepalive_task", None)
+            if task is not None and not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+            session_module._keepalive_task = None  # type: ignore[attr-defined]
+
+    @pytest.mark.asyncio
+    async def test_keepalive_noop_in_testing(self, mock_engine_with_connect):
+        """is_testing=True → _keepalive_task remains None after init_db()."""
+        testing_patch, production_patch = _patch_env(is_testing=True, is_production=False)
+        factory = MagicMock()
+
+        with testing_patch, production_patch:
+            with patch("src.db.session.create_engine", return_value=mock_engine_with_connect):
+                with patch("src.db.session.create_session_factory", return_value=factory):
+                    await session_module.init_db()
+
+        task = getattr(session_module, "_keepalive_task", None)
+        assert task is None, f"Expected _keepalive_task to be None in testing mode, got {task!r}"
+
+    @pytest.mark.asyncio
+    async def test_keepalive_pings_pool_each_tick(self, mock_engine_with_connect):
+        """_keepalive_ping(warm_min) issues SELECT 1 exactly warm_min times."""
+        # Access _keepalive_ping at runtime — AttributeError if not implemented → RED.
+        ping_fn = getattr(session_module, "_keepalive_ping", None)
+        assert (
+            ping_fn is not None
+        ), "_keepalive_ping not found on session_module — implementation not yet added"
+
+        # Point the module's _engine at our mock so the ping uses it.
+        session_module._engine = mock_engine_with_connect
+
+        await ping_fn(3)
+
+        connect_conn = mock_engine_with_connect.connect.return_value.__aenter__.return_value
+        assert (
+            connect_conn.execute.await_count == 3
+        ), f"Expected 3 execute calls, got {connect_conn.execute.await_count}"
+
+    @pytest.mark.asyncio
+    async def test_close_db_cancels_keepalive(self, mock_engine_with_connect):
+        """close_db() cancels the keepalive task, does not propagate CancelledError,
+        sets _keepalive_task=None, and calls engine.dispose() after cancellation.
+        """
+        import asyncio
+
+        # Set up a real long-running task to stand in for the keepalive loop.
+        dummy_task = asyncio.create_task(asyncio.sleep(3600))
+        session_module._keepalive_task = dummy_task  # type: ignore[attr-defined]
+        session_module._engine = mock_engine_with_connect
+        session_module._session_factory = MagicMock()
+
+        # close_db must not raise.
+        await session_module.close_db()
+
+        # Task must be cancelled.
+        assert dummy_task.cancelled(), "Keepalive task was not cancelled by close_db()"
+
+        # _keepalive_task global must be cleared.
+        remaining = getattr(session_module, "_keepalive_task", "MISSING")
+        assert (
+            remaining is None
+        ), f"Expected _keepalive_task=None after close_db(), got {remaining!r}"
+
+        # dispose() must have been called (after cancellation).
+        mock_engine_with_connect.dispose.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_keepalive_survives_transient_ping_error(self):
+        """The keepalive loop logs a warning on a failed ping tick and keeps running.
+
+        Strategy:
+        - Patch _keepalive_ping to raise on the first call.
+        - Patch asyncio.sleep to be a no-op on first call, then raise CancelledError
+          on the second call to terminate the loop cleanly.
+        - Assert the ping-raised exception did NOT kill the loop (loop ran at least
+          once after the failure attempt before the CancelledError stopped it).
+        """
+        import asyncio
+
+        loop_fn = getattr(session_module, "_keepalive_loop", None)
+        assert (
+            loop_fn is not None
+        ), "_keepalive_loop not found on session_module — implementation not yet added"
+
+        ping_call_count = 0
+
+        async def fake_ping(warm_min: int) -> None:
+            nonlocal ping_call_count
+            ping_call_count += 1
+            raise Exception("transient network error")
+
+        sleep_call_count = 0
+
+        async def fake_sleep(_seconds: float) -> None:
+            nonlocal sleep_call_count
+            sleep_call_count += 1
+            if sleep_call_count >= 2:
+                # Second sleep call terminates the loop via CancelledError.
+                raise asyncio.CancelledError("test teardown")
+
+        with patch.object(session_module, "_keepalive_ping", new=fake_ping):
+            with patch("asyncio.sleep", new=fake_sleep):
+                try:
+                    await loop_fn(2)
+                except asyncio.CancelledError:
+                    pass  # Expected — this is how we exit the loop.
+
+        # The loop must have attempted the ping at least once (proven the loop body ran).
+        assert ping_call_count >= 1, f"Expected at least 1 ping attempt, got {ping_call_count}"
+        # The loop must have attempted a second sleep, proving it didn't exit after
+        # the first ping failure (i.e. the transient error was caught, not re-raised).
+        assert (
+            sleep_call_count >= 2
+        ), f"Expected >=2 sleep calls (loop continued after error), got {sleep_call_count}"
+
+
+# ============================================================================
+# PERF-07-04: warm_min Override / Settings-Default Tests
+# ============================================================================
+
+
+class TestWarmMinOverride:
+    """Tests for the warm_min parameter contract added by PERF-07-04.
+
+    init_db(warm_min=N) overrides settings.database_pool_warm_min.
+    init_db(warm_min=0) disables both warm-up and keepalive entirely.
+    init_db() with no arg falls back to settings.database_pool_warm_min.
+    """
+
+    @pytest.mark.asyncio
+    async def test_init_db_respects_warm_min_override(self, mock_engine_with_connect):
+        """init_db(warm_min=1) in non-testing mode → exactly 1 warm connect() opened."""
+        testing_patch, production_patch = _patch_env(is_testing=False, is_production=True)
+        factory = MagicMock()
+
+        with testing_patch, production_patch:
+            with patch("src.db.session.create_engine", return_value=mock_engine_with_connect):
+                with patch("src.db.session.create_session_factory", return_value=factory):
+                    with patch("asyncio.create_task"):
+                        await session_module.init_db(warm_min=1)
+
+        assert mock_engine_with_connect.connect.call_count == 1, (
+            f"Expected 1 warm connect() for warm_min=1, "
+            f"got {mock_engine_with_connect.connect.call_count}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_init_db_warm_min_zero_opts_out(self, mock_engine_with_connect):
+        """init_db(warm_min=0) → no connect() calls, no create_task(), _keepalive_task=None."""
+        testing_patch, production_patch = _patch_env(is_testing=False, is_production=True)
+        factory = MagicMock()
+
+        with testing_patch, production_patch:
+            with patch("src.db.session.create_engine", return_value=mock_engine_with_connect):
+                with patch("src.db.session.create_session_factory", return_value=factory):
+                    with patch("asyncio.create_task") as mock_create_task:
+                        await session_module.init_db(warm_min=0)
+
+        assert (
+            mock_engine_with_connect.connect.call_count == 0
+        ), "connect() must not be called when warm_min=0"
+        mock_create_task.assert_not_called()
+
+        task = getattr(session_module, "_keepalive_task", None)
+        assert task is None, f"_keepalive_task must be None when warm_min=0, got {task!r}"
+
+    @pytest.mark.asyncio
+    async def test_api_init_db_uses_settings_default(self, mock_engine_with_connect):
+        """init_db() with no arg uses settings.database_pool_warm_min as warm_min.
+
+        database_pool_warm_min is a new settings attribute added by the implementation;
+        we stub the entire settings object so the test runs even before the attribute exists.
+        """
+        testing_patch, production_patch = _patch_env(is_testing=False, is_production=True)
+        factory = MagicMock()
+
+        with testing_patch, production_patch:
+            with patch("src.db.session.create_engine", return_value=mock_engine_with_connect):
+                with patch("src.db.session.create_session_factory", return_value=factory):
+                    # Stub settings to inject database_pool_warm_min=3.
+                    # We patch the module-level `settings` reference used by init_db()
+                    # so the new attribute is visible before the real Settings class has it.
+                    with patch("src.db.session.settings") as mock_settings:
+                        mock_settings.database_pool_warm_min = 3
+                        mock_settings.is_testing = False
+                        mock_settings.is_production = True
+                        mock_settings.database_url = "postgresql+asyncpg://test/test"
+                        mock_settings.debug = False
+                        mock_settings.database_pool_size = 5
+                        mock_settings.database_max_overflow = 10
+                        mock_settings.database_pool_timeout = 30
+                        with patch("asyncio.create_task"):
+                            # No warm_min arg → implementation must read from settings.
+                            await session_module.init_db()
+
+        assert mock_engine_with_connect.connect.call_count == 3, (
+            f"Expected 3 warm connects (settings.database_pool_warm_min=3), "
+            f"got {mock_engine_with_connect.connect.call_count}"
+        )
