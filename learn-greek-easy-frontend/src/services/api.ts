@@ -21,7 +21,7 @@ import {
   sleep,
   logRetryAttempt,
 } from '@/lib/retryUtils';
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabase } from '@/lib/supabaseClient';
 import { checkVersionAndRefreshIfNeeded } from '@/lib/versionCheck';
 
 // API base URL - relative URL for nginx proxy in production, or VITE_API_URL for dev
@@ -58,8 +58,9 @@ export class APIRequestError extends Error {
  * Clear auth tokens (on logout or auth failure).
  * Signs out of Supabase locally and cleans up legacy storage.
  */
-export function clearAuthTokens(): void {
-  supabase.auth.signOut({ scope: 'local' });
+export async function clearAuthTokens(): Promise<void> {
+  const supabase = await getSupabase();
+  await supabase.auth.signOut({ scope: 'local' });
   localStorage.removeItem('auth-storage');
   sessionStorage.removeItem('auth-token');
 }
@@ -113,6 +114,7 @@ async function request<T>(
 
   // Add auth token if not skipped
   if (!skipAuth) {
+    const supabase = await getSupabase();
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -323,6 +325,7 @@ export const api = {
  * Does not set Content-Type — browser sets multipart/form-data with boundary automatically.
  */
 export async function postFormData<T>(path: string, formData: FormData): Promise<T> {
+  const supabase = await getSupabase();
   const {
     data: { session },
   } = await supabase.auth.getSession();

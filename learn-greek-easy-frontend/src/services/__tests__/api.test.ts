@@ -30,14 +30,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { api, APIRequestError } from '../api';
 
 // Mock Supabase client before any imports
-vi.mock('@/lib/supabaseClient', () => ({
-  supabase: {
+vi.mock('@/lib/supabaseClient', () => {
+  const mockSupabase = {
     auth: {
       getSession: vi.fn(),
       signOut: vi.fn(),
     },
-  },
-}));
+  };
+  return {
+    supabase: mockSupabase,
+    getSupabase: vi.fn(() => Promise.resolve(mockSupabase)),
+  };
+});
 
 // Get mocked functions after module is mocked
 import { supabase } from '@/lib/supabaseClient';

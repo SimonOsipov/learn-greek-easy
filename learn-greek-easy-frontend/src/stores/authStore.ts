@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 import { reportAPIError } from '@/lib/errorReporting';
 import { queryClient } from '@/lib/queryClient';
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabase } from '@/lib/supabaseClient';
 import { APIRequestError } from '@/services/api';
 import { authAPI, type ProfileUpdateRequest } from '@/services/authAPI';
 import type { User, AuthError } from '@/types/auth';
@@ -90,6 +90,7 @@ export const useAuthStore = create<AuthState>()(
         }
 
         // Sign out via Supabase (clears session)
+        const supabase = await getSupabase();
         const { error } = await supabase.auth.signOut();
         if (error) {
           reportAPIError(error, { operation: 'logout', endpoint: 'supabase.auth.signOut' });
@@ -203,6 +204,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isProfileUpdating: true, error: null });
 
         try {
+          const supabase = await getSupabase();
           const { error } = await supabase.auth.updateUser({ password: newPassword });
 
           if (error) {
@@ -247,6 +249,7 @@ export const useAuthStore = create<AuthState>()(
           const epoch = _authEpoch;
           try {
             // Check Supabase session
+            const supabase = await getSupabase();
             const {
               data: { session },
             } = await supabase.auth.getSession();

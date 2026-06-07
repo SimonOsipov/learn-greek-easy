@@ -39,13 +39,26 @@ vi.mock('@/lib/supabaseClient', () => ({
       onAuthStateChange: (cb: (event: string) => void) => onAuthStateChange(cb),
     },
   },
+  getSupabase: vi.fn(() =>
+    Promise.resolve({
+      auth: {
+        onAuthStateChange: (cb: (event: string) => void) => onAuthStateChange(cb),
+      },
+    })
+  ),
 }));
 
 const Child = () => <div data-testid="route-guard-child">App Shell</div>;
 
-const emit = (event: string) => {
-  if (!authStateCallback) throw new Error('auth state callback not registered');
-  authStateCallback(event);
+/**
+ * Emit an auth event. Waits for the subscription to register first
+ * (getSupabase() is async, so the callback registers after one microtask).
+ */
+const emit = async (event: string) => {
+  await waitFor(() => {
+    if (!authStateCallback) throw new Error('subscription not yet registered');
+  });
+  authStateCallback!(event);
 };
 
 describe('RouteGuard', () => {
@@ -84,7 +97,7 @@ describe('RouteGuard', () => {
     expect(screen.getByTestId('auth-loading')).toBeInTheDocument();
     expect(screen.queryByTestId('route-guard-child')).not.toBeInTheDocument();
 
-    emit('INITIAL_SESSION');
+    await emit('INITIAL_SESSION');
 
     await waitFor(() => {
       expect(screen.getByTestId('route-guard-child')).toBeInTheDocument();
@@ -99,7 +112,7 @@ describe('RouteGuard', () => {
       </RouteGuard>
     );
 
-    emit('INITIAL_SESSION');
+    await emit('INITIAL_SESSION');
 
     await waitFor(() => {
       expect(checkAuthSpy).toHaveBeenCalledTimes(1);
@@ -123,7 +136,7 @@ describe('RouteGuard', () => {
       </RouteGuard>
     );
 
-    emit('INITIAL_SESSION');
+    await emit('INITIAL_SESSION');
 
     await waitFor(() => {
       expect(checkAuthSpy).toHaveBeenCalledTimes(1);
@@ -133,7 +146,7 @@ describe('RouteGuard', () => {
     useAuthStore.setState({ isAuthenticated: true });
 
     // Supabase fires the redundant SIGNED_IN right after INITIAL_SESSION.
-    emit('SIGNED_IN');
+    await emit('SIGNED_IN');
 
     // No additional checkAuth call should occur.
     await Promise.resolve();
@@ -147,14 +160,14 @@ describe('RouteGuard', () => {
       </RouteGuard>
     );
 
-    emit('INITIAL_SESSION');
+    await emit('INITIAL_SESSION');
 
     await waitFor(() => {
       expect(checkAuthSpy).toHaveBeenCalledTimes(1);
     });
 
     // Still unauthenticated => a genuine login event must trigger checkAuth.
-    emit('SIGNED_IN');
+    await emit('SIGNED_IN');
 
     await waitFor(() => {
       expect(checkAuthSpy).toHaveBeenCalledTimes(2);
@@ -168,7 +181,7 @@ describe('RouteGuard', () => {
       </RouteGuard>
     );
 
-    emit('INITIAL_SESSION');
+    await emit('INITIAL_SESSION');
 
     await waitFor(() => {
       expect(checkAuthSpy).toHaveBeenCalledTimes(1);
@@ -181,7 +194,7 @@ describe('RouteGuard', () => {
       isLoading: false,
     });
 
-    emit('SIGNED_OUT');
+    await emit('SIGNED_OUT');
 
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
     expect(useAuthStore.getState().user).toBeNull();
@@ -206,7 +219,7 @@ describe('RouteGuard', () => {
       </RouteGuard>
     );
 
-    emit('INITIAL_SESSION');
+    await emit('INITIAL_SESSION');
 
     await waitFor(() => {
       expect(capturedSignal).toBeInstanceOf(AbortSignal);
@@ -290,7 +303,7 @@ describe('RouteGuard — de-gated persisted-session render (PERF-02)', () => {
       </RouteGuard>
     );
 
-    emit('INITIAL_SESSION');
+    await emit('INITIAL_SESSION');
 
     // Children must appear even though checkAuth has NOT resolved.
     // findBy uses implicit waitFor with a short timeout.
@@ -312,7 +325,7 @@ describe('RouteGuard — de-gated persisted-session render (PERF-02)', () => {
       </RouteGuard>
     );
 
-    emit('INITIAL_SESSION');
+    await emit('INITIAL_SESSION');
 
     // Give the event loop a chance to schedule the async call.
     await act(async () => {
@@ -333,7 +346,7 @@ describe('RouteGuard — de-gated persisted-session render (PERF-02)', () => {
       </RouteGuard>
     );
 
-    emit('INITIAL_SESSION');
+    await emit('INITIAL_SESSION');
 
     // Children must be present (persisted session => immediate render).
     const child = await screen.findByTestId('route-guard-child');
@@ -362,7 +375,7 @@ describe('RouteGuard — de-gated persisted-session render (PERF-02)', () => {
       </RouteGuard>
     );
 
-    emit('INITIAL_SESSION');
+    await emit('INITIAL_SESSION');
 
     // Wait for children to be present (should be immediate for persisted session).
     await screen.findByTestId('route-guard-child');
@@ -394,7 +407,7 @@ describe('RouteGuard — de-gated persisted-session render (PERF-02)', () => {
       </RouteGuard>
     );
 
-    emit('INITIAL_SESSION');
+    await emit('INITIAL_SESSION');
 
     // Give the event loop a tick.
     await act(async () => {
@@ -437,7 +450,7 @@ describe('RouteGuard — de-gated persisted-session render (PERF-02)', () => {
     expect(screen.getByTestId('auth-loading')).toBeInTheDocument();
     expect(screen.queryByTestId('route-guard-child')).not.toBeInTheDocument();
 
-    emit('INITIAL_SESSION');
+    await emit('INITIAL_SESSION');
 
     // Give the event loop a tick — checkAuth still never resolves.
     await act(async () => {

@@ -202,8 +202,8 @@ vi.mock('@/components/auth/AuthRoutesWrapper', async (importOriginal) => {
 
 // Mock Supabase client
 // This prevents Supabase from initializing during tests (env vars not available)
-vi.mock('@/lib/supabaseClient', () => ({
-  supabase: {
+vi.mock('@/lib/supabaseClient', () => {
+  const mockSupabase = {
     auth: {
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
       signOut: vi.fn().mockResolvedValue({ error: null }),
@@ -216,8 +216,12 @@ vi.mock('@/lib/supabaseClient', () => ({
       resetPasswordForEmail: vi.fn(),
       updateUser: vi.fn(),
     },
-  },
-}));
+  };
+  return {
+    supabase: mockSupabase,
+    getSupabase: vi.fn(() => Promise.resolve(mockSupabase)),
+  };
+});
 
 // Mock posthog-js library
 // This prevents PostHog from initializing during tests
