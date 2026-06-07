@@ -48,6 +48,15 @@ jobs:
       web: ${{ steps.filter.outputs.web }}
       mobile: ${{ steps.filter.outputs.mobile }}
     steps:
+      # paths-filter needs a local git repo on workflow_dispatch (no PR base to
+      # diff via the API), otherwise `git branch --show-current` fails with exit
+      # 128. The pull_request path doesn't need this, but release-verify is always
+      # dispatched, so check out before filtering.
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
       - name: Filter changed paths
         uses: dorny/paths-filter@v3
         id: filter
