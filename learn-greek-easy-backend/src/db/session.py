@@ -1,5 +1,6 @@
 """Database session management with async SQLAlchemy 2.0."""
 
+import asyncio
 import logging
 from typing import AsyncGenerator
 
@@ -24,6 +25,8 @@ logger = logging.getLogger(__name__)
 # Global engine instance (initialized on app startup)
 _engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
+_keepalive_task: asyncio.Task | None = None
+_KEEPALIVE_INTERVAL_SECONDS = 300  # well inside pool_recycle=3600 and the Supavisor idle window
 
 
 def create_engine() -> AsyncEngine:
@@ -97,19 +100,51 @@ def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSessi
     )
 
 
-async def init_db() -> None:
+async def _warm_one() -> None:
+    """Open one pooled connection, run SELECT 1, return it to the pool's idle set."""
+    async with _engine.connect() as conn:  # type: ignore[union-attr]
+        await conn.execute(text("SELECT 1"))
+
+
+async def _keepalive_ping(warm_min: int) -> None:
+    """One keepalive tick: touch warm_min pooled connections to reset their idle clocks."""
+    for _ in range(warm_min):
+        async with _engine.connect() as conn:  # type: ignore[union-attr]
+            await conn.execute(text("SELECT 1"))
+
+
+async def _keepalive_loop(warm_min: int) -> None:
+    """Periodically ping the pool so warmed connections don't idle-reap / go cold."""
+    while True:
+        await asyncio.sleep(_KEEPALIVE_INTERVAL_SECONDS)
+        try:
+            await _keepalive_ping(warm_min)
+        except Exception as e:  # never let the keepalive die silently on a transient error
+            logger.warning("Keepalive ping failed", extra={"error": str(e)})
+
+
+async def init_db(warm_min: int | None = None) -> None:
     """
     Initialize database connection on application startup.
 
     Should be called in FastAPI lifespan startup event.
+
+    Args:
+        warm_min: Number of connections to pre-warm. Defaults to
+            settings.database_pool_warm_min. Pass 0 to opt out entirely.
     """
-    global _engine, _session_factory
+    global _engine, _session_factory, _keepalive_task
 
     if _engine is not None:
         logger.warning("Database engine already initialized")
         return
 
+    # Clear any stale keepalive reference from a previous init/close cycle.
+    _keepalive_task = None
+
     logger.info("Initializing database connection...")
+
+    effective_warm_min = settings.database_pool_warm_min if warm_min is None else warm_min
 
     _engine = create_engine()
     _session_factory = create_session_factory(_engine)
@@ -123,6 +158,21 @@ async def init_db() -> None:
         logger.error(f"Database connection failed: {e}")
         raise
 
+    # Pre-warm the pool: pre-pay the asyncpg connect() handshake (TCP + TLS +
+    # Postgres startup) up front so the first requests after a cold start find
+    # hot, ready connections instead of each paying ~85ms cold-connect. Each
+    # warmed connection runs SELECT 1 and returns to the pool's idle set.
+    # (SELECT 1 (int4) needs no custom-type lookup — asyncpg introspects lazily;
+    #  the win here is the connect() handshake, not type-cache setup.)
+    if not settings.is_testing and effective_warm_min > 0:
+        try:
+            await asyncio.gather(*[_warm_one() for _ in range(effective_warm_min)])
+            logger.info("Pool pre-warmed", extra={"warm_min": effective_warm_min})
+        except Exception as e:
+            # Non-fatal: connectivity already verified above; pool fills lazily.
+            logger.warning("Pool warm-up connection failed", extra={"error": str(e)})
+        _keepalive_task = asyncio.create_task(_keepalive_loop(effective_warm_min))
+
 
 async def close_db() -> None:
     """
@@ -130,12 +180,20 @@ async def close_db() -> None:
 
     Should be called in FastAPI lifespan shutdown event.
     """
-    global _engine, _session_factory
+    global _engine, _session_factory, _keepalive_task
 
     if _engine is None:
         return
 
     logger.info("Closing database connection...")
+
+    if _keepalive_task is not None:
+        _keepalive_task.cancel()
+        try:
+            await _keepalive_task
+        except asyncio.CancelledError:
+            pass
+        _keepalive_task = None
 
     await _engine.dispose()
     _engine = None
