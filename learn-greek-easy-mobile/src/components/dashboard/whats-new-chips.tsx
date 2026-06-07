@@ -126,7 +126,7 @@ export function WhatsNewChips({
           className="text-fg3 text-[9.5px] uppercase tracking-[0.10em]"
           style={{ fontFamily: 'SpaceMono_400Regular' }}
         >
-          What's new
+          What&apos;s new
         </Text>
       </View>
 

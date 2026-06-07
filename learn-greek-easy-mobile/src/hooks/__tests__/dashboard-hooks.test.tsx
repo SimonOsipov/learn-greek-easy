@@ -93,8 +93,11 @@ function makeClient() {
 
 /** Wraps renderHook children in a fresh QueryClientProvider. */
 function makeWrapper(client: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client }, children);
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    return React.createElement(QueryClientProvider, { client }, children);
+  }
+  Wrapper.displayName = 'Wrapper';
+  return Wrapper;
 }
 
 /** Minimal fake session object (only the `access_token` field is needed). */

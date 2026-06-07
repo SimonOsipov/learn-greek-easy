@@ -42,7 +42,7 @@ const DISMISS_DELAY_MS = 2000;
 /** Mount once at the app shell. Exposes `showComingSoonToast()` app-wide. */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [visible, setVisible] = useState(false);
-  const opacity = useRef(new Animated.Value(0)).current;
+  const [opacity] = useState(() => new Animated.Value(0));
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showComingSoonToast = useCallback(() => {

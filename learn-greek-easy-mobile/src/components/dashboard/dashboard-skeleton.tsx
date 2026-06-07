@@ -21,7 +21,7 @@
  * Also exports SectionError — a compact inline error/empty state used when a
  * single shelf's query fails without blanking sibling sections.
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, Animated, Pressable } from 'react-native';
 
 // ---------------------------------------------------------------------------
@@ -56,7 +56,7 @@ export function SectionError({ label, onRetry, testID }: SectionErrorProps) {
       testID={testID ?? 'section-error'}
       className="mx-[18px] my-3 px-4 py-3 rounded-xl bg-card border border-line flex-row items-center justify-between"
     >
-      <Text className="text-fg3 text-[13px]">Couldn't load {label}</Text>
+      <Text className="text-fg3 text-[13px]">Couldn&apos;t load {label}</Text>
       <Pressable onPress={onRetry} testID={`${testID ?? 'section-error'}-retry`}>
         <Text className="text-primary text-[13px] font-semibold">Retry</Text>
       </Pressable>
@@ -97,7 +97,7 @@ function ShimmerWrapper({
   reduceMotion: boolean;
   children: React.ReactNode;
 }) {
-  const opacity = useRef(new Animated.Value(0.4)).current;
+  const [opacity] = useState(() => new Animated.Value(0.4));
 
   useEffect(() => {
     if (reduceMotion) {
