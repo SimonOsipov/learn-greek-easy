@@ -22,6 +22,23 @@ class SeedRequest(BaseModel):
         default=None,
         description="Optional seed operation configuration",
     )
+    pr_number: Optional[str] = Field(
+        default=None,
+        description="PR namespace for per-PR seed-user isolation (RGATE-05). "
+        "When supplied, the beginner seed user is created as "
+        "e2e_beginner+pr<N>@test.com. Omit for default back-compat behaviour.",
+    )
+
+
+class ResetOnboardingRequest(BaseModel):
+    """Request body for reset-onboarding (optional)."""
+
+    pr_number: Optional[str] = Field(
+        default=None,
+        description="PR namespace for per-PR seed-user isolation (RGATE-05). "
+        "When supplied, the reset targets e2e_beginner+pr<N>@test.com instead "
+        "of the default e2e_beginner@test.com.",
+    )
 
 
 class SeedStatusResponse(BaseModel):

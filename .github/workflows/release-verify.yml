@@ -454,8 +454,10 @@ jobs:
             exit 0
           fi
 
-          # Call seed endpoint
-          RESPONSE=$(curl -s -X POST "$FRONTEND_URL/api/v1/test/seed/all")
+          # Call seed endpoint (pass pr_number for per-PR user namespacing — RGATE-05)
+          RESPONSE=$(curl -s -X POST "$FRONTEND_URL/api/v1/test/seed/all" \
+            -H "Content-Type: application/json" \
+            -d "{\"pr_number\": \"${{ env.PR_NUMBER }}\"}")
           echo "Seed response: $RESPONSE"
 
           # Verify success
@@ -583,7 +585,9 @@ jobs:
         run: |
           FRONTEND_URL="${{ needs.deploy.outputs.frontend_url }}"
           echo "=== Resetting onboarding state before test run ==="
-          RESPONSE=$(curl -s -X POST "$FRONTEND_URL/api/v1/test/seed/reset-onboarding")
+          RESPONSE=$(curl -s -X POST "$FRONTEND_URL/api/v1/test/seed/reset-onboarding" \
+            -H "Content-Type: application/json" \
+            -d "{\"pr_number\": \"${{ env.PR_NUMBER }}\"}")
           echo "Reset response: $RESPONSE"
           SUCCESS=$(echo "$RESPONSE" | jq -r '.success')
           if [ "$SUCCESS" != "true" ]; then
@@ -638,8 +642,17 @@ jobs:
           cat "$RUNNER_TEMP/metro.log" || true
           exit 1
 
+      - name: Compute E2E email for Maestro (RGATE-05)
+        run: |
+          if [ -n "${{ env.PR_NUMBER }}" ]; then
+            EMAIL="e2e_beginner+pr${{ env.PR_NUMBER }}@test.com"
+          else
+            EMAIL="e2e_beginner@test.com"
+          fi
+          echo "E2E_EMAIL=$EMAIL" >> "$GITHUB_ENV"
+
       - name: Run Maestro onboarding flow
-        run: maestro test .maestro/onboarding.yaml
+        run: maestro test --env E2E_EMAIL="$E2E_EMAIL" .maestro/onboarding.yaml
 
       - name: Run Maestro smoke flow
         run: maestro test .maestro/smoke.yaml
@@ -649,7 +662,9 @@ jobs:
         run: |
           FRONTEND_URL="${{ needs.deploy.outputs.frontend_url }}"
           echo "=== Resetting onboarding state after test run ==="
-          RESPONSE=$(curl -s -X POST "$FRONTEND_URL/api/v1/test/seed/reset-onboarding")
+          RESPONSE=$(curl -s -X POST "$FRONTEND_URL/api/v1/test/seed/reset-onboarding" \
+            -H "Content-Type: application/json" \
+            -d "{\"pr_number\": \"${{ env.PR_NUMBER }}\"}")
           echo "Reset response: $RESPONSE"
           # Verify no residue: tour_completed_at must be null in the response
           TOUR_COMPLETED=$(echo "$RESPONSE" | jq -r '.results.tour_completed_at')

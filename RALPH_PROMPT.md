@@ -252,14 +252,17 @@ Mobile has no web preview deploy, so the gate runs on the **iOS simulator** and 
 1. **Boot RALPH's OWN simulator** (the orchestrator's sim is session-isolated from the user's — boot a fresh one via `xcrun simctl boot` + `bootstatus -b`). Build the cached Debug dev-client ONCE (`npx expo run:ios`, or reuse the one already running from execution) and keep **Metro on `127.0.0.1:8081`** — the flows launch with `--initialUrl http://127.0.0.1:8081`. Point the app at the **dev backend**: `API_URL=https://frontend-dev-8db9.up.railway.app` (same dev frontend the CI job and PR preview use).
 2. **Reset before AND after** via the MOB15-01 endpoint so the run is repeatable and residue-free — exactly as CI does:
    ```bash
-   curl -s -X POST "https://frontend-dev-8db9.up.railway.app/api/v1/test/seed/reset-onboarding"   # pre-run: must return success=true
+   curl -s -X POST "https://frontend-dev-8db9.up.railway.app/api/v1/test/seed/reset-onboarding" \
+     -H "Content-Type: application/json" -d "{\"pr_number\": \"$PR_NUMBER\"}"   # pre-run: must return success=true
    # … run flows …
-   curl -s -X POST "https://frontend-dev-8db9.up.railway.app/api/v1/test/seed/reset-onboarding"   # post-run: tour_completed_at must be null
+   curl -s -X POST "https://frontend-dev-8db9.up.railway.app/api/v1/test/seed/reset-onboarding" \
+     -H "Content-Type: application/json" -d "{\"pr_number\": \"$PR_NUMBER\"}"   # post-run: tour_completed_at must be null
    ```
+   The reset curl and Maestro `--env` must resolve to the same `e2e_beginner+pr<N>@test.com`, and a `seed/all` with that `pr_number` must have provisioned the user first.
 3. **Run the reused flows** to drive every onboarding screen and capture per-screen screenshots (the flows already `takeScreenshot` each step: `01-login` … `10-app-home`):
    ```bash
    export JAVA_HOME=/opt/homebrew/opt/openjdk
-   (cd "$WORKTREE_PATH/learn-greek-easy-mobile" && maestro test .maestro/onboarding.yaml && maestro test .maestro/smoke.yaml)
+   (cd "$WORKTREE_PATH/learn-greek-easy-mobile" && maestro test --env E2E_EMAIL="e2e_beginner+pr${PR_NUMBER}@test.com" .maestro/onboarding.yaml && maestro test .maestro/smoke.yaml)
    ```
 4. **Feed the per-screen screenshots to `product-qa-spec`** (strict / adversarial) for a design critique. **Compare against the authoritative design export** — `design_handoff_*/screenshots/*` (or the handoff mock rendered at phone size). Comparing the app to *self-generated* screenshots is circular and will false-pass — that is how MOB-09 shipped a degraded login. The critic must flag EVERY deviation: element order, missing elements (a dropped social provider), flat-vs-frosted glass, scrim strength, spacing, copy. A hi-fi handoff silently degraded to a "sanctioned fallback" (flat `View` instead of `BlurView`, dropped button) is a **fail**, never an acceptable shortcut.
    - **Fallback when no design export exists for the screen:** critique against `docs/design-system.md` rules + the MOB-14 design reference (`docs/mobile-app.md` § Visual QA), and **flag to the user that fidelity is human-confirmed** for any pixel call not citable against a rule.

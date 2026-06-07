@@ -85,5 +85,5 @@ env:
 - extendedWaitUntil:
     visible: "Success!"          # substring (avoids emoji)
     timeout: 90000
-- assertVisible: "Signed in as e2e_beginner@test.com"
+- assertVisible: "Signed in as ${E2E_EMAIL}"
 - takeScreenshot: 10-app-home
