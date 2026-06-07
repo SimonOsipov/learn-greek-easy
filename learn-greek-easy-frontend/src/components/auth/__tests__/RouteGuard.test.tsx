@@ -19,6 +19,7 @@ import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 
 import { act, render, screen, waitFor } from '@testing-library/react';
 
+import * as supabaseClientModule from '@/lib/supabaseClient';
 import { useAppStore } from '@/stores/appStore';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -461,5 +462,90 @@ describe('RouteGuard — de-gated persisted-session render (PERF-02)', () => {
     // (selector was false) and checkAuth hasn't resolved to flip it.
     expect(screen.getByTestId('auth-loading')).toBeInTheDocument();
     expect(screen.queryByTestId('route-guard-child')).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PERF-06-04: adversarial cancelled-flag coverage
+//
+// RouteGuard uses a `cancelled` boolean + deferred subscribe pattern:
+//   getSupabase().then((supabase) => {
+//     if (cancelled) return;           ← guard
+//     const { data } = supabase.auth.onAuthStateChange(cb);
+//     subscription = data.subscription;
+//   });
+//
+// If the component unmounts before getSupabase() resolves, `cancelled` is
+// flipped to true in the cleanup, and onAuthStateChange must NOT be called.
+// This test drives a controlled deferred getSupabase() promise to create
+// the race, then resolves it AFTER unmount.
+// ---------------------------------------------------------------------------
+
+describe('RouteGuard — adversarial: cancelled-flag on unmount-before-getSupabase-resolves (PERF-06-04)', () => {
+  // We obtain the mocked getSupabase from the module-level vi.mock at the top
+  // of this file. Since the mock factory already ran, we can import it
+  // synchronously via the module mock registry.
+  // The test overrides mockImplementationOnce to return a deferred promise.
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authStateCallback = null;
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+      checkAuth: vi.fn().mockResolvedValue(undefined),
+    });
+    useAppStore.getState().reset();
+  });
+
+  afterEach(() => {
+    useAppStore.getState().reset();
+  });
+
+  it('does NOT subscribe to onAuthStateChange when unmounted before getSupabase resolves', async () => {
+    // supabaseClientModule.getSupabase is already a vi.fn() from the module-level
+    // vi.mock factory above. We override it for this one test with a deferred promise.
+    const mockGetSupabase = vi.mocked(supabaseClientModule.getSupabase);
+
+    let resolveDeferred!: (value: {
+      auth: { onAuthStateChange: typeof onAuthStateChange };
+    }) => void;
+    mockGetSupabase.mockImplementationOnce(
+      () =>
+        new Promise<{ auth: { onAuthStateChange: typeof onAuthStateChange } }>((resolve) => {
+          resolveDeferred = resolve;
+        })
+    );
+
+    const { unmount } = render(
+      <RouteGuard>
+        <Child />
+      </RouteGuard>
+    );
+
+    // Unmount immediately — before getSupabase has resolved.
+    // This sets cancelled = true in the effect cleanup.
+    unmount();
+
+    // Now resolve the deferred getSupabase() promise AFTER unmount.
+    resolveDeferred({
+      auth: {
+        onAuthStateChange: onAuthStateChange,
+      },
+    });
+
+    // Drain microtask queue so the .then() body runs.
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // The cancelled flag was true when .then() ran, so onAuthStateChange
+    // must NOT have been called, preventing a subscription on an unmounted component.
+    expect(onAuthStateChange).not.toHaveBeenCalled();
+    // No subscription was ever created, so unsubscribe should not be called either.
+    expect(unsubscribe).not.toHaveBeenCalled();
   });
 });

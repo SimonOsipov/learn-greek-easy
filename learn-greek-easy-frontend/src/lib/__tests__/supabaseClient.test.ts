@@ -133,3 +133,79 @@ describe('supabaseClient — lazy getSupabase() memoization contract', () => {
     await expect(import('../supabaseClient')).rejects.toThrow('Missing Supabase configuration');
   });
 });
+
+// ── Adversarial coverage (PERF-06-04 Stage 4) ───────────────────────────────
+//
+// These tests probe the contracts that the memoization tests above do NOT cover:
+//   A. Rejection permanence: if the dynamic import fails, the rejected promise
+//      is cached and ALL subsequent callers receive the same rejection forever —
+//      the module does NOT auto-retry. Tests assert this is the actual contract
+//      so a future "auto-retry on failure" change would require an explicit decision.
+//   B. Concurrent rejection sharing: concurrent callers all reject from the
+//      single cached promise, not from separate import() attempts.
+//   C. RouteGuard cancelled-flag: if the component unmounts before
+//      getSupabase() resolves, the onAuthStateChange subscription is never
+//      established (cancelled=true check prevents the call).
+
+describe('supabaseClient — adversarial rejection contract (PERF-06-04)', () => {
+  beforeEach(() => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://test.supabase.co');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-anon-key');
+    mockCreateClient.mockClear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  // ── A. Rejection permanence ──────────────────────────────────────────────
+  // If the dynamic import rejects, _clientPromise is set to the rejected promise
+  // and is NOT reset to null. All subsequent calls return the same rejection.
+  // This test documents the current contract: no auto-retry after failure.
+  it('A: once the dynamic import rejects, subsequent calls return the same cached rejection', async () => {
+    vi.resetModules();
+    // Make createClient throw to simulate a load failure after import succeeds
+    mockCreateClient.mockImplementationOnce(() => {
+      throw new Error('createClient load failure');
+    });
+    vi.mock('@supabase/supabase-js', () => ({
+      createClient: mockCreateClient,
+    }));
+    const { getSupabase } = await import('../supabaseClient');
+
+    // First call — should reject because createClient throws
+    await expect(getSupabase()).rejects.toThrow('createClient load failure');
+
+    // Second call — must also reject from the cached promise (no second import attempt)
+    await expect(getSupabase()).rejects.toThrow('createClient load failure');
+
+    // createClient should only have been called once despite two getSupabase() calls
+    expect(mockCreateClient).toHaveBeenCalledTimes(1);
+  });
+
+  // ── B. Concurrent rejection sharing ─────────────────────────────────────
+  // Three concurrent callers all share the same failing promise; the dynamic
+  // import is attempted exactly once regardless of how many callers are waiting.
+  it('B: concurrent callers share the same rejection; import attempted exactly once', async () => {
+    vi.resetModules();
+    mockCreateClient.mockImplementationOnce(() => {
+      throw new Error('concurrent failure');
+    });
+    vi.mock('@supabase/supabase-js', () => ({
+      createClient: mockCreateClient,
+    }));
+    const { getSupabase } = await import('../supabaseClient');
+
+    const results = await Promise.allSettled([getSupabase(), getSupabase(), getSupabase()]);
+
+    // All three should have rejected
+    for (const result of results) {
+      expect(result.status).toBe('rejected');
+      expect((result as PromiseRejectedResult).reason.message).toBe('concurrent failure');
+    }
+
+    // Only one import attempt — the promise was shared
+    expect(mockCreateClient).toHaveBeenCalledTimes(1);
+  });
+});
