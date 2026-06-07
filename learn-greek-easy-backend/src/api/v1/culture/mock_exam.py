@@ -19,6 +19,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import settings
 from src.core.dependencies import get_current_user
 from src.db.dependencies import get_db
 from src.db.models import User
@@ -449,12 +450,13 @@ async def submit_all_mock_exam_answers(
         for ar in result["answer_results"]
     ]
 
-    background_tasks.add_task(
-        invalidate_cache_task,
-        cache_type="progress",
-        entity_id=None,
-        user_id=current_user.id,
-    )
+    if settings.feature_background_tasks:
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="progress",
+            entity_id=None,
+            user_id=current_user.id,
+        )
 
     return MockExamSubmitAllResponse(
         session=session_response,

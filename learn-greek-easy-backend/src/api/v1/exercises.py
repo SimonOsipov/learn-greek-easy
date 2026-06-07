@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.config import settings
 from src.core.dependencies import get_current_user
 from src.core.exceptions import InsufficientDistractorPoolException
 from src.db.dependencies import get_db
@@ -108,12 +109,13 @@ async def submit_exercise_review(
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
 
-    background_tasks.add_task(
-        invalidate_cache_task,
-        cache_type="progress",
-        entity_id=None,
-        user_id=current_user.id,
-    )
+    if settings.feature_background_tasks:
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="progress",
+            entity_id=None,
+            user_id=current_user.id,
+        )
     return result
 
 
