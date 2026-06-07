@@ -40,6 +40,8 @@ vi.mock('@/components/culture/WaveformPlayer', () => ({
 }));
 vi.mock('@/lib/analytics/track', () => ({
   track: vi.fn(),
+  __setPosthogInstance: vi.fn(),
+  getPosthogInstance: vi.fn(() => null),
 }));
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

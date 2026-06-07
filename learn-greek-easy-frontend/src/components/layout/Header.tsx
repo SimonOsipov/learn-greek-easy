@@ -1,7 +1,6 @@
 import React, { useCallback, useState } from 'react';
 
 import { Menu, ChevronDown, Crown, User, CircleHelp } from 'lucide-react';
-import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
@@ -21,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useLayoutContext } from '@/contexts/LayoutContext';
 import { useAuth } from '@/hooks/useAuth';
+import { track } from '@/lib/analytics';
 import { APP_NAME } from '@/lib/constants';
 import { startTour, buildTourSteps, waitForElement } from '@/lib/tour';
 import { cn } from '@/lib/utils';
@@ -65,9 +65,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
         trigger: 'manual',
         t,
         onAnalyticsEvent: (event, props) => {
-          if (typeof posthog?.capture === 'function') {
-            posthog.capture(event, props);
-          }
+          track(event, props);
         },
         onPersistCompletion: () => {
           updateProfile({ tourCompletedAt: new Date().toISOString() }).catch(() => {
