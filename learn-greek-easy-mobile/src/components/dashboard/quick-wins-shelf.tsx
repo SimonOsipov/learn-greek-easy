@@ -16,6 +16,7 @@ import { Sparkles, Zap } from 'lucide-react-native';
 
 import { Shelf } from '@/components/dashboard/shelf';
 import { useToast } from '@/components/ui/toast';
+import { track } from '@/lib/analytics';
 
 // ---------------------------------------------------------------------------
 // Sample data
@@ -209,7 +210,10 @@ export function QuickWinsShelf() {
             <DailyMixCard
               key={item.id}
               item={item}
-              onPress={showComingSoonToast}
+              onPress={() => {
+                track('home_card_tapped', { section: 'quick-wins', target: item.id, coming_soon: true });
+                showComingSoonToast();
+              }}
             />
           );
         }
@@ -218,7 +222,10 @@ export function QuickWinsShelf() {
             <WordOfDayCard
               key={item.id}
               item={item}
-              onPress={showComingSoonToast}
+              onPress={() => {
+                track('home_card_tapped', { section: 'quick-wins', target: item.id, coming_soon: true });
+                showComingSoonToast();
+              }}
             />
           );
         }
@@ -226,7 +233,10 @@ export function QuickWinsShelf() {
           <QuickDrillCard
             key={item.id}
             item={item}
-            onPress={showComingSoonToast}
+            onPress={() => {
+              track('home_card_tapped', { section: 'quick-wins', target: item.id, coming_soon: true });
+              showComingSoonToast();
+            }}
           />
         );
       }}

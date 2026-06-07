@@ -29,7 +29,7 @@
  *
  * Dark is the default theme (controlled by NativeWind + app _layout).
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -38,6 +38,7 @@ import { BookOpen, Trophy } from 'lucide-react-native';
 import { useDashboard } from '@/hooks/use-dashboard';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useToast } from '@/components/ui/toast';
+import { track } from '@/lib/analytics';
 
 import { GreetingHeader } from '@/components/dashboard/greeting-header';
 import { ProgressBand } from '@/components/dashboard/progress-band';
@@ -121,6 +122,17 @@ export default function HomeScreen() {
     setTimeout(() => setRefreshing(false), 1500);
   }, [refetchAll]);
 
+  // ── Analytics: home_screen_viewed ──
+  // Fire once after isNewUser resolves (not while undefined / loading).
+  // Ref guard prevents double-fire in React StrictMode.
+  const viewedFired = useRef(false);
+  useEffect(() => {
+    if (isNewUser !== undefined && !viewedFired.current) {
+      viewedFired.current = true;
+      track('home_screen_viewed', { state: isNewUser ? 'new_user' : 'returning' });
+    }
+  }, [isNewUser]);
+
   // ── Loading state ──
   // While isLoading is true, isNewUser is undefined. Show per-section
   // skeletons instead of a bare ActivityIndicator.
@@ -154,14 +166,26 @@ export default function HomeScreen() {
             firstName={firstName}
             streak={0}
             initials={initialsFromName(firstName)}
-            onAvatarPress={() => router.push('/(app)/you')}
+            onAvatarPress={() => {
+              track('home_card_tapped', { section: 'greeting', target: 'profile', coming_soon: false });
+              router.push('/(app)/you');
+            }}
           />
 
           {/* New-user chooser block */}
           <NewUserStart
-            onPickDeck={() => router.push('/(app)/decks')}
-            onReadArticle={() => router.push('/(app)/culture')}
-            onTryConversation={() => router.push('/(app)/practice')}
+            onPickDeck={() => {
+              track('home_card_tapped', { section: 'new-user', target: 'decks', coming_soon: false });
+              router.push('/(app)/decks');
+            }}
+            onReadArticle={() => {
+              track('home_card_tapped', { section: 'new-user', target: 'culture', coming_soon: false });
+              router.push('/(app)/culture');
+            }}
+            onTryConversation={() => {
+              track('home_card_tapped', { section: 'new-user', target: 'practice', coming_soon: false });
+              router.push('/(app)/practice');
+            }}
           />
         </ScrollView>
       </SafeAreaView>
@@ -214,7 +238,10 @@ export default function HomeScreen() {
             firstName={firstName}
             streak={currentStreak}
             initials={initialsFromName(firstName)}
-            onAvatarPress={() => router.push('/(app)/you')}
+            onAvatarPress={() => {
+              track('home_card_tapped', { section: 'greeting', target: 'profile', coming_soon: false });
+              router.push('/(app)/you');
+            }}
           />
         </View>
 
@@ -238,6 +265,7 @@ export default function HomeScreen() {
               dueNow={heroDueNow}
               onResume={() => {
                 // Deck-review detail screen not yet built — toast
+                track('home_card_tapped', { section: 'continue', target: 'deck-review', coming_soon: true });
                 showComingSoonToast();
               }}
             />
@@ -272,9 +300,18 @@ export default function HomeScreen() {
         <View testID="block-whats-new">
           <WhatsNewChips
             counts={whatsNew}
-            onNewsPress={() => router.push('/(app)/culture')}
-            onAudioPress={() => router.push('/(app)/culture')}
-            onComingSoon={showComingSoonToast}
+            onNewsPress={() => {
+              track('home_card_tapped', { section: 'whats-new', target: 'culture', coming_soon: false });
+              router.push('/(app)/culture');
+            }}
+            onAudioPress={() => {
+              track('home_card_tapped', { section: 'whats-new', target: 'culture-audio', coming_soon: false });
+              router.push('/(app)/culture');
+            }}
+            onComingSoon={() => {
+              track('home_card_tapped', { section: 'whats-new', target: 'dialogs', coming_soon: true });
+              showComingSoonToast();
+            }}
           />
         </View>
 
@@ -304,7 +341,10 @@ export default function HomeScreen() {
               title="Today's news"
               subtitle="With audio at your level"
               seeAllLabel="All news"
-              onSeeAll={() => router.push('/(app)/culture')}
+              onSeeAll={() => {
+                track('home_card_tapped', { section: 'news', target: 'culture', coming_soon: false });
+                router.push('/(app)/culture');
+              }}
               data={news}
               renderItem={({ item }) => (
                 <NewsCard
@@ -312,6 +352,7 @@ export default function HomeScreen() {
                   item={item}
                   onPress={() => {
                     // News detail screen not yet built — toast
+                    track('home_card_tapped', { section: 'news', target: 'news-detail', coming_soon: true });
                     showComingSoonToast();
                   }}
                 />
@@ -338,7 +379,10 @@ export default function HomeScreen() {
               title="Practice situations"
               subtitle="Real Greek conversations"
               seeAllLabel="All situations"
-              onSeeAll={() => router.push('/(app)/practice')}
+              onSeeAll={() => {
+                track('home_card_tapped', { section: 'situations', target: 'practice', coming_soon: false });
+                router.push('/(app)/practice');
+              }}
               data={situations}
               renderItem={({ item }) => (
                 <SituationCard
@@ -346,6 +390,7 @@ export default function HomeScreen() {
                   item={item}
                   onPress={() => {
                     // Situation detail screen not yet built — toast
+                    track('home_card_tapped', { section: 'situations', target: 'situation-detail', coming_soon: true });
                     showComingSoonToast();
                   }}
                 />
@@ -372,7 +417,10 @@ export default function HomeScreen() {
               title="Your decks"
               subtitle="Continue where you left off"
               seeAllLabel="All decks"
-              onSeeAll={() => router.push('/(app)/decks')}
+              onSeeAll={() => {
+                track('home_card_tapped', { section: 'decks', target: 'decks', coming_soon: false });
+                router.push('/(app)/decks');
+              }}
               data={decks}
               renderItem={({ item }) => (
                 <DeckCard
@@ -380,6 +428,7 @@ export default function HomeScreen() {
                   deck={item}
                   onPress={() => {
                     // Deck review/study screen not yet built — toast
+                    track('home_card_tapped', { section: 'decks', target: 'deck-review', coming_soon: true });
                     showComingSoonToast();
                   }}
                 />
