@@ -72,6 +72,16 @@ module.exports = {
         // Primary at 0.15 alpha for the selected-tile badge flip (221 83% 53% = rgb(36,99,235)).
         // Light-theme value; theme-invariant by design (selected-tile surface shows in light only).
         'primary-15': 'rgba(36,99,235,0.15)',
+        // EntryCard violet tone tints (DASH-06): 280 70% 60% = rgb(177,82,224).
+        'entry-violet': 'rgb(177,82,224)',          // iconFg — solid accent
+        'entry-violet-16': 'rgba(177,82,224,0.16)', // iconBg — MOB-13 explicit alpha
+        'entry-violet-32': 'rgba(177,82,224,0.32)', // ring/glow — MOB-13 explicit alpha
+        // EntryCard amber tone tints (DASH-06): 38 92% 55% = rgb(246,168,35).
+        'entry-amber': 'rgb(246,168,35)',            // iconFg — solid accent
+        'entry-amber-16': 'rgba(246,168,35,0.16)',  // iconBg — MOB-13 explicit alpha
+        'entry-amber-32': 'rgba(246,168,35,0.32)',  // ring/glow — MOB-13 explicit alpha
+        // WhatsNew green dot: 150 60% 48% = rgb(49,196,122).
+        'whats-new-green': 'rgb(49,196,122)',
         // === end MOB-13 explicit opacity tokens ===
       },
       borderRadius: {
