@@ -17,9 +17,9 @@ Add `CI Gate` under **Settings → Branches → Branch protection rules → Requ
 | Label | Effect |
 |-------|--------|
 | `skip-k6` | Skip k6 performance tests |
-| `needs-native-build` | Trigger the on-demand EAS local iOS build + Maestro smoke workflow (`mobile-native-build.yml`) |
 
 > **Note:** `skip-visual` label exists but has no effect — visual regression tests are currently disabled (being reorganized).
+> `needs-native-build` label is retired (MOB-15) — the native iOS build + Maestro flows now run automatically as the `mobile-e2e` job in `preview.yml` on every ready mobile PR.
 
 ## Default Behavior
 

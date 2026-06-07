@@ -144,7 +144,7 @@ For each subtask, in dependency order, execute the 4 stages below. Delegate to s
 #### Mobile stories (`learn-greek-easy-mobile`) — special handling
 - **Iterate with Metro + Fast Refresh, NEVER Release-rebuild-per-change.** Build the Debug dev-client ONCE in the worktree (`npx expo run:ios` — one cold native compile, since Xcode DerivedData is worktree-path-keyed), then keep Metro running. Every JS / NativeWind / `tailwind.config` edit then hot-reloads on the simulator in ~1s. A `--configuration Release` rebuild per change (~10 min each) is the single biggest mobile-RALPH time-sink — `Release` is only for final *unattended* visual capture.
 - **NativeWind opacity gotcha:** never put a `token/NN` opacity modifier on a custom var-backed token — it renders DARK on native (the RN opacity-modifier path is broken; see MOB-13 / project memory). Use an explicit full-color token instead.
-- **No web preview deploy** — the mobile Phase 3.5 gate runs on the iOS simulator and diffs against the design export, not a preview URL (see the Mobile variant in Phase 3.5).
+- **No web preview deploy** — the mobile Phase 3.5 gate runs on the iOS simulator and diffs against the design export, not a preview URL. It **reuses the same `.maestro/onboarding.yaml` + `.maestro/smoke.yaml` flows + `reset-onboarding` endpoint as the CI `mobile-e2e` job** — no new harness (see the Mobile variant in Phase 3.5).
 
 #### Fallback: If Subagent Spawning Fails
 Read the corresponding agent technical prompt file BEFORE executing the stage yourself:
@@ -247,13 +247,25 @@ Runs **once per story**, after CI is green and CodeRabbit is addressed, against 
 
 #### Phase 3.5 — Mobile variant (`learn-greek-easy-mobile` UI stories)
 
-Mobile has no web preview deploy, so the gate runs on the **iOS simulator** and diffs against the **authoritative design export** — not a URL, and **not** against your own app captures:
+Mobile has no web preview deploy, so the gate runs on the **iOS simulator** and diffs against the **authoritative design export** — not a URL, and **not** against your own app captures. **No new harness — it reuses the exact same flow files as the CI `mobile-e2e` job** (`.github/workflows/preview.yml`): `.maestro/onboarding.yaml` + `.maestro/smoke.yaml`.
 
-1. Bring the app up on a booted simulator via the Metro dev loop (already running from execution) or a Release capture build.
-2. **Compare against the authoritative design export** — `design_handoff_*/screenshots/*` (or the handoff mock rendered at phone size). Comparing the app to *self-generated* screenshots is circular and will false-pass — that is exactly how MOB-09 shipped a degraded login.
-3. Spawn `product-qa-spec` with BOTH the app screenshot AND the design export, **strict / adversarial**. It must flag EVERY deviation: element order, missing elements (a dropped social provider), flat-vs-frosted glass, scrim strength, spacing, copy. A hi-fi handoff silently degraded to a "sanctioned fallback" (flat `View` instead of `BlurView`, dropped button) is a **fail**, never an acceptable shortcut.
-4. **Fidelity is human-confirmed** — do not self-certify a pixel match. Surface app-vs-design-export to the user for the subjective call; only deviations citable against the design export or a `docs/design-system.md` rule bounce the executor.
-5. Log to the story's QA Debate Log as in the web flow.
+1. **Boot RALPH's OWN simulator** (the orchestrator's sim is session-isolated from the user's — boot a fresh one via `xcrun simctl boot` + `bootstatus -b`). Build the cached Debug dev-client ONCE (`npx expo run:ios`, or reuse the one already running from execution) and keep **Metro on `127.0.0.1:8081`** — the flows launch with `--initialUrl http://127.0.0.1:8081`. Point the app at the **dev backend**: `API_URL=https://frontend-dev-8db9.up.railway.app` (same dev frontend the CI job and PR preview use).
+2. **Reset before AND after** via the MOB15-01 endpoint so the run is repeatable and residue-free — exactly as CI does:
+   ```bash
+   curl -s -X POST "https://frontend-dev-8db9.up.railway.app/api/v1/test/seed/reset-onboarding"   # pre-run: must return success=true
+   # … run flows …
+   curl -s -X POST "https://frontend-dev-8db9.up.railway.app/api/v1/test/seed/reset-onboarding"   # post-run: tour_completed_at must be null
+   ```
+3. **Run the reused flows** to drive every onboarding screen and capture per-screen screenshots (the flows already `takeScreenshot` each step: `01-login` … `10-app-home`):
+   ```bash
+   export JAVA_HOME=/opt/homebrew/opt/openjdk
+   (cd "$WORKTREE_PATH/learn-greek-easy-mobile" && maestro test .maestro/onboarding.yaml && maestro test .maestro/smoke.yaml)
+   ```
+4. **Feed the per-screen screenshots to `product-qa-spec`** (strict / adversarial) for a design critique. **Compare against the authoritative design export** — `design_handoff_*/screenshots/*` (or the handoff mock rendered at phone size). Comparing the app to *self-generated* screenshots is circular and will false-pass — that is how MOB-09 shipped a degraded login. The critic must flag EVERY deviation: element order, missing elements (a dropped social provider), flat-vs-frosted glass, scrim strength, spacing, copy. A hi-fi handoff silently degraded to a "sanctioned fallback" (flat `View` instead of `BlurView`, dropped button) is a **fail**, never an acceptable shortcut.
+   - **Fallback when no design export exists for the screen:** critique against `docs/design-system.md` rules + the MOB-14 design reference (`docs/mobile-app.md` § Visual QA), and **flag to the user that fidelity is human-confirmed** for any pixel call not citable against a rule.
+5. **Iterate via Metro Fast Refresh (~1s), NEVER Release-rebuild-per-change (~10 min).** Only rebuild natively when *native* code changes. Release builds are for final unattended capture only.
+6. **Fidelity is human-confirmed** — do not self-certify a pixel match. Surface app-vs-design-export to the user for the subjective call; only deviations citable against the design export or a `docs/design-system.md` rule bounce the executor.
+7. Log to the story's QA Debate Log as in the web flow.
 
 ### Phase 4: Worktree Cleanup
 

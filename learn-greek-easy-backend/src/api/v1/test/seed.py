@@ -37,7 +37,7 @@ from src.db.models import (
     FeedbackStatus,
     NewsItem,
 )
-from src.repositories.user import UserRepository
+from src.repositories.user import UserRepository, UserSettingsRepository
 from src.schemas.seed import SeedRequest, SeedResultResponse, SeedStatusResponse
 from src.services.seed_service import SeedService
 
@@ -1140,3 +1140,59 @@ async def seed_card_errors_batch(
         await db.refresh(r)
 
     return {"ids": [str(r.id) for r in rows]}
+
+
+@router.post(
+    "/reset-onboarding",
+    response_model=SeedResultResponse,
+    summary="Reset onboarding state for e2e_beginner user",
+    description="Nulls tour_completed_at for e2e_beginner@test.com so Maestro E2E tests "
+    "can exercise the onboarding tour from a clean state. "
+    "Requires test users to be seeded first.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def reset_onboarding(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Null tour_completed_at for the E2E beginner user.
+
+    Resets the onboarding tour state so E2E tests can exercise the full
+    first-run experience regardless of prior test runs.
+
+    Returns:
+        SeedResultResponse with operation details
+
+    Raises:
+        404: If e2e_beginner@test.com is not found in the database
+        404: If UserSettings row is missing for the beginner user
+    """
+    start_time = perf_counter()
+
+    user = await UserRepository(db).get_by_email("e2e_beginner@test.com")
+    if user is None:
+        raise HTTPException(status_code=404, detail="E2E beginner user not found")
+
+    user_settings = await UserSettingsRepository(db).get_by_user_id(user.id)
+    if user_settings is None:
+        raise HTTPException(status_code=404, detail="E2E beginner user settings not found")
+
+    user_settings.tour_completed_at = None
+    await db.commit()
+
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    logger.info(
+        "reset-onboarding seed completed",
+        extra={
+            "event": "seed.reset_onboarding.success",
+            "user_id": str(user.id),
+        },
+    )
+
+    return SeedResultResponse(
+        success=True,
+        operation="reset-onboarding",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results={"tour_completed_at": None},
+    )

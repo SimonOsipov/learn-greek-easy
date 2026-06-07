@@ -820,3 +820,315 @@ class TestSeedCardErrorsBatchEndpoint:
         data = response.json()
         assert "ids" in data
         assert len(data["ids"]) == 4
+
+
+# ============================================================================
+# POST /test/seed/reset-onboarding Endpoint Tests (MOB15-01)
+# ============================================================================
+
+
+class TestResetOnboardingEndpoint:
+    """Tests for POST /test/seed/reset-onboarding.
+
+    The endpoint is NOT yet implemented; all tests should be RED.
+    Guards open = is_production=False, test_seed_enabled=True, seed_requires_secret=False.
+    """
+
+    def test_returns_403_when_production(self, client: TestClient):
+        """Should return 403 when running in production environment."""
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = True
+
+            response = client.post("/test/seed/reset-onboarding")
+
+        assert response.status_code == 403
+
+    def test_returns_403_when_disabled(self, client: TestClient):
+        """Should return 403 when TEST_SEED_ENABLED is False."""
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = False
+
+            response = client.post("/test/seed/reset-onboarding")
+
+        assert response.status_code == 403
+
+    def test_returns_404_when_user_absent(self, client: TestClient):
+        """Should return 404 when e2e_beginner@test.com does not exist in DB."""
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                mock_repo.get_by_email.return_value = None
+                mock_repo_class.return_value = mock_repo
+
+                response = client.post("/test/seed/reset-onboarding")
+
+        assert response.status_code == 404
+
+    def test_returns_404_when_settings_absent(self, client: TestClient):
+        """Should return 404 when the user exists but their UserSettings row is absent."""
+        from unittest.mock import MagicMock
+        from uuid import uuid4
+
+        mock_user = MagicMock()
+        mock_user.id = uuid4()
+
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                mock_repo.get_by_email.return_value = mock_user
+                mock_repo_class.return_value = mock_repo
+
+                # create=True allows patching the name even before the import exists in
+                # the seed module; once the executor adds the import this becomes a
+                # real patch. Without create=True the test would error on AttributeError
+                # before ever reaching the assertion — the wrong failure mode.
+                with patch(
+                    "src.api.v1.test.seed.UserSettingsRepository",
+                    create=True,
+                ) as mock_settings_repo_class:
+                    mock_settings_repo = AsyncMock()
+                    mock_settings_repo.get_by_user_id.return_value = None
+                    mock_settings_repo_class.return_value = mock_settings_repo
+
+                    response = client.post("/test/seed/reset-onboarding")
+
+        assert response.status_code == 404
+
+    def test_nulls_tour_completed_at_on_success(self, client: TestClient, mock_db: AsyncMock):
+        """Should null tour_completed_at, commit once, and return success=True."""
+        from datetime import datetime, timezone
+        from unittest.mock import MagicMock
+        from uuid import uuid4
+
+        mock_user = MagicMock()
+        mock_user.id = uuid4()
+
+        mock_settings_obj = MagicMock()
+        mock_settings_obj.tour_completed_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
+
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                mock_repo.get_by_email.return_value = mock_user
+                mock_repo_class.return_value = mock_repo
+
+                with patch(
+                    "src.api.v1.test.seed.UserSettingsRepository",
+                    create=True,
+                ) as mock_settings_repo_class:
+                    mock_settings_repo = AsyncMock()
+                    mock_settings_repo.get_by_user_id.return_value = mock_settings_obj
+                    mock_settings_repo_class.return_value = mock_settings_repo
+
+                    response = client.post("/test/seed/reset-onboarding")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert mock_settings_obj.tour_completed_at is None
+        mock_db.commit.assert_awaited_once()
+
+    def test_accepts_no_request_body(self, client: TestClient):
+        """POST with no JSON body should succeed (endpoint takes no body)."""
+        from unittest.mock import MagicMock
+        from uuid import uuid4
+
+        mock_user = MagicMock()
+        mock_user.id = uuid4()
+
+        mock_settings_obj = MagicMock()
+        mock_settings_obj.tour_completed_at = None
+
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                mock_repo.get_by_email.return_value = mock_user
+                mock_repo_class.return_value = mock_repo
+
+                with patch(
+                    "src.api.v1.test.seed.UserSettingsRepository",
+                    create=True,
+                ) as mock_settings_repo_class:
+                    mock_settings_repo = AsyncMock()
+                    mock_settings_repo.get_by_user_id.return_value = mock_settings_obj
+                    mock_settings_repo_class.return_value = mock_settings_repo
+
+                    # Explicitly pass no JSON body
+                    response = client.post("/test/seed/reset-onboarding")
+
+        assert response.status_code == 200
+
+
+# ============================================================================
+# POST /test/seed/reset-onboarding Adversarial Tests (MOB15-01)
+# ============================================================================
+
+
+class TestResetOnboardingAdversarial:
+    """Adversarial / edge / boundary coverage for reset-onboarding.
+
+    These tests verify behaviour the AC tests don't cover:
+    - db.commit NOT called on 404 paths (no partial writes)
+    - response.operation field is the exact string "reset-onboarding"
+    - the hardcoded email constant is exactly e2e_beginner@test.com
+    - bad/missing X-Test-Seed-Secret -> 401 when seed_requires_secret=True
+    """
+
+    def test_commit_not_called_when_user_absent(self, client: TestClient, mock_db: AsyncMock):
+        """db.commit must NOT be called when the user is absent (no partial write)."""
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                mock_repo.get_by_email.return_value = None
+                mock_repo_class.return_value = mock_repo
+
+                response = client.post("/test/seed/reset-onboarding")
+
+        assert response.status_code == 404
+        mock_db.commit.assert_not_awaited()
+
+    def test_commit_not_called_when_settings_absent(self, client: TestClient, mock_db: AsyncMock):
+        """db.commit must NOT be called when UserSettings row is absent (no partial write)."""
+        from unittest.mock import MagicMock
+        from uuid import uuid4
+
+        mock_user = MagicMock()
+        mock_user.id = uuid4()
+
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                mock_repo.get_by_email.return_value = mock_user
+                mock_repo_class.return_value = mock_repo
+
+                with patch(
+                    "src.api.v1.test.seed.UserSettingsRepository",
+                ) as mock_settings_repo_class:
+                    mock_settings_repo = AsyncMock()
+                    mock_settings_repo.get_by_user_id.return_value = None
+                    mock_settings_repo_class.return_value = mock_settings_repo
+
+                    response = client.post("/test/seed/reset-onboarding")
+
+        assert response.status_code == 404
+        mock_db.commit.assert_not_awaited()
+
+    def test_operation_field_is_reset_onboarding(self, client: TestClient):
+        """The response 'operation' field must equal the literal string 'reset-onboarding'."""
+        from unittest.mock import MagicMock
+        from uuid import uuid4
+
+        mock_user = MagicMock()
+        mock_user.id = uuid4()
+
+        mock_settings_obj = MagicMock()
+        mock_settings_obj.tour_completed_at = None
+
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                mock_repo.get_by_email.return_value = mock_user
+                mock_repo_class.return_value = mock_repo
+
+                with patch(
+                    "src.api.v1.test.seed.UserSettingsRepository",
+                ) as mock_settings_repo_class:
+                    mock_settings_repo = AsyncMock()
+                    mock_settings_repo.get_by_user_id.return_value = mock_settings_obj
+                    mock_settings_repo_class.return_value = mock_settings_repo
+
+                    response = client.post("/test/seed/reset-onboarding")
+
+        assert response.status_code == 200
+        assert response.json()["operation"] == "reset-onboarding"
+
+    def test_hardcoded_email_is_e2e_beginner(self, client: TestClient):
+        """Verify the handler looks up 'e2e_beginner@test.com' — not any other address."""
+        from unittest.mock import MagicMock
+        from uuid import uuid4
+
+        mock_user = MagicMock()
+        mock_user.id = uuid4()
+
+        mock_settings_obj = MagicMock()
+        mock_settings_obj.tour_completed_at = None
+
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                mock_repo.get_by_email.return_value = mock_user
+                mock_repo_class.return_value = mock_repo
+
+                with patch(
+                    "src.api.v1.test.seed.UserSettingsRepository",
+                ) as mock_settings_repo_class:
+                    mock_settings_repo = AsyncMock()
+                    mock_settings_repo.get_by_user_id.return_value = mock_settings_obj
+                    mock_settings_repo_class.return_value = mock_settings_repo
+
+                    response = client.post("/test/seed/reset-onboarding")
+
+        assert response.status_code == 200
+        # The handler must have looked up exactly this email
+        mock_repo.get_by_email.assert_awaited_once_with("e2e_beginner@test.com")
+
+    def test_returns_401_with_wrong_secret_when_required(self, client: TestClient):
+        """Should return 401 when seed_requires_secret=True and a bad secret is sent."""
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = True
+            mock_settings.validate_seed_secret.return_value = False
+
+            response = client.post(
+                "/test/seed/reset-onboarding",
+                headers={"X-Test-Seed-Secret": "wrong-secret"},
+            )
+
+        assert response.status_code == 401
+        assert response.json()["error"]["code"] == "SEED_UNAUTHORIZED"
+
+    def test_returns_401_with_missing_secret_when_required(self, client: TestClient):
+        """Should return 401 when seed_requires_secret=True but no secret header sent."""
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = True
+            mock_settings.validate_seed_secret.return_value = False
+
+            response = client.post("/test/seed/reset-onboarding")
+
+        assert response.status_code == 401

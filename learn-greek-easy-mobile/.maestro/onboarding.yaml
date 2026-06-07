@@ -1,0 +1,89 @@
+appId: eu.greeklish.app.dev
+env:
+  E2E_EMAIL: "e2e_beginner@test.com"
+  E2E_PASSWORD: "TestPassword123!"
+---
+# Launch signed-out, connect to Metro (MOB-11 --initialUrl mechanism, matches smoke.yaml)
+- launchApp:
+    clearState: true
+    arguments:
+      "--initialUrl": "http://127.0.0.1:8081"
+
+# LOGIN (login fields have NO testID/accessibilityLabel — target by placeholder text)
+- extendedWaitUntil:
+    visible: "Welcome back"
+    timeout: 120000
+- takeScreenshot: 01-login
+- tapOn: "you@example.com"
+- inputText: ${E2E_EMAIL}
+- tapOn: "Welcome back"       # dismiss keyboard so the password field is not keyboard-covered before we focus it
+- tapOn: "••••••••"          # U+2022 bullets — copy verbatim, do NOT use ASCII asterisks
+- inputText: ${E2E_PASSWORD}
+- tapOn: "Welcome back"       # dismiss keyboard again before tapping the CTA (hideKeyboard is flaky on RN custom inputs)
+- tapOn:
+    text: "Sign in"
+    index: 1                  # index 0 = segmented tab, index 1 = submit CTA
+# Dismiss the iOS "Save Password" system dialog if it appears (intermittent; blocks the view hierarchy)
+- tapOn:
+    text: "Not Now"
+    optional: true
+
+# STEP 1: LEVEL (guard routed here; Back disabled on step 1 — do NOT assert Back here)
+- extendedWaitUntil:
+    visible: "Where are you with Greek?"
+    timeout: 30000
+- takeScreenshot: 02-level
+- tapOn: "A1"                 # SelectTile accessibilityLabel = enum value
+- tapOn: "Continue"
+
+# STEP 2: GOAL
+- assertVisible: "What brings you here?"
+- takeScreenshot: 03-goal
+- tapOn: "Go back"            # Back: goal -> level
+- assertVisible: "Where are you with Greek?"
+- takeScreenshot: 04-goal-back-level
+- tapOn: "Continue"           # selection persisted -> re-advance
+- assertVisible: "What brings you here?"
+- tapOn: "live"
+- tapOn: "Continue"
+
+# STEP 3: TIME (15 min pre-selected; just Continue)
+- assertVisible: "How much per day?"
+# (15-min tile a11y label is "15"; its visible "15 minutes"/"RECOMMENDED" text is not a queryable node.
+#  Pre-selection is proven below: Continue advances to Summary WITHOUT tapping a tile.)
+- takeScreenshot: 05-time
+- tapOn: "Go back"            # Back: time -> goal
+- assertVisible: "What brings you here?"
+- takeScreenshot: 06-time-back-goal
+- tapOn: "Go back"            # Back: goal -> level
+- assertVisible: "Where are you with Greek?"
+- takeScreenshot: 07-time-back-level
+- tapOn: "Continue"           # level -> goal
+- assertVisible: "What brings you here?"
+- tapOn: "Continue"           # goal -> time
+- assertVisible: "How much per day?"
+- tapOn: "Continue"           # time -> summary
+
+# STEP 4: SUMMARY (title is empty; assert the stable kicker + recap labels)
+- assertVisible: "YOUR PLAN"
+- assertVisible: "LEVEL"
+- assertVisible: "GOAL"
+- assertVisible: "DAILY"
+- takeScreenshot: 08-summary
+- tapOn: "Go back"            # Back: summary -> time
+- assertVisible: "How much per day?"
+- takeScreenshot: 09-summary-back-time
+- tapOn: "Continue"           # back to summary
+- assertVisible: "YOUR PLAN"
+- tapOn:
+    text: "Start practicing.*"   # regex: trailing space + U+2192 arrow
+
+# POST-ONBOARDING: (app) HOME
+# 90s timeout: the submit does PATCH /auth/me -> ['me'] invalidation -> guard re-route -> home render,
+# a round-trip that can exceed 30s against a COLD-STARTED dev backend (just deployed by the CI deploy job).
+# The success screen renders correctly; it just needs patience on a cold backend.
+- extendedWaitUntil:
+    visible: "Success!"          # substring (avoids emoji)
+    timeout: 90000
+- assertVisible: "Signed in as e2e_beginner@test.com"
+- takeScreenshot: 10-app-home

@@ -47,7 +47,9 @@ export function getApiConfig(): { apiUrl: string } {
   const apiUrl = extra?.apiUrl;
 
   if (!apiUrl) {
-    throw new Error('Missing API config in app.config extra (apiUrl)');
+    throw new Error(
+      'Missing API config in app.config extra (apiUrl). Set API_URL in .env or run `eas env:pull --environment development`, then restart Metro (the value is baked into app.config extra at Metro start).',
+    );
   }
 
   return { apiUrl };
