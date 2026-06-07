@@ -1,18 +1,17 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { __setPosthogInstance, track } from '../track';
 
 const mockCapture = vi.fn();
-
-vi.mock('posthog-js', () => ({
-  default: {
-    capture: mockCapture,
-  },
-}));
-
-const { track } = await import('../track');
 
 describe('track', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    __setPosthogInstance({ capture: mockCapture } as unknown as import('posthog-js').PostHog);
+  });
+
+  afterEach(() => {
+    __setPosthogInstance(null);
   });
 
   it('calls posthog.capture with the event name', () => {
@@ -29,5 +28,11 @@ describe('track', () => {
     track('event_a');
     track('event_b');
     expect(mockCapture).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not throw and does not call capture when posthog instance is null', () => {
+    __setPosthogInstance(null);
+    expect(() => track('e')).not.toThrow();
+    expect(mockCapture).not.toHaveBeenCalled();
   });
 });
