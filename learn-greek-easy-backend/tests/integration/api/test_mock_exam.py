@@ -18,6 +18,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import settings
 from src.db.models import CultureDeck, CultureQuestion, User
 from src.tasks import invalidate_cache_task
 
@@ -868,10 +869,12 @@ class TestMockExamCacheInvalidation:
                 )
 
         # Patch BackgroundTasks.add_task at the Starlette class level so all
-        # instances are instrumented. The executor will add BackgroundTasks as a
-        # dependency param and gate the call behind feature_background_tasks;
-        # for now no such call exists so the assertion finds 0.
-        with patch("starlette.background.BackgroundTasks.add_task") as mock_add_task:
+        # instances are instrumented. feature_background_tasks must be True so
+        # the gated branch in mock_exam.py fires.
+        with (
+            patch.object(settings, "feature_background_tasks", True),
+            patch("starlette.background.BackgroundTasks.add_task") as mock_add_task,
+        ):
             response = await client.post(
                 f"/api/v1/culture/mock-exam/sessions/{session_id}/submit-all",
                 headers=auth_headers,
