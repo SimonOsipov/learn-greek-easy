@@ -359,3 +359,188 @@ class TestListDecksNoneGuardSurfacesRealError:
         assert not isinstance(
             exc_info.value, pydantic.ValidationError
         ), "None-guard must surface the original RuntimeError, not wrap it in ValidationError"
+
+
+# =============================================================================
+# C3 — create_deck schedules invalidate_cache_task when feature_background_tasks=True
+# =============================================================================
+
+
+@pytest.mark.unit
+class TestCreateDeckCacheEviction:
+    """create_deck must schedule invalidate_cache_task(cache_type='deck', entity_id=<new deck id>)
+    when settings.feature_background_tasks is True (C3 CodeRabbit fix).
+    """
+
+    async def test_create_deck_schedules_cache_invalidation(self):
+        """BackgroundTasks.add_task is called with invalidate_cache_task + new deck id."""
+        from datetime import datetime, timezone
+
+        from fastapi import BackgroundTasks
+
+        from src.api.v1.decks import create_deck
+        from src.db.models import DeckLevel
+        from src.schemas.deck import DeckCreate
+        from src.tasks.background import invalidate_cache_task
+
+        new_deck_id = uuid4()
+
+        # Build a minimal mock deck that create_deck will return
+        mock_deck = MagicMock()
+        mock_deck.id = new_deck_id
+        mock_deck.name_en = "Test Deck"
+        mock_deck.description_en = None
+        mock_deck.name_ru = None
+        mock_deck.name_el = None
+        mock_deck.description_ru = None
+        mock_deck.description_el = None
+        mock_deck.level = DeckLevel.A1
+        mock_deck.is_active = True
+        mock_deck.is_premium = False
+        mock_deck.created_at = datetime.now(timezone.utc)
+        mock_deck.updated_at = datetime.now(timezone.utc)
+
+        mock_db = AsyncMock()
+        mock_repo = MagicMock()
+        mock_repo.create = AsyncMock(return_value=mock_deck)
+
+        mock_user = MagicMock()
+        mock_user.id = uuid4()
+        mock_user.is_superuser = False
+
+        background_tasks = BackgroundTasks()
+
+        deck_data = DeckCreate(name="Test Deck", level=DeckLevel.A1)
+
+        with (
+            patch("src.api.v1.decks.DeckRepository", return_value=mock_repo),
+            patch("src.api.v1.decks.settings") as mock_settings,
+            patch("src.api.v1.decks.get_s3_service", return_value=MagicMock()),
+            patch("starlette.background.BackgroundTasks.add_task") as mock_add_task,
+        ):
+            mock_settings.feature_background_tasks = True
+
+            await create_deck(
+                deck_data=deck_data,
+                background_tasks=background_tasks,
+                db=mock_db,
+                current_user=mock_user,
+            )
+
+        # Filter for invalidate_cache_task calls
+        invalidation_calls = [
+            c for c in mock_add_task.call_args_list if c.args and c.args[0] is invalidate_cache_task
+        ]
+        assert (
+            len(invalidation_calls) == 1
+        ), f"Expected exactly 1 invalidate_cache_task call, found {len(invalidation_calls)}"
+        call_kwargs = invalidation_calls[0].kwargs
+        assert (
+            call_kwargs.get("cache_type") == "deck"
+        ), f"Expected cache_type='deck', got {call_kwargs.get('cache_type')!r}"
+        assert (
+            call_kwargs.get("entity_id") == new_deck_id
+        ), f"Expected entity_id={new_deck_id}, got {call_kwargs.get('entity_id')!r}"
+
+    async def test_create_deck_no_invalidation_when_feature_disabled(self):
+        """BackgroundTasks.add_task is NOT called when feature_background_tasks=False."""
+        from datetime import datetime, timezone
+
+        from fastapi import BackgroundTasks
+
+        from src.api.v1.decks import create_deck
+        from src.db.models import DeckLevel
+        from src.schemas.deck import DeckCreate
+
+        new_deck_id = uuid4()
+
+        mock_deck = MagicMock()
+        mock_deck.id = new_deck_id
+        mock_deck.name_en = "Test Deck"
+        mock_deck.description_en = None
+        mock_deck.name_ru = None
+        mock_deck.name_el = None
+        mock_deck.description_ru = None
+        mock_deck.description_el = None
+        mock_deck.level = DeckLevel.A1
+        mock_deck.is_active = True
+        mock_deck.is_premium = False
+        mock_deck.created_at = datetime.now(timezone.utc)
+        mock_deck.updated_at = datetime.now(timezone.utc)
+
+        mock_db = AsyncMock()
+        mock_repo = MagicMock()
+        mock_repo.create = AsyncMock(return_value=mock_deck)
+
+        mock_user = MagicMock()
+        mock_user.id = uuid4()
+        mock_user.is_superuser = False
+
+        background_tasks = BackgroundTasks()
+
+        deck_data = DeckCreate(name="Test Deck", level=DeckLevel.A1)
+
+        with (
+            patch("src.api.v1.decks.DeckRepository", return_value=mock_repo),
+            patch("src.api.v1.decks.settings") as mock_settings,
+            patch("src.api.v1.decks.get_s3_service", return_value=MagicMock()),
+            patch("starlette.background.BackgroundTasks.add_task") as mock_add_task,
+        ):
+            mock_settings.feature_background_tasks = False
+
+            await create_deck(
+                deck_data=deck_data,
+                background_tasks=background_tasks,
+                db=mock_db,
+                current_user=mock_user,
+            )
+
+        mock_add_task.assert_not_called()
+
+
+# =============================================================================
+# C4 — list_decks falls back to recompute on corrupt/stale cache payload
+# =============================================================================
+
+
+@pytest.mark.unit
+class TestListDecksCorruptCacheFallback:
+    """list_decks must recompute (not raise) when cached payload fails model_validate (C4)."""
+
+    async def test_list_decks_recomputes_on_corrupt_cached_payload(self):
+        """get_or_set returns a dict that fails DeckListResponse.model_validate.
+
+        Expected: endpoint recomputes (repo.list_active is called, result returned).
+        Must NOT raise pydantic.ValidationError to the caller.
+        """
+        corrupt_payload = {"bogus": "this is not a DeckListResponse"}
+        mock_get_or_set = AsyncMock(return_value=corrupt_payload)
+        mock_cache = MagicMock()
+        mock_cache.get_or_set = mock_get_or_set
+
+        db = _make_mock_db()
+        user = _make_mock_user()
+
+        with (
+            patch("src.api.v1.decks.get_cache", return_value=mock_cache),
+            patch("src.api.v1.decks.DeckRepository") as mock_repo_cls,
+            patch(
+                "src.api.v1.decks.get_s3_service",
+                return_value=MagicMock(generate_presigned_url=MagicMock(return_value=None)),
+            ),
+            patch("src.api.v1.decks.get_localized_deck_content", return_value=("name", "desc")),
+            patch("src.api.v1.decks.invalidate_cache_task", MagicMock()),
+        ):
+            mock_repo = _wire_repo_empty(mock_repo_cls)
+            result = await list_decks(
+                page=1, page_size=20, level=None, locale="en", db=db, current_user=user
+            )
+
+        # Must return a valid DeckListResponse (fallback recompute ran)
+        assert isinstance(
+            result, DeckListResponse
+        ), f"Expected DeckListResponse from fallback recompute, got {type(result)}"
+        # Repo must have been called (the direct recompute path executed)
+        assert (
+            mock_repo.list_active.call_count >= 1
+        ), "Expected repo.list_active called during fallback recompute"

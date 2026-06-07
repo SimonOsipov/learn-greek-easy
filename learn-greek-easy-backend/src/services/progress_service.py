@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
+from pydantic import ValidationError
 from sqlalchemy import func, literal, select, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -81,7 +82,10 @@ class ProgressService:
 
         cached = await cache.get_or_set(key, _factory, ttl=settings.cache_user_progress_ttl)  # type: ignore[arg-type]
         if cached is not None:
-            return DashboardStatsResponse.model_validate(cached)
+            try:
+                return DashboardStatsResponse.model_validate(cached)
+            except ValidationError:
+                pass
         return await self._compute_dashboard_stats(user_id)
 
     async def _compute_dashboard_stats(self, user_id: UUID) -> DashboardStatsResponse:
@@ -516,7 +520,10 @@ class ProgressService:
 
         cached = await cache.get_or_set(key, _factory, ttl=settings.cache_user_progress_ttl)  # type: ignore[arg-type]
         if cached is not None:
-            return DeckProgressListResponse.model_validate(cached)
+            try:
+                return DeckProgressListResponse.model_validate(cached)
+            except ValidationError:
+                pass
         return await self._compute_deck_progress_list(user_id, page, page_size)
 
     async def _compute_deck_progress_list(

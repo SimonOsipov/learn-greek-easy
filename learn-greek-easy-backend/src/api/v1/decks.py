@@ -10,6 +10,7 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, status
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
@@ -219,7 +220,12 @@ async def list_decks(
         return (await _compute()).model_dump(mode="json")
 
     cached = await cache.get_or_set(key, _factory, ttl=settings.cache_deck_list_ttl)  # type: ignore[arg-type]
-    return DeckListResponse.model_validate(cached) if cached is not None else await _compute()
+    if cached is not None:
+        try:
+            return DeckListResponse.model_validate(cached)
+        except ValidationError:
+            pass
+    return await _compute()
 
 
 @router.post(
@@ -255,6 +261,7 @@ async def list_decks(
 )
 async def create_deck(
     deck_data: DeckCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DeckResponse:
@@ -310,6 +317,14 @@ async def create_deck(
     # Commit the transaction
     await db.commit()
     await db.refresh(deck)
+
+    # Schedule background tasks if enabled
+    if settings.feature_background_tasks:
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="deck",
+            entity_id=deck.id,
+        )
 
     # Return response with localized fields (default to English for created deck)
     return DeckResponse(

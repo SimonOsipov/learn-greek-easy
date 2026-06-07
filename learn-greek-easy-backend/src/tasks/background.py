@@ -192,7 +192,9 @@ async def invalidate_cache_task(
     Supported cache types:
         - "deck": Invalidates deck cache. entity_id is the deck_id.
         - "card": Invalidates card cache. entity_id is the card_id, deck_id is required.
-        - "progress": Invalidates user progress cache. entity_id is the deck_id, user_id is required.
+        - "progress": Invalidates user progress cache. user_id is required. entity_id is
+          OPTIONAL: when provided, scopes the eviction to that deck; when None, evicts
+          all progress entries for the user.
     """
     if not is_background_tasks_enabled():
         logger.debug("Background tasks disabled, skipping invalidate_cache_task")

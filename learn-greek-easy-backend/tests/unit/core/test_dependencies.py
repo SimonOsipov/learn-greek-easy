@@ -768,3 +768,77 @@ class TestGetOrCreateUserCache:
             db.add(returned)
         except Exception as exc:
             pytest.fail(f"db.add(returned_user) raised {type(exc).__name__}: {exc}")
+
+
+# ============================================================================
+# C5 — Malformed identity cache guard: corrupt entry falls through to real query
+# ============================================================================
+
+
+class TestGetOrCreateUserMalformedCache:
+    """Tests for the malformed-cache guard added to get_or_create_user (C5 CodeRabbit fix).
+
+    Verifies that a corrupt cached entry (bad UUID, missing key, wrong type)
+    does NOT raise an exception — it falls through to the real supabase_id query.
+    """
+
+    @pytest.mark.asyncio
+    async def test_malformed_uuid_in_cache_falls_through_to_db_query(self):
+        """cache.get returns {"id": "not-a-uuid"} → UUID() raises → falls through.
+
+        Expected:
+          - db.get is NOT called (malformed, so cached_user_id is None)
+          - db.execute IS called (the real supabase_id SELECT runs)
+          - No exception raised; valid user returned
+        """
+        supabase_id = str(uuid4())
+        claims = _make_claims(supabase_id)
+        user = _make_db_user()
+
+        db = AsyncMock(spec=AsyncSession)
+        _stub_execute_for_existing_user(db, user)
+
+        cache = AsyncMock()
+        cache.get = AsyncMock(return_value={"id": "not-a-uuid"})  # malformed UUID
+        cache.set = AsyncMock(return_value=True)
+
+        mock_get_cache = MagicMock(return_value=cache)
+
+        with patch("src.core.dependencies.get_cache", mock_get_cache, create=True):
+            returned = await get_or_create_user(db, claims)
+
+        # db.get must NOT be called (malformed → cached_user_id is None)
+        db.get.assert_not_called()
+        # The real supabase_id SELECT must have run
+        db.execute.assert_called()
+        # Must return the valid user from the DB query
+        assert returned is user
+
+    @pytest.mark.asyncio
+    async def test_missing_id_key_in_cache_falls_through_to_db_query(self):
+        """cache.get returns {} (missing 'id' key) → KeyError → falls through.
+
+        Expected:
+          - db.get is NOT called
+          - db.execute IS called (real query)
+          - No exception raised
+        """
+        supabase_id = str(uuid4())
+        claims = _make_claims(supabase_id)
+        user = _make_db_user()
+
+        db = AsyncMock(spec=AsyncSession)
+        _stub_execute_for_existing_user(db, user)
+
+        cache = AsyncMock()
+        cache.get = AsyncMock(return_value={})  # missing 'id' key
+        cache.set = AsyncMock(return_value=True)
+
+        mock_get_cache = MagicMock(return_value=cache)
+
+        with patch("src.core.dependencies.get_cache", mock_get_cache, create=True):
+            returned = await get_or_create_user(db, claims)
+
+        db.get.assert_not_called()
+        db.execute.assert_called()
+        assert returned is user

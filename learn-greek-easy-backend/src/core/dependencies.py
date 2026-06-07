@@ -72,6 +72,14 @@ class SSEAuthResult:
         return self.user is not None
 
 
+def _parse_cached_uuid(cached: dict) -> UUID | None:
+    """Return UUID from a cached identity dict, or None if the entry is malformed."""
+    try:
+        return UUID(cached["id"])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> User:
     """Get or create a user based on Supabase JWT claims.
 
@@ -100,10 +108,11 @@ async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> Us
     identity_key = f"user:identity:{claims.supabase_id}"
     cached = await cache.get(identity_key)
     if cached:
-        user = await db.get(User, UUID(cached["id"]))
+        cached_user_id = _parse_cached_uuid(cached)
+        user = await db.get(User, cached_user_id) if cached_user_id else None
         if user is not None:
             return user
-        # else: torn cache (user deleted) → fall through to the real query
+        # else: malformed/torn cache OR deleted user → fall through to the real query
 
     # 1. Try to find existing user by supabase_id
     stmt = (
@@ -226,7 +235,11 @@ async def get_current_user(
     Example:
         @router.get("/me")
         async def get_me(current_user: User = Depends(get_current_user)):
-            return UserProfileResponse.model_validate(current_user)
+            # current_user.settings is NOT eagerly loaded here — do NOT call
+            # UserProfileResponse.model_validate(current_user) directly.
+            # Profile endpoints refetch with selectinload(User.settings):
+            #   stmt = select(User).options(selectinload(User.settings)).where(...)
+            return {"id": str(current_user.id), "email": current_user.email}
     """
     # 0. Per-request memo: if the user was already resolved earlier in this
     #    request (e.g. via a second Depends(get_current_user) injection),
