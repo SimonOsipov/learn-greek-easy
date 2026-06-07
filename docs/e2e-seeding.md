@@ -88,7 +88,7 @@ curl -X POST .../api/v1/test/seed/reset-onboarding \
 ```
 
 - **Default fallback (omit `pr_number`):** behaviour is byte-for-byte unchanged — `e2e_beginner@test.com` is used, no Supabase Auth provisioning is performed.
-- **With `pr_number`:** the beginner is created as `e2e_beginner+pr<N>@test.com` AND provisioned in Supabase Auth (idempotent: delete-if-exists then create), so Maestro can log in with a real JWT.
+- **With `pr_number`:** the beginner is resolved to `e2e_beginner+pr<N>@test.com`. Supabase Auth provisioning then occurs **only when** `pr_number` is non-empty **and** `get_supabase_admin_client()` returns a non-None client (i.e. the Supabase Admin key is configured in the environment). The flow is idempotent: `list_users_by_email` → `delete_user` if found → `create_user`, with the returned `id` saved as `supabase_id` on the `User` row, so Maestro can log in with a real JWT. When `pr_number` is empty or the admin client is None, provisioning is skipped and `supabase_id` is left as `None`.
 
 **End-to-end consistency — all four surfaces must agree:**
 

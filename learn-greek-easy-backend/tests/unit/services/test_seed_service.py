@@ -1603,6 +1603,8 @@ class TestNamespacedBeginnerEmail:
 
         assert namespaced_beginner_email("123") == namespaced_beginner_email(123)
         assert namespaced_beginner_email("123") == "e2e_beginner+pr123@test.com"
+        # Leading/trailing whitespace must be stripped (e.g. from CI env var injection)
+        assert namespaced_beginner_email(" 123 ") == "e2e_beginner+pr123@test.com"
 
     @pytest.mark.unit
     def test_namespaced_email_preserves_domain_and_local(self):
@@ -1685,9 +1687,10 @@ class TestSeedAllNamespacing:
         self, mock_db_for_namespacing, mock_settings_can_seed
     ):
         """seed_all(pr_number='42') must call Supabase admin create_user for the namespaced email."""
+        fake_supabase_id = "fake-supabase-uuid-123"
         mock_admin_client = AsyncMock()
         mock_admin_client.create_user = AsyncMock(
-            return_value=MagicMock(user=MagicMock(id=str(uuid4())))
+            return_value={"id": fake_supabase_id, "email": "e2e_beginner+pr42@test.com"}
         )
 
         seed_service = SeedService(mock_db_for_namespacing)
@@ -1710,14 +1713,17 @@ class TestSeedAllNamespacing:
         ), "create_user must be called with email='e2e_beginner+pr42@test.com'"
         assert namespaced_calls[0].get("email_confirm") is True
 
-        # The DB row must have supabase_id set (non-None)
+        # The DB row must have supabase_id set to the exact id returned by create_user
         added_namespaced = [
             obj
             for obj in mock_db_for_namespacing._added_objects
             if hasattr(obj, "email") and obj.email == "e2e_beginner+pr42@test.com"
         ]
         assert len(added_namespaced) >= 1
-        assert added_namespaced[0].supabase_id is not None
+        assert added_namespaced[0].supabase_id == fake_supabase_id, (
+            f"supabase_id must equal the id returned by create_user ({fake_supabase_id!r}), "
+            f"got {added_namespaced[0].supabase_id!r}"
+        )
 
 
 # ============================================================================

@@ -99,10 +99,11 @@ def namespaced_beginner_email(namespace: int | str | None) -> str:
     Returns:
         Resolved email address.
     """
-    if namespace is None or str(namespace).strip() == "":
+    ns = str(namespace).strip() if namespace is not None else ""
+    if ns == "":
         return DEFAULT_BEGINNER_EMAIL
     local, domain = DEFAULT_BEGINNER_EMAIL.split("@", 1)
-    return f"{local}+pr{namespace}@{domain}"
+    return f"{local}+pr{ns}@{domain}"
 
 
 class FeedbackSeedData(TypedDict):
