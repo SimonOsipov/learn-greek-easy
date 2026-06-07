@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import CultureDeck, CultureQuestion, MockExamSession, MockExamStatus, User
 from src.repositories.mock_exam import MockExamRepository
+from tests.factories.mock_exam import MockExamSessionFactory
 
 # =============================================================================
 # Test Fixtures
@@ -125,18 +126,7 @@ async def inactive_deck_questions(
 @pytest.fixture
 async def mock_exam_session(db_session: AsyncSession, test_user: User) -> MockExamSession:
     """Create an active mock exam session."""
-    session = MockExamSession(
-        user_id=test_user.id,
-        total_questions=25,
-        status=MockExamStatus.ACTIVE,
-        score=0,
-        passed=False,
-        time_taken_seconds=0,
-    )
-    db_session.add(session)
-    await db_session.flush()
-    await db_session.refresh(session)
-    return session
+    return await MockExamSessionFactory.create(session=db_session, user_id=test_user.id)
 
 
 @pytest.fixture
@@ -149,21 +139,16 @@ async def completed_exam_sessions(
         # Vary scores: 20, 21, 22, 23, 24 correct out of 25
         score = 20 + i
         passed = score >= 20  # 80% threshold
-        session = MockExamSession(
+        session = await MockExamSessionFactory.create(
+            session=db_session,
             user_id=test_user.id,
-            total_questions=25,
             status=MockExamStatus.COMPLETED,
             score=score,
             passed=passed,
             time_taken_seconds=600 + (i * 60),  # 10-14 minutes
             completed_at=datetime.utcnow() - timedelta(days=i),
         )
-        db_session.add(session)
         sessions.append(session)
-
-    await db_session.flush()
-    for s in sessions:
-        await db_session.refresh(s)
     return sessions
 
 

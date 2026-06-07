@@ -268,30 +268,56 @@ class GamificationProjection:
         # Round-trip latency is recovered in INFRA-04 by merging these into
         # fewer SQL statements — NOT by reintroducing concurrency (the
         # Supavisor session-mode pooler caps us at 30 connections).
+        #
+        # SQLCON-03: card_record_reviews reads collapsed from 4 to 2 round-trips:
+        #   Shape 1 (scalar agg): get_total_reviews + get_weekly_accuracy → 1 query
+        #   Shape 2 (per-day grouped): get_daily_review_counts + get_max_inactive_gap_days → 1 query
+        #   get_session_aggregates and get_consecutive_correct_streak stay separate (see AC4).
+        # count_by_status rewritten from 2 queries to 1 via FILTER (see SQLCON-03 Section B).
         streak_days: int = await compute_aggregated_streak(db, user_id)
         count_by_status: dict[str, int] = await card_stats_repo.count_by_status(user_id)
-        total_reviews: int = await card_review_repo.get_total_reviews(user_id)
+        # Shape 1: merged total_reviews + weekly_accuracy (1 round-trip instead of 2)
+        _scalar_agg = await card_review_repo.get_projection_review_scalar_agg(user_id)
+        total_reviews: int = _scalar_agg["total_reviews"]
+        weekly_correct_total: tuple[int, int] = (
+            _scalar_agg["weekly_correct"],
+            _scalar_agg["weekly_total"],
+        )
         sessions: list[SessionAgg] = await card_review_repo.get_session_aggregates(user_id)
-        weekly_correct_total: tuple[int, int] = await card_review_repo.get_weekly_accuracy(user_id)
         consecutive_correct: int = await card_review_repo.get_consecutive_correct_streak(user_id)
         cefr_completion: dict[DeckLevel, tuple[int, int]] = (
             await card_stats_repo.get_cefr_completion(user_id)
         )
-        max_inactive_gap: int = await card_review_repo.get_max_inactive_gap_days(user_id)
-        vocab_daily: list[tuple[date, int]] = await card_review_repo.get_daily_review_counts(
-            user_id
-        )
-        culture_total: int = await culture_history_repo.get_total_answers(user_id)
-        culture_correct: int = await culture_history_repo.get_correct_answers_count(user_id)
+        # Shape 2: merged daily counts + max-gap (1 round-trip instead of 2)
+        _daily_rows = await card_review_repo.get_projection_daily_counts(user_id)
+        vocab_daily: list[tuple[date, int]] = [
+            (row.review_date, int(row.cnt)) for row in _daily_rows
+        ]
+        # Derive max_inactive_gap from the same rows (replicates get_max_inactive_gap_days)
+        _dates = [row.review_date for row in _daily_rows]
+        if len(_dates) < 2:
+            max_inactive_gap: int = 0
+        else:
+            max_inactive_gap = 0
+            for _i in range(len(_dates) - 1):
+                _gap = (_dates[_i + 1] - _dates[_i]).days
+                if _gap > max_inactive_gap:
+                    max_inactive_gap = _gap
+        # SQLCON-04: collapse get_total_answers + get_correct_answers_count +
+        # get_daily_answer_counts into one conditional-aggregate GROUP BY query.
+        # Derive the two scalars in Python by summing the per-day buckets.
+        # Equivalence: sum(total per day) == count(*) over all rows (complete
+        # day-partition with no NULL created_at).  Same for correct_cnt.
+        culture_daily_agg = await culture_history_repo.get_daily_answer_aggregates(user_id)
+        culture_total: int = sum(total for _, total, _ in culture_daily_agg)
+        culture_correct: int = sum(correct for _, _, correct in culture_daily_agg)
+        culture_daily: list[tuple[date, int]] = [(d, total) for d, total, _ in culture_daily_agg]
         culture_consec: int = await culture_history_repo.get_consecutive_correct_streak(user_id)
         culture_categories: dict[str, tuple[int, int]] = (
             await culture_stats_repo.get_category_mastery_counts(user_id)
         )
         culture_greek: int = await culture_history_repo.count_by_language(user_id, "el")
         culture_languages: int = await culture_history_repo.count_distinct_languages(user_id)
-        culture_daily: list[tuple[date, int]] = await culture_history_repo.get_daily_answer_counts(
-            user_id
-        )
 
         # ----------------------------------------------------------------
         # 3. Fetch daily_goal inline (UserSettings may be absent for new users)

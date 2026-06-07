@@ -212,3 +212,62 @@ class TestGetCefrCompletion:
         assert DeckLevel.A2 in result
         assert DeckLevel.B1 in result
         assert DeckLevel.B2 in result
+
+    @pytest.mark.asyncio
+    async def test_multi_user_isolation(
+        self,
+        db_session: AsyncSession,
+        sample_user: User,
+    ) -> None:
+        """AC2: another user's MASTERED rows must not inflate total or bleed into
+        the queried user's mastered count.
+
+        Setup:
+        - 1 active A1 deck, 3 active cards.
+        - sample_user masters card 1 only (leaves cards 2 and 3 unstudied).
+        - second_user masters all 3 cards.
+
+        Assertions:
+        - get_cefr_completion(sample_user.id) → A1 == (mastered=1, total=3)
+          total==3 proves unstudied cards / the other user's rows were NOT dropped
+          (user_id is in the LEFT JOIN ON clause, not WHERE).
+          mastered==1 proves no cross-user leak.
+        - get_cefr_completion(second_user.id) → A1 == (mastered=3, total=3)
+        """
+        # Create a second user independent of the sample_user fixture.
+        second_user = User(
+            email=f"second_{uuid4().hex[:8]}@test.com",
+            full_name="Second User",
+            is_active=True,
+        )
+        db_session.add(second_user)
+        await db_session.flush()
+        await db_session.refresh(second_user)
+
+        # 1 A1 deck, 3 active cards.
+        a1_deck = await _make_deck(db_session, DeckLevel.A1)
+        card1 = await _make_card(db_session, a1_deck)
+        card2 = await _make_card(db_session, a1_deck)
+        card3 = await _make_card(db_session, a1_deck)
+
+        # sample_user masters only card1.
+        await _make_stats(db_session, sample_user, card1, CardStatus.MASTERED)
+
+        # second_user masters all three.
+        await _make_stats(db_session, second_user, card1, CardStatus.MASTERED)
+        await _make_stats(db_session, second_user, card2, CardStatus.MASTERED)
+        await _make_stats(db_session, second_user, card3, CardStatus.MASTERED)
+
+        repo = CardRecordStatisticsRepository(db_session)
+
+        result_a = await repo.get_cefr_completion(sample_user.id)
+        mastered_a, total_a = result_a[DeckLevel.A1]
+        # total must be 3 — unstudied cards NOT dropped by WHERE predicate
+        assert total_a == 3, f"expected total=3 for sample_user, got {total_a}"
+        # mastered must be 1 — no cross-user bleed
+        assert mastered_a == 1, f"expected mastered=1 for sample_user, got {mastered_a}"
+
+        result_b = await repo.get_cefr_completion(second_user.id)
+        mastered_b, total_b = result_b[DeckLevel.A1]
+        assert total_b == 3, f"expected total=3 for second_user, got {total_b}"
+        assert mastered_b == 3, f"expected mastered=3 for second_user, got {mastered_b}"

@@ -434,16 +434,16 @@ class TestNoDbWrites:
                 ),
             ),
             patch(
-                "src.services.gamification.projection.CardRecordReviewRepository.get_total_reviews",
-                new=AsyncMock(return_value=0),
+                # SQLCON-03: get_total_reviews + get_weekly_accuracy merged into
+                # get_projection_review_scalar_agg (Shape 1)
+                "src.services.gamification.projection.CardRecordReviewRepository.get_projection_review_scalar_agg",
+                new=AsyncMock(
+                    return_value={"total_reviews": 0, "weekly_correct": 0, "weekly_total": 0}
+                ),
             ),
             patch(
                 "src.services.gamification.projection.CardRecordReviewRepository.get_session_aggregates",
                 new=AsyncMock(return_value=[]),
-            ),
-            patch(
-                "src.services.gamification.projection.CardRecordReviewRepository.get_weekly_accuracy",
-                new=AsyncMock(return_value=(0, 0)),
             ),
             patch(
                 "src.services.gamification.projection.CardRecordReviewRepository.get_consecutive_correct_streak",
@@ -461,20 +461,16 @@ class TestNoDbWrites:
                 ),
             ),
             patch(
-                "src.services.gamification.projection.CardRecordReviewRepository.get_max_inactive_gap_days",
-                new=AsyncMock(return_value=0),
-            ),
-            patch(
-                "src.services.gamification.projection.CardRecordReviewRepository.get_daily_review_counts",
+                # SQLCON-03: get_daily_review_counts + get_max_inactive_gap_days merged into
+                # get_projection_daily_counts (Shape 2); returns empty list (no rows)
+                "src.services.gamification.projection.CardRecordReviewRepository.get_projection_daily_counts",
                 new=AsyncMock(return_value=[]),
             ),
             patch(
-                "src.services.gamification.projection.CultureAnswerHistoryRepository.get_total_answers",
-                new=AsyncMock(return_value=0),
-            ),
-            patch(
-                "src.services.gamification.projection.CultureAnswerHistoryRepository.get_correct_answers_count",
-                new=AsyncMock(return_value=0),
+                # SQLCON-04: get_total_answers + get_correct_answers_count +
+                # get_daily_answer_counts merged into get_daily_answer_aggregates (1 query)
+                "src.services.gamification.projection.CultureAnswerHistoryRepository.get_daily_answer_aggregates",
+                new=AsyncMock(return_value=[]),
             ),
             patch(
                 "src.services.gamification.projection.CultureAnswerHistoryRepository.get_consecutive_correct_streak",
@@ -491,10 +487,6 @@ class TestNoDbWrites:
             patch(
                 "src.services.gamification.projection.CultureAnswerHistoryRepository.count_distinct_languages",
                 new=AsyncMock(return_value=0),
-            ),
-            patch(
-                "src.services.gamification.projection.CultureAnswerHistoryRepository.get_daily_answer_counts",
-                new=AsyncMock(return_value=[]),
             ),
         ):
             # Mock the UserSettings query

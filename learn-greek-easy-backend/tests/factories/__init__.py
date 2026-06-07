@@ -103,6 +103,9 @@ from tests.factories.listening_dialog import (
     ListeningDialogFactory,
 )
 
+# Mock Exam factories
+from tests.factories.mock_exam import MockExamSessionFactory
+
 # News factories
 from tests.factories.news import NewsItemFactory
 
@@ -212,6 +215,8 @@ __all__ = [
     "CultureQuestionFactory",
     "CultureQuestionStatsFactory",
     "CultureAnswerHistoryFactory",
+    # Mock Exam
+    "MockExamSessionFactory",
     # Constants
     "SM2_DEFAULT_EASINESS_FACTOR",
     "SM2_MIN_EASINESS_FACTOR",
