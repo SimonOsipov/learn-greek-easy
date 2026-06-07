@@ -1132,3 +1132,258 @@ class TestResetOnboardingAdversarial:
             response = client.post("/test/seed/reset-onboarding")
 
         assert response.status_code == 401
+
+
+# ============================================================================
+# RGATE-05 — Per-PR seed-user namespacing: schema + endpoint RED specs
+# ============================================================================
+
+
+class TestSeedRequestSchemaNamespacing:
+    """Schema-level tests for pr_number field additions (RGATE-05).
+
+    All tests RED until SeedRequest gains pr_number and ResetOnboardingRequest
+    is added to src/schemas/seed.py.
+    Each test imports the symbol locally so a missing import causes an
+    individual ImportError, not a file-level collection crash.
+    """
+
+    @pytest.mark.unit
+    def test_seed_request_accepts_optional_pr_number(self):
+        """SeedRequest must accept pr_number as an optional field."""
+        from src.schemas.seed import SeedRequest  # noqa: PLC0415
+
+        # With pr_number provided
+        req = SeedRequest(pr_number="123")
+        assert req.pr_number == "123"
+
+        # Without pr_number — defaults to None (back-compat)
+        req_no_pr = SeedRequest()
+        assert req_no_pr.pr_number is None
+
+    @pytest.mark.unit
+    def test_reset_onboarding_request_pr_number_optional(self):
+        """ResetOnboardingRequest must exist with optional pr_number."""
+        from src.schemas.seed import ResetOnboardingRequest  # noqa: PLC0415
+
+        req_empty = ResetOnboardingRequest()
+        assert req_empty.pr_number is None
+
+        req_with_pr = ResetOnboardingRequest(pr_number="7")
+        assert req_with_pr.pr_number == "7"
+
+
+class TestResetOnboardingNamespacingEndpoint:
+    """Endpoint tests for reset-onboarding pr_number support (RGATE-05).
+
+    Tests are RED until the endpoint accepts ResetOnboardingRequest and resolves
+    the lookup email via namespaced_beginner_email.
+    """
+
+    # ------------------------------------------------------------------
+    # Helper: build settings + UserRepository patch context
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _settings_ctx():
+        """Return a patch context for seed settings (guards open)."""
+        mock = patch("src.api.v1.test.seed.settings")
+        return mock
+
+    @staticmethod
+    def _repo_ctx(return_value):
+        """Return a patch context for UserRepository.get_by_email."""
+        mock = patch("src.api.v1.test.seed.UserRepository")
+        return mock, return_value
+
+    # ------------------------------------------------------------------
+    # AC tests (RGATE-05)
+    # ------------------------------------------------------------------
+
+    @pytest.mark.unit
+    def test_reset_onboarding_no_body_resets_default_user(
+        self, client: TestClient, mock_db: AsyncMock
+    ):
+        """POST with NO body must resolve to e2e_beginner@test.com and commit once."""
+        from unittest.mock import MagicMock
+        from uuid import uuid4
+
+        mock_user = MagicMock()
+        mock_user.id = uuid4()
+        mock_settings_obj = MagicMock()
+        mock_settings_obj.tour_completed_at = None
+
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                mock_repo.get_by_email.return_value = mock_user
+                mock_repo_class.return_value = mock_repo
+
+                with patch(
+                    "src.api.v1.test.seed.UserSettingsRepository",
+                    create=True,
+                ) as mock_settings_repo_class:
+                    mock_settings_repo = AsyncMock()
+                    mock_settings_repo.get_by_user_id.return_value = mock_settings_obj
+                    mock_settings_repo_class.return_value = mock_settings_repo
+
+                    response = client.post("/test/seed/reset-onboarding")
+
+        assert response.status_code == 200
+        # Must look up the default email exactly once
+        mock_repo.get_by_email.assert_awaited_once_with("e2e_beginner@test.com")
+        mock_db.commit.assert_awaited_once()
+
+    @pytest.mark.unit
+    def test_reset_onboarding_explicit_null_pr_number_uses_default(
+        self, client: TestClient, mock_db: AsyncMock
+    ):
+        """Body with pr_number=null must still resolve to the default email."""
+        from unittest.mock import MagicMock
+        from uuid import uuid4
+
+        mock_user = MagicMock()
+        mock_user.id = uuid4()
+        mock_settings_obj = MagicMock()
+        mock_settings_obj.tour_completed_at = None
+
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                mock_repo.get_by_email.return_value = mock_user
+                mock_repo_class.return_value = mock_repo
+
+                with patch(
+                    "src.api.v1.test.seed.UserSettingsRepository",
+                    create=True,
+                ) as mock_settings_repo_class:
+                    mock_settings_repo = AsyncMock()
+                    mock_settings_repo.get_by_user_id.return_value = mock_settings_obj
+                    mock_settings_repo_class.return_value = mock_settings_repo
+
+                    response = client.post(
+                        "/test/seed/reset-onboarding",
+                        json={"pr_number": None},
+                    )
+
+        assert response.status_code == 200
+        mock_repo.get_by_email.assert_awaited_once_with("e2e_beginner@test.com")
+
+    @pytest.mark.unit
+    def test_reset_onboarding_with_pr_number_resets_namespaced_user(
+        self, client: TestClient, mock_db: AsyncMock
+    ):
+        """Body with pr_number='55' must look up e2e_beginner+pr55@test.com."""
+        from unittest.mock import MagicMock
+        from uuid import uuid4
+
+        mock_user = MagicMock()
+        mock_user.id = uuid4()
+        mock_settings_obj = MagicMock()
+        mock_settings_obj.tour_completed_at = None
+
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                mock_repo.get_by_email.return_value = mock_user
+                mock_repo_class.return_value = mock_repo
+
+                with patch(
+                    "src.api.v1.test.seed.UserSettingsRepository",
+                    create=True,
+                ) as mock_settings_repo_class:
+                    mock_settings_repo = AsyncMock()
+                    mock_settings_repo.get_by_user_id.return_value = mock_settings_obj
+                    mock_settings_repo_class.return_value = mock_settings_repo
+
+                    response = client.post(
+                        "/test/seed/reset-onboarding",
+                        json={"pr_number": "55"},
+                    )
+
+        assert response.status_code == 200
+        mock_repo.get_by_email.assert_awaited_once_with("e2e_beginner+pr55@test.com")
+
+    @pytest.mark.unit
+    def test_reset_onboarding_namespaced_does_not_touch_default(self, client: TestClient):
+        """When pr_number='55', the default email must never be queried."""
+        from unittest.mock import MagicMock
+        from uuid import uuid4
+
+        mock_user = MagicMock()
+        mock_user.id = uuid4()
+        mock_settings_obj = MagicMock()
+        mock_settings_obj.tour_completed_at = None
+
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                mock_repo.get_by_email.return_value = mock_user
+                mock_repo_class.return_value = mock_repo
+
+                with patch(
+                    "src.api.v1.test.seed.UserSettingsRepository",
+                    create=True,
+                ) as mock_settings_repo_class:
+                    mock_settings_repo = AsyncMock()
+                    mock_settings_repo.get_by_user_id.return_value = mock_settings_obj
+                    mock_settings_repo_class.return_value = mock_settings_repo
+
+                    response = client.post(
+                        "/test/seed/reset-onboarding",
+                        json={"pr_number": "55"},
+                    )
+
+        assert response.status_code == 200
+        # The default (non-namespaced) email must NOT appear in any call
+        all_calls = mock_repo.get_by_email.call_args_list
+        default_calls = [c for c in all_calls if c.args and c.args[0] == "e2e_beginner@test.com"]
+        assert (
+            len(default_calls) == 0
+        ), "Default email must not be queried when pr_number is supplied"
+
+    @pytest.mark.unit
+    def test_reset_onboarding_namespaced_user_absent_returns_404(
+        self, client: TestClient, mock_db: AsyncMock
+    ):
+        """When get_by_email returns None for the namespaced email, must return 404."""
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                mock_repo.get_by_email.return_value = None  # namespaced user absent
+                mock_repo_class.return_value = mock_repo
+
+                response = client.post(
+                    "/test/seed/reset-onboarding",
+                    json={"pr_number": "99"},
+                )
+
+        assert response.status_code == 404
+        # Error detail must mention the namespaced email
+        body = response.json()
+        detail_str = str(body)
+        assert (
+            "e2e_beginner+pr99@test.com" in detail_str
+        ), f"404 detail must mention the namespaced email; got: {body}"
+        # db.commit must NOT have been awaited (no partial write)
+        mock_db.commit.assert_not_awaited()

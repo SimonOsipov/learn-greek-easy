@@ -65,6 +65,43 @@ Test users are **auto-provisioned on first login**, not created by seeding. User
 
 **Important:** If test users don't exist in Supabase Auth, they will be auto-created by seed_all() for test environments only.
 
+### Per-PR namespaced seed users (RGATE-05)
+
+To prevent parallel release runs from sharing onboarding state, each PR can use its own isolated beginner identity: `e2e_beginner+pr<N>@test.com` (e.g. `e2e_beginner+pr42@test.com` for PR #42).
+
+**Convention:** `e2e_beginner+pr<N>@test.com` where `<N>` is the GitHub PR number.  Supabase Auth supports plus-addressing, so no DB migration is needed.
+
+**How it works — optional `pr_number` field:**
+
+Both `POST /api/v1/test/seed/all` and `POST /api/v1/test/seed/reset-onboarding` accept an optional JSON body with `pr_number`:
+
+```bash
+# Seed with PR-scoped beginner user
+curl -X POST .../api/v1/test/seed/all \
+  -H "Content-Type: application/json" \
+  -d '{"pr_number": "42"}'
+
+# Reset that PR's beginner user before/after Maestro
+curl -X POST .../api/v1/test/seed/reset-onboarding \
+  -H "Content-Type: application/json" \
+  -d '{"pr_number": "42"}'
+```
+
+- **Default fallback (omit `pr_number`):** behaviour is byte-for-byte unchanged — `e2e_beginner@test.com` is used, no Supabase Auth provisioning is performed.
+- **With `pr_number`:** the beginner is resolved to `e2e_beginner+pr<N>@test.com`. Supabase Auth provisioning then occurs **only when** `pr_number` is non-empty **and** `get_supabase_admin_client()` returns a non-None client (i.e. the Supabase Admin key is configured in the environment). The flow is idempotent: `list_users_by_email` → `delete_user` if found → `create_user`, with the returned `id` saved as `supabase_id` on the `User` row, so Maestro can log in with a real JWT. When `pr_number` is empty or the admin client is None, provisioning is skipped and `supabase_id` is left as `None`.
+
+**End-to-end consistency — all four surfaces must agree:**
+
+| Surface | What changes |
+|---------|-------------|
+| Backend `seed/all` | Creates `e2e_beginner+pr<N>@test.com` + Supabase Auth user |
+| Backend `reset-onboarding` | Targets `e2e_beginner+pr<N>@test.com` |
+| `.maestro/onboarding.yaml` | `--env E2E_EMAIL=e2e_beginner+pr<N>@test.com` at Maestro invocation; L3 fallback kept as `e2e_beginner@test.com` |
+| CI `release-verify.yml` | Passes `pr_number` in seed + reset curls; computes EMAIL for Maestro `--env` |
+| RALPH local mobile gate | Same reset curls + `maestro test --env E2E_EMAIL=...` |
+
+A bare `e2e_beginner@test.com` in any operational path (outside a named default-fallback constant) is a bug.
+
 ## Data Created by `/seed/all`
 
 The full seed executes 19 steps in order:

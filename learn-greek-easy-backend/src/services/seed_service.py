@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.core.logging import get_logger
+from src.core.supabase_admin import get_supabase_admin_client
 from src.db.models import (
     Achievement,
     AnnouncementCampaign,
@@ -77,6 +78,32 @@ from src.services.card_generator_service import CardGeneratorService
 from src.services.xp_constants import get_level_from_xp
 
 logger = get_logger(__name__)
+
+# ============================================================================
+# Per-PR seed-user namespacing (RGATE-05)
+# ============================================================================
+
+DEFAULT_BEGINNER_EMAIL = "e2e_beginner@test.com"
+
+
+def namespaced_beginner_email(namespace: int | str | None) -> str:
+    """Return the beginner email for a given PR namespace.
+
+    If namespace is None, empty, or whitespace-only, returns the
+    default email unchanged (back-compat).  Otherwise returns
+    e2e_beginner+pr<namespace>@test.com.
+
+    Args:
+        namespace: PR number (int or str) or None.
+
+    Returns:
+        Resolved email address.
+    """
+    ns = str(namespace).strip() if namespace is not None else ""
+    if ns == "":
+        return DEFAULT_BEGINNER_EMAIL
+    local, domain = DEFAULT_BEGINNER_EMAIL.split("@", 1)
+    return f"{local}+pr{ns}@{domain}"
 
 
 class FeedbackSeedData(TypedDict):
@@ -4283,7 +4310,7 @@ class SeedService:
     # Full Seed Orchestration
     # =====================
 
-    async def seed_all(self) -> dict[str, Any]:  # noqa: C901
+    async def seed_all(self, pr_number: int | str | None = None) -> dict[str, Any]:  # noqa: C901
         """Execute full database seeding sequence.
 
         Orchestrates complete seeding:
@@ -4300,6 +4327,12 @@ class SeedService:
         10. Create culture decks and questions
         11. Create culture progress for learner and advanced users
 
+        Args:
+            pr_number: Optional PR namespace.  When supplied the beginner user
+                is created as e2e_beginner+pr<N>@test.com AND provisioned in
+                Supabase Auth (RGATE-05).  Default None → behaviour is
+                byte-for-byte unchanged.
+
         Returns:
             dict with complete seeding summary
 
@@ -4307,6 +4340,9 @@ class SeedService:
             RuntimeError: If seeding not allowed
         """
         self._check_can_seed()
+
+        # Resolve the beginner email for this run.
+        beginner_email = namespaced_beginner_email(pr_number)
 
         # Step 1: Truncate
         truncate_result = await self.truncate_tables()
@@ -4316,10 +4352,30 @@ class SeedService:
         # In test environments: create users if they don't exist
         base_users_data = [
             {"email": "e2e_learner@test.com", "full_name": "E2E Learner", "is_superuser": False},
-            {"email": "e2e_beginner@test.com", "full_name": "E2E Beginner", "is_superuser": False},
+            {"email": beginner_email, "full_name": "E2E Beginner", "is_superuser": False},
             {"email": "e2e_advanced@test.com", "full_name": "E2E Advanced", "is_superuser": False},
             {"email": "e2e_admin@test.com", "full_name": "E2E Admin", "is_superuser": True},
         ]
+
+        # When pr_number is set, provision the namespaced beginner in Supabase Auth.
+        # We do this once before the user loop so the supabase_id is available when
+        # the User row is created.  Guard on admin_client being None so non-Supabase
+        # environments degrade gracefully (same pattern as /create-user endpoint).
+        namespaced_supabase_id: str | None = None
+        if pr_number is not None and str(pr_number).strip() != "":
+            admin_client = get_supabase_admin_client()
+            if admin_client is not None:
+                # Idempotent: delete-if-exists then create
+                existing = await admin_client.list_users_by_email(beginner_email)
+                if existing:
+                    await admin_client.delete_user(existing[0]["id"])
+                supabase_user = await admin_client.create_user(
+                    email=beginner_email,
+                    password=self.DEFAULT_PASSWORD,
+                    email_confirm=True,
+                    user_metadata={"full_name": "E2E Beginner"},
+                )
+                namespaced_supabase_id = supabase_user["id"]
 
         created_users = []
         for user_data in base_users_data:
@@ -4328,11 +4384,18 @@ class SeedService:
             user = result.scalar_one_or_none()
 
             if user is None:
+                # Determine supabase_id: namespaced beginner gets the provisioned id;
+                # all others are set on first login.
+                initial_supabase_id = (
+                    namespaced_supabase_id
+                    if user_data["email"] == beginner_email and namespaced_supabase_id is not None
+                    else None
+                )
                 # Create new user (test environment)
                 user = User(
                     email=user_data["email"],
                     full_name=user_data["full_name"],
-                    supabase_id=None,  # Will be set on first login
+                    supabase_id=initial_supabase_id,
                     is_superuser=user_data["is_superuser"],
                     is_active=True,
                     subscription_tier=SubscriptionTier.FREE,

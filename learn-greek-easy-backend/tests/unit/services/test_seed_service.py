@@ -1559,3 +1559,325 @@ class TestSeedServiceChangelog:
     def test_truncation_order_includes_changelog_entries(self):
         """TRUNCATION_ORDER should include changelog_entries table."""
         assert "changelog_entries" in SeedService.TRUNCATION_ORDER
+
+
+# ============================================================================
+# RGATE-05 — Per-PR seed-user namespacing (RED specs)
+# ============================================================================
+
+
+class TestNamespacedBeginnerEmail:
+    """Tests for the namespaced_beginner_email helper (RGATE-05).
+
+    These tests are RED until the helper is added to src/services/seed_service.py.
+    Each test uses a local import so that a missing symbol causes an ImportError
+    on that individual test, not a collection-time crash for the whole file.
+    """
+
+    @pytest.mark.unit
+    def test_namespaced_email_none_returns_default(self):
+        """namespaced_beginner_email(None) should return the default email."""
+        from src.services.seed_service import namespaced_beginner_email  # noqa: PLC0415
+
+        assert namespaced_beginner_email(None) == "e2e_beginner@test.com"
+
+    @pytest.mark.unit
+    def test_namespaced_email_empty_string_returns_default(self):
+        """Empty string and whitespace-only string should both return the default email."""
+        from src.services.seed_service import namespaced_beginner_email  # noqa: PLC0415
+
+        assert namespaced_beginner_email("") == "e2e_beginner@test.com"
+        assert namespaced_beginner_email("   ") == "e2e_beginner@test.com"
+
+    @pytest.mark.unit
+    def test_namespaced_email_int_namespace(self):
+        """namespaced_beginner_email(123) should return the pr-suffixed email."""
+        from src.services.seed_service import namespaced_beginner_email  # noqa: PLC0415
+
+        assert namespaced_beginner_email(123) == "e2e_beginner+pr123@test.com"
+
+    @pytest.mark.unit
+    def test_namespaced_email_str_namespace_equals_int(self):
+        """str and int namespace must produce identical results."""
+        from src.services.seed_service import namespaced_beginner_email  # noqa: PLC0415
+
+        assert namespaced_beginner_email("123") == namespaced_beginner_email(123)
+        assert namespaced_beginner_email("123") == "e2e_beginner+pr123@test.com"
+        # Leading/trailing whitespace must be stripped (e.g. from CI env var injection)
+        assert namespaced_beginner_email(" 123 ") == "e2e_beginner+pr123@test.com"
+
+    @pytest.mark.unit
+    def test_namespaced_email_preserves_domain_and_local(self):
+        """Local part and domain must be preserved; only a +prN tag is injected."""
+        from src.services.seed_service import namespaced_beginner_email  # noqa: PLC0415
+
+        result = namespaced_beginner_email(7)
+        assert result == "e2e_beginner+pr7@test.com"
+
+
+class TestSeedAllNamespacing:
+    """Tests for seed_all pr_number threading (RGATE-05).
+
+    These are RED until seed_service.seed_all accepts pr_number and creates the
+    namespaced user + Supabase auth record.
+    """
+
+    @pytest.fixture
+    def mock_db_for_namespacing(self):
+        """Minimal mock DB that lets seed_all run through its user-creation step."""
+        db = AsyncMock()
+        added_objects: list = []
+
+        def track_add(obj):
+            if hasattr(obj, "id") and obj.id is None:
+                obj.id = uuid4()
+            added_objects.append(obj)
+
+        db.add = MagicMock(side_effect=track_add)
+        db.flush = AsyncMock()
+        db.commit = AsyncMock()
+
+        mock_result = MagicMock()
+        mock_result.fetchall.return_value = [(uuid4(),) for _ in range(10)]
+        mock_result.fetchone.return_value = (uuid4(),)
+        mock_result.scalar_one_or_none.return_value = None
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
+        mock_result.scalars.return_value = mock_scalars
+        db.execute = AsyncMock(return_value=mock_result)
+
+        db._added_objects = added_objects
+        return db
+
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_seed_all_without_pr_number_creates_default_beginner(
+        self, mock_db_for_namespacing, mock_settings_can_seed
+    ):
+        """seed_all() with no pr_number must use e2e_beginner@test.com (not +prN)."""
+        seed_service = SeedService(mock_db_for_namespacing)
+        await seed_service.seed_all()
+
+        added_emails = [
+            obj.email for obj in mock_db_for_namespacing._added_objects if hasattr(obj, "email")
+        ]
+        # Default beginner present
+        assert "e2e_beginner@test.com" in added_emails
+        # No namespaced variant created
+        assert not any("+pr" in e for e in added_emails)
+
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_seed_all_with_pr_number_creates_namespaced_beginner(
+        self, mock_db_for_namespacing, mock_settings_can_seed
+    ):
+        """seed_all(pr_number='42') must add a User with email e2e_beginner+pr42@test.com."""
+        seed_service = SeedService(mock_db_for_namespacing)
+        # This call must accept pr_number — will fail with TypeError until implemented
+        await seed_service.seed_all(pr_number="42")
+
+        added_emails = [
+            obj.email for obj in mock_db_for_namespacing._added_objects if hasattr(obj, "email")
+        ]
+        assert "e2e_beginner+pr42@test.com" in added_emails
+
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_seed_all_with_pr_number_provisions_supabase_auth_user(
+        self, mock_db_for_namespacing, mock_settings_can_seed
+    ):
+        """seed_all(pr_number='42') must call Supabase admin create_user for the namespaced email."""
+        fake_supabase_id = "fake-supabase-uuid-123"
+        mock_admin_client = AsyncMock()
+        mock_admin_client.create_user = AsyncMock(
+            return_value={"id": fake_supabase_id, "email": "e2e_beginner+pr42@test.com"}
+        )
+
+        seed_service = SeedService(mock_db_for_namespacing)
+        with patch(
+            "src.services.seed_service.get_supabase_admin_client",
+            return_value=mock_admin_client,
+        ):
+            await seed_service.seed_all(pr_number="42")
+
+        # Supabase create_user must have been called for the namespaced email
+        call_kwargs_list = [
+            call.kwargs if call.kwargs else {}
+            for call in mock_admin_client.create_user.call_args_list
+        ]
+        namespaced_calls = [
+            kw for kw in call_kwargs_list if kw.get("email") == "e2e_beginner+pr42@test.com"
+        ]
+        assert (
+            len(namespaced_calls) >= 1
+        ), "create_user must be called with email='e2e_beginner+pr42@test.com'"
+        assert namespaced_calls[0].get("email_confirm") is True
+
+        # The DB row must have supabase_id set to the exact id returned by create_user
+        added_namespaced = [
+            obj
+            for obj in mock_db_for_namespacing._added_objects
+            if hasattr(obj, "email") and obj.email == "e2e_beginner+pr42@test.com"
+        ]
+        assert len(added_namespaced) >= 1
+        assert added_namespaced[0].supabase_id == fake_supabase_id, (
+            f"supabase_id must equal the id returned by create_user ({fake_supabase_id!r}), "
+            f"got {added_namespaced[0].supabase_id!r}"
+        )
+
+
+# ============================================================================
+# RGATE-05 adversarial / edge coverage (QA-added, 2026-06-07)
+# ============================================================================
+
+
+class TestNamespacedBeginnerEmailEdgeCases:
+    """Edge and adversarial coverage for namespaced_beginner_email (RGATE-05).
+
+    Covers inputs not included in the AC tests: strings that already contain
+    '+' or '@', zero, and large integers.
+    """
+
+    @pytest.mark.unit
+    def test_namespace_with_plus_in_value(self):
+        """A namespace string that already contains '+' is embedded verbatim."""
+        from src.services.seed_service import namespaced_beginner_email  # noqa: PLC0415
+
+        # The function does not strip special chars from the namespace token;
+        # it embeds whatever was passed so the caller owns the format contract.
+        result = namespaced_beginner_email("1+extra")
+        assert result == "e2e_beginner+pr1+extra@test.com"
+        assert result.count("@") == 1  # single '@' — valid email structure
+
+    @pytest.mark.unit
+    def test_namespace_zero_produces_namespaced_email(self):
+        """Integer 0 is a valid (non-empty) namespace → produces a +pr0 email."""
+        from src.services.seed_service import namespaced_beginner_email  # noqa: PLC0415
+
+        # 0 is falsy in Python but is NOT None and str(0).strip() != "" so it
+        # must NOT fall back to the default.
+        result = namespaced_beginner_email(0)
+        assert result == "e2e_beginner+pr0@test.com"
+        assert result != "e2e_beginner@test.com"
+
+    @pytest.mark.unit
+    def test_namespace_large_int(self):
+        """Large integers (e.g. a 6-digit PR number) are embedded correctly."""
+        from src.services.seed_service import namespaced_beginner_email  # noqa: PLC0415
+
+        result = namespaced_beginner_email(123456)
+        assert result == "e2e_beginner+pr123456@test.com"
+
+    @pytest.mark.unit
+    def test_whitespace_only_string_falls_back_to_default(self):
+        """A string of only whitespace returns the default (AC edge — multiple spaces)."""
+        from src.services.seed_service import namespaced_beginner_email  # noqa: PLC0415
+
+        for ws in ["\t", "\n", "  \t  "]:
+            assert (
+                namespaced_beginner_email(ws) == "e2e_beginner@test.com"
+            ), f"Whitespace string {ws!r} should return default"
+
+
+class TestSeedAllNamespacingIsolation:
+    """Adversarial isolation tests: pr_number=A must not touch the default user."""
+
+    @pytest.fixture
+    def mock_db_isolation(self):
+        """Mock DB that records all added objects."""
+        db = AsyncMock()
+        added_objects: list = []
+
+        def track_add(obj):
+            if hasattr(obj, "id") and obj.id is None:
+                obj.id = uuid4()
+            added_objects.append(obj)
+
+        db.add = MagicMock(side_effect=track_add)
+        db.flush = AsyncMock()
+        db.commit = AsyncMock()
+
+        mock_result = MagicMock()
+        mock_result.fetchall.return_value = [(uuid4(),) for _ in range(10)]
+        mock_result.fetchone.return_value = (uuid4(),)
+        mock_result.scalar_one_or_none.return_value = None
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
+        mock_result.scalars.return_value = mock_scalars
+        db.execute = AsyncMock(return_value=mock_result)
+
+        db._added_objects = added_objects
+        return db
+
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_pr_number_seed_does_not_create_default_beginner(
+        self, mock_db_isolation, mock_settings_can_seed
+    ):
+        """When pr_number is set, ONLY the namespaced email is created — NOT e2e_beginner@test.com.
+
+        Regression guard: if someone accidentally adds the default email back to
+        base_users_data when namespacing, two beginner rows would be created and
+        the isolation guarantee breaks.
+        """
+        seed_service = SeedService(mock_db_isolation)
+        await seed_service.seed_all(pr_number="77")
+
+        added_emails = [
+            obj.email for obj in mock_db_isolation._added_objects if hasattr(obj, "email")
+        ]
+        assert (
+            "e2e_beginner@test.com" not in added_emails
+        ), "Default e2e_beginner@test.com must NOT be created when pr_number is supplied"
+        assert "e2e_beginner+pr77@test.com" in added_emails
+
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_no_pr_number_does_not_create_namespaced_user(
+        self, mock_db_isolation, mock_settings_can_seed
+    ):
+        """Without pr_number, zero namespaced variants must be created (back-compat guard)."""
+        seed_service = SeedService(mock_db_isolation)
+        await seed_service.seed_all()
+
+        added_emails = [
+            obj.email for obj in mock_db_isolation._added_objects if hasattr(obj, "email")
+        ]
+        assert not any(
+            "+pr" in e for e in added_emails
+        ), "No +prN email variants must be created when pr_number is omitted"
+        assert "e2e_beginner@test.com" in added_emails
+
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_admin_client_none_still_creates_db_row(
+        self, mock_db_isolation, mock_settings_can_seed
+    ):
+        """When get_supabase_admin_client() returns None, the namespaced DB row is still created.
+
+        This is the graceful-degradation guarantee: non-Supabase envs must not crash
+        and must still provision the namespaced user in the application DB.
+        """
+        seed_service = SeedService(mock_db_isolation)
+        with patch(
+            "src.services.seed_service.get_supabase_admin_client",
+            return_value=None,
+        ):
+            await seed_service.seed_all(pr_number="99")
+
+        added_emails = [
+            obj.email for obj in mock_db_isolation._added_objects if hasattr(obj, "email")
+        ]
+        assert (
+            "e2e_beginner+pr99@test.com" in added_emails
+        ), "DB row for namespaced user must be created even when Supabase admin client is None"
+        # supabase_id should be None (no Supabase provisioning done)
+        added_namespaced = [
+            obj
+            for obj in mock_db_isolation._added_objects
+            if hasattr(obj, "email") and obj.email == "e2e_beginner+pr99@test.com"
+        ]
+        assert len(added_namespaced) >= 1
+        assert (
+            added_namespaced[0].supabase_id is None
+        ), "supabase_id must be None when admin_client is None (not a MagicMock stub)"
