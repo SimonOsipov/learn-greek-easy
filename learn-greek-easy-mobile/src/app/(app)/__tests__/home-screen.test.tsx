@@ -32,6 +32,35 @@ jest.mock('@/hooks/use-dashboard', () => ({
   useDashboard: () => mockUseDashboard(),
 }));
 
+// useReducedMotion — default to false (no reduced motion) for existing tests
+jest.mock('@/hooks/use-reduced-motion', () => ({
+  useReducedMotion: () => false,
+}));
+
+// dashboard-skeleton — stub to a plain View so Animated doesn't complicate these tests
+jest.mock('@/components/dashboard/dashboard-skeleton', () => {
+  const { View } = require('react-native');
+  const ce = require('react').createElement;
+  return {
+    DashboardSkeleton: ({ testID }: { testID?: string }) =>
+      ce(View, { testID: testID ?? 'dashboard-skeleton' }),
+    SectionError: ({
+      testID,
+      label,
+      onRetry,
+    }: {
+      testID?: string;
+      label: string;
+      onRetry: () => void;
+    }) =>
+      ce(
+        View,
+        { testID: testID ?? 'section-error' },
+        ce(View, { testID: `${testID ?? 'section-error'}-retry`, onPress: onRetry }),
+      ),
+  };
+});
+
 // useToast — capture showComingSoonToast calls
 const mockShowComingSoonToast = jest.fn();
 jest.mock('@/components/ui/toast', () => ({
@@ -120,6 +149,9 @@ function makeReturningSummary() {
     isNewUser: false,
     isLoading: false,
     isError: false,
+    newsError: false,
+    situationsError: false,
+    decksError: false,
     refetchAll: jest.fn(),
   };
 }
@@ -261,26 +293,28 @@ describe('HomeScreen — returning-user branch', () => {
   });
 
   it('greeting header (block-greeting) appears before block-stat-grid in the tree', () => {
-    render(<HomeScreen />);
-    const greeting = screen.getByTestId('block-greeting');
-    const statGrid = screen.getByTestId('block-stat-grid');
+    const { UNSAFE_root } = render(<HomeScreen />);
 
-    // Find their positions in the rendered tree by counting ancestors/siblings.
-    // We use a simple trick: query the React Native fiber order by checking
-    // that block-greeting's testID appears before block-stat-grid in the flat
-    // rendered output. Use UNSAFE_root traversal (most reliable for order).
-    // We compare DOM position via the toJSON output.
-    const json = render(<HomeScreen />).toJSON();
-    const jsonStr = JSON.stringify(json);
-    const greetingPos = jsonStr.indexOf('"block-greeting"');
-    const statGridPos = jsonStr.indexOf('"block-stat-grid"');
+    // Walk the fiber tree to collect testIDs in render order, then compare
+    // their positions. This avoids JSON.stringify which fails on circular
+    // refs introduced by RefreshControl's react-test-renderer fiber props.
+    const testIDs: string[] = [];
+    function collectTestIDs(node: { props?: { testID?: string }; children?: unknown }) {
+      if (node.props?.testID) testIDs.push(node.props.testID);
+      const kids = (node as { children?: unknown }).children;
+      if (Array.isArray(kids)) {
+        (kids as typeof node[]).forEach(collectTestIDs);
+      } else if (kids && typeof kids === 'object') {
+        collectTestIDs(kids as typeof node);
+      }
+    }
+    collectTestIDs(UNSAFE_root);
+
+    const greetingPos = testIDs.indexOf('block-greeting');
+    const statGridPos = testIDs.indexOf('block-stat-grid');
     expect(greetingPos).toBeGreaterThan(-1);
     expect(statGridPos).toBeGreaterThan(-1);
     expect(greetingPos).toBeLessThan(statGridPos);
-
-    // Suppress unused variable lint — both are truthy (we already asserted order)
-    expect(greeting).toBeTruthy();
-    expect(statGrid).toBeTruthy();
   });
 
   it('renders QuickWinsShelf block (block-shelf-quick-wins)', () => {

@@ -138,6 +138,14 @@ export interface DashboardViewModel {
   /** True if any underlying query errored. */
   isError: boolean;
 
+  /**
+   * Per-section error flags — lets the screen degrade a single shelf without
+   * blanking siblings or crashing full-screen.
+   */
+  newsError: boolean;
+  situationsError: boolean;
+  decksError: boolean;
+
   /** Calls refetch() on all underlying queries. */
   refetchAll: () => void;
 }

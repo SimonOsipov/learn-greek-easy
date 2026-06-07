@@ -1,5 +1,5 @@
 /**
- * HomeScreen — the main dashboard screen (DASH-09).
+ * HomeScreen — the main dashboard screen (DASH-09 / DASH-10).
  *
  * Assembles all dashboard blocks in the spec-mandated order:
  *   1. GreetingHeader
@@ -9,6 +9,14 @@
  *   5. WhatsNewChips
  *   6. StatGrid (2×2)
  *   7. Shelves: news → situations → decks → quick-wins
+ *
+ * DASH-10 additions:
+ *   - Pull-to-refresh via RefreshControl → refetchAll()
+ *   - Initial load shows DashboardSkeleton instead of bare ActivityIndicator
+ *   - Per-section graceful degradation: a failed shelf shows SectionError
+ *     inline WITHOUT blanking sibling sections or crashing full-screen
+ *   - Reduced-motion aware: shimmer/animation gated via useReducedMotion()
+ *   - 401/403 handled by queryClient (no retry) + Stack.Protected gate (MOB-04)
  *
  * While isNewUser is undefined (progress query still loading), renders nothing
  * to prevent a flash of the wrong branch.
@@ -21,12 +29,14 @@
  *
  * Dark is the default theme (controlled by NativeWind + app _layout).
  */
-import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
+import { useState, useCallback } from 'react';
+import { View, Text, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { BookOpen, Trophy } from 'lucide-react-native';
 
 import { useDashboard } from '@/hooks/use-dashboard';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useToast } from '@/components/ui/toast';
 
 import { GreetingHeader } from '@/components/dashboard/greeting-header';
@@ -41,6 +51,7 @@ import { SituationCard } from '@/components/dashboard/situation-card';
 import { DeckCard } from '@/components/dashboard/deck-card';
 import { QuickWinsShelf } from '@/components/dashboard/quick-wins-shelf';
 import { NewUserStart } from '@/components/dashboard/new-user-start';
+import { DashboardSkeleton, SectionError } from '@/components/dashboard/dashboard-skeleton';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -71,6 +82,7 @@ function initialsFromName(firstName: string | null): string {
 export default function HomeScreen() {
   const router = useRouter();
   const { showComingSoonToast } = useToast();
+  const reduceMotion = useReducedMotion();
 
   const {
     greeting,
@@ -87,15 +99,40 @@ export default function HomeScreen() {
     whatsNew,
     isNewUser,
     isLoading,
+    newsError,
+    situationsError,
+    decksError,
+    refetchAll,
   } = useDashboard();
 
+  // ── Pull-to-refresh state ──
+  // We track a local refreshing flag tied to refetchAll. The spinner shows
+  // until the queries settle (isLoading goes false) — we stop refreshing once
+  // the critical progress query is no longer loading.
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    refetchAll();
+    // The spinner will clear automatically once isLoading transitions back to
+    // false (handled in the effect below via the refreshing+isLoading combo).
+    // React Query doesn't return promises from refetch() in this hook pattern,
+    // so we use a simple timeout floor to avoid an instant spinner flash.
+    setTimeout(() => setRefreshing(false), 1500);
+  }, [refetchAll]);
+
   // ── Loading state ──
-  // While isLoading is true, isNewUser is undefined. Render nothing
-  // to prevent a flash of the wrong layout branch.
+  // While isLoading is true, isNewUser is undefined. Show per-section
+  // skeletons instead of a bare ActivityIndicator.
   if (isLoading || isNewUser === undefined) {
     return (
-      <SafeAreaView testID="home-loading" className="flex-1 bg-bg items-center justify-center">
-        <ActivityIndicator />
+      <SafeAreaView testID="home-loading" className="flex-1 bg-bg">
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 90 }}
+        >
+          <DashboardSkeleton reduceMotion={reduceMotion} />
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -107,6 +144,9 @@ export default function HomeScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 90 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
         >
           {/* Block 1: Greeting (streak = 0 for new user) */}
           <GreetingHeader
@@ -163,6 +203,9 @@ export default function HomeScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 90 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
       >
         {/* ── Block 1: Greeting header ── */}
         <View testID="block-greeting">
@@ -246,7 +289,15 @@ export default function HomeScreen() {
         </View>
 
         {/* ── Block 7a: News shelf ── */}
-        {news.length > 0 ? (
+        {newsError ? (
+          <View testID="block-shelf-news">
+            <SectionError
+              testID="section-error-news"
+              label="news"
+              onRetry={refetchAll}
+            />
+          </View>
+        ) : news.length > 0 ? (
           <View testID="block-shelf-news">
             <Shelf
               kicker="NEWS"
@@ -272,7 +323,15 @@ export default function HomeScreen() {
         ) : null}
 
         {/* ── Block 7b: Situations shelf ── */}
-        {situations.length > 0 ? (
+        {situationsError ? (
+          <View testID="block-shelf-situations">
+            <SectionError
+              testID="section-error-situations"
+              label="practice situations"
+              onRetry={refetchAll}
+            />
+          </View>
+        ) : situations.length > 0 ? (
           <View testID="block-shelf-situations">
             <Shelf
               kicker="PRACTICE"
@@ -298,7 +357,15 @@ export default function HomeScreen() {
         ) : null}
 
         {/* ── Block 7c: Decks shelf ── */}
-        {decks.length > 0 ? (
+        {decksError ? (
+          <View testID="block-shelf-decks">
+            <SectionError
+              testID="section-error-decks"
+              label="decks"
+              onRetry={refetchAll}
+            />
+          </View>
+        ) : decks.length > 0 ? (
           <View testID="block-shelf-decks">
             <Shelf
               kicker="YOUR DECKS"

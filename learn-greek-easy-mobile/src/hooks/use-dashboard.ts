@@ -129,6 +129,13 @@ export function useDashboard(): DashboardViewModel {
   }
 
   // -------------------------------------------------------------------------
+  // Per-section error flags (section-level degradation for DASH-10)
+  // -------------------------------------------------------------------------
+  const newsError = newsQuery.isError;
+  const situationsError = situationsQuery.isError;
+  const decksError = decksQuery.isError;
+
+  // -------------------------------------------------------------------------
   // Return view model
   // -------------------------------------------------------------------------
   return {
@@ -147,6 +154,9 @@ export function useDashboard(): DashboardViewModel {
     firstName,
     isLoading,
     isError,
+    newsError,
+    situationsError,
+    decksError,
     refetchAll,
   };
 }
