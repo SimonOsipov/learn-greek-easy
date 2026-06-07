@@ -280,3 +280,82 @@ class TestListDecksCacheRed:
         ), f"Expected key with 'decks:list:ru:all:', got: {keys}"
         # The two keys must be distinct (level=A1 vs level=None must not collide)
         assert keys[0] != keys[1], f"Expected distinct keys, got: {keys}"
+
+
+# =============================================================================
+# PERF-05-06 Gap 2 — list_decks: factory-raises / None-guard surfaces real error (AC#4)
+# =============================================================================
+
+
+@pytest.mark.unit
+class TestListDecksNoneGuardSurfacesRealError:
+    """PERF-05-06 plan item 2 / AC#4 — list_decks variant.
+
+    For list_decks, _compute() is a local inner function so it cannot be
+    patched directly.  Instead, we patch DeckRepository.list_active with
+    side_effect=RuntimeError so that BOTH calls to _compute (the factory
+    invocation inside get_or_set AND the None-guard recompute) raise the
+    same error.
+
+    Flow:
+    1. mock_redis.get.return_value = None  →  cache miss  →  get_or_set calls factory
+    2. factory calls _compute() which calls repo.list_active  →  raises RuntimeError
+    3. get_or_set catches and returns None
+    4. None-guard recomputes: _compute() called directly  →  raises RuntimeError again
+    5. RuntimeError propagates to the caller — NOT a pydantic.ValidationError
+    """
+
+    async def test_list_decks_surfaces_db_error_not_validation_error(self):
+        """RuntimeError from DeckRepository.list_active propagates through None-guard.
+
+        Strategy: real CacheService(redis_client=mock_redis) so the full
+        get_or_set path executes.  DeckRepository.list_active raises RuntimeError
+        on every call, so both the factory and the None-guard recompute raise,
+        and the original error type propagates.
+        """
+        import pydantic
+
+        mock_redis = AsyncMock()
+        mock_redis.get.return_value = None  # force miss → get_or_set calls factory
+
+        real_cache = _make_real_cache(mock_redis)
+        db = _make_mock_db()
+        user = _make_mock_user()
+
+        with (
+            _make_cache_settings_patch(),
+            patch(
+                "src.api.v1.decks.get_cache",
+                return_value=real_cache,
+                create=True,
+            ),
+            patch("src.api.v1.decks.DeckRepository") as mock_repo_cls,
+            patch(
+                "src.api.v1.decks.get_s3_service",
+                return_value=MagicMock(generate_presigned_url=MagicMock(return_value=None)),
+            ),
+            patch(
+                "src.api.v1.decks.get_localized_deck_content",
+                return_value=("name", "desc"),
+            ),
+            patch("src.api.v1.decks.invalidate_cache_task", MagicMock()),
+        ):
+            # Make list_active raise on every call (both factory + None-guard recompute)
+            mock_repo_cls.return_value.list_active = AsyncMock(
+                side_effect=RuntimeError("simulated DB failure")
+            )
+
+            with pytest.raises(RuntimeError, match="simulated DB failure") as exc_info:
+                await list_decks(
+                    page=1,
+                    page_size=20,
+                    level=None,
+                    locale="en",
+                    db=db,
+                    current_user=user,
+                )
+
+        # Must NOT be wrapped in a pydantic ValidationError
+        assert not isinstance(
+            exc_info.value, pydantic.ValidationError
+        ), "None-guard must surface the original RuntimeError, not wrap it in ValidationError"

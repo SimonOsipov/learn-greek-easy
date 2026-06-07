@@ -1345,3 +1345,103 @@ class TestDeckProgressListCache:
         keys = [call[0][0] for call in setex_calls]
         assert any(":decks:3:50" in k for k in keys), f":decks:3:50 not in keys: {keys}"
         assert any(":decks:1:20" in k for k in keys), f":decks:1:20 not in keys: {keys}"
+
+
+# =============================================================================
+# PERF-05-06 Gap 2 — Explicit factory-raises / None-guard surfaces real error (AC#4)
+# =============================================================================
+
+
+@pytest.mark.unit
+class TestNoneGuardSurfacesRealError:
+    """PERF-05-06 plan item 2 / AC#4 — when get_or_set swallows the factory
+    exception (returning None), the None-guard recomputes by calling the
+    underlying compute directly.  That second call also raises because the
+    error is persistent (e.g. a DB failure), so the ORIGINAL error type
+    must propagate — NOT a pydantic.ValidationError.
+
+    Mechanism:
+    1. mock_redis.get.return_value = None  →  cache miss  →  get_or_set calls factory
+    2. _compute_* is patched to raise RuntimeError  →  factory raises  →
+       get_or_set catches and returns None
+    3. None-guard recomputes by calling _compute_* directly  →  raises again  →
+       propagates to the caller as RuntimeError (not ValidationError)
+
+    The compute runs twice total (factory + guard); we assert error type, not
+    call count.
+    """
+
+    async def test_get_dashboard_stats_surfaces_db_error_not_validation_error(
+        self, mock_db, mock_user_id
+    ):
+        """RuntimeError from _compute_dashboard_stats propagates through None-guard.
+
+        Strategy: real CacheService(redis_client=mock_redis) with cache_enabled=True
+        so the full get_or_set path runs.  _compute_dashboard_stats is patched with
+        side_effect=RuntimeError so both the factory call AND the None-guard recompute
+        raise, causing the error to surface.
+        """
+        import pydantic
+
+        mock_redis = AsyncMock()
+        mock_redis.get.return_value = None  # force miss → get_or_set calls factory
+
+        real_cache = _make_real_cache(mock_redis)
+
+        with (
+            _make_cache_settings_patch(),
+            patch(
+                "src.services.progress_service.get_cache",
+                return_value=real_cache,
+                create=True,
+            ),
+            patch.object(
+                ProgressService,
+                "_compute_dashboard_stats",
+                new=AsyncMock(side_effect=RuntimeError("simulated DB failure")),
+            ),
+        ):
+            service = ProgressService(mock_db)
+            with pytest.raises(RuntimeError, match="simulated DB failure") as exc_info:
+                await service.get_dashboard_stats(mock_user_id)
+
+        # The raised exception must NOT be a pydantic ValidationError
+        assert not isinstance(
+            exc_info.value, pydantic.ValidationError
+        ), "None-guard must surface the original RuntimeError, not wrap it in ValidationError"
+
+    async def test_get_deck_progress_list_surfaces_db_error_not_validation_error(
+        self, mock_db, mock_user_id
+    ):
+        """RuntimeError from _compute_deck_progress_list propagates through None-guard.
+
+        Same mechanism as the dashboard test: patch _compute_deck_progress_list to
+        raise on both the factory invocation and the None-guard recompute.
+        """
+        import pydantic
+
+        mock_redis = AsyncMock()
+        mock_redis.get.return_value = None  # force miss
+
+        real_cache = _make_real_cache(mock_redis)
+
+        with (
+            _make_cache_settings_patch(),
+            patch(
+                "src.services.progress_service.get_cache",
+                return_value=real_cache,
+                create=True,
+            ),
+            patch.object(
+                ProgressService,
+                "_compute_deck_progress_list",
+                new=AsyncMock(side_effect=RuntimeError("simulated DB failure")),
+            ),
+        ):
+            service = ProgressService(mock_db)
+            with pytest.raises(RuntimeError, match="simulated DB failure") as exc_info:
+                await service.get_deck_progress_list(mock_user_id)
+
+        assert not isinstance(
+            exc_info.value, pydantic.ValidationError
+        ), "None-guard must surface the original RuntimeError, not wrap it in ValidationError"
