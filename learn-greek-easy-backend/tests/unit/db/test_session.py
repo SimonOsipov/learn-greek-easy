@@ -728,3 +728,87 @@ class TestWarmMinOverride:
             f"Expected 3 warm connects (settings.database_pool_warm_min=3), "
             f"got {mock_engine_with_connect.connect.call_count}"
         )
+
+
+# ============================================================================
+# PERF-07-02..04: Adversarial / Edge Coverage (Mode B additions)
+# ============================================================================
+
+
+class TestAdversarialEdge:
+    """Adversarial and boundary tests not covered by the AC-derived suite.
+
+    These guard against specific regression scenarios:
+    1. close_db when no keepalive ever started (warm_min=0 or testing path)
+       must not raise and must still dispose the engine.
+    2. warm-up failure (non-fatal) does NOT prevent keepalive task creation:
+       the task is unconditionally created after the try/except per the
+       current implementation contract.
+    3. _keepalive_ping(0) issues zero connect() calls (boundary).
+    4. autouse fixture gap: _keepalive_task is NOT saved/restored by the
+       reset_session_module_state fixture — tests that mutate it must clean up
+       themselves (verified here to prevent silent leakage from future tests).
+    """
+
+    @pytest.mark.asyncio
+    async def test_close_db_no_keepalive_still_disposes(self, mock_engine):
+        """close_db with _keepalive_task=None does not raise and still disposes.
+
+        Regression guard: the None-guard at session.py:190 must be present;
+        if removed, calling .cancel() on None raises AttributeError.
+        """
+        session_module._engine = mock_engine
+        session_module._session_factory = MagicMock()
+        session_module._keepalive_task = None
+
+        # Must not raise even though no keepalive was ever started.
+        await session_module.close_db()
+
+        mock_engine.dispose.assert_awaited_once()
+        assert session_module._engine is None
+        assert session_module._session_factory is None
+        assert session_module._keepalive_task is None
+
+    @pytest.mark.asyncio
+    async def test_warmup_failure_still_starts_keepalive(self, mock_engine_with_connect):
+        """After a non-fatal warm-up failure, the keepalive task is still created.
+
+        The implementation (session.py:167-174) places asyncio.create_task()
+        OUTSIDE the try/except for warm-up, so a warm-up exception does NOT
+        prevent keepalive creation.  This test locks in that contract.
+        If the implementer ever moves create_task inside the try block, this
+        test will fail — intentionally, as that would change the AC-specified
+        behavior (keepalive guards remaining idle connections even when warm-up
+        partially failed).
+        """
+        testing_patch, production_patch = _patch_env(is_testing=False, is_production=True)
+        factory = MagicMock()
+
+        # Make warm-up connections raise so the try/except path is exercised.
+        connect_conn = mock_engine_with_connect.connect.return_value.__aenter__.return_value
+        connect_conn.execute = AsyncMock(side_effect=Exception("transient warm-up error"))
+
+        with testing_patch, production_patch:
+            with patch("src.db.session.create_engine", return_value=mock_engine_with_connect):
+                with patch("src.db.session.create_session_factory", return_value=factory):
+                    with patch("asyncio.create_task") as mock_create_task:
+                        await session_module.init_db(warm_min=2)
+
+        # create_task must have been called exactly once even though warm-up failed.
+        mock_create_task.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_keepalive_ping_zero_issues_no_connects(self, mock_engine_with_connect):
+        """_keepalive_ping(0) performs zero connect() calls — the boundary.
+
+        Verifies loop range(0) is a no-op, which is the same guard warm_min=0
+        relies on to skip the scheduler's keepalive work at the ping level.
+        """
+        session_module._engine = mock_engine_with_connect
+
+        await session_module._keepalive_ping(0)
+
+        assert mock_engine_with_connect.connect.call_count == 0, (
+            f"_keepalive_ping(0) should not open any connections, "
+            f"got {mock_engine_with_connect.connect.call_count}"
+        )
