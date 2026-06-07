@@ -257,6 +257,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       deploy: ${{ steps.check.outputs.deploy }}
+      release_requested: ${{ steps.check.outputs.release_requested }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -281,6 +282,14 @@ jobs:
             echo "Only documentation changes - skipping preview deployment"
           fi
 
+          # Determine if this is a deliberate release signal
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || \
+             [[ "${{ github.event.action }}" == "labeled" && "${{ github.event.label.name }}" == "ready-to-verify" ]]; then
+            echo "release_requested=true" >> $GITHUB_OUTPUT
+          else
+            echo "release_requested=false" >> $GITHUB_OUTPUT
+          fi
+
   # =============================================================================
   # JOB 3: Deploy Preview
   # Purpose: Deploy frontend and backend to Railway dev environment
@@ -293,6 +302,7 @@ jobs:
       always() &&
       needs.should-run-full.outputs.run_full == 'true' &&
       needs.should-deploy.outputs.deploy == 'true' &&
+      needs.should-deploy.outputs.release_requested == 'true' &&
       (
         needs.ci-tests.result == 'success' ||
         (
@@ -1570,7 +1580,7 @@ jobs:
   report-results:
     name: Report Results
     needs: [ci-tests, should-deploy, should-run-full, changes, deploy, health-check, seed-database, k6-performance, accessibility, lighthouse]
-    if: always() && needs.should-run-full.outputs.run_full == 'true' && needs.changes.outputs.web == 'true' && needs.should-deploy.outputs.deploy == 'true'
+    if: always() && needs.should-run-full.outputs.run_full == 'true' && needs.changes.outputs.web == 'true' && needs.should-deploy.outputs.deploy == 'true' && needs.should-deploy.outputs.release_requested == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Post or Update PR Comment
