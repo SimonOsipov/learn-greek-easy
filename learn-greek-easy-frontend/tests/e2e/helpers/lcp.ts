@@ -51,7 +51,7 @@ export interface LCPResult {
   /**
    * true if the LCP element is the news <img>:
    *   - tagName === "IMG"
-   *   - AND (element is inside [data-testid^="news-card-"] OR url host contains "storageapi.dev")
+   *   - AND (element is inside [data-testid^="news-card-"] OR url host contains "storage.railway.app" or "storageapi.dev")
    */
   isNewsImage: boolean;
   /** PerformanceResourceTiming segments for the LCP URL (may be null if no matching entry) */
@@ -221,7 +221,10 @@ export async function captureLCP(page: Page): Promise<LCPResult> {
   // Determine if this is the news image
   let isNewsImage = false;
   if (tagName === 'IMG') {
-    const urlHostIsStorage = lcpUrl.includes('storageapi.dev');
+    // Primary: storage.railway.app (Railway Object Storage presigned URLs)
+    // Fallback: storageapi.dev (Tigris-backed dev/preview envs may differ)
+    const urlHostIsStorage =
+      lcpUrl.includes('storage.railway.app') || lcpUrl.includes('storageapi.dev');
     isNewsImage = insideNewsCard || urlHostIsStorage;
   }
 

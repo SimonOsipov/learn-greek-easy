@@ -3,7 +3,7 @@
  *
  * Captures the Largest Contentful Paint element identity and timing for
  * /dashboard using a single PerformanceObserver entry, then reports whether
- * the LCP element is the news <img> from t3.storageapi.dev.
+ * the LCP element is the news <img> from storage.railway.app (Railway Object Storage; both storage.railway.app and storageapi.dev are Tigris-backed, but the serving host is storage.railway.app).
  *
  * This is a MEASUREMENT harness — the test NEVER asserts on the LCP number
  * or element identity. The deliverable is the `lcp-baseline.json` attachment.
