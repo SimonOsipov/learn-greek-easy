@@ -29,7 +29,18 @@
     /* Path Aliases */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      /* vite-imagetools query-string imports: TypeScript cannot resolve query params
+         through path aliases in bundler mode, so we map each variant to a type stub. */
+      "@/assets/landing/cyprus-hero.webp?w=640;960;1280;1920&format=avif&quality=65&as=srcset": [
+        "./src/types/imagetools.d.ts"
+      ],
+      "@/assets/landing/cyprus-hero.webp?w=640;960;1280;1920&format=webp&quality=68&as=srcset": [
+        "./src/types/imagetools.d.ts"
+      ],
+      "@/assets/landing/cyprus-hero.webp?w=1280&format=webp&quality=68": [
+        "./src/types/imagetools.d.ts"
+      ]
     }
   },
   "include": ["src"],

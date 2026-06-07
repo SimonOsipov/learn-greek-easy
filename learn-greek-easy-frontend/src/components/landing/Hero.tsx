@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
-import heroImage from '@/assets/landing/cyprus-hero.webp';
+import heroFallback from '@/assets/landing/cyprus-hero.webp?w=1280&format=webp&quality=68';
+import heroAvif from '@/assets/landing/cyprus-hero.webp?w=640;960;1280;1920&format=avif&quality=65&as=srcset';
+import heroWebp from '@/assets/landing/cyprus-hero.webp?w=640;960;1280;1920&format=webp&quality=68&as=srcset';
 
 import WaitlistForm from './WaitlistForm';
 
@@ -15,13 +17,19 @@ const Hero = () => {
     >
       {/* Full-screen background image */}
       <div className="absolute inset-0 motion-safe:animate-landing-fade-in">
-        <img
-          src={heroImage}
-          alt={t('hero.heroImageAlt')}
-          loading="eager"
-          fetchPriority="high"
-          className="h-full w-full object-cover"
-        />
+        <picture>
+          <source srcSet={heroAvif} type="image/avif" sizes="100vw" />
+          <source srcSet={heroWebp} type="image/webp" sizes="100vw" />
+          <img
+            src={heroFallback}
+            alt={t('hero.heroImageAlt')}
+            width={1920}
+            height={1080}
+            loading="eager"
+            fetchPriority="high"
+            className="h-full w-full object-cover"
+          />
+        </picture>
         {/* Dark overlay for text readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-[hsl(var(--landing-header-bg))]/85 via-[hsl(var(--landing-header-bg))]/80 to-[hsl(var(--landing-header-bg))]" />
       </div>

@@ -1,26 +1,54 @@
 import { defineConfig, loadEnv, type Plugin, type HtmlTagDescriptor } from 'vite';
-import type { OutputBundle, OutputAsset } from 'rollup';
+import type { OutputBundle, OutputChunk } from 'rollup';
 import react from '@vitejs/plugin-react';
+import { imagetools } from 'vite-imagetools';
 import path from 'node:path';
 
 /**
- * Find an emitted asset in the Rollup bundle by matching a suffix of its original source path.
- * Returns the hashed output fileName (e.g. "assets/img/cyprus-hero-abc123.webp").
- * Throws if the bundle exists but no asset matches — keeps LCP regressions loud.
+ * Extract the AVIF srcset string for the hero image from the built JS chunks.
+ *
+ * vite-imagetools emits filenames without width encoding (all derivatives are
+ * "cyprus-hero-<hash>.avif"), so we cannot reconstruct the srcset from asset
+ * names alone. Instead we read the exact srcset literal that vite-imagetools
+ * inlines into the JS bundle — this gives a byte-exact match with the string
+ * Hero.tsx assigns to its <source srcSet> attribute, which is the AC3 requirement.
+ *
+ * Pattern matches: "/assets/img/cyprus-hero-<hash>.avif NNNw, ..."
+ * This is distinctive enough (multiple avif entries with width descriptors)
+ * that false-positive matches are not a concern.
+ *
+ * Throws if the bundle exists but no AVIF srcset string is found, keeping
+ * LCP regressions loud.
  */
-function findEmittedAsset(bundle: OutputBundle, srcSuffix: string): string {
-  const match = Object.values(bundle).find(
-    (entry): entry is OutputAsset =>
-      entry.type === 'asset' &&
-      entry.originalFileNames.some((p) => p.endsWith(srcSuffix))
-  );
-  if (!match) {
-    throw new Error(`[perf-06 hero preload] ${srcSuffix} not found in bundle`);
+function extractHeroAvifSrcset(bundle: OutputBundle): string {
+  // Regex: matches a comma-separated list of 2+ hashed AVIF URLs with width descriptors.
+  // Anchored to the assets/img/ path prefix to avoid matching unrelated files.
+  const AVIF_SRCSET_RE =
+    /(\/assets\/img\/cyprus-hero-[A-Za-z0-9_-]+\.avif \d+w(?:, \/assets\/img\/cyprus-hero-[A-Za-z0-9_-]+\.avif \d+w)+)/;
+
+  for (const entry of Object.values(bundle)) {
+    if (entry.type !== 'chunk') continue;
+    const chunk = entry as OutputChunk;
+    const match = chunk.code.match(AVIF_SRCSET_RE);
+    if (match) {
+      return match[1];
+    }
   }
-  return match.fileName;
+
+  throw new Error(
+    '[perf-06 hero preload] AVIF srcset for cyprus-hero not found in any JS chunk. ' +
+      'Ensure Hero.tsx imports heroAvif with ?w=...&format=avif&as=srcset.'
+  );
 }
 
-/** Inject a <link rel="preload"> for the LCP hero image at build time. */
+/**
+ * Inject a <link rel="preload as="image"> for the LCP hero image at build time.
+ *
+ * Uses imagesrcset/imagesizes (the responsive preload form) so the browser can
+ * select the same candidate it will use for the <picture><source> — no double-fetch.
+ * The imagesrcset value is extracted byte-for-byte from the built JS bundle
+ * (the heroAvif import string), guaranteeing it matches the rendered <source srcSet>.
+ */
 const heroPreloadPlugin: Plugin = {
   name: 'hero-preload',
   transformIndexHtml: {
@@ -29,7 +57,7 @@ const heroPreloadPlugin: Plugin = {
       // In dev mode ctx.bundle is undefined — skip silently.
       if (!ctx.bundle) return;
 
-      const fileName = findEmittedAsset(ctx.bundle, 'assets/landing/cyprus-hero.webp');
+      const avifSrcset = extractHeroAvifSrcset(ctx.bundle);
 
       const tags: HtmlTagDescriptor[] = [
         {
@@ -39,7 +67,9 @@ const heroPreloadPlugin: Plugin = {
             rel: 'preload',
             as: 'image',
             fetchpriority: 'high',
-            href: '/' + fileName,
+            type: 'image/avif',
+            imagesrcset: avifSrcset,
+            imagesizes: '100vw',
           },
         },
       ];
@@ -54,7 +84,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
 
   return {
-    plugins: [react(), heroPreloadPlugin],
+    plugins: [react(), imagetools({ removeMetadata: true }), heroPreloadPlugin],
 
     // Define global constants that are replaced at build time
     define: {
