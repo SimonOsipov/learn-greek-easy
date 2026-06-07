@@ -19,6 +19,11 @@
  *   E2E_API_URL=<dev backend api base> \
  *   npx playwright test lcp-baseline.spec.ts --grep @lcp-baseline --project=chromium
  *
+ * When PLAYWRIGHT_BASE_URL is set to a deployed host, the local webServer
+ * (npm run dev) is automatically skipped — no local backend is needed.
+ * NOTE: loopback URLs (localhost, 127.0.0.1, 0.0.0.0) are intentionally
+ * skipped; PLAYWRIGHT_BASE_URL must point to a real deployed host.
+ *
  * The auth setup (auth.setup.ts) must have run first to populate
  * playwright/.auth/learner.json, or run with --project=setup first:
  *
@@ -51,9 +56,10 @@ import { verifyAuthSucceeded } from './helpers/auth-helpers';
 import { installLCPObserver, captureLCP } from './helpers/lcp';
 
 // This spec runs ONLY against a deployed env. Skip in all other contexts.
-// PLAYWRIGHT_BASE_URL must be set and must NOT point to localhost.
+// PLAYWRIGHT_BASE_URL must be set and must NOT point to a loopback address.
+const baseURL = process.env['PLAYWRIGHT_BASE_URL'];
 test.skip(
-  !process.env['PLAYWRIGHT_BASE_URL'] || process.env['PLAYWRIGHT_BASE_URL'].includes('localhost'),
+  !baseURL || /localhost|127\.0\.0\.1|0\.0\.0\.0/.test(baseURL),
   'LCP baseline runs against a deployed env only — set PLAYWRIGHT_BASE_URL to a deployed frontend URL (not localhost)'
 );
 

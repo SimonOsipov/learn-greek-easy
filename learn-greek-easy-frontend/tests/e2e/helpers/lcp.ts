@@ -141,7 +141,7 @@ export async function installLCPObserver(page: Page): Promise<void> {
 async function resolveLCPSelector(page: Page): Promise<string> {
   return await page.evaluate(() => {
     const el = document.querySelector('[data-lcp-candidate]');
-    if (!el) return '[data-lcp-candidate]';
+    if (!el) return '(element detached from DOM)';
 
     const testId = el.getAttribute('data-testid');
     if (testId) return `[data-testid="${testId}"]`;

@@ -128,21 +128,25 @@ export default defineConfig({
     // },
   ],
 
-  // Web server configuration (start dev server before tests)
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI, // CI: always start fresh
-    timeout: 120 * 1000, // 2 minutes to start
-    env: {
-      VITE_ENVIRONMENT: 'test',
-      // API URL - explicitly pass to ensure Vite exposes to client code
-      VITE_API_URL: process.env.VITE_API_URL || 'http://localhost:8000',
-      // Supabase config for authentication
-      VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL || 'http://localhost:54321',
-      VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY || '',
-    },
-  },
+  // Web server configuration (start dev server before tests).
+  // Omitted when PLAYWRIGHT_BASE_URL is set — the tests run against the
+  // deployed env directly and no local server is needed.
+  webServer: process.env.PLAYWRIGHT_BASE_URL
+    ? undefined
+    : {
+        command: 'npm run dev',
+        url: 'http://localhost:5173',
+        reuseExistingServer: !process.env.CI, // CI: always start fresh
+        timeout: 120 * 1000, // 2 minutes to start
+        env: {
+          VITE_ENVIRONMENT: 'test',
+          // API URL - explicitly pass to ensure Vite exposes to client code
+          VITE_API_URL: process.env.VITE_API_URL || 'http://localhost:8000',
+          // Supabase config for authentication
+          VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL || 'http://localhost:54321',
+          VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY || '',
+        },
+      },
 });
 
 // Export storage state paths for use in tests
