@@ -16,8 +16,11 @@
     <!-- Preconnect hints for external origins -->
     <link rel="preconnect" href="https://accounts.google.com" crossorigin />
     <link rel="dns-prefetch" href="https://accounts.google.com" />
-    <link rel="preconnect" href="https://us.i.posthog.com" crossorigin />
+    <link rel="preconnect" href="https://eu.i.posthog.com" crossorigin />
     <link rel="preconnect" href="https://ingest.us.sentry.io" crossorigin />
+    <!-- LCP image origin (object storage). NO crossorigin: a plain <img> is a non-CORS request, so the anonymous (no-crossorigin) socket is the one the image reuses. Adding crossorigin would warm a SEPARATE CORS connection the <img> cannot reuse. -->
+    <link rel="preconnect" href="https://t3.storageapi.dev" />
+    <link rel="dns-prefetch" href="https://t3.storageapi.dev" />
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
