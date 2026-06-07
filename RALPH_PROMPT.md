@@ -2,7 +2,7 @@
 
 ## Overview
 
-Automated execution of a single user story's Backlog subtasks through per-subtask quality gates (Architecture → Explore → Test-Spec* → Execution → QA Verify; *Test-Spec runs only for logic-bearing `Test-first: yes` subtasks), followed by a story-level visual QA gate (Phase 3.5) that checks the assembled feature against the original objective on the preview deploy. Runs in an isolated git worktree so multiple stories can be worked in parallel from separate terminals without colliding.
+Automated execution of a single user story's Backlog subtasks through per-subtask quality gates (Architecture → Explore → Test-Spec* → Execution → QA Verify; *Test-Spec runs only for logic-bearing `Test-first: yes` subtasks), followed by a story-level visual QA gate (Phase 3.5) that checks the assembled feature against the original objective via the locked `release-verify.yml` run (web verification + artifacts) and the local-sim Maestro gate (mobile). Runs in an isolated git worktree so multiple stories can be worked in parallel from separate terminals without colliding.
 
 **Invocation**: `/ralph <STORY-ID>` (e.g., `/ralph SIT-07`). One story per invocation. To run multiple stories in parallel, open another terminal and invoke `/ralph SIT-09` — each invocation creates its own worktree, branch, and PR.
 
@@ -385,8 +385,8 @@ gh run list --branch "$BRANCH" --limit 1 --json databaseId,status -q '.[0]'
 2. **A green `release-verify.yml` run IS a blocker** — task completion requires the locked release (Deploy → Seed → Health/Smoke → web-verify / mobile-e2e → A11y/K6/Lighthouse) to pass inside the `dev-release-lease` window. CodeRabbit review may start as soon as per-push test checks pass, but completion is gated on the release run.
 3. **Subtask status transitions**:
    - Start: "To Do" → "In Progress" (during Phase 0.5)
-   - Complete: "In Progress" → "Done" (after CI test checks pass AND CodeRabbit fixes committed)
-4. **Story-Level Visual QA Gate (Phase 3.5) must pass** before completion — all original acceptance criteria verified visually on the preview deploy, no unresolved bounces
+   - Complete: "In Progress" → "Done" (ONLY after Phase 3.5 passes — the locked `release-verify.yml` run is green; see Phase 3 step 4 and Phase 3.5 "On PASS")
+4. **Story-Level Visual QA Gate (Phase 3.5) must pass** before completion — all original acceptance criteria verified via the locked `release-verify.yml` run's artifacts (web) / the local-sim Maestro gate (mobile), no unresolved bounces
 5. Output `<promise>ALL_TASKS_COMPLETE</promise>` ONLY after Phase 3.5 passes AND subtasks are moved to "Done"
 
 ---
