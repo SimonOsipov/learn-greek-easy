@@ -82,6 +82,17 @@ module.exports = {
         'entry-amber-32': 'rgba(246,168,35,0.32)',  // ring/glow — MOB-13 explicit alpha
         // WhatsNew green dot: 150 60% 48% = rgb(49,196,122).
         'whats-new-green': 'rgb(49,196,122)',
+        // StatGrid tints (DASH-07): icon-badge fill colours for the 2×2 stat tiles.
+        // Each has a solid fg token + a 14%-alpha bg token (MOB-13 explicit rgba).
+        // stat-amber reuses the entry-amber base; stat-green reuses the whats-new-green base.
+        // stat-primary: 221 83% 53% = rgb(36,99,235) — same base as primary-15.
+        // stat-violet:  280 70% 65% = rgb(187,103,228) — slightly lighter than entry-violet.
+        'stat-amber-14':  'rgba(246,168,35,0.14)',  // 38 92% 55% — same base as entry-amber
+        'stat-green': 'rgb(49,196,122)',             // 150 60% 48% — same base as whats-new-green
+        'stat-green-14':  'rgba(49,196,122,0.14)',   // 150 60% 48%
+        'stat-primary-14': 'rgba(36,99,235,0.14)',  // --primary 221 83% 53%
+        'stat-violet': 'rgb(187,103,228)',           // 280 70% 65%
+        'stat-violet-14': 'rgba(187,103,228,0.14)', // 280 70% 65%
         // === end MOB-13 explicit opacity tokens ===
       },
       borderRadius: {
