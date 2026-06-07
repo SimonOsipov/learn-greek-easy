@@ -224,7 +224,7 @@ from src.services.verification_tier import compute_combined_tier_v2
 from src.services.wiktionary_morphology_service import WiktionaryMorphologyService
 from src.services.wiktionary_verification_service import WiktionaryVerificationService
 from src.services.word_entry_response import word_entry_to_response
-from src.tasks import create_announcement_notifications_task
+from src.tasks import create_announcement_notifications_task, invalidate_cache_task
 from src.tasks.description_audio import generate_description_audio_task
 from src.tasks.picture_generation import generate_picture_task
 from src.utils.greek_text import resolve_tts_text
@@ -2899,6 +2899,7 @@ def _validate_card_type_eligibility(word_entry: "WordEntry", card_type: str) -> 
 async def generate_word_entry_cards(
     word_entry_id: UUID,
     request: GenerateCardsRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> GenerateCardsResponse:
@@ -2939,6 +2940,13 @@ async def generate_word_entry_cards(
     created, updated = await generate_fn([word_entry], resolved_deck_id)
 
     await db.commit()
+
+    if settings.feature_background_tasks:
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="deck",
+            entity_id=resolved_deck_id,
+        )
 
     logger.info(
         "Cards generated for word entry",
@@ -3700,6 +3708,7 @@ async def generate_word_entry_stream(
 )
 async def create_and_link_word_entry(
     body: AdminWordEntryCreateRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> AdminWordEntryCreateResponse:
@@ -3748,6 +3757,13 @@ async def create_and_link_word_entry(
     await db.commit()
     await db.refresh(word_entry)
 
+    if settings.feature_background_tasks:
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="deck",
+            entity_id=body.deck_id,
+        )
+
     return AdminWordEntryCreateResponse(
         word_entry=word_entry_to_response(word_entry, deck_id=body.deck_id),
         cards_created=cards_created,
@@ -3778,6 +3794,7 @@ async def create_and_link_word_entry(
 async def link_word_entry_to_deck(
     deck_id: UUID,
     word_entry_id: UUID,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> WordEntryResponse:
@@ -3848,6 +3865,13 @@ async def link_word_entry_to_deck(
     await db.commit()
     await db.refresh(word_entry)
 
+    if settings.feature_background_tasks:
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="deck",
+            entity_id=deck_id,
+        )
+
     return word_entry_to_response(word_entry, deck_id=deck_id)
 
 
@@ -3867,6 +3891,7 @@ async def link_word_entry_to_deck(
 async def unlink_word_entry_from_deck(
     deck_id: UUID,
     word_entry_id: UUID,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> None:
@@ -3893,6 +3918,13 @@ async def unlink_word_entry_from_deck(
     await word_entry_repo.unlink_from_deck(word_entry_id, deck_id)
 
     await db.commit()
+
+    if settings.feature_background_tasks:
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="deck",
+            entity_id=deck_id,
+        )
 
 
 @router.delete(
