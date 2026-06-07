@@ -50,6 +50,10 @@ const createMockNewsItem = (overrides: Partial<NewsItemResponse> = {}): NewsItem
   publication_date: '2026-01-27',
   original_article_url: 'https://example.com/article',
   image_url: 'https://example.com/image.jpg',
+  audio_url: null,
+  audio_generated_at: null,
+  audio_duration_seconds: null,
+  audio_file_size_bytes: null,
   created_at: '2026-01-27T00:00:00Z',
   updated_at: '2026-01-27T00:00:00Z',
   country: 'cyprus',
@@ -57,7 +61,14 @@ const createMockNewsItem = (overrides: Partial<NewsItemResponse> = {}): NewsItem
   description_el_a2: null,
   audio_a2_url: null,
   audio_a2_duration_seconds: null,
+  audio_a2_generated_at: null,
+  audio_a2_file_size_bytes: null,
   has_a2_content: false,
+  alt_text: null,
+  photo_credit: null,
+  status: 'published',
+  linked_situation: null,
+  image_variants: null,
   ...overrides,
 });
 
@@ -267,6 +278,81 @@ describe('NewsSection Component', () => {
       await waitFor(() => {
         expect(screen.queryByTestId('news-section')).not.toBeInTheDocument();
       });
+    });
+  });
+
+  // PERF-04-02/03: first-row eager wiring + null-variants guard
+  describe('Eager loading for first-row cards (PERF-04-02/03)', () => {
+    const variantSet = {
+      400: 'https://cdn.example.com/img_400w.webp',
+      800: 'https://cdn.example.com/img_800w.webp',
+      1600: 'https://cdn.example.com/img_1600w.webp',
+    };
+
+    it('first 3 cards with non-null image_variants get loading="eager", 4th card stays lazy', async () => {
+      // 4 items, all with non-null image_variants
+      const items = Array.from({ length: 4 }, (_, i) =>
+        createMockNewsItem({
+          id: `item-${i}`,
+          image_url: 'https://cdn.example.com/original.jpg',
+          image_variants: variantSet,
+        })
+      );
+      (adminAPI.getNewsItems as Mock).mockResolvedValue(createPaginatedResponse(items, 4));
+
+      render(<NewsSection />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('news-section')).toBeInTheDocument();
+      });
+
+      // All 4 article images should be rendered — grab them in DOM order
+      const allImgs = Array.from(
+        document.querySelectorAll('img[aria-hidden="true"]')
+      ) as HTMLImageElement[];
+
+      expect(allImgs).toHaveLength(4);
+
+      // First 3 must be eager (PERF-04-02 AC)
+      expect(allImgs[0].getAttribute('loading')).toBe('eager');
+      expect(allImgs[1].getAttribute('loading')).toBe('eager');
+      expect(allImgs[2].getAttribute('loading')).toBe('eager');
+      // 4th must NOT be eager
+      expect(allImgs[3].getAttribute('loading')).toBe('lazy');
+    });
+
+    it('first-row card with null image_variants stays lazy (null-variants guard, PERF-04-03)', async () => {
+      // Item 0 has null variants; item 1 has non-null variants — both are in the first row (index < 3)
+      const items = [
+        createMockNewsItem({
+          id: 'item-null',
+          image_url: 'https://cdn.example.com/original.jpg',
+          image_variants: null, // null → must stay lazy even though index=0
+        }),
+        createMockNewsItem({
+          id: 'item-variants',
+          image_url: 'https://cdn.example.com/original.jpg',
+          image_variants: variantSet, // has variants → must be eager
+        }),
+      ];
+      (adminAPI.getNewsItems as Mock).mockResolvedValue(createPaginatedResponse(items, 2));
+
+      render(<NewsSection />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('news-section')).toBeInTheDocument();
+      });
+
+      const allImgs = Array.from(
+        document.querySelectorAll('img[aria-hidden="true"]')
+      ) as HTMLImageElement[];
+
+      expect(allImgs).toHaveLength(2);
+
+      // item-null: index=0 but image_variants==null → must NOT be eager
+      expect(allImgs[0].getAttribute('loading')).toBe('lazy');
+      // item-variants: index=1 with image_variants present → must be eager
+      expect(allImgs[1].getAttribute('loading')).toBe('eager');
     });
   });
 });
