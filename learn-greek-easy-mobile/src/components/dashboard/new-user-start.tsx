@@ -108,8 +108,8 @@ export function NewUserStart({
               className={`w-10 h-10 rounded-[12px] items-center justify-center flex-shrink-0 ${row.numBg}`}
             >
               <Text
-                className="text-[17px] leading-none"
-                style={{ fontFamily: 'InterTight_700Bold', fontWeight: '800', color: '#fff' }}
+                className="text-[17px] leading-none text-on-photo"
+                style={{ fontFamily: 'InterTight_700Bold', fontWeight: '800' }}
                 aria-hidden
               >
                 {row.number}
