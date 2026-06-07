@@ -22,6 +22,7 @@ import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from uuid import UUID
 
 from fastapi import Depends, Header, Query, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -30,6 +31,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.config import settings
+from src.core.cache import get_cache
 from src.core.exceptions import (
     ConflictException,
     ForbiddenException,
@@ -92,6 +95,16 @@ async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> Us
         Uses db.flush() (not db.commit()) - the get_db() dependency
         handles commit automatically after the route handler returns.
     """
+    # 0. Cache read: skip the supabase_id SELECT on a warm identity hit
+    cache = get_cache()
+    identity_key = f"user:identity:{claims.supabase_id}"
+    cached = await cache.get(identity_key)
+    if cached:
+        user = await db.get(User, UUID(cached["id"]))
+        if user is not None:
+            return user
+        # else: torn cache (user deleted) → fall through to the real query
+
     # 1. Try to find existing user by supabase_id
     stmt = (
         select(User)
@@ -101,6 +114,11 @@ async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> Us
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
     if user is not None:
+        await cache.set(
+            identity_key,
+            {"id": str(user.id), "is_active": user.is_active, "is_superuser": user.is_superuser},
+            ttl=settings.cache_user_identity_ttl,
+        )
         return user
 
     # 2. Check if user exists by email (upsert pattern)

@@ -107,6 +107,10 @@ class Settings(BaseSettings):
         default=120,
         description="User statistics cache TTL in seconds (2 minutes)",
     )
+    cache_user_identity_ttl: int = Field(
+        default=20,
+        description="TTL (seconds) for the supabase_id→identity user lookup cache (PERF-05-05)",
+    )
 
     # =========================================================================
     # Authentication & Security
