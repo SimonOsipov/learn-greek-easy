@@ -59,8 +59,12 @@ export class APIRequestError extends Error {
  * Signs out of Supabase locally and cleans up legacy storage.
  */
 export async function clearAuthTokens(): Promise<void> {
-  const supabase = await getSupabase();
-  await supabase.auth.signOut({ scope: 'local' });
+  try {
+    const supabase = await getSupabase();
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch (err) {
+    log.warn('[clearAuthTokens] Failed to sign out from Supabase:', err);
+  }
   localStorage.removeItem('auth-storage');
   sessionStorage.removeItem('auth-token');
 }

@@ -11,6 +11,7 @@ import React, {
 import { toast } from '@/hooks/use-toast';
 import { useSSE } from '@/hooks/useSSE';
 import { reportAPIError } from '@/lib/errorReporting';
+import log from '@/lib/logger';
 import { getSupabase } from '@/lib/supabaseClient';
 import { APIRequestError } from '@/services/api';
 import * as notificationAPI from '@/services/notificationAPI';
@@ -83,15 +84,20 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     let cancelled = false;
     let subscription: { unsubscribe: () => void } | undefined;
-    getSupabase().then((supabase) => {
-      if (cancelled) return;
-      const { data } = supabase.auth.onAuthStateChange((event) => {
-        if (event === 'TOKEN_REFRESHED') {
-          setTokenVersion((v) => v + 1);
-        }
+    getSupabase()
+      .then((supabase) => {
+        if (cancelled) return;
+        const { data } = supabase.auth.onAuthStateChange((event) => {
+          if (event === 'TOKEN_REFRESHED') {
+            setTokenVersion((v) => v + 1);
+          }
+        });
+        subscription = data.subscription;
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        log.warn('[NotificationContext] Failed to initialize Supabase client:', err);
       });
-      subscription = data.subscription;
-    });
     return () => {
       cancelled = true;
       subscription?.unsubscribe();

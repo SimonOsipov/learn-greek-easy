@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 
 import { APP_NAME } from '@/lib/constants';
+import log from '@/lib/logger';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppStore } from '@/stores/appStore';
 import { useAuthStore, selectHasPersistedSession } from '@/stores/authStore';
@@ -72,34 +73,45 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     // SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED, USER_UPDATED events.
     let cancelled = false;
     let subscription: { unsubscribe: () => void } | undefined;
-    getSupabase().then((supabase) => {
-      if (cancelled) return;
-      const { data } = supabase.auth.onAuthStateChange((event) => {
-        if (event === 'INITIAL_SESSION') {
-          // Initial session check on mount
-          initialSessionHandledRef.current = true;
-          handleAuthEvent();
-        } else if (event === 'SIGNED_IN') {
-          // Skip the redundant SIGNED_IN that Supabase fires right after
-          // INITIAL_SESSION for already-authenticated users. Only react to
-          // SIGNED_IN when the user was not yet authenticated (actual login).
-          const { isAuthenticated } = useAuthStore.getState();
-          if (!initialSessionHandledRef.current || !isAuthenticated) {
+    getSupabase()
+      .then((supabase) => {
+        if (cancelled) return;
+        const { data } = supabase.auth.onAuthStateChange((event) => {
+          if (event === 'INITIAL_SESSION') {
+            // Initial session check on mount
+            initialSessionHandledRef.current = true;
             handleAuthEvent();
+          } else if (event === 'SIGNED_IN') {
+            // Skip the redundant SIGNED_IN that Supabase fires right after
+            // INITIAL_SESSION for already-authenticated users. Only react to
+            // SIGNED_IN when the user was not yet authenticated (actual login).
+            const { isAuthenticated } = useAuthStore.getState();
+            if (!initialSessionHandledRef.current || !isAuthenticated) {
+              handleAuthEvent();
+            }
+          } else if (event === 'USER_UPDATED') {
+            handleAuthEvent();
+          } else if (event === 'SIGNED_OUT') {
+            // User signed out - clear auth state
+            useAuthStore.setState({
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
           }
-        } else if (event === 'USER_UPDATED') {
-          handleAuthEvent();
-        } else if (event === 'SIGNED_OUT') {
-          // User signed out - clear auth state
-          useAuthStore.setState({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
-          });
+        });
+        subscription = data.subscription;
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        log.warn('[RouteGuard] Failed to initialize Supabase client:', err);
+        // Treat as unauthenticated — complete initialization so the user is not stuck on the spinner.
+        if (!hasInitializedRef.current) {
+          hasInitializedRef.current = true;
+          setIsInitializing(false);
+          setAuthInitialized();
         }
       });
-      subscription = data.subscription;
-    });
 
     return () => {
       cancelled = true;

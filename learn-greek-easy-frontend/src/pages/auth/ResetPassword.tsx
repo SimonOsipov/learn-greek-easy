@@ -94,13 +94,22 @@ export const ResetPassword: React.FC = () => {
   const [userEmail, setUserEmail] = useState<string>('');
 
   useEffect(() => {
+    let cancelled = false;
     getSupabase()
       .then((supabase) => supabase.auth.getUser())
       .then(({ data }) => {
-        if (data.user?.email) {
+        if (!cancelled && data.user?.email) {
           setUserEmail(data.user.email);
         }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          log.warn('[ResetPassword] Failed to load user email:', err);
+        }
       });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   /**

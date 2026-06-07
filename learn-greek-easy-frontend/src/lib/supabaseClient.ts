@@ -9,9 +9,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
 let _clientPromise: Promise<SupabaseClient> | null = null;
 export function getSupabase(): Promise<SupabaseClient> {
   if (_clientPromise === null) {
-    _clientPromise = import('@supabase/supabase-js').then(({ createClient }) =>
-      createClient(supabaseUrl, supabaseAnonKey)
-    );
+    _clientPromise = import('@supabase/supabase-js')
+      .then(({ createClient }) => createClient(supabaseUrl, supabaseAnonKey))
+      .catch((err) => {
+        _clientPromise = null;
+        throw err;
+      });
   }
   return _clientPromise;
 }
