@@ -9,6 +9,8 @@ from uuid import UUID
 from sqlalchemy import func, literal, select, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import settings  # noqa: F401 (may already be imported transitively)
+from src.core.cache import get_cache
 from src.db.models import (
     CardRecordReview,
     CardStatus,
@@ -71,6 +73,18 @@ class ProgressService:
     # ── Dashboard ──────────────────────────────────────────────────────────
 
     async def get_dashboard_stats(self, user_id: UUID) -> DashboardStatsResponse:
+        cache = get_cache()
+        key = f"progress:user:{user_id}:dashboard"
+
+        async def _factory() -> dict:
+            return (await self._compute_dashboard_stats(user_id)).model_dump(mode="json")
+
+        cached = await cache.get_or_set(key, _factory, ttl=settings.cache_user_progress_ttl)  # type: ignore[arg-type]
+        if cached is not None:
+            return DashboardStatsResponse.model_validate(cached)
+        return await self._compute_dashboard_stats(user_id)
+
+    async def _compute_dashboard_stats(self, user_id: UUID) -> DashboardStatsResponse:
         # Group 1: status counts and overview metrics
         vocab_status: dict[str, int]
         culture_status: dict[str, int]
@@ -487,6 +501,25 @@ class ProgressService:
     # ── Deck List ─────────────────────────────────────────────────────────
 
     async def get_deck_progress_list(
+        self,
+        user_id: UUID,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> DeckProgressListResponse:
+        cache = get_cache()
+        key = f"progress:user:{user_id}:decks:{page}:{page_size}"
+
+        async def _factory() -> dict:
+            return (await self._compute_deck_progress_list(user_id, page, page_size)).model_dump(
+                mode="json"
+            )
+
+        cached = await cache.get_or_set(key, _factory, ttl=settings.cache_user_progress_ttl)  # type: ignore[arg-type]
+        if cached is not None:
+            return DeckProgressListResponse.model_validate(cached)
+        return await self._compute_deck_progress_list(user_id, page, page_size)
+
+    async def _compute_deck_progress_list(
         self,
         user_id: UUID,
         page: int = 1,
