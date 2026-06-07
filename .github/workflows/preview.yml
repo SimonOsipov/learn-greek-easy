@@ -44,18 +44,22 @@ jobs:
           IS_DRAFT="${{ github.event.pull_request.draft }}"
           EVENT="${{ github.event.action }}"
           IS_DISPATCH="${{ github.event_name == 'workflow_dispatch' }}"
+          IS_RELEASE_LABEL="${{ github.event.action == 'labeled' && github.event.label.name == 'ready-to-verify' }}"
 
           echo "=== Full Test Condition Check ==="
           echo "Event: $EVENT"
           echo "Is Draft: $IS_DRAFT"
           echo "Is workflow_dispatch: $IS_DISPATCH"
+          echo "Is ready-to-verify label: $IS_RELEASE_LABEL"
 
           # Run full tests if:
           # 1. Manual workflow_dispatch
           # 2. ready_for_review event (draft -> ready transition)
           # 3. Non-draft PR with standard events (opened, synchronize, reopened)
+          # 4. ready-to-verify label added (deliberate release signal)
           if [[ "$IS_DISPATCH" == "true" ]] || \
              [[ "$EVENT" == "ready_for_review" ]] || \
+             [[ "$IS_RELEASE_LABEL" == "true" ]] || \
              [[ "$IS_DRAFT" == "false" && ("$EVENT" == "opened" || "$EVENT" == "synchronize" || "$EVENT" == "reopened") ]]; then
             echo "run_full=true" >> $GITHUB_OUTPUT
             echo "Result: Full test suite will run"
