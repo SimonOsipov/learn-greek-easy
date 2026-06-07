@@ -107,9 +107,77 @@ describe('NewsCard srcset (PERF-10)', () => {
     expect(img?.getAttribute('loading')).toBe('lazy');
   });
 
+  it('img has no fetchPriority when eager is absent (default lazy)', () => {
+    render(<NewsCard article={baseArticle} newsLang="el" />);
+    const img = document.querySelector('img[aria-hidden="true"]') as HTMLImageElement | null;
+    // fetchPriority must NOT be set to "high" when eager is absent/false
+    expect(img?.getAttribute('fetchpriority')).not.toBe('high');
+  });
+
   it('no <img> rendered when image_url is null', () => {
     render(<NewsCard article={{ ...baseArticle, image_url: null }} newsLang="el" />);
     const img = document.querySelector('img[aria-hidden="true"]');
     expect(img).toBeNull();
+  });
+});
+
+// PERF-04-02: eager prop wires loading="eager" + fetchPriority="high"
+describe('NewsCard eager loading (PERF-04-02)', () => {
+  const articleWithVariants: NewsItemResponse = {
+    ...{
+      id: 'news-eager',
+      situation_id: 'sit-1',
+      title_el: 'Τίτλος',
+      title_en: 'Title',
+      title_ru: 'Заголовок',
+      description_el: 'Περιγραφή',
+      description_en: 'Description',
+      description_ru: 'Описание',
+      publication_date: '2026-01-01',
+      original_article_url: 'https://example.com',
+      image_url: 'https://cdn.example.com/original.jpg',
+      image_variants: null,
+      audio_url: null,
+      audio_generated_at: null,
+      audio_duration_seconds: null,
+      audio_file_size_bytes: null,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+      country: 'greece',
+      title_el_a2: null,
+      description_el_a2: null,
+      audio_a2_url: null,
+      audio_a2_duration_seconds: null,
+      audio_a2_generated_at: null,
+      audio_a2_file_size_bytes: null,
+      has_a2_content: false,
+      alt_text: null,
+      photo_credit: null,
+      status: 'published',
+      linked_situation: null,
+    },
+    image_variants: {
+      400: 'https://cdn.example.com/img_400w.webp',
+      800: 'https://cdn.example.com/img_800w.webp',
+      1600: 'https://cdn.example.com/img_1600w.webp',
+    },
+  } as NewsItemResponse;
+
+  it('sets loading="eager" and fetchPriority="high" when eager prop is true', () => {
+    // Cast through unknown to avoid TS error before the prop is added to NewsCardProps.
+    // The test will fail at ASSERTION level (loading is "lazy", not "eager") — not at compile/collection level.
+    const props = { article: articleWithVariants, newsLang: 'el' as const, eager: true };
+    render(<NewsCard {...(props as Parameters<typeof NewsCard>[0])} />);
+    const img = document.querySelector('img[aria-hidden="true"]') as HTMLImageElement | null;
+    expect(img?.getAttribute('loading')).toBe('eager');
+    expect(img?.getAttribute('fetchpriority')).toBe('high');
+  });
+
+  it('retains loading="lazy" and no fetchPriority="high" when eager is false', () => {
+    const props = { article: articleWithVariants, newsLang: 'el' as const, eager: false };
+    render(<NewsCard {...(props as Parameters<typeof NewsCard>[0])} />);
+    const img = document.querySelector('img[aria-hidden="true"]') as HTMLImageElement | null;
+    expect(img?.getAttribute('loading')).toBe('lazy');
+    expect(img?.getAttribute('fetchpriority')).not.toBe('high');
   });
 });
