@@ -11,13 +11,16 @@ All tests use real database connections via the db_session fixture.
 All endpoints require authentication.
 """
 
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import CultureDeck, CultureQuestion
+from src.config import settings
+from src.db.models import CultureDeck, CultureQuestion, User
+from src.tasks import invalidate_cache_task
 
 # =============================================================================
 # Test Fixtures
@@ -804,3 +807,93 @@ class TestMockExamSubmitAllEndpoint:
         )
 
         assert response.status_code == 422  # Validation error
+
+
+# =============================================================================
+# RED tests for PERF-05-04: cache-invalidation wiring
+# =============================================================================
+
+
+class TestMockExamCacheInvalidation:
+    """[RED] Tests verifying that mock exam submit-all schedules
+    invalidate_cache_task. Fails until PERF-05-04 wires the hook.
+    """
+
+    @pytest.mark.asyncio
+    async def test_mock_exam_submit_all_schedules_progress_invalidation(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        test_user: User,
+        culture_deck_with_questions: tuple,
+    ):
+        """[RED] POST /api/v1/culture/mock-exam/sessions/{id}/submit-all must schedule
+        invalidate_cache_task(cache_type='progress', user_id=<auth user>, entity_id=None)
+        when background tasks are enabled.
+        Fails until the hook is wired in the mock exam submit-all endpoint.
+        """
+        deck, questions = culture_deck_with_questions
+
+        # Create an active session first
+        create_response = await client.post(
+            "/api/v1/culture/mock-exam/sessions",
+            headers=auth_headers,
+        )
+        assert (
+            create_response.status_code == 201
+        ), f"Session creation failed: {create_response.text}"
+        session_id = create_response.json()["session"]["id"]
+        exam_questions = create_response.json()["questions"]
+
+        # Build passing answers (16/25 = 64%, above 60% threshold)
+        answers = []
+        for i, question in enumerate(exam_questions):
+            question_id = question["id"]
+            db_question = next(q for q in questions if str(q.id) == question_id)
+            if i < 16:
+                answers.append(
+                    {
+                        "question_id": question_id,
+                        "selected_option": db_question.correct_option,
+                        "time_taken_seconds": 10,
+                    }
+                )
+            else:
+                wrong_option = (db_question.correct_option % 4) + 1
+                answers.append(
+                    {
+                        "question_id": question_id,
+                        "selected_option": wrong_option,
+                        "time_taken_seconds": 10,
+                    }
+                )
+
+        # Patch BackgroundTasks.add_task at the Starlette class level so all
+        # instances are instrumented. feature_background_tasks must be True so
+        # the gated branch in mock_exam.py fires.
+        with (
+            patch.object(settings, "feature_background_tasks", True),
+            patch("starlette.background.BackgroundTasks.add_task") as mock_add_task,
+        ):
+            response = await client.post(
+                f"/api/v1/culture/mock-exam/sessions/{session_id}/submit-all",
+                headers=auth_headers,
+                json={"answers": answers, "total_time_seconds": 1200},
+            )
+
+        assert response.status_code == 200, (
+            f"Endpoint returned {response.status_code}: {response.text}. "
+            "Fix setup so endpoint succeeds before asserting on invalidation."
+        )
+
+        # Filter for invalidate_cache_task calls only
+        invalidation_calls = [
+            c for c in mock_add_task.call_args_list if c.args and c.args[0] is invalidate_cache_task
+        ]
+        assert (
+            len(invalidation_calls) == 1
+        ), f"Expected exactly 1 invalidate_cache_task call, found {len(invalidation_calls)}"
+        call_kwargs = invalidation_calls[0].kwargs
+        assert call_kwargs.get("cache_type") == "progress"
+        assert call_kwargs.get("user_id") == test_user.id
+        assert call_kwargs.get("entity_id") is None

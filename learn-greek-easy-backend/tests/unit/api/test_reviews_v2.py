@@ -1,11 +1,12 @@
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
 from src.db.models import CardStatus
 from src.schemas.v2_sm2 import V2ReviewResult
+from src.tasks import invalidate_cache_task
 
 
 def _make_v2_review_result() -> V2ReviewResult:
@@ -297,3 +298,52 @@ class TestSubmitV2Review:
         assert "interval" in data
         assert "repetitions" in data
         assert "next_review_date" in data
+
+    @pytest.mark.asyncio
+    async def test_vocab_review_schedules_progress_invalidation(
+        self, client, auth_headers, test_user
+    ):
+        """[RED] POST /api/v1/reviews/v2 must schedule invalidate_cache_task(
+        cache_type='progress', user_id=<auth user>, entity_id=UUID(ctx['deck_id']))
+        when background tasks are enabled. Fails until the hook is wired.
+        """
+        mock_card_record = MagicMock()
+        mock_card_record.deck = MagicMock()
+        review_ctx = _make_review_context()
+        deck_id_str = review_ctx["deck_id"]
+
+        with (
+            patch("src.api.v1.reviews_v2.CardRecordRepository") as mock_repo_cls,
+            patch("src.api.v1.reviews_v2.CardRecordReviewRepository") as mock_review_repo_cls,
+            patch("src.api.v1.reviews_v2.V2SM2Service") as mock_service_cls,
+            patch("src.api.v1.reviews_v2.check_premium_deck_access"),
+            patch("src.api.v1.reviews_v2.persist_deck_review_task"),
+            patch("src.api.v1.reviews_v2.settings") as mock_settings,
+            patch("starlette.background.BackgroundTasks.add_task") as mock_add_task,
+        ):
+            mock_repo_cls.return_value.get = AsyncMock(return_value=mock_card_record)
+            mock_review_repo_cls.return_value.count_reviews_today = AsyncMock(return_value=0)
+            mock_service_cls.return_value.compute_review = AsyncMock(
+                return_value=(_make_v2_review_result(), review_ctx)
+            )
+            mock_settings.feature_background_tasks = True
+
+            response = await client.post(
+                "/api/v1/reviews/v2",
+                json=_valid_review_body(),
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200
+
+        # Filter calls to add_task that scheduled invalidate_cache_task
+        invalidation_calls = [
+            c for c in mock_add_task.call_args_list if c.args and c.args[0] is invalidate_cache_task
+        ]
+        assert (
+            len(invalidation_calls) == 1
+        ), f"Expected exactly 1 invalidate_cache_task call, found {len(invalidation_calls)}"
+        call_kwargs = invalidation_calls[0].kwargs
+        assert call_kwargs.get("cache_type") == "progress"
+        assert call_kwargs.get("user_id") == test_user.id
+        assert call_kwargs.get("entity_id") == UUID(deck_id_str)

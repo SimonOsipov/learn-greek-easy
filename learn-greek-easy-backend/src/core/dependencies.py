@@ -22,6 +22,7 @@ import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from uuid import UUID
 
 from fastapi import Depends, Header, Query, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -30,6 +31,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.config import settings
+from src.core.cache import get_cache
 from src.core.exceptions import (
     ConflictException,
     ForbiddenException,
@@ -69,6 +72,14 @@ class SSEAuthResult:
         return self.user is not None
 
 
+def _parse_cached_uuid(cached: dict) -> UUID | None:
+    """Return UUID from a cached identity dict, or None if the entry is malformed."""
+    try:
+        return UUID(cached["id"])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> User:
     """Get or create a user based on Supabase JWT claims.
 
@@ -92,6 +103,17 @@ async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> Us
         Uses db.flush() (not db.commit()) - the get_db() dependency
         handles commit automatically after the route handler returns.
     """
+    # 0. Cache read: skip the supabase_id SELECT on a warm identity hit
+    cache = get_cache()
+    identity_key = f"user:identity:{claims.supabase_id}"
+    cached = await cache.get(identity_key)
+    if cached:
+        cached_user_id = _parse_cached_uuid(cached)
+        user = await db.get(User, cached_user_id) if cached_user_id else None
+        if user is not None:
+            return user
+        # else: malformed/torn cache OR deleted user → fall through to the real query
+
     # 1. Try to find existing user by supabase_id
     stmt = (
         select(User)
@@ -101,6 +123,11 @@ async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> Us
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
     if user is not None:
+        await cache.set(
+            identity_key,
+            {"id": str(user.id), "is_active": user.is_active, "is_superuser": user.is_superuser},
+            ttl=settings.cache_user_identity_ttl,
+        )
         return user
 
     # 2. Check if user exists by email (upsert pattern)
@@ -208,7 +235,11 @@ async def get_current_user(
     Example:
         @router.get("/me")
         async def get_me(current_user: User = Depends(get_current_user)):
-            return UserProfileResponse.model_validate(current_user)
+            # current_user.settings is NOT eagerly loaded here — do NOT call
+            # UserProfileResponse.model_validate(current_user) directly.
+            # Profile endpoints refetch with selectinload(User.settings):
+            #   stmt = select(User).options(selectinload(User.settings)).where(...)
+            return {"id": str(current_user.id), "email": current_user.email}
     """
     # 0. Per-request memo: if the user was already resolved earlier in this
     #    request (e.g. via a second Depends(get_current_user) injection),

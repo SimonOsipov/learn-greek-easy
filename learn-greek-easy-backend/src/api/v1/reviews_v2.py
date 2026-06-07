@@ -1,4 +1,5 @@
 import asyncio
+from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +15,7 @@ from src.repositories.card_record import CardRecordRepository
 from src.repositories.card_record_review import CardRecordReviewRepository
 from src.schemas.v2_sm2 import V2ReviewRequest, V2ReviewResult
 from src.services.v2_sm2_service import V2SM2Service
-from src.tasks.background import persist_deck_review_task
+from src.tasks.background import invalidate_cache_task, persist_deck_review_task
 
 logger = get_logger(__name__)
 
@@ -66,6 +67,12 @@ async def submit_v2_review(
             **context,
             reviews_before=reviews_before,
             user_email=current_user.email,
+        )
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="progress",
+            entity_id=UUID(context["deck_id"]),
+            user_id=current_user.id,
         )
     else:
         await service.persist_review(context)

@@ -9,6 +9,7 @@ All tests use real database connections via the db_session fixture.
 """
 
 from datetime import date, timedelta
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -16,6 +17,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import CardStatus, CultureDeck, CultureQuestion, CultureQuestionStats, User
+from src.tasks import invalidate_cache_task
 
 # =============================================================================
 # Test Fixtures
@@ -726,3 +728,60 @@ class TestGetProgressEndpoint:
 
         assert "history" in data["by_category"]
         assert data["by_category"]["history"]["questions_total"] == 10
+
+
+# =============================================================================
+# RED tests for PERF-05-04: cache-invalidation wiring
+# =============================================================================
+
+
+class TestCultureAnswerCacheInvalidation:
+    """[RED] Tests verifying that culture answer submission schedules
+    invalidate_cache_task. Fails until PERF-05-04 wires the hook.
+    """
+
+    @pytest.mark.asyncio
+    async def test_culture_answer_schedules_progress_invalidation(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        test_user: User,
+        culture_deck: CultureDeck,
+        culture_questions: list[CultureQuestion],
+    ):
+        """[RED] POST /api/v1/culture/questions/{id}/answer must schedule
+        invalidate_cache_task(cache_type='progress', user_id=<auth user>,
+        entity_id=None) when background tasks are enabled.
+        Fails until the hook is wired in the culture answer endpoint.
+        """
+        question = culture_questions[0]
+
+        with (
+            patch(
+                "src.api.v1.culture.router.is_background_tasks_enabled",
+                return_value=True,
+            ),
+            patch("starlette.background.BackgroundTasks.add_task") as mock_add_task,
+        ):
+            response = await client.post(
+                f"/api/v1/culture/questions/{question.id}/answer",
+                headers=auth_headers,
+                json={"selected_option": 1, "time_taken": 10},
+            )
+
+        assert response.status_code == 200, (
+            f"Endpoint returned {response.status_code}: {response.text}. "
+            "Fix setup so endpoint succeeds before asserting on invalidation."
+        )
+
+        # Filter for invalidate_cache_task calls only
+        invalidation_calls = [
+            c for c in mock_add_task.call_args_list if c.args and c.args[0] is invalidate_cache_task
+        ]
+        assert (
+            len(invalidation_calls) == 1
+        ), f"Expected exactly 1 invalidate_cache_task call, found {len(invalidation_calls)}"
+        call_kwargs = invalidation_calls[0].kwargs
+        assert call_kwargs.get("cache_type") == "progress"
+        assert call_kwargs.get("user_id") == test_user.id
+        assert call_kwargs.get("entity_id") is None

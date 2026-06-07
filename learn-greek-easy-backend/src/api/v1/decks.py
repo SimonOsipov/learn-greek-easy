@@ -10,9 +10,11 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, status
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
+from src.core.cache import get_cache
 from src.core.dependencies import get_current_user, get_locale_from_header
 from src.core.exceptions import DeckNotFoundException, ForbiddenException
 from src.core.localization import get_localized_deck_content
@@ -162,51 +164,68 @@ async def list_decks(
     Example:
         GET /api/v1/decks?page=1&page_size=10&level=A1
     """
-    repo = DeckRepository(db)
 
-    # Calculate offset from page number
-    skip = (page - 1) * page_size
+    async def _compute() -> DeckListResponse:
+        repo = DeckRepository(db)
 
-    # Get decks and total count
-    decks = await repo.list_active(skip=skip, limit=page_size, level=level)
-    total = await repo.count_active(level=level)
+        # Calculate offset from page number
+        skip = (page - 1) * page_size
 
-    # Get card counts for all decks in batch
-    deck_ids = [deck.id for deck in decks]
-    card_counts = await repo.get_batch_card_counts(deck_ids)
+        # Get decks and total count
+        decks = await repo.list_active(skip=skip, limit=page_size, level=level)
+        total = await repo.count_active(level=level)
 
-    # Build localized response with card counts
-    s3 = get_s3_service()
-    deck_responses = []
-    for deck in decks:
-        name, description = get_localized_deck_content(deck, locale)
-        deck_responses.append(
-            DeckResponse(
-                id=deck.id,
-                name=name,
-                description=description,
-                name_en=deck.name_en,
-                name_ru=deck.name_ru,
-                name_el=deck.name_el,
-                description_en=deck.description_en,
-                description_ru=deck.description_ru,
-                description_el=deck.description_el,
-                level=deck.level,
-                is_active=deck.is_active,
-                is_premium=deck.is_premium,
-                card_count=card_counts.get(deck.id, 0),
-                created_at=deck.created_at,
-                updated_at=deck.updated_at,
-                cover_image_url=_deck_cover_url(deck, s3),
+        # Get card counts for all decks in batch
+        deck_ids = [deck.id for deck in decks]
+        card_counts = await repo.get_batch_card_counts(deck_ids)
+
+        # Build localized response with card counts
+        s3 = get_s3_service()
+        deck_responses = []
+        for deck in decks:
+            name, description = get_localized_deck_content(deck, locale)
+            deck_responses.append(
+                DeckResponse(
+                    id=deck.id,
+                    name=name,
+                    description=description,
+                    name_en=deck.name_en,
+                    name_ru=deck.name_ru,
+                    name_el=deck.name_el,
+                    description_en=deck.description_en,
+                    description_ru=deck.description_ru,
+                    description_el=deck.description_el,
+                    level=deck.level,
+                    is_active=deck.is_active,
+                    is_premium=deck.is_premium,
+                    card_count=card_counts.get(deck.id, 0),
+                    created_at=deck.created_at,
+                    updated_at=deck.updated_at,
+                    cover_image_url=_deck_cover_url(deck, s3),
+                )
             )
+
+        return DeckListResponse(
+            total=total,
+            page=page,
+            page_size=page_size,
+            decks=deck_responses,
         )
 
-    return DeckListResponse(
-        total=total,
-        page=page,
-        page_size=page_size,
-        decks=deck_responses,
-    )
+    cache = get_cache()
+    level_key = level.value if level else "all"
+    key = f"decks:list:{locale}:{level_key}:{page}:{page_size}"
+
+    async def _factory() -> dict:
+        return (await _compute()).model_dump(mode="json")
+
+    cached = await cache.get_or_set(key, _factory, ttl=settings.cache_deck_list_ttl)  # type: ignore[arg-type]
+    if cached is not None:
+        try:
+            return DeckListResponse.model_validate(cached)
+        except ValidationError:
+            pass
+    return await _compute()
 
 
 @router.post(
@@ -242,6 +261,7 @@ async def list_decks(
 )
 async def create_deck(
     deck_data: DeckCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DeckResponse:
@@ -297,6 +317,14 @@ async def create_deck(
     # Commit the transaction
     await db.commit()
     await db.refresh(deck)
+
+    # Schedule background tasks if enabled
+    if settings.feature_background_tasks:
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="deck",
+            entity_id=deck.id,
+        )
 
     # Return response with localized fields (default to English for created deck)
     return DeckResponse(

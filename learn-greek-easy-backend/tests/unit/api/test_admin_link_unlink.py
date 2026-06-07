@@ -19,7 +19,8 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Deck, DeckLevel, DeckWordEntry, PartOfSpeech, WordEntry
+from src.db.models import Deck, DeckLevel, DeckWordEntry, PartOfSpeech, User, WordEntry
+from src.tasks import invalidate_cache_task
 
 LINK_URL = "/api/v1/admin/decks/{deck_id}/word-entries/{word_entry_id}/link"
 
@@ -279,3 +280,64 @@ class TestUnlinkWordEntry:
             headers=auth_headers,
         )
         assert response.status_code == 403
+
+
+# =============================================================================
+# RED tests for PERF-05-04: cache-invalidation wiring
+# =============================================================================
+
+
+@pytest.mark.unit
+class TestLinkWordEntryCacheInvalidation:
+    """[RED] Tests verifying that word-entry link schedules invalidate_cache_task.
+    Fails until PERF-05-04 wires the hook.
+    """
+
+    @pytest.mark.asyncio
+    async def test_link_word_entry_schedules_deck_invalidation(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        test_superuser: User,
+        test_deck: Deck,
+        test_word_entry: WordEntry,
+    ) -> None:
+        """[RED] POST /api/v1/admin/decks/{deck_id}/word-entries/{word_entry_id}/link
+        must schedule invalidate_cache_task(cache_type='deck', entity_id=<deck_id>)
+        when background tasks are enabled.
+        Fails until the hook is wired in the admin link endpoint.
+        """
+        with (
+            patch("src.api.v1.admin.CardGeneratorService") as mock_card_svc_cls,
+            patch("src.api.v1.admin.settings") as mock_settings,
+            patch("starlette.background.BackgroundTasks.add_task") as mock_add_task,
+        ):
+            mock_card_svc = AsyncMock()
+            mock_card_svc.generate_meaning_cards = AsyncMock(return_value=(0, 0))
+            mock_card_svc.generate_plural_form_cards = AsyncMock(return_value=(0, 0))
+            mock_card_svc.generate_sentence_translation_cards = AsyncMock(return_value=(0, 0))
+            mock_card_svc.generate_article_cards = AsyncMock(return_value=(0, 0))
+            mock_card_svc.generate_declension_cards = AsyncMock(return_value=(0, 0))
+            mock_card_svc_cls.return_value = mock_card_svc
+            mock_settings.feature_background_tasks = True
+
+            response = await client.post(
+                _url(test_deck.id, test_word_entry.id),
+                headers=superuser_auth_headers,
+            )
+
+        assert response.status_code == 201, (
+            f"Endpoint returned {response.status_code}: {response.text}. "
+            "Fix setup so endpoint succeeds before asserting on invalidation."
+        )
+
+        # Filter for invalidate_cache_task calls only
+        invalidation_calls = [
+            c for c in mock_add_task.call_args_list if c.args and c.args[0] is invalidate_cache_task
+        ]
+        assert (
+            len(invalidation_calls) == 1
+        ), f"Expected exactly 1 invalidate_cache_task call, found {len(invalidation_calls)}"
+        call_kwargs = invalidation_calls[0].kwargs
+        assert call_kwargs.get("cache_type") == "deck"
+        assert call_kwargs.get("entity_id") == test_deck.id
