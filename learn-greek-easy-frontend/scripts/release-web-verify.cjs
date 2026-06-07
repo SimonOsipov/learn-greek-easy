@@ -25,7 +25,10 @@ const path = require('path');
 // ============================================================================
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-const SEED_EMAIL = 'e2e_beginner@test.com';
+const PR_NUMBER = (process.env.PR_NUMBER || '').trim();
+const SEED_EMAIL = PR_NUMBER
+  ? `e2e_beginner+pr${PR_NUMBER}@test.com`
+  : 'e2e_beginner@test.com';
 const SEED_PASSWORD = 'TestPassword123!';
 const REPORTS_DIR = path.join(process.cwd(), 'web-verify-reports');
 

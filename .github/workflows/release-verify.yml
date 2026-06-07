@@ -719,6 +719,7 @@ jobs:
         working-directory: learn-greek-easy-frontend
         env:
           FRONTEND_URL: ${{ needs.deploy.outputs.frontend_url }}
+          PR_NUMBER: ${{ env.PR_NUMBER }}
         run: node scripts/release-web-verify.cjs
       - name: Upload web verify screenshots
         if: always()
