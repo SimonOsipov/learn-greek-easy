@@ -132,7 +132,7 @@ export const NewsSection: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {items.map((item) => (
+          {items.map((item, index) => (
             <NewsCard
               key={item.id}
               article={item}
@@ -140,6 +140,7 @@ export const NewsSection: React.FC = () => {
               page="dashboard"
               level={newsLevel}
               variant="compact"
+              eager={index < 3 && item.image_variants != null}
             />
           ))}
         </div>

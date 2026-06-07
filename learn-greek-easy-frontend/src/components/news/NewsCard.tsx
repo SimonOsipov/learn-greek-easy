@@ -33,6 +33,7 @@ export interface NewsCardProps {
   page?: 'dashboard' | 'news';
   level?: NewsLevel;
   variant?: 'compact' | 'full';
+  eager?: boolean;
 }
 
 const heightClasses: Record<NewsCardHeight, string> = {
@@ -47,6 +48,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
   page,
   level = 'b2',
   variant = 'full',
+  eager,
 }) => {
   const { t } = useTranslation('common');
 
@@ -175,7 +177,8 @@ export const NewsCard: React.FC<NewsCardProps> = ({
             width={800}
             height={450}
             className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
-            loading="lazy"
+            loading={eager ? 'eager' : 'lazy'}
+            fetchPriority={eager ? 'high' : undefined}
             onError={recoverDerivativeError}
           />
         )}
