@@ -17,6 +17,7 @@ Add `CI Gate` under **Settings → Branches → Branch protection rules → Requ
 | Label | Effect |
 |-------|--------|
 | `skip-k6` | Skip k6 performance tests |
+| `ready-to-verify` | Triggers dev preview deploy + health/seed/e2e/perf/a11y/lighthouse chain on the PR. Dev deploy is no longer push-triggered — this label (or `workflow_dispatch`) is required. |
 
 > **Note:** `skip-visual` label exists but has no effect — visual regression tests are currently disabled (being reorganized).
 > `needs-native-build` label is retired (MOB-15) — the native iOS build + Maestro flows now run automatically as the `mobile-e2e` job in `preview.yml` on every ready mobile PR.
@@ -26,7 +27,7 @@ Add `CI Gate` under **Settings → Branches → Branch protection rules → Requ
 | PR State | Tests Run |
 |----------|-----------|
 | Draft PR | Quick checks only (lint, typecheck, format) |
-| Ready PR | Full suite: CI tests, deploy, health, a11y, Lighthouse, k6 |
+| Ready PR | CI tests run on every push. **Dev deploy + downstream jobs (health, seed, a11y, Lighthouse, k6, mobile-e2e) only run on `workflow_dispatch` or when the `ready-to-verify` label is applied.** |
 
 ## CI Workflow Behavior
 

@@ -38,8 +38,13 @@ from src.db.models import (
     NewsItem,
 )
 from src.repositories.user import UserRepository, UserSettingsRepository
-from src.schemas.seed import SeedRequest, SeedResultResponse, SeedStatusResponse
-from src.services.seed_service import SeedService
+from src.schemas.seed import (
+    ResetOnboardingRequest,
+    SeedRequest,
+    SeedResultResponse,
+    SeedStatusResponse,
+)
+from src.services.seed_service import SeedService, namespaced_beginner_email
 
 logger = get_logger(__name__)
 
@@ -155,9 +160,11 @@ async def seed_all(
 
     service = SeedService(db)
 
+    pr_number = request.pr_number if request else None
+
     # Note: skip_truncate option is less relevant now since users are permanent
     # Both paths call seed_all() which handles truncation (except for users)
-    result = await service.seed_all()
+    result = await service.seed_all(pr_number=pr_number)
 
     duration_ms = (perf_counter() - start_time) * 1000
 
@@ -1146,12 +1153,14 @@ async def seed_card_errors_batch(
     "/reset-onboarding",
     response_model=SeedResultResponse,
     summary="Reset onboarding state for e2e_beginner user",
-    description="Nulls tour_completed_at for e2e_beginner@test.com so Maestro E2E tests "
+    description="Nulls tour_completed_at for the E2E beginner user so Maestro E2E tests "
     "can exercise the onboarding tour from a clean state. "
+    "Pass pr_number in the body to target a namespaced user (e.g. e2e_beginner+pr<N>@test.com). "
     "Requires test users to be seeded first.",
     dependencies=[Depends(verify_seed_access)],
 )
 async def reset_onboarding(
+    body: Optional[ResetOnboardingRequest] = Body(default=None),
     db: AsyncSession = Depends(get_db),
 ) -> SeedResultResponse:
     """Null tour_completed_at for the E2E beginner user.
@@ -1159,18 +1168,23 @@ async def reset_onboarding(
     Resets the onboarding tour state so E2E tests can exercise the full
     first-run experience regardless of prior test runs.
 
+    When pr_number is supplied in the request body, targets the namespaced
+    e2e_beginner+pr<N>@test.com user instead of the default (RGATE-05).
+
     Returns:
         SeedResultResponse with operation details
 
     Raises:
-        404: If e2e_beginner@test.com is not found in the database
+        404: If the resolved beginner email is not found in the database
         404: If UserSettings row is missing for the beginner user
     """
     start_time = perf_counter()
 
-    user = await UserRepository(db).get_by_email("e2e_beginner@test.com")
+    email = namespaced_beginner_email(body.pr_number if body else None)
+
+    user = await UserRepository(db).get_by_email(email)
     if user is None:
-        raise HTTPException(status_code=404, detail="E2E beginner user not found")
+        raise HTTPException(status_code=404, detail=f"E2E beginner user not found: {email}")
 
     user_settings = await UserSettingsRepository(db).get_by_user_id(user.id)
     if user_settings is None:

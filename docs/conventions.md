@@ -7,7 +7,8 @@ Architectural decisions and established patterns. All agents (Feature, Architect
 | Decision | Convention | Reference |
 |----------|-----------|-----------|
 | Draft PRs | Quick checks only (lint, typecheck, format) | docs/ci-cd-labels.md |
-| Ready PRs | Full suite runs automatically | docs/ci-cd-labels.md |
+| Ready PRs | CI tests (lint/unit/E2E) run on every push. Dev deploy + downstream jobs require a deliberate release signal. | docs/ci-cd-labels.md |
+| Dev deploy trigger | `workflow_dispatch` OR applying the `ready-to-verify` label — not every push | docs/ci-cd-labels.md |
 | Visual tests | Currently disabled | — |
 | K6 perf tests | Non-blocking, skip with `skip-k6` label | docs/ci-cd-labels.md |
 | Deploy trigger | GitHub Actions only, Railway auto-deploy disabled | docs/deployment-guide.md |
