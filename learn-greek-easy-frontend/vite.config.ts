@@ -31,7 +31,18 @@ function extractHeroAvifSrcset(bundle: OutputBundle): string {
     const chunk = entry as OutputChunk;
     const match = chunk.code.match(AVIF_SRCSET_RE);
     if (match) {
-      return match[1];
+      const srcset = match[1];
+      // Assert all expected width variants are present (Hero.tsx requests 640;960;1280;1920).
+      // The base regex requires 2+; this guard catches silent partial matches caused by
+      // a widths-list mismatch between Hero.tsx and the plugin expectation.
+      const entryCount = (srcset.match(/\.avif \d+w/g) ?? []).length;
+      if (entryCount !== 4) {
+        throw new Error(
+          `[perf-06 hero preload] Expected 4 AVIF srcset entries (640w/960w/1280w/1920w) ` +
+            `but found ${entryCount}. Update vite.config.ts or Hero.tsx to stay in sync.`
+        );
+      }
+      return srcset;
     }
   }
 
