@@ -6,7 +6,8 @@ from uuid import uuid4
 
 import pytest
 
-from src.schemas.progress import DailyStats
+from src.core.cache import CacheService
+from src.schemas.progress import DailyStats, DashboardStatsResponse, DeckProgressListResponse
 from src.services.progress_service import ProgressService
 
 
@@ -910,3 +911,437 @@ class TestGetDeckProgressDetail:
             result = await service.get_deck_progress_detail(mock_user_id, mock_user_id)
 
         assert result.statistics.total_study_time_seconds == expected_time
+
+
+# =============================================================================
+# Helpers shared by the cache test classes
+# =============================================================================
+
+
+def _make_real_cache(mock_redis) -> CacheService:
+    """Return a CacheService backed by a mock Redis with caching enabled."""
+    cache = CacheService(redis_client=mock_redis)
+    return cache
+
+
+def _make_cache_settings_patch():
+    """Patch src.core.cache.settings so CacheService sees cache_enabled=True."""
+    mock_settings = MagicMock()
+    mock_settings.cache_enabled = True
+    mock_settings.cache_key_prefix = "cache"
+    mock_settings.cache_default_ttl = 300
+    mock_settings.cache_user_progress_ttl = 60
+    mock_settings.cache_deck_list_ttl = 300
+    return patch("src.core.cache.settings", mock_settings)
+
+
+def _wire_empty_deck_progress_repos(
+    stats_cls, review_cls, deck_cls, card_rec_cls, culture_deck_cls
+):
+    """Wire all repos needed by get_deck_progress_list to return empty results."""
+    stats_cls.return_value.get_deck_progress_summaries = AsyncMock(return_value=[])
+    review_cls.return_value.get_last_review_by_deck = AsyncMock(return_value={})
+    deck_cls.return_value.get_by_ids = AsyncMock(return_value=[])
+    card_rec_cls.return_value.count_by_deck = AsyncMock(return_value=0)
+    culture_deck_cls.return_value.list_active = AsyncMock(return_value=[])
+
+
+# =============================================================================
+# PERF-05-02: Dashboard read-through cache tests (RED)
+# =============================================================================
+
+
+@pytest.mark.unit
+class TestDashboardStatsCache:
+    """RED tests for get_dashboard_stats caching (PERF-05-02).
+
+    Pre-implementation: get_cache is not imported in progress_service.py.
+    All patches use create=True so they succeed at test collection.
+    RED condition: setex is never called (miss/key tests) or compute
+    runs twice (hit tests), because caching is not yet wired.
+    """
+
+    async def test_get_dashboard_stats_miss_computes_and_stores(self, mock_db, mock_user_id):
+        """Cache miss: result must be stored under cache:progress:user:{uid}:dashboard (TTL=60).
+
+        RED: setex call_count == 0 (cache not wired → nothing stored).
+        """
+        mock_redis = AsyncMock()
+        mock_redis.get.return_value = None  # force miss
+
+        real_cache = _make_real_cache(mock_redis)
+
+        patches = _make_full_repo_patches()
+        with (
+            _make_cache_settings_patch(),
+            patch(
+                "src.services.progress_service.get_cache",
+                return_value=real_cache,
+                create=True,
+            ),
+            patches[0] as s_cls,
+            patches[1] as r_cls,
+            patches[2] as cs_cls,
+            patches[3] as ca_cls,
+            patches[4] as me_cls,
+            patches[5],
+            patches[6],
+            patches[7],
+            patches[8] as ex_cls,
+        ):
+            _setup_dashboard_mocks(s_cls, r_cls, cs_cls, ca_cls, me_cls, ex_cls)
+            service = ProgressService(mock_db)
+            result = await service.get_dashboard_stats(mock_user_id)
+
+        # Must return valid response
+        assert isinstance(result, DashboardStatsResponse)
+
+        # RED: setex never called because cache isn't wired yet.
+        # Post-impl this will be called once with the correct key and TTL=60.
+        expected_key = f"cache:progress:user:{mock_user_id}:dashboard"
+        assert mock_redis.setex.call_count == 1, (
+            f"Expected setex called once with key {expected_key!r}, "
+            f"but call_count={mock_redis.setex.call_count}"
+        )
+        actual_key, actual_ttl, _payload = mock_redis.setex.call_args[0]
+        assert actual_key == expected_key, f"Wrong cache key: {actual_key!r}"
+        assert actual_ttl == 60, f"Wrong TTL: {actual_ttl}"
+
+    async def test_get_dashboard_stats_hit_skips_recompute(self, mock_db, mock_user_id):
+        """Cache hit: underlying compute must not run a second time.
+
+        RED: card_stats_repo.count_by_status call_count == 2 (called for
+        both invocations because caching is not yet wired).
+        """
+        from src.schemas.progress import OverviewStats, StreakStats, TodayStats
+
+        # Build a minimal cached dict that model_validate can consume
+        cached_dashboard = DashboardStatsResponse(
+            overview=OverviewStats(
+                total_cards_studied=0,
+                total_cards_mastered=0,
+                total_decks_started=0,
+                overall_mastery_percentage=0.0,
+            ),
+            today=TodayStats(
+                reviews_completed=0,
+                cards_due=0,
+                daily_goal=20,
+                goal_progress_percentage=0.0,
+                study_time_seconds=0,
+            ),
+            streak=StreakStats(
+                current_streak=0,
+                longest_streak=0,
+                last_study_date=None,
+            ),
+            cards_by_status={},
+            recent_activity=[],
+        )
+        cached_dict = cached_dashboard.model_dump(mode="json")
+
+        mock_get_or_set = AsyncMock(return_value=cached_dict)
+        mock_cache = MagicMock()
+        mock_cache.get_or_set = mock_get_or_set
+
+        patches = _make_full_repo_patches()
+        with (
+            patch(
+                "src.services.progress_service.get_cache",
+                return_value=mock_cache,
+                create=True,
+            ),
+            patches[0] as s_cls,
+            patches[1] as r_cls,
+            patches[2] as cs_cls,
+            patches[3] as ca_cls,
+            patches[4] as me_cls,
+            patches[5],
+            patches[6],
+            patches[7],
+            patches[8] as ex_cls,
+        ):
+            _setup_dashboard_mocks(s_cls, r_cls, cs_cls, ca_cls, me_cls, ex_cls)
+            service = ProgressService(mock_db)
+            # Call twice; second call should use cached result
+            await service.get_dashboard_stats(mock_user_id)
+            await service.get_dashboard_stats(mock_user_id)
+
+        # RED: count_by_status is called for EACH invocation because caching not wired.
+        # Post-impl: call_count must be 1 (first call only) → spy reports 0 extra calls.
+        # We assert the repo was never called (== 0); pre-impl it will be called twice.
+        assert s_cls.return_value.count_by_status.call_count == 0, (
+            "Expected count_by_status to be skipped on cache hit, "
+            f"but it was called {s_cls.return_value.count_by_status.call_count} time(s)"
+        )
+
+    async def test_get_dashboard_stats_recomputes_when_cache_returns_none(
+        self, mock_db, mock_user_id
+    ):
+        """None-guard: when get_or_set returns None, direct compute must still work.
+
+        RED: if none-guard is absent, model_validate(None) raises TypeError.
+        Pre-impl: caching not wired so the function just computes normally;
+        this test verifies the function itself doesn't break when cache returns None.
+        The RED here is subtle: post-impl the None-guard must be present — we
+        verify the result is a real DashboardStatsResponse (not None/exception).
+        We assert repo IS called (direct compute path ran) even when get_or_set→None.
+        """
+        mock_get_or_set = AsyncMock(return_value=None)
+        mock_cache = MagicMock()
+        mock_cache.get_or_set = mock_get_or_set
+
+        patches = _make_full_repo_patches()
+        with (
+            patch(
+                "src.services.progress_service.get_cache",
+                return_value=mock_cache,
+                create=True,
+            ),
+            patches[0] as s_cls,
+            patches[1] as r_cls,
+            patches[2] as cs_cls,
+            patches[3] as ca_cls,
+            patches[4] as me_cls,
+            patches[5],
+            patches[6],
+            patches[7],
+            patches[8] as ex_cls,
+        ):
+            _setup_dashboard_mocks(s_cls, r_cls, cs_cls, ca_cls, me_cls, ex_cls)
+            service = ProgressService(mock_db)
+            result = await service.get_dashboard_stats(mock_user_id)
+
+        # Must return a valid DashboardStatsResponse (NOT None, NOT raise)
+        assert isinstance(result, DashboardStatsResponse)
+        # Repo must have been called (direct compute path executed)
+        assert s_cls.return_value.count_by_status.call_count >= 1
+
+    async def test_dashboard_cache_key_is_per_user(self, mock_db):
+        """Two users produce two distinct cache keys.
+
+        RED: setex not called at all pre-impl (never called for either user).
+        """
+        uid_a = uuid4()
+        uid_b = uuid4()
+
+        mock_redis = AsyncMock()
+        mock_redis.get.return_value = None  # force miss for both
+
+        real_cache = _make_real_cache(mock_redis)
+
+        patches_a = _make_full_repo_patches()
+
+        with (
+            _make_cache_settings_patch(),
+            patch(
+                "src.services.progress_service.get_cache",
+                return_value=real_cache,
+                create=True,
+            ),
+            patches_a[0] as s_cls_a,
+            patches_a[1] as r_cls_a,
+            patches_a[2] as cs_cls_a,
+            patches_a[3] as ca_cls_a,
+            patches_a[4] as me_cls_a,
+            patches_a[5],
+            patches_a[6],
+            patches_a[7],
+            patches_a[8] as ex_cls_a,
+        ):
+            _setup_dashboard_mocks(s_cls_a, r_cls_a, cs_cls_a, ca_cls_a, me_cls_a, ex_cls_a)
+            service = ProgressService(mock_db)
+            await service.get_dashboard_stats(uid_a)
+            await service.get_dashboard_stats(uid_b)
+
+        # Collect all keys passed to setex
+        setex_calls = mock_redis.setex.call_args_list
+        # RED: setex never called pre-impl → assertion below fails
+        assert (
+            len(setex_calls) == 2
+        ), f"Expected 2 setex calls (one per user), got {len(setex_calls)}"
+        keys = [call[0][0] for call in setex_calls]
+        assert any(str(uid_a) in k for k in keys), f"uid_a not found in keys: {keys}"
+        assert any(str(uid_b) in k for k in keys), f"uid_b not found in keys: {keys}"
+        assert keys[0] != keys[1], "Expected distinct cache keys per user"
+
+
+# =============================================================================
+# PERF-05-03a: Deck-progress-list read-through cache tests (RED)
+# =============================================================================
+
+
+@pytest.mark.unit
+class TestDeckProgressListCache:
+    """RED tests for get_deck_progress_list caching (PERF-05-03).
+
+    Same RED strategy as TestDashboardStatsCache.
+    """
+
+    async def test_get_deck_progress_list_miss_computes_and_stores(self, mock_db, mock_user_id):
+        """Cache miss: result stored under cache:progress:user:{uid}:decks:2:10 (TTL=60).
+
+        RED: setex call_count == 0 pre-impl.
+        """
+        mock_redis = AsyncMock()
+        mock_redis.get.return_value = None
+
+        real_cache = _make_real_cache(mock_redis)
+
+        patches = _make_full_repo_patches()
+        with (
+            _make_cache_settings_patch(),
+            patch(
+                "src.services.progress_service.get_cache",
+                return_value=real_cache,
+                create=True,
+            ),
+            patches[0] as stats_cls,
+            patches[1] as review_cls,
+            patches[2],
+            patches[3],
+            patches[4],
+            patches[5] as deck_cls,
+            patches[6] as card_rec_cls,
+            patches[7] as culture_deck_cls,
+            patches[8],
+        ):
+            _wire_empty_deck_progress_repos(
+                stats_cls, review_cls, deck_cls, card_rec_cls, culture_deck_cls
+            )
+            service = ProgressService(mock_db)
+            result = await service.get_deck_progress_list(mock_user_id, page=2, page_size=10)
+
+        assert isinstance(result, DeckProgressListResponse)
+
+        expected_key = f"cache:progress:user:{mock_user_id}:decks:2:10"
+        # RED: setex never called pre-impl → call_count == 0, assertion fails
+        assert mock_redis.setex.call_count == 1, (
+            f"Expected setex called once with key {expected_key!r}, "
+            f"but call_count={mock_redis.setex.call_count}"
+        )
+        actual_key, actual_ttl, _payload = mock_redis.setex.call_args[0]
+        assert actual_key == expected_key, f"Wrong cache key: {actual_key!r}"
+        assert actual_ttl == 60, f"Wrong TTL: {actual_ttl}"
+
+    async def test_get_deck_progress_list_hit_skips_recompute(self, mock_db, mock_user_id):
+        """Cache hit: compute must not run a second time.
+
+        RED: get_deck_progress_summaries call_count == 2 pre-impl.
+        """
+        cached_list = DeckProgressListResponse(total=0, page=1, page_size=20, decks=[])
+        cached_dict = cached_list.model_dump(mode="json")
+
+        mock_get_or_set = AsyncMock(return_value=cached_dict)
+        mock_cache = MagicMock()
+        mock_cache.get_or_set = mock_get_or_set
+
+        patches = _make_full_repo_patches()
+        with (
+            patch(
+                "src.services.progress_service.get_cache",
+                return_value=mock_cache,
+                create=True,
+            ),
+            patches[0] as stats_cls,
+            patches[1] as review_cls,
+            patches[2],
+            patches[3],
+            patches[4],
+            patches[5] as deck_cls,
+            patches[6] as card_rec_cls,
+            patches[7] as culture_deck_cls,
+            patches[8],
+        ):
+            _wire_empty_deck_progress_repos(
+                stats_cls, review_cls, deck_cls, card_rec_cls, culture_deck_cls
+            )
+            service = ProgressService(mock_db)
+            await service.get_deck_progress_list(mock_user_id)
+            await service.get_deck_progress_list(mock_user_id)
+
+        # RED: called twice (once per invocation) because no caching wired
+        assert stats_cls.return_value.get_deck_progress_summaries.call_count == 0, (
+            "Expected get_deck_progress_summaries skipped on cache hit, "
+            f"got {stats_cls.return_value.get_deck_progress_summaries.call_count} call(s)"
+        )
+
+    async def test_get_deck_progress_list_recomputes_when_cache_none(self, mock_db, mock_user_id):
+        """None-guard: get_or_set→None must fall back to direct compute.
+
+        RED mechanism: this test passes pre-impl (function computes normally),
+        but verifies the post-impl None-guard doesn't break things either.
+        We assert result is valid AND repo was called (compute path ran).
+        """
+        mock_get_or_set = AsyncMock(return_value=None)
+        mock_cache = MagicMock()
+        mock_cache.get_or_set = mock_get_or_set
+
+        patches = _make_full_repo_patches()
+        with (
+            patch(
+                "src.services.progress_service.get_cache",
+                return_value=mock_cache,
+                create=True,
+            ),
+            patches[0] as stats_cls,
+            patches[1] as review_cls,
+            patches[2],
+            patches[3],
+            patches[4],
+            patches[5] as deck_cls,
+            patches[6] as card_rec_cls,
+            patches[7] as culture_deck_cls,
+            patches[8],
+        ):
+            _wire_empty_deck_progress_repos(
+                stats_cls, review_cls, deck_cls, card_rec_cls, culture_deck_cls
+            )
+            service = ProgressService(mock_db)
+            result = await service.get_deck_progress_list(mock_user_id)
+
+        assert isinstance(result, DeckProgressListResponse)
+        # Repo must be called (direct compute executed)
+        assert stats_cls.return_value.get_deck_progress_summaries.call_count >= 1
+
+    async def test_deck_progress_key_includes_page_and_page_size(self, mock_db, mock_user_id):
+        """Cache key must encode page and page_size: :decks:3:50 and :decks:1:20.
+
+        RED: setex never called pre-impl; assertion on call_count fails.
+        """
+        mock_redis = AsyncMock()
+        mock_redis.get.return_value = None
+
+        real_cache = _make_real_cache(mock_redis)
+
+        patches = _make_full_repo_patches()
+        with (
+            _make_cache_settings_patch(),
+            patch(
+                "src.services.progress_service.get_cache",
+                return_value=real_cache,
+                create=True,
+            ),
+            patches[0] as stats_cls,
+            patches[1] as review_cls,
+            patches[2],
+            patches[3],
+            patches[4],
+            patches[5] as deck_cls,
+            patches[6] as card_rec_cls,
+            patches[7] as culture_deck_cls,
+            patches[8],
+        ):
+            _wire_empty_deck_progress_repos(
+                stats_cls, review_cls, deck_cls, card_rec_cls, culture_deck_cls
+            )
+            service = ProgressService(mock_db)
+            await service.get_deck_progress_list(mock_user_id, page=3, page_size=50)
+            await service.get_deck_progress_list(mock_user_id, page=1, page_size=20)
+
+        setex_calls = mock_redis.setex.call_args_list
+        # RED: 0 calls pre-impl
+        assert len(setex_calls) == 2, f"Expected 2 setex calls, got {len(setex_calls)}"
+        keys = [call[0][0] for call in setex_calls]
+        assert any(":decks:3:50" in k for k in keys), f":decks:3:50 not in keys: {keys}"
+        assert any(":decks:1:20" in k for k in keys), f":decks:1:20 not in keys: {keys}"
