@@ -19,12 +19,6 @@ export const LANGUAGE_OPTIONS: LanguageOption[] = [
 ];
 
 /**
- * Type-safe translation key accessor
- * Will be extended when we add typed translations
- */
-export type TranslationKey = string;
-
-/**
  * i18next interpolation values
  */
 export interface InterpolationValues {
