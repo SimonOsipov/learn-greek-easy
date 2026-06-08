@@ -12,6 +12,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 
+import { tDynamic } from '@/i18n/tDynamic';
 import { cn } from '@/lib/utils';
 
 interface MobileNavProps {
@@ -156,7 +157,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ className }) => {
                   role="menuitem"
                   onClick={closeSubMenu}
                 >
-                  {t(child.labelKey)}
+                  {tDynamic(t, child.labelKey)}
                 </Link>
               ))}
           </div>
@@ -174,7 +175,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ className }) => {
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item);
-            const label = t(item.labelKey);
+            const label = tDynamic(t, item.labelKey);
             const isSubMenuOpen = openSubMenu === item.id;
 
             if (item.children) {

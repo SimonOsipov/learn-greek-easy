@@ -16,6 +16,7 @@ import { MasteryDotsLegend } from '@/components/shared/MasteryDotsLegend';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Kicker } from '@/features/decks/dx';
+import { tDynamic } from '@/i18n/tDynamic';
 import { debounce } from '@/lib/utils';
 import { progressAPI, type WordMasteryItem } from '@/services/progressAPI';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
@@ -141,7 +142,7 @@ function FilterPills({ activeFilter, counts, onFilterChange, trailing }: FilterP
             disabled={isDisabled}
             aria-pressed={isActive}
           >
-            {t(labelKey)} ({count})
+            {tDynamic(t, labelKey)} ({count})
           </button>
         );
       })}

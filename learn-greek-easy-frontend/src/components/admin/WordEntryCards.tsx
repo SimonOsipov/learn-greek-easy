@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useGenerateCards } from '@/features/words/hooks/useGenerateCards';
 import { useWordEntry } from '@/features/words/hooks/useWordEntry';
 import { useWordEntryCards } from '@/features/words/hooks/useWordEntryCards';
+import { tDynamic } from '@/i18n/tDynamic';
 import { getCardTypeEligibility } from '@/lib/cardTypeEligibility';
 import { getVariantKeyLabel } from '@/lib/variantKeyLabels';
 import type {
@@ -209,7 +210,7 @@ function AvailableCardTypes({
                   className="text-xs text-muted-foreground"
                   data-testid={`ineligible-reason-${genType}`}
                 >
-                  {t(reason)}
+                  {tDynamic(t, reason)}
                 </span>
               )}
             </div>

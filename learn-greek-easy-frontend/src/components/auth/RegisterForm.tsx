@@ -46,6 +46,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { tDynamic } from '@/i18n/tDynamic';
 import log from '@/lib/logger';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAuthStore } from '@/stores/authStore';
@@ -276,7 +277,7 @@ export const RegisterForm: React.FC = () => {
   // Helper to translate Zod error messages
   const getErrorMessage = (errorKey: string | undefined): string | undefined => {
     if (!errorKey) return undefined;
-    return t(`register.errors.${errorKey}`);
+    return tDynamic(t, `register.errors.${errorKey}`);
   };
 
   const isFormDisabled = isSubmitting;

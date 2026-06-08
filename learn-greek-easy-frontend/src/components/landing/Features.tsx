@@ -18,6 +18,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
+import { tDynamic } from '@/i18n/tDynamic';
 
 interface Feature {
   icon: ReactNode;
@@ -690,10 +691,10 @@ const Features = () => {
                   {feature.icon}
                 </div>
                 <h3 className="mb-2 line-clamp-2 text-xl font-bold text-[hsl(var(--landing-greek-blue-light))]">
-                  {t(feature.titleKey)}
+                  {tDynamic(t, feature.titleKey)}
                 </h3>
                 <p className="text-sm leading-relaxed text-[hsl(var(--landing-greek-blue-light))]/70 sm:line-clamp-2">
-                  {t(feature.descriptionKey)}
+                  {tDynamic(t, feature.descriptionKey)}
                 </p>
               </div>
 

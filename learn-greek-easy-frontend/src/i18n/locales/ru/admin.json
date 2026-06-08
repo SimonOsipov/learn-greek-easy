@@ -571,7 +571,8 @@
     },
     "card": {
       "editLabel": "Редактировать новость",
-      "deleteLabel": "Удалить новость"
+      "deleteLabel": "Удалить новость",
+      "publishedLabel": "Опубликовано"
     },
     "toolbar": {
       "searchPlaceholder": "Поиск по заголовку, тексту или персонажу…"
@@ -599,6 +600,9 @@
         "scenarioB2Helper": "Отображается учащимся B2 как основной текст статьи",
         "titleA2": "Заголовок — A2 (греческий)",
         "scenarioA2": "Сценарий — A2 (греческий)"
+      },
+      "country": {
+        "es": "Испания"
       }
     }
   },
@@ -1480,7 +1484,13 @@
     "linkSuccess": "Слово успешно связано с колодой",
     "existsInDecks": "Это слово есть в {{count}} колоде(ах)",
     "generation": {
-      "examples": "Примеры предложений"
+      "examples": "Примеры предложений",
+      "singular": "Единственное число",
+      "plural": "Множественное число",
+      "caseNominative": "Именительный",
+      "caseGenitive": "Родительный",
+      "caseAccusative": "Винительный",
+      "caseVocative": "Звательный"
     },
     "swapConfirmTitle": "Сменить вариант?",
     "swapConfirmDescription": "Результаты генерации будут заменены для нового варианта. Нормализация и переводы будут сохранены.",
@@ -2219,6 +2229,17 @@
     "pipeline": {
       "title": "Content pipeline",
       "sub": "Pipeline summary coming soon. Track ready vs. draft counts across decks, news, situations, and exercises."
+    }
+  },
+  "adminExercises": {
+    "pictureMatch": {
+      "anchorPictureAlt": "Основная картинка",
+      "runtimeNote": "Варианты картинок отображаются в процессе."
+    }
+  },
+  "sources": {
+    "articles": {
+      "alreadyGenerated": "Ожидает проверки"
     }
   }
 }

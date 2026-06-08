@@ -1103,7 +1103,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('common:cancel')}</AlertDialogCancel>
+            <AlertDialogCancel>{t('generateNoun.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => swapConfirmation && executeSwap(swapConfirmation.index)}
             >

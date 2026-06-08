@@ -53,7 +53,8 @@
     "timeWarning": "Only {{time}} remaining! Submit your answers soon.",
     "answerError": "Failed to submit answer. Please try again.",
     "noQuestions": "No Questions",
-    "noQuestionsDescription": "No questions available for this exam."
+    "noQuestionsDescription": "No questions available for this exam.",
+    "completing": "Completing exam..."
   },
   "results": {
     "title": "Exam Complete",

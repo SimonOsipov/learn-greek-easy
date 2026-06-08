@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { tDynamic } from '@/i18n/tDynamic';
 import { cn } from '@/lib/utils';
 import type { ChangelogTag } from '@/types/changelog';
 import { CHANGELOG_TAG_CONFIG, CHANGELOG_TAG_OPTIONS } from '@/types/changelog';
@@ -32,7 +33,7 @@ export function TagFilter({ activeTag, onTagChange }: TagFilterProps) {
           className={cn(activeTag === tag && 'active')}
           data-testid={`tag-filter-${tag}`}
         >
-          {t(CHANGELOG_TAG_CONFIG[tag].labelKey)}
+          {tDynamic(t, CHANGELOG_TAG_CONFIG[tag].labelKey)}
         </button>
       ))}
     </div>

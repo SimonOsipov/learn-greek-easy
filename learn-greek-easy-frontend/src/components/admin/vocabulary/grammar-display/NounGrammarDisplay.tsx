@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { tDynamic } from '@/i18n/tDynamic';
 
 // ============================================
 // Constants
@@ -58,7 +59,7 @@ export function NounGrammarDisplay({ fields }: NounGrammarDisplayProps) {
         </span>
         <span className="font-medium">
           {fields.gender ? (
-            t(`vocabularyCard.grammar.noun.genders.${fields.gender}`, {
+            tDynamic(t, `vocabularyCard.grammar.noun.genders.${fields.gender}`, {
               defaultValue: capitalize(fields.gender),
             })
           ) : (

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Input } from '@/components/ui/input';
 import { SegControl } from '@/components/ui/seg-control';
+import { tDynamic } from '@/i18n/tDynamic';
 import { track } from '@/lib/analytics/track';
 import {
   useAdminExercisesStore,
@@ -111,7 +112,7 @@ export function AdminExercisesToolbar() {
             label:
               v === 'all'
                 ? t('exercises.filters.level.all')
-                : t(`exercises.filters.level.${v.toLowerCase()}`),
+                : tDynamic(t, `exercises.filters.level.${v.toLowerCase()}`),
           }))}
           value={level}
           onChange={(v) => {
@@ -125,7 +126,10 @@ export function AdminExercisesToolbar() {
         <SegControl
           options={STATUS_OPTIONS.map((v) => ({
             value: v,
-            label: v === 'all' ? t('exercises.filters.status.all') : t(`exercises.statuses.${v}`),
+            label:
+              v === 'all'
+                ? t('exercises.filters.status.all')
+                : tDynamic(t, `exercises.statuses.${v}`),
           }))}
           value={status}
           onChange={(v) => {

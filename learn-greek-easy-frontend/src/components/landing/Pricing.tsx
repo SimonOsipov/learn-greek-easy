@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
+import { tDynamic } from '@/i18n/tDynamic';
 
 interface Plan {
   nameKey: string;
@@ -112,7 +113,9 @@ const Pricing = () => {
         {/* Pricing grid */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {plans.map((plan, index) => {
-            const features = t(plan.featuresKey, { returnObjects: true }) as string[];
+            const features = tDynamic(t, plan.featuresKey, {
+              returnObjects: true,
+            }) as unknown as string[];
             return (
               <div
                 key={index}
@@ -160,19 +163,21 @@ const Pricing = () => {
                     {plan.icon}
                   </div>
                   <h3 className="mb-1 text-xl font-bold text-[hsl(var(--landing-navy))]">
-                    {t(plan.nameKey)}
+                    {tDynamic(t, plan.nameKey)}
                   </h3>
                   <p className="text-sm text-[hsl(var(--landing-navy))]/70">
-                    {t(plan.descriptionKey)}
+                    {tDynamic(t, plan.descriptionKey)}
                   </p>
                 </div>
 
                 {/* Price */}
                 <div className="mb-6 flex items-baseline gap-1.5">
                   <span className="text-4xl font-bold text-[hsl(var(--landing-navy))]">
-                    {t(plan.priceKey)}
+                    {tDynamic(t, plan.priceKey)}
                   </span>
-                  <span className="text-[hsl(var(--landing-navy))]/70">{t(plan.periodKey)}</span>
+                  <span className="text-[hsl(var(--landing-navy))]/70">
+                    {tDynamic(t, plan.periodKey)}
+                  </span>
                 </div>
 
                 {/* Features */}
@@ -203,7 +208,7 @@ const Pricing = () => {
                   data-testid="pricing-cta"
                   asChild
                 >
-                  <Link to={plan.route}>{t(plan.ctaKey)}</Link>
+                  <Link to={plan.route}>{tDynamic(t, plan.ctaKey)}</Link>
                 </Button>
               </div>
             );

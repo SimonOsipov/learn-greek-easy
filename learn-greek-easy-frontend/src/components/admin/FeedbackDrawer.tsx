@@ -24,6 +24,7 @@ import { Field } from '@/components/ui/field';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { tDynamic } from '@/i18n/tDynamic';
 import { useAdminFeedbackStore } from '@/stores/adminFeedbackStore';
 
 import {
@@ -195,7 +196,7 @@ function ReplyTab({ feedbackId, onClose, onRequestDelete, form }: ReplyTabProps)
             hint={t('feedback.v2.reply.status_hint')}
           >
             <StatusGrid
-              options={STATUS_PICKER.map((s) => ({ ...s, label: t(s.label) }))}
+              options={STATUS_PICKER.map((s) => ({ ...s, label: tDynamic(t, s.label) }))}
               value={selectedStatus}
               onChange={(next) => form.setValue('status', next, { shouldDirty: true })}
             />
@@ -301,7 +302,7 @@ function MetaTab({ feedbackId }: MetaTabProps) {
     { label: t('feedback.v2.drawer.meta.rows.likes'), value: item.vote_count },
     {
       label: t('feedback.v2.drawer.meta.rows.status'),
-      value: <Badge tone={STATUS_TONE[handoff]}>{t(HANDOFF_LABEL[handoff])}</Badge>,
+      value: <Badge tone={STATUS_TONE[handoff]}>{tDynamic(t, HANDOFF_LABEL[handoff])}</Badge>,
     },
     ...(item.admin_response
       ? [
@@ -378,7 +379,9 @@ export function FeedbackDrawer({
                   ? t('feedback.v2.type.bug')
                   : t('feedback.v2.type.feature')}
               </Badge>
-              <Badge tone={STATUS_TONE[selectedStatus]}>{t(HANDOFF_LABEL[selectedStatus])}</Badge>
+              <Badge tone={STATUS_TONE[selectedStatus]}>
+                {tDynamic(t, HANDOFF_LABEL[selectedStatus])}
+              </Badge>
               <span className="text-xs text-muted-foreground">
                 {t('feedback.v2.drawer.likes', { count: feedback.vote_count })}
               </span>
@@ -403,7 +406,7 @@ export function FeedbackDrawer({
               onClick={() => onInnerTabChange(value)}
               data-testid={`feedback-drawer-tab-${value}`}
             >
-              {t(label)}
+              {tDynamic(t, label)}
             </button>
           ))}
         </div>

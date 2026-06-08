@@ -222,7 +222,7 @@ describe('MockExamSessionPage', () => {
 
       render(<MockExamSessionPage />);
 
-      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+      expect(screen.getAllByText('Something went wrong').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
     });
 

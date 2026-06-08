@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { tDynamic } from '@/i18n/tDynamic';
 import { type NewsItemResponse } from '@/services/adminAPI';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -195,7 +196,7 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
         <div className="audio-l">
           <Badge tone={tone}>{badgeLabel}</Badge>
           <div>
-            <span className="audio-name">{t(nameKey)}</span>
+            <span className="audio-name">{tDynamic(t, nameKey)}</span>
             <span className="audio-sub">{renderSubText(level)}</span>
           </div>
         </div>

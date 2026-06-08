@@ -4,6 +4,7 @@ import { Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { tDynamic } from '@/i18n/tDynamic';
 
 import { MasteryDots } from './MasteryDots';
 
@@ -29,7 +30,7 @@ export const MasteryDotsLegend: React.FC<MasteryDotsLegendProps> = ({
         <button
           type="button"
           className="inline-flex items-center justify-center rounded-sm p-0.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label={t(ariaLabelKey)}
+          aria-label={tDynamic(t, ariaLabelKey)}
           data-testid="mastery-dots-legend-trigger"
         >
           <Info className="h-4 w-4" />
@@ -39,7 +40,7 @@ export const MasteryDotsLegend: React.FC<MasteryDotsLegendProps> = ({
         <div className="mb-2 flex items-center gap-2">
           <MasteryDots filled={2} />
         </div>
-        <p className="text-sm text-muted-foreground">{t(legendKey)}</p>
+        <p className="text-sm text-muted-foreground">{tDynamic(t, legendKey)}</p>
       </PopoverContent>
     </Popover>
   );

@@ -2,6 +2,7 @@ import React from 'react';
 
 import { useTranslation } from 'react-i18next';
 
+import { tDynamic } from '@/i18n/tDynamic';
 import { getCEFRBadgeClass } from '@/lib/cefrColors';
 import type { DeckCategory, DeckLevel, DeckStatus } from '@/types/deck';
 
@@ -53,7 +54,7 @@ export const DeckBadge: React.FC<DeckBadgeProps> = ({
 
   if (type === 'status' && status) {
     const config = STATUS_CONFIG[status];
-    const statusLabel = t(config.labelKey);
+    const statusLabel = tDynamic(t, config.labelKey);
     return (
       <span
         className={`badge ${config.badgeSlot} ${className}`}
@@ -66,7 +67,7 @@ export const DeckBadge: React.FC<DeckBadgeProps> = ({
 
   if (type === 'category' && category && category !== 'culture') {
     const config = CATEGORY_CONFIG[category];
-    const categoryLabel = t(config.labelKey);
+    const categoryLabel = tDynamic(t, config.labelKey);
     return (
       <span
         className={`badge ${config.badgeSlot} ${className}`}

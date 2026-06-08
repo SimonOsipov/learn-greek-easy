@@ -8,6 +8,7 @@ import { TourCompletionDialog } from '@/components/tour/TourCompletionDialog';
 import { TourDismissDialog } from '@/components/tour/TourDismissDialog';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useLayoutContext } from '@/contexts/LayoutContext';
+import { tDynamic } from '@/i18n/tDynamic';
 import { registerDismissHandler, registerCompletionHandler } from '@/lib/tour';
 import { cn } from '@/lib/utils';
 
@@ -94,7 +95,7 @@ export const AppLayout: React.FC = () => {
                         )}
                       >
                         <Icon className="h-5 w-5" />
-                        <span className="font-medium">{t(item.labelKey)}</span>
+                        <span className="font-medium">{tDynamic(t, item.labelKey)}</span>
                       </Link>
                     );
                   })}

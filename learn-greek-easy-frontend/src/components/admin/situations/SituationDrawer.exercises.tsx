@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { SegControl } from '@/components/ui/seg-control';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { tDynamic } from '@/i18n/tDynamic';
 import { track } from '@/lib/analytics';
 import { adminAPI } from '@/services/adminAPI';
 import type {
@@ -76,12 +77,12 @@ function GenerateButton({
           <Button
             variant="default"
             disabled
-            aria-label={t(GENERATE_KEY[source])}
+            aria-label={tDynamic(t, GENERATE_KEY[source])}
             data-testid={`situation-drawer-exercises-generate-${source}`}
             onClick={() => void handleGenerate()}
           >
             <Wand2 className="mr-2 h-4 w-4" />
-            {t(GENERATE_KEY[source])}
+            {tDynamic(t, GENERATE_KEY[source])}
           </Button>
         </span>
       </TooltipTrigger>

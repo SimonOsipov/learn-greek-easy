@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { tDynamic } from '@/i18n/tDynamic';
 import type { PictureNested } from '@/types/situation';
 
 import type { SituationDrawerFormData } from './SituationDrawer';
@@ -41,15 +42,15 @@ export function PicturePromptForm({
             id={`picture-prompt-${key}`}
             data-testid={`picture-prompt-${key.replaceAll('_', '-')}`}
             rows={rows}
-            placeholder={t(`situations.detail.picturePrompt.placeholders.${key}`)}
+            placeholder={tDynamic(t, `situations.detail.picturePrompt.placeholders.${key}`)}
             {...register(`picture.${key}`)}
           />
-          {t(`situations.detail.picturePrompt.hints.${key}`, '') && (
+          {tDynamic(t, `situations.detail.picturePrompt.hints.${key}`, { defaultValue: '' }) && (
             <p
               className="text-xs text-muted-foreground"
               data-testid={`picture-prompt-hint-${key.replaceAll('_', '-')}`}
             >
-              {t(`situations.detail.picturePrompt.hints.${key}`)}
+              {tDynamic(t, `situations.detail.picturePrompt.hints.${key}`, { defaultValue: '' })}
             </p>
           )}
         </div>

@@ -16,6 +16,7 @@ import { Field } from '@/components/ui/field';
 import { Kicker } from '@/components/ui/kicker';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { tDynamic } from '@/i18n/tDynamic';
 import type { SituationDetailResponse } from '@/types/situation';
 
 import type { SituationDrawerFormData } from './SituationDrawer';
@@ -193,7 +194,7 @@ export function SituationDrawerDescription({ situation }: Props) {
         <div className="audio-l">
           <Badge tone="violet">{level.toUpperCase()}</Badge>
           <div>
-            <span className="audio-name">{t(nameKey)}</span>
+            <span className="audio-name">{tDynamic(t, nameKey)}</span>
             <span className="audio-sub">{subText}</span>
           </div>
         </div>

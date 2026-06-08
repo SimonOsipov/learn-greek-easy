@@ -17,6 +17,7 @@ import { GenderBadge, PartOfSpeechBadge } from '@/components/review/grammar';
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
 import { DonutRing, DxSvgDefs, WeekHeat, rollingDayLabels } from '@/features/decks/dx';
 import '@/features/decks/dx/dx.css';
+import { tDynamic } from '@/i18n/tDynamic';
 import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
@@ -98,7 +99,7 @@ export function WordHero({
           <PartOfSpeechBadge partOfSpeech={partOfSpeech} />
           {partOfSpeech === 'verb' && grammarData && 'voice' in grammarData && (
             <span className="dx-w-tag is-gender capitalize">
-              {t(`review:grammar.verbConjugation.voice.${grammarData.voice as string}`)}
+              {tDynamic(t, `review:grammar.verbConjugation.voice.${grammarData.voice as string}`)}
             </span>
           )}
           {gender && <GenderBadge gender={gender} />}

@@ -6,6 +6,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { tDynamic } from '@/i18n/tDynamic';
 
 const FAQ = () => {
   const { t } = useTranslation('landing');
@@ -60,10 +61,10 @@ const FAQ = () => {
                 data-testid="faq-item"
               >
                 <AccordionTrigger className="py-5 text-left font-semibold text-[hsl(var(--landing-greek-blue-light))] hover:no-underline [&>svg]:opacity-60">
-                  {t(`faq.items.${key}.question`)}
+                  {tDynamic(t, `faq.items.${key}.question`)}
                 </AccordionTrigger>
                 <AccordionContent className="pb-5 leading-relaxed text-[hsl(var(--landing-greek-blue-light))]/80">
-                  {t(`faq.items.${key}.answer`)}
+                  {tDynamic(t, `faq.items.${key}.answer`)}
                 </AccordionContent>
               </AccordionItem>
             ))}

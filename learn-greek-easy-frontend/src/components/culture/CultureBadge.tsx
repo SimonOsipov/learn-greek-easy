@@ -2,6 +2,8 @@ import type { FC } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
+import { tDynamic } from '@/i18n/tDynamic';
+
 export type CultureCategory =
   | 'history'
   | 'geography'
@@ -64,7 +66,7 @@ export const CultureBadge: FC<CultureBadgeProps> = ({
   const { t } = useTranslation('deck');
   const colors = getCategoryColor(category);
   const labelKey = category ? `culture.categories.${category}` : 'culture.badge';
-  const translatedLabel = t(labelKey);
+  const translatedLabel = tDynamic(t, labelKey);
 
   return (
     <span

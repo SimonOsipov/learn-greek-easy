@@ -42,6 +42,7 @@ import {
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useDeck } from '@/hooks/useDeck';
 import { usePracticeKeyboard } from '@/hooks/usePracticeKeyboard';
+import { tDynamic } from '@/i18n/tDynamic';
 import type { CardRecordType } from '@/services/wordEntryAPI';
 import {
   useV2PracticeStore,
@@ -188,7 +189,7 @@ export function V2FlashcardPracticePage() {
   };
 
   const translatePrompt = (raw: string | null | undefined): string | null => {
-    if (raw && raw in PROMPT_KEY_BY_RAW) return t(PROMPT_KEY_BY_RAW[raw]);
+    if (raw && raw in PROMPT_KEY_BY_RAW) return tDynamic(t, PROMPT_KEY_BY_RAW[raw]);
     return raw ?? null; // fallback: show raw value unchanged
   };
 

@@ -11,6 +11,7 @@ import { AchievementIcon } from '@/components/achievements/AchievementIcon';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { tDynamic } from '@/i18n/tDynamic';
 import { cn } from '@/lib/utils';
 import type { AchievementResponse } from '@/services/xpAPI';
 import {
@@ -47,7 +48,7 @@ function getRelativeTime(dateStr: string | null | undefined, language: string): 
 
 interface RecentUnlockCardProps {
   achievement: AchievementResponse;
-  tAch: (key: string, fallback: string) => string;
+  tAch: ReturnType<typeof useTranslation<'achievements'>>['t'];
   language: string;
 }
 
@@ -59,7 +60,7 @@ function RecentUnlockCard({ achievement: a, tAch, language }: RecentUnlockCardPr
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-foreground">
-          {tAch(`items.${a.id}.name`, a.name)}
+          {tDynamic(tAch, `items.${a.id}.name`)}
         </p>
         <p className="text-xs text-muted-foreground">{getRelativeTime(a.unlocked_at, language)}</p>
       </div>
@@ -209,11 +210,9 @@ export const AchievementsGrid: React.FC<AchievementsGridProps> = ({ className })
                   <AchievementIcon icon={nextUp.icon} size={20} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">
-                    {tAch(`items.${nextUp.id}.name`, nextUp.name)}
-                  </p>
+                  <p className="text-sm font-medium">{tDynamic(tAch, `items.${nextUp.id}.name`)}</p>
                   <p className="text-xs text-muted-foreground">
-                    {tAch(`items.${nextUp.id}.hint`, nextUp.hint ?? '')}
+                    {tDynamic(tAch, `items.${nextUp.id}.hint`)}
                   </p>
                 </div>
                 <span className="badge b-gray shrink-0">

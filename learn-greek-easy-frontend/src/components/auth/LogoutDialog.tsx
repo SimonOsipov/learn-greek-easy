@@ -76,7 +76,7 @@ export const LogoutDialog: React.FC<LogoutDialogProps> = ({ trigger }) => {
             disabled={isLoggingOut}
             data-testid="logout-confirm-button"
           >
-            {isLoggingOut ? t('logout.loggingOut', 'Logging out...') : t('logout.confirm')}
+            {isLoggingOut ? t('logout.loggingOut') : t('logout.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

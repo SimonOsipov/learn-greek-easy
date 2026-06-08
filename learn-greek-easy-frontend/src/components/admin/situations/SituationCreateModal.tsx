@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
+import { tDynamic } from '@/i18n/tDynamic';
 import { useAdminSituationStore } from '@/stores/adminSituationStore';
 
 import { SITUATION_JSON_PLACEHOLDER, validateSituationJson } from './SituationCreateValidation';
@@ -40,7 +41,7 @@ export function SituationCreateModal({ open, onOpenChange }: SituationCreateModa
   const handleSubmit = async () => {
     const validation = validateSituationJson(jsonValue);
     if (!validation.valid) {
-      setError(t(validation.error.messageKey));
+      setError(tDynamic(t, validation.error.messageKey));
       return;
     }
     try {

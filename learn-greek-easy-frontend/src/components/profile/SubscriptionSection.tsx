@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { PREMIUM_ONLY_FEATURES } from '@/constants/premiumFeatures';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
+import { tDynamic } from '@/i18n/tDynamic';
 import { reportAPIError } from '@/lib/errorReporting';
 import { billingAPI } from '@/services/billingAPI';
 import type { BillingStatusResponse } from '@/services/billingAPI';
@@ -232,7 +233,7 @@ export const SubscriptionSection: React.FC = () => {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t('subscription.billingCycle')}</span>
                   <span className="text-foreground">
-                    {t(`subscription.cycles.${billingStatus.billing_cycle}`)}
+                    {tDynamic(t, `subscription.cycles.${billingStatus.billing_cycle}`)}
                   </span>
                 </div>
               )}
@@ -248,7 +249,7 @@ export const SubscriptionSection: React.FC = () => {
                     {t('subscription.priceFormat', {
                       currency: billingStatus.current_price_currency?.toUpperCase() ?? '',
                       amount: billingStatus.current_price_formatted,
-                      period: t(`subscription.cycles.${billingStatus.billing_cycle}`),
+                      period: tDynamic(t, `subscription.cycles.${billingStatus.billing_cycle}`),
                     })}
                   </span>
                 </div>
@@ -286,7 +287,7 @@ export const SubscriptionSection: React.FC = () => {
                       className="flex items-center gap-2 text-sm text-muted-foreground"
                     >
                       <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground" />
-                      {t(feature.labelKey, { ns: 'upgrade' })}
+                      {tDynamic(t, feature.labelKey, { ns: 'upgrade' })}
                     </li>
                   ))}
                 </ul>
@@ -310,7 +311,7 @@ export const SubscriptionSection: React.FC = () => {
                   className="flex items-center gap-2 text-sm text-muted-foreground"
                 >
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground" />
-                  {t(feature.labelKey, { ns: 'upgrade' })}
+                  {tDynamic(t, feature.labelKey, { ns: 'upgrade' })}
                 </li>
               ))}
             </ul>

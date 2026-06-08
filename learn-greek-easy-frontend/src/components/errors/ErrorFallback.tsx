@@ -89,7 +89,7 @@ export function ErrorFallback({ error, onReset, eventId }: ErrorFallbackProps) {
           {eventId && import.meta.env.PROD && isSentryLoaded() && (
             <Button onClick={handleReportIssue} variant="secondary" className="w-full">
               <MessageSquare className="mr-2 h-4 w-4" />
-              {t('error.reportIssue', 'Report Issue')}
+              {t('error.reportIssue')}
             </Button>
           )}
         </div>

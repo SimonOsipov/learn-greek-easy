@@ -77,8 +77,6 @@ import { useAdminTabCountsStore } from '@/stores/adminTabCountsStore';
 
 import { type AdminTabType, isValidTab } from './admin/types';
 
-import type { TFunction } from 'i18next';
-
 /**
  * Loading skeleton for the admin page
  */
@@ -476,9 +474,9 @@ export interface PageHeadCounts {
 
 export function pageHeadPropsFor(
   tab: AdminTabType,
-  // Accept a generic translation function so tests can pass a simple mock.
-  // TFunction<'admin'> is the most precise type but tests pass (key: string) => string.
-  t: TFunction<'admin'> | ((key: string, opts?: Record<string, unknown>) => string),
+  // Structural type accepts both TFunction<'admin'> (production) and mock functions
+  // in tests. Avoids TFunction<'admin'> | (...) union which trips TS2589.
+  t: (key: string, opts?: Record<string, unknown>) => string,
   handlers?: PageHeadHandlers,
   counts?: PageHeadCounts
 ): PageHeadProps {

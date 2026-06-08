@@ -27,7 +27,7 @@ import { useAuthStore } from '@/stores/authStore';
 import type { TFunction } from 'i18next';
 
 // Factory function to create schema with translations
-const createPasswordSchema = (t: TFunction) =>
+const createPasswordSchema = (t: TFunction<'profile'>) =>
   z
     .object({
       newPassword: z

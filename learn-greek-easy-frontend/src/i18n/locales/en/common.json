@@ -1,5 +1,10 @@
 {
   "loading": "Loading...",
+  "retry": "Try Again",
+  "correct": "Correct",
+  "accuracy": "Accuracy",
+  "confirm": "Confirm",
+  "cancel": "Cancel",
   "error": {
     "generic": "An error occurred",
     "tryAgain": "Please try again",
@@ -8,7 +13,8 @@
     "forbidden": "Access denied",
     "somethingWrong": "Something went wrong",
     "unexpectedError": "We're sorry, but something unexpected happened. Please try again.",
-    "persistsContact": "If this problem persists, please contact support."
+    "persistsContact": "If this problem persists, please contact support.",
+    "reportIssue": "Report Issue"
   },
   "notFoundPage": {
     "code": "404",
@@ -99,6 +105,7 @@
   "dashboard": {
     "title": "Dashboard",
     "progress": {
+      "kicker": "Progress",
       "title": "Your Progress",
       "error": "Failed to load metrics. Please try refreshing the page.",
       "empty": "No progress data yet. Start studying to see your metrics!"
@@ -116,6 +123,7 @@
       "allTime": "all time"
     },
     "activeDecks": {
+      "kicker": "Active Decks",
       "title": "Active Decks",
       "viewAll": "View all decks",
       "empty": "No active decks yet.",
@@ -131,7 +139,8 @@
         "audioUnavailable": "Audio not available",
         "audioError": "Audio failed to load"
       },
-      "seeAll": "See All News"
+      "seeAll": "See All News",
+      "kicker": "News"
     }
   },
   "welcome": {
@@ -263,7 +272,9 @@
       "b2": "B2",
       "label": "Content level",
       "difficulty": "Difficulty:"
-    }
+    },
+    "loading": "Loading news articles",
+    "gridLabel": "News articles"
   },
   "situations": {
     "page": {
@@ -349,7 +360,9 @@
     "retry": "Retry",
     "dismiss": "Dismiss notification",
     "readMore": "Read more",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "disabled": "Notifications disabled",
+    "disabledTooltip": "Notifications are disabled in preferences"
   },
   "theme": {
     "switchToDark": "Switch to dark mode",

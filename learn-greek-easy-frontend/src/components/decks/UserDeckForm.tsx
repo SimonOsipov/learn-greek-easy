@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { tDynamic } from '@/i18n/tDynamic';
 import type { CreateDeckInput, DeckLevel } from '@/services/deckAPI';
 
 /**
@@ -129,7 +130,9 @@ export const UserDeckForm: React.FC<UserDeckFormProps> = ({
                 />
               </FormControl>
               <FormMessage>
-                {form.formState.errors.name?.message ? t(form.formState.errors.name.message) : null}
+                {form.formState.errors.name?.message
+                  ? tDynamic(t, form.formState.errors.name.message)
+                  : null}
               </FormMessage>
             </FormItem>
           )}
@@ -151,7 +154,7 @@ export const UserDeckForm: React.FC<UserDeckFormProps> = ({
               </FormControl>
               <FormMessage>
                 {form.formState.errors.description?.message
-                  ? t(form.formState.errors.description.message)
+                  ? tDynamic(t, form.formState.errors.description.message)
                   : null}
               </FormMessage>
             </FormItem>

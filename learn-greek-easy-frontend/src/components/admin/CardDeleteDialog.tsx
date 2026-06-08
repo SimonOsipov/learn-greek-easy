@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { tDynamic } from '@/i18n/tDynamic';
 
 interface CardDeleteDialogProps {
   open: boolean;
@@ -88,7 +89,7 @@ export const CardDeleteDialog: React.FC<CardDeleteDialogProps> = ({
                 {/* Data Loss List */}
                 <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
                   {dataLostKeys.map((key) => (
-                    <li key={key}>{t(key)}</li>
+                    <li key={key}>{tDynamic(t, key)}</li>
                   ))}
                 </ul>
 

@@ -222,9 +222,7 @@ export function MockExamResultsPage() {
               <p className="font-practice-mono text-2xl font-bold text-foreground">
                 {summary.score}
               </p>
-              <p className="text-center text-sm text-muted-foreground">
-                {t('common:correct', 'Correct')}
-              </p>
+              <p className="text-center text-sm text-muted-foreground">{t('common:correct')}</p>
             </CardContent>
           </Card>
 
@@ -235,9 +233,7 @@ export function MockExamResultsPage() {
               <p className="font-practice-mono text-2xl font-bold text-foreground">
                 {summary.percentage}%
               </p>
-              <p className="text-center text-sm text-muted-foreground">
-                {t('common:accuracy', 'Accuracy')}
-              </p>
+              <p className="text-center text-sm text-muted-foreground">{t('common:accuracy')}</p>
             </CardContent>
           </Card>
 

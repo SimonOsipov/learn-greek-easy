@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
+import { tDynamic } from '@/i18n/tDynamic';
 import { cn } from '@/lib/utils';
 import type { CardRecordType } from '@/services/wordEntryAPI';
 
@@ -74,7 +75,7 @@ export function MediaBadge({ cardType, className }: MediaBadgeProps) {
 
   return (
     <Badge className={cn(config.bgClass, config.textClass, className)} data-testid="media-badge">
-      {t(config.labelKey)}
+      {tDynamic(t, config.labelKey)}
     </Badge>
   );
 }

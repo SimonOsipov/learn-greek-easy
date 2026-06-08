@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { tDynamic } from '@/i18n/tDynamic';
 import { cn } from '@/lib/utils';
 import type { AchievementResponse } from '@/services/xpAPI';
 
@@ -117,11 +118,8 @@ export const AchievementCategory: React.FC<AchievementCategoryProps> = ({
   const IconComponent = categoryIcons[categoryKey] || categoryIcons.default;
   const colors = CATEGORY_COLORS[categoryKey] || DEFAULT_COLORS;
 
-  // Format category name for fallback (capitalize, replace underscores)
-  const formattedCategory = category.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-
-  // Get translated category name (fallback to formatted name)
-  const translatedCategory = t(`category.names.${categoryKey}`, formattedCategory);
+  // Get translated category name
+  const translatedCategory = tDynamic(t, `category.names.${categoryKey}`);
 
   const headingId = `category-${categoryKey.replace(/\s+/g, '-')}`;
 

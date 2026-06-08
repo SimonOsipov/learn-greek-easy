@@ -6,6 +6,7 @@
 
 import { useTranslation } from 'react-i18next';
 
+import { tDynamic } from '@/i18n/tDynamic';
 import { cn } from '@/lib/utils';
 import { CARD_ERROR_STATUS_CONFIG, type CardErrorStatus } from '@/types/cardError';
 
@@ -16,7 +17,7 @@ export function CardErrorStatusBadge({ status, className }: Props) {
   const { badgeClass } = CARD_ERROR_STATUS_CONFIG[status];
   return (
     <span className={cn(badgeClass, className)} data-testid="card-error-status-badge">
-      {t(`cardErrors.statuses.${status.toLowerCase()}`)}
+      {tDynamic(t, `cardErrors.statuses.${status.toLowerCase()}`)}
     </span>
   );
 }

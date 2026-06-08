@@ -66,14 +66,14 @@ export const NotificationsDropdown: React.FC = () => {
               size="icon"
               className="relative"
               disabled
-              aria-label={t('notifications.disabled', 'Notifications disabled')}
+              aria-label={t('notifications.disabled')}
               data-testid="notifications-trigger"
             >
               <Bell className="h-5 w-5 text-muted-foreground" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{t('notifications.disabledTooltip', 'Notifications are disabled in preferences')}</p>
+            <p>{t('notifications.disabledTooltip')}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -87,7 +87,7 @@ export const NotificationsDropdown: React.FC = () => {
           variant="ghost"
           size="icon"
           className="relative"
-          aria-label={t('notifications.title', 'Notifications')}
+          aria-label={t('notifications.title')}
           data-testid="notifications-trigger"
         >
           <Bell className="h-5 w-5" />
@@ -101,7 +101,7 @@ export const NotificationsDropdown: React.FC = () => {
       <DropdownMenuContent className="w-80" align="end" forceMount>
         {/* Header */}
         <DropdownMenuLabel className="flex items-center justify-between font-normal">
-          <span className="text-sm font-semibold">{t('notifications.title', 'Notifications')}</span>
+          <span className="text-sm font-semibold">{t('notifications.title')}</span>
           <div className="flex items-center gap-1">
             {unreadCount > 0 && (
               <>
