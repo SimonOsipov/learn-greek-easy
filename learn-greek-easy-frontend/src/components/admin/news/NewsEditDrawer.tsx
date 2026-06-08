@@ -51,7 +51,10 @@ export interface NewsDrawerFormData {
 }
 
 function getDateLocale(language: string): Locale | undefined {
-  switch (language) {
+  // Normalize region-qualified tags (e.g. 'ru-RU' -> 'ru'), matching the
+  // LanguageContext `.split('-')[0]` convention, so RU dates resolve when the
+  // browser supplies a region code.
+  switch (language.split('-')[0]) {
     case 'ru':
       return ru;
     case 'el':
