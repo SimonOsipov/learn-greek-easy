@@ -131,7 +131,9 @@ describe('i18n configuration', () => {
 
     it('should return key path for missing translation', () => {
       const result = i18n.t('nonexistent.key');
-      // With returnEmptyString: false and returnNull: false, missing keys return the key path
+      // With returnEmptyString: false and returnNull: false, missing keys return the key path.
+      // The production init wires warn/report mode (not throw), so missing keys do not throw
+      // here — they log to console.warn in dev and Sentry Logs in prod.
       expect(result).toBe('nonexistent.key');
     });
   });

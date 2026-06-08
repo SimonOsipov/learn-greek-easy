@@ -24,10 +24,15 @@ import enCommon from '@/i18n/locales/en/common.json';
 import enCulture from '@/i18n/locales/en/culture.json';
 import enDeck from '@/i18n/locales/en/deck.json';
 import enFeedback from '@/i18n/locales/en/feedback.json';
+import enLanding from '@/i18n/locales/en/landing.json';
+import enMockExam from '@/i18n/locales/en/mockExam.json';
 import enProfile from '@/i18n/locales/en/profile.json';
 import enReview from '@/i18n/locales/en/review.json';
 import enSettings from '@/i18n/locales/en/settings.json';
 import enStatistics from '@/i18n/locales/en/statistics.json';
+import enSubscription from '@/i18n/locales/en/subscription.json';
+import enUpgrade from '@/i18n/locales/en/upgrade.json';
+import enWaitlist from '@/i18n/locales/en/waitlist.json';
 import ruAchievements from '@/i18n/locales/ru/achievements.json';
 import ruAdmin from '@/i18n/locales/ru/admin.json';
 import ruAuth from '@/i18n/locales/ru/auth.json';
@@ -36,16 +41,25 @@ import ruCommon from '@/i18n/locales/ru/common.json';
 import ruCulture from '@/i18n/locales/ru/culture.json';
 import ruDeck from '@/i18n/locales/ru/deck.json';
 import ruFeedback from '@/i18n/locales/ru/feedback.json';
+import ruLanding from '@/i18n/locales/ru/landing.json';
+import ruMockExam from '@/i18n/locales/ru/mockExam.json';
 import ruProfile from '@/i18n/locales/ru/profile.json';
 import ruReview from '@/i18n/locales/ru/review.json';
 import ruSettings from '@/i18n/locales/ru/settings.json';
 import ruStatistics from '@/i18n/locales/ru/statistics.json';
+import ruSubscription from '@/i18n/locales/ru/subscription.json';
+import ruUpgrade from '@/i18n/locales/ru/upgrade.json';
+import ruWaitlist from '@/i18n/locales/ru/waitlist.json';
 import log from '@/lib/logger';
 
 // Initialize i18n for tests with English and Russian translations.
 // RU resources must be registered here so that i18n.changeLanguage('ru') in
 // locale-switching tests resolves to the actual RU strings rather than falling
 // back to EN (which happens when the language bundle is absent).
+//
+// All 17 namespaces are loaded so the throw-mode missing-key handler only fires
+// on keys that are genuinely absent, not on keys in namespaces that weren't
+// registered (which would also trigger saveMissing).
 i18n.use(initReactI18next).init({
   resources: {
     en: {
@@ -61,6 +75,11 @@ i18n.use(initReactI18next).init({
       feedback: enFeedback,
       culture: enCulture,
       admin: enAdmin,
+      landing: enLanding,
+      mockExam: enMockExam,
+      subscription: enSubscription,
+      upgrade: enUpgrade,
+      waitlist: enWaitlist,
     },
     ru: {
       common: ruCommon,
@@ -75,6 +94,11 @@ i18n.use(initReactI18next).init({
       feedback: ruFeedback,
       culture: ruCulture,
       admin: ruAdmin,
+      landing: ruLanding,
+      mockExam: ruMockExam,
+      subscription: ruSubscription,
+      upgrade: ruUpgrade,
+      waitlist: ruWaitlist,
     },
   },
   lng: 'en', // Force English for tests
@@ -93,12 +117,29 @@ i18n.use(initReactI18next).init({
     'feedback',
     'culture',
     'admin',
+    'landing',
+    'mockExam',
+    'subscription',
+    'upgrade',
+    'waitlist',
   ],
   interpolation: {
     escapeValue: false,
   },
   react: {
     useSuspense: false,
+  },
+  // Throw on missing keys in tests so absent translation strings surface
+  // immediately as test failures rather than silently returning the key path.
+  // Inlined here to avoid loading missingKeyHandler.ts in the setupFiles context,
+  // which would prevent vi.mock('@/lib/sentry-queue') from intercepting calls
+  // in missingKeyHandler.test.ts (Vitest cannot re-apply live bindings to modules
+  // loaded before per-test-file mocking runs).
+  saveMissing: true,
+  missingKeyHandler: (_lngs: string[], ns: string, key: string, fallbackValue: string): void => {
+    if (fallbackValue === key) {
+      throw new Error(`[i18n] missing key ${ns}:${key} (no translation, no defaultValue)`);
+    }
   },
 });
 

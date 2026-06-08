@@ -24,7 +24,7 @@ export function GenderBadge({ gender, className }: GenderBadgeProps) {
       className={cn('badge pointer-events-none', badgeVariant, className)}
       data-testid="gender-badge"
     >
-      {t(`grammar.nounDeclension.genders.${gender}`)}
+      {t(`grammar.nounDeclension.genders.${gender}`, { defaultValue: gender })}
     </span>
   );
 }
