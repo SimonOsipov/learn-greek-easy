@@ -747,9 +747,10 @@ it('renders title in Greek when lang=el', async () => {
 
 ### CI guard
 
-`scripts/check-no-raw-i18n-keys.sh` scans all test files for string literals that
-match a known i18n namespace prefix followed by dotted sub-keys. The script is run
-in CI as part of the `frontend-lint` job:
+`scripts/check-no-raw-i18n-keys.sh` scans the 8 news admin test files (I18NG-04
+scope) for raw i18n key literals in `*ByText`, `*ByLabelText`, and
+`getByRole` name assertions. Wider test-file coverage is deferred to a follow-up
+story. The script is run in CI as part of the `frontend-lint` job:
 
 ```
 npm run lint:no-raw-i18n-keys

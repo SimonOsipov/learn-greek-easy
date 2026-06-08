@@ -36,15 +36,37 @@ set -euo pipefail
 #
 # We require the string to start with a lowercase letter (to exclude URLs, UUIDs,
 # class names, ISO dates, etc.) and have the form: word.word.word (2+ dots).
+# Segments are digit-aware: [a-zA-Z0-9_]+ catches keys like b1Narration, scenarioB2.
 #
-# Regex breakdown:
-#   (getByText|queryByText|...) — assertion function
-#   \(                          — opening paren
-#   ['"]                        — opening quote
-#   [a-z][a-zA-Z0-9_]*         — first segment (must start lowercase, no digits)
-#   (\.[a-zA-Z0-9_]+){2,}      — two or more additional dot-separated segments
-#   ['"]                        — closing quote
-ASSERTION_PATTERN="(getByText|queryByText|getAllByText|queryAllByText|findByText|findAllByText|toHaveTextContent)\(['\"][a-z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+){2,}['\"]"
+# Three raw-key forms are detected (AC-4):
+#
+#   Form 1 — *ByText / toHaveTextContent with a raw string arg:
+#     screen.getByText('news.drawer.publishedPill')
+#
+#   Form 2 — *ByLabelText family with a raw string arg:
+#     screen.getByLabelText('news.drawer.title')
+#
+#   Form 3 — getByRole / *ByRole with a { name: '…' } or { name: /…/ } option:
+#     screen.getByRole('button', { name: 'news.drawer.save' })
+#     screen.getByRole('button', { name: /news\.drawer\.unlink/i })
+#
+# Regex breakdown (Form 1 & 2):
+#   (getByText|...|getByLabelText|...) — assertion function
+#   \(                                 — opening paren
+#   ['"]                               — opening quote
+#   [a-z][a-zA-Z0-9_]*               — first segment (must start lowercase)
+#   (\.[a-zA-Z0-9_]+){2,}             — two or more additional dot-separated segments
+#   ['"]                               — closing quote
+#
+# Regex breakdown (Form 3 — string name):
+#   name:[[:space:]]*                  — name: option key (with optional whitespace)
+#   ['"][a-z]…                         — same dotted-key shape as Forms 1/2
+#
+# Regex breakdown (Form 3 — regex /name/ literal):
+#   name:[[:space:]]*/[^/]*            — name: followed by /…
+#   [a-z][a-zA-Z0-9_]*(\\.[a-zA-Z0-9_]+){2,}
+#                                      — dotted key with escaped dots (\.segment)
+ASSERTION_PATTERN="(getByText|queryByText|getAllByText|queryAllByText|findByText|findAllByText|toHaveTextContent|getByLabelText|queryByLabelText|getAllByLabelText|queryAllByLabelText|findByLabelText|findAllByLabelText)\\(['\"][a-z][a-zA-Z0-9_]*(\\.[a-zA-Z0-9_]+){2,}['\"]|name:[[:space:]]*['\"][a-z][a-zA-Z0-9_]*(\\.[a-zA-Z0-9_]+){2,}['\"]|name:[[:space:]]*/[^/]*[a-z][a-zA-Z0-9_]*(\\\\.[a-zA-Z0-9_]+){2,}"
 
 # I18NG-04 scope: the 8 news test files that were cleaned of the masking pattern.
 # Extend this list as more test files are migrated (I18NG future stories).
