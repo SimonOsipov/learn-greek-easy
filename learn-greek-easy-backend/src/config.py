@@ -4,7 +4,7 @@ import json
 from functools import lru_cache
 from typing import List, Optional
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     database_pool_size: int = Field(default=15, description="Database connection pool size")
     database_max_overflow: int = Field(default=5, description="Max overflow connections")
     database_pool_timeout: int = Field(default=30, description="Pool connection timeout")
+    database_pool_warm_min: int = Field(
+        default=5,
+        description="Minimum number of DB connections to pre-open (warm) at startup",
+    )
 
     # =========================================================================
     # Redis
@@ -217,6 +221,12 @@ class Settings(BaseSettings):
         alias="cors_expose_headers",
         description="Headers exposed to browser JavaScript (comma-separated or JSON array)",
     )
+
+    @model_validator(mode="after")
+    def _validate_warm_min(self) -> "Settings":
+        if self.database_pool_warm_min > self.database_pool_size:
+            raise ValueError("database_pool_warm_min cannot exceed database_pool_size")
+        return self
 
     @staticmethod
     def _parse_list_from_string(value: str) -> List[str]:

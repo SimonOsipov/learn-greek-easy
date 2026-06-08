@@ -78,3 +78,62 @@ class TestOpenRouterImageSettings:
 
         settings = Settings()
         assert settings.openrouter_image_aspect_ratio == "1:1"
+
+
+class TestDatabasePoolWarmMin:
+    """Tests for database_pool_warm_min config setting (PERF-07-01)."""
+
+    def test_database_pool_warm_min_defaults_to_5(self, monkeypatch):
+        """database_pool_warm_min defaults to 5 when DATABASE_POOL_WARM_MIN env var is unset."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.delenv("DATABASE_POOL_WARM_MIN", raising=False)
+
+        settings = Settings()
+        assert settings.database_pool_warm_min == 5
+
+    def test_database_pool_warm_min_env_override(self, monkeypatch):
+        """database_pool_warm_min reads value from DATABASE_POOL_WARM_MIN env var when set."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("DATABASE_POOL_WARM_MIN", "10")
+
+        settings = Settings()
+        assert settings.database_pool_warm_min == 10
+
+    def test_database_pool_warm_min_exceeding_pool_size_rejected(self, monkeypatch):
+        """Settings() raises ValidationError when database_pool_warm_min > database_pool_size."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("DATABASE_POOL_SIZE", "5")
+        monkeypatch.setenv("DATABASE_POOL_WARM_MIN", "6")
+
+        with pytest.raises(ValidationError) as exc_info:
+            Settings()
+
+        assert "database_pool_warm_min" in str(exc_info.value).lower()
+
+    def test_database_pool_warm_min_equal_to_pool_size_accepted(self, monkeypatch):
+        """warm_min == pool_size is valid — the validator uses strict >, not >=."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("DATABASE_POOL_SIZE", "5")
+        monkeypatch.setenv("DATABASE_POOL_WARM_MIN", "5")
+
+        settings = Settings()
+        assert settings.database_pool_warm_min == 5
+        assert settings.database_pool_size == 5
+
+    def test_database_pool_warm_min_zero_accepted(self, monkeypatch):
+        """warm_min=0 disables warming; the validator must not reject it."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("DATABASE_POOL_WARM_MIN", "0")
+
+        settings = Settings()
+        assert settings.database_pool_warm_min == 0
