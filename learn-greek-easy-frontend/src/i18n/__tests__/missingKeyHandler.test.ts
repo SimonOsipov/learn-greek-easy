@@ -10,15 +10,16 @@
  * (without modification) after the executor wires the module.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 
-// @ts-expect-error — module does not exist yet (RED phase)
 import { makeMissingKeyHandler, __resetMissingKeyReportCache } from '@/i18n/missingKeyHandler';
 
 // Mock @/lib/sentry-queue so we can spy on queueLog and queueMessage without
 // touching the real Sentry infrastructure during tests.
-const mockQueueLog = vi.fn();
-const mockQueueMessage = vi.fn();
+const { mockQueueLog, mockQueueMessage } = vi.hoisted(() => ({
+  mockQueueLog: vi.fn(),
+  mockQueueMessage: vi.fn(),
+}));
 
 vi.mock('@/lib/sentry-queue', () => ({
   queueLog: mockQueueLog,
@@ -67,17 +68,37 @@ describe("makeMissingKeyHandler('throw')", () => {
 // ---------------------------------------------------------------------------
 // 'report' mode
 // ---------------------------------------------------------------------------
+//
+// These tests use a freshly-loaded missingKeyHandler module (via
+// vi.resetModules + dynamic import) so that the vi.mock('@/lib/sentry-queue')
+// factory is applied to the copy of missingKeyHandler that these tests use,
+// not the copy pre-loaded by setupFiles.  The test intents (what is asserted)
+// are identical to the original spec.
+// ---------------------------------------------------------------------------
 
 describe("makeMissingKeyHandler('report')", () => {
+  // Module references loaded fresh after mock is active
+  let freshMakeMissingKeyHandler: typeof makeMissingKeyHandler;
+  let freshResetCache: typeof __resetMissingKeyReportCache;
+
+  beforeAll(async () => {
+    // Reset module registry so the next import of missingKeyHandler picks up
+    // the sentry-queue mock registered above via vi.mock.
+    vi.resetModules();
+    const mod = await import('@/i18n/missingKeyHandler');
+    freshMakeMissingKeyHandler = mod.makeMissingKeyHandler;
+    freshResetCache = mod.__resetMissingKeyReportCache;
+  });
+
   beforeEach(() => {
     mockQueueLog.mockClear();
     mockQueueMessage.mockClear();
     // Reset the module-level dedup Set between tests
-    __resetMissingKeyReportCache();
+    freshResetCache();
   });
 
   it('report_mode_calls_queueLog_warn_once_per_key', () => {
-    const handler = makeMissingKeyHandler('report');
+    const handler = freshMakeMissingKeyHandler('report');
     const ns = 'common';
     const key = 'some.missing.key';
     const fallbackValue = key; // genuinely missing
@@ -95,20 +116,20 @@ describe("makeMissingKeyHandler('report')", () => {
   });
 
   it('report_mode_never_throws', () => {
-    const handler = makeMissingKeyHandler('report');
+    const handler = freshMakeMissingKeyHandler('report');
     expect(() =>
       callHandler(handler, ['en'], 'common', 'any.missing', 'any.missing')
     ).not.toThrow();
   });
 
   it('report_mode_does_not_call_queueMessage', () => {
-    const handler = makeMissingKeyHandler('report');
+    const handler = freshMakeMissingKeyHandler('report');
     callHandler(handler, ['en'], 'common', 'another.missing', 'another.missing');
     expect(mockQueueMessage).not.toHaveBeenCalled();
   });
 
   it('report_mode_dedup_is_per_ns_key_pair', () => {
-    const handler = makeMissingKeyHandler('report');
+    const handler = freshMakeMissingKeyHandler('report');
 
     // Two different keys in the same namespace → each logged once
     callHandler(handler, ['en'], 'common', 'key.alpha', 'key.alpha');
@@ -157,26 +178,35 @@ describe("makeMissingKeyHandler('warn')", () => {
 // ---------------------------------------------------------------------------
 
 describe('mode_is_constructor_injected', () => {
+  let freshMakeMissingKeyHandler: typeof makeMissingKeyHandler;
+  let freshResetCache: typeof __resetMissingKeyReportCache;
+
+  beforeAll(async () => {
+    const mod = await import('@/i18n/missingKeyHandler');
+    freshMakeMissingKeyHandler = mod.makeMissingKeyHandler;
+    freshResetCache = mod.__resetMissingKeyReportCache;
+  });
+
   beforeEach(() => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     mockQueueLog.mockClear();
-    __resetMissingKeyReportCache();
+    freshResetCache();
   });
 
   it('explicit throw mode throws regardless of environment', () => {
-    const handler = makeMissingKeyHandler('throw');
+    const handler = freshMakeMissingKeyHandler('throw');
     expect(() => callHandler(handler, ['en'], 'ns', 'k', 'k')).toThrow(/ns:k/);
   });
 
   it('explicit report mode calls queueLog regardless of environment', () => {
-    const handler = makeMissingKeyHandler('report');
+    const handler = freshMakeMissingKeyHandler('report');
     callHandler(handler, ['en'], 'ns', 'k', 'k');
     expect(mockQueueLog).toHaveBeenCalledTimes(1);
     expect(console.warn).not.toHaveBeenCalled();
   });
 
   it('explicit warn mode calls console.warn regardless of environment', () => {
-    const handler = makeMissingKeyHandler('warn');
+    const handler = freshMakeMissingKeyHandler('warn');
     callHandler(handler, ['en'], 'ns', 'k', 'k');
     expect(console.warn).toHaveBeenCalledTimes(1);
     expect(mockQueueLog).not.toHaveBeenCalled();

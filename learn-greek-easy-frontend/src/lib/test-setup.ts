@@ -50,6 +50,7 @@ import ruStatistics from '@/i18n/locales/ru/statistics.json';
 import ruSubscription from '@/i18n/locales/ru/subscription.json';
 import ruUpgrade from '@/i18n/locales/ru/upgrade.json';
 import ruWaitlist from '@/i18n/locales/ru/waitlist.json';
+import { makeMissingKeyHandler } from '@/i18n/missingKeyHandler';
 import log from '@/lib/logger';
 
 // Initialize i18n for tests with English and Russian translations.
@@ -131,16 +132,8 @@ i18n.use(initReactI18next).init({
   },
   // Throw on missing keys in tests so absent translation strings surface
   // immediately as test failures rather than silently returning the key path.
-  // Inlined here to avoid loading missingKeyHandler.ts in the setupFiles context,
-  // which would prevent vi.mock('@/lib/sentry-queue') from intercepting calls
-  // in missingKeyHandler.test.ts (Vitest cannot re-apply live bindings to modules
-  // loaded before per-test-file mocking runs).
   saveMissing: true,
-  missingKeyHandler: (_lngs: string[], ns: string, key: string, fallbackValue: string): void => {
-    if (fallbackValue === key) {
-      throw new Error(`[i18n] missing key ${ns}:${key} (no translation, no defaultValue)`);
-    }
-  },
+  missingKeyHandler: makeMissingKeyHandler('throw'),
 });
 
 // Ensure localStorage exists BEFORE any Zustand stores are imported

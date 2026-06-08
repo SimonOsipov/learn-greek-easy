@@ -18,7 +18,5 @@
     "src/test-utils/**/*",
     "tests/**/*"
   ],
-  "exclude": [
-    "src/i18n/__tests__/missingKeyHandler.test.ts"
-  ]
+  "exclude": []
 }

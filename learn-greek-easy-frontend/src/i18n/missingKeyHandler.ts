@@ -11,7 +11,6 @@
  * instances.  Use __resetMissingKeyReportCache() to clear it between tests.
  */
 
-import log from '@/lib/logger';
 import { queueLog } from '@/lib/sentry-queue';
 
 export type MissingKeyMode = 'throw' | 'report' | 'warn';
@@ -38,6 +37,13 @@ const reported = new Set<string>();
  * Escape hatch: if the caller passes a `defaultValue` option, i18next sets
  * `fallbackValue` to that string (different from `key`), so the handler treats
  * the lookup as intentional and does NOT throw / log.
+ *
+ * Implementation note: 'warn' mode calls console.warn directly (not via
+ * loglevel) so that vi.spyOn(console, 'warn') in unit tests captures the call
+ * reliably without loglevel's pre-captured method-factory reference interfering.
+ * The 'report' mode unit tests use vi.resetModules() + dynamic import to load
+ * a fresh copy of this module after the vi.mock('@/lib/sentry-queue') factory
+ * has been registered, ensuring queueLog resolves to the mock spy.
  */
 export function makeMissingKeyHandler(mode: MissingKeyMode): MissingKeyHandler {
   return (_lngs, ns, key, fallbackValue) => {
@@ -58,8 +64,10 @@ export function makeMissingKeyHandler(mode: MissingKeyMode): MissingKeyHandler {
     if (mode === 'report') {
       queueLog('warn', `[i18n] missing key ${id}`);
     } else {
-      // 'warn' mode
-      log.warn(`[i18n] missing key ${id}`);
+      // 'warn' mode — call console.warn directly so vi.spyOn(console, 'warn')
+      // captures the call without loglevel's pre-captured method reference interfering.
+      // eslint-disable-next-line no-console
+      console.warn(`[i18n] missing key ${id}`);
     }
   };
 }
