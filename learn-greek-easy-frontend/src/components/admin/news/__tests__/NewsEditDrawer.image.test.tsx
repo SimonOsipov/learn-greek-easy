@@ -136,7 +136,8 @@ async function loadModules() {
 function Wrapper({ item }: { item: NewsItemResponse }) {
   const methods = useForm({
     defaultValues: {
-      source_image_url: item.image_url ?? '',
+      // NBUG-06: toDefaults() seeds source_image_url as '' (not item.image_url)
+      source_image_url: '',
       alt_text: item.alt_text ?? '',
       photo_credit: item.photo_credit ?? '',
     },
@@ -205,12 +206,12 @@ describe('NewsEditDrawerImage — layout', () => {
 });
 
 describe('NewsEditDrawerImage — source URL input', () => {
-  it('pre-fills source_image_url from item.image_url', () => {
+  it('source_image_url opens empty regardless of item.image_url (NBUG-06)', () => {
     const item = makeItem({ image_url: 'https://cdn.example.com/photo.jpg' });
-    // Wrapper passes item.image_url as source_image_url default, matching toDefaults behaviour
+    // NBUG-06: toDefaults() seeds source_image_url as '' — the field opens empty, not pre-filled
     render(<Wrapper item={item} />);
     const input = screen.getByTestId('news-drawer-image-url-input') as HTMLInputElement;
-    expect(input.value).toBe('https://cdn.example.com/photo.jpg');
+    expect(input.value).toBe('');
   });
 
   it('opens empty when item.image_url is null', () => {

@@ -305,13 +305,14 @@ describe('NewsEditDrawer — pickTitle fallback chain', () => {
     expect(document.querySelector('.drawer-title')!.textContent).toBe('Ελληνικό');
   });
 
-  it('shows (untitled) when all title fields are empty', () => {
+  it('shows untitled i18n key when all title fields are empty', () => {
     const item = makeItem({ title_el: '', title_en: '', title_ru: '' });
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
     currentLang = 'en';
     renderDrawer();
-    expect(document.querySelector('.drawer-title')!.textContent).toBe('(untitled)');
+    // pickTitle returns '' → component renders t('news.drawer.untitled'); i18n mock returns key
+    expect(document.querySelector('.drawer-title')!.textContent).toBe('news.drawer.untitled');
   });
 });
 
@@ -321,7 +322,8 @@ describe('NewsEditDrawer — linked situation pill', () => {
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
     renderDrawer();
-    expect(screen.queryByText('news.drawer.linkedSituationPill')).not.toBeInTheDocument();
+    // NBUG-01: callsite now uses t('news.drawer.linkedSituationLabel')
+    expect(screen.queryByText('news.drawer.linkedSituationLabel')).not.toBeInTheDocument();
   });
 
   it('renders blue linked-situation badge when linked_situation is non-null', () => {
@@ -343,7 +345,8 @@ describe('NewsEditDrawer — linked situation pill', () => {
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
     renderDrawer();
-    expect(screen.getByText('news.drawer.linkedSituationPill')).toBeInTheDocument();
+    // NBUG-01: pill uses t('news.drawer.linkedSituationLabel') not the old 'linkedSituationPill'
+    expect(screen.getByText('news.drawer.linkedSituationLabel')).toBeInTheDocument();
   });
 });
 

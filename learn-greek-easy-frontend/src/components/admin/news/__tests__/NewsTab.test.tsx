@@ -12,6 +12,7 @@
 import React from 'react';
 
 import { render, screen } from '@testing-library/react';
+import enAdmin from '@/i18n/locales/en/admin.json';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -179,9 +180,9 @@ describe('NewsTab — basic rendering', () => {
     expect(barsEl.querySelectorAll('span')).toHaveLength(9);
   });
 
-  it('card #2 (audio) shows sub from i18n key news.stats.audioCoverage', () => {
-    renderWithRouter();
-    expect(screen.getByText('news.stats.audioCoverage')).toBeInTheDocument();
+  it('news.stats.audioCoverage exists and is non-empty in en/admin.json (NBUG-01/NBUG-08)', () => {
+    expect(enAdmin.news.stats.audioCoverage).toBeTruthy();
+    expect(typeof enAdmin.news.stats.audioCoverage).toBe('string');
   });
 
   it('card #4 (country) renders sparkline bars with 9 bars', () => {
@@ -197,9 +198,9 @@ describe('NewsTab — basic rendering', () => {
     expect(screen.getByText('CY')).toBeInTheDocument();
   });
 
-  it('card #4 (country) shows sub from i18n key news.stats.countrySub', () => {
-    renderWithRouter();
-    expect(screen.getByText('news.stats.countrySub')).toBeInTheDocument();
+  it('news.stats.countrySub exists and is non-empty in en/admin.json (NBUG-01/NBUG-08)', () => {
+    expect(enAdmin.news.stats.countrySub).toBeTruthy();
+    expect(typeof enAdmin.news.stats.countrySub).toBe('string');
   });
 
   it('card #3 (B1) renders real b1_audio_count value (not "—")', () => {

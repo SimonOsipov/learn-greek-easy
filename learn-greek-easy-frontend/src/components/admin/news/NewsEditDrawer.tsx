@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { format, formatDistanceToNow, parseISO } from 'date-fns';
+import { el } from 'date-fns/locale/el';
+import { ru } from 'date-fns/locale/ru';
 import { Check, Pencil, Wand2 } from 'lucide-react';
 import { FormProvider, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -32,6 +34,8 @@ import {
 } from './NewsEditDrawer.linkedSituation';
 import { NewsEditDrawerTranslations } from './NewsEditDrawer.translations';
 
+import type { Locale } from 'date-fns';
+
 export type NewsDrawerTab = 'translations' | 'body' | 'audio' | 'image' | 'linkedSituation';
 
 export interface NewsDrawerFormData {
@@ -44,6 +48,20 @@ export interface NewsDrawerFormData {
   source_image_url: string;
   alt_text: string;
   photo_credit: string;
+}
+
+function getDateLocale(language: string): Locale | undefined {
+  // Normalize region-qualified tags (e.g. 'ru-RU' -> 'ru'), matching the
+  // LanguageContext `.split('-')[0]` convention, so RU dates resolve when the
+  // browser supplies a region code.
+  switch (language.split('-')[0]) {
+    case 'ru':
+      return ru;
+    case 'el':
+      return el;
+    default:
+      return undefined;
+  }
 }
 
 export const NewsEditDrawer: React.FC = () => {
@@ -164,6 +182,9 @@ export const NewsEditDrawer: React.FC = () => {
 
   const handlePublish = useCallback(async () => {
     if (!item) return;
+    if (!item.alt_text || item.alt_text.trim() === '') {
+      toast({ title: t('news.drawer.image.altWarning'), variant: 'default' });
+    }
     setIsPublishing(true);
     try {
       const targetStatus = item.status === 'draft' ? 'published' : 'published';
@@ -189,10 +210,10 @@ export const NewsEditDrawer: React.FC = () => {
 
   if (!item) return null;
 
-  const titleInLang = pickTitle(item, i18n.language);
+  const titleInLang = pickTitle(item, i18n.language) || t('news.drawer.untitled');
   const countryLabel = t(`news.drawer.country.${item.country}`);
   const countryFlag =
-    ({ cyprus: '🇨🇾', greece: '🇬🇷', world: '🌍', es: '🇪🇸' } as const)[item.country] ?? '🌍';
+    ({ cyprus: '🇨🇾', greece: '🇬🇷', world: '🌍' } as Record<string, string>)[item.country] ?? '🌍';
 
   return (
     <TooltipProvider>
@@ -203,11 +224,11 @@ export const NewsEditDrawer: React.FC = () => {
         }}
         size="default"
         data-testid="news-edit-drawer"
-        title="Edit news article"
+        title={t('news.drawer.title')}
       >
         <SidePanel.CloseButton position="right" onClick={requestClose} />
         <SidePanel.Header>
-          <div className="drawer-breadcrumb">{`News · ${countryFlag} ${countryLabel} · ${t('news.drawer.publishedOn', { date: item.publication_date ? format(parseISO(item.publication_date), 'dd MMM yyyy') : '' })}`}</div>
+          <div className="drawer-breadcrumb">{`News · ${countryFlag} ${countryLabel} · ${t('news.drawer.publishedOn', { date: item.publication_date ? format(parseISO(item.publication_date), 'dd MMM yyyy', { locale: getDateLocale(i18n.language) }) : '' })}`}</div>
           <h2 className="drawer-title">{titleInLang}</h2>
           <div className="drawer-meta">
             {item.status === 'draft' ? (
@@ -224,7 +245,7 @@ export const NewsEditDrawer: React.FC = () => {
             {item.description_el ? <Badge tone="violet">B2</Badge> : null}
             {item.description_el_a2 ? <Badge tone="violet">A2</Badge> : null}
             {item.linked_situation !== null && (
-              <Badge tone="blue">{t('news.drawer.linkedSituationPill')}</Badge>
+              <Badge tone="blue">{t('news.drawer.linkedSituationLabel')}</Badge>
             )}
           </div>
         </SidePanel.Header>
@@ -288,7 +309,10 @@ export const NewsEditDrawer: React.FC = () => {
               </Badge>
               <span className="text-muted-foreground">
                 {t('news.drawer.updatedRelative', {
-                  relative: formatDistanceToNow(new Date(item.updated_at), { addSuffix: true }),
+                  relative: formatDistanceToNow(new Date(item.updated_at), {
+                    addSuffix: true,
+                    locale: getDateLocale(i18n.language),
+                  }),
                 })}
               </span>
             </div>
@@ -381,7 +405,7 @@ function toDefaults(item: NewsItemResponse | null): NewsDrawerFormData {
     description_el: item?.description_el ?? '',
     title_el_a2: item?.title_el_a2 ?? null,
     description_el_a2: item?.description_el_a2 ?? null,
-    source_image_url: item?.image_url ?? '',
+    source_image_url: '',
     alt_text: item?.alt_text ?? '',
     photo_credit: item?.photo_credit ?? '',
   };
@@ -409,5 +433,5 @@ function toLinkedSituationSummaryProp(
 
 function pickTitle(item: NewsItemResponse, lang: string): string {
   const byLang = lang === 'el' ? item.title_el : lang === 'ru' ? item.title_ru : item.title_en;
-  return byLang || item.title_en || item.title_el || '(untitled)';
+  return byLang || item.title_en || item.title_el || '';
 }

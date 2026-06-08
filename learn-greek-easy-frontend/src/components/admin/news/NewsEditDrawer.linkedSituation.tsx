@@ -111,9 +111,9 @@ export const NewsEditDrawerLinkedSituation: React.FC<Props> = ({
             {/* Status + level badges */}
             <div className="dr-sit-badges">
               <span className="dr-sit-status" data-testid="dr-sit-status-badge">
-                {linkedSituation.status === 'ready'
-                  ? t('situations.status.ready')
-                  : linkedSituation.status}
+                {t('situations.status.' + linkedSituation.status, {
+                  defaultValue: linkedSituation.status,
+                })}
               </span>
               {linkedSituation.levels.map((level) => (
                 <Badge key={level} tone="violet" className="news-level">
@@ -125,14 +125,25 @@ export const NewsEditDrawerLinkedSituation: React.FC<Props> = ({
             <p className="dr-sit-title-el" lang="el">
               {linkedSituation.titleEl}
             </p>
-            <p className="dr-sit-meta">
-              {linkedSituation.roleCount} roles · {linkedSituation.names} ·{' '}
-              {linkedSituation.turnCount} turns · {linkedSituation.exerciseCount} exercises ·{' '}
-              <span className="dr-sit-audio">
-                <Play size={10} aria-hidden="true" />
-                {formatDurationMSS(linkedSituation.audioDurationSeconds)}
-              </span>
-            </p>
+            {(() => {
+              const metaSegments = [
+                `${linkedSituation.roleCount} roles`,
+                linkedSituation.names,
+                `${linkedSituation.turnCount} turns`,
+                `${linkedSituation.exerciseCount} exercises`,
+              ].filter(Boolean);
+              const metaText = metaSegments.join(' · ');
+              return (
+                <p className="dr-sit-meta">
+                  {metaText}
+                  {metaText ? ' · ' : ''}
+                  <span className="dr-sit-audio">
+                    <Play size={10} aria-hidden="true" />
+                    {formatDurationMSS(linkedSituation.audioDurationSeconds)}
+                  </span>
+                </p>
+              );
+            })()}
           </div>
         </div>
       )}
