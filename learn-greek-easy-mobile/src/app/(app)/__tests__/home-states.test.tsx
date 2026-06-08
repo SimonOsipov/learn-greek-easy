@@ -8,7 +8,7 @@
  */
 import React, { act } from 'react';
 import { RefreshControl } from 'react-native';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, fireEvent } from '@testing-library/react-native';
 
 // ---------------------------------------------------------------------------
 // Mocks — MUST precede any import that resolves the mocked module.
@@ -295,5 +295,52 @@ describe('DASH-10 — reduced motion renders static skeleton', () => {
     );
     render(<HomeScreen />);
     expect(screen.getByTestId('dashboard-skeleton')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 5. Critical-error state → page-level error + retry (MOB-16 / DASH-10 AC)
+// ---------------------------------------------------------------------------
+
+describe('MOB-16 — critical error shows page-level error + retry', () => {
+  it('renders error message and Retry button when isError=true and isLoading=false', () => {
+    mockUseDashboard.mockReturnValue(
+      makeReturningSummary({ isError: true, isLoading: false, isNewUser: undefined }),
+    );
+    render(<HomeScreen />);
+
+    expect(screen.getByTestId('home-error')).toBeTruthy();
+    expect(screen.getByText("Couldn't load your dashboard.")).toBeTruthy();
+    expect(screen.getByTestId('home-error-retry')).toBeTruthy();
+  });
+
+  it('does NOT render DashboardSkeleton when isError=true (no infinite skeleton)', () => {
+    mockUseDashboard.mockReturnValue(
+      makeReturningSummary({ isError: true, isLoading: false, isNewUser: undefined }),
+    );
+    render(<HomeScreen />);
+
+    expect(screen.queryByTestId('dashboard-skeleton')).toBeNull();
+  });
+
+  it('does NOT render the returning-user or new-user screen on critical error', () => {
+    mockUseDashboard.mockReturnValue(
+      makeReturningSummary({ isError: true, isLoading: false, isNewUser: undefined }),
+    );
+    render(<HomeScreen />);
+
+    expect(screen.queryByTestId('home-returning')).toBeNull();
+    expect(screen.queryByTestId('home-new-user')).toBeNull();
+  });
+
+  it('pressing Retry calls refetchAll', () => {
+    const refetchAll = jest.fn().mockResolvedValue(undefined);
+    mockUseDashboard.mockReturnValue(
+      makeReturningSummary({ isError: true, isLoading: false, isNewUser: undefined, refetchAll }),
+    );
+    render(<HomeScreen />);
+
+    fireEvent.press(screen.getByTestId('home-error-retry'));
+    expect(refetchAll).toHaveBeenCalledTimes(1);
   });
 });

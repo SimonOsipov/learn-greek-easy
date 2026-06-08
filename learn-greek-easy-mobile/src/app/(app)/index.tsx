@@ -30,7 +30,7 @@
  * Dark is the default theme (controlled by NativeWind + app _layout).
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { BookOpen, Trophy } from 'lucide-react-native';
@@ -101,6 +101,7 @@ export default function HomeScreen() {
     whatsNew,
     isNewUser,
     isLoading,
+    isError,
     newsError,
     situationsError,
     decksError,
@@ -136,6 +137,27 @@ export default function HomeScreen() {
       track('home_screen_viewed', { state: isNewUser ? 'new_user' : 'returning' });
     }
   }, [isNewUser]);
+
+  // ── Critical-error state ──
+  // If the progress query errors, isLoading becomes false but isNewUser stays
+  // undefined — the skeleton guard below would show indefinitely. Catch it here
+  // first and show a page-level error + retry affordance instead.
+  if (isError && !isLoading) {
+    return (
+      <SafeAreaView testID="home-error" className="flex-1 bg-bg items-center justify-center px-8">
+        <Text className="text-fg2 text-[15px] text-center mb-5">
+          Couldn&apos;t load your dashboard.
+        </Text>
+        <Pressable
+          testID="home-error-retry"
+          onPress={refetchAll}
+          className="px-6 py-3 rounded-xl bg-card border border-line active:opacity-70"
+        >
+          <Text className="text-primary text-[14px] font-semibold">Retry</Text>
+        </Pressable>
+      </SafeAreaView>
+    );
+  }
 
   // ── Loading state ──
   // While isLoading is true, isNewUser is undefined. Show per-section
