@@ -78,12 +78,13 @@ env:
 - tapOn:
     text: "Start practicing.*"   # regex: trailing space + U+2192 arrow
 
-# POST-ONBOARDING: (app) HOME
+# POST-ONBOARDING: (app) HOME — now the MOB-16 dashboard (replaced the old "Success!" proof screen).
 # 90s timeout: the submit does PATCH /auth/me -> ['me'] invalidation -> guard re-route -> home render,
-# a round-trip that can exceed 30s against a COLD-STARTED dev backend (just deployed by the CI deploy job).
-# The success screen renders correctly; it just needs patience on a cold backend.
+# a round-trip that can exceed 30s against a COLD-STARTED dev backend (just deployed by the CI deploy job),
+# plus the dashboard then fetches progress/decks/news before content paints.
+# "Γεια σου" is the greeting rendered in BOTH dashboard states (new-user "Three ways to start" and
+# returning), so it is the stable post-onboarding marker for a just-onboarded account.
 - extendedWaitUntil:
-    visible: "Success!"          # substring (avoids emoji)
+    visible: "Γεια σου"          # greeting kicker — present in both dashboard states
     timeout: 90000
-- assertVisible: "Signed in as ${E2E_EMAIL}"
 - takeScreenshot: 10-app-home
