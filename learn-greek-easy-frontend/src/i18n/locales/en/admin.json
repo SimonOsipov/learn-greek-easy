@@ -450,6 +450,8 @@
       "withAudio": "With Audio",
       "b1Coverage": "B1 coverage",
       "countries": "Countries",
+      "audioCoverage": "{{count}}/{{total}} with audio",
+      "countrySub": "Cyprus only",
       "allTime": "All time",
       "recentThisWeek": "+{{count}} this week"
     },
@@ -564,6 +566,7 @@
         "image": "Image",
         "linkedSituation": "Linked situation"
       },
+      "untitled": "(untitled)",
       "save": "Save & close",
       "saving": "Saving…",
       "cancel": "Cancel",
@@ -624,7 +627,8 @@
         "sourceUrl": "Source image URL",
         "altText": "Alt text — English",
         "photoCredit": "Photo credit",
-        "invalidUrl": "Image URL is not valid"
+        "invalidUrl": "Image URL is not valid",
+        "altWarning": "This article has no alt text. Consider adding it for accessibility before publishing."
       },
       "linkedSituation": {
         "kicker": "Linked situation",
@@ -637,10 +641,16 @@
     },
     "card": {
       "editLabel": "Edit",
-      "deleteLabel": "Delete"
+      "deleteLabel": "Delete",
+      "publishedLabel": "Published"
     },
     "toolbar": {
-      "searchPlaceholder": "Search by title, body, or person…"
+      "searchPlaceholder": "Search by title, body, or person…",
+      "sort": {
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "updated": "Recently updated"
+      }
     },
     "list": {
       "emptyTitle": "No results",
@@ -1689,7 +1699,8 @@
     },
     "status": {
       "draft": "Draft",
-      "ready": "Ready"
+      "ready": "Ready",
+      "published": "Published"
     },
     "media": {
       "dialogAudio": "Dialog Audio",

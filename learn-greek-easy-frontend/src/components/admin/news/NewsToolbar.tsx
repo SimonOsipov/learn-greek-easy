@@ -16,19 +16,19 @@
 
 import { useEffect, useState } from 'react';
 
-import { ChevronDown, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { SegControl, type SegOption } from '@/components/ui/seg-control';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
 
 // ---------------------------------------------------------------------------
@@ -48,7 +48,7 @@ function useDebounce<T>(value: T, delay: number): T {
 // Option definitions
 // ---------------------------------------------------------------------------
 
-type CountryValue = 'all' | 'cyprus' | 'greece' | 'es';
+type CountryValue = 'all' | 'cyprus' | 'greece';
 type LevelValue = 'all' | 'B2' | 'A2' | 'B1';
 type SortValue = 'newest' | 'oldest' | 'updated';
 
@@ -56,7 +56,6 @@ const COUNTRY_OPTIONS: SegOption<CountryValue>[] = [
   { value: 'all', label: 'All' },
   { value: 'cyprus', label: '🇨🇾 CY' },
   { value: 'greece', label: '🇬🇷 GR' },
-  { value: 'es', label: '🇪🇸 ES' },
 ];
 
 const LEVEL_OPTIONS: SegOption<LevelValue>[] = [
@@ -65,12 +64,6 @@ const LEVEL_OPTIONS: SegOption<LevelValue>[] = [
   { value: 'A2', label: 'A2' },
   { value: 'B1', label: 'B1' },
 ];
-
-const SORT_LABELS: Record<SortValue, string> = {
-  newest: 'Newest first',
-  oldest: 'Oldest first',
-  updated: 'Recently updated',
-};
 
 // ---------------------------------------------------------------------------
 // Component
@@ -242,22 +235,17 @@ export function NewsToolbar() {
         label="Level"
       />
 
-      {/* Sort dropdown */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="btn-glass btn-sm" data-testid="news-toolbar-sort-trigger">
-            {SORT_LABELS[sortMode]}
-            <ChevronDown className="ml-1 h-4 w-4" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuRadioGroup value={sortMode} onValueChange={handleSortChange}>
-            <DropdownMenuRadioItem value="newest">Newest first</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="oldest">Oldest first</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="updated">Recently updated</DropdownMenuRadioItem>
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {/* Sort select */}
+      <Select value={sortMode} onValueChange={handleSortChange}>
+        <SelectTrigger className="w-[180px]" data-testid="news-toolbar-sort-trigger">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="newest">{t('news.toolbar.sort.newest')}</SelectItem>
+          <SelectItem value="oldest">{t('news.toolbar.sort.oldest')}</SelectItem>
+          <SelectItem value="updated">{t('news.toolbar.sort.updated')}</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }

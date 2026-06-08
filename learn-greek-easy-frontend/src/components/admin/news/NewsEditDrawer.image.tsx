@@ -24,16 +24,16 @@ export const NewsEditDrawerImage: React.FC<Props> = ({ item }) => {
       <div className="dr-image-preview">
         <div className="dr-image-box">
           {item.image_url ? (
-            <img src={item.image_url} alt="" />
+            <img src={item.image_url} alt={item.alt_text ?? ''} />
           ) : (
             <div className="dr-image-fallback" />
           )}
         </div>
         <div className="dr-image-overlay">
           <Kicker dot="primary">{t('news.drawer.image.kicker')}</Kicker>
-          <p className="text-sm text-muted-foreground">{t('news.drawer.image.helper')}</p>
         </div>
       </div>
+      <p className="text-sm text-muted-foreground">{t('news.drawer.image.helper')}</p>
 
       {/* Right: stacked Field inputs */}
       <div className="space-y-4">

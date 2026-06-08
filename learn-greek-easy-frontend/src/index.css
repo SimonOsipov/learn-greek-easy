@@ -1449,6 +1449,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 14px;
+    align-items: start;
   }
   .dr-field {
     display: flex;
@@ -3187,7 +3188,7 @@
   /* ── Audio tab rows (NEWS-07c) ─────────────────────────────────────────── */
   .audio-row {
     display: grid;
-    grid-template-columns: 200px 1fr auto;
+    grid-template-columns: minmax(220px, 260px) 1fr auto;
     gap: 12px;
     align-items: center;
     padding: 10px;
@@ -3201,7 +3202,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    min-width: 220px;
+    min-width: 0;
   }
   .audio-name {
     font-weight: 600;
@@ -3213,6 +3214,10 @@
     color: hsl(var(--fg-3));
     display: block;
     margin-top: 2px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .audio-player {
     display: flex;
