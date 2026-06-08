@@ -82,9 +82,10 @@ env:
 # 90s timeout: the submit does PATCH /auth/me -> ['me'] invalidation -> guard re-route -> home render,
 # a round-trip that can exceed 30s against a COLD-STARTED dev backend (just deployed by the CI deploy job),
 # plus the dashboard then fetches progress/decks/news before content paints.
-# "Γεια σου" is the greeting rendered in BOTH dashboard states (new-user "Three ways to start" and
-# returning), so it is the stable post-onboarding marker for a just-onboarded account.
+# A just-onboarded account (reset → no review history) lands on the new-user state, whose heading
+# "Three ways to start" is a stable Latin string Maestro matches reliably. (The greeting "Γεια σου"
+# renders correctly on-screen but the Greek glyphs are not reliably matchable in the iOS a11y tree.)
 - extendedWaitUntil:
-    visible: "Γεια σου"          # greeting kicker — present in both dashboard states
+    visible: "Three ways to start"   # new-user dashboard heading — reliable post-onboarding marker
     timeout: 90000
 - takeScreenshot: 10-app-home
