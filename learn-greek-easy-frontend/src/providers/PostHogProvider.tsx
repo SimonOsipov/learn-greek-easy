@@ -82,6 +82,10 @@ export function PostHogProvider({ children }: PostHogProviderProps) {
             capture_pageleave: true,
             autocapture: false, // Manual events only for control
             disable_session_recording: true, // Enable later if needed
+            capture_performance: false, // Gates Network Timing + Web Vitals (web-vitals.js)
+            disable_surveys: true, // Gates surveys.js
+            capture_dead_clicks: false, // Gates dead-clicks-autocapture.js
+            capture_heatmaps: false, // Gates heatmaps
             bootstrap: { featureFlags: FLAG_BOOTSTRAP },
             loaded: (posthogInstance) => {
               // Register super properties included in all events

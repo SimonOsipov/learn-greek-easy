@@ -78,12 +78,15 @@ env:
 - tapOn:
     text: "Start practicing.*"   # regex: trailing space + U+2192 arrow
 
-# POST-ONBOARDING: (app) HOME
+# POST-ONBOARDING: (app) HOME — now the MOB-16 dashboard (replaced the old "Success!" proof screen).
 # 90s timeout: the submit does PATCH /auth/me -> ['me'] invalidation -> guard re-route -> home render,
-# a round-trip that can exceed 30s against a COLD-STARTED dev backend (just deployed by the CI deploy job).
-# The success screen renders correctly; it just needs patience on a cold backend.
+# a round-trip that can exceed 30s against a COLD-STARTED dev backend (just deployed by the CI deploy job),
+# plus the dashboard then fetches progress/decks/news before content paints.
+# A just-onboarded account (reset → no review history) lands on the new-user state, whose heading
+# "Three ways to start" is a stable Latin string Maestro matches reliably. (The greeting "Γεια σου"
+# renders correctly on-screen but the Greek glyphs are not reliably matchable in the iOS a11y tree.)
 - extendedWaitUntil:
-    visible: "Success!"          # substring (avoids emoji)
+    visible: "Three ways to start"   # new-user dashboard heading — reliable post-onboarding marker
     timeout: 90000
-- assertVisible: "Signed in as ${E2E_EMAIL}"
+- assertVisible: "First Greek words"   # first chooser row — confirms dashboard content rendered, not just the heading
 - takeScreenshot: 10-app-home

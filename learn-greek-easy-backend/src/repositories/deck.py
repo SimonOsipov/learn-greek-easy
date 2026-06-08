@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import noload, selectinload
 
 from src.db.models import Deck, DeckLevel, DeckWordEntry, WordEntry
 from src.repositories.base import BaseRepository
@@ -39,9 +39,13 @@ class DeckRepository(BaseRepository[Deck]):
         Use Case:
             Browse decks page (public deck listing)
         """
-        query = select(Deck).where(
-            Deck.is_active.is_(True),
-            Deck.owner_id.is_(None),  # Only system decks
+        query = (
+            select(Deck)
+            .options(noload(Deck.word_entries))
+            .where(
+                Deck.is_active.is_(True),
+                Deck.owner_id.is_(None),  # Only system decks
+            )
         )
 
         if level is not None:
@@ -217,7 +221,12 @@ class DeckRepository(BaseRepository[Deck]):
         Use Case:
             User's "My Decks" page
         """
-        query = select(Deck).where(Deck.owner_id == user_id).where(Deck.is_active.is_(True))
+        query = (
+            select(Deck)
+            .options(noload(Deck.word_entries))
+            .where(Deck.owner_id == user_id)
+            .where(Deck.is_active.is_(True))
+        )
         if level is not None:
             query = query.where(Deck.level == level)
         query = query.offset(skip).limit(limit).order_by(Deck.created_at.desc())

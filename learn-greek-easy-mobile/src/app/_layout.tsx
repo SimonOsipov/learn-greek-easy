@@ -23,6 +23,7 @@ import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { ToastProvider } from '@/components/ui/toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useUserSettings } from '@/hooks/use-user-settings';
 import { getPostHog, registerSuperProperties } from '@/lib/analytics/posthog';
@@ -111,13 +112,15 @@ function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {posthog ? (
-        <PostHogProvider client={posthog} autocapture={false}>
-          {navigator}
-        </PostHogProvider>
-      ) : (
-        navigator
-      )}
+      <ToastProvider>
+        {posthog ? (
+          <PostHogProvider client={posthog} autocapture={false}>
+            {navigator}
+          </PostHogProvider>
+        ) : (
+          navigator
+        )}
+      </ToastProvider>
     </QueryClientProvider>
   );
 }

@@ -493,7 +493,8 @@ jobs:
     if: |
       needs.changes.outputs.mobile == 'true' &&
       needs.deploy.result == 'success' &&
-      needs.seed-database.result == 'success'
+      needs.seed-database.result == 'success' &&
+      needs.seed-database.outputs.status == 'success'
     runs-on: macos-26
     timeout-minutes: 60
     defaults:
@@ -537,9 +538,27 @@ jobs:
 
       - name: Install EAS CLI + Maestro
         run: |
+          set -euo pipefail
           npm install -g eas-cli@20.0.0
-          curl -Ls https://get.maestro.mobile.dev | bash
+          # Maestro install is flaky: `curl -Ls | bash` can no-op on an upstream/CDN
+          # blip and still exit 0, leaving the binary absent -> "maestro: command not
+          # found" in a later step. Use `-f` (fail on HTTP error), retry, and verify the
+          # binary actually landed + execs before exporting PATH.
+          for attempt in 1 2 3; do
+            echo "Maestro install attempt $attempt..."
+            if curl -fsSL https://get.maestro.mobile.dev | bash && [ -x "$HOME/.maestro/bin/maestro" ]; then
+              break
+            fi
+            echo "Maestro install attempt $attempt failed (binary missing); retrying in 10s..."
+            sleep 10
+          done
+          if [ ! -x "$HOME/.maestro/bin/maestro" ]; then
+            echo "::error::Maestro binary not found after 3 attempts ($HOME/.maestro/bin/maestro)"
+            ls -la "$HOME/.maestro/bin" 2>/dev/null || echo "(.maestro/bin does not exist)"
+            exit 1
+          fi
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+          "$HOME/.maestro/bin/maestro" --version
 
       - name: Compute native fingerprint
         id: fp
@@ -593,16 +612,45 @@ jobs:
       - name: Reset onboarding state (pre-test)
         run: |
           FRONTEND_URL="${{ needs.deploy.outputs.frontend_url }}"
+          PR_NUM="${{ env.PR_NUMBER }}"
           echo "=== Resetting onboarding state before test run ==="
-          RESPONSE=$(curl -s -X POST "$FRONTEND_URL/api/v1/test/seed/reset-onboarding" \
+
+          # First attempt
+          HTTP_STATUS=$(curl -s -o /tmp/reset_response.json -w "%{http_code}" \
+            -X POST "$FRONTEND_URL/api/v1/test/seed/reset-onboarding" \
             -H "Content-Type: application/json" \
-            -d "{\"pr_number\": \"${{ env.PR_NUMBER }}\"}")
-          echo "Reset response: $RESPONSE"
+            -d "{\"pr_number\": \"$PR_NUM\"}")
+          RESPONSE=$(cat /tmp/reset_response.json)
+          echo "Reset response (HTTP $HTTP_STATUS): $RESPONSE"
           SUCCESS=$(echo "$RESPONSE" | jq -r '.success')
-          if [ "$SUCCESS" != "true" ]; then
-            echo "::error::Pre-test reset-onboarding failed: $RESPONSE"
-            exit 1
+
+          # If the user is absent (404) or success != true, re-seed then retry
+          if [ "$HTTP_STATUS" = "404" ] || [ "$SUCCESS" != "true" ]; then
+            echo "::warning::Pre-test reset returned HTTP $HTTP_STATUS / success=$SUCCESS — re-seeding pr_number=$PR_NUM then retrying"
+            SEED_RESPONSE=$(curl -s -X POST "$FRONTEND_URL/api/v1/test/seed/all" \
+              -H "Content-Type: application/json" \
+              -d "{\"pr_number\": \"$PR_NUM\"}")
+            echo "Re-seed response: $SEED_RESPONSE"
+            SEED_OK=$(echo "$SEED_RESPONSE" | jq -r '.success')
+            if [ "$SEED_OK" != "true" ]; then
+              echo "::error::Re-seed also failed: $SEED_RESPONSE"
+              exit 1
+            fi
+
+            # Retry reset-onboarding once
+            HTTP_STATUS=$(curl -s -o /tmp/reset_response2.json -w "%{http_code}" \
+              -X POST "$FRONTEND_URL/api/v1/test/seed/reset-onboarding" \
+              -H "Content-Type: application/json" \
+              -d "{\"pr_number\": \"$PR_NUM\"}")
+            RESPONSE=$(cat /tmp/reset_response2.json)
+            echo "Reset retry response (HTTP $HTTP_STATUS): $RESPONSE"
+            SUCCESS=$(echo "$RESPONSE" | jq -r '.success')
+            if [ "$SUCCESS" != "true" ]; then
+              echo "::error::Pre-test reset-onboarding failed after re-seed: $RESPONSE"
+              exit 1
+            fi
           fi
+
           echo "Onboarding state reset successfully"
 
       - name: Start Metro (dev-client)
