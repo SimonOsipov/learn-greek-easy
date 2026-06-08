@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { tDynamic } from '@/i18n/tDynamic';
 import { cn } from '@/lib/utils';
 import type { PartOfSpeech } from '@/types/grammar';
 
@@ -23,7 +24,7 @@ export function PartOfSpeechBadge({ partOfSpeech, className }: PartOfSpeechBadge
 
   return (
     <span className={cn('badge', badgeVariant, className)} data-testid="part-of-speech-badge">
-      {t(`grammar.partOfSpeech.${partOfSpeech}`)}
+      {tDynamic(t, `grammar.partOfSpeech.${partOfSpeech}`)}
     </span>
   );
 }

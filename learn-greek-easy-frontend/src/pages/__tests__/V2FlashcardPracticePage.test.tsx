@@ -102,7 +102,26 @@ const defaultStoreState = {
   setInputMode: vi.fn(),
 };
 
-let mockStoreState = { ...defaultStoreState };
+type MockStoreState = Omit<
+  typeof defaultStoreState,
+  'sessionId' | 'sessionSummary' | 'cards' | 'error'
+> & {
+  sessionId: string | null;
+  sessionSummary: {
+    sessionId: string;
+    deckId: string;
+    cardsReviewed: number;
+    totalTimeSeconds: number;
+    avgTimePerCard: number;
+    ratingBreakdown: { again: number; hard: number; good: number; easy: number };
+    newStarted: number;
+    cardsMastered: number;
+  } | null;
+  cards: Record<string, unknown>[];
+  error: string | null;
+};
+
+let mockStoreState: MockStoreState = { ...defaultStoreState };
 
 vi.mock('@/stores/v2PracticeStore', () => ({
   useV2PracticeStore: () => mockStoreState,

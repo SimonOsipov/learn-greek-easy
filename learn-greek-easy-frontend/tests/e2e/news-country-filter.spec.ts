@@ -15,7 +15,8 @@
  * MCNEWS-03 updates the seeder to include varied countries (cyprus/greece/world).
  */
 
-import { APIRequestContext, Page, test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import type { APIRequestContext, Page } from '@playwright/test';
 
 import { navigateToAdminTab } from './helpers/admin-helpers';
 import { verifyAuthSucceeded } from './helpers/auth-helpers';

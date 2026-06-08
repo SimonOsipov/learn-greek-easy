@@ -8,6 +8,7 @@ import { ThemeSwitcher } from '@/components/theme';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { tDynamic } from '@/i18n/tDynamic';
 
 const Header = () => {
   const { t } = useTranslation('landing');
@@ -51,7 +52,7 @@ const Header = () => {
               href={link.href}
               className="text-lg text-landing-header-fg/80 transition-colors hover:text-landing-header-fg"
             >
-              {t(link.labelKey)}
+              {tDynamic(t, link.labelKey)}
             </a>
           ))}
         </nav>
@@ -85,7 +86,7 @@ const Header = () => {
                     onClick={() => setOpen(false)}
                     className="text-lg text-landing-header-fg/80 transition-colors hover:text-landing-header-fg"
                   >
-                    {t(link.labelKey)}
+                    {tDynamic(t, link.labelKey)}
                   </a>
                 ))}
               </nav>

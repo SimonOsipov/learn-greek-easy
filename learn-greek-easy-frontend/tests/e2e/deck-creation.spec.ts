@@ -144,9 +144,6 @@ test.describe('Deck Creation - Create Flows', () => {
     await nameInput.focus();
     await nameInput.blur();
 
-    // Error message should be visible (Name is required)
-    // Note: The exact error text depends on translation, check for form message element
-    const formMessage = page.locator('form[data-testid="user-deck-form"] p.text-destructive');
     // Wait a moment for validation to trigger
     await page.waitForTimeout(500);
 
@@ -237,7 +234,6 @@ test.describe('Deck Creation - Edit Flows', () => {
     await myGreekBasicsCard.hover();
 
     // Find and click the edit button using deck-specific test ID
-    const deckId = await myGreekBasicsCard.getAttribute('data-deck-id');
     // Actions container should become visible on hover
     const actionsContainer = myGreekBasicsCard.locator('[data-testid="deck-card-actions"]');
     await expect(actionsContainer).toBeVisible({ timeout: 3000 });

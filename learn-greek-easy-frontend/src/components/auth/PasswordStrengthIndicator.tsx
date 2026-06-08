@@ -19,6 +19,7 @@ import { Check, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Progress } from '@/components/ui/progress';
+import { tDynamic } from '@/i18n/tDynamic';
 import { cn } from '@/lib/utils';
 
 interface PasswordStrengthIndicatorProps {
@@ -160,7 +161,7 @@ export const PasswordStrengthIndicator: React.FC<PasswordStrengthIndicatorProps>
     <div className={cn('space-y-2', className)} data-testid="password-strength-indicator">
       <ul className="space-y-1" data-testid="password-requirements-list">
         {REQUIREMENT_KEYS.map(({ key, i18nKey }) => (
-          <RequirementItem key={key} met={requirements[key]} label={t(i18nKey)} />
+          <RequirementItem key={key} met={requirements[key]} label={tDynamic(t, i18nKey)} />
         ))}
       </ul>
       {password && (

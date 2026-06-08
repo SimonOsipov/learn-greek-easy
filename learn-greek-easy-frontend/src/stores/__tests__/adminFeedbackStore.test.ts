@@ -72,12 +72,12 @@ describe('adminFeedbackStore — drawer state (FBDR-03)', () => {
 
     it('should set openInnerTab to the explicitly provided tab', () => {
       act(() => {
-        useAdminFeedbackStore.getState().openDrawer('feedback-456', 'thread');
+        useAdminFeedbackStore.getState().openDrawer('feedback-456', 'meta');
       });
 
       const state = useAdminFeedbackStore.getState();
       expect(state.openFeedbackId).toBe('feedback-456');
-      expect(state.openInnerTab).toBe('thread');
+      expect(state.openInnerTab).toBe('meta');
     });
 
     it('should set openInnerTab to "meta" when explicitly provided', () => {
@@ -91,7 +91,7 @@ describe('adminFeedbackStore — drawer state (FBDR-03)', () => {
 
   describe('closeDrawer', () => {
     it('should reset openFeedbackId to null', () => {
-      useAdminFeedbackStore.setState({ openFeedbackId: 'feedback-123', openInnerTab: 'thread' });
+      useAdminFeedbackStore.setState({ openFeedbackId: 'feedback-123', openInnerTab: 'meta' });
 
       act(() => {
         useAdminFeedbackStore.getState().closeDrawer();
@@ -111,7 +111,7 @@ describe('adminFeedbackStore — drawer state (FBDR-03)', () => {
     });
 
     it('should reset both fields together', () => {
-      useAdminFeedbackStore.setState({ openFeedbackId: 'feedback-abc', openInnerTab: 'thread' });
+      useAdminFeedbackStore.setState({ openFeedbackId: 'feedback-abc', openInnerTab: 'meta' });
 
       act(() => {
         useAdminFeedbackStore.getState().closeDrawer();
@@ -124,18 +124,8 @@ describe('adminFeedbackStore — drawer state (FBDR-03)', () => {
   });
 
   describe('setInnerTab', () => {
-    it('should transition from "reply" to "thread"', () => {
+    it('should transition from "reply" to "meta"', () => {
       useAdminFeedbackStore.setState({ openFeedbackId: 'feedback-123', openInnerTab: 'reply' });
-
-      act(() => {
-        useAdminFeedbackStore.getState().setInnerTab('thread');
-      });
-
-      expect(useAdminFeedbackStore.getState().openInnerTab).toBe('thread');
-    });
-
-    it('should transition from "thread" to "meta"', () => {
-      useAdminFeedbackStore.setState({ openFeedbackId: 'feedback-123', openInnerTab: 'thread' });
 
       act(() => {
         useAdminFeedbackStore.getState().setInnerTab('meta');
@@ -190,12 +180,12 @@ describe('adminFeedbackStore — drawer state (FBDR-03)', () => {
       useAdminFeedbackStore.setState({ openFeedbackId: 'feedback-1', openInnerTab: 'reply' });
 
       act(() => {
-        useAdminFeedbackStore.getState().openDrawer('feedback-1', 'thread');
+        useAdminFeedbackStore.getState().openDrawer('feedback-1', 'meta');
       });
 
       const state = useAdminFeedbackStore.getState();
       expect(state.openFeedbackId).toBe('feedback-1');
-      expect(state.openInnerTab).toBe('thread');
+      expect(state.openInnerTab).toBe('meta');
     });
   });
 });

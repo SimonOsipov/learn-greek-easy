@@ -54,7 +54,7 @@ test.describe('Mobile Responsive (375px)', () => {
 
     // Cards should be full width (or close to it)
     const firstCard = deckCards.first();
-    const cardWidth = await firstCard.evaluate((el) => el.offsetWidth);
+    const cardWidth = await firstCard.evaluate((el) => (el as HTMLElement).offsetWidth);
 
     // Expect card to be at least 82% of viewport width (accounts for container padding)
     expect(cardWidth).toBeGreaterThan(375 * 0.82);
@@ -162,7 +162,7 @@ test.describe('Tablet Responsive (768px)', () => {
     } else {
       // Fallback: card should be near-full width
       const firstCard = deckCards.first();
-      const cardWidth = await firstCard.evaluate((el) => el.offsetWidth);
+      const cardWidth = await firstCard.evaluate((el) => (el as HTMLElement).offsetWidth);
       expect(cardWidth).toBeGreaterThan(768 * 0.6);
     }
   });
@@ -203,7 +203,7 @@ test.describe('Desktop Responsive (1024px)', () => {
     } else {
       // Fallback: card should be roughly half viewport width
       const firstCard = deckCards.first();
-      const cardWidth = await firstCard.evaluate((el) => el.offsetWidth);
+      const cardWidth = await firstCard.evaluate((el) => (el as HTMLElement).offsetWidth);
       expect(cardWidth).toBeGreaterThan(1024 * 0.3);
       expect(cardWidth).toBeLessThan(1024 * 0.6);
     }

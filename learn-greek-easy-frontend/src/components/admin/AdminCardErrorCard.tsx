@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { tDynamic } from '@/i18n/tDynamic';
 import type { AdminCardErrorResponse, CardErrorCardSnapshot } from '@/types/cardError';
 
 import { CardErrorStatusBadge } from './CardErrorStatusBadge';
@@ -188,7 +189,7 @@ export const AdminCardErrorCard: React.FC<AdminCardErrorCardProps> = ({
               <CardErrorStatusBadge status={errorReport.status} />
               <span className="badge b-gray gap-1" data-testid="card-error-type-badge">
                 <CardTypeIcon className="h-3 w-3" />
-                {t(`cardErrors.cardTypes.${errorReport.card_type.toLowerCase()}`)}
+                {tDynamic(t, `cardErrors.cardTypes.${errorReport.card_type.toLowerCase()}`)}
               </span>
               {/* CER-12: Deck chip — hidden when deck is null/empty */}
               {errorReport.deck?.name ? (

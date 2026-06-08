@@ -10,7 +10,7 @@
  * - getEnvironment() - returns current env or 'development' fallback
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the logger to avoid real log output and side effects
 vi.mock('../logger', () => ({

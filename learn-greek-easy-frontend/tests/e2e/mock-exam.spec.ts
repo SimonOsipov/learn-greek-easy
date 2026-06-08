@@ -16,7 +16,8 @@
  * the cached auth tokens since user UUIDs would change.
  */
 
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 /**
  * Helper function to navigate to mock exam landing page
@@ -156,7 +157,6 @@ test.describe('Mock Exam Session', () => {
     expect(timerText).toMatch(/\d{1,2}:\d{2}/);
 
     // Verify the timer is running (decreasing)
-    const initialTime = timerText;
     await page.waitForTimeout(2000); // Wait 2 seconds
     const afterTime = await timer.textContent();
 
@@ -282,7 +282,6 @@ test.describe('Mock Exam Session', () => {
   });
 
   test('MOCKEXAM-E2E-06: New user flow shows empty state and can start exam', async ({
-    page,
     browser,
   }) => {
     // Create a new context with beginner auth state (new user with no exam history)

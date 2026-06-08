@@ -3,6 +3,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { tDynamic } from '@/i18n/tDynamic';
 import { cn } from '@/lib/utils';
 
 export type DotStatus = 'none' | 'studied' | 'mastered';
@@ -101,11 +102,11 @@ const TypedMasteryDots: React.FC<{ dots: TypedDot[]; className?: string }> = ({
         <div className="space-y-2">
           {dots.map((dot, i) => (
             <div key={i} className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">{t(dot.labelKey)}</span>
+              <span className="text-muted-foreground">{tDynamic(t, dot.labelKey)}</span>
               <div className="flex items-center gap-1.5">
                 <div className={cn('h-2 w-2 rounded-full', DOT_COLORS[dot.status])} />
                 <span className="text-muted-foreground">
-                  {t(`v2Practice.typeProgress.${STATUS_LABELS[dot.status]}`)}
+                  {tDynamic(t, `v2Practice.typeProgress.${STATUS_LABELS[dot.status]}`)}
                 </span>
               </div>
             </div>

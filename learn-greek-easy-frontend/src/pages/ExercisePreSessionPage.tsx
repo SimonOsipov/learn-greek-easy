@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { tDynamic } from '@/i18n/tDynamic';
 import { exerciseAPI } from '@/services/exerciseAPI';
 import type { ExerciseModality } from '@/services/exerciseAPI';
 
@@ -66,7 +67,7 @@ export const ExercisePreSessionPage = () => {
             variant={modality === value ? 'default' : 'outline'}
             onClick={() => setModality(value)}
           >
-            {t(labelKey)}
+            {tDynamic(t, labelKey)}
           </Button>
         ))}
       </div>

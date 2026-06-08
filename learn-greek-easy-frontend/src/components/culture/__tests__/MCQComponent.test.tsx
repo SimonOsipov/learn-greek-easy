@@ -12,8 +12,6 @@
  * - Accessibility features
  */
 
-import React from 'react';
-
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -109,6 +107,8 @@ const mockQuestion: CultureQuestionResponse = {
   ],
   option_count: 4,
   image_url: null,
+  audio_url: null,
+  audio_a2_url: null,
   order_index: 1,
   correct_option: 1,
   original_article_url: null,
@@ -138,6 +138,7 @@ const mockQuestionWithMissingTranslation: CultureQuestionResponse = {
   option_count: 4,
   image_url: null,
   audio_url: null,
+  audio_a2_url: null,
   order_index: 1,
   correct_option: 1,
   original_article_url: null,
@@ -158,6 +159,8 @@ const mockQuestion2Options: CultureQuestionResponse = {
   ],
   option_count: 2,
   image_url: null,
+  audio_url: null,
+  audio_a2_url: null,
   order_index: 1,
   correct_option: 1,
   original_article_url: null,
@@ -178,6 +181,8 @@ const mockQuestion3Options: CultureQuestionResponse = {
   ],
   option_count: 3,
   image_url: null,
+  audio_url: null,
+  audio_a2_url: null,
   order_index: 1,
   correct_option: 2,
   original_article_url: null,
@@ -205,12 +210,6 @@ const mockAnswerResultCorrect = {
   explanationText: 'Athens has been the capital of Greece since 1834.',
 };
 
-const mockAnswerResultIncorrect = {
-  isCorrect: false,
-  correctOption: 1,
-  explanationText: 'Athens has been the capital of Greece since 1834.',
-};
-
 const mockAnswerResultNoExplanation = {
   isCorrect: true,
   correctOption: 2,
@@ -228,9 +227,12 @@ const mockQuestion2: CultureQuestionResponse = {
   ],
   option_count: 4,
   image_url: null,
+  audio_url: null,
+  audio_a2_url: null,
+  order_index: 1,
+  correct_option: 1,
   original_article_url: null,
   also_in_decks: [],
-  difficulty: 'medium',
 };
 
 describe('MCQComponent', () => {
@@ -403,8 +405,7 @@ describe('MCQComponent', () => {
       expect(mockOnAnswer).toHaveBeenCalledWith(3);
     });
 
-    it('should be disabled when component is disabled', async () => {
-      const user = userEvent.setup();
+    it('should be disabled when component is disabled', () => {
       renderWithProviders(
         <MCQComponent
           question={mockQuestion}

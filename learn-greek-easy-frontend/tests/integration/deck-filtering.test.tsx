@@ -87,12 +87,9 @@ const setupAuthenticatedUser = () => {
       createdAt: new Date('2025-01-01'),
       updatedAt: new Date('2025-01-01'),
     },
-    token: 'mock-access-token',
-    refreshToken: 'mock-refresh-token',
     isAuthenticated: true,
     isLoading: false,
     error: null,
-    rememberMe: false,
   });
 };
 

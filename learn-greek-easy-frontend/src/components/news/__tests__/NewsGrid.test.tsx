@@ -16,26 +16,34 @@ import { type NewsItemResponse } from '@/services/adminAPI';
 import { render, screen, within } from '@/lib/test-utils';
 
 // Factory function for creating mock news items
-const createMockNewsItem = (overrides: Partial<NewsItemResponse> = {}): NewsItemResponse => ({
-  id: `news-${Math.random().toString(36).substr(2, 9)}`,
-  title_el: 'Ελληνικός τίτλος',
-  title_en: 'English title',
-  title_ru: 'Русский заголовок',
-  description_el: 'Ελληνική περιγραφή του άρθρου',
-  description_en: 'English description of the article',
-  description_ru: 'Русское описание статьи',
-  publication_date: '2026-01-27',
-  original_article_url: 'https://example.com/article',
-  image_url: 'https://example.com/image.jpg',
-  created_at: '2026-01-27T00:00:00Z',
-  updated_at: '2026-01-27T00:00:00Z',
-  title_el_a2: null,
-  description_el_a2: null,
-  audio_a2_url: null,
-  audio_a2_duration_seconds: null,
-  has_a2_content: false,
-  ...overrides,
-});
+const createMockNewsItem = (overrides: Partial<NewsItemResponse> = {}): NewsItemResponse =>
+  ({
+    id: `news-${Math.random().toString(36).substr(2, 9)}`,
+    title_el: 'Ελληνικός τίτλος',
+    title_en: 'English title',
+    title_ru: 'Русский заголовок',
+    description_el: 'Ελληνική περιγραφή του άρθρου',
+    description_en: 'English description of the article',
+    description_ru: 'Русское описание статьи',
+    publication_date: '2026-01-27',
+    original_article_url: 'https://example.com/article',
+    image_url: 'https://example.com/image.jpg',
+    created_at: '2026-01-27T00:00:00Z',
+    updated_at: '2026-01-27T00:00:00Z',
+    title_el_a2: null,
+    description_el_a2: null,
+    audio_a2_url: null,
+    audio_a2_duration_seconds: null,
+    has_a2_content: false,
+    audio_a2_generated_at: null,
+    audio_a2_file_size_bytes: null,
+    alt_text: null,
+    photo_credit: null,
+    status: 'published' as const,
+    linked_situation: null,
+    image_variants: null,
+    ...overrides,
+  }) as NewsItemResponse;
 
 // Factory function for creating props
 const createProps = (overrides: Partial<NewsGridProps> = {}): NewsGridProps => ({

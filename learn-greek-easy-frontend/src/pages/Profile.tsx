@@ -11,6 +11,7 @@ import { SecuritySection } from '@/components/profile/SecuritySection';
 import { SubscriptionSection } from '@/components/profile/SubscriptionSection';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { tDynamic } from '@/i18n/tDynamic';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -83,7 +84,7 @@ export const Profile: React.FC = () => {
               return (
                 <>
                   <Icon className="h-3.5 w-3.5" />
-                  {t(active.labelKey)}
+                  {tDynamic(t, active.labelKey)}
                 </>
               );
             })()}
@@ -120,7 +121,7 @@ export const Profile: React.FC = () => {
                           )}
                         >
                           <Icon className="h-4 w-4" />
-                          {t(item.labelKey)}
+                          {tDynamic(t, item.labelKey)}
                         </button>
                       </li>
                     );

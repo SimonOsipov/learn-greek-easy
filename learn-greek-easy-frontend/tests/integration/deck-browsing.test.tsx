@@ -7,14 +7,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@/lib/test-utils';
 import userEvent from '@testing-library/user-event';
 import { DecksPage } from '@/pages/DecksPage';
-import { useAuthStore } from '@/stores/authStore';
 import { useDeckStore } from '@/stores/deckStore';
 
 describe.skip('Deck Browsing Integration', () => {
   beforeEach(async () => {
-    // Login
-    await useAuthStore.getState().login('demo@learngreekeasy.com', 'Demo123!');
-
     // Reset deck store
     useDeckStore.setState({
       decks: [],
@@ -79,8 +75,6 @@ describe.skip('Deck Browsing Integration', () => {
   it('should show loading state while fetching decks', async () => {
     render(<DecksPage />);
 
-    // Should show loading initially (skeleton)
-    const skeletons = screen.queryAllByTestId('card-skeleton');
     // Skeletons might render or loading text might appear
     // We just verify page renders without crashing during loading
     expect(screen.getByText(/Available Decks/i)).toBeInTheDocument();
@@ -92,9 +86,6 @@ describe.skip('Deck Browsing Integration', () => {
   });
 
   it('should handle empty deck list gracefully', async () => {
-    // Set filters that will return no results
-    const { setFilters } = useDeckStore.getState();
-
     render(<DecksPage />);
 
     // Wait for initial load
@@ -103,7 +94,7 @@ describe.skip('Deck Browsing Integration', () => {
       expect(isLoading).toBe(false);
     }, { timeout: 5000 });
 
-    // Apply impossible filter combination
+    // Apply impossible filter combination via user interaction
     await userEvent.setup().type(screen.getByPlaceholderText(/search/i), 'xyz123nonexistent');
 
     // Wait for filter to apply

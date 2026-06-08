@@ -9,8 +9,6 @@
  *            renders cover image layer when coverImageUrl is set (gradient fallback otherwise)
  */
 
-import React from 'react';
-
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 

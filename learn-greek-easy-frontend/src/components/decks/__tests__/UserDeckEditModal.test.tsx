@@ -47,15 +47,9 @@ const createMockDeckResponse = (overrides: Partial<DeckResponse> = {}): DeckResp
   level: 'B1' as DeckLevel,
   is_active: true,
   is_premium: false,
-  owner_id: 'user-123',
-  category: null,
-  author: 'Test User',
   card_count: 0,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
-  due_count: 0,
-  mastered_count: 0,
-  learning_count: 0,
   ...overrides,
 });
 

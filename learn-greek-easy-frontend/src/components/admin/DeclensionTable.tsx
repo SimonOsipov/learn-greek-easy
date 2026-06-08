@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { tDynamic } from '@/i18n/tDynamic';
 import { type GeneratedNounCases } from '@/services/adminAPI';
 
 interface DeclensionTableProps {
@@ -29,7 +30,8 @@ export function DeclensionTable({ cases }: DeclensionTableProps) {
           {CASE_KEYS.map((caseKey) => (
             <tr key={caseKey} className="border-b last:border-0">
               <th scope="row" className="py-1 pr-2 font-medium">
-                {t(
+                {tDynamic(
+                  t,
                   `generateNoun.generation.case${caseKey.charAt(0).toUpperCase() + caseKey.slice(1)}`
                 )}
               </th>

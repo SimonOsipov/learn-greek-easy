@@ -16,8 +16,6 @@
  *   assert content presence, not pixel height, per jsdom caveat)
  */
 
-import React from 'react';
-
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 

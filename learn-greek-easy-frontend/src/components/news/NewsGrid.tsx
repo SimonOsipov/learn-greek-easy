@@ -49,7 +49,7 @@ export const NewsGrid: React.FC<NewsGridProps> = ({
         className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
         data-testid="news-grid-loading"
         role="list"
-        aria-label={t('news.loading', 'Loading news articles')}
+        aria-label={t('news.loading')}
         aria-busy="true"
       >
         {Array.from({ length: skeletonCount }).map((_, index) => (
@@ -72,7 +72,7 @@ export const NewsGrid: React.FC<NewsGridProps> = ({
       className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
       data-testid="news-grid"
       role="list"
-      aria-label={t('news.gridLabel', 'News articles')}
+      aria-label={t('news.gridLabel')}
     >
       {articles.map((article) => (
         <div key={article.id} role="listitem">

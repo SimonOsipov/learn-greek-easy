@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { tDynamic } from '@/i18n/tDynamic';
 import { cn } from '@/lib/utils';
 import type { NewsCountry } from '@/services/adminAPI';
 import type { NewsLevel } from '@/utils/newsLevel';
@@ -56,7 +57,7 @@ export function NewsFilters({
             className="gap-1.5 rounded-full"
             aria-pressed={countryFilter === country}
           >
-            {COUNTRY_CONFIG[country].flag} {t(COUNTRY_CONFIG[country].labelKey)}
+            {COUNTRY_CONFIG[country].flag} {tDynamic(t, COUNTRY_CONFIG[country].labelKey)}
             <Badge variant="secondary" className="ml-1 min-w-[1.25rem] px-1.5">
               {countryCounts[country]}
             </Badge>

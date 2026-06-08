@@ -15,7 +15,7 @@ import userEvent from '@testing-library/user-event';
 import posthog from 'posthog-js';
 import { useCultureSessionStore } from '@/stores/cultureSessionStore';
 import type { CultureQuestionResponse } from '@/types/culture';
-import type { CultureQuestionState } from '@/types/cultureSession';
+import type { CultureQuestionState, CultureSessionState } from '@/types/cultureSession';
 
 import { CulturePracticePage } from '../CulturePracticePage';
 
@@ -81,9 +81,12 @@ const mockQuestion: CultureQuestionResponse = {
   ],
   option_count: 4,
   image_url: null,
+  audio_url: null,
+  audio_a2_url: null,
   order_index: 0,
   correct_option: 1,
   original_article_url: null,
+  also_in_decks: [],
 };
 
 const mockNewsQuestion: CultureQuestionResponse = {
@@ -99,7 +102,10 @@ function createMockQuestions(count: number): CultureQuestionResponse[] {
   }));
 }
 
-function createActiveSessionState(questionCount: number, currentIndex = 0) {
+function createActiveSessionState(
+  questionCount: number,
+  currentIndex = 0
+): Partial<CultureSessionState> {
   const questions = createMockQuestions(questionCount);
   const questionStates: CultureQuestionState[] = questions.map((q, i) => ({
     question: q,
@@ -157,7 +163,7 @@ function createActiveSessionState(questionCount: number, currentIndex = 0) {
   };
 }
 
-function createSummaryState() {
+function createSummaryState(): Partial<CultureSessionState> {
   return {
     session: null,
     currentQuestion: null,
@@ -187,43 +193,48 @@ function createSummaryState() {
       questionResults: [
         {
           index: 0,
+          question: mockQuestion,
           isCorrect: true,
           selectedOption: 1,
           correctOption: 1,
           xpEarned: 10,
-          timeTaken: 5000,
+          timeSeconds: 5,
         },
         {
           index: 1,
+          question: mockQuestion,
           isCorrect: true,
           selectedOption: 2,
           correctOption: 2,
           xpEarned: 10,
-          timeTaken: 4000,
+          timeSeconds: 4,
         },
         {
           index: 2,
+          question: mockQuestion,
           isCorrect: false,
           selectedOption: 1,
           correctOption: 3,
           xpEarned: 0,
-          timeTaken: 8000,
+          timeSeconds: 8,
         },
         {
           index: 3,
+          question: mockQuestion,
           isCorrect: true,
           selectedOption: 4,
           correctOption: 4,
           xpEarned: 10,
-          timeTaken: 6000,
+          timeSeconds: 6,
         },
         {
           index: 4,
+          question: mockQuestion,
           isCorrect: false,
           selectedOption: 2,
           correctOption: 1,
           xpEarned: 0,
-          timeTaken: 7000,
+          timeSeconds: 7,
         },
       ],
       durationSeconds: 120,
@@ -293,9 +304,14 @@ describe('CulturePracticePage', () => {
       const { cultureDeckAPI } = await import('@/services/cultureDeckAPI');
       const questions = createMockQuestions(3);
       vi.mocked(cultureDeckAPI.getQuestionQueue).mockResolvedValueOnce({
-        questions,
+        deck_id: 'test-deck-1',
+        questions:
+          questions as unknown as import('@/services/cultureDeckAPI').CultureQuestionQueueItem[],
         deck_name: { en: 'Test Deck', el: 'Test Deck', ru: 'Test Deck' },
         category: 'history',
+        total_due: 3,
+        total_new: 3,
+        total_in_queue: 3,
         has_studied_questions: false,
       });
 
@@ -524,7 +540,7 @@ describe('CulturePracticePage', () => {
 
     it('shows toggle for news-derived questions with original_article_url', () => {
       const state = createActiveSessionState(5);
-      state.currentQuestion.question = mockNewsQuestion;
+      state.currentQuestion!.question = mockNewsQuestion;
       useCultureSessionStore.setState(state);
       render(<CulturePracticePage />);
 
@@ -537,13 +553,13 @@ describe('CulturePracticePage', () => {
       const state = createActiveSessionState(5, 2);
 
       // Mark first two questions as answered
-      state.session.questions[0].selectedOption = 1;
-      state.session.questions[0].isCorrect = true;
-      state.session.questions[0].answeredAt = new Date().toISOString();
+      state.session!.questions[0].selectedOption = 1;
+      state.session!.questions[0].isCorrect = true;
+      state.session!.questions[0].answeredAt = new Date().toISOString();
 
-      state.session.questions[1].selectedOption = 2;
-      state.session.questions[1].isCorrect = false;
-      state.session.questions[1].answeredAt = new Date().toISOString();
+      state.session!.questions[1].selectedOption = 2;
+      state.session!.questions[1].isCorrect = false;
+      state.session!.questions[1].answeredAt = new Date().toISOString();
 
       useCultureSessionStore.setState(state);
       render(<CulturePracticePage />);

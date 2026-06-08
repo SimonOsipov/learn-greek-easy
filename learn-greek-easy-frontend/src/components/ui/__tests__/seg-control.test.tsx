@@ -10,10 +10,7 @@ const _typedOptions: SegOption<'a' | 'b'>[] = [
   { value: 'b', label: 'B' },
 ];
 const _typedOnChange: (v: 'a' | 'b') => void = (_v) => {};
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _typeProbe = (
-  <SegControl<'a' | 'b'> options={_typedOptions} value="a" onChange={_typedOnChange} />
-);
+void (<SegControl<'a' | 'b'> options={_typedOptions} value="a" onChange={_typedOnChange} />);
 
 const OPTIONS = [
   { value: 'a', label: 'Alpha' },

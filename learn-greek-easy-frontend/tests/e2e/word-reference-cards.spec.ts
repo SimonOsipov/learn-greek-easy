@@ -14,7 +14,8 @@
 
 import * as fs from 'fs';
 
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 import { getSupabaseStorageKey } from './helpers/supabase-test-client';
 

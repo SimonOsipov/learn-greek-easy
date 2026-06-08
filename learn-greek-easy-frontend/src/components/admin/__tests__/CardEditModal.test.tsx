@@ -53,16 +53,14 @@ type SSEOptions = {
 };
 
 let capturedOnEvent: ((event: SSEEvent) => void) | undefined;
-let capturedEnabled = false;
 
-const mockUseSSE = vi.fn((url: string, options: SSEOptions) => {
-  capturedEnabled = options.enabled ?? false;
+const mockUseSSE = vi.fn((_url: string, options: SSEOptions) => {
   if (options.enabled && options.onEvent) capturedOnEvent = options.onEvent;
   return { state: options.enabled ? 'connected' : 'disconnected', close: vi.fn() };
 });
 
 vi.mock('@/hooks/useSSE', () => ({
-  useSSE: (url: string, options: SSEOptions) => mockUseSSE(url, options),
+  useSSE: (_url: string, options: SSEOptions) => mockUseSSE(_url, options),
 }));
 
 // ============================================
@@ -160,7 +158,6 @@ describe('CardEditModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedOnEvent = undefined;
-    capturedEnabled = false;
     mockUseSSE.mockClear();
     (adminAPI.updateCultureQuestion as Mock).mockResolvedValue({ id: 'question-123' });
   });

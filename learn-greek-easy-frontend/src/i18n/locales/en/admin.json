@@ -592,7 +592,8 @@
       "country": {
         "cyprus": "Cyprus",
         "greece": "Greece",
-        "world": "World"
+        "world": "World",
+        "es": "Spain"
       },
       "audio": {
         "b2Narration": "B2 narration",
@@ -1537,7 +1538,13 @@
     "linkSuccess": "Word linked to deck successfully",
     "existsInDecks": "This word exists in {{count}} deck(s)",
     "generation": {
-      "examples": "Example Sentences"
+      "examples": "Example Sentences",
+      "singular": "Singular",
+      "plural": "Plural",
+      "caseNominative": "Nominative",
+      "caseGenitive": "Genitive",
+      "caseAccusative": "Accusative",
+      "caseVocative": "Vocative"
     },
     "swapConfirmTitle": "Switch suggestion?",
     "swapConfirmDescription": "Generation results will be replaced for the new suggestion. Normalization and translations will be preserved.",
@@ -2273,6 +2280,17 @@
     "pipeline": {
       "title": "Content pipeline",
       "sub": "Pipeline summary coming soon. Track ready vs. draft counts across decks, news, situations, and exercises."
+    }
+  },
+  "sources": {
+    "articles": {
+      "alreadyGenerated": "Pending review"
+    }
+  },
+  "adminExercises": {
+    "pictureMatch": {
+      "anchorPictureAlt": "Anchor picture",
+      "runtimeNote": "Picture options are shown at runtime."
     }
   }
 }

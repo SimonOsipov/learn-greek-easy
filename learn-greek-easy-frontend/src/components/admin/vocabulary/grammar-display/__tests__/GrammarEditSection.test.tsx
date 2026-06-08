@@ -43,7 +43,6 @@ function createMockWordEntry(overrides: Partial<WordEntryResponse> = {}): WordEn
         greek: 'Το σπίτι είναι μεγάλο.',
         english: 'The house is big.',
         russian: 'Дом большой.',
-        context: 'everyday',
         audio_key: null,
         audio_url: null,
         audio_status: 'ready' as const,

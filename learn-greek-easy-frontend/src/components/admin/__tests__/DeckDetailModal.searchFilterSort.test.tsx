@@ -28,7 +28,7 @@
  */
 import type { ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -136,22 +136,6 @@ const makeWordEntriesResponse = (cards: AdminVocabularyCard[], total = cards.len
   deck_id: 'deck-v2',
   cards,
 });
-
-// ============================================
-// Helper: Trigger POS filter via Radix hidden select
-// Radix UI renders a visually-hidden native <select> for form compatibility.
-// We find it and dispatch a change event. This is the only way to change
-// the Select's value in jsdom without pointer events.
-// ============================================
-
-function triggerPosFilterChange(container: HTMLElement, value: string) {
-  // Radix UI renders a hidden <select> as a sibling of the trigger's button
-  // or as a child of the Select root. It has aria-hidden="true".
-  const hiddenSelects = container.querySelectorAll('select');
-  hiddenSelects.forEach((sel) => {
-    fireEvent.change(sel, { target: { value } });
-  });
-}
 
 // ============================================
 // Render Helper
@@ -427,10 +411,6 @@ describe('AC-6: Filtered count shown when filters are active', () => {
     await waitFor(
       () => {
         // filteredCount: "6 of 30 words" — the text may be split across elements
-        const description = screen.getByRole('dialog').querySelector('[class*="text-muted"]');
-        const dialogDesc = document.querySelector(
-          '[id^="radix-"][class*="description"], [data-radix-dialog-description]'
-        );
         // Check the dialog description text matches filteredCount pattern
         const allText = document.body.textContent ?? '';
         expect(allText).toMatch(/6/);

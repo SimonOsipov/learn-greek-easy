@@ -6,6 +6,7 @@ import { reviewAPI } from '@/services/reviewAPI';
 import type { ReviewResult } from '@/services/reviewAPI';
 import { studyAPI } from '@/services/studyAPI';
 import type { StudyQueue, StudyQueueCard } from '@/services/studyAPI';
+import type { CardRecordType } from '@/services/wordEntryAPI';
 import { useAuthStore } from '@/stores/authStore';
 
 import {
@@ -95,6 +96,8 @@ function makeMockCard(overrides: Partial<StudyQueueCard> = {}): StudyQueueCard {
     translation_ru: 'дом',
     translation_ru_plural: 'дома',
     sentence_ru: null,
+    example_el: null,
+    example_en: null,
     ...overrides,
   };
 }
@@ -206,12 +209,7 @@ describe('v2PracticeStore', () => {
     const queue = makeMockQueue([meaningCard, sentenceCard, otherCard]);
     vi.mocked(studyAPI.getQueue).mockResolvedValue(queue);
 
-    await useV2PracticeStore
-      .getState()
-      .startSession(
-        'deck-1',
-        'meaning' as ReturnType<typeof useV2PracticeStore.getState>['cardType']
-      );
+    await useV2PracticeStore.getState().startSession('deck-1', 'meaning' as CardRecordType);
 
     const state = useV2PracticeStore.getState();
     // Should filter to meaning_* and sentence_translation cards

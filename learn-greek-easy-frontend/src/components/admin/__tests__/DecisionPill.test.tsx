@@ -61,6 +61,7 @@ function renderPill(
     <I18nextProvider i18n={i18n}>
       <UnifiedVerificationTable
         local={null}
+        wiktionaryLocal={null}
         crossAI={makeCrossAI(comparisons)}
         resolvedValues={resolvedValues}
         onResolvedValueChange={onResolvedValueChange}

@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TimelineEntry } from '@/components/ui/timeline-entry';
 import type { TimelineTone } from '@/components/ui/timeline-entry';
+import { tDynamic } from '@/i18n/tDynamic';
 import type { ChangelogEntryAdmin, ChangelogTag } from '@/types/changelog';
 import { CHANGELOG_TAG_CONFIG } from '@/types/changelog';
 
@@ -49,7 +50,7 @@ function HeaderSlot({ entry }: HeaderSlotProps) {
 
   return (
     <>
-      <Badge tone={TONE_BY_TAG[entry.tag]}>{t(tagConfig.labelKey)}</Badge>
+      <Badge tone={TONE_BY_TAG[entry.tag]}>{tDynamic(t, tagConfig.labelKey)}</Badge>
       {entry.version ? (
         <span className="cl-preview-v" data-testid="version-pill">
           {entry.version}

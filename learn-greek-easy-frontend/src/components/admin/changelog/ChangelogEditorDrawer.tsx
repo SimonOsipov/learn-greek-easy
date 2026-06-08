@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
+import { tDynamic } from '@/i18n/tDynamic';
 import { renderInlineMarkdown } from '@/lib/markdown-inline';
 import { cn } from '@/lib/utils';
 import {
@@ -422,7 +423,7 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
                         data-testid={`changelog-editor-tag-${tag}`}
                       >
                         <span className="cl-tag-dot" aria-hidden="true" />
-                        {t(CHANGELOG_TAG_CONFIG[tag].labelKey as Parameters<typeof t>[0])}
+                        {tDynamic(t, CHANGELOG_TAG_CONFIG[tag].labelKey)}
                       </button>
                     ))}
                   </div>
@@ -487,7 +488,7 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
                   <div className="cl-preview-card">
                     <div className="cl-preview-head">
                       <Badge tone={TAG_TONE[form.tag]}>
-                        {t(CHANGELOG_TAG_CONFIG[form.tag].labelKey as Parameters<typeof t>[0])}
+                        {tDynamic(t, CHANGELOG_TAG_CONFIG[form.tag].labelKey)}
                       </Badge>
                       {form.version && (
                         <span className="cl-preview-v" data-testid="changelog-preview-version">

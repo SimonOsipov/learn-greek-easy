@@ -18,7 +18,7 @@
  */
 
 import { test, expect } from '@chromatic-com/playwright';
-import { Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 import {
   takeSnapshot,

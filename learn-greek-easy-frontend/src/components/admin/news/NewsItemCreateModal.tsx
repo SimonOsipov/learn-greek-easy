@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
+import { tDynamic } from '@/i18n/tDynamic';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
 
 import { JSON_PLACEHOLDER, validateNewsItemJson } from './newsJsonValidation';
@@ -41,7 +42,7 @@ export function NewsItemCreateModal({ open, onOpenChange }: NewsItemCreateModalP
     const validation = validateNewsItemJson(jsonValue);
 
     if (!validation.valid) {
-      setError(t(validation.error.messageKey));
+      setError(tDynamic(t, validation.error.messageKey));
       return;
     }
 

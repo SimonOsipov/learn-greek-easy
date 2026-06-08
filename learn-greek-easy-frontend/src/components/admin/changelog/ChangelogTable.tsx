@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { tDynamic } from '@/i18n/tDynamic';
 import type { ChangelogEntryAdmin, ChangelogTag } from '@/types/changelog';
 import { CHANGELOG_TAG_CONFIG, CHANGELOG_TAG_OPTIONS } from '@/types/changelog';
 
@@ -141,7 +142,7 @@ export function ChangelogTable({
             <SelectItem value="all">{t('admin:changelog.filter.allTags')}</SelectItem>
             {CHANGELOG_TAG_OPTIONS.map((tag) => (
               <SelectItem key={tag} value={tag}>
-                {t(CHANGELOG_TAG_CONFIG[tag].labelKey)}
+                {tDynamic(t, CHANGELOG_TAG_CONFIG[tag].labelKey)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -189,7 +190,7 @@ export function ChangelogTable({
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary" className={tagConfig.colorClass}>
-                        {t(tagConfig.labelKey)}
+                        {tDynamic(t, tagConfig.labelKey)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">

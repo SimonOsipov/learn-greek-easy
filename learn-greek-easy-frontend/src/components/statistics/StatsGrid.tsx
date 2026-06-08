@@ -4,6 +4,7 @@ import { BookOpen, Flame, Landmark, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { tDynamic } from '@/i18n/tDynamic';
 import { cn } from '@/lib/utils';
 
 export interface StatsGridProps {
@@ -73,7 +74,9 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
               {streak === 1 ? t('stats.day') : t('stats.days')}
             </span>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">{t(getStreakMessageKey(streak))}</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {tDynamic(t, getStreakMessageKey(streak))}
+          </p>
         </CardContent>
       </Card>
 

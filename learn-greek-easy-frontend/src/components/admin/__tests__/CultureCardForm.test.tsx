@@ -30,33 +30,37 @@ import i18n from '@/i18n';
 /**
  * Factory for creating mock AdminCultureQuestion data
  */
-const createMockQuestion = (
-  overrides: Partial<AdminCultureQuestion> = {}
-): AdminCultureQuestion => ({
-  id: 'test-question-1',
-  question_text: {
-    ru: 'Тестовый вопрос',
-    el: 'Ερώτηση δοκιμής',
-    en: 'Test question',
-  },
-  option_a: {
-    ru: 'Ответ А',
-    el: 'Απάντηση Α',
-    en: 'Answer A',
-  },
-  option_b: {
-    ru: 'Ответ Б',
-    el: 'Απάντηση Β',
-    en: 'Answer B',
-  },
-  option_c: null,
-  option_d: null,
-  correct_option: 1,
-  source_article_url: null,
-  is_pending_review: false,
-  created_at: '2026-01-01T00:00:00Z',
-  ...overrides,
-});
+const createMockQuestion = (overrides: Partial<AdminCultureQuestion> = {}): AdminCultureQuestion =>
+  ({
+    id: 'test-question-1',
+    question_text: {
+      ru: 'Тестовый вопрос',
+      el: 'Ερώτηση δοκιμής',
+      en: 'Test question',
+    },
+    option_a: {
+      ru: 'Ответ А',
+      el: 'Απάντηση Α',
+      en: 'Answer A',
+    },
+    option_b: {
+      ru: 'Ответ Б',
+      el: 'Απάντηση Β',
+      en: 'Answer B',
+    },
+    option_c: null,
+    option_d: null,
+    correct_option: 1,
+    source_article_url: null,
+    is_pending_review: false,
+    created_at: '2026-01-01T00:00:00Z',
+    audio_s3_key: null,
+    news_item_id: null,
+    original_article_url: null,
+    order_index: 0,
+    news_item_audio_a2_s3_key: null,
+    ...overrides,
+  }) as AdminCultureQuestion;
 
 /**
  * Factory for creating mock question with 4 answers
@@ -828,7 +832,6 @@ describe('CultureCardForm', () => {
     });
 
     it('should fall back to initialData.id when deckId is empty string', async () => {
-      const user = userEvent.setup();
       const onSubmit = vi.fn().mockResolvedValue(undefined);
       const mockQuestion = createMockQuestion({ id: 'existing-question-id' });
 

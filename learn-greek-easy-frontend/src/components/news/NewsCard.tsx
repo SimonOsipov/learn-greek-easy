@@ -15,6 +15,7 @@ import { ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
+import { tDynamic } from '@/i18n/tDynamic';
 import { track } from '@/lib/analytics';
 import { buildSrcSet, recoverDerivativeError } from '@/lib/imageVariants';
 import { clearActivePlayer, registerActivePlayer } from '@/lib/newsAudioCoordinator';
@@ -197,7 +198,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         {article.country && COUNTRY_CONFIG[article.country as NewsCountry] && (
           <span className="badge b-blue on-photo absolute left-2 top-2 z-10">
             {COUNTRY_CONFIG[article.country as NewsCountry].flag}{' '}
-            {t(COUNTRY_CONFIG[article.country as NewsCountry].labelKey)}
+            {tDynamic(t, COUNTRY_CONFIG[article.country as NewsCountry].labelKey)}
           </span>
         )}
 

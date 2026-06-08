@@ -153,7 +153,8 @@
     "noQuestionsDueDescription": "Great job! You have no questions due for review right now. Come back later or explore other decks.",
     "browseDecks": "Browse Decks",
     "backToDeck": "Back to Deck",
-    "returnToDeck": "Return to Deck"
+    "returnToDeck": "Return to Deck",
+    "practiceAnyway": "Practice Anyway"
   },
   "summary": {
     "practiceComplete": "Practice Complete",

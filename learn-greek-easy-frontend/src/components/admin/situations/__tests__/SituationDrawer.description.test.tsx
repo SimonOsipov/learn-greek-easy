@@ -103,6 +103,7 @@ function makeSituation(overrides: Partial<SituationDetailResponse> = {}): Situat
     },
     picture: null,
     dialog: null,
+    linked_news: null,
     ...overrides,
   };
 }
@@ -236,8 +237,6 @@ describe('SituationDrawerDescription — RHF dirty tracking (SAR2-26-01)', () =>
   it('typing into B1 textarea makes it dirty', async () => {
     const user = userEvent.setup();
     const situation = makeSituation();
-    let isDirty = false;
-
     function TrackingWrapper() {
       const form = useForm<SituationDrawerFormData>({
         defaultValues: {
@@ -251,7 +250,6 @@ describe('SituationDrawerDescription — RHF dirty tracking (SAR2-26-01)', () =>
           },
         },
       });
-      isDirty = form.formState.isDirty;
       return (
         <FormProvider {...form}>
           <SituationDrawerDescription situation={situation} />
@@ -390,7 +388,6 @@ describe('SituationDrawerDescription — save submits dirty description fields (
   });
 
   it('save omits description payload when no description field is dirty', async () => {
-    const user = userEvent.setup();
     const situation = makeSituation();
 
     // Verify that when nothing is typed, all dirtyFields.description remains empty

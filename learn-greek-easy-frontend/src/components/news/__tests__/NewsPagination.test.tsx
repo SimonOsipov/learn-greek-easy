@@ -13,8 +13,9 @@
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { NewsPagination, NewsPaginationProps } from '@/components/news/NewsPagination';
-import { render, screen, within } from '@/lib/test-utils';
+import { NewsPagination } from '@/components/news/NewsPagination';
+import type { NewsPaginationProps } from '@/components/news/NewsPagination';
+import { render, screen } from '@/lib/test-utils';
 
 // Default props factory
 const createProps = (overrides: Partial<NewsPaginationProps> = {}): NewsPaginationProps => ({

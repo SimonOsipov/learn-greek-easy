@@ -15,6 +15,7 @@ import { SidePanel } from '@/components/ui/side-panel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
 import { useAdminTabNav } from '@/hooks/useAdminTabNav';
+import { tDynamic } from '@/i18n/tDynamic';
 import { track } from '@/lib/analytics';
 import {
   adminAPI,
@@ -211,7 +212,7 @@ export const NewsEditDrawer: React.FC = () => {
   if (!item) return null;
 
   const titleInLang = pickTitle(item, i18n.language) || t('news.drawer.untitled');
-  const countryLabel = t(`news.drawer.country.${item.country}`);
+  const countryLabel = tDynamic(t, `news.drawer.country.${item.country}`);
   const countryFlag =
     ({ cyprus: '🇨🇾', greece: '🇬🇷', world: '🌍' } as Record<string, string>)[item.country] ?? '🌍';
 

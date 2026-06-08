@@ -80,6 +80,8 @@ function createMockSituation(
     source_image_url: null,
     picture_url: null,
     source_title: null,
+    picture_variants: null,
+    source_image_variants: null,
     ...overrides,
   };
 }

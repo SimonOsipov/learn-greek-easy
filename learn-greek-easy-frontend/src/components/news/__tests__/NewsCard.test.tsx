@@ -25,31 +25,37 @@ vi.mock('@/lib/newsAudioCoordinator', () => ({
 
 import { type NewsItemResponse } from '@/services/adminAPI';
 
-const createMockArticle = (overrides: Partial<NewsItemResponse> = {}): NewsItemResponse => ({
-  id: 'test-article-id',
-  title_el: 'Ελληνικός τίτλος',
-  title_en: 'English title',
-  title_ru: 'Русский заголовок',
-  description_el: 'Ελληνική περιγραφή',
-  description_en: 'English description',
-  description_ru: 'Русское описание',
-  publication_date: '2026-01-27',
-  original_article_url: 'https://example.com/article',
-  image_url: 'https://example.com/image.jpg',
-  audio_url: null,
-  audio_generated_at: null,
-  audio_duration_seconds: null,
-  audio_file_size_bytes: null,
-  created_at: '2026-01-27T00:00:00Z',
-  updated_at: '2026-01-27T00:00:00Z',
-  country: 'cyprus',
-  title_el_a2: null,
-  description_el_a2: null,
-  audio_a2_url: null,
-  audio_a2_duration_seconds: null,
-  has_a2_content: false,
-  ...overrides,
-});
+const createMockArticle = (overrides: Partial<NewsItemResponse> = {}): NewsItemResponse =>
+  ({
+    id: 'test-article-id',
+    title_el: 'Ελληνικός τίτλος',
+    title_en: 'English title',
+    title_ru: 'Русский заголовок',
+    description_el: 'Ελληνική περιγραφή',
+    description_en: 'English description',
+    description_ru: 'Русское описание',
+    publication_date: '2026-01-27',
+    original_article_url: 'https://example.com/article',
+    image_url: 'https://example.com/image.jpg',
+    audio_url: null,
+    audio_generated_at: null,
+    audio_duration_seconds: null,
+    audio_file_size_bytes: null,
+    created_at: '2026-01-27T00:00:00Z',
+    updated_at: '2026-01-27T00:00:00Z',
+    country: 'cyprus',
+    title_el_a2: null,
+    description_el_a2: null,
+    audio_a2_url: null,
+    audio_a2_duration_seconds: null,
+    has_a2_content: false,
+    alt_text: null,
+    photo_credit: null,
+    status: 'published' as const,
+    linked_situation: null,
+    image_variants: null,
+    ...overrides,
+  }) as NewsItemResponse;
 
 describe('NewsCard', () => {
   it('renders WaveformPlayer when audio_url is present', () => {

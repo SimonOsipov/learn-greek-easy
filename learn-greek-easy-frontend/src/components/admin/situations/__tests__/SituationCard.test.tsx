@@ -64,6 +64,7 @@ function makeItem(overrides: Partial<SituationListItem> = {}): SituationListItem
     dialog_lines_count: 0,
     roles: [],
     picture_image_url: null,
+    picture_image_variants: null,
     audio_duration_seconds: null,
     source_title_en: null,
     source_country: null,

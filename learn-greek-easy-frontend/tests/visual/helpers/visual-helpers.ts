@@ -5,7 +5,7 @@
  * These helpers provide authentication, viewport management, and snapshot utilities.
  */
 
-import { Page, TestInfo } from '@playwright/test';
+import type { Page, TestInfo } from '@playwright/test';
 import { takeSnapshot } from '@chromatic-com/playwright';
 
 // Re-export takeSnapshot for convenience

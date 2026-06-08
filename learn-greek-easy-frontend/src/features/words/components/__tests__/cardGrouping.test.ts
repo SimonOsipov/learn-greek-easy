@@ -8,6 +8,7 @@ function makeCard(
   mastery_status: 'none' | 'studied' | 'mastered' = 'none'
 ): CardMasteryItem {
   return {
+    id: `card-${card_type}`,
     card_type: card_type as CardMasteryItem['card_type'],
     front_content: { prompt: 'test' },
     back_content: { answer: 'test' },

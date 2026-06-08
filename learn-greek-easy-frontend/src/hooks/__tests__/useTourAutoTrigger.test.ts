@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -130,12 +130,7 @@ describe('useTourAutoTrigger', () => {
   it('does not trigger when analytics is loading', () => {
     // Remove seeded data so query fires and stays loading
     queryClient.removeQueries({ queryKey: ['analytics'] });
-    let resolve!: (v: unknown) => void;
-    mockGetAnalytics.mockReturnValue(
-      new Promise((r) => {
-        resolve = r;
-      })
-    );
+    mockGetAnalytics.mockReturnValue(new Promise(() => {}));
 
     renderHook(() => useTourAutoTrigger(), { wrapper: makeWrapper(queryClient) });
     vi.advanceTimersByTime(250);
@@ -158,12 +153,7 @@ describe('useTourAutoTrigger', () => {
   it('fail-safe: sets triggeredRef after 10s, preventing late trigger', () => {
     // Dashboard never loads
     queryClient.removeQueries({ queryKey: ['analytics'] });
-    let resolve!: (v: unknown) => void;
-    mockGetAnalytics.mockReturnValue(
-      new Promise((r) => {
-        resolve = r;
-      })
-    );
+    mockGetAnalytics.mockReturnValue(new Promise(() => {}));
 
     renderHook(() => useTourAutoTrigger(), { wrapper: makeWrapper(queryClient) });
     vi.advanceTimersByTime(10_000);

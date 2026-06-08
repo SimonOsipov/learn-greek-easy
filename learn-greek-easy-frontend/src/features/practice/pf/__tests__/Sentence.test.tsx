@@ -24,8 +24,6 @@
  * - Direction: undefined/null prompt defaults to el_to_en
  */
 
-import React from 'react';
-
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 

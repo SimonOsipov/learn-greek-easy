@@ -20,17 +20,7 @@ import type { NewsItemResponse } from '@/services/adminAPI';
 
 // ── Module mocks ───────────────────────────────────────────────────────────────
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, opts?: Record<string, unknown>) => {
-      if (opts) {
-        return Object.entries(opts).reduce((s, [k, v]) => s.replace(`{{${k}}}`, String(v)), key);
-      }
-      return key;
-    },
-    i18n: { language: 'en' },
-  }),
-}));
+// I18NG-04: mock dropped — real i18n instance from test-setup resolves all admin keys.
 
 const mockToast = vi.fn();
 vi.mock('@/hooks/use-toast', () => ({
@@ -115,6 +105,9 @@ function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
     has_a2_content: false,
     alt_text: null,
     photo_credit: null,
+    status: 'published' as const,
+    linked_situation: null,
+    image_variants: null,
     ...overrides,
   };
 }
@@ -188,12 +181,18 @@ describe('NewsEditDrawerImage — preview block', () => {
 
   it('renders Kicker with i18n key news.drawer.image.kicker', () => {
     render(<Wrapper item={makeItem()} />);
-    expect(screen.getByText('news.drawer.image.kicker')).toBeInTheDocument();
+    // Resolves to "Source image"
+    expect(screen.getByText('Source image')).toBeInTheDocument();
   });
 
   it('renders helper text exactly', () => {
     render(<Wrapper item={makeItem()} />);
-    expect(screen.getByText('news.drawer.image.helper')).toBeInTheDocument();
+    // Resolves to the full helper string
+    expect(
+      screen.getByText(
+        'Enter a URL to replace the current image. The original source URL is not stored after upload.'
+      )
+    ).toBeInTheDocument();
   });
 });
 
@@ -228,9 +227,9 @@ describe('NewsEditDrawerImage — source URL input', () => {
 
   it('every input is reachable via getByLabelText (a11y contract)', () => {
     render(<Wrapper item={makeItem()} />);
-    expect(screen.getByLabelText('news.drawer.image.sourceUrl')).toBeInTheDocument();
-    expect(screen.getByLabelText('news.drawer.image.altText')).toBeInTheDocument();
-    expect(screen.getByLabelText('news.drawer.image.photoCredit')).toBeInTheDocument();
+    expect(screen.getByLabelText('Source image URL')).toBeInTheDocument();
+    expect(screen.getByLabelText('Alt text — English')).toBeInTheDocument();
+    expect(screen.getByLabelText('Photo credit')).toBeInTheDocument();
   });
 });
 

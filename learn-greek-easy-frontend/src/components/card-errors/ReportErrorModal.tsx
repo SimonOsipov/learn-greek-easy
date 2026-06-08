@@ -56,7 +56,7 @@ export interface ReportErrorModalProps {
  * ```
  */
 export function ReportErrorModal({ isOpen, onClose, cardId, cardType }: ReportErrorModalProps) {
-  const { t } = useTranslation('review');
+  const { t } = useTranslation(['review', 'common']);
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -71,7 +71,7 @@ export function ReportErrorModal({ isOpen, onClose, cardId, cardType }: ReportEr
     // Client-side validation
     if (trimmedDescription.length < MIN_DESCRIPTION_LENGTH) {
       toast({
-        title: t('reportError.validation.tooShort', 'Please provide at least 10 characters'),
+        title: t('reportError.validation.tooShort'),
         variant: 'destructive',
       });
       return;
@@ -91,14 +91,14 @@ export function ReportErrorModal({ isOpen, onClose, cardId, cardType }: ReportEr
 
       // Show success and close
       toast({
-        title: t('reportError.success', 'Thank you for reporting this error!'),
+        title: t('reportError.success'),
       });
       handleClose();
     } catch (error: unknown) {
       // Check for duplicate report (409 Conflict)
       if (error && typeof error === 'object' && 'status' in error && error.status === 409) {
         toast({
-          title: t('reportError.pendingReview', 'Admin yet to review your previous feedback'),
+          title: t('reportError.pendingReview'),
           variant: 'destructive',
         });
       } else {
@@ -110,7 +110,7 @@ export function ReportErrorModal({ isOpen, onClose, cardId, cardType }: ReportEr
           cardType,
         });
         toast({
-          title: t('reportError.error', 'Failed to submit error report. Please try again.'),
+          title: t('reportError.error'),
           variant: 'destructive',
         });
       }
@@ -135,13 +135,8 @@ export function ReportErrorModal({ isOpen, onClose, cardId, cardType }: ReportEr
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{t('reportError.title', 'Report an Error')}</DialogTitle>
-          <DialogDescription>
-            {t(
-              'reportError.description',
-              'Help us improve by reporting any errors you find in this card.'
-            )}
-          </DialogDescription>
+          <DialogTitle>{t('reportError.title')}</DialogTitle>
+          <DialogDescription>{t('reportError.description')}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -149,7 +144,7 @@ export function ReportErrorModal({ isOpen, onClose, cardId, cardType }: ReportEr
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={t('reportError.placeholder', 'Describe the error you found...')}
+              placeholder={t('reportError.placeholder')}
               className={cn(
                 'w-full resize-none rounded-lg border p-3',
                 'bg-background text-foreground placeholder:text-muted-foreground',
@@ -167,12 +162,7 @@ export function ReportErrorModal({ isOpen, onClose, cardId, cardType }: ReportEr
               <span
                 className={cn('text-muted-foreground', isDescriptionTooShort && 'text-destructive')}
               >
-                {isDescriptionTooShort && (
-                  <span>
-                    {t('reportError.validation.tooShort', 'Please provide at least 10 characters')}{' '}
-                    -{' '}
-                  </span>
-                )}
+                {isDescriptionTooShort && <span>{t('reportError.validation.tooShort')} - </span>}
               </span>
               <span className="text-muted-foreground">
                 {descriptionLength}/{MAX_DESCRIPTION_LENGTH}
@@ -188,16 +178,16 @@ export function ReportErrorModal({ isOpen, onClose, cardId, cardType }: ReportEr
               className="flex-1"
               disabled={isSubmitting}
             >
-              {t('common:actions.cancel', 'Cancel')}
+              {t('common:actions.cancel')}
             </Button>
             <Button type="submit" className="flex-1" disabled={!canSubmit}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t('reportError.submitting', 'Submitting...')}
+                  {t('reportError.submitting')}
                 </>
               ) : (
-                t('common:actions.submit', 'Submit')
+                t('common:actions.submit')
               )}
             </Button>
           </DialogFooter>

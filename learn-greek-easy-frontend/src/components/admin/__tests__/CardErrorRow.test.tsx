@@ -2,7 +2,7 @@
 // file. If any sibling file is missing when this lands, the test suite must
 // fail loudly via the watcher's "no tests found" output — do not silence it.
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderWithProviders } from '@/lib/test-utils';

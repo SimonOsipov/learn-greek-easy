@@ -58,7 +58,7 @@ describe('superProperties — adversarial / edge coverage', () => {
       capture: vi.fn(),
     } as unknown as import('posthog-js').PostHog;
     __setPosthogInstance(captureOnlyInstance);
-    expect(() => registerInterfaceLanguage('el')).not.toThrow();
+    expect(() => registerInterfaceLanguage('ru')).not.toThrow();
   });
 
   it('registerTheme no-ops when register field exists but is not a function', () => {
@@ -80,9 +80,9 @@ describe('superProperties — adversarial / edge coverage', () => {
   it('registerInterfaceLanguage passes the language value through unmodified', () => {
     const mockReg = vi.fn();
     __setPosthogInstance({ register: mockReg } as unknown as import('posthog-js').PostHog);
-    registerInterfaceLanguage('el');
-    expect(mockReg).toHaveBeenCalledWith({ interface_language: 'el' });
-    expect(mockReg.mock.calls[0][0]).toStrictEqual({ interface_language: 'el' });
+    registerInterfaceLanguage('ru');
+    expect(mockReg).toHaveBeenCalledWith({ interface_language: 'ru' });
+    expect(mockReg.mock.calls[0][0]).toStrictEqual({ interface_language: 'ru' });
   });
 
   it('register is called exactly once per registerTheme call (no batching or debouncing)', () => {

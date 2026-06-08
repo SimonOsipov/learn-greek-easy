@@ -70,7 +70,7 @@ vi.mock('@/components/ui/tooltip', () => ({
     <div data-testid="tooltip-content">{children}</div>
   ),
   TooltipProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TooltipTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
+  TooltipTrigger: ({ children }: { children: React.ReactNode; asChild?: boolean }) => (
     <div>{children}</div>
   ),
 }));

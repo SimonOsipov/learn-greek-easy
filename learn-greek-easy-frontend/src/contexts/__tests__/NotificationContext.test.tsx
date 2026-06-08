@@ -98,6 +98,7 @@ describe('Change A — refreshUnreadCount error filtering', () => {
     vi.mocked(notificationAPI.fetchNotifications).mockResolvedValue({
       notifications: [],
       unread_count: 0,
+      total_count: 0,
       has_more: false,
     });
     vi.mocked(notificationAPI.fetchUnreadCount).mockResolvedValue(0);
@@ -185,6 +186,7 @@ describe('Change B — visibility-aware polling', () => {
     vi.mocked(notificationAPI.fetchNotifications).mockResolvedValue({
       notifications: [],
       unread_count: 0,
+      total_count: 0,
       has_more: false,
     });
     vi.mocked(notificationAPI.fetchUnreadCount).mockResolvedValue(0);
@@ -367,6 +369,7 @@ describe('SSE integration', () => {
     vi.mocked(notificationAPI.fetchNotifications).mockResolvedValue({
       notifications: [],
       unread_count: 0,
+      total_count: 0,
       has_more: false,
     });
     vi.mocked(notificationAPI.fetchUnreadCount).mockResolvedValue(0);

@@ -8,6 +8,18 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { useAuth, useRequireAuth, useRedirectIfAuth, useRequireRole } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
+import type { User, UserRole } from '@/types/auth';
+
+// Helper: build a minimal valid User for test assertions
+function makeUser(overrides: { id: string; email: string; name: string; role: UserRole }): User {
+  return {
+    ...overrides,
+    preferences: { language: 'en', dailyGoal: 20, notifications: true },
+    stats: { streak: 0, wordsLearned: 0, totalXP: 0, joinedDate: new Date('2025-01-01') },
+    createdAt: new Date('2025-01-01'),
+    updatedAt: new Date('2025-01-01'),
+  };
+}
 
 // Mock react-router-dom
 const mockNavigate = vi.fn();
@@ -49,13 +61,12 @@ describe.skip('useAuth Hook', () => {
     });
 
     it('should return authenticated user data', () => {
-      const mockUser = {
+      const mockUser = makeUser({
         id: '1',
         email: 'test@example.com',
         name: 'Test User',
-        role: 'free' as const,
-        createdAt: new Date().toISOString(),
-      };
+        role: 'free',
+      });
 
       useAuthStore.setState({
         user: mockUser,
@@ -96,13 +107,12 @@ describe.skip('useAuth Hook', () => {
     describe('Role-based computed properties', () => {
       it('should identify admin users', () => {
         useAuthStore.setState({
-          user: {
+          user: makeUser({
             id: '1',
             email: 'admin@example.com',
             name: 'Admin User',
             role: 'admin',
-            createdAt: new Date().toISOString(),
-          },
+          }),
           isAuthenticated: true,
         });
 
@@ -115,13 +125,12 @@ describe.skip('useAuth Hook', () => {
 
       it('should identify premium users', () => {
         useAuthStore.setState({
-          user: {
+          user: makeUser({
             id: '2',
             email: 'premium@example.com',
             name: 'Premium User',
             role: 'premium',
-            createdAt: new Date().toISOString(),
-          },
+          }),
           isAuthenticated: true,
         });
 
@@ -134,13 +143,7 @@ describe.skip('useAuth Hook', () => {
 
       it('should identify free users', () => {
         useAuthStore.setState({
-          user: {
-            id: '3',
-            email: 'free@example.com',
-            name: 'Free User',
-            role: 'free',
-            createdAt: new Date().toISOString(),
-          },
+          user: makeUser({ id: '3', email: 'free@example.com', name: 'Free User', role: 'free' }),
           isAuthenticated: true,
         });
 
@@ -183,13 +186,7 @@ describe.skip('useAuth Hook', () => {
   describe('useRequireAuth', () => {
     it('should not redirect when authenticated', () => {
       useAuthStore.setState({
-        user: {
-          id: '1',
-          email: 'test@example.com',
-          name: 'Test User',
-          role: 'free',
-          createdAt: new Date().toISOString(),
-        },
+        user: makeUser({ id: '1', email: 'test@example.com', name: 'Test User', role: 'free' }),
         isAuthenticated: true,
         isLoading: false,
       });
@@ -248,13 +245,7 @@ describe.skip('useAuth Hook', () => {
   describe('useRedirectIfAuth', () => {
     it('should redirect to dashboard when authenticated', () => {
       useAuthStore.setState({
-        user: {
-          id: '1',
-          email: 'test@example.com',
-          name: 'Test User',
-          role: 'free',
-          createdAt: new Date().toISOString(),
-        },
+        user: makeUser({ id: '1', email: 'test@example.com', name: 'Test User', role: 'free' }),
         isAuthenticated: true,
       });
 
@@ -275,13 +266,7 @@ describe.skip('useAuth Hook', () => {
 
     it('should use custom redirect path', () => {
       useAuthStore.setState({
-        user: {
-          id: '1',
-          email: 'test@example.com',
-          name: 'Test User',
-          role: 'free',
-          createdAt: new Date().toISOString(),
-        },
+        user: makeUser({ id: '1', email: 'test@example.com', name: 'Test User', role: 'free' }),
         isAuthenticated: true,
       });
 
@@ -304,13 +289,12 @@ describe.skip('useAuth Hook', () => {
 
     it('should not redirect when user has required role', () => {
       useAuthStore.setState({
-        user: {
+        user: makeUser({
           id: '1',
           email: 'premium@example.com',
           name: 'Premium User',
           role: 'premium',
-          createdAt: new Date().toISOString(),
-        },
+        }),
         isAuthenticated: true,
       });
 
@@ -322,13 +306,7 @@ describe.skip('useAuth Hook', () => {
 
     it('should redirect when user lacks required role', () => {
       useAuthStore.setState({
-        user: {
-          id: '1',
-          email: 'free@example.com',
-          name: 'Free User',
-          role: 'free',
-          createdAt: new Date().toISOString(),
-        },
+        user: makeUser({ id: '1', email: 'free@example.com', name: 'Free User', role: 'free' }),
         isAuthenticated: true,
       });
 
@@ -339,13 +317,7 @@ describe.skip('useAuth Hook', () => {
 
     it('should allow admin users to access premium features', () => {
       useAuthStore.setState({
-        user: {
-          id: '1',
-          email: 'admin@example.com',
-          name: 'Admin User',
-          role: 'admin',
-          createdAt: new Date().toISOString(),
-        },
+        user: makeUser({ id: '1', email: 'admin@example.com', name: 'Admin User', role: 'admin' }),
         isAuthenticated: true,
       });
 
@@ -356,13 +328,7 @@ describe.skip('useAuth Hook', () => {
 
     it('should allow admin users to access admin features', () => {
       useAuthStore.setState({
-        user: {
-          id: '1',
-          email: 'admin@example.com',
-          name: 'Admin User',
-          role: 'admin',
-          createdAt: new Date().toISOString(),
-        },
+        user: makeUser({ id: '1', email: 'admin@example.com', name: 'Admin User', role: 'admin' }),
         isAuthenticated: true,
       });
 
@@ -373,13 +339,12 @@ describe.skip('useAuth Hook', () => {
 
     it('should not allow premium users to access admin features', () => {
       useAuthStore.setState({
-        user: {
+        user: makeUser({
           id: '1',
           email: 'premium@example.com',
           name: 'Premium User',
           role: 'premium',
-          createdAt: new Date().toISOString(),
-        },
+        }),
         isAuthenticated: true,
       });
 
@@ -390,13 +355,7 @@ describe.skip('useAuth Hook', () => {
 
     it('should use custom redirect path when access denied', () => {
       useAuthStore.setState({
-        user: {
-          id: '1',
-          email: 'free@example.com',
-          name: 'Free User',
-          role: 'free',
-          createdAt: new Date().toISOString(),
-        },
+        user: makeUser({ id: '1', email: 'free@example.com', name: 'Free User', role: 'free' }),
         isAuthenticated: true,
       });
 
@@ -407,13 +366,12 @@ describe.skip('useAuth Hook', () => {
 
     it('should return hasAccess based on user role', () => {
       useAuthStore.setState({
-        user: {
+        user: makeUser({
           id: '1',
           email: 'premium@example.com',
           name: 'Premium User',
           role: 'premium',
-          createdAt: new Date().toISOString(),
-        },
+        }),
         isAuthenticated: true,
       });
 
@@ -424,13 +382,7 @@ describe.skip('useAuth Hook', () => {
 
     it('should return hasAccess false when user lacks role', () => {
       useAuthStore.setState({
-        user: {
-          id: '1',
-          email: 'free@example.com',
-          name: 'Free User',
-          role: 'free',
-          createdAt: new Date().toISOString(),
-        },
+        user: makeUser({ id: '1', email: 'free@example.com', name: 'Free User', role: 'free' }),
         isAuthenticated: true,
       });
 

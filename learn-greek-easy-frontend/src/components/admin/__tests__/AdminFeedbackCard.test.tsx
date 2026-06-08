@@ -7,7 +7,7 @@
 // NOTE: Delete-button tests (trash icon, onDelete prop) live in
 // AdminFeedbackDelete.test.tsx — do NOT duplicate them here.
 
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 

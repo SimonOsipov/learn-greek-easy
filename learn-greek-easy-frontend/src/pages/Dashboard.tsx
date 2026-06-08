@@ -212,7 +212,7 @@ export const Dashboard: React.FC = () => {
 
       {/* Metrics Grid */}
       <section data-testid="metrics-section">
-        <p className="kicker mb-2">{t('dashboard.progress.kicker', 'Progress')}</p>
+        <p className="kicker mb-2">{t('dashboard.progress.kicker')}</p>
         <h2 className="mb-4 text-lg font-semibold text-foreground">
           {t('dashboard.progress.title')}
         </h2>
@@ -246,7 +246,7 @@ export const Dashboard: React.FC = () => {
 
       {/* Active Decks Section */}
       <section>
-        <p className="kicker mb-2">{t('dashboard.activeDecks.kicker', 'Active Decks')}</p>
+        <p className="kicker mb-2">{t('dashboard.activeDecks.kicker')}</p>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">
             {t('dashboard.activeDecks.title')}

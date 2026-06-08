@@ -470,21 +470,14 @@ export function CulturePracticePage() {
         <Dialog open={showRecoveryDialog} onOpenChange={setShowRecoveryDialog}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>{t('practice.recovery.title', 'Resume Practice?')}</DialogTitle>
-              <DialogDescription>
-                {t(
-                  'practice.recovery.description',
-                  'You have an unfinished practice session. Would you like to continue where you left off?'
-                )}
-              </DialogDescription>
+              <DialogTitle>{t('practice.recovery.title')}</DialogTitle>
+              <DialogDescription>{t('practice.recovery.description')}</DialogDescription>
             </DialogHeader>
             <DialogFooter className="gap-2 sm:justify-start">
               <Button variant="outline" onClick={handleDismissRecovery}>
-                {t('practice.recovery.startNew', 'Start New')}
+                {t('practice.recovery.startNew')}
               </Button>
-              <Button onClick={handleRecoverSession}>
-                {t('practice.recovery.resume', 'Resume Session')}
-              </Button>
+              <Button onClick={handleRecoverSession}>{t('practice.recovery.resume')}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -519,7 +512,7 @@ export function CulturePracticePage() {
             className="mb-4"
           >
             <ChevronLeft className="mr-2 h-4 w-4" />
-            {t('practice.backToDeck', 'Back to Deck')}
+            {t('practice.backToDeck')}
           </Button>
           <Card className="bg-card">
             <CardContent className="py-12 text-center">
@@ -527,13 +520,10 @@ export function CulturePracticePage() {
                 <CheckCircle className="h-8 w-8 text-practice-correct" />
               </div>
               <h2 className="mb-2 text-xl font-semibold text-foreground">
-                {t('practice.allCaughtUp', 'All Caught Up!')}
+                {t('practice.allCaughtUp')}
               </h2>
               <p className="mx-auto mb-6 max-w-md text-sm text-muted-foreground">
-                {t(
-                  'practice.noQuestionsDueDescription',
-                  'Great job! You have no questions due for review right now. Come back later or explore other decks.'
-                )}
+                {t('practice.noQuestionsDueDescription')}
               </p>
               <div className="mx-auto flex w-full max-w-xs flex-col gap-3">
                 {/* Practice Anyway button - only show if user has studied questions before */}
@@ -547,23 +537,23 @@ export function CulturePracticePage() {
                     {isPracticeAnywayLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {t('common:loading', 'Loading...')}
+                        {t('common:loading')}
                       </>
                     ) : (
-                      t('practice.practiceAnyway', 'Practice Anyway')
+                      t('practice.practiceAnyway')
                     )}
                   </Button>
                 )}
                 <div className="flex gap-3">
                   <Button className="flex-1" variant="outline" onClick={() => navigate('/decks')}>
-                    {t('practice.browseDecks', 'Browse Decks')}
+                    {t('practice.browseDecks')}
                   </Button>
                   <Button
                     className="flex-1"
                     variant={hasStudiedQuestions ? 'outline' : 'default'}
                     onClick={() => navigate(`/culture/decks/${deckId}`)}
                   >
-                    {t('practice.returnToDeck', 'Return to Deck')}
+                    {t('practice.returnToDeck')}
                   </Button>
                 </div>
               </div>
@@ -586,19 +576,19 @@ export function CulturePracticePage() {
         <div className="mx-auto max-w-[520px]">
           <Button variant="ghost" onClick={() => navigate('/decks')} className="mb-4">
             <ChevronLeft className="mr-2 h-4 w-4" />
-            {t('practice.backToDecks', 'Back to Decks')}
+            {t('practice.backToDecks')}
           </Button>
           <Alert variant="destructive" className="bg-card">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>{t('practice.error', 'Error')}</AlertTitle>
+            <AlertTitle>{t('practice.error')}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
           <div className="mt-4 flex gap-3">
             <Button onClick={() => clearError()} variant="default">
-              {t('common:retry', 'Try Again')}
+              {t('common:retry')}
             </Button>
             <Button onClick={() => navigate('/decks')} variant="secondary">
-              {t('practice.backToDecks', 'Back to Decks')}
+              {t('practice.backToDecks')}
             </Button>
           </div>
         </div>
@@ -613,14 +603,12 @@ export function CulturePracticePage() {
         <div className="mx-auto max-w-[520px]">
           <Button variant="ghost" onClick={() => navigate('/decks')} className="mb-4">
             <ChevronLeft className="mr-2 h-4 w-4" />
-            {t('practice.backToDecks', 'Back to Decks')}
+            {t('practice.backToDecks')}
           </Button>
           <Alert className="bg-card">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>{t('practice.noQuestions', 'No Questions')}</AlertTitle>
-            <AlertDescription>
-              {t('practice.noQuestionsDescription', 'No questions available for this deck.')}
-            </AlertDescription>
+            <AlertTitle>{t('practice.noQuestions')}</AlertTitle>
+            <AlertDescription>{t('practice.noQuestionsDescription')}</AlertDescription>
           </Alert>
         </div>
       </div>
@@ -633,16 +621,13 @@ export function CulturePracticePage() {
         {/* Header */}
         <PracticeHeader
           onExit={handleExitClick}
-          exitLabel={t('practice.exit', 'Exit')}
+          exitLabel={t('practice.exit')}
           exitTestId="exit-button"
           className="mb-4 px-0 py-0"
           rightSlot={
             <>
               {showLevelToggle && (
-                <div
-                  className="flex items-center gap-1"
-                  aria-label={t('common:news.level.label', 'Content level')}
-                >
+                <div className="flex items-center gap-1" aria-label={t('common:news.level.label')}>
                   <span className="whitespace-nowrap text-sm text-muted-foreground">
                     {t('common:news.level.difficulty')}
                   </span>
@@ -652,7 +637,7 @@ export function CulturePracticePage() {
                     onClick={() => handleNewsLevelChange('a2')}
                     data-testid="level-toggle-a2"
                   >
-                    {t('common:news.level.a2', 'A2')}
+                    {t('common:news.level.a2')}
                   </Button>
                   <Button
                     variant={newsLevel === 'b2' ? 'default' : 'outline'}
@@ -660,7 +645,7 @@ export function CulturePracticePage() {
                     onClick={() => handleNewsLevelChange('b2')}
                     data-testid="level-toggle-b2"
                   >
-                    {t('common:news.level.b2', 'B2')}
+                    {t('common:news.level.b2')}
                   </Button>
                 </div>
               )}
@@ -704,13 +689,10 @@ export function CulturePracticePage() {
       <ConfirmDialog
         open={showExitConfirm}
         onOpenChange={setShowExitConfirm}
-        title={t('practice.exitTitle', 'Exit Practice?')}
-        description={t(
-          'practice.exitConfirm',
-          'Your progress will be saved, but you will exit the current session. Are you sure you want to exit?'
-        )}
-        confirmText={t('common:confirm', 'Confirm')}
-        cancelText={t('common:cancel', 'Cancel')}
+        title={t('practice.exitTitle')}
+        description={t('practice.exitConfirm')}
+        confirmText={t('common:confirm')}
+        cancelText={t('common:cancel')}
         onConfirm={handleConfirmExit}
         variant="destructive"
       />

@@ -1,8 +1,7 @@
 {
   "extends": "./tsconfig.app.json",
   "compilerOptions": {
-    "composite": true,
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
+    "composite": false,
     "noEmit": true,
     "types": [
       "vite/client",
@@ -19,6 +18,5 @@
     "src/test-utils/**/*",
     "tests/**/*"
   ],
-  "exclude": [],
-  "references": [{ "path": "./tsconfig.app.json" }]
+  "exclude": []
 }

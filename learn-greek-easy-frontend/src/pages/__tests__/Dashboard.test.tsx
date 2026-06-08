@@ -275,7 +275,7 @@ describe('Dashboard navigation', () => {
     continueButtons.forEach((btn) => fireEvent.click(btn));
 
     // Assert none of the navigate calls used the old /review route
-    const allCalls = mockNavigate.mock.calls.map(([url]: [string]) => url);
+    const allCalls = (mockNavigate.mock.calls as [string][]).map(([url]) => url);
     const reviewCalls = allCalls.filter((url: string) => url.includes('/review'));
     expect(reviewCalls).toEqual([]);
   });

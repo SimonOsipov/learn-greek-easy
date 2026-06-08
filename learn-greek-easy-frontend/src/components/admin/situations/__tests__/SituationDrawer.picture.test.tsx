@@ -4,8 +4,6 @@
 // Covers: two-column layout with both wrapped panels, onCompleted wiring,
 // empty state when picture is null.
 
-import React from 'react';
-
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
@@ -60,7 +58,7 @@ vi.mock('../SituationPicturePromptForm', () => ({
 const basePicture: PictureNested = {
   id: 'pic-1',
   image_prompt: 'A marketplace',
-  status: 'ready',
+  status: 'generated',
   created_at: '2025-01-01T00:00:00Z',
   scene_en: 'A busy marketplace',
   scene_el: null,
@@ -81,6 +79,8 @@ function makeSituation(overrides: Partial<SituationDetailResponse> = {}): Situat
     description: null,
     picture: basePicture,
     dialog: null,
+    levels: [],
+    linked_news: null,
     ...overrides,
   };
 }

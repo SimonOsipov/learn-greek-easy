@@ -31,6 +31,8 @@
 
 import { useTranslation } from 'react-i18next';
 
+import { tDynamic } from '@/i18n/tDynamic';
+
 // -- Local payload types -------------------------------------------------------
 
 /** Narrowed from back_content (Record<string, unknown>) -- mirrors card_record.py:47-54 */
@@ -165,7 +167,7 @@ export function Declension({ card, revealed, glossRu }: DeclensionProps) {
               {/* Case label — reuse the shared review-namespace case names;
                   backend sends capitalised English (Nominative…) → lowercase key. */}
               <td className="pf-decl-table__case" scope="row">
-                {t(`grammar.nounDeclension.cases.${row.case.toLowerCase()}`, {
+                {tDynamic(t, `grammar.nounDeclension.cases.${row.case.toLowerCase()}`, {
                   ns: 'review',
                   defaultValue: row.case,
                 })}

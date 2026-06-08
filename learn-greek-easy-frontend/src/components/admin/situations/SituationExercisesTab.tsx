@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/accordion';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { tDynamic } from '@/i18n/tDynamic';
 import { adminAPI } from '@/services/adminAPI';
 import type {
   ExerciseSourceType,
@@ -78,11 +79,11 @@ function ExerciseFlatRow({
       <div className="dr-ex-body">
         <div className="dr-ex-badges">
           <Badge variant="secondary" className="dr-ex-badge-type">
-            {t(`situations.detail.exercises.type.${exercise.exercise_type}`)}
+            {tDynamic(t, `situations.detail.exercises.type.${exercise.exercise_type}`)}
           </Badge>
           {exercise.audio_level && (
             <Badge tone="violet" className="dr-ex-badge-level">
-              {t(`situations.detail.exercises.audioLevel.${exercise.audio_level}`)}
+              {tDynamic(t, `situations.detail.exercises.audioLevel.${exercise.audio_level}`)}
             </Badge>
           )}
           {sourceType === 'dialog' && (
@@ -173,7 +174,7 @@ function ExerciseAccordionItem({
       <AccordionTrigger className="hover:no-underline">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">
-            {t(`situations.detail.exercises.type.${exercise.exercise_type}`)}
+            {tDynamic(t, `situations.detail.exercises.type.${exercise.exercise_type}`)}
           </Badge>
           <Badge
             variant={exercise.status === 'approved' ? 'default' : 'secondary'}
@@ -183,16 +184,16 @@ function ExerciseAccordionItem({
                 : undefined
             }
           >
-            {t(`situations.detail.exercises.status.${exercise.status}`)}
+            {tDynamic(t, `situations.detail.exercises.status.${exercise.status}`)}
           </Badge>
           {sourceType === 'description' && exercise.audio_level && (
             <Badge variant="outline">
-              {t(`situations.detail.exercises.audioLevel.${exercise.audio_level}`)}
+              {tDynamic(t, `situations.detail.exercises.audioLevel.${exercise.audio_level}`)}
             </Badge>
           )}
           {sourceType === 'description' && exercise.modality && (
             <Badge variant="outline">
-              {t(`situations.detail.exercises.modality.${exercise.modality}`)}
+              {tDynamic(t, `situations.detail.exercises.modality.${exercise.modality}`)}
             </Badge>
           )}
         </div>
@@ -234,7 +235,7 @@ function GroupAccordionItem({ group }: { group: SituationExerciseGroupResponse }
       <AccordionTrigger className="hover:no-underline">
         <div className="flex items-center gap-2">
           <Icon className="h-4 w-4 text-muted-foreground" />
-          <span>{t(`situations.detail.exercises.sourceType.${group.source_type}`)}</span>
+          <span>{tDynamic(t, `situations.detail.exercises.sourceType.${group.source_type}`)}</span>
           <Badge variant="secondary">{group.exercise_count}</Badge>
         </div>
       </AccordionTrigger>

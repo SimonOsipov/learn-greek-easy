@@ -77,7 +77,7 @@ describe('sentry-queue', () => {
     it('passes valid SeverityLevel "error" through to captureMessage when Sentry is loaded', async () => {
       // Force PROD mode so initSentryAsync runs
       const originalProd = import.meta.env.PROD;
-      vi.stubEnv('PROD', true as unknown as string);
+      vi.stubEnv('PROD', true);
 
       const { initSentryAsync, queueMessage } = await import('../sentry-queue');
 
@@ -89,12 +89,12 @@ describe('sentry-queue', () => {
       expect(mockCaptureMessage).toHaveBeenCalledWith('test error message', 'error');
       expect(result).toBe('mock-event-id');
 
-      vi.stubEnv('PROD', originalProd as unknown as string);
+      vi.stubEnv('PROD', originalProd);
     });
 
     it('passes valid SeverityLevel "warning" (not "warn") through to captureMessage', async () => {
       const originalProd = import.meta.env.PROD;
-      vi.stubEnv('PROD', true as unknown as string);
+      vi.stubEnv('PROD', true);
 
       const { initSentryAsync, queueMessage } = await import('../sentry-queue');
       await initSentryAsync();
@@ -103,12 +103,12 @@ describe('sentry-queue', () => {
 
       expect(mockCaptureMessage).toHaveBeenCalledWith('test warning message', 'warning');
 
-      vi.stubEnv('PROD', originalProd as unknown as string);
+      vi.stubEnv('PROD', originalProd);
     });
 
     it('passes valid SeverityLevel "info" through to captureMessage', async () => {
       const originalProd = import.meta.env.PROD;
-      vi.stubEnv('PROD', true as unknown as string);
+      vi.stubEnv('PROD', true);
 
       const { initSentryAsync, queueMessage } = await import('../sentry-queue');
       await initSentryAsync();
@@ -117,12 +117,12 @@ describe('sentry-queue', () => {
 
       expect(mockCaptureMessage).toHaveBeenCalledWith('test info message', 'info');
 
-      vi.stubEnv('PROD', originalProd as unknown as string);
+      vi.stubEnv('PROD', originalProd);
     });
 
     it('uses "error" as the default level when no level argument is given', async () => {
       const originalProd = import.meta.env.PROD;
-      vi.stubEnv('PROD', true as unknown as string);
+      vi.stubEnv('PROD', true);
 
       const { initSentryAsync, queueMessage } = await import('../sentry-queue');
       await initSentryAsync();
@@ -131,14 +131,14 @@ describe('sentry-queue', () => {
 
       expect(mockCaptureMessage).toHaveBeenCalledWith('message with default level', 'error');
 
-      vi.stubEnv('PROD', originalProd as unknown as string);
+      vi.stubEnv('PROD', originalProd);
     });
 
     it('queued message stores exact SeverityLevel and flushes it unchanged to captureMessage', async () => {
       // When Sentry is not yet loaded, messages go into the queue.
       // On flush, captureMessage must receive the same SeverityLevel that was passed.
       const originalProd = import.meta.env.PROD;
-      vi.stubEnv('PROD', true as unknown as string);
+      vi.stubEnv('PROD', true);
 
       const { queueMessage, initSentryAsync } = await import('../sentry-queue');
 
@@ -156,14 +156,14 @@ describe('sentry-queue', () => {
       // The flushed message must use the stored SeverityLevel ('warning', not 'warn')
       expect(mockCaptureMessage).toHaveBeenCalledWith('queued message', 'warning');
 
-      vi.stubEnv('PROD', originalProd as unknown as string);
+      vi.stubEnv('PROD', originalProd);
     });
 
     it('captureMessage is never called with "warn" (invalid Sentry level)', async () => {
       // Exhaustive check: regardless of how many valid-level messages are sent,
       // captureMessage should never receive the string 'warn'.
       const originalProd = import.meta.env.PROD;
-      vi.stubEnv('PROD', true as unknown as string);
+      vi.stubEnv('PROD', true);
 
       const { initSentryAsync, queueMessage } = await import('../sentry-queue');
       await initSentryAsync();
@@ -181,7 +181,7 @@ describe('sentry-queue', () => {
       // Every level sent was a valid SeverityLevel
       expect(receivedLevels).toEqual(validLevels);
 
-      vi.stubEnv('PROD', originalProd as unknown as string);
+      vi.stubEnv('PROD', originalProd);
     });
   });
 

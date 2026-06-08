@@ -9,8 +9,6 @@
  * (same as GenerateNounDialog.sse.test.tsx).
  */
 
-import React from 'react';
-
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
@@ -159,6 +157,7 @@ const mockApproveResponse = {
     is_active: true,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
+    deck_id: null,
   },
   cards_created: 3,
   is_new: true,

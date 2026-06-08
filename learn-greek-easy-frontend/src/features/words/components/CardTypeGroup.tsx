@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { TypeChip } from '@/features/decks/dx';
+import { tDynamic } from '@/i18n/tDynamic';
 import { track } from '@/lib/analytics';
 
 import { CardRow } from './CardRow';
@@ -49,7 +50,7 @@ export function CardTypeGroup({
     <div className="dx-cards-group" data-group={dataGroup} data-testid={`card-group-${groupKey}`}>
       {/* Group header */}
       <div className="dx-cards-group-head" data-testid={`card-group-header-${groupKey}`}>
-        <h4 className="dx-cards-group-h">{t(`wordReference.${i18nKey}`)}</h4>
+        <h4 className="dx-cards-group-h">{tDynamic(t, `wordReference.${i18nKey}`)}</h4>
         <div className="inline-flex items-center gap-2.5">
           <span className="dx-cards-group-count">
             {t('wordReference.groupMastered', {

@@ -5,7 +5,7 @@
 
 import React from 'react';
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,17 +14,7 @@ import type { NewsItemResponse } from '@/services/adminAPI';
 
 // ── Module mocks ───────────────────────────────────────────────────────────────
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, opts?: Record<string, unknown>) => {
-      if (opts) {
-        return Object.entries(opts).reduce((s, [k, v]) => s.replace(`{{${k}}}`, String(v)), key);
-      }
-      return key;
-    },
-    i18n: { language: 'en' },
-  }),
-}));
+// I18NG-04: mock dropped — real i18n instance from test-setup resolves all admin keys.
 
 const mockToast = vi.fn();
 vi.mock('@/hooks/use-toast', () => ({
@@ -114,7 +104,9 @@ function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
     has_a2_content: false,
     alt_text: null,
     photo_credit: null,
+    status: 'published' as const,
     linked_situation: null,
+    image_variants: null,
     ...overrides,
   };
 }
@@ -170,7 +162,8 @@ describe('NewsEditDrawerLinkedSituation — kicker + helper', () => {
         <NewsEditDrawerLinkedSituation item={item} />
       </MemoryRouter>
     );
-    expect(screen.getByText('news.drawer.linkedSituation.kicker')).toBeInTheDocument();
+    // Resolves to "Linked situation"
+    expect(screen.getByText('Linked situation')).toBeInTheDocument();
   });
 
   it('kicker dot has data-tone="blue"', () => {
@@ -192,7 +185,12 @@ describe('NewsEditDrawerLinkedSituation — kicker + helper', () => {
         <NewsEditDrawerLinkedSituation item={item} />
       </MemoryRouter>
     );
-    expect(screen.getByText('news.drawer.linkedSituation.helper')).toBeInTheDocument();
+    // Resolves to the full helper string
+    expect(
+      screen.getByText(
+        'Every news item can spawn one scenario-based dialog. Learners practice the vocabulary in context after reading.'
+      )
+    ).toBeInTheDocument();
   });
 
   it('always renders the linkedSituation-content container', () => {
@@ -214,7 +212,8 @@ describe('NewsEditDrawerLinkedSituation — empty state', () => {
         <NewsEditDrawerLinkedSituation item={item} linkedSituation={null} />
       </MemoryRouter>
     );
-    expect(screen.getByText('news.drawer.linkedSituation.emptyText')).toBeInTheDocument();
+    // Resolves to "No situation linked to this article yet."
+    expect(screen.getByText('No situation linked to this article yet.')).toBeInTheDocument();
   });
 
   it('renders Generate button with aria-disabled="true"', () => {
@@ -224,7 +223,8 @@ describe('NewsEditDrawerLinkedSituation — empty state', () => {
         <NewsEditDrawerLinkedSituation item={item} linkedSituation={null} />
       </MemoryRouter>
     );
-    const btn = screen.getByRole('button', { name: 'news.drawer.linkedSituation.generate' });
+    // Resolves to "Generate situation from this article"
+    const btn = screen.getByRole('button', { name: 'Generate situation from this article' });
     expect(btn).toHaveAttribute('aria-disabled', 'true');
   });
 
@@ -236,7 +236,7 @@ describe('NewsEditDrawerLinkedSituation — empty state', () => {
         <NewsEditDrawerLinkedSituation item={item} linkedSituation={null} />
       </MemoryRouter>
     );
-    const btn = screen.getByRole('button', { name: 'news.drawer.linkedSituation.generate' });
+    const btn = screen.getByRole('button', { name: 'Generate situation from this article' });
     await user.click(btn);
     // No side effects — just checking it doesn't throw
     expect(mockOpenIn).not.toHaveBeenCalled();
@@ -250,7 +250,8 @@ describe('NewsEditDrawerLinkedSituation — empty state', () => {
       </MemoryRouter>
     );
     const tooltips = screen.getAllByTestId('tooltip-content');
-    const comingSoon = tooltips.filter((el) => el.textContent?.includes('comingSoon'));
+    // With real i18n, comingSoon resolves to "Coming soon"
+    const comingSoon = tooltips.filter((el) => el.textContent?.includes('Coming soon'));
     expect(comingSoon.length).toBeGreaterThanOrEqual(1);
   });
 });
@@ -396,10 +397,10 @@ describe('NewsEditDrawerLinkedSituation — NADM-23 handoff fidelity', () => {
         <NewsEditDrawerLinkedSituation item={item} linkedSituation={FIXTURE_SITUATION} />
       </MemoryRouter>
     );
-    // status=ready → renders i18n key 'situations.status.ready' (stub returns the key itself)
+    // status=ready → renders "Ready" (resolved from admin:situations.status.ready)
     const badge = screen.getByTestId('dr-sit-status-badge');
     expect(badge).toBeInTheDocument();
-    expect(badge.textContent).toContain('situations.status.ready');
+    expect(badge.textContent).toContain('Ready');
   });
 
   it('status badge reflects non-ready status text verbatim', () => {
@@ -411,7 +412,7 @@ describe('NewsEditDrawerLinkedSituation — NADM-23 handoff fidelity', () => {
       </MemoryRouter>
     );
     const badge = screen.getByTestId('dr-sit-status-badge');
-    expect(badge.textContent).toContain('draft');
+    expect(badge.textContent).toContain('Draft');
   });
 
   it('level pills render for each level entry with news-level class', () => {
@@ -485,7 +486,7 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
         <NewsEditDrawerLinkedSituation item={item} />
       </MemoryRouter>
     );
-    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.unlink/i });
+    const btn = screen.getByRole('button', { name: /Unlink/i });
     expect(btn).not.toHaveAttribute('aria-disabled');
   });
 
@@ -496,7 +497,7 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
         <NewsEditDrawerLinkedSituation item={item} />
       </MemoryRouter>
     );
-    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.unlink/i });
+    const btn = screen.getByRole('button', { name: /Unlink/i });
     expect(btn.classList.contains('btn-glass')).toBe(true);
   });
 
@@ -507,7 +508,7 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
         <NewsEditDrawerLinkedSituation item={item} />
       </MemoryRouter>
     );
-    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.unlink/i });
+    const btn = screen.getByRole('button', { name: /Unlink/i });
     // X icon renders an SVG
     expect(btn.querySelector('svg')).toBeInTheDocument();
   });
@@ -519,7 +520,7 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
         <NewsEditDrawerLinkedSituation item={item} />
       </MemoryRouter>
     );
-    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.regenerate/i });
+    const btn = screen.getByRole('button', { name: /Regenerate from this article/i });
     expect(btn).not.toHaveAttribute('aria-disabled');
   });
 
@@ -530,7 +531,7 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
         <NewsEditDrawerLinkedSituation item={item} />
       </MemoryRouter>
     );
-    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.regenerate/i });
+    const btn = screen.getByRole('button', { name: /Regenerate from this article/i });
     expect(btn.classList.contains('btn-glass')).toBe(true);
   });
 
@@ -541,7 +542,7 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
         <NewsEditDrawerLinkedSituation item={item} />
       </MemoryRouter>
     );
-    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.regenerate/i });
+    const btn = screen.getByRole('button', { name: /Regenerate from this article/i });
     expect(btn.querySelector('svg')).toBeInTheDocument();
   });
 
@@ -553,9 +554,9 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
         <NewsEditDrawerLinkedSituation item={item} />
       </MemoryRouter>
     );
-    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.unlink/i });
+    const btn = screen.getByRole('button', { name: /Unlink/i });
     await user.click(btn);
-    expect(mockToast).toHaveBeenCalledWith({ title: 'comingSoon' });
+    expect(mockToast).toHaveBeenCalledWith({ title: 'Coming soon' });
   });
 
   it('clicking Regenerate calls toast with "Coming soon — backend in progress"', async () => {
@@ -566,9 +567,9 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
         <NewsEditDrawerLinkedSituation item={item} />
       </MemoryRouter>
     );
-    const btn = screen.getByRole('button', { name: /news\.drawer\.linkedSituation\.regenerate/i });
+    const btn = screen.getByRole('button', { name: /Regenerate from this article/i });
     await user.click(btn);
-    expect(mockToast).toHaveBeenCalledWith({ title: 'comingSoon' });
+    expect(mockToast).toHaveBeenCalledWith({ title: 'Coming soon' });
   });
 });
 
@@ -607,7 +608,8 @@ describe('NewsEditDrawer — quick-jump clean path', () => {
 
     // The linkedSituation prop is null in production (no backend), so the card is not shown.
     // The ConfirmDialog for quick-jump should NOT be open.
-    expect(screen.queryByText('news.drawer.dirty.title')).not.toBeInTheDocument();
+    // "Unsaved changes" dialog should not be visible
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
   });
 });
 
@@ -625,7 +627,6 @@ describe('NewsEditDrawer — quick-jump dirty path', () => {
     renderDrawer();
 
     // Make the form dirty by typing in the translations tab
-    const titleEnInputs = document.querySelectorAll('input, textarea');
     // Find the translations content area
     const translationsContent = screen.getByTestId('news-drawer-tab-translations-content');
     expect(translationsContent).toBeInTheDocument();
@@ -635,16 +636,16 @@ describe('NewsEditDrawer — quick-jump dirty path', () => {
 
     // Since linkedSituation=null (no backend data), the card is not shown.
     // Verify empty state renders correctly
-    expect(screen.getByText('news.drawer.linkedSituation.emptyText')).toBeInTheDocument();
+    expect(screen.getByText('No situation linked to this article yet.')).toBeInTheDocument();
 
     // Confirm that without a linked situation card, no ConfirmDialog is triggered
-    expect(screen.queryByText('news.drawer.dirty.title')).not.toBeInTheDocument();
+    // "Unsaved changes" dialog should not be visible
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
   });
 });
 
 describe('NewsEditDrawer — quick-jump second ConfirmDialog', () => {
   it('pendingQuickJumpSituationId=null means quick-jump ConfirmDialog is closed on initial render', () => {
-    const user = userEvent.setup();
     const item = makeItem();
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
@@ -653,7 +654,8 @@ describe('NewsEditDrawer — quick-jump second ConfirmDialog', () => {
 
     // The quick-jump ConfirmDialog (second one) should not be visible initially
     // Both dirtyDialogOpen and pendingQuickJumpSituationId start as null
-    const allDirtyTitles = screen.queryAllByText('news.drawer.dirty.title');
+    // "Unsaved changes" dialog should not be visible
+    const allDirtyTitles = screen.queryAllByText('Unsaved changes');
     expect(allDirtyTitles).toHaveLength(0);
   });
 });
@@ -687,6 +689,6 @@ describe('NewsEditDrawer — linked situation populated card path', () => {
     // Card should be visible — not the empty state
     expect(screen.getByTestId('news-drawer-linked-situation-card')).toBeInTheDocument();
     expect(screen.getByText('At the Pharmacy')).toBeInTheDocument();
-    expect(screen.queryByText('news.drawer.linkedSituation.emptyText')).not.toBeInTheDocument();
+    expect(screen.queryByText('No situation linked to this article yet.')).not.toBeInTheDocument();
   });
 });

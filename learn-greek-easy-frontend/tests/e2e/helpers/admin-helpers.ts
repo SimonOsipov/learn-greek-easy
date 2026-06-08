@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 // ── E2E seed helpers for Card Errors (CER-56) ─────────────────────────────────
 

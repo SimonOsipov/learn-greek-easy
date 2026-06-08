@@ -8,7 +8,7 @@
  * - Date formatting based on locale
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import userEvent from '@testing-library/user-event';
 
 import { ChangelogCard } from '../ChangelogCard';
@@ -21,6 +21,7 @@ const createMockEntry = (overrides: Partial<ChangelogItem> = {}): ChangelogItem 
   title: 'Test Title',
   content: 'Test content for the changelog entry.',
   tag: 'new_feature',
+  version: null,
   created_at: '2026-01-15T10:30:00Z',
   updated_at: '2026-01-15T10:30:00Z',
   ...overrides,

@@ -8,7 +8,8 @@
  * Test data is seeded via the /api/v1/test/seed/news-feed endpoint.
  */
 
-import { test, expect, Page, APIRequestContext } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import type { Page, APIRequestContext } from '@playwright/test';
 import { navigateToAdminTab } from './helpers/admin-helpers';
 import { verifyAuthSucceeded } from './helpers/auth-helpers';
 

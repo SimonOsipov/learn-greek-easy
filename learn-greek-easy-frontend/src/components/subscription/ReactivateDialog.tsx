@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useSubscriptionActions } from '@/hooks/useSubscriptionActions';
+import { tDynamic } from '@/i18n/tDynamic';
 import { type BillingStatusResponse } from '@/services/billingAPI';
 
 interface ReactivateDialogProps {
@@ -45,25 +46,21 @@ export function ReactivateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t('reactivate.title', 'Reactivate Subscription')}</DialogTitle>
-          <DialogDescription>
-            {t('reactivate.description', 'Resume your subscription before it expires.')}
-          </DialogDescription>
+          <DialogTitle>{t('reactivate.title')}</DialogTitle>
+          <DialogDescription>{t('reactivate.description')}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-4">
           {billingStatus.billing_cycle && (
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">
-                {t('labels.currentPlan', 'Current Plan')}
-              </span>
+              <span className="text-muted-foreground">{t('labels.currentPlan')}</span>
               <span className="font-medium">
-                {t(`cycle.${billingStatus.billing_cycle}`, billingStatus.billing_cycle)}
+                {tDynamic(t, `cycle.${billingStatus.billing_cycle}`)}
               </span>
             </div>
           )}
           {billingStatus.current_price_formatted && (
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">{t('labels.price', 'Price')}</span>
+              <span className="text-muted-foreground">{t('labels.price')}</span>
               <span className="font-medium">
                 {billingStatus.current_price_currency?.toUpperCase()}{' '}
                 {billingStatus.current_price_formatted}
@@ -72,19 +69,17 @@ export function ReactivateDialog({
           )}
           {formattedDate && (
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">
-                {t('labels.nextBilling', 'Next billing date')}
-              </span>
+              <span className="text-muted-foreground">{t('labels.nextBilling')}</span>
               <span className="font-medium">{formattedDate}</span>
             </div>
           )}
         </div>
         <DialogFooter className="flex gap-2">
           <Button variant="secondary" disabled={isReactivating} onClick={() => onOpenChange(false)}>
-            {t('reactivate.cancel', 'Cancel')}
+            {t('reactivate.cancel')}
           </Button>
           <Button variant="default" disabled={isReactivating} onClick={handleReactivate}>
-            {t('reactivate.confirm', 'Reactivate')}
+            {t('reactivate.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -2,12 +2,10 @@
 //
 // NEWS-07b / NADM-20: NewsEditDrawerBody — unit tests.
 
-import React from 'react';
-
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FormProvider, useForm } from 'react-hook-form';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import type { NewsItemResponse } from '@/services/adminAPI';
 
@@ -16,18 +14,7 @@ import { NewsEditDrawerBody } from '../NewsEditDrawer.body';
 
 // ── Module mocks ───────────────────────────────────────────────────────────────
 
-// i18n mock: returns the key as-is, except for keys where the exact English
-// text is needed to assert on rendered content.
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      if (key === 'news.drawer.body.greekBodyHelper') {
-        return 'Full article — shown to B2 learners; lower levels read a simplified scenario';
-      }
-      return key;
-    },
-  }),
-}));
+// I18NG-04: mock dropped — real i18n instance from test-setup resolves all admin keys.
 
 // ── Test harness ───────────────────────────────────────────────────────────────
 
@@ -137,13 +124,14 @@ describe('NewsEditDrawerBody — structure', () => {
 
   it('Scenario B2 label renders via i18n key', () => {
     render(<Harness />);
-    // The i18n mock returns the key as-is — assert the label text matches the key
-    expect(screen.getByText('news.drawer.body.scenarioB2')).toBeInTheDocument();
+    // Resolves to "Scenario — B2 (Greek)"
+    expect(screen.getByText('Scenario — B2 (Greek)')).toBeInTheDocument();
   });
 
   it('Title A2 label renders via i18n key', () => {
     render(<Harness />);
-    expect(screen.getByText('news.drawer.body.titleA2')).toBeInTheDocument();
+    // Resolves to "Title — A2 (Greek)"
+    expect(screen.getByText('Title — A2 (Greek)')).toBeInTheDocument();
   });
 });
 
@@ -224,9 +212,9 @@ describe('NewsEditDrawerBody — A2 pair validation', () => {
       expect(screen.getByTestId('news-drawer-body-a2-error')).toBeInTheDocument();
     });
 
-    // The error message key is returned as-is by the i18n mock
+    // Resolves to the actual validation message
     expect(screen.getByTestId('news-drawer-body-a2-error')).toHaveTextContent(
-      'news.validation.a2FieldsPaired'
+      'title_el_a2 and description_el_a2 must both be provided or both omitted'
     );
   });
 
@@ -241,7 +229,7 @@ describe('NewsEditDrawerBody — A2 pair validation', () => {
       expect(screen.getByTestId('news-drawer-body-a2-error')).toBeInTheDocument();
     });
     expect(screen.getByTestId('news-drawer-body-a2-error')).toHaveTextContent(
-      'news.validation.a2FieldsPaired'
+      'title_el_a2 and description_el_a2 must both be provided or both omitted'
     );
   });
 

@@ -2,7 +2,8 @@
  * Navigation Helpers for E2E Tests
  */
 
-import { Page, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 /**
  * Navigate to a route and wait for it to load

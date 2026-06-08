@@ -341,12 +341,12 @@ export const MockExamSessionPage: React.FC = () => {
         <div className="mx-auto">
           <Alert variant="destructive" className="bg-card">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>{t('common:error', { defaultValue: 'Error' })}</AlertTitle>
+            <AlertTitle>{t('common:error.somethingWrong')}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
           <div className="mt-4 flex gap-3">
             <Button onClick={() => clearError()} variant="default">
-              {t('common:retry', { defaultValue: 'Try Again' })}
+              {t('common:retry')}
             </Button>
             <Button onClick={() => navigate('/practice/culture-exam')} variant="secondary">
               {t('results.backToHome')}
@@ -435,9 +435,7 @@ export const MockExamSessionPage: React.FC = () => {
               <div className="flex min-h-[400px] items-center justify-center">
                 <div className="text-center">
                   <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-practice-accent"></div>
-                  <p className="text-muted-foreground">
-                    {t('session.completing', { defaultValue: 'Completing exam...' })}
-                  </p>
+                  <p className="text-muted-foreground">{t('session.completing')}</p>
                 </div>
               </div>
             ) : (

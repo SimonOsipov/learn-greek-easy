@@ -6,7 +6,7 @@
  */
 
 import { act, renderHook } from '@testing-library/react';
-import posthog from 'posthog-js';
+import posthog, { type FeatureFlagsCallback } from 'posthog-js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FLAGS } from '@/lib/flags';
@@ -209,7 +209,7 @@ describe('useFlag', () => {
       vi.stubEnv('VITE_ENVIRONMENT', 'production');
 
       // Capture the callback passed to onFeatureFlags
-      let capturedCallback: (() => void) | null = null;
+      let capturedCallback: FeatureFlagsCallback | null = null;
       vi.mocked(posthog.onFeatureFlags).mockImplementation((cb) => {
         capturedCallback = cb;
         return () => {}; // unsubscribe no-op
@@ -226,7 +226,7 @@ describe('useFlag', () => {
 
       // Fire the callback so the hook re-evaluates
       act(() => {
-        capturedCallback!();
+        capturedCallback!([], {});
       });
 
       expect(result.current).toBe(true);

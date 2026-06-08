@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { tDynamic } from '@/i18n/tDynamic';
 import log from '@/lib/logger';
 import { getSupabase } from '@/lib/supabaseClient';
 import { mapSupabaseResetError } from '@/utils/auth-errors';
@@ -144,7 +145,7 @@ export const ResetPassword: React.FC = () => {
   // Helper to translate Zod error messages
   const getErrorMessage = (errorKey: string | undefined): string | undefined => {
     if (!errorKey) return undefined;
-    return t(`resetPassword.errors.${errorKey}`);
+    return tDynamic(t, `resetPassword.errors.${errorKey}`);
   };
 
   const isFormDisabled = isSubmitting;

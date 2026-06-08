@@ -16,7 +16,20 @@ vi.mock('@/hooks/useSubscriptionActions', () => ({
   }),
 }));
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (_key: string, fallback: string) => fallback }),
+  useTranslation: () => ({
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        'reactivate.title': 'Reactivate Subscription',
+        'reactivate.description': 'Your subscription will be reactivated.',
+        'reactivate.cancel': 'Cancel',
+        'reactivate.confirm': 'Reactivate',
+        'labels.currentPlan': 'Current Plan',
+        'labels.price': 'Price',
+        'labels.nextBilling': 'Next Billing',
+      };
+      return map[key] ?? key;
+    },
+  }),
 }));
 vi.mock('@/hooks/use-toast', () => ({ toast: vi.fn() }));
 

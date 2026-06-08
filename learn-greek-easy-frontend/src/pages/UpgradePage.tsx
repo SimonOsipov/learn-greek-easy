@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import { COMPARISON_FEATURES } from '@/constants/premiumFeatures';
 import { useCheckout } from '@/hooks/useCheckout';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
+import { tDynamic } from '@/i18n/tDynamic';
 import { reportAPIError } from '@/lib/errorReporting';
 import { billingAPI } from '@/services/billingAPI';
 import type { BillingCycle, BillingStatusResponse, PricingPlan } from '@/services/billingAPI';
@@ -175,7 +176,7 @@ export function UpgradePage() {
 
   const renderCell = (value: string | boolean) => {
     if (typeof value === 'string') {
-      return <span className="text-xs font-medium text-fg3">{t(value)}</span>;
+      return <span className="text-xs font-medium text-fg3">{tDynamic(t, value)}</span>;
     }
     return value ? (
       <Check
@@ -211,7 +212,7 @@ export function UpgradePage() {
               key={feature.labelKey}
               className={`border-b border-line ${index % 2 === 0 ? 'bg-card' : 'bg-bg-2'}`}
             >
-              <td className="px-4 py-3 text-fg2">{t(feature.labelKey)}</td>
+              <td className="px-4 py-3 text-fg2">{tDynamic(t, feature.labelKey)}</td>
               <td className="px-4 py-3 text-center">{renderCell(feature.free)}</td>
               <td className="px-4 py-3 text-center">{renderCell(feature.premium)}</td>
             </tr>

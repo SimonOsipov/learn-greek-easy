@@ -13,7 +13,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 
-import { ChangelogPagination, ChangelogPaginationProps } from '../ChangelogPagination';
+import { ChangelogPagination } from '../ChangelogPagination';
+import type { ChangelogPaginationProps } from '../ChangelogPagination';
 import { render, screen } from '@/lib/test-utils';
 
 // Default props factory

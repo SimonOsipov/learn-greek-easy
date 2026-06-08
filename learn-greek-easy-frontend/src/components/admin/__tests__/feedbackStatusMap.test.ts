@@ -11,7 +11,6 @@ import {
   STATUS_TONE,
   backendToHandoff,
   handoffToBackend,
-  type HandoffStatus,
 } from '../feedbackStatusMap';
 
 const BACKEND_STATUSES: readonly FeedbackStatus[] = [

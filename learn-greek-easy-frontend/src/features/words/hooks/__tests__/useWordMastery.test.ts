@@ -6,6 +6,7 @@ import React from 'react';
 import { useWordMastery } from '../useWordMastery';
 import { progressAPI } from '@/services/progressAPI';
 import { wordEntryAPI } from '@/services/wordEntryAPI';
+import type { CardRecordResponse } from '@/services/wordEntryAPI';
 
 vi.mock('@/services/progressAPI', () => ({
   progressAPI: {
@@ -31,7 +32,7 @@ const mockCardBase = {
   updated_at: '2024-01-01T00:00:00Z',
 };
 
-const mockCards = [
+const mockCards: CardRecordResponse[] = [
   { ...mockCardBase, id: 'card-1', card_type: 'meaning_el_to_en', is_active: true },
   {
     ...mockCardBase,
@@ -214,7 +215,7 @@ describe('useWordMastery Hook', () => {
   });
 
   it('should exclude inactive cards from the result', async () => {
-    const cardsWithInactive = [
+    const cardsWithInactive: CardRecordResponse[] = [
       ...mockCards,
       { ...mockCardBase, id: 'card-3', card_type: 'cloze', is_active: false },
     ];

@@ -9,6 +9,7 @@ import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { tDynamic } from '@/i18n/tDynamic';
 import type { ChangelogItem, ChangelogTag } from '@/types/changelog';
 import { CHANGELOG_TAG_CONFIG } from '@/types/changelog';
 
@@ -28,7 +29,7 @@ function TagBadge({ tag }: { tag: ChangelogTag }) {
 
   return (
     <span className={`badge ${config.colorClass}`} data-testid="tag-badge">
-      {t(config.labelKey)}
+      {tDynamic(t, config.labelKey)}
     </span>
   );
 }

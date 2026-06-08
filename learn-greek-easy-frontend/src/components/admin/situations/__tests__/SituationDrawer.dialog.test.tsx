@@ -3,8 +3,6 @@
 // SIT-07a: SituationDrawerDialog unit tests.
 // Wraps the component in a FormProvider so the hidden RHF scenario_en input doesn't crash.
 
-import React from 'react';
-
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useForm, FormProvider } from 'react-hook-form';
@@ -104,6 +102,8 @@ function makeSituation(overrides: Partial<SituationDetailResponse> = {}): Situat
         },
       ],
     },
+    levels: [],
+    linked_news: null,
     ...overrides,
   };
 }

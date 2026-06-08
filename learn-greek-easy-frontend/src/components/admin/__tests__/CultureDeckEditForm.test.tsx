@@ -31,25 +31,27 @@ interface BilingualMockDeck extends UnifiedDeckItem {
 }
 
 // Mock deck for testing with bilingual support
-const createMockDeck = (overrides: Partial<BilingualMockDeck> = {}): BilingualMockDeck => ({
-  id: 'test-culture-deck-1',
-  name: 'Test Culture Deck',
-  type: 'culture',
-  level: null,
-  category: 'history',
-  item_count: 30,
-  is_active: true,
-  is_premium: false,
-  created_at: '2026-01-01T00:00:00Z',
-  owner_id: null,
-  owner_name: null,
-  // Bilingual name fields for form
-  name_en: 'Test Culture Deck',
-  name_ru: 'Test Culture Deck RU',
-  description_en: '',
-  description_ru: '',
-  ...overrides,
-});
+const createMockDeck = (overrides: Partial<BilingualMockDeck> = {}): BilingualMockDeck =>
+  ({
+    id: 'test-culture-deck-1',
+    name: 'Test Culture Deck',
+    type: 'culture',
+    level: null,
+    category: 'history',
+    item_count: 30,
+    is_active: true,
+    is_premium: false,
+    created_at: '2026-01-01T00:00:00Z',
+    owner_id: null,
+    owner_name: null,
+    // Bilingual name fields for form
+    name_en: 'Test Culture Deck',
+    name_ru: 'Test Culture Deck RU',
+    description_en: '',
+    description_ru: '',
+    is_system_deck: null,
+    ...overrides,
+  }) as BilingualMockDeck;
 
 // Wrapper component with i18n provider
 const renderWithI18n = (ui: React.ReactElement) => {
@@ -523,7 +525,7 @@ describe('CultureDeckEditForm', () => {
       resetFn!();
 
       await waitFor(() => {
-        const calls = onDirtyChange.mock.calls.map((c: [boolean]) => c[0]);
+        const calls = onDirtyChange.mock.calls.map((c: unknown[]) => c[0] as boolean);
         expect(calls[calls.length - 1]).toBe(false);
       });
     });

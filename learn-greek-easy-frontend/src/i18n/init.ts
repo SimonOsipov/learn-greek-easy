@@ -40,6 +40,7 @@ import enStatistics from './locales/en/statistics.json';
 import enSubscription from './locales/en/subscription.json';
 import enUpgrade from './locales/en/upgrade.json';
 import enWaitlist from './locales/en/waitlist.json';
+import { makeMissingKeyHandler } from './missingKeyHandler';
 
 import type { SupportedLanguage } from './constants';
 
@@ -249,6 +250,12 @@ export async function initI18n(): Promise<typeof i18n> {
 
       // Debug mode for development
       debug: import.meta.env.DEV,
+
+      // Missing-key handler: report to Sentry Logs in production, warn to
+      // console in development.  'throw' mode is used only in tests
+      // (wired in src/lib/test-setup.ts).
+      saveMissing: true,
+      missingKeyHandler: makeMissingKeyHandler(import.meta.env.PROD ? 'report' : 'warn'),
     });
 
   // Step 5: Defense in depth - handle runtime language changes

@@ -217,7 +217,7 @@ test.describe('Landing Page - Responsive', () => {
       await page.goto('/');
 
       const heroSection = page.getByTestId('hero-section');
-      const heroWidth = await heroSection.evaluate((el) => el.offsetWidth);
+      const heroWidth = await heroSection.evaluate((el) => (el as HTMLElement).offsetWidth);
 
       // Should be nearly full viewport width (accounting for padding)
       expect(heroWidth).toBeGreaterThan(375 * 0.9);

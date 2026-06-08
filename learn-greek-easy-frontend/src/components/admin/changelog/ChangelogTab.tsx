@@ -19,6 +19,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { SegControl, type SegOption } from '@/components/ui/seg-control';
 import { StatCard } from '@/components/ui/stat-card';
+import { tDynamic } from '@/i18n/tDynamic';
 import { useAdminChangelogStore } from '@/stores/adminChangelogStore';
 import { CHANGELOG_TAG_CONFIG, CHANGELOG_TAG_OPTIONS } from '@/types/changelog';
 import type { ChangelogEntryAdmin, ChangelogTag } from '@/types/changelog';
@@ -177,7 +178,7 @@ export function ChangelogTab() {
     ...CHANGELOG_TAG_OPTIONS.filter((tag) => filteredBySearch.some((e) => e.tag === tag)).map(
       (tag) => ({
         value: tag as 'all' | ChangelogTag,
-        label: t(CHANGELOG_TAG_CONFIG[tag].labelKey),
+        label: tDynamic(t, CHANGELOG_TAG_CONFIG[tag].labelKey),
       })
     ),
   ];

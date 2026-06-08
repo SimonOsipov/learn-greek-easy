@@ -7,7 +7,7 @@
  * - Logs authentication state
  */
 
-import { Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 /**
  * Enable diagnostic logging for test execution

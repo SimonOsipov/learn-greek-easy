@@ -5,7 +5,7 @@
  * Captures snapshots at multiple viewports and in both languages.
  */
 
-import { test, expect } from '@chromatic-com/playwright';
+import { test } from '@chromatic-com/playwright';
 import { takeSnapshot, waitForPageReady, VIEWPORTS } from './helpers/visual-helpers';
 
 test.describe('Landing Page - Desktop Visual Tests', () => {

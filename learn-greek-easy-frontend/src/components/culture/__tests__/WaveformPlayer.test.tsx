@@ -816,7 +816,7 @@ describe('WaveformPlayer', () => {
         });
         fireEvent(audio, new Event('loadedmetadata'));
 
-        let playSpy = vi.spyOn(audio, 'play').mockResolvedValue();
+        vi.spyOn(audio, 'play').mockResolvedValue();
         const playButton = screen.getByTestId('waveform-play-button');
 
         // First play of first audio
@@ -844,7 +844,7 @@ describe('WaveformPlayer', () => {
         });
         fireEvent(audio, new Event('loadedmetadata'));
 
-        playSpy = vi.spyOn(audio, 'play').mockResolvedValue();
+        vi.spyOn(audio, 'play').mockResolvedValue();
 
         // First play of second audio should trigger onPlay again
         fireEvent.click(playButton);

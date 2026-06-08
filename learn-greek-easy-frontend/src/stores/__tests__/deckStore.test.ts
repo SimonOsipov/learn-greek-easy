@@ -249,7 +249,7 @@ function makeDeckDetail(): DeckDetailResponse {
     name: 'Numbers',
     description: null,
     name_el: 'Αριθμοί',
-    level: 'a1',
+    level: 'A1',
     is_active: true,
     card_count: WORD_COUNT,
     created_at: '2026-01-01T00:00:00Z',
@@ -280,6 +280,9 @@ function makeProgressDetail(): DeckProgressDetailResponse {
       average_quality: 4,
       average_easiness_factor: 2.5,
       average_interval_days: 3,
+      deck_streak_current: 0,
+      deck_streak_longest: 0,
+      weekly_activity: [],
     },
     timeline: {
       first_studied_at: null,
@@ -343,9 +346,6 @@ describe('transformDeckResponse — cardCount uses word count, not SRS count (#5
 //      early-return before ever calling deckAPI.getList(), and
 //      `getList.mock.calls.length` would be 0 — the test fails.
 // ---------------------------------------------------------------------------
-
-import { deckAPI } from '@/services/deckAPI';
-import { progressAPI } from '@/services/progressAPI';
 
 describe('deckStore — parallel dispatch / no auth gate (PERF-02-05)', () => {
   beforeEach(() => {

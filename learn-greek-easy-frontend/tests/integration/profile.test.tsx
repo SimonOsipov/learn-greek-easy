@@ -10,7 +10,6 @@
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, act } from '@/lib/test-utils';
-import userEvent from '@testing-library/user-event';
 import { PreferencesSection } from '@/components/profile/PreferencesSection';
 import { useAuthStore } from '@/stores/authStore';
 import type { User } from '@/types/auth';
@@ -57,7 +56,6 @@ describe('PreferencesSection', () => {
     const mockUser = createMockUser(20);
     useAuthStore.setState({
       user: mockUser,
-      token: 'mock-token',
       isAuthenticated: true,
       isLoading: false,
       error: null,

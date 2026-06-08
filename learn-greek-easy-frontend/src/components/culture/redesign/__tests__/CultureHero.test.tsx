@@ -8,8 +8,6 @@
  * - No coverDeck → right column absent
  */
 
-import React from 'react';
-
 import { describe, it, expect } from 'vitest';
 
 import { render } from '@/lib/test-utils';
@@ -22,15 +20,15 @@ import type { CultureHeroProps } from '../CultureHero';
 const coverDeck: CultureHeroProps['coverDeck'] = {
   id: 'deck-1',
   level: 'A1',
-  category: 'history',
-  coverImageUrl: null,
+  category: 'culture',
+  coverImageUrl: undefined,
 };
 
 const makeSibling = (id: string): NonNullable<CultureHeroProps['siblingDecks']>[number] => ({
   id,
   level: 'A1',
-  category: 'history',
-  coverImageUrl: null,
+  category: 'culture',
+  coverImageUrl: undefined,
   title: `Sibling ${id}`,
 });
 

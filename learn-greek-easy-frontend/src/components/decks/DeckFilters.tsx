@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { tDynamic } from '@/i18n/tDynamic';
 import { CEFR_LEVEL_OPTIONS } from '@/lib/cefrColors';
 import { debounce } from '@/lib/utils';
 import type { DeckFilters as DeckFiltersType, DeckLevel, DeckStatus } from '@/types/deck';
@@ -161,7 +162,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
               className="dx-chip"
               aria-pressed={filters.status.includes(value)}
             >
-              {t(labelKey)}
+              {tDynamic(t, labelKey)}
             </button>
           ))}
 

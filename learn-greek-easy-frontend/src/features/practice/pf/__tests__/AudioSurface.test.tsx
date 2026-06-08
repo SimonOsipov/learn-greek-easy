@@ -22,10 +22,8 @@
  * - Component NOT dispatched from V2FlashcardPracticePage (no audio case)
  */
 
-import React from 'react';
-
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 import { AudioSurface, barHeight } from '../AudioSurface';
 import v2PageSource from '../../../../pages/V2FlashcardPracticePage.tsx?raw';

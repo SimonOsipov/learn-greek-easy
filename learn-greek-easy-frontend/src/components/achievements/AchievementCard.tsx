@@ -7,6 +7,7 @@ import { AchievementIcon } from '@/components/achievements/AchievementIcon';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { tDynamic } from '@/i18n/tDynamic';
 import { cn } from '@/lib/utils';
 import type { AchievementResponse } from '@/services/xpAPI';
 
@@ -28,22 +29,24 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
   const { t, i18n } = useTranslation('achievements');
   const {
     id,
-    name,
-    description,
     icon,
-    hint,
     threshold,
     xp_reward,
     unlocked,
     unlocked_at,
     progress,
     current_value,
+    name,
+    description,
+    hint,
   } = achievement;
 
   // Get translated name, description, and hint (fallback to API values)
-  const translatedName = t(`items.${id}.name`, name);
-  const translatedDescription = t(`items.${id}.description`, description);
-  const translatedHint = t(`items.${id}.hint`, hint);
+  const translatedName = tDynamic(t, `items.${id}.name`, { defaultValue: name });
+  const translatedDescription = tDynamic(t, `items.${id}.description`, {
+    defaultValue: description,
+  });
+  const translatedHint = tDynamic(t, `items.${id}.hint`, { defaultValue: hint });
 
   // Format unlocked date if available, using the current language locale
   const formattedDate = unlocked_at

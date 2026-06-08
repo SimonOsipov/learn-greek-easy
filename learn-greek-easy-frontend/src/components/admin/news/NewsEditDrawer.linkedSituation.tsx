@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Kicker } from '@/components/ui/kicker';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
+import { tDynamic } from '@/i18n/tDynamic';
 import type { NewsItemResponse } from '@/services/adminAPI';
 
 // Country code → flag emoji lookup (ISO 3166-1 alpha-2 and common backend string values).
@@ -111,7 +112,7 @@ export const NewsEditDrawerLinkedSituation: React.FC<Props> = ({
             {/* Status + level badges */}
             <div className="dr-sit-badges">
               <span className="dr-sit-status" data-testid="dr-sit-status-badge">
-                {t('situations.status.' + linkedSituation.status, {
+                {tDynamic(t, 'situations.status.' + linkedSituation.status, {
                   defaultValue: linkedSituation.status,
                 })}
               </span>

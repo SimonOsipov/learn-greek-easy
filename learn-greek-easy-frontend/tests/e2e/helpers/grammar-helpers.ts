@@ -4,9 +4,10 @@
  * Helper functions for testing grammar UI components with API mocking.
  */
 
-import { Page, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import type { MockCard } from '../fixtures/grammar-mock-data';
 import {
-  MockCard,
   mockDeck,
   createDeckResponse,
   createUserStatsResponse,

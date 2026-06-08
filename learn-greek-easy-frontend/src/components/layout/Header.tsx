@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useLayoutContext } from '@/contexts/LayoutContext';
 import { useAuth } from '@/hooks/useAuth';
+import { tDynamic } from '@/i18n/tDynamic';
 import { track } from '@/lib/analytics';
 import { APP_NAME } from '@/lib/constants';
 import { startTour, buildTourSteps, waitForElement } from '@/lib/tour';
@@ -183,7 +184,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                       )}
                       data-testid={`${item.path.replace('/', '')}-dropdown-trigger`}
                     >
-                      {t(item.labelKey)}
+                      {tDynamic(t, item.labelKey)}
                       <ChevronDown className="h-4 w-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
@@ -197,7 +198,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                             to={child.path}
                             className={cn('w-full', isActiveChild(child) ? 'text-primary' : '')}
                           >
-                            {t(child.labelKey)}
+                            {tDynamic(t, child.labelKey)}
                           </Link>
                         </DropdownMenuItem>
                       ))}
@@ -212,7 +213,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                       isActiveRoute(item.path) ? 'text-primary' : 'text-muted-foreground'
                     )}
                   >
-                    {t(item.labelKey)}
+                    {tDynamic(t, item.labelKey)}
                   </Link>
                 )
               )}

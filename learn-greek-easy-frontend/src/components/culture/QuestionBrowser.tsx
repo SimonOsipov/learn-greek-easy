@@ -11,6 +11,7 @@ import { MasteryDotsLegend } from '@/components/shared/MasteryDotsLegend';
 import { QuestionLanguageSelector } from '@/components/shared/QuestionLanguageSelector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { tDynamic } from '@/i18n/tDynamic';
 import { debounce } from '@/lib/utils';
 import { cultureDeckAPI } from '@/services/cultureDeckAPI';
 import { useCultureDeckQuestionLanguage } from '@/stores/cultureDeckQuestionLanguageStore';
@@ -99,7 +100,7 @@ function FilterPills({ activeFilter, counts, onFilterChange }: FilterPillsProps)
             aria-pressed={isActive}
             className="min-w-[80px]"
           >
-            {t(labelKey)} ({count})
+            {tDynamic(t, labelKey)} ({count})
           </Button>
         );
       })}

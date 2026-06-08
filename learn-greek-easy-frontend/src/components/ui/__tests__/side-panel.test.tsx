@@ -3,7 +3,6 @@
  * Validates compound API, Context wiring, size variant, and shadcn close-button override.
  */
 
-import * as React from 'react';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 

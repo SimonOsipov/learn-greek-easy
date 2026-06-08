@@ -9,22 +9,11 @@
  * - Drawer close URL wiring deferred to NEWS-06.
  */
 
-import React from 'react';
-
 import { render, screen } from '@testing-library/react';
-import enAdmin from '@/i18n/locales/en/admin.json';
-import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
-
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (k: string) => k,
-    i18n: { language: 'en' },
-  }),
-}));
 
 vi.mock('@/hooks/use-toast', () => ({
   toast: vi.fn(),
@@ -151,11 +140,11 @@ describe('NewsTab — basic rendering', () => {
 
   it('renders 4 StatCards by title', () => {
     renderWithRouter();
-    // StatCard renders title via .stat-label — queried by text (i18n mock returns keys)
-    expect(screen.getByText('news.stats.total')).toBeInTheDocument();
-    expect(screen.getByText('news.stats.withAudio')).toBeInTheDocument();
-    expect(screen.getByText('news.stats.b1Coverage')).toBeInTheDocument();
-    expect(screen.getByText('news.stats.countries')).toBeInTheDocument();
+    // StatCard renders title via .stat-label — queried by resolved en copy
+    expect(screen.getByText('Total News')).toBeInTheDocument();
+    expect(screen.getByText('With Audio')).toBeInTheDocument();
+    expect(screen.getByText('B1 coverage')).toBeInTheDocument();
+    expect(screen.getByText('Countries')).toBeInTheDocument();
   });
 
   it('card #1 (total) renders sparkline bars with 9 bars', () => {
@@ -168,8 +157,8 @@ describe('NewsTab — basic rendering', () => {
 
   it('card #1 (total) shows sub from i18n key news.stats.recentThisWeek', () => {
     renderWithRouter();
-    // t mock returns key — recentThisWeek key becomes its own text
-    expect(screen.getByText('news.stats.recentThisWeek')).toBeInTheDocument();
+    // storeState.newsItems=[] → recentCount=0, resolves to "+0 this week"
+    expect(screen.getByText('+0 this week')).toBeInTheDocument();
   });
 
   it('card #2 (audio) renders sparkline bars with 9 bars', () => {
@@ -180,9 +169,10 @@ describe('NewsTab — basic rendering', () => {
     expect(barsEl.querySelectorAll('span')).toHaveLength(9);
   });
 
-  it('news.stats.audioCoverage exists and is non-empty in en/admin.json (NBUG-01/NBUG-08)', () => {
-    expect(enAdmin.news.stats.audioCoverage).toBeTruthy();
-    expect(typeof enAdmin.news.stats.audioCoverage).toBe('string');
+  it('card #2 (audio) shows sub from i18n key news.stats.audioCoverage', () => {
+    renderWithRouter();
+    // storeState.audioCount=0, total=0 → resolves to "0/0 with audio"
+    expect(screen.getByText('0/0 with audio')).toBeInTheDocument();
   });
 
   it('card #4 (country) renders sparkline bars with 9 bars', () => {
@@ -198,9 +188,10 @@ describe('NewsTab — basic rendering', () => {
     expect(screen.getByText('CY')).toBeInTheDocument();
   });
 
-  it('news.stats.countrySub exists and is non-empty in en/admin.json (NBUG-01/NBUG-08)', () => {
-    expect(enAdmin.news.stats.countrySub).toBeTruthy();
-    expect(typeof enAdmin.news.stats.countrySub).toBe('string');
+  it('card #4 (country) shows sub from i18n key news.stats.countrySub', () => {
+    renderWithRouter();
+    // Resolves to "Cyprus only"
+    expect(screen.getByText('Cyprus only')).toBeInTheDocument();
   });
 
   it('card #3 (B1) renders real b1_audio_count value (not "—")', () => {

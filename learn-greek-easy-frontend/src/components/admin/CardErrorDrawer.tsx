@@ -65,6 +65,7 @@ import { Separator } from '@/components/ui/separator';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { tDynamic } from '@/i18n/tDynamic';
 import { track } from '@/lib/analytics/track';
 import { adminAPI } from '@/services/adminAPI';
 import { useAdminCardErrorStore } from '@/stores/adminCardErrorStore';
@@ -415,14 +416,14 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
   // ── Status options with localized labels (CER-29) ────────────────────────────
   const statusOptions: StatusOption<CEStatus>[] = CE_STATUS_OPTIONS.map((opt) => ({
     ...opt,
-    label: t(`cardErrors.reply.status.${opt.key.toLowerCase()}`),
+    label: tDynamic(t, `cardErrors.reply.status.${opt.key.toLowerCase()}`),
   }));
 
   // ── Canned reply pills (CER-32) ───────────────────────────────────────────────
   const cannedPills = QUICK_REPLY_KEYS.map((key) => ({
     key,
-    label: t(`cardErrors.reply.quick.${key}.label`),
-    body: t(`cardErrors.reply.quick.${key}.body`),
+    label: tDynamic(t, `cardErrors.reply.quick.${key}.label`),
+    body: tDynamic(t, `cardErrors.reply.quick.${key}.body`),
   }));
 
   // ── Resolved banner (CER-33) ──────────────────────────────────────────────────
@@ -463,7 +464,7 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
               ) : (
                 <Globe className="size-3" aria-hidden="true" />
               )}
-              {t(`cardErrors.cardTypes.${report.card_type.toLowerCase()}`)}
+              {tDynamic(t, `cardErrors.cardTypes.${report.card_type.toLowerCase()}`)}
             </span>
 
             {/* Live status badge — mirrors form's current status (CER-23) */}
@@ -740,7 +741,7 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
                   label: t('cardErrors.meta.type'),
                   value: (
                     <span className="badge b-gray">
-                      {t(`cardErrors.cardTypes.${report.card_type.toLowerCase()}`)}
+                      {tDynamic(t, `cardErrors.cardTypes.${report.card_type.toLowerCase()}`)}
                     </span>
                   ),
                 },

@@ -625,7 +625,8 @@
       "country": {
         "cyprus": "Кипр",
         "greece": "Греция",
-        "world": "Мир"
+        "world": "Мир",
+        "es": "Испания"
       },
       "audio": {
         "b2Narration": "Нарратив B2",
@@ -1551,7 +1552,13 @@
     "linkSuccess": "Слово успешно связано с колодой",
     "existsInDecks": "Это слово есть в {{count}} колоде(ах)",
     "generation": {
-      "examples": "Примеры предложений"
+      "examples": "Примеры предложений",
+      "singular": "Единственное число",
+      "plural": "Множественное число",
+      "caseNominative": "Именительный",
+      "caseGenitive": "Родительный",
+      "caseAccusative": "Винительный",
+      "caseVocative": "Звательный"
     },
     "swapConfirmTitle": "Сменить вариант?",
     "swapConfirmDescription": "Результаты генерации будут заменены для нового варианта. Нормализация и переводы будут сохранены.",
@@ -2291,6 +2298,17 @@
     "pipeline": {
       "title": "Content pipeline",
       "sub": "Pipeline summary coming soon. Track ready vs. draft counts across decks, news, situations, and exercises."
+    }
+  },
+  "sources": {
+    "articles": {
+      "alreadyGenerated": "Ожидает проверки"
+    }
+  },
+  "adminExercises": {
+    "pictureMatch": {
+      "anchorPictureAlt": "Основная картинка",
+      "runtimeNote": "Варианты картинок отображаются в процессе."
     }
   }
 }

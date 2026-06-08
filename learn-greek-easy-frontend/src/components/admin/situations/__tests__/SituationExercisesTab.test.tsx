@@ -5,8 +5,6 @@
 // onDataLoaded firing rules (once per situationId, re-fires on id change,
 // does NOT re-fire on re-render).
 
-import React from 'react';
-
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -63,16 +61,13 @@ vi.mock('../../exercises/ExerciseItemPayload', () => ({
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-function makeExercise(id: string) {
+function makeExercise(id: string): import('@/types/situation').SituationExerciseResponse {
   return {
     id,
     exercise_type: 'fill_gaps',
     status: 'draft',
-    modality: 'reading',
-    audio_level: null,
-    audio_url: null,
-    reading_text: null,
     items: [],
+    modality: 'reading',
   };
 }
 

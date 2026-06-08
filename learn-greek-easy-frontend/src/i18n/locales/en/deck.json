@@ -439,7 +439,9 @@
       "prefix": "Tap or press",
       "spaceKey": "Space",
       "suffix": "to reveal answer"
-    }
+    },
+    "langEn": "English",
+    "langRu": "Russian"
   },
   "skeleton": {
     "loadingCard": "Loading deck card"

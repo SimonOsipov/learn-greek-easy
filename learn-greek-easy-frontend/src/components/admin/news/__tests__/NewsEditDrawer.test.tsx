@@ -6,32 +6,15 @@ import React from 'react';
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import i18n from 'i18next';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Module mocks ───────────────────────────────────────────────────────────────
 
-// Controllable language for i18n
-let currentLang = 'en';
-
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (k: string, opts?: Record<string, unknown>) => {
-      if (opts) {
-        return Object.entries(opts).reduce(
-          (s, [key, val]) => s.replace(`{{${key}}}`, String(val)),
-          k
-        );
-      }
-      return k;
-    },
-    i18n: {
-      get language() {
-        return currentLang;
-      },
-    },
-  }),
-}));
+// I18NG-04: mock dropped — real i18n instance from test-setup resolves all admin keys.
+// Locale-switching tests call await i18n.changeLanguage('el'/'ru') directly.
+// The test-setup afterEach resets language to 'en' after every test.
 
 vi.mock('@/hooks/use-toast', () => ({
   toast: vi.fn(),
@@ -67,7 +50,7 @@ const mockFetchNewsItems = vi.fn().mockResolvedValue(undefined);
 
 const storeState = {
   drawerItemId: null as string | null,
-  newsItems: [] as ReturnType<typeof makeItem>[],
+  newsItems: [] as import('@/services/adminAPI').NewsItemResponse[],
   closeDrawer: mockCloseDrawer,
   fetchNewsItems: mockFetchNewsItems,
 };
@@ -86,11 +69,13 @@ vi.mock('@/stores/adminNewsStore', () => ({
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function makeItem(overrides: Partial<ReturnType<typeof _buildItem>> = {}) {
+function makeItem(
+  overrides: Partial<import('@/services/adminAPI').NewsItemResponse> = {}
+): import('@/services/adminAPI').NewsItemResponse {
   return { ..._buildItem(), ...overrides };
 }
 
-function _buildItem() {
+function _buildItem(): import('@/services/adminAPI').NewsItemResponse {
   return {
     id: 'item-1',
     title_el: 'Ελληνικός τίτλος',
@@ -108,7 +93,7 @@ function _buildItem() {
     audio_file_size_bytes: null,
     created_at: '2025-01-10T10:00:00Z',
     updated_at: '2025-01-14T12:00:00Z',
-    country: 'greece' as const,
+    country: 'greece',
     title_el_a2: null,
     description_el_a2: null,
     audio_a2_url: null,
@@ -118,8 +103,9 @@ function _buildItem() {
     has_a2_content: false,
     alt_text: null,
     photo_credit: null,
-    status: 'published' as 'draft' | 'published',
+    status: 'published' as const,
     linked_situation: null as import('@/services/adminAPI').LinkedSituationSummary | null,
+    image_variants: null,
   };
 }
 
@@ -142,7 +128,6 @@ async function loadDrawer() {
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  currentLang = 'en';
   storeState.drawerItemId = null;
   storeState.newsItems = [];
   mockFetchNewsItems.mockResolvedValue(undefined);
@@ -185,13 +170,13 @@ describe('NewsEditDrawer — header rendering', () => {
 
   it('renders breadcrumb with flag, country label, and publication date key', () => {
     renderDrawer();
-    // The i18n mock returns the key string; the date is passed as an interpolation arg.
+    // Real i18n resolves country.greece → "Greece" and publishedOn → "Published 15 Jan 2025".
     // We verify the breadcrumb is present and does NOT contain the raw ISO date string.
     const breadcrumb = document.querySelector('.drawer-breadcrumb');
     expect(breadcrumb).toBeInTheDocument();
     expect(breadcrumb!.textContent).toContain('🇬🇷');
-    expect(breadcrumb!.textContent).toContain('news.drawer.country.greece');
-    expect(breadcrumb!.textContent).toContain('news.drawer.publishedOn');
+    expect(breadcrumb!.textContent).toContain('Greece');
+    expect(breadcrumb!.textContent).toContain('Published');
     // Raw ISO format must NOT appear — date is formatted via date-fns
     expect(breadcrumb!.textContent).not.toContain('2025-01-15');
   });
@@ -207,19 +192,18 @@ describe('NewsEditDrawer — header rendering', () => {
   });
 
   it('renders title in English (default lang)', () => {
-    currentLang = 'en';
     renderDrawer();
     expect(document.querySelector('.drawer-title')!.textContent).toBe('English title');
   });
 
-  it('renders title in Greek when lang=el', () => {
-    currentLang = 'el';
+  it('renders title in Greek when lang=el', async () => {
+    await i18n.changeLanguage('el');
     renderDrawer();
     expect(document.querySelector('.drawer-title')!.textContent).toBe('Ελληνικός τίτλος');
   });
 
-  it('renders title in Russian when lang=ru', () => {
-    currentLang = 'ru';
+  it('renders title in Russian when lang=ru', async () => {
+    await i18n.changeLanguage('ru');
     renderDrawer();
     expect(document.querySelector('.drawer-title')!.textContent).toBe('Русский заголовок');
   });
@@ -227,7 +211,7 @@ describe('NewsEditDrawer — header rendering', () => {
   it('renders Published status pill when status is published', () => {
     renderDrawer();
     expect(screen.getByTestId('news-drawer-status-pill')).toBeInTheDocument();
-    expect(screen.getByText('news.drawer.publishedPill')).toBeInTheDocument();
+    expect(screen.getByTestId('news-drawer-status-pill')).toHaveTextContent('Published');
   });
 
   it('renders Draft status pill when status is draft', () => {
@@ -236,7 +220,7 @@ describe('NewsEditDrawer — header rendering', () => {
     storeState.newsItems = [item];
     renderDrawer();
     expect(screen.getByTestId('news-drawer-status-pill')).toBeInTheDocument();
-    expect(screen.getByText('news.drawer.draftPill')).toBeInTheDocument();
+    expect(screen.getByTestId('news-drawer-status-pill')).toHaveTextContent('Draft — not visible');
   });
 
   it('renders B2 badge when description_el is present', () => {
@@ -260,11 +244,11 @@ describe('NewsEditDrawer — header rendering', () => {
 describe('NewsEditDrawer — pickTitle fallback chain', () => {
   // These test the pickTitle helper indirectly via drawer title rendering.
 
-  it('shows title_el when lang=el and title_el is present', () => {
+  it('shows title_el when lang=el and title_el is present', async () => {
     const item = makeItem({ title_el: 'Τίτλος', title_en: 'English', title_ru: 'Русский' });
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
-    currentLang = 'el';
+    await i18n.changeLanguage('el');
     renderDrawer();
     expect(document.querySelector('.drawer-title')!.textContent).toBe('Τίτλος');
   });
@@ -273,25 +257,25 @@ describe('NewsEditDrawer — pickTitle fallback chain', () => {
     const item = makeItem({ title_el: 'Τίτλος', title_en: 'English', title_ru: 'Русский' });
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
-    currentLang = 'en';
+    // i18n already set to 'en' by test-setup
     renderDrawer();
     expect(document.querySelector('.drawer-title')!.textContent).toBe('English');
   });
 
-  it('shows title_ru when lang=ru and title_ru is present', () => {
+  it('shows title_ru when lang=ru and title_ru is present', async () => {
     const item = makeItem({ title_el: 'Τίτλος', title_en: 'English', title_ru: 'Русский' });
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
-    currentLang = 'ru';
+    await i18n.changeLanguage('ru');
     renderDrawer();
     expect(document.querySelector('.drawer-title')!.textContent).toBe('Русский');
   });
 
-  it('falls back to title_en when lang=ru but title_ru is empty', () => {
+  it('falls back to title_en when lang=ru but title_ru is empty', async () => {
     const item = makeItem({ title_el: 'Τίτλος', title_en: 'English fallback', title_ru: '' });
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
-    currentLang = 'ru';
+    await i18n.changeLanguage('ru');
     renderDrawer();
     expect(document.querySelector('.drawer-title')!.textContent).toBe('English fallback');
   });
@@ -300,19 +284,18 @@ describe('NewsEditDrawer — pickTitle fallback chain', () => {
     const item = makeItem({ title_el: 'Ελληνικό', title_en: '', title_ru: '' });
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
-    currentLang = 'en';
+    // i18n already set to 'en' by test-setup
     renderDrawer();
     expect(document.querySelector('.drawer-title')!.textContent).toBe('Ελληνικό');
   });
 
-  it('shows untitled i18n key when all title fields are empty', () => {
+  it('shows (untitled) when all title fields are empty', () => {
     const item = makeItem({ title_el: '', title_en: '', title_ru: '' });
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
-    currentLang = 'en';
+    // i18n already set to 'en' by test-setup
     renderDrawer();
-    // pickTitle returns '' → component renders t('news.drawer.untitled'); i18n mock returns key
-    expect(document.querySelector('.drawer-title')!.textContent).toBe('news.drawer.untitled');
+    expect(document.querySelector('.drawer-title')!.textContent).toBe('(untitled)');
   });
 });
 
@@ -322,8 +305,10 @@ describe('NewsEditDrawer — linked situation pill', () => {
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
     renderDrawer();
-    // NBUG-01: callsite now uses t('news.drawer.linkedSituationLabel')
-    expect(screen.queryByText('news.drawer.linkedSituationLabel')).not.toBeInTheDocument();
+    // The badge lives inside .drawer-meta; the tab button has the same text but is not in .drawer-meta
+    const meta = document.querySelector('.drawer-meta');
+    expect(meta).toBeInTheDocument();
+    expect(meta!.textContent).not.toContain('Linked situation');
   });
 
   it('renders blue linked-situation badge when linked_situation is non-null', () => {
@@ -345,8 +330,10 @@ describe('NewsEditDrawer — linked situation pill', () => {
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
     renderDrawer();
-    // NBUG-01: pill uses t('news.drawer.linkedSituationLabel') not the old 'linkedSituationPill'
-    expect(screen.getByText('news.drawer.linkedSituationLabel')).toBeInTheDocument();
+    // The badge lives inside .drawer-meta with tone="blue" (class b-blue)
+    const meta = document.querySelector('.drawer-meta');
+    expect(meta).toBeInTheDocument();
+    expect(meta!.textContent).toContain('Linked situation');
   });
 });
 
@@ -356,7 +343,7 @@ describe('NewsEditDrawer — Regenerate button with icon', () => {
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
     renderDrawer();
-    const btn = screen.getByText('news.drawer.regenerateTranslations').closest('button');
+    const btn = screen.getByText('Regenerate translations').closest('button');
     expect(btn).toBeInTheDocument();
     expect(btn).toHaveAttribute('aria-disabled', 'true');
     // Wand2 icon is an SVG inside the button
@@ -370,7 +357,7 @@ describe('NewsEditDrawer — allChecksPassed badge with Check icon', () => {
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
     renderDrawer();
-    const badgeText = screen.getByText('news.drawer.allChecksPassed');
+    const badgeText = screen.getByText('All checks passed');
     // The badge wraps the text and the icon — find the parent badge div
     const badge = badgeText.closest('.badge, [class*="badge"]') ?? badgeText.parentElement;
     expect(badge).toBeInTheDocument();
@@ -437,13 +424,13 @@ describe('NewsEditDrawer — footer', () => {
 
   it('renders allChecksPassed badge', () => {
     renderDrawer();
-    expect(screen.getByText('news.drawer.allChecksPassed')).toBeInTheDocument();
+    expect(screen.getByText('All checks passed')).toBeInTheDocument();
   });
 
   it('renders updatedRelative text', () => {
     renderDrawer();
-    // The i18n mock returns key with replacement, so "news.drawer.updatedRelative" with {{relative}}
-    const footerText = screen.getByText(/news\.drawer\.updatedRelative/);
+    // Real i18n resolves to "Updated <relative>" e.g. "Updated about 1 year ago"
+    const footerText = screen.getByText(/Updated/);
     expect(footerText).toBeInTheDocument();
   });
 
@@ -487,7 +474,7 @@ describe('NewsEditDrawer — dirty guard (close button)', () => {
 
     // Should have closed without dirty dialog
     expect(mockCloseDrawer).toHaveBeenCalled();
-    expect(screen.queryByText('news.drawer.dirty.title')).not.toBeInTheDocument();
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
   });
 
   it('Discard & continue closes drawer without saving', async () => {
@@ -606,7 +593,7 @@ describe('NewsEditDrawer — Publish CTA (NADM-25)', () => {
 
   it('shows "Mark as Published" label when status is draft', () => {
     renderDrawer();
-    expect(screen.getByText('news.drawer.publishCta')).toBeInTheDocument();
+    expect(screen.getByText('Mark as Published')).toBeInTheDocument();
   });
 
   it('shows "Publish changes" label when status is published', () => {
@@ -614,7 +601,7 @@ describe('NewsEditDrawer — Publish CTA (NADM-25)', () => {
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
     renderDrawer();
-    expect(screen.getByText('news.drawer.publishChangesCta')).toBeInTheDocument();
+    expect(screen.getByText('Publish changes')).toBeInTheDocument();
   });
 
   it('publish button is enabled when form is pristine', () => {
