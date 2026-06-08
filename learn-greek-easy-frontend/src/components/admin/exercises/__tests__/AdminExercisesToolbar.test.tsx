@@ -26,6 +26,8 @@ vi.mock('react-i18next', () => ({
 const mockTrack = vi.fn();
 vi.mock('@/lib/analytics/track', () => ({
   track: (...args: unknown[]) => mockTrack(...args),
+  __setPosthogInstance: vi.fn(),
+  getPosthogInstance: vi.fn(() => null),
 }));
 
 vi.mock('@/stores/adminExercisesStore', () => ({

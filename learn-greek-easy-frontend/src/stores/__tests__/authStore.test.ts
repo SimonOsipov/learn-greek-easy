@@ -124,8 +124,8 @@ describe.skip('authStore (uses persist middleware)', () => {
 // Shared mocks (apply to all describe blocks below)
 // ---------------------------------------------------------------------------
 
-vi.mock('@/lib/supabaseClient', () => ({
-  supabase: {
+vi.mock('@/lib/supabaseClient', () => {
+  const mockSupabase = {
     auth: {
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
       signOut: vi.fn().mockResolvedValue({ error: null }),
@@ -133,8 +133,12 @@ vi.mock('@/lib/supabaseClient', () => ({
         data: { subscription: { unsubscribe: vi.fn() } },
       }),
     },
-  },
-}));
+  };
+  return {
+    supabase: mockSupabase,
+    getSupabase: vi.fn(() => Promise.resolve(mockSupabase)),
+  };
+});
 
 vi.mock('posthog-js', () => ({
   default: { capture: vi.fn(), reset: vi.fn(), identify: vi.fn() },

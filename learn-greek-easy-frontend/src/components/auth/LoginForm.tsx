@@ -41,7 +41,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import log from '@/lib/logger';
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabase } from '@/lib/supabaseClient';
 import { useAuthStore } from '@/stores/authStore';
 
 /**
@@ -117,6 +117,7 @@ export const LoginForm: React.FC = () => {
     try {
       // Step 1: Authenticate with Supabase
       log.info('[LoginForm] Attempting Supabase login');
+      const supabase = await getSupabase();
       const { data: authData, error } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
@@ -176,6 +177,7 @@ export const LoginForm: React.FC = () => {
    */
   const handleGoogleLogin = async () => {
     try {
+      const supabase = await getSupabase();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

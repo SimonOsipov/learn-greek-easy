@@ -41,6 +41,8 @@ vi.mock('posthog-js', () => ({
 // Analytics track — keep silent
 vi.mock('@/lib/analytics/track', () => ({
   track: vi.fn(),
+  __setPosthogInstance: vi.fn(),
+  getPosthogInstance: vi.fn(() => null),
 }));
 
 // usePracticeSession — return a resetTracking stub (not the subject under test here)
