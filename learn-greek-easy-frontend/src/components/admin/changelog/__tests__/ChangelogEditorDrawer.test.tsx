@@ -909,8 +909,10 @@ describe('ChangelogEditorDrawer', () => {
     mockStoreState.panelMode = 'json';
     rerender(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
 
-    const jsonTextarea = screen.getByTestId('changelog-editor-json-textarea');
-    const parsed = JSON.parse(jsonTextarea.value as string);
+    const jsonTextarea = screen.getByTestId(
+      'changelog-editor-json-textarea'
+    ) as HTMLTextAreaElement;
+    const parsed = JSON.parse(jsonTextarea.value);
     expect(parsed.title_en).toBe('Original title');
     expect(parsed.content_en).toBe('Original content');
   });

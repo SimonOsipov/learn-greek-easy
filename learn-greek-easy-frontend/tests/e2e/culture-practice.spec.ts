@@ -9,7 +9,8 @@
  * the cached auth tokens since user UUIDs would change.
  */
 
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 /**
  * Helper function to navigate to a culture deck's practice page via UI.

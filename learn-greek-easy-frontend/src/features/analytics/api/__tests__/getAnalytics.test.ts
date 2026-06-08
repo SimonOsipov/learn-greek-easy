@@ -42,6 +42,7 @@ const stubDashboard: DashboardStatsResponse = {
     overall_mastery_percentage: 0,
     culture_questions_mastered: 0,
     total_study_time_seconds: 0,
+    culture_weekly_study_time_seconds: 0,
   },
   today: {
     reviews_completed: 0,

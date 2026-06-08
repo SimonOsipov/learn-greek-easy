@@ -259,7 +259,7 @@ describe('AllDecksList — Hide Deactivated Filter (TASK-161)', () => {
         page_size: 10,
       };
       const search = 'greek';
-      const typeFilter = 'vocabulary';
+      const typeFilter: string = 'vocabulary';
       const hideDeactivated = true; // toggle is ON
 
       if (search) params.search = search;
@@ -347,7 +347,7 @@ describe('AllDecksList — Hide Deactivated Filter (TASK-161)', () => {
     });
 
     it('RU locale has deckList.hideDeactivated key', () => {
-      const tRu = i18n.getFixedT('ru', 'admin');
+      void i18n.getFixedT('ru', 'admin');
       // Russian locale may not be loaded in test setup; fall back to key lookup
       // via the loaded EN translations which confirm the key structure exists.
       // The RU translation file was verified by direct inspection: "Скрыть неактивные"

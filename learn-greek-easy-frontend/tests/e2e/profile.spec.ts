@@ -13,7 +13,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { verifyAuthSucceeded, waitForAppReady, SEED_USERS } from './helpers/auth-helpers';
+import { verifyAuthSucceeded } from './helpers/auth-helpers';
 
 test.describe('Profile Page', () => {
   test.beforeEach(async ({ page }) => {

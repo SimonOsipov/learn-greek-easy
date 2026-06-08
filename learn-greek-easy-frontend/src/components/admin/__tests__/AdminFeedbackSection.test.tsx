@@ -4,7 +4,7 @@
 // Covers: stat cards, seg-control filters (status × type AND-combined),
 // vote-desc sort, debounced search, URL deep-link mounting, decorative buttons.
 
-import { render, screen, waitFor, within, act } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi, beforeEach, type Mock } from 'vitest';

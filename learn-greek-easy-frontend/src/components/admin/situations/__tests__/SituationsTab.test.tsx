@@ -15,10 +15,7 @@
  * - fetchSituations called on mount.
  */
 
-import React from 'react';
-
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

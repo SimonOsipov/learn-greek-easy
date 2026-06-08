@@ -249,8 +249,6 @@ describe('DeckSettingsTab', () => {
   // ── 5. Discard dialog: "Keep editing" keeps form dirty ───────────────────
 
   it('"Keep editing" in discard dialog dismisses dialog without resetting form', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-
     // We need to access the discard dialog. Since the Cancel path goes through
     // context (no-op in standalone), we directly open the dialog by triggering
     // the close guard. Here we test the dialog buttons directly using the

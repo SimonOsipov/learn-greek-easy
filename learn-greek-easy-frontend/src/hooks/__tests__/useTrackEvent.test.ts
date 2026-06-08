@@ -83,7 +83,7 @@ describe('useTrackEvent Hook', () => {
 
     it('should not throw if posthog.capture is undefined', () => {
       const originalCapture = posthog.capture;
-      (posthog as Record<string, unknown>).capture = undefined;
+      (posthog as Partial<typeof posthog>).capture = undefined;
 
       const { result } = renderHook(() => useTrackEvent());
 
@@ -93,13 +93,13 @@ describe('useTrackEvent Hook', () => {
         });
       }).not.toThrow();
 
-      (posthog as Record<string, unknown>).capture = originalCapture;
+      (posthog as Partial<typeof posthog>).capture = originalCapture;
     });
 
     it('should not throw if posthog is undefined', () => {
       const originalCapture = posthog.capture;
       // Set capture to non-function value
-      (posthog as Record<string, unknown>).capture = null;
+      delete (posthog as Partial<typeof posthog>).capture;
 
       const { result } = renderHook(() => useTrackEvent());
 
@@ -109,7 +109,7 @@ describe('useTrackEvent Hook', () => {
         });
       }).not.toThrow();
 
-      (posthog as Record<string, unknown>).capture = originalCapture;
+      (posthog as Partial<typeof posthog>).capture = originalCapture;
     });
   });
 
@@ -154,7 +154,7 @@ describe('useTrackEvent Hook', () => {
 
     it('should not throw if posthog.identify is undefined', () => {
       const originalIdentify = posthog.identify;
-      (posthog as Record<string, unknown>).identify = undefined;
+      (posthog as Partial<typeof posthog>).identify = undefined;
 
       const { result } = renderHook(() => useTrackEvent());
 
@@ -164,7 +164,7 @@ describe('useTrackEvent Hook', () => {
         });
       }).not.toThrow();
 
-      (posthog as Record<string, unknown>).identify = originalIdentify;
+      (posthog as Partial<typeof posthog>).identify = originalIdentify;
     });
   });
 
@@ -181,7 +181,7 @@ describe('useTrackEvent Hook', () => {
 
     it('should not throw if posthog.reset is undefined', () => {
       const originalReset = posthog.reset;
-      (posthog as Record<string, unknown>).reset = undefined;
+      (posthog as Partial<typeof posthog>).reset = undefined;
 
       const { result } = renderHook(() => useTrackEvent());
 
@@ -191,7 +191,7 @@ describe('useTrackEvent Hook', () => {
         });
       }).not.toThrow();
 
-      (posthog as Record<string, unknown>).reset = originalReset;
+      (posthog as Partial<typeof posthog>).reset = originalReset;
     });
   });
 
@@ -221,7 +221,7 @@ describe('useTrackEvent Hook', () => {
 
     it('should not throw if posthog.people is undefined', () => {
       const originalPeople = posthog.people;
-      (posthog as Record<string, unknown>).people = undefined;
+      (posthog as Partial<typeof posthog>).people = undefined;
 
       const { result } = renderHook(() => useTrackEvent());
 
@@ -231,12 +231,12 @@ describe('useTrackEvent Hook', () => {
         });
       }).not.toThrow();
 
-      (posthog as Record<string, unknown>).people = originalPeople;
+      (posthog as Partial<typeof posthog>).people = originalPeople;
     });
 
     it('should not throw if posthog.people.set is undefined', () => {
       const originalSet = posthog.people.set;
-      (posthog.people as Record<string, unknown>).set = undefined;
+      (posthog.people as Partial<typeof posthog.people>).set = undefined;
 
       const { result } = renderHook(() => useTrackEvent());
 
@@ -246,7 +246,7 @@ describe('useTrackEvent Hook', () => {
         });
       }).not.toThrow();
 
-      (posthog.people as Record<string, unknown>).set = originalSet;
+      (posthog.people as Partial<typeof posthog.people>).set = originalSet;
     });
   });
 

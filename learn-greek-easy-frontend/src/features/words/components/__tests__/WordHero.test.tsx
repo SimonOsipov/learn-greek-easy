@@ -13,7 +13,7 @@
  */
 
 import userEvent from '@testing-library/user-event';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
@@ -149,7 +149,7 @@ function makeWordEntry(overrides: Partial<WordEntryResponse> = {}): WordEntryRes
     examples: null,
     audio_key: 'audio/word-42.mp3',
     audio_url: 'https://cdn.example.com/word-42.mp3',
-    audio_status: 'done',
+    audio_status: 'ready',
     is_active: true,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',

@@ -19,7 +19,6 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { STORAGE_STATE } from '../../playwright.config';
 
 // Storage state paths
 const ADMIN_AUTH = 'playwright/.auth/admin.json';

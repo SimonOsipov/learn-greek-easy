@@ -78,6 +78,7 @@ const mockCard: CardRecordResponse = {
   deck_id: 'deck-001',
   card_type: 'meaning_el_to_en',
   tier: 1,
+  variant_key: 'default',
   front_content: {
     card_type: 'meaning_el_to_en',
     prompt: 'What does this mean?',
@@ -109,6 +110,7 @@ const mockSentenceCard: CardRecordResponse = {
   deck_id: 'deck-001',
   card_type: 'sentence_translation',
   tier: 1,
+  variant_key: 'default',
   front_content: {
     card_type: 'sentence_translation',
     prompt: 'Translate this sentence',
@@ -137,6 +139,7 @@ const mockPluralSgToPlCard: CardRecordResponse = {
   deck_id: 'deck-001',
   card_type: 'plural_form',
   tier: 1,
+  variant_key: 'sg_to_pl',
   front_content: {
     card_type: 'plural_form',
     prompt: 'What is the plural?',
@@ -163,6 +166,7 @@ const mockPluralPlToSgCard: CardRecordResponse = {
   deck_id: 'deck-001',
   card_type: 'plural_form',
   tier: 1,
+  variant_key: 'pl_to_sg',
   front_content: {
     card_type: 'plural_form',
     prompt: 'What is the singular?',
@@ -188,6 +192,7 @@ const mockArticleCard: CardRecordResponse = {
   deck_id: 'deck-001',
   card_type: 'article',
   tier: 1,
+  variant_key: 'default',
   front_content: {
     card_type: 'article',
     prompt: 'What is the article?',

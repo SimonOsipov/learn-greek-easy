@@ -76,6 +76,7 @@ function makeDetailResponse(
     correct_option: 1,
     image_url: null,
     audio_url: null,
+    audio_a2_url: null,
     order_index: 0,
     original_article_url: null,
     also_in_decks: [],

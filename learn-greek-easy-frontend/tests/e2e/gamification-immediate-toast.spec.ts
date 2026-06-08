@@ -107,8 +107,8 @@ test.describe('Gamification — IMMEDIATE-mode notification on review unlock (GA
 
   test(
     'GAMIF-05-06: IMMEDIATE-mode notification appears within review request lifecycle',
-    { timeout: 90_000 },
     async ({ page, request }) => {
+      test.setTimeout(90_000);
       const apiBaseUrl = getApiBaseUrl();
       const authHeaders = { Authorization: `Bearer ${getLearnerAccessToken()}` };
 

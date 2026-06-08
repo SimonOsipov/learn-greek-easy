@@ -83,7 +83,7 @@ const mockCountryCounts = { cyprus: 5, greece: 3, world: 2 };
 
 const mockNewsListResponse = (
   items: typeof mockNewsItemCyprus[],
-  countryFilter?: string
+  _countryFilter?: string
 ) => ({
   items,
   total: items.length,
@@ -187,7 +187,6 @@ test.describe('News Page - Country Filter Tabs', () => {
   test('Visual-MCNEWS-05: Filter tabs Cyprus selected state', async ({ page }, testInfo) => {
     await loginForVisualTest(page);
 
-    let callCount = 0;
     await page.route('**/api/v1/news*', (route) => {
       const url = new URL(route.request().url());
       const country = url.searchParams.get('country');

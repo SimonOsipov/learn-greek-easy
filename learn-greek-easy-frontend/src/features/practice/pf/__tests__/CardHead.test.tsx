@@ -8,8 +8,6 @@
  * - Positive guard: pf-fam-badge present AND pf-pos-chip / pf-pos / pf-lang-switch / pf-lang-en / pf-lang-ru absent
  */
 
-import React from 'react';
-
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 

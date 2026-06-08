@@ -144,53 +144,53 @@ describe('ChunkErrorBoundary', () => {
 
   describe('chunk error detection', () => {
     it('should recognize "loading chunk" in error message', () => {
-      const boundary = new ChunkErrorBoundary({});
+      const boundary = new ChunkErrorBoundary({ children: null });
       expect(boundary.isChunkLoadError(new Error('Loading chunk abc failed'))).toBe(true);
     });
 
     it('should recognize "dynamically imported module" in error message', () => {
-      const boundary = new ChunkErrorBoundary({});
+      const boundary = new ChunkErrorBoundary({ children: null });
       expect(
         boundary.isChunkLoadError(new Error('Failed to fetch dynamically imported module'))
       ).toBe(true);
     });
 
     it('should recognize "failed to fetch" in error message', () => {
-      const boundary = new ChunkErrorBoundary({});
+      const boundary = new ChunkErrorBoundary({ children: null });
       expect(boundary.isChunkLoadError(new Error('Failed to fetch'))).toBe(true);
     });
 
     it('should recognize ChunkLoadError by name', () => {
-      const boundary = new ChunkErrorBoundary({});
+      const boundary = new ChunkErrorBoundary({ children: null });
       const error = new Error('Some error');
       error.name = 'ChunkLoadError';
       expect(boundary.isChunkLoadError(error)).toBe(true);
     });
 
     it('should return false for non-chunk errors', () => {
-      const boundary = new ChunkErrorBoundary({});
+      const boundary = new ChunkErrorBoundary({ children: null });
       expect(boundary.isChunkLoadError(new Error('Regular error'))).toBe(false);
     });
   });
 
   describe('version mismatch detection', () => {
     it('should detect unexpected token errors', () => {
-      const boundary = new ChunkErrorBoundary({});
+      const boundary = new ChunkErrorBoundary({ children: null });
       expect(boundary.isVersionMismatch(new Error('Unexpected token <'))).toBe(true);
     });
 
     it('should detect invalid JSON errors', () => {
-      const boundary = new ChunkErrorBoundary({});
+      const boundary = new ChunkErrorBoundary({ children: null });
       expect(boundary.isVersionMismatch(new Error('is not valid json'))).toBe(true);
     });
 
     it('should detect MIME type errors', () => {
-      const boundary = new ChunkErrorBoundary({});
+      const boundary = new ChunkErrorBoundary({ children: null });
       expect(boundary.isVersionMismatch(new Error('MIME type mismatch'))).toBe(true);
     });
 
     it('should return false for non-version-mismatch errors', () => {
-      const boundary = new ChunkErrorBoundary({});
+      const boundary = new ChunkErrorBoundary({ children: null });
       expect(boundary.isVersionMismatch(new Error('Network error'))).toBe(false);
     });
   });

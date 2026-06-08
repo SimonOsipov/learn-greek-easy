@@ -5,7 +5,7 @@
 
 import React from 'react';
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -104,7 +104,9 @@ function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
     has_a2_content: false,
     alt_text: null,
     photo_credit: null,
+    status: 'published' as const,
     linked_situation: null,
+    image_variants: null,
     ...overrides,
   };
 }
@@ -625,7 +627,6 @@ describe('NewsEditDrawer — quick-jump dirty path', () => {
     renderDrawer();
 
     // Make the form dirty by typing in the translations tab
-    const titleEnInputs = document.querySelectorAll('input, textarea');
     // Find the translations content area
     const translationsContent = screen.getByTestId('news-drawer-tab-translations-content');
     expect(translationsContent).toBeInTheDocument();
@@ -645,7 +646,6 @@ describe('NewsEditDrawer — quick-jump dirty path', () => {
 
 describe('NewsEditDrawer — quick-jump second ConfirmDialog', () => {
   it('pendingQuickJumpSituationId=null means quick-jump ConfirmDialog is closed on initial render', () => {
-    const user = userEvent.setup();
     const item = makeItem();
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];

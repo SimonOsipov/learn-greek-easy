@@ -9,7 +9,7 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { createTestQueryClient } from '@/lib/test-utils';
 import { useProgressData } from '@/hooks/useProgressData';

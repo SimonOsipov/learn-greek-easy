@@ -54,14 +54,6 @@ function getApiBaseUrl(): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Set the UI language via localStorage and reload so i18next picks it up.
- */
-async function setLanguage(page: Page, lang: 'en' | 'ru'): Promise<void> {
-  await page.evaluate((l) => localStorage.setItem('i18nextLng', l), lang);
-  await page.reload();
-}
-
-/**
  * Find the deck card for "Greek A1 Vocabulary (Nouns)" by looking for either
  * the EN or RU localized title. Returns the deck card locator.
  */

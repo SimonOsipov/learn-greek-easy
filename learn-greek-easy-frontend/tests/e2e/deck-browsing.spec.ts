@@ -40,10 +40,6 @@ test.describe('Deck Browsing', () => {
     // Verify dashboard heading
     await expect(page.getByTestId('dashboard-title')).toBeVisible();
 
-    // Verify user greeting or welcome message exists
-    const greeting = page.getByText(/welcome|hello|hi/i);
-    const hasGreeting = await greeting.isVisible().catch(() => false);
-
     // Dashboard should have some content
     const content = await page.content();
     expect(content.length).toBeGreaterThan(100);
@@ -183,7 +179,7 @@ test.describe('Deck Browsing', () => {
     expect(pageContent).toBeTruthy();
 
     // Should have some action available or deck information
-    expect(pageContent.includes('card')).toBe(true);
+    expect(pageContent?.includes('card')).toBe(true);
   });
 
   test('E2E-03.6: Reset filters', async ({ page }) => {

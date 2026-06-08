@@ -516,7 +516,7 @@ describe('RouteGuard — adversarial: cancelled-flag on unmount-before-getSupaba
       () =>
         new Promise<{ auth: { onAuthStateChange: typeof onAuthStateChange } }>((resolve) => {
           resolveDeferred = resolve;
-        })
+        }) as unknown as ReturnType<typeof supabaseClientModule.getSupabase>
     );
 
     const { unmount } = render(

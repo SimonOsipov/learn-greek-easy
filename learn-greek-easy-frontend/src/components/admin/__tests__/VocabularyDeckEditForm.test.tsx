@@ -749,7 +749,7 @@ describe('VocabularyDeckEditForm', () => {
 
       await waitFor(() => {
         // After reset, the last call should be false
-        const calls = onDirtyChange.mock.calls.map((c: [boolean]) => c[0]);
+        const calls = onDirtyChange.mock.calls.map((c: unknown[]) => c[0] as boolean);
         expect(calls[calls.length - 1]).toBe(false);
       });
     });

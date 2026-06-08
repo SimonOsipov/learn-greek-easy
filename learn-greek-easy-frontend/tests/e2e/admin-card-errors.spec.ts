@@ -31,14 +31,11 @@ test.use({ storageState: STORAGE_STATE.ADMIN });
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Admin Card Errors (CER-57)', () => {
-  let reportIds: string[] = [];
-
   test.beforeAll(async ({ browser }) => {
     const ctx = await browser.newContext({ storageState: STORAGE_STATE.ADMIN });
     const page = await ctx.newPage();
     await page.goto('/admin');
-    const result = await seedAdminCardErrorsBatch(page);
-    reportIds = result.ids;
+    await seedAdminCardErrorsBatch(page);
     await ctx.close();
   });
 

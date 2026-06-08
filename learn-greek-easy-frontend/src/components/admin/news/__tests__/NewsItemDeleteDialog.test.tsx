@@ -71,6 +71,11 @@ function makeNewsItem(overrides: Partial<NewsItemResponse> = {}): NewsItemRespon
     audio_a2_generated_at: null,
     audio_a2_file_size_bytes: null,
     has_a2_content: false,
+    alt_text: null,
+    photo_credit: null,
+    status: 'published' as const,
+    linked_situation: null,
+    image_variants: null,
     ...overrides,
   };
 }

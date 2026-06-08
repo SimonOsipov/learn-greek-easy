@@ -17,14 +17,13 @@ type RafCallback = (time: number) => void;
 
 let rafCallbacks: Map<number, RafCallback>;
 let rafNextId: number;
-let rafSpy: ReturnType<typeof vi.spyOn>;
 let cafSpy: ReturnType<typeof vi.spyOn>;
 
 function setupRafStubs() {
   rafCallbacks = new Map();
   rafNextId = 1;
 
-  rafSpy = vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb: RafCallback) => {
+  vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb: RafCallback) => {
     const id = rafNextId++;
     rafCallbacks.set(id, cb);
     return id;
@@ -53,17 +52,13 @@ function flushRaf(time = 0) {
 type MoCallback = MutationCallback;
 
 let capturedMoCallback: MoCallback | null = null;
-let capturedMoTarget: Node | null = null;
 let moDisconnect: ReturnType<typeof vi.fn>;
 let moObserve: ReturnType<typeof vi.fn>;
 
 function setupMutationObserverStub() {
   capturedMoCallback = null;
-  capturedMoTarget = null;
   moDisconnect = vi.fn();
-  moObserve = vi.fn().mockImplementation((target: Node) => {
-    capturedMoTarget = target;
-  });
+  moObserve = vi.fn();
 
   vi.stubGlobal(
     'MutationObserver',
@@ -485,7 +480,7 @@ describe('useAudioTimeMs', () => {
     it('starts tracking when container changes from null to an element with audio', () => {
       const { result, rerender } = renderHook(
         ({ cont }: { cont: HTMLElement | null }) => useAudioTimeMs(cont, true),
-        { initialProps: { cont: null } }
+        { initialProps: { cont: null as HTMLElement | null } }
       );
 
       expect(result.current).toBe(0);

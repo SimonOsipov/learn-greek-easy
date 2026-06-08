@@ -5,8 +5,6 @@
  * SSE events directly — same pattern as GenerateNounDialog.sse.test.tsx.
  */
 
-import React from 'react';
-
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -65,7 +63,7 @@ import { PictureGenerationPanel } from '../PictureGenerationPanel';
 const basePicture: PictureNested = {
   id: 'pic-1',
   image_prompt: 'A sunny beach',
-  status: 'pending',
+  status: 'draft',
   created_at: '2026-01-01T00:00:00Z',
   scene_en: 'Beach scene',
   scene_el: null,

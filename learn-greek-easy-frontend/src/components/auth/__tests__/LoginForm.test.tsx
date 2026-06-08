@@ -22,7 +22,7 @@ import { I18nextProvider } from 'react-i18next';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import i18n from '@/i18n';
-import { supabase } from '@/lib/supabaseClient';
+import * as supabaseClientModule from '@/lib/supabaseClient';
 import { authAPI } from '@/services/authAPI';
 import type { UserProfileResponse } from '@/services/authAPI';
 import { useAuthStore } from '@/stores/authStore';
@@ -38,8 +38,14 @@ vi.mock('@/services/authAPI', () => ({
 }));
 
 // Typed handles to the globally-mocked supabase auth methods
-const signInWithPassword = supabase.auth.signInWithPassword as ReturnType<typeof vi.fn>;
-const getSession = supabase.auth.getSession as ReturnType<typeof vi.fn>;
+// The global mock in test-setup.ts exports `supabase`; we access it via the module namespace.
+const mockedModule = supabaseClientModule as unknown as {
+  supabase: {
+    auth: { signInWithPassword: ReturnType<typeof vi.fn>; getSession: ReturnType<typeof vi.fn> };
+  };
+};
+const signInWithPassword = mockedModule.supabase.auth.signInWithPassword;
+const getSession = mockedModule.supabase.auth.getSession;
 const getProfile = authAPI.getProfile as ReturnType<typeof vi.fn>;
 
 const baseProfile: UserProfileResponse = {

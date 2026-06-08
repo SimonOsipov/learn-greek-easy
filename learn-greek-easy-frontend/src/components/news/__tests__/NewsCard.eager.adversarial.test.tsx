@@ -51,7 +51,6 @@ vi.mock('@/lib/waveform', () => ({
 
 const BASE: NewsItemResponse = {
   id: 'adv-1',
-  situation_id: 'sit-1',
   title_el: 'Τίτλος',
   title_en: 'Title',
   title_ru: 'Заголовок',

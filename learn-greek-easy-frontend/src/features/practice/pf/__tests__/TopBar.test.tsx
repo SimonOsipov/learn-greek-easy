@@ -9,8 +9,6 @@
  * - TopBar renders without crashing
  */
 
-import React from 'react';
-
 import { render, screen, fireEvent } from '@testing-library/react';
 import i18n from 'i18next';
 import { describe, it, expect, vi } from 'vitest';
@@ -52,6 +50,8 @@ function makeCard(id: string, cardType = 'meaning_el_to_en'): StudyQueueCard {
     translation_ru: null,
     translation_ru_plural: null,
     sentence_ru: null,
+    example_el: null,
+    example_en: null,
   };
 }
 

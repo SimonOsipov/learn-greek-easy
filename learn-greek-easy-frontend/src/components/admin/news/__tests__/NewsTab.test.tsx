@@ -9,10 +9,7 @@
  * - Drawer close URL wiring deferred to NEWS-06.
  */
 
-import React from 'react';
-
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

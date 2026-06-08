@@ -120,7 +120,6 @@ describe('MetricCard', () => {
       // passing it would cause a TS error (verified by the build passing).
       // This test documents the expected behavior.
 
-      // @ts-expect-error - onClick should not be a valid prop
       const propsWithOnClick = { ...defaultProps, onClick: () => {} };
 
       // We can still render, but onClick won't be used
@@ -131,7 +130,6 @@ describe('MetricCard', () => {
     });
 
     it('should NOT accept tooltip prop in TypeScript', () => {
-      // @ts-expect-error - tooltip should not be a valid prop
       const propsWithTooltip = { ...defaultProps, tooltip: 'Some tooltip' };
 
       render(<MetricCard {...propsWithTooltip} />);

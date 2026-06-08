@@ -20,8 +20,6 @@
  * - TranslationEnToEl: Greek display word stays Noto Serif / lang="el" — N/A (display word is English)
  */
 
-import React from 'react';
-
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 

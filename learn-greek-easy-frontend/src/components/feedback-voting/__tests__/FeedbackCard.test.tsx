@@ -221,7 +221,12 @@ describe('FeedbackCard', () => {
       // Import and mock useAuth for this specific test
       const { useAuth } = await import('@/hooks/useAuth');
       vi.mocked(useAuth).mockReturnValue({
-        user: { id: 'author-456', role: 'free', email: 'test@test.com', name: 'Test' },
+        user: {
+          id: 'author-456',
+          role: 'free',
+          email: 'test@test.com',
+          name: 'Test',
+        } as import('@/types/auth').User,
         isAuthenticated: true,
         isLoading: false,
         error: null,

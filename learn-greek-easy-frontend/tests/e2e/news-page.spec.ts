@@ -12,7 +12,8 @@
  * This creates 25 news items (10 with questions, 15 without).
  */
 
-import { test, expect, Page, APIRequestContext } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import type { Page, APIRequestContext } from '@playwright/test';
 import { verifyAuthSucceeded } from './helpers/auth-helpers';
 
 /**

@@ -99,7 +99,7 @@ describe('adminCardErrorStore — fetchErrorList status param forwarding', () =>
     });
 
     expect(adminAPI.listCardErrors).toHaveBeenCalledOnce();
-    const call = vi.mocked(adminAPI.listCardErrors).mock.calls[0][0];
+    const call = vi.mocked(adminAPI.listCardErrors).mock.calls[0]![0]!;
     expect(call.status).toBeUndefined();
   });
 
@@ -111,7 +111,7 @@ describe('adminCardErrorStore — fetchErrorList status param forwarding', () =>
     });
 
     expect(adminAPI.listCardErrors).toHaveBeenCalledOnce();
-    const call = vi.mocked(adminAPI.listCardErrors).mock.calls[0][0];
+    const call = vi.mocked(adminAPI.listCardErrors).mock.calls[0]![0]!;
     expect(call.status).toBeUndefined();
   });
 
@@ -123,7 +123,7 @@ describe('adminCardErrorStore — fetchErrorList status param forwarding', () =>
     });
 
     expect(adminAPI.listCardErrors).toHaveBeenCalledOnce();
-    const call = vi.mocked(adminAPI.listCardErrors).mock.calls[0][0];
+    const call = vi.mocked(adminAPI.listCardErrors).mock.calls[0]![0]!;
     expect(call.status).toBe('FIXED');
   });
 
@@ -134,7 +134,7 @@ describe('adminCardErrorStore — fetchErrorList status param forwarding', () =>
       await useAdminCardErrorStore.getState().fetchErrorList();
     });
 
-    const call = vi.mocked(adminAPI.listCardErrors).mock.calls[0][0];
+    const call = vi.mocked(adminAPI.listCardErrors).mock.calls[0]![0]!;
     expect(call.status).toBe('PENDING');
   });
 
@@ -145,7 +145,7 @@ describe('adminCardErrorStore — fetchErrorList status param forwarding', () =>
       await useAdminCardErrorStore.getState().fetchErrorList();
     });
 
-    const call = vi.mocked(adminAPI.listCardErrors).mock.calls[0][0];
+    const call = vi.mocked(adminAPI.listCardErrors).mock.calls[0]![0]!;
     expect(call.status).toBe('DISMISSED');
   });
 
@@ -156,7 +156,7 @@ describe('adminCardErrorStore — fetchErrorList status param forwarding', () =>
       await useAdminCardErrorStore.getState().fetchErrorList();
     });
 
-    const call = vi.mocked(adminAPI.listCardErrors).mock.calls[0][0];
+    const call = vi.mocked(adminAPI.listCardErrors).mock.calls[0]![0]!;
     expect(call.card_type).toBe('CULTURE');
   });
 

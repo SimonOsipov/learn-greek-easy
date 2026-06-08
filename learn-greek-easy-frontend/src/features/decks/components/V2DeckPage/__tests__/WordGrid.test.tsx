@@ -9,8 +9,6 @@
  * Note: Individual WordCard tests are in components/__tests__/WordCard.test.tsx
  */
 
-import React from 'react';
-
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect } from 'vitest';
@@ -38,7 +36,7 @@ const mockWordEntries: WordEntryResponse[] = [
     id: '1',
     deck_id: 'deck-1',
     lemma: 'test',
-    part_of_speech: 'NOUN',
+    part_of_speech: 'noun',
     translation_en: 'test translation',
     translation_en_plural: null,
     translation_ru: 'test russian',
@@ -47,6 +45,8 @@ const mockWordEntries: WordEntryResponse[] = [
     grammar_data: null,
     examples: null,
     audio_key: null,
+    audio_url: null,
+    audio_status: 'missing',
     is_active: true,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
@@ -55,7 +55,7 @@ const mockWordEntries: WordEntryResponse[] = [
     id: '2',
     deck_id: 'deck-1',
     lemma: 'another',
-    part_of_speech: 'VERB',
+    part_of_speech: 'verb',
     translation_en: 'another translation',
     translation_en_plural: null,
     translation_ru: null,
@@ -64,6 +64,8 @@ const mockWordEntries: WordEntryResponse[] = [
     grammar_data: null,
     examples: null,
     audio_key: 'audio-key',
+    audio_url: null,
+    audio_status: 'missing',
     is_active: true,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
@@ -72,7 +74,7 @@ const mockWordEntries: WordEntryResponse[] = [
     id: '3',
     deck_id: 'deck-1',
     lemma: 'third',
-    part_of_speech: 'ADJECTIVE',
+    part_of_speech: 'adjective',
     translation_en: 'third translation',
     translation_en_plural: null,
     translation_ru: null,
@@ -81,6 +83,8 @@ const mockWordEntries: WordEntryResponse[] = [
     grammar_data: null,
     examples: null,
     audio_key: null,
+    audio_url: null,
+    audio_status: 'missing',
     is_active: true,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
@@ -359,7 +363,6 @@ describe('WordGridSkeleton Component', () => {
     expect(card).toBeInTheDocument();
 
     // Card should contain Skeleton elements (they have skeleton class)
-    const skeletonElements = skeleton.querySelectorAll('[class*="animate-pulse"]');
     // Note: Skeleton components use animate-pulse or similar - check for multiple elements
     expect(card?.childNodes.length).toBeGreaterThan(0);
   });
@@ -376,7 +379,7 @@ describe('getWordGender', () => {
     id: 'w1',
     deck_id: 'd1',
     lemma: 'λέξη',
-    part_of_speech: 'NOUN',
+    part_of_speech: 'noun',
     translation_en: 'word',
     translation_en_plural: null,
     translation_ru: null,

@@ -211,10 +211,8 @@ test.describe.skip('Admin Culture Cards - Create from Deck Detail', () => {
     }).first();
 
     // Try culture deck first, fall back to any deck if not found
-    let clickedCultureDeck = false;
     if (await cultureDeckRow.isVisible({ timeout: 2000 }).catch(() => false)) {
       await cultureDeckRow.click();
-      clickedCultureDeck = true;
     } else {
       // Try any deck row as fallback
       const anyDeckRow = page.locator('[data-testid^="deck-row-"]').first();
@@ -239,7 +237,6 @@ test.describe.skip('Admin Culture Cards - Create from Deck Detail', () => {
     // Wait for either culture or vocabulary create modal to appear
     // Culture decks open card-create-modal, vocabulary decks open vocabulary-card-create-modal
     const cultureCreateModal = page.getByTestId('card-create-modal');
-    const vocabCreateModal = page.getByTestId('vocabulary-card-create-modal');
 
     // Check which modal opened
     const isCultureModal = await cultureCreateModal.isVisible({ timeout: 3000 }).catch(() => false);

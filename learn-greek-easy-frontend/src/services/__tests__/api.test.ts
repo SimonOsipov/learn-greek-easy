@@ -44,9 +44,16 @@ vi.mock('@/lib/supabaseClient', () => {
 });
 
 // Get mocked functions after module is mocked
-import { supabase } from '@/lib/supabaseClient';
-const mockGetSession = vi.mocked(supabase.auth.getSession);
-const mockSignOut = vi.mocked(supabase.auth.signOut);
+// The vi.mock factory above exports `supabase`; we access it via module namespace cast
+// because the real module type only exports `getSupabase`.
+import * as supabaseClientModule from '@/lib/supabaseClient';
+const mockedSupabase = (
+  supabaseClientModule as unknown as {
+    supabase: { auth: { getSession: ReturnType<typeof vi.fn>; signOut: ReturnType<typeof vi.fn> } };
+  }
+).supabase;
+const mockGetSession = vi.mocked(mockedSupabase.auth.getSession);
+const mockSignOut = vi.mocked(mockedSupabase.auth.signOut);
 
 vi.mock('@/i18n', () => ({
   default: { language: 'en' },

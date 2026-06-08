@@ -10,8 +10,6 @@
  * - Total UnwiredDots in the strip === 0
  */
 
-import React from 'react';
-
 import { render, screen, within } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import { describe, it, expect } from 'vitest';

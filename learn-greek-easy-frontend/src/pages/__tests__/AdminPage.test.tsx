@@ -12,8 +12,6 @@
  * Badge DOM: <span class="va-tab-n">. Scoped via within(tablist).
  */
 
-import React from 'react';
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -86,7 +84,7 @@ vi.mock('@/stores/adminSituationStore', () => ({
     };
     return selector ? selector(state) : state;
   },
-  selectStatsTotals: (state: { situations: unknown[] }) => ({
+  selectStatsTotals: (_state: { situations: unknown[] }) => ({
     total: 0,
     draft: 0,
     ready: 0,

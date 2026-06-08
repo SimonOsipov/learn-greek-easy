@@ -70,10 +70,10 @@ const WORD_ENTRY_ID = 'word-1';
 const makeWordEntry = (overrides: Partial<WordEntryResponse> = {}): WordEntryResponse =>
   ({
     id: WORD_ENTRY_ID,
-    audio_status: 'pending',
+    audio_status: 'generating',
     examples: [
-      { id: 'ex-1', audio_status: 'pending' },
-      { id: 'ex-2', audio_status: 'pending' },
+      { id: 'ex-1', audio_status: 'generating' },
+      { id: 'ex-2', audio_status: 'generating' },
     ],
     ...overrides,
   }) as unknown as WordEntryResponse;
@@ -198,7 +198,7 @@ describe('useGenerateAudio SSE state machine', () => {
     const cached = queryClient.getQueryData<WordEntryResponse>(['wordEntry', WORD_ENTRY_ID]);
     expect(cached?.audio_status).toBe('ready');
     // Examples untouched
-    expect(cached?.examples?.every((ex) => ex.audio_status === 'pending')).toBe(true);
+    expect(cached?.examples?.every((ex) => ex.audio_status === 'generating')).toBe(true);
   });
 
   it('part_complete by example_id updates only the matching example', () => {
@@ -219,9 +219,9 @@ describe('useGenerateAudio SSE state machine', () => {
     const ex2 = cached?.examples?.find((e) => e.id === 'ex-2');
     expect(ex2?.audio_status).toBe('ready');
     // Only the matching example changed
-    expect(ex1?.audio_status).toBe('pending');
+    expect(ex1?.audio_status).toBe('generating');
     // Lemma root untouched
-    expect(cached?.audio_status).toBe('pending');
+    expect(cached?.audio_status).toBe('generating');
   });
 
   it('part_complete with a mismatched example_id leaves the cache unchanged', () => {
@@ -240,8 +240,8 @@ describe('useGenerateAudio SSE state machine', () => {
 
     const cached = queryClient.getQueryData<WordEntryResponse>(['wordEntry', WORD_ENTRY_ID]);
     // No example was corrupted; all still pending
-    expect(cached?.examples?.every((ex) => ex.audio_status === 'pending')).toBe(true);
-    expect(cached?.audio_status).toBe('pending');
+    expect(cached?.examples?.every((ex) => ex.audio_status === 'generating')).toBe(true);
+    expect(cached?.audio_status).toBe('generating');
   });
 
   it('part_complete for an example with null example_id leaves the cache unchanged', () => {
@@ -258,8 +258,8 @@ describe('useGenerateAudio SSE state machine', () => {
     });
 
     const cached = queryClient.getQueryData<WordEntryResponse>(['wordEntry', WORD_ENTRY_ID]);
-    expect(cached?.examples?.every((ex) => ex.audio_status === 'pending')).toBe(true);
-    expect(cached?.audio_status).toBe('pending');
+    expect(cached?.examples?.every((ex) => ex.audio_status === 'generating')).toBe(true);
+    expect(cached?.audio_status).toBe('generating');
   });
 
   it('complete event closes the stream, invalidates the query, and shows a success toast', () => {

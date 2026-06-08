@@ -2,12 +2,10 @@
 //
 // NEWS-07b / NADM-20: NewsEditDrawerBody — unit tests.
 
-import React from 'react';
-
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FormProvider, useForm } from 'react-hook-form';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import type { NewsItemResponse } from '@/services/adminAPI';
 

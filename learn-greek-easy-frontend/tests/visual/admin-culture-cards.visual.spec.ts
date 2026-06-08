@@ -11,6 +11,7 @@
  */
 
 import { test, expect } from '@chromatic-com/playwright';
+import type { Route } from '@playwright/test';
 import {
   takeSnapshot,
   loginForVisualTest,
@@ -21,30 +22,6 @@ import {
 // ============================================================================
 // MOCK DATA
 // ============================================================================
-
-const mockCultureDecks = [
-  {
-    id: 'deck-001',
-    name: 'Greek Traditions',
-    category: 'Culture',
-    question_count: 25,
-    is_active: true,
-  },
-  {
-    id: 'deck-002',
-    name: 'Greek History',
-    category: 'History',
-    question_count: 30,
-    is_active: true,
-  },
-  {
-    id: 'deck-003',
-    name: 'Greek Geography',
-    category: 'Geography',
-    question_count: 15,
-    is_active: true,
-  },
-];
 
 const mockCultureQuestionTwoAnswers = {
   id: 'question-001',
@@ -756,15 +733,28 @@ test.describe('CardEditModal - Visual Tests', () => {
     });
   });
 
+  type CultureQuestion = {
+    id: string;
+    question_text: { ru: string; el: string; en: string };
+    option_a: { ru: string; el: string; en: string };
+    option_b: { ru: string; el: string; en: string };
+    option_c: { ru: string; el: string; en: string } | null;
+    option_d: { ru: string; el: string; en: string } | null;
+    correct_option: number;
+    source_article_url: string | null;
+    is_pending_review: boolean;
+    created_at: string;
+  };
+
   // Helper to set up deck detail page with questions
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function setupDeckDetailWithQuestions(
     page: any,
-    questions: (typeof mockCultureQuestionFourAnswers)[]
+    questions: CultureQuestion[]
   ) {
     // Mock decks API
-    await page.route('**/api/v1/admin/decks*', (route) => {
-      route.fulfill({
+    await page.route('**/api/v1/admin/decks*', (route: Route) => {
+      void route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
@@ -791,8 +781,8 @@ test.describe('CardEditModal - Visual Tests', () => {
     });
 
     // Mock culture questions for deck detail
-    await page.route('**/api/v1/admin/culture/decks/deck-001/questions*', (route) => {
-      route.fulfill({
+    await page.route('**/api/v1/admin/culture/decks/deck-001/questions*', (route: Route) => {
+      void route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
@@ -806,8 +796,8 @@ test.describe('CardEditModal - Visual Tests', () => {
     });
 
     // Mock stats API
-    await page.route('**/api/v1/admin/stats*', (route) => {
-      route.fulfill({
+    await page.route('**/api/v1/admin/stats*', (route: Route) => {
+      void route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({

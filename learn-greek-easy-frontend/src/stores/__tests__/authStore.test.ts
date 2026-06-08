@@ -3,7 +3,6 @@
 import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { queryClient } from '@/lib/queryClient';
-import { supabase } from '@/lib/supabaseClient';
 import { authAPI } from '@/services/authAPI';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -124,21 +123,20 @@ describe.skip('authStore (uses persist middleware)', () => {
 // Shared mocks (apply to all describe blocks below)
 // ---------------------------------------------------------------------------
 
-vi.mock('@/lib/supabaseClient', () => {
-  const mockSupabase = {
-    auth: {
-      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
-      signOut: vi.fn().mockResolvedValue({ error: null }),
-      onAuthStateChange: vi.fn().mockReturnValue({
-        data: { subscription: { unsubscribe: vi.fn() } },
-      }),
-    },
-  };
-  return {
-    supabase: mockSupabase,
-    getSupabase: vi.fn(() => Promise.resolve(mockSupabase)),
-  };
-});
+// Define mockSupabase at module scope so test code can reference it directly.
+const mockSupabase = vi.hoisted(() => ({
+  auth: {
+    getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
+    signOut: vi.fn().mockResolvedValue({ error: null }),
+    onAuthStateChange: vi.fn().mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    }),
+  },
+}));
+
+vi.mock('@/lib/supabaseClient', () => ({
+  getSupabase: vi.fn(() => Promise.resolve(mockSupabase)),
+}));
 
 vi.mock('posthog-js', () => ({
   default: { capture: vi.fn(), reset: vi.fn(), identify: vi.fn() },
@@ -214,7 +212,7 @@ const minimalProfile = {
 };
 
 describe('authStore — checkAuth in-flight dedup (PERF-03)', () => {
-  const getSession = supabase.auth.getSession as ReturnType<typeof vi.fn>;
+  const getSession = mockSupabase.auth.getSession as ReturnType<typeof vi.fn>;
   const getProfile = authAPI.getProfile as ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -309,7 +307,7 @@ const preservedUser04 = {
 };
 
 describe('authStore — logout-race epoch guard (PERF-02-04)', () => {
-  const getSession = supabase.auth.getSession as ReturnType<typeof vi.fn>;
+  const getSession = mockSupabase.auth.getSession as ReturnType<typeof vi.fn>;
   const getProfile = authAPI.getProfile as ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -684,7 +682,7 @@ const EPOCH_STEP = 60_000; // 60 s > 30 s freshness window
 let perf02FakeEpoch = Date.now(); // start at real time, incremented each beforeEach
 
 describe('authStore — checkAuth background revalidation (PERF-02)', () => {
-  const getSession = supabase.auth.getSession as ReturnType<typeof vi.fn>;
+  const getSession = mockSupabase.auth.getSession as ReturnType<typeof vi.fn>;
   const getProfile = authAPI.getProfile as ReturnType<typeof vi.fn>;
 
   beforeEach(() => {

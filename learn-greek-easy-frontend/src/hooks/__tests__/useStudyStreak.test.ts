@@ -144,9 +144,10 @@ describe('useStudyStreak Hook', () => {
 
   it('should handle zero streak values', () => {
     const { queryClient, wrapper } = makeWrapper();
+    const zeroDate = new Date('2025-01-01');
     queryClient.setQueryData(['analytics', 'user-123', 'last7'], {
       ...fixtureData,
-      streak: { currentStreak: 0, longestStreak: 0, lastStudyDate: null },
+      streak: { ...mockStreakData, currentStreak: 0, longestStreak: 0, lastActivityDate: zeroDate },
     });
     mockGetAnalytics.mockResolvedValue(fixtureData);
 
@@ -154,7 +155,7 @@ describe('useStudyStreak Hook', () => {
 
     expect(result.current.streak?.currentStreak).toBe(0);
     expect(result.current.streak?.longestStreak).toBe(0);
-    expect(result.current.streak?.lastStudyDate).toBeNull();
+    expect(result.current.streak?.lastActivityDate).toEqual(zeroDate);
   });
 
   it('should update when streak changes in cache', async () => {

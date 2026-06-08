@@ -38,6 +38,7 @@
 import * as fs from 'fs';
 
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 import { getSupabaseStorageKey } from './helpers/supabase-test-client';
 
@@ -140,7 +141,7 @@ test.describe('Card Audio Playback', () => {
     cardId: string,
     wordEntryId: string,
     deckId: string,
-    audioUrl: string
+    _audioUrl: string
   ) {
     const baseCard = {
       id: cardId,
@@ -253,7 +254,7 @@ test.describe('Card Audio Playback', () => {
    * Pass audioUrl: null explicitly to simulate a card with no audio.
    */
   async function setupAudioMocks(
-    page: Parameters<Parameters<typeof test>[1]>[0],
+    page: Page,
     options: {
       audioUrl?: string | null;
       cardType?: string;

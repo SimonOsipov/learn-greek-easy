@@ -10,8 +10,6 @@
  * - Family class set on each tick per card_type
  */
 
-import React from 'react';
-
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 
@@ -43,6 +41,8 @@ function makeCard(id: string, cardType = 'meaning_el_to_en'): StudyQueueCard {
     translation_ru: null,
     translation_ru_plural: null,
     sentence_ru: null,
+    example_el: null,
+    example_en: null,
   };
 }
 

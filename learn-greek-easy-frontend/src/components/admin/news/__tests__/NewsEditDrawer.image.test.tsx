@@ -105,6 +105,9 @@ function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
     has_a2_content: false,
     alt_text: null,
     photo_credit: null,
+    status: 'published' as const,
+    linked_situation: null,
+    image_variants: null,
     ...overrides,
   };
 }

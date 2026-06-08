@@ -50,7 +50,7 @@ const mockFetchNewsItems = vi.fn().mockResolvedValue(undefined);
 
 const storeState = {
   drawerItemId: null as string | null,
-  newsItems: [] as ReturnType<typeof makeItem>[],
+  newsItems: [] as import('@/services/adminAPI').NewsItemResponse[],
   closeDrawer: mockCloseDrawer,
   fetchNewsItems: mockFetchNewsItems,
 };
@@ -69,11 +69,13 @@ vi.mock('@/stores/adminNewsStore', () => ({
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function makeItem(overrides: Partial<ReturnType<typeof _buildItem>> = {}) {
+function makeItem(
+  overrides: Partial<import('@/services/adminAPI').NewsItemResponse> = {}
+): import('@/services/adminAPI').NewsItemResponse {
   return { ..._buildItem(), ...overrides };
 }
 
-function _buildItem() {
+function _buildItem(): import('@/services/adminAPI').NewsItemResponse {
   return {
     id: 'item-1',
     title_el: 'Ελληνικός τίτλος',
@@ -91,7 +93,7 @@ function _buildItem() {
     audio_file_size_bytes: null,
     created_at: '2025-01-10T10:00:00Z',
     updated_at: '2025-01-14T12:00:00Z',
-    country: 'greece' as const,
+    country: 'greece',
     title_el_a2: null,
     description_el_a2: null,
     audio_a2_url: null,
@@ -101,8 +103,9 @@ function _buildItem() {
     has_a2_content: false,
     alt_text: null,
     photo_credit: null,
-    status: 'published' as 'draft' | 'published',
+    status: 'published' as const,
     linked_situation: null as import('@/services/adminAPI').LinkedSituationSummary | null,
+    image_variants: null,
   };
 }
 

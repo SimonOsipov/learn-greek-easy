@@ -17,6 +17,7 @@ import React from 'react';
 
 import { useWordEntryCards } from '../useWordEntryCards';
 import { wordEntryAPI } from '@/services/wordEntryAPI';
+import type { CardRecordResponse } from '@/services/wordEntryAPI';
 
 // Mock the wordEntryAPI
 vi.mock('@/services/wordEntryAPI', () => ({
@@ -26,7 +27,7 @@ vi.mock('@/services/wordEntryAPI', () => ({
 }));
 
 // Mock card records data
-const mockCards = [
+const mockCards: CardRecordResponse[] = [
   {
     id: 'card-1',
     word_entry_id: 'word-1',

@@ -86,6 +86,14 @@ jobs:
           # Exit with tsc's actual code — job is required, non-zero blocks merge.
           exit $TSC_EXIT
 
+      # Type-check the TEST files too (INFRA-06 / I18NG-01). `tsc -b` above only
+      # covers app+node sources (tests are excluded from tsconfig.app.json). This
+      # standalone pass type-checks vitest + playwright specs so i18n key typos and
+      # other test-code type errors are caught. 0 errors required.
+      - name: Type-check test files (typecheck:test)
+        working-directory: learn-greek-easy-frontend
+        run: npm run typecheck:test
+
   # Job 2: Backend Lint & Format
   backend-lint:
     name: Backend Lint & Format

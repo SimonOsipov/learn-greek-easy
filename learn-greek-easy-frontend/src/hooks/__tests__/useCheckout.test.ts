@@ -10,7 +10,7 @@ import * as billingAPIModule from '@/services/billingAPI';
 
 vi.mock('@/services/billingAPI');
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string, fallback: string) => fallback }),
+  useTranslation: () => ({ t: (_key: string, fallback: string) => fallback }),
 }));
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
 vi.mock('@/lib/errorReporting', () => ({ reportAPIError: vi.fn() }));

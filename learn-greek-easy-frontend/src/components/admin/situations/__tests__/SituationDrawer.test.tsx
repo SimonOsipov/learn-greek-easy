@@ -39,7 +39,7 @@ const mockFetchSituations = vi.fn().mockResolvedValue(undefined);
 
 const storeState = {
   drawerItemId: null as string | null,
-  selectedSituation: null as ReturnType<typeof makeDetail> | null,
+  selectedSituation: null as import('@/types/situation').SituationDetailResponse | null,
   isLoadingDetail: false,
   situations: [] as ReturnType<typeof makeListItem>[],
   closeDrawer: mockCloseDrawer,
@@ -69,7 +69,7 @@ function _buildListItem() {
     scenario_el: 'Ελληνικό σενάριο',
     scenario_en: 'English scenario',
     scenario_ru: 'Русский сценарий',
-    status: 'draft' as const,
+    status: 'draft',
     created_at: '2025-01-10T10:00:00Z',
     has_dialog: true,
     has_description: false,
@@ -90,23 +90,25 @@ function _buildListItem() {
   };
 }
 
-function makeDetail(overrides: Partial<ReturnType<typeof _buildDetail>> = {}) {
+function makeDetail(
+  overrides: Partial<import('@/types/situation').SituationDetailResponse> = {}
+): import('@/types/situation').SituationDetailResponse {
   return { ..._buildDetail(), ...overrides };
 }
 
-function _buildDetail() {
+function _buildDetail(): import('@/types/situation').SituationDetailResponse {
   return {
     id: 'sit-1',
     scenario_el: 'Ελληνικό σενάριο',
     scenario_en: 'English scenario',
     scenario_ru: 'Русский сценарий',
-    status: 'draft' as const,
+    status: 'draft',
     created_at: '2025-01-10T10:00:00Z',
     updated_at: '2025-01-14T12:00:00Z',
     levels: [] as string[],
     dialog: {
       id: 'dlg-1',
-      status: 'draft' as const,
+      status: 'draft',
       num_speakers: 2,
       audio_duration_seconds: null,
       audio_url: null,
@@ -138,6 +140,7 @@ function _buildDetail() {
     },
     description: null,
     picture: null,
+    linked_news: null,
   };
 }
 

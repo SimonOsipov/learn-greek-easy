@@ -24,7 +24,6 @@ function makeAnnouncement(overrides: Partial<AnnouncementItem> = {}): Announceme
     total_recipients: 100,
     read_count: 20,
     created_at: '2026-01-15T10:00:00Z',
-    creator: null,
     ...overrides,
   };
 }

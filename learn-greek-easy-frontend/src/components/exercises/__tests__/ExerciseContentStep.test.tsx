@@ -4,6 +4,7 @@ import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ExerciseContentStep } from '@/components/exercises/ExerciseContentStep';
+import type { DeckLevel } from '@/services/exerciseAPI';
 import { renderWithProviders } from '@/lib/test-utils';
 
 // Mock WaveformPlayer since it requires audio context
@@ -24,7 +25,7 @@ vi.mock('@/components/culture/WaveformPlayer', () => ({
 
 const defaultProps = {
   modality: null as 'listening' | 'reading' | null,
-  audioLevel: null as string | null,
+  audioLevel: null as DeckLevel | null,
   descriptionTextEl: null as string | null,
   descriptionAudioUrl: null as string | null,
   descriptionAudioDuration: null as number | null,

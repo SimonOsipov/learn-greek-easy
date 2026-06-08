@@ -46,6 +46,7 @@ const mockEnToElCard: CardRecordResponse = {
   deck_id: 'deck-001',
   card_type: 'meaning_en_to_el',
   tier: 1,
+  variant_key: '',
   front_content: {
     card_type: 'meaning_en_to_el',
     prompt: 'How do you say this in Greek?',
@@ -71,6 +72,7 @@ const mockTargetToElSentenceCard: CardRecordResponse = {
   deck_id: 'deck-001',
   card_type: 'sentence_translation',
   tier: 1,
+  variant_key: '',
   front_content: {
     card_type: 'sentence_translation',
     prompt: 'Translate to Greek',

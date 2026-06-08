@@ -74,16 +74,13 @@ vi.mock('../../exercises/ExerciseItemPayload', () => ({
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-function makeExercise(id: string) {
+function makeExercise(id: string): import('@/types/situation').SituationExerciseResponse {
   return {
     id,
     exercise_type: 'fill_gaps',
     status: 'draft',
-    modality: 'reading',
-    audio_level: null,
-    audio_url: null,
-    reading_text: null,
     items: [],
+    modality: 'reading',
   };
 }
 
@@ -114,6 +111,8 @@ function makeSituation(id = 'sit-1'): SituationDetailResponse {
     description: null,
     picture: null,
     dialog: null,
+    levels: [],
+    linked_news: null,
   };
 }
 

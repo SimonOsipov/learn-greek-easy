@@ -20,8 +20,8 @@
  * This creates 12 changelog entries with varied tags and dates.
  */
 
-import { test, expect, Page, APIRequestContext } from '@playwright/test';
-import { navigateToAdminTab } from './helpers/admin-helpers';
+import { test, expect } from '@playwright/test';
+import type { Page, APIRequestContext } from '@playwright/test';
 import { verifyAuthSucceeded } from './helpers/auth-helpers';
 
 /**

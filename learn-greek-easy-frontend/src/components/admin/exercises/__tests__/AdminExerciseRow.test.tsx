@@ -61,9 +61,8 @@ function renderRow(exercise: AdminExerciseListItem, isOpen = false) {
 
 describe('AdminExerciseRow badge rendering (EXR-70)', () => {
   it('source badge: description renders with blue tone class', () => {
-    const { container } = renderRow(makeExercise({ source_type: 'description' }));
+    const { container: _container } = renderRow(makeExercise({ source_type: 'description' }));
     // Badge with 'blue' tone has a blue-related class
-    const badges = container.querySelectorAll('[class*="badge"], [class*="tone"]');
     // The first badge (source) should contain text 'Description' (or have its icon)
     expect(screen.getByText('Description')).toBeTruthy();
   });

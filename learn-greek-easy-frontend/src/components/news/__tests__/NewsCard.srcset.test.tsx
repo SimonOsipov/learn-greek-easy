@@ -9,7 +9,7 @@
  * - loading="lazy" attribute present
  */
 
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { NewsItemResponse } from '@/services/adminAPI';
@@ -30,7 +30,6 @@ vi.mock('@/lib/waveform', () => ({
 
 const baseArticle: NewsItemResponse = {
   id: 'news-1',
-  situation_id: 'sit-1',
   title_el: 'Τίτλος',
   title_en: 'Title',
   title_ru: 'Заголовок',
@@ -59,7 +58,6 @@ const baseArticle: NewsItemResponse = {
   photo_credit: null,
   status: 'published',
   linked_situation: null,
-  situation_title_el: null,
 };
 
 describe('NewsCard srcset (PERF-10)', () => {
@@ -126,7 +124,6 @@ describe('NewsCard eager loading (PERF-04-02)', () => {
   const articleWithVariants: NewsItemResponse = {
     ...{
       id: 'news-eager',
-      situation_id: 'sit-1',
       title_el: 'Τίτλος',
       title_en: 'Title',
       title_ru: 'Заголовок',

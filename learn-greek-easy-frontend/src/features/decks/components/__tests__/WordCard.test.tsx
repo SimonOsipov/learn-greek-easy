@@ -23,7 +23,7 @@ const mockWordEntry: WordEntryResponse = {
   id: 'test-word-id',
   deck_id: 'test-deck-id',
   lemma: 'μιλάω',
-  part_of_speech: 'VERB',
+  part_of_speech: 'verb',
   translation_en: 'to speak, to talk',
   translation_en_plural: null,
   translation_ru: 'говорить',
@@ -32,6 +32,8 @@ const mockWordEntry: WordEntryResponse = {
   grammar_data: null,
   examples: null,
   audio_key: null,
+  audio_url: null,
+  audio_status: 'missing',
   is_active: true,
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
@@ -76,7 +78,7 @@ describe('WordCard', () => {
     });
 
     it('abbreviates adjective to adj.', () => {
-      const adjEntry = { ...mockWordEntry, part_of_speech: 'adjective' };
+      const adjEntry: typeof mockWordEntry = { ...mockWordEntry, part_of_speech: 'adjective' };
       render(<WordCard wordEntry={adjEntry} />);
       const pos = screen.getByTestId('word-card-pos');
       expect(pos).toHaveTextContent('adj.');
@@ -284,8 +286,6 @@ describe('WordCardSkeleton', () => {
 // ============================================================
 // DX-08: Gender kicker + mastery tests
 // ============================================================
-
-import type { WordGender } from '../V2DeckPage/WordGrid';
 
 describe('WordCard — DX-08 gender kicker', () => {
   const baseEntry: WordEntryResponse = {

@@ -11,8 +11,6 @@
  * Related feature: [NGEN-08] Generate Noun Dialog
  */
 
-import React from 'react';
-
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';

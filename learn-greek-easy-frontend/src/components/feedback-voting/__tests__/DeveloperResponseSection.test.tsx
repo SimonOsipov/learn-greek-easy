@@ -16,7 +16,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale/ru';
 import i18n from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 import { DeveloperResponseSection } from '../DeveloperResponseSection';
 

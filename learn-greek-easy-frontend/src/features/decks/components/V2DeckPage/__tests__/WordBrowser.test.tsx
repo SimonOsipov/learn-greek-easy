@@ -25,6 +25,7 @@ import { WordBrowser } from '../WordBrowser';
 import i18n from '@/i18n';
 import { progressAPI } from '@/services/progressAPI';
 import { wordEntryAPI } from '@/services/wordEntryAPI';
+import type { WordEntryResponse } from '@/services/wordEntryAPI';
 
 // Mock the wordEntryAPI
 vi.mock('@/services/wordEntryAPI', () => ({
@@ -41,12 +42,12 @@ vi.mock('@/services/progressAPI', () => ({
 }));
 
 // Mock word entries data
-const mockWordEntries = [
+const mockWordEntries: WordEntryResponse[] = [
   {
     id: '1',
     deck_id: 'deck-1',
     lemma: 'test',
-    part_of_speech: 'NOUN',
+    part_of_speech: 'noun',
     translation_en: 'test english',
     translation_en_plural: null,
     translation_ru: 'test russian',
@@ -55,6 +56,8 @@ const mockWordEntries = [
     grammar_data: null,
     examples: null,
     audio_key: null,
+    audio_url: null,
+    audio_status: 'missing',
     is_active: true,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
@@ -63,7 +66,7 @@ const mockWordEntries = [
     id: '2',
     deck_id: 'deck-1',
     lemma: 'another',
-    part_of_speech: 'VERB',
+    part_of_speech: 'verb',
     translation_en: 'another english',
     translation_en_plural: null,
     translation_ru: null,
@@ -72,6 +75,8 @@ const mockWordEntries = [
     grammar_data: null,
     examples: null,
     audio_key: 'audio-key',
+    audio_url: null,
+    audio_status: 'missing',
     is_active: true,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
@@ -80,7 +85,7 @@ const mockWordEntries = [
     id: '3',
     deck_id: 'deck-1',
     lemma: 'unique',
-    part_of_speech: 'ADJECTIVE',
+    part_of_speech: 'adjective',
     translation_en: 'unique english',
     translation_en_plural: null,
     translation_ru: null,
@@ -89,6 +94,8 @@ const mockWordEntries = [
     grammar_data: null,
     examples: null,
     audio_key: null,
+    audio_url: null,
+    audio_status: 'missing',
     is_active: true,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
@@ -422,6 +429,7 @@ describe('WordBrowser Component', () => {
             mastered_count: 2,
             studied_count: 2,
             total_count: 2,
+            type_progress: [],
           },
         ],
       });
@@ -451,6 +459,7 @@ describe('WordBrowser Component', () => {
             mastered_count: 0,
             studied_count: 1,
             total_count: 2,
+            type_progress: [],
           },
         ],
       });
@@ -673,12 +682,12 @@ describe('WordBrowser Component', () => {
     });
 
     it('should sort words: reviewing first, new second, learned last', async () => {
-      const sortEntries = [
+      const sortEntries: WordEntryResponse[] = [
         {
           id: 'learned-1',
           deck_id: 'deck-1',
           lemma: 'βeta',
-          part_of_speech: 'NOUN',
+          part_of_speech: 'noun',
           translation_en: 'learned word',
           translation_en_plural: null,
           translation_ru: null,
@@ -687,6 +696,8 @@ describe('WordBrowser Component', () => {
           grammar_data: null,
           examples: null,
           audio_key: null,
+          audio_url: null,
+          audio_status: 'missing',
           is_active: true,
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z',
@@ -695,7 +706,7 @@ describe('WordBrowser Component', () => {
           id: 'new-1',
           deck_id: 'deck-1',
           lemma: 'alpha',
-          part_of_speech: 'NOUN',
+          part_of_speech: 'noun',
           translation_en: 'new word',
           translation_en_plural: null,
           translation_ru: null,
@@ -704,6 +715,8 @@ describe('WordBrowser Component', () => {
           grammar_data: null,
           examples: null,
           audio_key: null,
+          audio_url: null,
+          audio_status: 'missing',
           is_active: true,
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z',
@@ -712,7 +725,7 @@ describe('WordBrowser Component', () => {
           id: 'reviewing-1',
           deck_id: 'deck-1',
           lemma: 'gamma',
-          part_of_speech: 'NOUN',
+          part_of_speech: 'noun',
           translation_en: 'reviewing word',
           translation_en_plural: null,
           translation_ru: null,
@@ -721,6 +734,8 @@ describe('WordBrowser Component', () => {
           grammar_data: null,
           examples: null,
           audio_key: null,
+          audio_url: null,
+          audio_status: 'missing',
           is_active: true,
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z',
@@ -739,9 +754,21 @@ describe('WordBrowser Component', () => {
         deck_id: 'deck-1',
         items: [
           // reviewing: studied > 0, not mastered
-          { word_entry_id: 'reviewing-1', mastered_count: 0, studied_count: 2, total_count: 4 },
+          {
+            word_entry_id: 'reviewing-1',
+            mastered_count: 0,
+            studied_count: 2,
+            total_count: 4,
+            type_progress: [],
+          },
           // learned: fully mastered
-          { word_entry_id: 'learned-1', mastered_count: 2, studied_count: 2, total_count: 2 },
+          {
+            word_entry_id: 'learned-1',
+            mastered_count: 2,
+            studied_count: 2,
+            total_count: 2,
+            type_progress: [],
+          },
           // new-1 has no mastery entry
         ],
       });
@@ -830,11 +857,11 @@ describe('WordBrowser Component', () => {
     });
 
     it('should fetch next page when Load More is clicked', async () => {
-      const page2Entry = {
+      const page2Entry: WordEntryResponse = {
         id: '4',
         deck_id: 'deck-1',
         lemma: 'page2word',
-        part_of_speech: 'NOUN',
+        part_of_speech: 'noun',
         translation_en: 'page 2 entry',
         translation_en_plural: null,
         translation_ru: null,
@@ -843,6 +870,8 @@ describe('WordBrowser Component', () => {
         grammar_data: null,
         examples: null,
         audio_key: null,
+        audio_url: null,
+        audio_status: 'missing',
         is_active: true,
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',

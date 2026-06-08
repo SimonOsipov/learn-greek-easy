@@ -57,6 +57,7 @@ const makeDashboard = (
     accuracy_percentage: 85,
     culture_questions_mastered: 3,
     total_study_time_seconds: 1200,
+    culture_weekly_study_time_seconds: 0,
   },
   today: {
     reviews_completed: 5,

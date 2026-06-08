@@ -151,7 +151,9 @@ describe.skip('Registration Flow Integration Tests (Legacy - needs Auth0 rewrite
       );
 
       // Verify auth state is updated correctly
-      const authState = useAuthStore.getState();
+      const authState = useAuthStore.getState() as ReturnType<typeof useAuthStore.getState> & {
+        token?: string;
+      };
       expect(authState.user).toBeTruthy();
       expect(authState.user?.email).toBe('john.smith@example.com');
       expect(authState.user?.name).toBe('John Smith');
@@ -182,7 +184,9 @@ describe.skip('Registration Flow Integration Tests (Legacy - needs Auth0 rewrite
       // Wait for auto-login
       await waitFor(
         () => {
-          const authState = useAuthStore.getState();
+          const authState = useAuthStore.getState() as ReturnType<typeof useAuthStore.getState> & {
+            token?: string;
+          };
           expect(authState.isAuthenticated).toBe(true);
           expect(authState.token).toBeTruthy();
         },
@@ -217,7 +221,9 @@ describe.skip('Registration Flow Integration Tests (Legacy - needs Auth0 rewrite
 
       // Verify auth state has the user data
       // Note: localStorage persistence requires rememberMe=true, which registration doesn't set
-      const authState = useAuthStore.getState();
+      const authState = useAuthStore.getState() as ReturnType<typeof useAuthStore.getState> & {
+        token?: string;
+      };
       expect(authState.user).toBeTruthy();
       expect(authState.user?.email).toBe('test.user@example.com');
       expect(authState.user?.name).toBe('Test User');

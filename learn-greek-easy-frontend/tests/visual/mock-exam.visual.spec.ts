@@ -17,8 +17,8 @@
  * that can be fully mocked.
  */
 
-import { test, expect } from '@chromatic-com/playwright';
-import { Page } from '@playwright/test';
+import { test } from '@chromatic-com/playwright';
+import type { Page } from '@playwright/test';
 
 import {
   takeSnapshot,

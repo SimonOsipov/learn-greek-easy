@@ -15,19 +15,8 @@ import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vite
 import userEvent from '@testing-library/user-event';
 
 import { ChangelogPage } from '@/pages/ChangelogPage';
-import { render, screen, waitFor, act } from '@/lib/test-utils';
-import {
-  useChangelogStore,
-  selectActiveTag,
-  selectAllItems,
-  selectChangelogItems,
-  selectChangelogLoading,
-  selectChangelogError,
-  selectChangelogPage,
-  selectChangelogPageSize,
-  selectChangelogTotal,
-  selectChangelogTotalPages,
-} from '@/stores/changelogStore';
+import { render, screen, waitFor } from '@/lib/test-utils';
+import { useChangelogStore } from '@/stores/changelogStore';
 import { track } from '@/lib/analytics';
 
 // Mock the changelog store

@@ -134,7 +134,9 @@ describe.skip('Login Flow Integration Tests (Legacy - needs Auth0 rewrite)', () 
       );
 
       // Verify auth state is updated correctly
-      const authState = useAuthStore.getState();
+      const authState = useAuthStore.getState() as ReturnType<typeof useAuthStore.getState> & {
+        token?: string;
+      };
       expect(authState.user).toBeTruthy();
       expect(authState.user?.email).toBe('demo@learngreekeasy.com');
       expect(authState.token).toBeTruthy();
@@ -206,7 +208,9 @@ describe.skip('Login Flow Integration Tests (Legacy - needs Auth0 rewrite)', () 
       );
 
       // Verify rememberMe is stored in auth state
-      const authState = useAuthStore.getState();
+      const authState = useAuthStore.getState() as ReturnType<typeof useAuthStore.getState> & {
+        rememberMe?: boolean;
+      };
       expect(authState.rememberMe).toBe(true);
     });
   });

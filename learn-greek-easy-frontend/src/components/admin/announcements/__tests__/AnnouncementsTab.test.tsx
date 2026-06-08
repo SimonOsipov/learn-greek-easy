@@ -47,12 +47,15 @@ vi.mock('@/lib/errorReporting', () => ({
 // the toolbar sort tests can drive sort changes via fireEvent.change.
 // Existing tests don't interact with the Select, so this shim is transparent to them.
 vi.mock('@/components/ui/select', () => {
-  const React = require('react');
-  const Select: React.FC<{
+  const Select = ({
+    value,
+    onValueChange,
+    children,
+  }: {
     value?: string;
     onValueChange?: (v: string) => void;
-    children?: React.ReactNode;
-  }> = ({ value, onValueChange, children }) => (
+    children?: import('react').ReactNode;
+  }) => (
     <select
       value={value}
       onChange={(e) => onValueChange?.(e.target.value)}
@@ -61,12 +64,16 @@ vi.mock('@/components/ui/select', () => {
       {children}
     </select>
   );
-  const SelectTrigger: React.FC<{ children?: React.ReactNode; [k: string]: unknown }> = () => null;
-  const SelectValue: React.FC<{ [k: string]: unknown }> = () => null;
-  const SelectContent: React.FC<{ children?: React.ReactNode }> = ({ children }) => <>{children}</>;
-  const SelectItem: React.FC<{ value: string; children?: React.ReactNode }> = ({
+  const SelectTrigger = (_props: { children?: import('react').ReactNode; [k: string]: unknown }) =>
+    null;
+  const SelectValue = (_props: { [k: string]: unknown }) => null;
+  const SelectContent = ({ children }: { children?: import('react').ReactNode }) => <>{children}</>;
+  const SelectItem = ({
     value,
     children,
+  }: {
+    value: string;
+    children?: import('react').ReactNode;
   }) => <option value={value}>{children}</option>;
   return { Select, SelectTrigger, SelectValue, SelectContent, SelectItem };
 });
@@ -428,7 +435,6 @@ describe('AnnouncementsTab', () => {
   // ── Tab-level ConfirmDialog — triggered by Details drawer Delete button ─────
 
   it('clicking Details drawer Delete button opens the tab-level ConfirmDialog', async () => {
-    const user = userEvent.setup();
     setupStore(buildStoreState());
     renderTab(`/?edit=${ANNOUNCEMENT_ID}`);
 

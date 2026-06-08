@@ -90,6 +90,13 @@ jobs:
           echo "_Required gate: 0 errors to pass._" >> "$GITHUB_STEP_SUMMARY"
           exit $TSC_EXIT
 
+      # Type-check the TEST files too (INFRA-06 / I18NG-01). Mirrors test.yml.
+      # `tsc -b` above only covers app+node sources; this standalone pass checks
+      # vitest + playwright specs. 0 errors required to deploy.
+      - name: Type-check test files (typecheck:test)
+        working-directory: learn-greek-easy-frontend
+        run: npm run typecheck:test
+
   # =============================================================================
   # JOB 1c: Detect Changed Areas (MOB-01a)
   # Purpose: A mobile-only merge to main must NOT redeploy backend/frontend.
