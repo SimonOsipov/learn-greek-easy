@@ -538,9 +538,27 @@ jobs:
 
       - name: Install EAS CLI + Maestro
         run: |
+          set -euo pipefail
           npm install -g eas-cli@20.0.0
-          curl -Ls https://get.maestro.mobile.dev | bash
+          # Maestro install is flaky: `curl -Ls | bash` can no-op on an upstream/CDN
+          # blip and still exit 0, leaving the binary absent -> "maestro: command not
+          # found" in a later step. Use `-f` (fail on HTTP error), retry, and verify the
+          # binary actually landed + execs before exporting PATH.
+          for attempt in 1 2 3; do
+            echo "Maestro install attempt $attempt..."
+            if curl -fsSL https://get.maestro.mobile.dev | bash && [ -x "$HOME/.maestro/bin/maestro" ]; then
+              break
+            fi
+            echo "Maestro install attempt $attempt failed (binary missing); retrying in 10s..."
+            sleep 10
+          done
+          if [ ! -x "$HOME/.maestro/bin/maestro" ]; then
+            echo "::error::Maestro binary not found after 3 attempts ($HOME/.maestro/bin/maestro)"
+            ls -la "$HOME/.maestro/bin" 2>/dev/null || echo "(.maestro/bin does not exist)"
+            exit 1
+          fi
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+          "$HOME/.maestro/bin/maestro" --version
 
       - name: Compute native fingerprint
         id: fp

@@ -88,4 +88,5 @@ env:
 - extendedWaitUntil:
     visible: "Three ways to start"   # new-user dashboard heading — reliable post-onboarding marker
     timeout: 90000
+- assertVisible: "First Greek words"   # first chooser row — confirms dashboard content rendered, not just the heading
 - takeScreenshot: 10-app-home
