@@ -42,7 +42,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import log from '@/lib/logger';
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabase } from '@/lib/supabaseClient';
 import { mapSupabaseResetError } from '@/utils/auth-errors';
 
 /** Form state machine states */
@@ -94,11 +94,22 @@ export const ResetPassword: React.FC = () => {
   const [userEmail, setUserEmail] = useState<string>('');
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user?.email) {
-        setUserEmail(data.user.email);
-      }
-    });
+    let cancelled = false;
+    getSupabase()
+      .then((supabase) => supabase.auth.getUser())
+      .then(({ data }) => {
+        if (!cancelled && data.user?.email) {
+          setUserEmail(data.user.email);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          log.warn('[ResetPassword] Failed to load user email:', err);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   /**
@@ -109,6 +120,7 @@ export const ResetPassword: React.FC = () => {
     setIsSubmitting(true);
 
     try {
+      const supabase = await getSupabase();
       const { error } = await supabase.auth.updateUser({
         password: data.password,
       });

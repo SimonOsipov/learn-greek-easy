@@ -122,6 +122,59 @@ The Supavisor session-mode pooler has a hard cap of **30 connections**. Pool siz
 | Application Pool | 30 | 0-30 | 30 | pool_size (20) + max_overflow (10) — **outdated** |
 | Buffer | 20 | 0 | 20 | Reserved for admin, monitoring, migrations |
 
+## Connection Pool Warm-Up and Keepalive (PERF-07)
+
+### Mechanism
+
+On startup, `init_db()` pre-warms the SQLAlchemy connection pool by pre-paying the asyncpg `connect()` handshake (TCP + TLS + Postgres startup) so the first requests after a cold start find hot, pooled connections instead of each paying the ~85 ms cold-connect cost. Each warm-up task opens a connection, executes `SELECT 1`, and returns the connection to the pool's idle set.
+
+`SELECT 1` returns an int4 — asyncpg introspects custom types lazily, so a bare `SELECT 1`/int4 needs no custom-type lookup. The performance win here is entirely from paying the `connect()` handshake up front, not from priming a type cache.
+
+### `DATABASE_POOL_WARM_MIN` Setting
+
+| Setting | Default | Env override | Constraint |
+|---------|---------|--------------|------------|
+| `DATABASE_POOL_WARM_MIN` | `5` | Yes (`DATABASE_POOL_WARM_MIN=N`) | `warm_min ≤ database_pool_size` (15), enforced by a `model_validator` — fails loud at startup if violated |
+
+The validator prevents misconfiguration where warm-up would request more connections than the pool can hold.
+
+### Keepalive Task
+
+A background asyncio task (`_keepalive_loop`) pings `warm_min` pooled connections every `_KEEPALIVE_INTERVAL_SECONDS = 300` seconds, keeping them hot against network-side or Postgres-side drops.
+
+**Why 300 s**: `pool_recycle = 3600 s` — recycling a connection closes and reopens it. At 300 s, each keepalive tick refreshes connections well before the recycle threshold, avoiding an unnecessary reconnect burst on the first request after an idle period.
+
+**Supavisor idle-reap finding**: Supavisor session-mode `client_idle_timeout` defaults to `0` (no idle reaping). This was verified in the Supavisor source:
+- `lib/supavisor/tenants/tenant.ex`: `field(:client_idle_timeout, :integer, default: 0)`
+- `lib/supavisor/client_handler.ex`: the idle-reaper is armed only `if idle_timeout > 0`
+
+This is corroborated by the Supabase Supavisor FAQ (session mode does not auto-close idle client connections). Because there is no pooler idle window shorter than `pool_recycle = 3600`, the recycle value stays at 3600 and `pool_pre_ping = True` is retained as a correctness safety net. A reduction of `pool_recycle` (PERF-07-05) was descoped — it would have had no effect given the `client_idle_timeout = 0` finding, and unconditional pre-ping removal is deferred to an evidence-gated follow-up after PERF-07-07's production re-measure.
+
+### Per-Process Opt-Out
+
+`init_db(warm_min: int | None = None)` accepts an explicit override:
+
+| Caller | Call | Effect |
+|--------|------|--------|
+| API (`main.py` lifespan) | `await init_db()` | Uses `DATABASE_POOL_WARM_MIN` (default 5) |
+| Scheduler (`scheduler_main.py`) | `await init_db(warm_min=0)` | Fully opts out — no warm-up, no keepalive task |
+
+The scheduler is cron-driven and not latency-sensitive, so warm-up overhead is unnecessary. Passing `warm_min=0` also suppresses the keepalive task (the task is created only when `effective_warm_min > 0`).
+
+### Connection Budget (post-PERF-07)
+
+`warm_min` eagerly opens connections within the existing `pool_size` budget — it does not raise the ceiling. The Supavisor cap of **30 connections** is unchanged from INFRA-03.
+
+| Process | pool_size | max_overflow | warm_min | Max connections |
+|---------|-----------|--------------|----------|-----------------|
+| API | 15 | 5 | 5 | 20 |
+| Scheduler | 3 | 2 | 0 | 5 |
+| **Total** | | | | **25 ≤ 30** |
+
+`warm_min ≤ pool_size` (enforced at startup), so pre-warming only pre-opens connections within the already-allocated pool — the maximum connections per process and the combined total are identical to the pre-PERF-07 budget.
+
+---
+
 ## Extensions
 
 | Extension | Version | Schema | Purpose |

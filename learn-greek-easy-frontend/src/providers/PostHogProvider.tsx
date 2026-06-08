@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE, type SupportedLanguage } from '@/i18n';
+import { __setPosthogInstance } from '@/lib/analytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { FLAG_BOOTSTRAP } from '@/lib/flags';
 import { isTestUser, shouldInitializePostHog } from '@/utils/analytics';
@@ -89,6 +90,7 @@ export function PostHogProvider({ children }: PostHogProviderProps) {
                 app_version: import.meta.env.VITE_APP_VERSION || '1.0.0',
                 interface_language: getStoredLanguage(),
               });
+              __setPosthogInstance(posthogInstance);
               setPhState({ PHProvider: PHProviderModule, posthogInstance });
             },
             before_send: (event) => {

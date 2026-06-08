@@ -27,14 +27,18 @@ import { ResetPassword } from '../ResetPassword';
 const mockUpdateUser = vi.fn();
 const mockGetUser = vi.fn();
 
-vi.mock('@/lib/supabaseClient', () => ({
-  supabase: {
+vi.mock('@/lib/supabaseClient', () => {
+  const mockSupabase = {
     auth: {
       getUser: (...args: unknown[]) => mockGetUser(...args),
       updateUser: (...args: unknown[]) => mockUpdateUser(...args),
     },
-  },
-}));
+  };
+  return {
+    supabase: mockSupabase,
+    getSupabase: vi.fn(() => Promise.resolve(mockSupabase)),
+  };
+});
 
 describe('ResetPassword Flow Integration Tests', () => {
   beforeEach(() => {

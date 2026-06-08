@@ -65,8 +65,10 @@ async def main() -> None:
         await init_redis()
         logger.info("Redis connection established")
 
-        # Initialize database connection pool (shared across all scheduled tasks)
-        await init_db()
+        # Initialize database connection pool (shared across all scheduled tasks).
+        # warm_min=0: scheduler pool is cron-driven, not latency-sensitive — skip
+        # warm-up and keepalive to avoid pinning connections against the ≤30 Supavisor cap.
+        await init_db(warm_min=0)
         logger.info("Database connection pool established")
 
         # Start the scheduler
