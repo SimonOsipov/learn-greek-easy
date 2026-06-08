@@ -16,7 +16,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import type { SpacedRepetitionData, ReviewRating, CardReviewState } from '@/types/review';
+import type { SpacedRepetitionData } from '@/types/review';
 
 import {
   calculateNextInterval,

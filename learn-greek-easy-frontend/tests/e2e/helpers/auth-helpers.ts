@@ -14,7 +14,8 @@
  * - waitForAPIReady, seedDatabase: Test setup helpers
  */
 
-import { Page, APIRequestContext, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
+import type { Page, APIRequestContext } from '@playwright/test';
 
 import { createTestSupabaseClient, getSupabaseStorageKey } from './supabase-test-client';
 
