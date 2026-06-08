@@ -15,13 +15,17 @@ import { render, screen, waitFor } from '@/lib/test-utils';
 
 // Mock Supabase client used by ForgotPassword
 const mockResetPasswordForEmail = vi.fn();
-vi.mock('@/lib/supabaseClient', () => ({
-  supabase: {
+vi.mock('@/lib/supabaseClient', () => {
+  const mockSupabase = {
     auth: {
       resetPasswordForEmail: (...args: unknown[]) => mockResetPasswordForEmail(...args),
     },
-  },
-}));
+  };
+  return {
+    supabase: mockSupabase,
+    getSupabase: vi.fn(() => Promise.resolve(mockSupabase)),
+  };
+});
 
 // Silence logger noise
 vi.mock('@/lib/logger', () => ({

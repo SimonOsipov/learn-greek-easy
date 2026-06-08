@@ -50,6 +50,8 @@ vi.mock('@/utils/practiceSettings', () => ({
 
 vi.mock('@/lib/analytics/track', () => ({
   track: vi.fn(),
+  __setPosthogInstance: vi.fn(),
+  getPosthogInstance: vi.fn(() => null),
 }));
 
 vi.mock('@/features/practice/pf/families', () => ({

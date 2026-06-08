@@ -47,7 +47,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import log from '@/lib/logger';
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabase } from '@/lib/supabaseClient';
 import { useAuthStore } from '@/stores/authStore';
 
 import type { FieldErrors } from 'react-hook-form';
@@ -141,6 +141,7 @@ export const RegisterForm: React.FC = () => {
 
     try {
       log.info('[RegisterForm] Attempting Supabase signup');
+      const supabase = await getSupabase();
       const { data: authData, error } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -218,6 +219,7 @@ export const RegisterForm: React.FC = () => {
     setResendSuccess(false);
 
     try {
+      const supabase = await getSupabase();
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: registeredEmail,
@@ -244,6 +246,7 @@ export const RegisterForm: React.FC = () => {
    */
   const handleGoogleSignup = async () => {
     try {
+      const supabase = await getSupabase();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

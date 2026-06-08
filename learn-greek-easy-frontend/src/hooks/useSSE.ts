@@ -8,7 +8,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabase } from '@/lib/supabaseClient';
 import type {
   SSEConnectionState,
   SSEErrorEvent,
@@ -139,6 +139,7 @@ export function useSSE<T = unknown>(url: string, options: SSEOptions<T>): UseSSE
         ...extraHeaders,
       };
 
+      const supabase = await getSupabase();
       const {
         data: { session },
       } = await supabase.auth.getSession();
