@@ -871,16 +871,29 @@ class TestDetailPathEagerLoad:
         no word_entries statement would appear — and this assertion would FAIL,
         surfacing the regression.
         """
+        deck_id = system_deck.id
         await _add_word_entries(db_session, system_deck, 2)
+
+        # Clear the identity map so get_with_cards performs a FRESH load. The
+        # system_deck fixture's refresh() already populated the lazy="selectin"
+        # word_entries collection (empty — before any entries were linked);
+        # without expunge, selectinload sees the cached collection and skips its
+        # secondary query (there is no populate_existing), masking the eager
+        # load. Production is unaffected: each request uses a fresh session.
+        db_session.expunge_all()
 
         repo = DeckRepository(db_session)
 
         with capture_sql(db_engine) as stmts:
-            await repo.get_with_cards(system_deck.id)
+            await repo.get_with_cards(deck_id)
 
-        word_entry_selects = [s for s in stmts if "from word_entries" in s.lower()]
+        # Deck.word_entries is many-to-many (secondary="deck_word_entries"), so
+        # the selectin emits "FROM deck_word_entries JOIN word_entries ..." —
+        # match on the "word_entries" reference (the primary deck fetch, FROM
+        # decks, never mentions it).
+        word_entry_selects = [s for s in stmts if "word_entries" in s.lower()]
         assert word_entry_selects != [], (
-            "get_with_cards() did NOT emit a 'FROM word_entries' statement — "
+            "get_with_cards() did NOT emit a word_entries selectin statement — "
             "the selectinload on Deck.word_entries appears to have been removed "
             "or replaced with noload on the detail path, which is a regression."
         )
@@ -899,9 +912,17 @@ class TestDetailPathEagerLoad:
         """
         entries = await _add_word_entries(db_session, system_deck, 3)
         entry_ids = {e.id for e in entries}
+        deck_id = system_deck.id
+
+        # Clear the identity map so the selectin actually re-loads the
+        # collection. The fixture's refresh() cached an empty word_entries
+        # before the entries were linked; without expunge, get_with_cards would
+        # return that stale (empty) cached collection. Production uses a fresh
+        # session per request, so this only affects the test.
+        db_session.expunge_all()
 
         repo = DeckRepository(db_session)
-        deck = await repo.get_with_cards(system_deck.id)
+        deck = await repo.get_with_cards(deck_id)
 
         assert deck is not None
         loaded_ids = {e.id for e in deck.word_entries}
