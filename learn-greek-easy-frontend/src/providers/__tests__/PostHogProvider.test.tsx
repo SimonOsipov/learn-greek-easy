@@ -113,6 +113,10 @@ describe('PostHogProvider', () => {
         capture_pageleave: true,
         autocapture: false,
         disable_session_recording: true,
+        capture_performance: false,
+        disable_surveys: true,
+        capture_dead_clicks: false,
+        capture_heatmaps: false,
       });
     });
   });
