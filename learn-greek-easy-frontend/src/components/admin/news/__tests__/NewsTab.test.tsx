@@ -171,8 +171,8 @@ describe('NewsTab — basic rendering', () => {
 
   it('card #2 (audio) shows sub from i18n key news.stats.audioCoverage', () => {
     renderWithRouter();
-    // storeState.audioCount=0, total=0 → resolves to "0 of 0 have audio"
-    expect(screen.getByText('0 of 0 have audio')).toBeInTheDocument();
+    // storeState.audioCount=0, total=0 → resolves to "0/0 with audio"
+    expect(screen.getByText('0/0 with audio')).toBeInTheDocument();
   });
 
   it('card #4 (country) renders sparkline bars with 9 bars', () => {

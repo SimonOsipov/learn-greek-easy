@@ -10,10 +10,11 @@
  * dynamic t() callsites make static unused-key detection impractical without a
  * hand-maintained allowlist; tracked as a follow-up, NOT in this story.
  *
- * KNOWN_DRIFT: 59 pre-existing admin paths (ADMIN2-13, explicitly OUT OF SCOPE
- * for INFRA-06). Subtracted before asserting, so the suite is GREEN now but
- * FAILS on any NEW missing key in any namespace. The set must only ever SHRINK
- * — the stale-entry guard test below enforces that.
+ * KNOWN_DRIFT: 9 pre-existing admin paths (ADMIN2-13, out of scope) — the
+ * news.drawer drift was resolved when ADMIN2-31 (#577) backfilled ru.
+ * Subtracted before asserting, so the suite is GREEN now but FAILS on any NEW
+ * missing key in any namespace. The set must only ever SHRINK — the stale-entry
+ * guard test below enforces that.
  */
 import { describe, it, expect } from 'vitest';
 
@@ -45,7 +46,7 @@ function bundle(mods: Record<string, unknown>): Record<string, Set<string>> {
 }
 
 const KNOWN_DRIFT: ReadonlySet<string> = new Set([
-  // en-only (57):
+  // en-only (7):
   'admin:decks.breadcrumb.decks',
   'admin:decks.statusPremium',
   'admin:decks.table.cards',
@@ -53,56 +54,6 @@ const KNOWN_DRIFT: ReadonlySet<string> = new Set([
   'admin:decks.table.lastEdit',
   'admin:decks.table.owner',
   'admin:decks.table.type',
-  'admin:news.drawer.allChecksPassed',
-  'admin:news.drawer.audio.a2Narration',
-  'admin:news.drawer.audio.b1Narration',
-  'admin:news.drawer.audio.b1NotShipping',
-  'admin:news.drawer.audio.b2Narration',
-  'admin:news.drawer.audio.generatedFrom',
-  'admin:news.drawer.audio.notGeneratedYet',
-  'admin:news.drawer.audio.pauseLabel',
-  'admin:news.drawer.audio.playLabel',
-  'admin:news.drawer.audio.regenerate',
-  'admin:news.drawer.cancel',
-  'admin:news.drawer.country.cyprus',
-  'admin:news.drawer.country.greece',
-  'admin:news.drawer.country.world',
-  'admin:news.drawer.dirty.body',
-  'admin:news.drawer.dirty.cancel',
-  'admin:news.drawer.dirty.discardAndContinue',
-  'admin:news.drawer.dirty.saveAndContinue',
-  'admin:news.drawer.dirty.title',
-  'admin:news.drawer.image.altText',
-  'admin:news.drawer.image.helper',
-  'admin:news.drawer.image.invalidUrl',
-  'admin:news.drawer.image.kicker',
-  'admin:news.drawer.image.photoCredit',
-  'admin:news.drawer.image.sourceUrl',
-  'admin:news.drawer.linkedSituation.emptyText',
-  'admin:news.drawer.linkedSituation.generate',
-  'admin:news.drawer.linkedSituation.helper',
-  'admin:news.drawer.linkedSituation.kicker',
-  'admin:news.drawer.linkedSituation.regenerate',
-  'admin:news.drawer.linkedSituation.unlink',
-  'admin:news.drawer.linkedSituationLabel',
-  'admin:news.drawer.published',
-  'admin:news.drawer.publishedOn',
-  'admin:news.drawer.regenerateTranslations',
-  'admin:news.drawer.save',
-  'admin:news.drawer.saving',
-  'admin:news.drawer.tabs.audio',
-  'admin:news.drawer.tabs.body',
-  'admin:news.drawer.tabs.image',
-  'admin:news.drawer.tabs.linkedSituation',
-  'admin:news.drawer.tabs.translations',
-  'admin:news.drawer.title',
-  'admin:news.drawer.translations.hintEl',
-  'admin:news.drawer.translations.hintEn',
-  'admin:news.drawer.translations.hintRu',
-  'admin:news.drawer.translations.titleEl',
-  'admin:news.drawer.translations.titleEn',
-  'admin:news.drawer.translations.titleRu',
-  'admin:news.drawer.updatedRelative',
   // ru-only (2):
   'admin:tabs.newsComingSoon',
   'admin:tabs.newsComingSoonDescription',

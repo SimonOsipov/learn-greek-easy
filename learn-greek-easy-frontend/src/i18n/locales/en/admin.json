@@ -450,10 +450,10 @@
       "withAudio": "With Audio",
       "b1Coverage": "B1 coverage",
       "countries": "Countries",
+      "audioCoverage": "{{count}}/{{total}} with audio",
+      "countrySub": "Cyprus only",
       "allTime": "All time",
-      "recentThisWeek": "+{{count}} this week",
-      "audioCoverage": "{{count}} of {{total}} have audio",
-      "countrySub": "Cyprus only"
+      "recentThisWeek": "+{{count}} this week"
     },
     "actions": {
       "importRss": "Import RSS",
@@ -566,6 +566,7 @@
         "image": "Image",
         "linkedSituation": "Linked situation"
       },
+      "untitled": "(untitled)",
       "save": "Save & close",
       "saving": "Saving…",
       "cancel": "Cancel",
@@ -581,7 +582,6 @@
       "saveFirst": "Save changes first",
       "publishGuardFailed": "Cannot publish without a publication date",
       "linkedSituationLabel": "Linked situation",
-      "linkedSituationPill": "Situation linked",
       "dirty": {
         "title": "Unsaved changes",
         "body": "You have unsaved changes. Save before leaving?",
@@ -628,7 +628,8 @@
         "sourceUrl": "Source image URL",
         "altText": "Alt text — English",
         "photoCredit": "Photo credit",
-        "invalidUrl": "Image URL is not valid"
+        "invalidUrl": "Image URL is not valid",
+        "altWarning": "This article has no alt text. Consider adding it for accessibility before publishing."
       },
       "linkedSituation": {
         "kicker": "Linked situation",
@@ -645,7 +646,12 @@
       "publishedLabel": "Published"
     },
     "toolbar": {
-      "searchPlaceholder": "Search by title, body, or person…"
+      "searchPlaceholder": "Search by title, body, or person…",
+      "sort": {
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "updated": "Recently updated"
+      }
     },
     "list": {
       "emptyTitle": "No results",
@@ -1700,7 +1706,8 @@
     },
     "status": {
       "draft": "Draft",
-      "ready": "Ready"
+      "ready": "Ready",
+      "published": "Published"
     },
     "media": {
       "dialogAudio": "Dialog Audio",
@@ -2275,15 +2282,15 @@
       "sub": "Pipeline summary coming soon. Track ready vs. draft counts across decks, news, situations, and exercises."
     }
   },
+  "sources": {
+    "articles": {
+      "alreadyGenerated": "Pending review"
+    }
+  },
   "adminExercises": {
     "pictureMatch": {
       "anchorPictureAlt": "Anchor picture",
       "runtimeNote": "Picture options are shown at runtime."
-    }
-  },
-  "sources": {
-    "articles": {
-      "alreadyGenerated": "Pending review"
     }
   }
 }

@@ -464,12 +464,12 @@
     "stats": {
       "total": "Всего новостей",
       "withAudio": "С аудио",
-      "b1Coverage": "Покрытие B1",
+      "b1Coverage": "Охват B1",
       "countries": "Страны",
+      "audioCoverage": "{{count}}/{{total}} с аудио",
+      "countrySub": "Только Кипр",
       "allTime": "За всё время",
-      "recentThisWeek": "+{{count}} за неделю",
-      "audioCoverage": "{{count}} из {{total}} с аудио",
-      "countrySub": "Только Кипр"
+      "recentThisWeek": "+{{count}} за неделю"
     },
     "create": {
       "title": "Создать новость",
@@ -575,7 +575,12 @@
       "publishedLabel": "Опубликовано"
     },
     "toolbar": {
-      "searchPlaceholder": "Поиск по заголовку, тексту или персонажу…"
+      "searchPlaceholder": "Поиск по заголовку, тексту или персонажу…",
+      "sort": {
+        "newest": "Сначала новые",
+        "oldest": "Сначала старые",
+        "updated": "Недавно обновлённые"
+      }
     },
     "list": {
       "emptyTitle": "Нет результатов",
@@ -586,13 +591,62 @@
       "pagerNext": "Вперёд"
     },
     "drawer": {
+      "title": "Редактировать статью",
+      "tabs": {
+        "translations": "Переводы",
+        "body": "Текст",
+        "audio": "Аудио · 3 уровня",
+        "image": "Изображение",
+        "linkedSituation": "Связанная ситуация"
+      },
+      "untitled": "(без названия)",
+      "save": "Сохранить и закрыть",
+      "saving": "Сохранение…",
+      "cancel": "Отмена",
+      "regenerateTranslations": "Перегенерировать переводы",
+      "allChecksPassed": "Все проверки пройдены",
+      "updatedRelative": "Обновлено {{relative}}",
+      "published": "Опубликовано",
       "publishedPill": "Опубликовано",
       "draftPill": "Черновик — не виден",
+      "publishedOn": "Опубликовано {{date}}",
       "publishCta": "Опубликовать",
       "publishChangesCta": "Опубликовать изменения",
       "saveFirst": "Сначала сохраните изменения",
       "publishGuardFailed": "Невозможно опубликовать без даты публикации",
-      "linkedSituationPill": "Ситуация привязана",
+      "linkedSituationLabel": "Связанная ситуация",
+      "dirty": {
+        "title": "Несохранённые изменения",
+        "body": "Есть несохранённые изменения. Сохранить перед уходом?",
+        "saveAndContinue": "Сохранить и продолжить",
+        "discardAndContinue": "Отменить и продолжить",
+        "cancel": "Отмена"
+      },
+      "country": {
+        "cyprus": "Кипр",
+        "greece": "Греция",
+        "world": "Мир",
+        "es": "Испания"
+      },
+      "audio": {
+        "b2Narration": "Нарратив B2",
+        "a2Narration": "Нарратив A2",
+        "b1Narration": "Нарратив B1",
+        "generatedFrom": "Создано · ElevenLabs · Греческий женский голос — последний {{date}}",
+        "notGeneratedYet": "Ещё не создано",
+        "b1NotShipping": "Ещё не создано — аудио B1 выйдет с NLVL-B1",
+        "regenerate": "Перегенерировать",
+        "playLabel": "Воспроизвести нарратив {{level}}",
+        "pauseLabel": "Пауза нарратива {{level}}"
+      },
+      "translations": {
+        "titleEn": "Заголовок — English",
+        "titleEl": "Τίτλος — Ελληνικά",
+        "titleRu": "Заголовок — Русский",
+        "hintEn": "Исходный язык",
+        "hintEl": "Перевод на греческий · используется в приложении",
+        "hintRu": "Перевод на русский · для резервных пояснений"
+      },
       "body": {
         "greekBody": "Греческий текст",
         "greekBodyHelper": "Полная статья — для уровня B2; учащиеся с более низким уровнем читают упрощённый сценарий",
@@ -601,8 +655,22 @@
         "titleA2": "Заголовок — A2 (греческий)",
         "scenarioA2": "Сценарий — A2 (греческий)"
       },
-      "country": {
-        "es": "Испания"
+      "image": {
+        "kicker": "Исходное изображение",
+        "helper": "Введите URL, чтобы заменить текущее изображение. Исходный URL не сохраняется после загрузки.",
+        "sourceUrl": "URL исходного изображения",
+        "altText": "Альтернативный текст — English",
+        "photoCredit": "Фото-кредит",
+        "invalidUrl": "URL изображения недействителен",
+        "altWarning": "У этой статьи нет альтернативного текста. Рекомендуется добавить его для доступности перед публикацией."
+      },
+      "linkedSituation": {
+        "kicker": "Связанная ситуация",
+        "helper": "К каждой новостной статье можно привязать один сценарный диалог. Учащиеся отрабатывают лексику в контексте после чтения.",
+        "emptyText": "К этой статье ещё не привязана ситуация.",
+        "generate": "Сгенерировать ситуацию из статьи",
+        "unlink": "Отвязать",
+        "regenerate": "Перегенерировать из статьи"
       }
     }
   },
@@ -1652,7 +1720,8 @@
     },
     "status": {
       "draft": "Черновик",
-      "ready": "Готово"
+      "ready": "Готово",
+      "published": "Опубликовано"
     },
     "media": {
       "dialogAudio": "Аудио диалога",
@@ -2231,15 +2300,15 @@
       "sub": "Pipeline summary coming soon. Track ready vs. draft counts across decks, news, situations, and exercises."
     }
   },
+  "sources": {
+    "articles": {
+      "alreadyGenerated": "Ожидает проверки"
+    }
+  },
   "adminExercises": {
     "pictureMatch": {
       "anchorPictureAlt": "Основная картинка",
       "runtimeNote": "Варианты картинок отображаются в процессе."
-    }
-  },
-  "sources": {
-    "articles": {
-      "alreadyGenerated": "Ожидает проверки"
     }
   }
 }

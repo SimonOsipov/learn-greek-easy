@@ -412,7 +412,7 @@ describe('NewsEditDrawerLinkedSituation — NADM-23 handoff fidelity', () => {
       </MemoryRouter>
     );
     const badge = screen.getByTestId('dr-sit-status-badge');
-    expect(badge.textContent).toContain('draft');
+    expect(badge.textContent).toContain('Draft');
   });
 
   it('level pills render for each level entry with news-level class', () => {

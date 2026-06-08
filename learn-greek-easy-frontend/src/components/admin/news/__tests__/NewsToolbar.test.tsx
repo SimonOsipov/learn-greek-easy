@@ -68,13 +68,14 @@ describe('NewsToolbar — renders all controls', () => {
     storeState.sortMode = 'newest';
   });
 
-  it('renders Country SegControl with All/CY/GR/ES options (World removed)', () => {
+  it('renders Country SegControl with All/CY/GR options (ES and World removed)', () => {
     renderWithRouter();
     // Both SegControls have an "All" button — use getAllByText
     expect(screen.getAllByText('All').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('🇨🇾 CY')).toBeInTheDocument();
     expect(screen.getByText('🇬🇷 GR')).toBeInTheDocument();
-    expect(screen.getByText('🇪🇸 ES')).toBeInTheDocument();
+    // NBUG-02: ES removed from country filter options
+    expect(screen.queryByText('🇪🇸 ES')).not.toBeInTheDocument();
     expect(screen.queryByText('🌍 World')).not.toBeInTheDocument();
   });
 
@@ -302,21 +303,23 @@ describe('NewsToolbar — NADM-15 layout and chrome', () => {
     expect(searchWrapper.classList.contains('min-w-[280px]')).toBe(true);
   });
 
-  it('sort trigger has btn-glass class', () => {
+  it('sort trigger is a combobox (Radix Select, NBUG-03)', () => {
     renderWithRouter();
     const sortTrigger = screen.getByTestId('news-toolbar-sort-trigger');
-    expect(sortTrigger.classList.contains('btn-glass')).toBe(true);
+    // NBUG-03: sort control replaced with Radix Select — trigger role is combobox, not a DropdownMenu button
+    expect(sortTrigger).toHaveAttribute('role', 'combobox');
   });
 
-  it('sort trigger has btn-sm class', () => {
+  it('sort trigger has w-[180px] class (Select width)', () => {
     renderWithRouter();
     const sortTrigger = screen.getByTestId('news-toolbar-sort-trigger');
-    expect(sortTrigger.classList.contains('btn-sm')).toBe(true);
+    expect(sortTrigger.classList.contains('w-[180px]')).toBe(true);
   });
 
-  it('ES country option is present', () => {
+  it('ES country option is absent (NBUG-02)', () => {
     renderWithRouter();
-    expect(screen.getByText('🇪🇸 ES')).toBeInTheDocument();
+    // NBUG-02: ES option removed from country filter
+    expect(screen.queryByText('🇪🇸 ES')).not.toBeInTheDocument();
   });
 
   it('World country option is absent', () => {

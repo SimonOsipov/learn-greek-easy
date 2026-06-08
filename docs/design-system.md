@@ -36,7 +36,7 @@ All colors stored as HSL channels (`221 83% 53%`) so `hsl(var(--x) / 0.12)` work
 | `--glass` | `0 0% 100% / .55` | `224 30% 14% / .55` | Translucent glass surface |
 | `--fg` | `222 32% 12%` | `210 30% 96%` | Primary text |
 | `--fg-2` | `222 18% 38%` | `220 12% 70%` | Secondary text / captions |
-| `--fg-3` | `222 14% 56%` | `220 10% 50%` | Tertiary text / kbd / timestamps |
+| `--fg-3` | `222 14% 45%` | `220 10% 50%` | Tertiary text / kbd / timestamps (light darkened 56%→45% → 4.95:1 on `--bg`, WCAG-AA — ADMIN2-31; fixes Dashboard `.kicker` 3.33:1) |
 | `--line` | `222 20% 90%` | `224 18% 18%` | Default border / divider |
 | `--line-2` | `222 25% 84%` | `224 18% 24%` | Stronger border |
 

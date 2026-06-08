@@ -305,7 +305,10 @@ describe('NewsEditDrawer — linked situation pill', () => {
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
     renderDrawer();
-    expect(screen.queryByText('Situation linked')).not.toBeInTheDocument();
+    // The badge lives inside .drawer-meta; the tab button has the same text but is not in .drawer-meta
+    const meta = document.querySelector('.drawer-meta');
+    expect(meta).toBeInTheDocument();
+    expect(meta!.textContent).not.toContain('Linked situation');
   });
 
   it('renders blue linked-situation badge when linked_situation is non-null', () => {
@@ -327,7 +330,10 @@ describe('NewsEditDrawer — linked situation pill', () => {
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
     renderDrawer();
-    expect(screen.getByText('Situation linked')).toBeInTheDocument();
+    // The badge lives inside .drawer-meta with tone="blue" (class b-blue)
+    const meta = document.querySelector('.drawer-meta');
+    expect(meta).toBeInTheDocument();
+    expect(meta!.textContent).toContain('Linked situation');
   });
 });
 

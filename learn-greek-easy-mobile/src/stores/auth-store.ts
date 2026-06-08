@@ -6,6 +6,7 @@ import { getQueryParams } from 'expo-auth-session/build/QueryParams';
 import { supabase } from '@/lib/supabase';
 import { identifyUser, resetIdentity } from '@/lib/analytics';
 import { setSentryUser } from '@/lib/sentry';
+import { queryClient } from '@/lib/query-client';
 
 // Complete any pending browser auth sessions on module load.
 WebBrowser.maybeCompleteAuthSession();
@@ -33,13 +34,19 @@ export const useAuthStore = create<AuthState>((set) => {
   // events are missed between the two async operations.
   const {
     data: { subscription },
-  } = supabase.auth.onAuthStateChange((_event, session) => {
+  } = supabase.auth.onAuthStateChange((event, session) => {
     if (session) {
       identifyUser(session.user.id);
       setSentryUser(session.user.id);
     } else {
       resetIdentity();
       setSentryUser(null);
+      // Clear auth-scoped React Query cache so a subsequent sign-in by a
+      // different user never sees the previous user's cached ['me'] profile
+      // (staleTime is 5 min — without this the stale entry would linger).
+      if (event === 'SIGNED_OUT') {
+        queryClient.removeQueries({ queryKey: ['me'] });
+      }
     }
     set({
       session,
