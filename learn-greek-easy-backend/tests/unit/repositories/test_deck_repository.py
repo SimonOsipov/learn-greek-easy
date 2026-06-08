@@ -9,10 +9,12 @@ This module tests:
 Tests use real database fixtures and PostgreSQL (no mocks).
 """
 
+from contextlib import contextmanager
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import event
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from src.db.models import Deck, DeckLevel, DeckWordEntry, PartOfSpeech, User, WordEntry
 from src.repositories.deck import DeckRepository
@@ -618,3 +620,218 @@ class TestBatchCountConsistencyWithCountCards:
         count_result = await repo.count_cards(system_deck.id)
 
         assert batch_result[system_deck.id] == count_result == 2
+
+
+# =============================================================================
+# Tests: query-count / over-fetch guards (PERF-08-02)
+#
+# These tests lock in the behaviour that list_active() and list_user_owned()
+# must NOT fire a secondary SELECT against word_entries.  They are RED
+# (failing) before the executor applies `.options(noload(Deck.word_entries))`
+# and GREEN afterwards.
+# =============================================================================
+
+
+@contextmanager
+def capture_sql(engine: AsyncEngine):
+    """Capture SQL statements emitted on *engine* for the duration of the block.
+
+    Attaches a ``before_cursor_execute`` listener immediately before the block
+    and removes it immediately after, so only statements issued inside the
+    ``with`` body are recorded.  Fixture-setup SQL (inserts, flushes, …) that
+    runs outside the block is not captured.
+
+    Usage::
+
+        with capture_sql(db_engine) as stmts:
+            await repo.list_active()
+        assert not any("from word_entries" in s.lower() for s in stmts)
+    """
+    stmts: list[str] = []
+
+    def _hook(conn, cursor, statement, parameters, context, executemany):
+        stmts.append(statement)
+
+    event.listen(engine.sync_engine, "before_cursor_execute", _hook)
+    try:
+        yield stmts
+    finally:
+        event.remove(engine.sync_engine, "before_cursor_execute", _hook)
+
+
+class TestQueryCountOverFetch:
+    """PERF-08-02: list_active and list_user_owned must not over-fetch word_entries.
+
+    RED before the executor adds .options(noload(Deck.word_entries)).
+    GREEN after that fix is applied.
+    """
+
+    # ------------------------------------------------------------------
+    # list_active — no word_entries selectin
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_list_active_emits_no_word_entries_select(
+        self,
+        db_session,
+        db_engine: AsyncEngine,
+        system_deck: Deck,
+    ):
+        """list_active() must not issue a secondary SELECT against word_entries.
+
+        The deck under test has ≥2 linked WordEntry rows so that the selectin
+        loader will fire if the relationship is not suppressed — a vacuous
+        pass is impossible.
+
+        RED: fails because Deck.word_entries is lazy='selectin', so SQLAlchemy
+        issues 'SELECT ... FROM word_entries WHERE …' after the main query.
+        GREEN after: .options(noload(Deck.word_entries)) suppresses that load.
+        """
+        # Add ≥2 entries so the selectin loader has something to fire on.
+        await _add_word_entries(db_session, system_deck, 2)
+
+        repo = DeckRepository(db_session)
+
+        with capture_sql(db_engine) as stmts:
+            await repo.list_active()
+
+        word_entry_selects = [s for s in stmts if "from word_entries" in s.lower()]
+        assert word_entry_selects == [], (
+            f"list_active() fired {len(word_entry_selects)} unexpected "
+            f"'FROM word_entries' statement(s):\n" + "\n---\n".join(word_entry_selects)
+        )
+
+    @pytest.mark.asyncio
+    async def test_list_active_issues_single_select(
+        self,
+        db_session,
+        db_engine: AsyncEngine,
+        system_deck: Deck,
+    ):
+        """list_active() must issue exactly one SELECT against decks, no secondary entity loads.
+
+        RED: the selectin on word_entries (and owner) causes additional
+        round-trips, so the total statement count exceeds one.
+        GREEN after: noload suppresses the word_entries selectin; only the
+        primary decks query remains (the owner selectin is out-of-scope for
+        this ticket but counted here to confirm total).
+
+        The primary assertion is: exactly one statement contains 'from decks'.
+        """
+        await _add_word_entries(db_session, system_deck, 2)
+
+        repo = DeckRepository(db_session)
+
+        with capture_sql(db_engine) as stmts:
+            await repo.list_active()
+
+        decks_selects = [s for s in stmts if "from decks" in s.lower()]
+        word_entry_selects = [s for s in stmts if "from word_entries" in s.lower()]
+
+        assert (
+            len(decks_selects) == 1
+        ), f"Expected exactly 1 'FROM decks' statement, got {len(decks_selects)}: " + str(
+            decks_selects
+        )
+        assert word_entry_selects == [], (
+            f"list_active() fired {len(word_entry_selects)} unexpected "
+            f"'FROM word_entries' statement(s):\n" + "\n---\n".join(word_entry_selects)
+        )
+
+    # ------------------------------------------------------------------
+    # list_user_owned — no word_entries selectin
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_list_user_owned_emits_no_word_entries_select(
+        self,
+        db_session,
+        db_engine: AsyncEngine,
+        user_owned_deck: Deck,
+        owner_user,
+    ):
+        """list_user_owned() must not issue a secondary SELECT against word_entries.
+
+        The user-owned deck has ≥2 linked WordEntry rows so the selectin
+        loader will fire if the relationship is not suppressed.
+
+        RED: same root cause as list_active — lazy='selectin' on word_entries.
+        GREEN after: noload suppresses that load.
+        """
+        await _add_word_entries(db_session, user_owned_deck, 2)
+
+        repo = DeckRepository(db_session)
+
+        with capture_sql(db_engine) as stmts:
+            await repo.list_user_owned(owner_user.id)
+
+        word_entry_selects = [s for s in stmts if "from word_entries" in s.lower()]
+        assert word_entry_selects == [], (
+            f"list_user_owned() fired {len(word_entry_selects)} unexpected "
+            f"'FROM word_entries' statement(s):\n" + "\n---\n".join(word_entry_selects)
+        )
+
+    @pytest.mark.asyncio
+    async def test_list_user_owned_issues_single_select(
+        self,
+        db_session,
+        db_engine: AsyncEngine,
+        user_owned_deck: Deck,
+        owner_user,
+    ):
+        """list_user_owned() must issue exactly one SELECT against decks, no word_entries loads.
+
+        RED: secondary selectin fires on word_entries.
+        GREEN after: noload suppresses it, leaving only the primary decks query.
+        """
+        await _add_word_entries(db_session, user_owned_deck, 2)
+
+        repo = DeckRepository(db_session)
+
+        with capture_sql(db_engine) as stmts:
+            await repo.list_user_owned(owner_user.id)
+
+        decks_selects = [s for s in stmts if "from decks" in s.lower()]
+        word_entry_selects = [s for s in stmts if "from word_entries" in s.lower()]
+
+        assert (
+            len(decks_selects) == 1
+        ), f"Expected exactly 1 'FROM decks' statement, got {len(decks_selects)}: " + str(
+            decks_selects
+        )
+        assert word_entry_selects == [], (
+            f"list_user_owned() fired {len(word_entry_selects)} unexpected "
+            f"'FROM word_entries' statement(s):\n" + "\n---\n".join(word_entry_selects)
+        )
+
+    # ------------------------------------------------------------------
+    # Regression guard: scalar fields unchanged after the fix
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_list_active_response_shape_unchanged(
+        self,
+        db_session,
+        system_deck: Deck,
+    ):
+        """list_active() must still expose expected scalar fields after the noload fix.
+
+        This test must be GREEN both before and after the executor's change —
+        it guards against the fix accidentally stripping columns or renaming
+        attributes on the returned Deck objects.
+        """
+        await _add_word_entries(db_session, system_deck, 2)
+
+        repo = DeckRepository(db_session)
+        results = await repo.list_active()
+
+        matching = [d for d in results if d.id == system_deck.id]
+        assert matching, "system_deck not found in list_active() results"
+        deck = matching[0]
+
+        assert deck.id == system_deck.id
+        assert deck.name_en == system_deck.name_en
+        assert deck.level == system_deck.level
+        assert deck.is_active is True
+        assert isinstance(deck.is_premium, bool)
+        assert deck.created_at is not None
