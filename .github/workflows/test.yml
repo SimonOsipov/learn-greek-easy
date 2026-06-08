@@ -41,6 +41,10 @@ jobs:
         working-directory: learn-greek-easy-frontend
         run: npm run format:check
 
+      - name: Check no raw i18n keys in tests (I18NG-04)
+        working-directory: learn-greek-easy-frontend
+        run: npm run lint:no-raw-i18n-keys
+
   # Job 1b: Frontend tsc -b (project references) — REQUIRED gate (TSCI-01-10)
   # Runs `tsc -b` against the full project-references graph. All TS errors were
   # resolved in TSCI-01-11/12/13; this job is now a required status check.

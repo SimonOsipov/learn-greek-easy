@@ -684,6 +684,82 @@ This section documents resolved E2E test issues and their solutions to help with
 
 ---
 
+## I18N Testing Policy (I18NG-04)
+
+### The masking-test anti-pattern
+
+Before I18NG-04 many test files mocked the entire `react-i18next` module with a
+pass-through `t()` that returned the raw key string:
+
+```ts
+// ❌ Anti-pattern — mock masks missing/wrong keys
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (k: string) => k }),
+}));
+
+// This test passes even when the key doesn't exist in admin.json!
+expect(screen.getByText('news.drawer.publishedPill')).toBeInTheDocument();
+```
+
+This is called the **masking-test pattern**. It:
+- Makes tests pass even when the key is **absent** from the JSON bundle
+- Makes tests pass even when the **resolved copy** changed
+- Blocks the throwing missing-key handler (I18NG-03) from working in tests
+
+### The correct pattern
+
+Drop the `vi.mock('react-i18next', ...)` block entirely. The global test setup
+(`src/lib/test-setup.ts`) initialises a real i18n instance with full en+ru bundles.
+Assert on the **resolved English copy string**, not the raw dotted key:
+
+```ts
+// ✓ Correct — tests the real resolved copy
+expect(screen.getByText('Published')).toBeInTheDocument();
+expect(screen.getByText('Draft — not visible')).toBeInTheDocument();
+```
+
+### Interpolated keys
+
+For keys with `{{count}}` / `{{date}}` / `{{relative}}` placeholders, assert on
+the resolved string with the actual runtime value substituted:
+
+```ts
+// Key: "recentThisWeek": "+{{count}} this week"
+// Test store has count=0 → resolves to "+0 this week"
+expect(screen.getByText('+0 this week')).toBeInTheDocument();
+```
+
+### Locale-switching tests
+
+Use `await i18n.changeLanguage('el')` before rendering. Import the shared
+singleton from `'i18next'` (not `'@/lib/i18n'`). The `afterEach` in
+`test-setup.ts` resets the language to 'en' automatically.
+
+```ts
+import i18n from 'i18next';
+
+it('renders title in Greek when lang=el', async () => {
+  await i18n.changeLanguage('el');
+  render(<MyComponent />);
+  expect(screen.getByText('Ελληνικός τίτλος')).toBeInTheDocument();
+});
+```
+
+### CI guard
+
+`scripts/check-no-raw-i18n-keys.sh` scans all test files for string literals that
+match a known i18n namespace prefix followed by dotted sub-keys. The script is run
+in CI as part of the `frontend-lint` job:
+
+```
+npm run lint:no-raw-i18n-keys
+```
+
+If you introduce a new test that accidentally asserts on a raw key the CI step
+will fail and print the offending file+line.
+
+---
+
 ## Next Steps
 
 1. Write tests for existing utilities in `src/lib/` and `src/utils/`

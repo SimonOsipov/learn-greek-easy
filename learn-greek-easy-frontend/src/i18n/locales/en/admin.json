@@ -451,7 +451,9 @@
       "b1Coverage": "B1 coverage",
       "countries": "Countries",
       "allTime": "All time",
-      "recentThisWeek": "+{{count}} this week"
+      "recentThisWeek": "+{{count}} this week",
+      "audioCoverage": "{{count}} of {{total}} have audio",
+      "countrySub": "Cyprus only"
     },
     "actions": {
       "importRss": "Import RSS",
@@ -579,6 +581,7 @@
       "saveFirst": "Save changes first",
       "publishGuardFailed": "Cannot publish without a publication date",
       "linkedSituationLabel": "Linked situation",
+      "linkedSituationPill": "Situation linked",
       "dirty": {
         "title": "Unsaved changes",
         "body": "You have unsaved changes. Save before leaving?",

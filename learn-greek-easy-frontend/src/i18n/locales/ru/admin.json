@@ -463,7 +463,13 @@
     },
     "stats": {
       "total": "Всего новостей",
-      "withAudio": "С аудио"
+      "withAudio": "С аудио",
+      "b1Coverage": "Покрытие B1",
+      "countries": "Страны",
+      "allTime": "За всё время",
+      "recentThisWeek": "+{{count}} за неделю",
+      "audioCoverage": "{{count}} из {{total}} с аудио",
+      "countrySub": "Только Кипр"
     },
     "create": {
       "title": "Создать новость",
@@ -585,6 +591,7 @@
       "publishChangesCta": "Опубликовать изменения",
       "saveFirst": "Сначала сохраните изменения",
       "publishGuardFailed": "Невозможно опубликовать без даты публикации",
+      "linkedSituationPill": "Ситуация привязана",
       "body": {
         "greekBody": "Греческий текст",
         "greekBodyHelper": "Полная статья — для уровня B2; учащиеся с более низким уровнем читают упрощённый сценарий",

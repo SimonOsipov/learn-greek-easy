@@ -16,25 +16,8 @@ import { NewsEditDrawerAudio } from '../NewsEditDrawer.audio';
 
 // ── Module mocks ───────────────────────────────────────────────────────────────
 
-// i18n: key-pass-through, except comingSoon and playLabel/pauseLabel which use interpolation.
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, opts?: Record<string, unknown>) => {
-      if (key === 'comingSoon') return 'Coming soon';
-      if (key === 'news.drawer.audio.playLabel' && opts?.level) {
-        return `Play ${opts.level} narration`;
-      }
-      if (key === 'news.drawer.audio.pauseLabel' && opts?.level) {
-        return `Pause ${opts.level} narration`;
-      }
-      if (key === 'news.drawer.audio.generatedFrom' && opts?.date) {
-        return `Generated · ElevenLabs · Greek female voice — last ${opts.date}`;
-      }
-      return key;
-    },
-    i18n: { language: 'en' },
-  }),
-}));
+// I18NG-04: mock dropped — real i18n instance from test-setup resolves all admin keys.
+// comingSoon="Coming soon", playLabel/pauseLabel/generatedFrom interpolate correctly via real i18n.
 
 // Tooltip: render children + content inline so TooltipContent is accessible.
 vi.mock('@/components/ui/tooltip', () => ({
@@ -109,9 +92,9 @@ describe('NewsEditDrawerAudio — row rendering', () => {
 
   it('renders B2/A2/B1 name i18n keys', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
-    expect(screen.getByText('news.drawer.audio.b2Narration')).toBeInTheDocument();
-    expect(screen.getByText('news.drawer.audio.a2Narration')).toBeInTheDocument();
-    expect(screen.getByText('news.drawer.audio.b1Narration')).toBeInTheDocument();
+    expect(screen.getByText('B2 narration')).toBeInTheDocument();
+    expect(screen.getByText('A2 narration')).toBeInTheDocument();
+    expect(screen.getByText('B1 narration')).toBeInTheDocument();
   });
 
   it('shows "Generated · ElevenLabs..." sub for B2 when audio_url present', () => {
@@ -122,13 +105,17 @@ describe('NewsEditDrawerAudio — row rendering', () => {
 
   it('shows "notGeneratedYet" sub for B2 when audio_url is null', () => {
     render(<NewsEditDrawerAudio item={makeItem({ audio_url: null, audio_generated_at: null })} />);
-    const notGenerated = screen.getAllByText('news.drawer.audio.notGeneratedYet');
+    // Resolves to "Not generated yet"
+    const notGenerated = screen.getAllByText('Not generated yet');
     expect(notGenerated.length).toBeGreaterThanOrEqual(1);
   });
 
   it('shows b1NotShipping sub for B1 row always', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
-    expect(screen.getByText('news.drawer.audio.b1NotShipping')).toBeInTheDocument();
+    // Resolves to "Not generated yet — B1 audio shipping with NLVL-B1"
+    expect(
+      screen.getByText('Not generated yet — B1 audio shipping with NLVL-B1')
+    ).toBeInTheDocument();
   });
 });
 
@@ -271,7 +258,7 @@ describe('NewsEditDrawerAudio — B1 row disabled', () => {
 describe('NewsEditDrawerAudio — Regenerate + Upload buttons', () => {
   it('every row has a Regenerate button with aria-disabled="true"', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
-    const regenBtns = screen.getAllByText('news.drawer.audio.regenerate');
+    const regenBtns = screen.getAllByText('Regenerate');
     expect(regenBtns).toHaveLength(3);
     regenBtns.forEach((btn) => {
       expect(btn.closest('button')).toHaveAttribute('aria-disabled', 'true');
@@ -325,7 +312,7 @@ describe('NewsEditDrawerAudio — NADM-19 chrome: audio-play class', () => {
 describe('NewsEditDrawerAudio — NADM-19 chrome: Regenerate + Upload icons', () => {
   it('each Regenerate button contains a RefreshCw SVG icon', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
-    const regenBtns = screen.getAllByText('news.drawer.audio.regenerate');
+    const regenBtns = screen.getAllByText('Regenerate');
     expect(regenBtns).toHaveLength(3);
     regenBtns.forEach((textNode) => {
       const btn = textNode.closest('button');
@@ -421,7 +408,7 @@ describe('NewsEditDrawerAudio — NADM-19 chrome: audio-play class', () => {
 describe('NewsEditDrawerAudio — NADM-19 chrome: Regenerate + Upload icons', () => {
   it('each Regenerate button contains a RefreshCw SVG icon', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
-    const regenBtns = screen.getAllByText('news.drawer.audio.regenerate');
+    const regenBtns = screen.getAllByText('Regenerate');
     expect(regenBtns).toHaveLength(3);
     regenBtns.forEach((textNode) => {
       const btn = textNode.closest('button');

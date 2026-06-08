@@ -16,9 +16,7 @@ import { NewsEditDrawerTranslations } from '../NewsEditDrawer.translations';
 
 // ── Module mocks ───────────────────────────────────────────────────────────────
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
-}));
+// I18NG-04: mock dropped — real i18n instance from test-setup resolves all admin keys.
 
 // ── Test harness ───────────────────────────────────────────────────────────────
 
@@ -64,23 +62,24 @@ describe('NewsEditDrawerTranslations — structure', () => {
 
   it('renders labels for each field using i18n keys', () => {
     render(<Harness />);
-    expect(screen.getByText('news.drawer.translations.titleEn')).toBeInTheDocument();
-    expect(screen.getByText('news.drawer.translations.titleEl')).toBeInTheDocument();
-    expect(screen.getByText('news.drawer.translations.titleRu')).toBeInTheDocument();
+    // Resolved en copy
+    expect(screen.getByText('Title — English')).toBeInTheDocument();
+    expect(screen.getByText('Τίτλος — Ελληνικά')).toBeInTheDocument();
+    expect(screen.getByText('Заголовок — Русский')).toBeInTheDocument();
   });
 
   it('every input is reachable via getByLabelText (a11y contract)', () => {
     render(<Harness />);
-    expect(screen.getByLabelText('news.drawer.translations.titleEn')).toBeInTheDocument();
-    expect(screen.getByLabelText('news.drawer.translations.titleEl')).toBeInTheDocument();
-    expect(screen.getByLabelText('news.drawer.translations.titleRu')).toBeInTheDocument();
+    expect(screen.getByLabelText('Title — English')).toBeInTheDocument();
+    expect(screen.getByLabelText('Τίτλος — Ελληνικά')).toBeInTheDocument();
+    expect(screen.getByLabelText('Заголовок — Русский')).toBeInTheDocument();
   });
 
   it('renders hint paragraphs for each field using i18n keys', () => {
     render(<Harness />);
-    expect(screen.getByText('news.drawer.translations.hintEn')).toBeInTheDocument();
-    expect(screen.getByText('news.drawer.translations.hintEl')).toBeInTheDocument();
-    expect(screen.getByText('news.drawer.translations.hintRu')).toBeInTheDocument();
+    expect(screen.getByText('Source language')).toBeInTheDocument();
+    expect(screen.getByText('Greek translation · used in the app')).toBeInTheDocument();
+    expect(screen.getByText('Russian translation · for fallback explanations')).toBeInTheDocument();
   });
 
   it('Greek textarea has lang="el"', () => {

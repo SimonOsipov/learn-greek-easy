@@ -10,14 +10,6 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// ── Mock i18n ──────────────────────────────────────────────────────────
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-    i18n: { language: 'en' },
-  }),
-}));
-
 // ── Mock store state (mutable for tests) ───────────────────────────────
 const mockSetCountryFilter = vi.fn();
 const mockSetLevelFilter = vi.fn();
@@ -99,15 +91,15 @@ describe('NewsGrid', () => {
   it('shows empty state when filtered items list is empty', () => {
     storeState.items = [];
     render(<NewsGrid onRequestDelete={vi.fn()} />);
-    expect(screen.getByText('news.list.emptyBody')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'news.list.clearFilters' })).toBeInTheDocument();
+    expect(screen.getByText('No news articles match the current filters.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
   });
 
   it('empty state "Clear filters" button resets all four filters', async () => {
     storeState.items = [];
     const user = userEvent.setup();
     render(<NewsGrid onRequestDelete={vi.fn()} />);
-    await user.click(screen.getByRole('button', { name: 'news.list.clearFilters' }));
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
     expect(mockSetCountryFilter).toHaveBeenCalledWith('all');
     expect(mockSetLevelFilter).toHaveBeenCalledWith('all');
     expect(mockSetSearchQuery).toHaveBeenCalledWith('');
@@ -130,7 +122,8 @@ describe('NewsGrid', () => {
     storeState.items = [];
     render(<NewsGrid onRequestDelete={vi.fn()} />);
     expect(screen.getByTestId('news-grid-pagination')).toBeInTheDocument();
-    expect(screen.getByText('news.list.pagerShowing')).toBeInTheDocument();
+    // page=1, pageSize=10, total=30 → "Showing 1–10 of 30"
+    expect(screen.getByText('Showing 1–10 of 30')).toBeInTheDocument();
   });
 
   it('calls setPage with decremented value when Previous is clicked', async () => {
@@ -160,12 +153,12 @@ describe('NewsGrid', () => {
   it('empty state renders all three i18n keys via t()', () => {
     storeState.items = [];
     render(<NewsGrid onRequestDelete={vi.fn()} />);
-    // Kicker uses emptyTitle key
-    expect(screen.getByText('news.list.emptyTitle')).toBeInTheDocument();
-    // Muted paragraph uses emptyBody key
-    expect(screen.getByText('news.list.emptyBody')).toBeInTheDocument();
-    // Button uses clearFilters key
-    expect(screen.getByRole('button', { name: 'news.list.clearFilters' })).toBeInTheDocument();
+    // Kicker uses emptyTitle key → "No results"
+    expect(screen.getByText('No results')).toBeInTheDocument();
+    // Muted paragraph uses emptyBody key → "No news articles match the current filters."
+    expect(screen.getByText('No news articles match the current filters.')).toBeInTheDocument();
+    // Button uses clearFilters key → "Clear filters"
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
   });
 
   // ── NADM-17: Chevron icons in pagination buttons ───────────────────────
@@ -199,7 +192,7 @@ describe('NewsGrid', () => {
     storeState.total = 30;
     storeState.items = [];
     render(<NewsGrid onRequestDelete={vi.fn()} />);
-    // t mock returns key as-is; i18n key should appear in document
-    expect(screen.getByText('news.list.pagerShowing')).toBeInTheDocument();
+    // page=1, pageSize=10, total=30 → "Showing 1–10 of 30"
+    expect(screen.getByText('Showing 1–10 of 30')).toBeInTheDocument();
   });
 });
