@@ -151,7 +151,7 @@ function BodyFooter({
 
       {/* Edit drawer stub */}
       <SidePanel
-        size="default"
+        size="half"
         open={editOpen}
         onOpenChange={setEditOpen}
         title={t('exercises.row.editButton')}

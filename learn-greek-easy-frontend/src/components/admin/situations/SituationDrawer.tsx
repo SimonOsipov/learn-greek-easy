@@ -315,7 +315,7 @@ export const SituationDrawer: React.FC = () => {
         onOpenChange={(o) => {
           if (!o) requestClose();
         }}
-        size="default"
+        size="half"
         data-testid="situation-edit-drawer"
         title={titleEn || 'Situation details'}
       >

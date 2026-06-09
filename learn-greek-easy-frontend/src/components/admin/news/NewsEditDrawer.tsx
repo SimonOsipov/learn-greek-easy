@@ -223,7 +223,7 @@ export const NewsEditDrawer: React.FC = () => {
         onOpenChange={(o) => {
           if (!o) requestClose();
         }}
-        size="default"
+        size="half"
         data-testid="news-edit-drawer"
         title={t('news.drawer.title')}
       >
