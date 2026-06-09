@@ -210,10 +210,10 @@ function QuestionText({ exercise }: { exercise: AdminExerciseListItem }) {
 
   return (
     <div>
-      <p lang="el" className="font-serif text-[16px] leading-[1.45] text-fg">
+      <p lang="el" className="font-serif text-base leading-[1.45] text-fg">
         {greek}
       </p>
-      {english && <p className="mt-1 text-[12.5px] italic text-fg3">{english}</p>}
+      {english && <p className="mt-1 text-xs italic text-fg3">{english}</p>}
     </div>
   );
 }
@@ -309,7 +309,7 @@ function McqVariant({
             <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border font-mono text-xs">
               {letter}
             </span>
-            <span lang="el" className="flex-1 font-serif text-[14.5px]">
+            <span lang="el" className="flex-1 font-serif text-sm">
               {opt}
             </span>
             {isCorrect && (
@@ -375,7 +375,7 @@ function TrueFalseVariant({
               !isPicked && !isCorrect && 'border-border hover:border-primary/30'
             )}
           >
-            <span lang="el" className="font-serif text-[14.5px]">
+            <span lang="el" className="font-serif text-sm">
               {label}
             </span>
             {isCorrect && (
@@ -449,7 +449,7 @@ function FillGapsVariant({
               !isPicked && !isCorrect && 'border-border hover:border-primary/30'
             )}
           >
-            <span lang="el" className="font-serif text-[14.5px]">
+            <span lang="el" className="font-serif text-sm">
               {opt}
             </span>
             {isCorrect && (
@@ -516,7 +516,7 @@ function WordOrderVariant({
             key={origIdx}
             className="inline-flex items-center gap-1 rounded-full border bg-bg px-3 py-1"
           >
-            <span lang="el" className="font-serif text-[14.5px]">
+            <span lang="el" className="font-serif text-sm">
               {chips[origIdx]}
             </span>
             <button
@@ -544,7 +544,7 @@ function WordOrderVariant({
         <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-success/10 px-3 py-1.5 text-success">
           <Check className="size-3.5" aria-hidden />
           <span className="font-mono text-xs">{t('exercises.wordOrder.correctOrder')}</span>
-          <span lang="el" className="font-serif text-[14.5px]">
+          <span lang="el" className="font-serif text-sm">
             {answerEl}
           </span>
         </div>
@@ -575,7 +575,7 @@ function PictureVariantA({
   return (
     <div className="mt-3">
       {desc && (
-        <p lang="el" className="mb-3 font-serif text-[16px] text-fg">
+        <p lang="el" className="mb-3 font-serif text-base text-fg">
           {desc}
         </p>
       )}
@@ -686,7 +686,7 @@ function PictureOptionsGrid({
               />
             )}
             {mode === 'text' && (
-              <span lang="el" className="flex-1 text-start font-serif text-[14.5px]">
+              <span lang="el" className="flex-1 text-start font-serif text-sm">
                 {textContent}
               </span>
             )}

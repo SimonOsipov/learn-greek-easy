@@ -49,10 +49,10 @@ export function AdminExerciseRow({ exercise, isOpen, onToggle, rowBodyId }: Admi
     <div className="flex w-full items-center gap-2 px-4 py-4">
       {/* Title block */}
       <div className="min-w-0 flex-1">
-        <div className="truncate font-serif text-[15.5px] leading-tight" lang="el">
+        <div className="truncate font-serif text-base leading-tight" lang="el">
           {exercise.situation_title_el}
         </div>
-        <div className="text-fg-3 truncate text-[12.5px]">{exercise.situation_title_en}</div>
+        <div className="text-fg-3 truncate text-xs">{exercise.situation_title_en}</div>
       </div>
 
       {/* Badges */}
@@ -75,7 +75,7 @@ export function AdminExerciseRow({ exercise, isOpen, onToggle, rowBodyId }: Admi
         {/* TODO: Picture rows may lack audio_level — backend follow-up needed to populate level for picture source exercises */}
 
         {/* Item count — mono, i18next plural */}
-        <span className="text-fg-3 ms-2 font-mono text-[11px]">
+        <span className="text-fg-3 ms-2 font-mono text-xs">
           {t('exercises.row.itemCount', { count: exercise.item_count })}
         </span>
       </div>

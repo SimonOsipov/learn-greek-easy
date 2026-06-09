@@ -85,7 +85,7 @@ export const NewsItemDeleteDialog: React.FC<NewsItemDeleteDialogProps> = ({
           <AlertDialogDescription>{t('news.delete.warning')}</AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-2 px-1 pb-2">
-          <p className="font-medium text-foreground">{titleInCurrentLang}</p>
+          <p className="text-sm text-foreground">{titleInCurrentLang}</p>
           <p className="text-sm font-medium text-destructive">{t('news.delete.irreversible')}</p>
         </div>
         <AlertDialogFooter>

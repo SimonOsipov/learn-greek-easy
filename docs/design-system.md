@@ -213,7 +213,9 @@ Tailwind aliases: `sm = radius-4`, `md = radius-2`, `lg = radius`, `xl = radius+
 | `Inter` (default sans) | Body, UI |
 | `Inter Tight` | Display sizes (headings, hero, metric numbers). -3% to -5% tracking. |
 | `Noto Serif` | Greek study text — flashcard front, transliteration, culture body |
-| `ui-monospace, SF Mono, Menlo` | Tokens, kbd, kickers, code |
+| `'JetBrains Mono', ui-monospace, SF Mono, Menlo` | Tokens, kbd, kickers, code. **App/admin canonical = JetBrains Mono** — Tailwind `font-mono` resolves to it (`tailwind.config.js`), and admin chrome (`.drawer-breadcrumb`, badges, ID/token CSS) is JetBrains Mono-first. |
+
+> Mono is palette-scoped: the App/admin stack is JetBrains Mono-first (above), while the Practice palette uses `--practice-font-mono` (bare `ui-monospace`) and the shared `<Kicker>` primitive (`.kicker`) intentionally stays on the `ui-monospace` stack. Font-family audits must respect this split.
 
 Type scale: D 96/700, XL 56/700, L 28/600, M 17/500, B 15/400, S 13/500, XS 11/500. Letter-spacing: -0.05em on D, -0.04em on XL, -0.03em on L, -0.005em on body buttons.
 

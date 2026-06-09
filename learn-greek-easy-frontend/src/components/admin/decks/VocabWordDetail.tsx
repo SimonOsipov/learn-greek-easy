@@ -163,7 +163,7 @@ export function VocabWordDetail({ deck, itemId }: VocabWordDetailProps) {
         <div className="flex flex-wrap items-center gap-2">
           <h3
             lang="el"
-            className="text-[28px] font-medium leading-tight"
+            className="text-2xl font-medium leading-tight"
             data-testid="vocab-word-detail-lemma"
           >
             {greekWord}
