@@ -76,7 +76,7 @@ test.describe('Admin News — drawer happy paths (NEWS-10)', () => {
     await expect(page.locator('[data-testid="news-drawer-tab-translations-content"]')).toBeVisible();
   });
 
-  test('5. Audio tab: URL unchanged, B2 row renders 60 waveform bars, B1 Play disabled', async ({
+  test('5. Audio tab: URL unchanged, exactly 2 rows (B1 + A2), B1 row renders 60 waveform bars; no phantom B1 "coming soon" row', async ({
     page,
   }) => {
     await navigateToAdminTab(page, 'news');
@@ -87,20 +87,22 @@ test.describe('Admin News — drawer happy paths (NEWS-10)', () => {
     // URL must NOT change on tab switch (inner-tab is local state)
     expect(page.url()).toBe(urlBefore);
     await expect(page.locator('[data-testid="news-drawer-tab-audio-content"]')).toBeVisible();
-    // Scope to first .audio-row (B2) — 60 decorative waveform bars
-    const b2Bars = page
-      .locator('[data-testid="news-drawer-tab-audio-content"] .audio-row')
-      .first()
-      .locator('.audio-wave');
-    await expect(b2Bars).toHaveCount(60);
-    // B1 row is third .audio-row — Play button must be aria-disabled
-    const b1Row = page
-      .locator('[data-testid="news-drawer-tab-audio-content"] .audio-row')
-      .nth(2);
-    await expect(b1Row.locator('button[aria-disabled="true"]').first()).toBeVisible();
+    // Exactly 2 rows now: B1 + A2. The phantom disabled B1 "coming soon" Play row is gone.
+    const rows = page.locator('[data-testid="news-drawer-tab-audio-content"] .audio-row');
+    await expect(rows).toHaveCount(2);
+    // First row is the base B1 narration row (was labelled "B2" before).
+    const b1Row = rows.first();
+    await expect(b1Row.getByText('B1', { exact: true })).toBeVisible();
+    // B1 row renders 60 decorative waveform bars.
+    await expect(b1Row.locator('.audio-wave')).toHaveCount(60);
+    // B1 Play button is a real, enabled play control (NOT a phantom aria-disabled stub).
+    await expect(b1Row.locator('.audio-play')).not.toHaveAttribute('aria-disabled', 'true');
+    // Each surviving row's Regenerate + Upload action buttons are aria-disabled stubs
+    // (coming-soon tooltip + red corner dot) — assert the two stubs are present in the B1 row.
+    await expect(b1Row.locator('.audio-actions button[aria-disabled="true"]')).toHaveCount(2);
   });
 
-  test('6. Linked situation tab: action button fires Coming soon toast', async ({
+  test('6. Linked situation tab: action button is aria-disabled with comingSoon tooltip (no toast)', async ({
     page,
   }) => {
     await navigateToAdminTab(page, 'news');
@@ -109,13 +111,17 @@ test.describe('Admin News — drawer happy paths (NEWS-10)', () => {
     await page.locator('[data-testid="news-drawer-tab-linkedSituation"]').click();
     const tabContent = page.locator('[data-testid="news-drawer-tab-linkedSituation-content"]');
     await expect(tabContent).toBeVisible();
-    // The empty-state path shows a disabled "Generate situation" button (Coming soon tooltip).
-    // The populated-state path (after NADM-22/-23/-24) shows enabled "Unlink" + "Regenerate from this article"
-    // buttons that fire a toast on click. Seeded news items have a linked situation, so the populated state renders.
+    // The footer Unlink / Regenerate / (empty-state) Generate buttons are now true-disabled
+    // stubs: aria-disabled with a comingSoon tooltip, and onClick is preventDefault — they no
+    // longer fire a "Coming soon" toast. Seeded news items have a linked situation, so the
+    // populated state renders with the "Regenerate from this article" footer action.
     const actionBtn = tabContent.getByRole('button', { name: /Regenerate from this article/i });
-    await expect(actionBtn).toBeEnabled();
-    await actionBtn.click();
-    await expect(page.getByText('Coming soon').first()).toBeVisible({ timeout: 5_000 });
+    await expect(actionBtn).toHaveAttribute('aria-disabled', 'true');
+    // Hover to trigger the shadcn Tooltip (rendered in a portal with role="tooltip").
+    await actionBtn.hover();
+    const tooltip = page.locator('[role="tooltip"]');
+    await expect(tooltip).toBeVisible({ timeout: 3_000 });
+    await expect(tooltip).toContainText(/coming soon/i);
   });
 
   test('7. Edit EN title then Cancel → dirty Dialog → Discard & continue clears ?edit=', async ({
