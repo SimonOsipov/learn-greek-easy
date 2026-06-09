@@ -440,7 +440,7 @@
   "news": {
     "title": "News",
     "kicker": "Admin · News",
-    "sub": "{{total}} articles · {{audio}}/{{total}} with B2+A2 audio · {{pending}} awaiting B1",
+    "sub": "{{total}} articles · {{audio}}/{{total}} with B1+A2 audio",
     "breadcrumb": {
       "dashboard": "Admin",
       "current": "News"
@@ -562,7 +562,7 @@
       "tabs": {
         "translations": "Translations",
         "body": "Body",
-        "audio": "Audio · 3 levels",
+        "audio": "Audio · 2 levels",
         "image": "Image",
         "linkedSituation": "Linked situation"
       },
@@ -600,7 +600,6 @@
         "b1Narration": "B1 narration",
         "generatedFrom": "Generated · ElevenLabs · Greek female voice — last {{date}}",
         "notGeneratedYet": "Not generated yet",
-        "b1NotShipping": "Not generated yet — B1 audio shipping with NLVL-B1",
         "regenerate": "Regenerate",
         "playLabel": "Play {{level}} narration",
         "pauseLabel": "Pause {{level}} narration"

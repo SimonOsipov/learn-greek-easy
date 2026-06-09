@@ -1,6 +1,6 @@
 // src/components/admin/news/NewsEditDrawer.audio.tsx
 //
-// NEWS-07c: Audio tab — 3 rows (B1 / A2 / B1) + static decorative waveform + one-at-a-time play.
+// NEWS-07c: Audio tab — 2 rows (B1 / A2) + static decorative waveform + one-at-a-time play.
 // Does NOT reuse WaveformPlayer — this is a lightweight static-bar atom with no Web Audio analysis.
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -15,7 +15,7 @@ import { type NewsItemResponse } from '@/services/adminAPI';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type AudioLevel = 'b2' | 'a2' | 'b1';
+type AudioLevel = 'b1' | 'a2';
 
 interface RowState {
   currentTime: number;
@@ -66,20 +66,19 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
 
   // Per-row playback state (currentTime / duration).
   const [rowState, setRowState] = useState<Record<AudioLevel, RowState>>({
-    b2: { currentTime: 0, duration: item.audio_duration_seconds ?? 0 },
+    b1: { currentTime: 0, duration: item.audio_duration_seconds ?? 0 },
     a2: { currentTime: 0, duration: item.audio_a2_duration_seconds ?? 0 },
-    b1: { currentTime: 0, duration: 0 },
   });
 
   // Audio element refs — only B1 and A2 have real audio elements.
-  const b2Ref = useRef<HTMLAudioElement>(null);
+  const b1Ref = useRef<HTMLAudioElement>(null);
   const a2Ref = useRef<HTMLAudioElement>(null);
 
   // Pause both elements on unmount (covers tab-change since the parent
   // conditionally renders this component only when activeTab === 'audio').
   useEffect(() => {
     return () => {
-      b2Ref.current?.pause();
+      b1Ref.current?.pause();
       a2Ref.current?.pause();
     };
   }, []);
@@ -87,7 +86,7 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
   // ── Playback control ────────────────────────────────────────────────────────
 
   function getRef(level: AudioLevel): React.RefObject<HTMLAudioElement | null> | null {
-    if (level === 'b2') return b2Ref;
+    if (level === 'b1') return b1Ref;
     if (level === 'a2') return a2Ref;
     return null;
   }
@@ -140,25 +139,6 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
   // ── Render helpers ──────────────────────────────────────────────────────────
 
   function renderPlayButton(level: AudioLevel) {
-    if (level === 'b1') {
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label={t('news.drawer.audio.playLabel', { level: 'B1' })}
-              aria-disabled="true"
-              className="btn-glass cursor-not-allowed opacity-60"
-              onClick={(e) => e.preventDefault()}
-            >
-              <Play size={16} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>{t('comingSoon')}</TooltipContent>
-        </Tooltip>
-      );
-    }
-
     const isPlaying = playing === level;
     const label = isPlaying
       ? t('news.drawer.audio.pauseLabel', { level: level.toUpperCase() })
@@ -177,10 +157,8 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
   }
 
   function renderSubText(level: AudioLevel): string {
-    if (level === 'b1') return t('news.drawer.audio.b1NotShipping');
-
-    const url = level === 'b2' ? item.audio_url : item.audio_a2_url;
-    const generatedAt = level === 'b2' ? item.audio_generated_at : item.audio_a2_generated_at;
+    const url = level === 'b1' ? item.audio_url : item.audio_a2_url;
+    const generatedAt = level === 'b1' ? item.audio_generated_at : item.audio_a2_generated_at;
 
     if (!url) return t('news.drawer.audio.notGeneratedYet');
 
@@ -250,23 +228,23 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
         {/* Hidden audio elements — only B1 and A2 */}
         {item.audio_url && (
           <audio
-            ref={b2Ref}
+            ref={b1Ref}
             src={item.audio_url}
             style={{ display: 'none' }}
-            data-testid="news-drawer-audio-b2-element"
-            onTimeUpdate={(e) => handleTimeUpdate('b2', e.currentTarget)}
-            onLoadedMetadata={(e) => handleLoadedMetadata('b2', e.currentTarget)}
-            onEnded={() => handleEnded('b2')}
+            data-testid="news-drawer-audio-b1-element"
+            onTimeUpdate={(e) => handleTimeUpdate('b1', e.currentTarget)}
+            onLoadedMetadata={(e) => handleLoadedMetadata('b1', e.currentTarget)}
+            onEnded={() => handleEnded('b1')}
           />
         )}
         {!item.audio_url && (
           <audio
-            ref={b2Ref}
+            ref={b1Ref}
             style={{ display: 'none' }}
-            data-testid="news-drawer-audio-b2-element"
-            onTimeUpdate={(e) => handleTimeUpdate('b2', e.currentTarget)}
-            onLoadedMetadata={(e) => handleLoadedMetadata('b2', e.currentTarget)}
-            onEnded={() => handleEnded('b2')}
+            data-testid="news-drawer-audio-b1-element"
+            onTimeUpdate={(e) => handleTimeUpdate('b1', e.currentTarget)}
+            onLoadedMetadata={(e) => handleLoadedMetadata('b1', e.currentTarget)}
+            onEnded={() => handleEnded('b1')}
           />
         )}
         {item.audio_a2_url && (
@@ -292,9 +270,8 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
         )}
 
         {/* Rows */}
-        {renderRow('b2', 'violet', 'B1', 'news.drawer.audio.b1Narration')}
-        {renderRow('a2', 'violet', 'A2', 'news.drawer.audio.a2Narration')}
         {renderRow('b1', 'violet', 'B1', 'news.drawer.audio.b1Narration')}
+        {renderRow('a2', 'violet', 'A2', 'news.drawer.audio.a2Narration')}
       </div>
     </TooltipProvider>
   );
