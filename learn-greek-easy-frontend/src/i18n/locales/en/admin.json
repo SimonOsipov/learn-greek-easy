@@ -440,7 +440,7 @@
   "news": {
     "title": "News",
     "kicker": "Admin · News",
-    "sub": "{{total}} articles · {{audio}}/{{total}} with B2+A2 audio · {{pending}} awaiting B1",
+    "sub": "{{total}} articles · {{audio}}/{{total}} with B1+A2 audio",
     "breadcrumb": {
       "dashboard": "Admin",
       "current": "News"
@@ -536,11 +536,8 @@
       "pause": "Pause audio",
       "playerDisabled": "No audio available for preview",
       "loadError": "Failed to load audio",
-      "b2StatusTitle": "B2 Audio",
       "a2StatusTitle": "A2 Audio",
-      "regenerateB2": "Regenerate B2 Audio",
       "regenerateA2": "Regenerate A2 Audio",
-      "regeneratingB2": "Regenerating B2...",
       "regeneratingA2": "Regenerating A2...",
       "regenerateA2Success": "A2 audio regeneration started",
       "regenerateA2Error": "Failed to regenerate A2 audio",
@@ -562,7 +559,7 @@
       "tabs": {
         "translations": "Translations",
         "body": "Body",
-        "audio": "Audio · 3 levels",
+        "audio": "Audio · 2 levels",
         "image": "Image",
         "linkedSituation": "Linked situation"
       },
@@ -571,7 +568,6 @@
       "saving": "Saving…",
       "cancel": "Cancel",
       "regenerateTranslations": "Regenerate translations",
-      "allChecksPassed": "All checks passed",
       "updatedRelative": "Updated {{relative}}",
       "published": "Published",
       "publishedPill": "Published",
@@ -596,12 +592,10 @@
         "es": "Spain"
       },
       "audio": {
-        "b2Narration": "B2 narration",
         "a2Narration": "A2 narration",
         "b1Narration": "B1 narration",
         "generatedFrom": "Generated · ElevenLabs · Greek female voice — last {{date}}",
         "notGeneratedYet": "Not generated yet",
-        "b1NotShipping": "Not generated yet — B1 audio shipping with NLVL-B1",
         "regenerate": "Regenerate",
         "playLabel": "Play {{level}} narration",
         "pauseLabel": "Pause {{level}} narration"
@@ -616,9 +610,9 @@
       },
       "body": {
         "greekBody": "Greek body",
-        "greekBodyHelper": "Full article — shown to B2 learners; lower levels read a simplified scenario",
-        "scenarioB2": "Scenario — B2 (Greek)",
-        "scenarioB2Helper": "Visible to B2 learners as the article body",
+        "greekBodyHelper": "Full article — shown to B1 learners; lower levels read a simplified scenario",
+        "scenarioB1": "Scenario — B1 (Greek)",
+        "scenarioB1Helper": "Visible to B1 learners as the article body",
         "titleA2": "Title — A2 (Greek)",
         "scenarioA2": "Scenario — A2 (Greek)"
       },
@@ -862,7 +856,7 @@
     "adminNotesLabel": "Admin Notes",
     "anonymousUser": "Anonymous User",
     "breadcrumb": {
-      "dashboard": "Dashboard",
+      "dashboard": "Admin",
       "current": "Card errors"
     },
     "cardTypes": {

@@ -210,9 +210,8 @@ export function DeckDrawer() {
       <SidePanel
         open={open}
         onOpenChange={handleOpenChange}
-        size="wide"
+        size="half"
         data-testid="deck-drawer"
-        className="w-screen max-w-none md:w-[calc(100vw-2rem)] md:max-w-none xl:w-[1080px]"
         title={deckName || 'Deck details'}
       >
         <SidePanel.CloseButton />

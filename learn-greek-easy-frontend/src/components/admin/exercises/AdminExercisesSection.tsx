@@ -5,7 +5,6 @@ import { useSearchParams } from 'react-router-dom';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { track } from '@/lib/analytics/track';
 import { cn } from '@/lib/utils';
 import { adminAPI } from '@/services/adminAPI';
 import { useAdminExercisesStore } from '@/stores/adminExercisesStore';
@@ -93,17 +92,6 @@ export function AdminExercisesSection({ refreshKey = 0 }: AdminExercisesSectionP
       if (next.has(id)) {
         next.delete(id);
       } else {
-        // EXR-73: track row open (closed → open transition only)
-        const exercise = exercises.find((e) => e.id === id);
-        if (exercise) {
-          track('admin_exercise_opened', {
-            exercise_id: exercise.id,
-            exercise_type: exercise.exercise_type,
-            status: exercise.status,
-            source: exercise.source_type,
-            level: exercise.audio_level,
-          });
-        }
         next.add(id);
       }
       return next;

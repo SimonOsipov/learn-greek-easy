@@ -20,11 +20,6 @@ vi.mock('@/hooks/use-toast', () => ({
   toast: vi.fn(),
 }));
 
-const mockTrack = vi.fn();
-vi.mock('@/lib/analytics', () => ({
-  track: (...args: unknown[]) => mockTrack(...args),
-}));
-
 vi.mock('@/services/api', () => ({
   APIRequestError: class APIRequestError extends Error {
     status: number;
@@ -81,7 +76,7 @@ function _buildItem(): import('@/services/adminAPI').NewsItemResponse {
     title_el: 'Ελληνικός τίτλος',
     title_en: 'English title',
     title_ru: 'Русский заголовок',
-    description_el: 'Περιγραφή B2',
+    description_el: 'Περιγραφή B1',
     description_en: 'Description EN',
     description_ru: 'Описание RU',
     publication_date: '2025-01-15',
@@ -223,9 +218,9 @@ describe('NewsEditDrawer — header rendering', () => {
     expect(screen.getByTestId('news-drawer-status-pill')).toHaveTextContent('Draft — not visible');
   });
 
-  it('renders B2 badge when description_el is present', () => {
+  it('renders B1 badge when description_el is present', () => {
     renderDrawer();
-    expect(screen.getByText('B2')).toBeInTheDocument();
+    expect(screen.getByText('B1')).toBeInTheDocument();
   });
 
   it('does not render A2 badge when description_el_a2 is null', () => {
@@ -351,20 +346,6 @@ describe('NewsEditDrawer — Regenerate button with icon', () => {
   });
 });
 
-describe('NewsEditDrawer — allChecksPassed badge with Check icon', () => {
-  it('renders allChecksPassed badge containing a Check icon', () => {
-    const item = makeItem();
-    storeState.drawerItemId = item.id;
-    storeState.newsItems = [item];
-    renderDrawer();
-    const badgeText = screen.getByText('All checks passed');
-    // The badge wraps the text and the icon — find the parent badge div
-    const badge = badgeText.closest('.badge, [class*="badge"]') ?? badgeText.parentElement;
-    expect(badge).toBeInTheDocument();
-    expect(badge!.querySelector('svg')).toBeInTheDocument();
-  });
-});
-
 describe('NewsEditDrawer — tab strip', () => {
   beforeEach(() => {
     const item = makeItem();
@@ -420,11 +401,6 @@ describe('NewsEditDrawer — footer', () => {
     const item = makeItem();
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
-  });
-
-  it('renders allChecksPassed badge', () => {
-    renderDrawer();
-    expect(screen.getByText('All checks passed')).toBeInTheDocument();
   });
 
   it('renders updatedRelative text', () => {
@@ -618,19 +594,6 @@ describe('NewsEditDrawer — Publish CTA (NADM-25)', () => {
       expect(mockUpdateNewsItem).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({ status: 'published' })
-      );
-    });
-  });
-
-  it('fires track("admin_news_published") on successful publish', async () => {
-    const user = userEvent.setup();
-    mockUpdateNewsItem.mockResolvedValue(undefined);
-    renderDrawer();
-    await user.click(screen.getByTestId('news-drawer-publish'));
-    await waitFor(() => {
-      expect(mockTrack).toHaveBeenCalledWith(
-        'admin_news_published',
-        expect.objectContaining({ news_item_id: 'item-1' })
       );
     });
   });

@@ -7,11 +7,10 @@
  * 3. All filter groups' options render (at least one option per group visible)
  * 4. Two-row layout: row-1 = search + Source + Type; row-2 = Level + Status
  * 5. Modality SegControl renders as first row, before row-1 (EXR2-24-08)
- * 6. Toggling Reading emits admin_exercise_filter_changed with axis:'modality' (EXR2-24-08)
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
 
 import { AdminExercisesToolbar } from '../AdminExercisesToolbar';
 
@@ -21,13 +20,6 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (k: string) => k,
   }),
-}));
-
-const mockTrack = vi.fn();
-vi.mock('@/lib/analytics/track', () => ({
-  track: (...args: unknown[]) => mockTrack(...args),
-  __setPosthogInstance: vi.fn(),
-  getPosthogInstance: vi.fn(() => null),
 }));
 
 vi.mock('@/stores/adminExercisesStore', () => ({
@@ -51,10 +43,6 @@ function makeStoreState() {
     setQ: vi.fn(),
   };
 }
-
-beforeEach(() => {
-  mockTrack.mockClear();
-});
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
@@ -182,19 +170,5 @@ describe('AdminExercisesToolbar — modality row (EXR2-24-08)', () => {
     const row2 = container.querySelector('[data-testid="exercises-toolbar-row-2"]')!;
     const modality = row2.querySelector('[data-testid="exercises-toolbar-row-modality"]');
     expect(modality).toBeTruthy();
-  });
-
-  it('clicking Reading option emits admin_exercise_filter_changed with axis:modality', () => {
-    const { container } = render(<AdminExercisesToolbar />);
-    const modalityRow = container.querySelector('[data-testid="exercises-toolbar-row-modality"]')!;
-    const readingButton = Array.from(modalityRow.querySelectorAll('button')).find((btn) =>
-      btn.textContent?.includes('exercises.modality.reading')
-    );
-    expect(readingButton).toBeTruthy();
-    fireEvent.click(readingButton!);
-    expect(mockTrack).toHaveBeenCalledWith('admin_exercise_filter_changed', {
-      axis: 'modality',
-      value: 'reading',
-    });
   });
 });

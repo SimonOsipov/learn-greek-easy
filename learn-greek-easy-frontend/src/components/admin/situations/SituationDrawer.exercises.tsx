@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { SegControl } from '@/components/ui/seg-control';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { tDynamic } from '@/i18n/tDynamic';
-import { track } from '@/lib/analytics';
 import { adminAPI } from '@/services/adminAPI';
 import type {
   ExerciseSourceType,
@@ -60,10 +59,6 @@ function GenerateButton({
   const handleGenerate = async () => {
     try {
       await adminAPI.generateSituationExercises(situationId, source);
-      track('admin_situation_exercise_generated', {
-        situation_id: situationId,
-        source,
-      });
     } catch {
       // Endpoint not yet implemented — no-op until it lands.
     }

@@ -48,7 +48,7 @@ interface AdminNewsState {
 
   // Filters
   countryFilter: NewsCountry | 'all';
-  levelFilter: 'all' | 'B2' | 'A2' | 'B1';
+  levelFilter: 'all' | 'A2' | 'B1';
   searchQuery: string;
   sortMode: 'newest' | 'oldest' | 'updated';
 
@@ -63,7 +63,7 @@ interface AdminNewsState {
   setPage: (page: number) => void;
   setSelectedItem: (item: NewsItemResponse | null) => void;
   setCountryFilter: (filter: NewsCountry | 'all') => void;
-  setLevelFilter: (level: 'all' | 'B2' | 'A2' | 'B1') => void;
+  setLevelFilter: (level: 'all' | 'A2' | 'B1') => void;
   setSearchQuery: (q: string) => void;
   setSortMode: (mode: 'newest' | 'oldest' | 'updated') => void;
   openDrawer: (id: string) => void;
@@ -93,7 +93,7 @@ export const useAdminNewsStore = create<AdminNewsState>()(
       isDeleting: false,
       error: null,
       countryFilter: 'all' as NewsCountry | 'all',
-      levelFilter: 'all' as 'all' | 'B2' | 'A2' | 'B1',
+      levelFilter: 'all' as 'all' | 'A2' | 'B1',
       searchQuery: '',
       sortMode: 'newest' as 'newest' | 'oldest' | 'updated',
       drawerItemId: null,
@@ -221,7 +221,7 @@ export const useAdminNewsStore = create<AdminNewsState>()(
       /**
        * Set level filter and reset to page 1 (client-side filter, no auto-fetch)
        */
-      setLevelFilter: (level: 'all' | 'B2' | 'A2' | 'B1') => {
+      setLevelFilter: (level: 'all' | 'A2' | 'B1') => {
         set({ levelFilter: level, page: 1 });
       },
 
@@ -301,15 +301,12 @@ export const selectFilteredNewsItems = (state: AdminNewsState): NewsItemResponse
 
   // 2. Level filter
   if (state.levelFilter !== 'all') {
-    if (state.levelFilter === 'B2') {
+    if (state.levelFilter === 'B1') {
       items = items.filter((item) => item.description_el != null && item.description_el !== '');
     } else if (state.levelFilter === 'A2') {
       items = items.filter(
         (item) => item.description_el_a2 != null && item.description_el_a2 !== ''
       );
-    } else if (state.levelFilter === 'B1') {
-      // B1 never matches in MVP
-      return [];
     }
   }
 

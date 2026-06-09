@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
-import { track } from '@/lib/analytics';
 import { adminAPI } from '@/services/adminAPI';
 import { APIRequestError } from '@/services/api';
 import { useAdminSituationStore } from '@/stores/adminSituationStore';
@@ -248,15 +247,7 @@ export const SituationDrawer: React.FC = () => {
           return;
         }
       }
-      const fromStatus = selectedSituation.status;
-      const startedAt = new Date(selectedSituation.created_at).getTime();
       await adminAPI.updateSituationStatus(selectedSituation.id, 'ready');
-      track('admin_situation_published', {
-        situation_id: selectedSituation.id,
-        from_status: fromStatus,
-        to_status: 'ready',
-        time_in_draft_seconds: Math.round((Date.now() - startedAt) / 1000),
-      });
       toast({ title: t('situations.drawer.footer.publishSuccess') });
       await fetchSituations();
       closeAndClearUrl();
@@ -315,7 +306,7 @@ export const SituationDrawer: React.FC = () => {
         onOpenChange={(o) => {
           if (!o) requestClose();
         }}
-        size="default"
+        size="half"
         data-testid="situation-edit-drawer"
         title={titleEn || 'Situation details'}
       >

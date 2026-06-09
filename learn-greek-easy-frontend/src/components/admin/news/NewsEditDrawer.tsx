@@ -16,7 +16,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { toast } from '@/hooks/use-toast';
 import { useAdminTabNav } from '@/hooks/useAdminTabNav';
 import { tDynamic } from '@/i18n/tDynamic';
-import { track } from '@/lib/analytics';
 import {
   adminAPI,
   type LinkedSituationSummary,
@@ -190,7 +189,6 @@ export const NewsEditDrawer: React.FC = () => {
     try {
       const targetStatus = item.status === 'draft' ? 'published' : 'published';
       await adminAPI.updateNewsItem(item.id, { status: targetStatus });
-      track('admin_news_published', { news_item_id: item.id });
       toast({ title: t('news.edit.success') });
       await useAdminNewsStore.getState().fetchNewsItems();
       closeAndClearUrl();
@@ -223,7 +221,7 @@ export const NewsEditDrawer: React.FC = () => {
         onOpenChange={(o) => {
           if (!o) requestClose();
         }}
-        size="default"
+        size="half"
         data-testid="news-edit-drawer"
         title={t('news.drawer.title')}
       >
@@ -243,7 +241,7 @@ export const NewsEditDrawer: React.FC = () => {
                 {t('news.drawer.publishedPill')}
               </Badge>
             )}
-            {item.description_el ? <Badge tone="violet">B2</Badge> : null}
+            {item.description_el ? <Badge tone="violet">B1</Badge> : null}
             {item.description_el_a2 ? <Badge tone="violet">A2</Badge> : null}
             {item.linked_situation !== null && (
               <Badge tone="blue">{t('news.drawer.linkedSituationLabel')}</Badge>
@@ -273,11 +271,15 @@ export const NewsEditDrawer: React.FC = () => {
                 <button
                   type="button"
                   aria-disabled="true"
-                  className="btn-glass inline-flex cursor-not-allowed items-center gap-1 opacity-60"
+                  className="btn-glass relative inline-flex cursor-not-allowed items-center gap-1 opacity-60"
                   onClick={(e) => e.preventDefault()}
                 >
                   <Wand2 className="size-3" />
                   {t('news.drawer.regenerateTranslations')}
+                  <span
+                    className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
+                    aria-hidden="true"
+                  />
                 </button>
               </TooltipTrigger>
               <TooltipContent>{t('comingSoon')}</TooltipContent>
@@ -304,10 +306,6 @@ export const NewsEditDrawer: React.FC = () => {
         <SidePanel.Footer>
           <div className="flex w-full items-center justify-between">
             <div className="flex items-center gap-2 text-sm">
-              <Badge tone="green">
-                <Check className="mr-1 size-3" />
-                {t('news.drawer.allChecksPassed')}
-              </Badge>
               <span className="text-muted-foreground">
                 {t('news.drawer.updatedRelative', {
                   relative: formatDistanceToNow(new Date(item.updated_at), {

@@ -3,8 +3,8 @@
 /**
  * AnnouncementComposeDrawer
  *
- * Full-width SidePanel for composing and sending announcements. Replaces the
- * v1 AnnouncementCreateModal + AnnouncementPreviewModal pair.
+ * Half-width SidePanel (size="half") for composing and sending announcements.
+ * Replaces the v1 AnnouncementCreateModal + AnnouncementPreviewModal pair.
  *
  * Features:
  * - Form / JSON tab toggle with dirty-state guard on tab switch
@@ -217,7 +217,7 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
       <SidePanel
         open={open}
         onOpenChange={handleOpenChange}
-        size="full"
+        size="half"
         data-testid="announcement-compose-drawer"
         title="Compose announcement"
       >

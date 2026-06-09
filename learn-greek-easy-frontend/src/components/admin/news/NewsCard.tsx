@@ -43,7 +43,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onRequestDelete }) => 
   const formattedDate = format(new Date(item.publication_date), 'dd MMM yyyy');
   const flag = COUNTRY_FLAG[item.country] ?? '🌍';
 
-  const hasB2 = item.description_el != null && item.description_el !== '';
+  const hasB1 = item.description_el != null && item.description_el !== '';
   const hasA2 = item.description_el_a2 != null && item.description_el_a2 !== '';
 
   const totalAudio = (item.audio_duration_seconds ?? 0) + (item.audio_a2_duration_seconds ?? 0);
@@ -109,9 +109,9 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onRequestDelete }) => 
 
         <div className="news-meta">
           {/* Level pills — using .news-level mono utility */}
-          {(hasB2 || hasA2) && (
+          {(hasB1 || hasA2) && (
             <span className="news-levels">
-              {hasB2 && <span className="news-level">B2</span>}
+              {hasB1 && <span className="news-level">B1</span>}
               {hasA2 && <span className="news-level">A2</span>}
             </span>
           )}
@@ -125,7 +125,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onRequestDelete }) => 
           )}
 
           {/* Middle dot separator */}
-          {(hasB2 || hasA2 || hasAudio) && <span aria-hidden="true">·</span>}
+          {(hasB1 || hasA2 || hasAudio) && <span aria-hidden="true">·</span>}
 
           {/* Published date */}
           <span className="news-pub">

@@ -54,7 +54,7 @@ function Harness({ defaults = {} }: HarnessProps) {
 }
 
 /** Harness that mounts Body and exposes a watched value div.
- *  Verifies that title_el in Body (Scenario B2 field) is wired to shared form state.
+ *  Verifies that title_el in Body (Scenario B1 field) is wired to shared form state.
  */
 function HarnessBoth({ defaults = {} }: HarnessProps) {
   const form = useForm<NewsDrawerFormData>({
@@ -95,7 +95,7 @@ describe('NewsEditDrawerBody — structure', () => {
     expect(textarea).toHaveAttribute('rows', '10');
   });
 
-  it('renders the Scenario B2 textarea (5 rows)', () => {
+  it('renders the Scenario B1 textarea (5 rows)', () => {
     render(<Harness />);
     const textarea = screen.getByTestId('news-drawer-body-scenario-el');
     expect(textarea).toBeInTheDocument();
@@ -122,10 +122,10 @@ describe('NewsEditDrawerBody — structure', () => {
     expect(screen.getByTestId('news-drawer-body-description-el-a2')).toHaveAttribute('lang', 'el');
   });
 
-  it('Scenario B2 label renders via i18n key', () => {
+  it('Scenario B1 label renders via i18n key', () => {
     render(<Harness />);
-    // Resolves to "Scenario — B2 (Greek)"
-    expect(screen.getByText('Scenario — B2 (Greek)')).toBeInTheDocument();
+    // Resolves to "Scenario — B1 (Greek)"
+    expect(screen.getByText('Scenario — B1 (Greek)')).toBeInTheDocument();
   });
 
   it('Title A2 label renders via i18n key', () => {
@@ -142,7 +142,7 @@ describe('NewsEditDrawerBody — helper text', () => {
     render(<Harness />);
     expect(
       screen.getByText(
-        'Full article — shown to B2 learners; lower levels read a simplified scenario'
+        'Full article — shown to B1 learners; lower levels read a simplified scenario'
       )
     ).toBeInTheDocument();
   });
@@ -151,16 +151,16 @@ describe('NewsEditDrawerBody — helper text', () => {
 // ── Tests: shared FormProvider sync ──────────────────────────────────────────
 
 describe('NewsEditDrawerBody — shared FormProvider sync with Translations tab', () => {
-  it('Scenario B2 field (title_el) typed in Body tab updates the shared RHF form state', async () => {
+  it('Scenario B1 field (title_el) typed in Body tab updates the shared RHF form state', async () => {
     const user = userEvent.setup();
     render(<HarnessBoth defaults={{ title_el: '' }} />);
 
-    const scenarioB2 = screen.getByTestId('news-drawer-body-scenario-el');
+    const scenarioB1 = screen.getByTestId('news-drawer-body-scenario-el');
 
-    await user.type(scenarioB2, 'Κείμενο');
+    await user.type(scenarioB1, 'Κείμενο');
 
     // form-title-el-value reads from form.watch('title_el') — same field used by Translations tab.
-    // This proves the Scenario B2 textarea is wired to the shared title_el form state.
+    // This proves the Scenario B1 textarea is wired to the shared title_el form state.
     await waitFor(() => {
       expect(screen.getByTestId('form-title-el-value')).toHaveTextContent('Κείμενο');
     });

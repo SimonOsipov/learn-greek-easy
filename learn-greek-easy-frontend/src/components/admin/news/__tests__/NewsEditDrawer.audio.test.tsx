@@ -2,8 +2,9 @@
 //
 // NEWS-07c: NewsEditDrawerAudio — unit tests.
 // Covers: row rendering, 60 static bars, heights, play/pause control,
-// one-at-a-time enforcement, B1 disabled, cleanup on unmount.
+// one-at-a-time enforcement, cleanup on unmount.
 // NADM-19: chrome tests — audio-play class, RefreshCw icon, Upload icon, primary colors.
+// ADMIN2-32: audio tab is now B1 + A2 (two rows); the phantom disabled B1 row was removed.
 
 import React from 'react';
 
@@ -41,7 +42,7 @@ function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
     title_el: 'Δοκιμαστικό άρθρο',
     title_ru: 'Тестовая статья',
     title_el_a2: null,
-    description_el: 'Some B2 body text',
+    description_el: 'Some B1 body text',
     description_el_a2: null,
     country: 'greece',
     publication_date: '2024-01-01',
@@ -56,7 +57,7 @@ function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
     style_en: null,
     exercise: null,
     linked_situation_id: null,
-    audio_url: 'https://example.com/b2.mp3',
+    audio_url: 'https://example.com/b1.mp3',
     audio_generated_at: '2024-03-15T10:00:00Z',
     audio_duration_seconds: 120,
     audio_a2_url: 'https://example.com/a2.mp3',
@@ -83,61 +84,53 @@ describe('NewsEditDrawerAudio — row rendering', () => {
     expect(screen.getByTestId('news-drawer-tab-audio-content')).toBeInTheDocument();
   });
 
-  it('renders three rows (B2, A2, B1) with correct badge labels', () => {
+  it('renders two rows (B1, A2) with correct badge labels', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
-    expect(screen.getByText('B2')).toBeInTheDocument();
-    expect(screen.getByText('A2')).toBeInTheDocument();
     expect(screen.getByText('B1')).toBeInTheDocument();
+    expect(screen.getByText('A2')).toBeInTheDocument();
+    expect(screen.queryByText('B2')).not.toBeInTheDocument();
+    expect(document.querySelectorAll('.audio-row')).toHaveLength(2);
   });
 
-  it('renders B2/A2/B1 name i18n keys', () => {
+  it('renders B1/A2 name i18n keys', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
-    expect(screen.getByText('B2 narration')).toBeInTheDocument();
-    expect(screen.getByText('A2 narration')).toBeInTheDocument();
     expect(screen.getByText('B1 narration')).toBeInTheDocument();
+    expect(screen.getByText('A2 narration')).toBeInTheDocument();
   });
 
-  it('shows "Generated · ElevenLabs..." sub for B2 when audio_url present', () => {
+  it('shows "Generated · ElevenLabs..." sub for B1 when audio_url present', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
     const subs = screen.getAllByText(/Generated · ElevenLabs/);
     expect(subs.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('shows "notGeneratedYet" sub for B2 when audio_url is null', () => {
+  it('shows "notGeneratedYet" sub for B1 when audio_url is null', () => {
     render(<NewsEditDrawerAudio item={makeItem({ audio_url: null, audio_generated_at: null })} />);
     // Resolves to "Not generated yet"
     const notGenerated = screen.getAllByText('Not generated yet');
     expect(notGenerated.length).toBeGreaterThanOrEqual(1);
   });
-
-  it('shows b1NotShipping sub for B1 row always', () => {
-    render(<NewsEditDrawerAudio item={makeItem()} />);
-    // Resolves to "Not generated yet — B1 audio shipping with NLVL-B1"
-    expect(
-      screen.getByText('Not generated yet — B1 audio shipping with NLVL-B1')
-    ).toBeInTheDocument();
-  });
 });
 
 describe('NewsEditDrawerAudio — static waveform bars', () => {
-  it('renders exactly 60 audio-wave spans per row (180 total)', () => {
+  it('renders exactly 60 audio-wave spans per row (120 total)', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
     const bars = document.querySelectorAll('.audio-wave');
-    expect(bars).toHaveLength(180);
+    expect(bars).toHaveLength(120);
   });
 
-  it('B2 row has 60 audio-wave spans', () => {
+  it('B1 row has 60 audio-wave spans', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
     const allRows = document.querySelectorAll('.audio-row');
-    const b2Row = allRows[0];
-    expect(b2Row.querySelectorAll('.audio-wave')).toHaveLength(60);
+    const b1Row = allRows[0];
+    expect(b1Row.querySelectorAll('.audio-wave')).toHaveLength(60);
   });
 
   it('wave bar heights match deterministic formula 6 + ((i*7) % 18)', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
     const allRows = document.querySelectorAll('.audio-row');
-    const b2Row = allRows[0];
-    const bars = b2Row.querySelectorAll<HTMLSpanElement>('.audio-wave');
+    const b1Row = allRows[0];
+    const bars = b1Row.querySelectorAll<HTMLSpanElement>('.audio-wave');
     // Spot-check a few indices
     for (const idx of [0, 5, 17, 30, 59]) {
       const expected = `${6 + ((idx * 7) % 18)}px`;
@@ -147,111 +140,80 @@ describe('NewsEditDrawerAudio — static waveform bars', () => {
 });
 
 describe('NewsEditDrawerAudio — audio elements', () => {
-  it('renders B2 and A2 audio elements (by data-testid)', () => {
+  it('renders B1 and A2 audio elements (by data-testid)', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
-    expect(screen.getByTestId('news-drawer-audio-b2-element')).toBeInTheDocument();
+    expect(screen.getByTestId('news-drawer-audio-b1-element')).toBeInTheDocument();
     expect(screen.getByTestId('news-drawer-audio-a2-element')).toBeInTheDocument();
   });
 
-  it('does NOT render a B1 audio element', () => {
-    render(<NewsEditDrawerAudio item={makeItem()} />);
-    expect(screen.queryByTestId('news-drawer-audio-b1-element')).toBeNull();
-  });
-
-  it('B2 audio element has src when audio_url is present', () => {
+  it('B1 audio element has src when audio_url is present', () => {
     render(
-      <NewsEditDrawerAudio item={makeItem({ audio_url: 'https://cdn.example.com/b2.mp3' })} />
+      <NewsEditDrawerAudio item={makeItem({ audio_url: 'https://cdn.example.com/b1.mp3' })} />
     );
-    const el = screen.getByTestId('news-drawer-audio-b2-element') as HTMLAudioElement;
-    expect(el.src).toContain('b2.mp3');
+    const el = screen.getByTestId('news-drawer-audio-b1-element') as HTMLAudioElement;
+    expect(el.src).toContain('b1.mp3');
   });
 });
 
 describe('NewsEditDrawerAudio — play / pause control', () => {
-  it('clicking B2 Play button calls audio.play()', async () => {
+  it('clicking B1 Play button calls audio.play()', async () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
 
-    const b2Audio = screen.getByTestId('news-drawer-audio-b2-element') as HTMLAudioElement;
-    mockAudioElement(b2Audio);
+    const b1Audio = screen.getByTestId('news-drawer-audio-b1-element') as HTMLAudioElement;
+    mockAudioElement(b1Audio);
 
-    const playBtn = screen.getByLabelText('Play B2 narration');
+    const playBtn = screen.getByLabelText('Play B1 narration');
     fireEvent.click(playBtn);
 
-    expect(b2Audio.play).toHaveBeenCalledTimes(1);
+    expect(b1Audio.play).toHaveBeenCalledTimes(1);
   });
 
-  it('clicking B2 Play then B2 again pauses the element', async () => {
+  it('clicking B1 Play then B1 again pauses the element', async () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
 
-    const b2Audio = screen.getByTestId('news-drawer-audio-b2-element') as HTMLAudioElement;
-    mockAudioElement(b2Audio);
+    const b1Audio = screen.getByTestId('news-drawer-audio-b1-element') as HTMLAudioElement;
+    mockAudioElement(b1Audio);
 
-    const playBtn = screen.getByLabelText('Play B2 narration');
+    const playBtn = screen.getByLabelText('Play B1 narration');
     fireEvent.click(playBtn); // plays
 
-    const pauseBtn = screen.getByLabelText('Pause B2 narration');
+    const pauseBtn = screen.getByLabelText('Pause B1 narration');
     fireEvent.click(pauseBtn); // pauses
 
-    expect(b2Audio.pause).toHaveBeenCalledTimes(1);
+    expect(b1Audio.pause).toHaveBeenCalledTimes(1);
   });
 
-  it('clicking A2 Play while B2 is playing pauses B2 and plays A2 (one-at-a-time)', async () => {
+  it('clicking A2 Play while B1 is playing pauses B1 and plays A2 (one-at-a-time)', async () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
 
-    const b2Audio = screen.getByTestId('news-drawer-audio-b2-element') as HTMLAudioElement;
+    const b1Audio = screen.getByTestId('news-drawer-audio-b1-element') as HTMLAudioElement;
     const a2Audio = screen.getByTestId('news-drawer-audio-a2-element') as HTMLAudioElement;
-    mockAudioElement(b2Audio);
+    mockAudioElement(b1Audio);
     mockAudioElement(a2Audio);
 
-    // Start B2
-    fireEvent.click(screen.getByLabelText('Play B2 narration'));
-    expect(b2Audio.play).toHaveBeenCalledTimes(1);
+    // Start B1
+    fireEvent.click(screen.getByLabelText('Play B1 narration'));
+    expect(b1Audio.play).toHaveBeenCalledTimes(1);
 
-    // Now click A2 Play — B2 should be paused
+    // Now click A2 Play — B1 should be paused
     fireEvent.click(screen.getByLabelText('Play A2 narration'));
-    expect(b2Audio.pause).toHaveBeenCalledTimes(1);
+    expect(b1Audio.pause).toHaveBeenCalledTimes(1);
     expect(a2Audio.play).toHaveBeenCalledTimes(1);
   });
 
   it('button aria-label is "Play <level> narration" initially', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
-    expect(screen.getByLabelText('Play B2 narration')).toBeInTheDocument();
+    expect(screen.getByLabelText('Play B1 narration')).toBeInTheDocument();
     expect(screen.getByLabelText('Play A2 narration')).toBeInTheDocument();
   });
 
   it('button aria-label switches to "Pause <level> narration" after clicking Play', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
-    const b2Audio = screen.getByTestId('news-drawer-audio-b2-element') as HTMLAudioElement;
-    mockAudioElement(b2Audio);
+    const b1Audio = screen.getByTestId('news-drawer-audio-b1-element') as HTMLAudioElement;
+    mockAudioElement(b1Audio);
 
-    fireEvent.click(screen.getByLabelText('Play B2 narration'));
-    expect(screen.getByLabelText('Pause B2 narration')).toBeInTheDocument();
-  });
-});
-
-describe('NewsEditDrawerAudio — B1 row disabled', () => {
-  it('B1 play button has aria-disabled="true"', () => {
-    render(<NewsEditDrawerAudio item={makeItem()} />);
-    // B1 is the third row — find its play button via aria-disabled
-    const disabledButtons = document.querySelectorAll<HTMLButtonElement>(
-      'button[aria-disabled="true"]'
-    );
-    // B1 play button is one of the aria-disabled buttons (along with regenerate/upload)
-    // The B1 play button wraps a <Play> icon
-    const b1PlayBtn = Array.from(disabledButtons).find(
-      (btn) =>
-        btn.querySelector('svg') &&
-        btn.closest('.audio-row') === document.querySelectorAll('.audio-row')[2]
-    );
-    expect(b1PlayBtn).toBeTruthy();
-    expect(b1PlayBtn?.getAttribute('aria-disabled')).toBe('true');
-  });
-
-  it('B1 row shows "Coming soon" tooltip content', () => {
-    render(<NewsEditDrawerAudio item={makeItem()} />);
-    const tooltips = screen.getAllByText('Coming soon');
-    // At least one "Coming soon" tooltip per row (Regenerate + Upload + B1 play)
-    expect(tooltips.length).toBeGreaterThanOrEqual(1);
+    fireEvent.click(screen.getByLabelText('Play B1 narration'));
+    expect(screen.getByLabelText('Pause B1 narration')).toBeInTheDocument();
   });
 });
 
@@ -259,7 +221,7 @@ describe('NewsEditDrawerAudio — Regenerate + Upload buttons', () => {
   it('every row has a Regenerate button with aria-disabled="true"', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
     const regenBtns = screen.getAllByText('Regenerate');
-    expect(regenBtns).toHaveLength(3);
+    expect(regenBtns).toHaveLength(2);
     regenBtns.forEach((btn) => {
       expect(btn.closest('button')).toHaveAttribute('aria-disabled', 'true');
     });
@@ -268,8 +230,8 @@ describe('NewsEditDrawerAudio — Regenerate + Upload buttons', () => {
   it('every Regenerate button has a "Coming soon" tooltip', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
     const comingSoon = screen.getAllByText('Coming soon');
-    // Should have one per row x 2 (regen + b1 play) + upload tooltips = many
-    expect(comingSoon.length).toBeGreaterThanOrEqual(3);
+    // One Regenerate + one Upload tooltip per row × 2 rows.
+    expect(comingSoon.length).toBeGreaterThanOrEqual(2);
   });
 
   it('Upload icon buttons have aria-disabled="true"', () => {
@@ -283,10 +245,10 @@ describe('NewsEditDrawerAudio — Regenerate + Upload buttons', () => {
 });
 
 describe('NewsEditDrawerAudio — NADM-19 chrome: audio-play class', () => {
-  it('B2 play button has class audio-play', () => {
+  it('B1 play button has class audio-play', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
-    const b2Row = document.querySelectorAll('.audio-row')[0];
-    const playBtn = b2Row.querySelector('button[aria-label="Play B2 narration"]');
+    const b1Row = document.querySelectorAll('.audio-row')[0];
+    const playBtn = b1Row.querySelector('button[aria-label="Play B1 narration"]');
     expect(playBtn).toBeTruthy();
     expect(playBtn).toHaveClass('audio-play');
   });
@@ -298,118 +260,13 @@ describe('NewsEditDrawerAudio — NADM-19 chrome: audio-play class', () => {
     expect(playBtn).toBeTruthy();
     expect(playBtn).toHaveClass('audio-play');
   });
-
-  it('B1 play button does NOT have class audio-play (keeps disabled glass treatment)', () => {
-    render(<NewsEditDrawerAudio item={makeItem()} />);
-    const b1Row = document.querySelectorAll('.audio-row')[2];
-    const disabledPlayBtn = b1Row.querySelector('button[aria-label="Play B1 narration"]');
-    expect(disabledPlayBtn).toBeTruthy();
-    expect(disabledPlayBtn).toHaveAttribute('aria-disabled', 'true');
-    expect(disabledPlayBtn).not.toHaveClass('audio-play');
-  });
 });
 
 describe('NewsEditDrawerAudio — NADM-19 chrome: Regenerate + Upload icons', () => {
   it('each Regenerate button contains a RefreshCw SVG icon', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
     const regenBtns = screen.getAllByText('Regenerate');
-    expect(regenBtns).toHaveLength(3);
-    regenBtns.forEach((textNode) => {
-      const btn = textNode.closest('button');
-      expect(btn).toBeTruthy();
-      expect(btn?.querySelector('svg')).toBeTruthy();
-    });
-  });
-
-  it('each Upload button contains an Upload SVG icon', () => {
-    render(<NewsEditDrawerAudio item={makeItem()} />);
-    const rows = document.querySelectorAll('.audio-row');
-    rows.forEach((row) => {
-      const uploadBtn = row.querySelector('button.icon-btn[aria-disabled="true"]');
-      expect(uploadBtn).toBeTruthy();
-      expect(uploadBtn?.querySelector('svg')).toBeTruthy();
-    });
-  });
-});
-
-describe('NewsEditDrawerAudio — NADM-19 chrome: waveform color tokens', () => {
-  it('audio-wave spans exist (primary color applied via CSS class)', () => {
-    render(<NewsEditDrawerAudio item={makeItem()} />);
-    const bars = document.querySelectorAll('.audio-wave');
-    expect(bars.length).toBeGreaterThan(0);
-  });
-
-  it('audio-progress spans exist (primary color applied via CSS class)', () => {
-    render(<NewsEditDrawerAudio item={makeItem()} />);
-    const progressBars = document.querySelectorAll('.audio-progress');
-    expect(progressBars.length).toBeGreaterThan(0);
-  });
-});
-
-describe('NewsEditDrawerAudio — pause on unmount (tab change)', () => {
-  it('component unmounts without errors when audio is playing', () => {
-    const { unmount } = render(<NewsEditDrawerAudio item={makeItem()} />);
-
-    const b2Audio = screen.getByTestId('news-drawer-audio-b2-element') as HTMLAudioElement;
-    mockAudioElement(b2Audio);
-
-    // Start B2 playing
-    fireEvent.click(screen.getByLabelText('Play B2 narration'));
-    expect(b2Audio.play).toHaveBeenCalledTimes(1);
-
-    // Unmount should not throw (cleanup calls pause on refs).
-    expect(() => unmount()).not.toThrow();
-  });
-
-  it('useEffect cleanup calls pause on both audio refs (covered by cleanup fn structure)', () => {
-    // This test verifies the component declares a cleanup effect.
-    // The actual pause-on-unmount behavior is tested via integration (no errors thrown).
-    const { unmount } = render(<NewsEditDrawerAudio item={makeItem()} />);
-
-    const b2Audio = screen.getByTestId('news-drawer-audio-b2-element') as HTMLAudioElement;
-    const pauseSpy = vi.spyOn(b2Audio, 'pause');
-
-    unmount();
-
-    // In jsdom, the ref cleanup runs synchronously before the DOM node is released.
-    // If pause was called, it was via the ref's cleanup effect.
-    // We assert it was called 0 or more times (the effect is present in source).
-    expect(pauseSpy.mock.calls.length).toBeGreaterThanOrEqual(0);
-  });
-});
-
-describe('NewsEditDrawerAudio — NADM-19 chrome: audio-play class', () => {
-  it('B2 play button has class audio-play', () => {
-    render(<NewsEditDrawerAudio item={makeItem()} />);
-    const b2Row = document.querySelectorAll('.audio-row')[0];
-    const playBtn = b2Row.querySelector('button[aria-label="Play B2 narration"]');
-    expect(playBtn).toBeTruthy();
-    expect(playBtn).toHaveClass('audio-play');
-  });
-
-  it('A2 play button has class audio-play', () => {
-    render(<NewsEditDrawerAudio item={makeItem()} />);
-    const a2Row = document.querySelectorAll('.audio-row')[1];
-    const playBtn = a2Row.querySelector('button[aria-label="Play A2 narration"]');
-    expect(playBtn).toBeTruthy();
-    expect(playBtn).toHaveClass('audio-play');
-  });
-
-  it('B1 play button does NOT have class audio-play (keeps disabled glass treatment)', () => {
-    render(<NewsEditDrawerAudio item={makeItem()} />);
-    const b1Row = document.querySelectorAll('.audio-row')[2];
-    // B1 has aria-disabled button — it should use btn-glass, not audio-play
-    const disabledPlayBtn = b1Row.querySelector('button[aria-disabled="true"].btn-glass');
-    expect(disabledPlayBtn).toBeTruthy();
-    expect(disabledPlayBtn).not.toHaveClass('audio-play');
-  });
-});
-
-describe('NewsEditDrawerAudio — NADM-19 chrome: Regenerate + Upload icons', () => {
-  it('each Regenerate button contains a RefreshCw SVG icon', () => {
-    render(<NewsEditDrawerAudio item={makeItem()} />);
-    const regenBtns = screen.getAllByText('Regenerate');
-    expect(regenBtns).toHaveLength(3);
+    expect(regenBtns).toHaveLength(2);
     regenBtns.forEach((textNode) => {
       const btn = textNode.closest('button');
       expect(btn).toBeTruthy();
@@ -443,35 +300,67 @@ describe('NewsEditDrawerAudio — NADM-19 chrome: waveform color tokens', () => 
   });
 });
 
+describe('NewsEditDrawerAudio — pause on unmount (tab change)', () => {
+  it('component unmounts without errors when audio is playing', () => {
+    const { unmount } = render(<NewsEditDrawerAudio item={makeItem()} />);
+
+    const b1Audio = screen.getByTestId('news-drawer-audio-b1-element') as HTMLAudioElement;
+    mockAudioElement(b1Audio);
+
+    // Start B1 playing
+    fireEvent.click(screen.getByLabelText('Play B1 narration'));
+    expect(b1Audio.play).toHaveBeenCalledTimes(1);
+
+    // Unmount should not throw (cleanup calls pause on refs).
+    expect(() => unmount()).not.toThrow();
+  });
+
+  it('useEffect cleanup calls pause on both audio refs (covered by cleanup fn structure)', () => {
+    // This test verifies the component declares a cleanup effect.
+    // The actual pause-on-unmount behavior is tested via integration (no errors thrown).
+    const { unmount } = render(<NewsEditDrawerAudio item={makeItem()} />);
+
+    const b1Audio = screen.getByTestId('news-drawer-audio-b1-element') as HTMLAudioElement;
+    const pauseSpy = vi.spyOn(b1Audio, 'pause');
+
+    unmount();
+
+    // In jsdom, the ref cleanup runs synchronously before the DOM node is released.
+    // If pause was called, it was via the ref's cleanup effect.
+    // We assert it was called 0 or more times (the effect is present in source).
+    expect(pauseSpy.mock.calls.length).toBeGreaterThanOrEqual(0);
+  });
+});
+
 describe('NewsEditDrawerAudio — time display', () => {
-  it('shows "0:00 / 2:00" for B2 with 120s duration from item prop', () => {
+  it('shows "0:00 / 2:00" for B1 with 120s duration from item prop', () => {
     render(<NewsEditDrawerAudio item={makeItem({ audio_duration_seconds: 120 })} />);
     // Initial state: currentTime=0, duration from prop=120s
     const timeDivs = document.querySelectorAll('.audio-time');
-    // B2 row is first
+    // B1 row is first
     expect(timeDivs[0].textContent).toBe('0:00 / 2:00');
   });
 
-  it('updates B2 currentTime on timeupdate event', () => {
+  it('updates B1 currentTime on timeupdate event', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
 
-    const b2Audio = screen.getByTestId('news-drawer-audio-b2-element') as HTMLAudioElement;
-    Object.defineProperty(b2Audio, 'currentTime', {
+    const b1Audio = screen.getByTestId('news-drawer-audio-b1-element') as HTMLAudioElement;
+    Object.defineProperty(b1Audio, 'currentTime', {
       value: 65,
       writable: true,
       configurable: true,
     });
-    Object.defineProperty(b2Audio, 'duration', {
+    Object.defineProperty(b1Audio, 'duration', {
       value: 120,
       writable: true,
       configurable: true,
     });
 
-    fireEvent(b2Audio, new Event('loadedmetadata'));
-    fireEvent(b2Audio, new Event('timeupdate'));
+    fireEvent(b1Audio, new Event('loadedmetadata'));
+    fireEvent(b1Audio, new Event('timeupdate'));
 
     const timeDivs = document.querySelectorAll('.audio-time');
-    // After timeupdate, B2 should show 1:05 / 2:00
+    // After timeupdate, B1 should show 1:05 / 2:00
     expect(timeDivs[0].textContent).toBe('1:05 / 2:00');
   });
 });

@@ -15,10 +15,6 @@ vi.mock('@/hooks/use-toast', () => ({
   toast: vi.fn(),
 }));
 
-vi.mock('@/lib/analytics', () => ({
-  track: vi.fn(),
-}));
-
 const mockUpdateSituation = vi.fn();
 const mockUpdateSituationDescription = vi.fn();
 const mockUpdateSituationPicture = vi.fn();

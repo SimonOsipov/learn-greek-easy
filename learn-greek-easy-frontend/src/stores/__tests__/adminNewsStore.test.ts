@@ -114,11 +114,11 @@ describe('adminNewsStore — NEWS-02 extensions', () => {
       useAdminNewsStore.setState({ page: 3 });
 
       act(() => {
-        useAdminNewsStore.getState().setLevelFilter('B2');
+        useAdminNewsStore.getState().setLevelFilter('B1');
       });
 
       const state = useAdminNewsStore.getState();
-      expect(state.levelFilter).toBe('B2');
+      expect(state.levelFilter).toBe('B1');
       expect(state.page).toBe(1);
     });
 
@@ -131,7 +131,7 @@ describe('adminNewsStore — NEWS-02 extensions', () => {
     });
 
     it('round-trips through all values', () => {
-      for (const level of ['B2', 'A2', 'B1', 'all'] as const) {
+      for (const level of ['B1', 'A2', 'all'] as const) {
         act(() => {
           useAdminNewsStore.getState().setLevelFilter(level);
         });
@@ -232,7 +232,7 @@ describe('adminNewsStore — NEWS-02 extensions', () => {
     it('returns all four filter fields', () => {
       useAdminNewsStore.setState({
         countryFilter: 'GR' as any,
-        levelFilter: 'B2',
+        levelFilter: 'B1',
         searchQuery: 'foo',
         sortMode: 'oldest',
       });
@@ -240,7 +240,7 @@ describe('adminNewsStore — NEWS-02 extensions', () => {
       const result = selectFilterState(useAdminNewsStore.getState());
       expect(result).toEqual({
         countryFilter: 'GR',
-        levelFilter: 'B2',
+        levelFilter: 'B1',
         searchQuery: 'foo',
         sortMode: 'oldest',
       });
@@ -263,30 +263,30 @@ describe('adminNewsStore — NEWS-02 extensions', () => {
   // selectFilteredNewsItems — level filter
   // ============================================================
   describe('selectFilteredNewsItems — level filter', () => {
-    const b2Item = makeItem({ id: 'b2', description_el: 'Κείμενο B2', description_el_a2: null });
+    const b1Item = makeItem({ id: 'b1', description_el: 'Κείμενο B1', description_el_a2: null });
     const a2Item = makeItem({ id: 'a2', description_el: null, description_el_a2: 'Κείμενο A2' });
     const bothItem = makeItem({
       id: 'both',
-      description_el: 'B2 text',
+      description_el: 'B1 text',
       description_el_a2: 'A2 text',
     });
     const noneItem = makeItem({ id: 'none', description_el: null, description_el_a2: null });
 
     beforeEach(() => {
-      useAdminNewsStore.setState({ newsItems: [b2Item, a2Item, bothItem, noneItem] as any });
+      useAdminNewsStore.setState({ newsItems: [b1Item, a2Item, bothItem, noneItem] as any });
     });
 
     it('"all" level returns all items', () => {
       useAdminNewsStore.setState({ levelFilter: 'all' });
       const result = selectFilteredNewsItems(useAdminNewsStore.getState());
-      expect(result.map((i) => i.id)).toEqual(expect.arrayContaining(['b2', 'a2', 'both', 'none']));
+      expect(result.map((i) => i.id)).toEqual(expect.arrayContaining(['b1', 'a2', 'both', 'none']));
       expect(result).toHaveLength(4);
     });
 
-    it('"B2" only matches items with non-empty description_el', () => {
-      useAdminNewsStore.setState({ levelFilter: 'B2' });
+    it('"B1" only matches items with non-empty description_el', () => {
+      useAdminNewsStore.setState({ levelFilter: 'B1' });
       const result = selectFilteredNewsItems(useAdminNewsStore.getState());
-      expect(result.map((i) => i.id)).toEqual(expect.arrayContaining(['b2', 'both']));
+      expect(result.map((i) => i.id)).toEqual(expect.arrayContaining(['b1', 'both']));
       expect(result).toHaveLength(2);
     });
 
@@ -295,12 +295,6 @@ describe('adminNewsStore — NEWS-02 extensions', () => {
       const result = selectFilteredNewsItems(useAdminNewsStore.getState());
       expect(result.map((i) => i.id)).toEqual(expect.arrayContaining(['a2', 'both']));
       expect(result).toHaveLength(2);
-    });
-
-    it('"B1" always returns []', () => {
-      useAdminNewsStore.setState({ levelFilter: 'B1' });
-      const result = selectFilteredNewsItems(useAdminNewsStore.getState());
-      expect(result).toEqual([]);
     });
   });
 
