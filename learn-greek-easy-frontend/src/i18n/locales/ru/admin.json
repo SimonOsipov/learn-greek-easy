@@ -876,7 +876,7 @@
     "adminNotesLabel": "Заметки администратора",
     "anonymousUser": "Анонимный пользователь",
     "breadcrumb": {
-      "dashboard": "Панель",
+      "dashboard": "Админ",
       "current": "Ошибки карточек"
     },
     "cardTypes": {

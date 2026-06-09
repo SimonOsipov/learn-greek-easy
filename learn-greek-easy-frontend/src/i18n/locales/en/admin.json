@@ -862,7 +862,7 @@
     "adminNotesLabel": "Admin Notes",
     "anonymousUser": "Anonymous User",
     "breadcrumb": {
-      "dashboard": "Dashboard",
+      "dashboard": "Admin",
       "current": "Card errors"
     },
     "cardTypes": {
