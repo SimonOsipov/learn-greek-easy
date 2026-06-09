@@ -16,7 +16,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { toast } from '@/hooks/use-toast';
 import { useAdminTabNav } from '@/hooks/useAdminTabNav';
 import { tDynamic } from '@/i18n/tDynamic';
-import { track } from '@/lib/analytics';
 import {
   adminAPI,
   type LinkedSituationSummary,
@@ -190,7 +189,6 @@ export const NewsEditDrawer: React.FC = () => {
     try {
       const targetStatus = item.status === 'draft' ? 'published' : 'published';
       await adminAPI.updateNewsItem(item.id, { status: targetStatus });
-      track('admin_news_published', { news_item_id: item.id });
       toast({ title: t('news.edit.success') });
       await useAdminNewsStore.getState().fetchNewsItems();
       closeAndClearUrl();

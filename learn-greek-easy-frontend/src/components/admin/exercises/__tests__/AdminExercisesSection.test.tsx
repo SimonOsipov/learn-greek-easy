@@ -38,11 +38,6 @@ vi.mock('../AdminExerciseBody', () => ({
 vi.mock('@/components/culture/WaveformPlayer', () => ({
   WaveformPlayer: () => <div data-testid="waveform-player" />,
 }));
-vi.mock('@/lib/analytics/track', () => ({
-  track: vi.fn(),
-  __setPosthogInstance: vi.fn(),
-  getPosthogInstance: vi.fn(() => null),
-}));
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

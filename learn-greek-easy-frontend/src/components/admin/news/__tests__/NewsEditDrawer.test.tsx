@@ -20,11 +20,6 @@ vi.mock('@/hooks/use-toast', () => ({
   toast: vi.fn(),
 }));
 
-const mockTrack = vi.fn();
-vi.mock('@/lib/analytics', () => ({
-  track: (...args: unknown[]) => mockTrack(...args),
-}));
-
 vi.mock('@/services/api', () => ({
   APIRequestError: class APIRequestError extends Error {
     status: number;
@@ -618,19 +613,6 @@ describe('NewsEditDrawer — Publish CTA (NADM-25)', () => {
       expect(mockUpdateNewsItem).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({ status: 'published' })
-      );
-    });
-  });
-
-  it('fires track("admin_news_published") on successful publish', async () => {
-    const user = userEvent.setup();
-    mockUpdateNewsItem.mockResolvedValue(undefined);
-    renderDrawer();
-    await user.click(screen.getByTestId('news-drawer-publish'));
-    await waitFor(() => {
-      expect(mockTrack).toHaveBeenCalledWith(
-        'admin_news_published',
-        expect.objectContaining({ news_item_id: 'item-1' })
       );
     });
   });

@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { SegControl } from '@/components/ui/seg-control';
 import { tDynamic } from '@/i18n/tDynamic';
-import { track } from '@/lib/analytics/track';
 import {
   useAdminExercisesStore,
   type ExerciseTypeFilter,
@@ -82,8 +81,6 @@ export function AdminExercisesToolbar() {
           value={source}
           onChange={(v) => {
             setSource(v);
-            // EXR-73: track filter change
-            track('admin_exercise_filter_changed', { axis: 'source', value: v });
           }}
           ariaLabel={t('exercises.filters.source.label')}
           className="flex-col items-start sm:flex-row sm:items-center"
@@ -97,7 +94,6 @@ export function AdminExercisesToolbar() {
           value={type}
           onChange={(v) => {
             setType(v);
-            track('admin_exercise_filter_changed', { axis: 'type', value: v });
           }}
           ariaLabel={t('exercises.filters.type.label')}
           className="flex-col items-start sm:flex-row sm:items-center"
@@ -117,7 +113,6 @@ export function AdminExercisesToolbar() {
           value={level}
           onChange={(v) => {
             setLevel(v);
-            track('admin_exercise_filter_changed', { axis: 'level', value: v });
           }}
           ariaLabel={t('exercises.filters.level.label')}
           className="flex-col items-start sm:flex-row sm:items-center"
@@ -134,7 +129,6 @@ export function AdminExercisesToolbar() {
           value={status}
           onChange={(v) => {
             setStatus(v);
-            track('admin_exercise_filter_changed', { axis: 'status', value: v });
           }}
           ariaLabel={t('exercises.filters.status.label')}
           className="flex-col items-start sm:flex-row sm:items-center"
@@ -149,7 +143,6 @@ export function AdminExercisesToolbar() {
             value={modality}
             onChange={(v) => {
               setModality(v as Modality);
-              track('admin_exercise_filter_changed', { axis: 'modality', value: v });
             }}
             ariaLabel={t('exercises.modality.ariaLabel')}
           />
