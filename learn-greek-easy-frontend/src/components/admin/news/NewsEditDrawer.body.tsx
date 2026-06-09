@@ -64,12 +64,12 @@ export const NewsEditDrawerBody: React.FC<Props> = () => {
         />
       </Field>
 
-      {/* 2-col row: Scenario B2 (left) + A2 pair (right) */}
+      {/* 2-col row: Scenario B1 (left) + A2 pair (right) */}
       <div className="dr-2col">
-        {/* Left: Scenario — B2 (Greek) — replaces the old Title B2 duplicate */}
+        {/* Left: Scenario — B1 (Greek) — replaces the old Title B1 duplicate */}
         <Field
-          label={t('news.drawer.body.scenarioB2')}
-          hint={t('news.drawer.body.scenarioB2Helper')}
+          label={t('news.drawer.body.scenarioB1')}
+          hint={t('news.drawer.body.scenarioB1Helper')}
           htmlFor="news-body-scenario-el"
         >
           <Textarea

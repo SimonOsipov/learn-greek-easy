@@ -1,6 +1,6 @@
 // src/components/admin/news/NewsEditDrawer.audio.tsx
 //
-// NEWS-07c: Audio tab — 3 rows (B2 / A2 / B1) + static decorative waveform + one-at-a-time play.
+// NEWS-07c: Audio tab — 3 rows (B1 / A2 / B1) + static decorative waveform + one-at-a-time play.
 // Does NOT reuse WaveformPlayer — this is a lightweight static-bar atom with no Web Audio analysis.
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -71,7 +71,7 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
     b1: { currentTime: 0, duration: 0 },
   });
 
-  // Audio element refs — only B2 and A2 have real audio elements.
+  // Audio element refs — only B1 and A2 have real audio elements.
   const b2Ref = useRef<HTMLAudioElement>(null);
   const a2Ref = useRef<HTMLAudioElement>(null);
 
@@ -247,7 +247,7 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
   return (
     <TooltipProvider>
       <div data-testid="news-drawer-tab-audio-content">
-        {/* Hidden audio elements — only B2 and A2 */}
+        {/* Hidden audio elements — only B1 and A2 */}
         {item.audio_url && (
           <audio
             ref={b2Ref}
@@ -292,7 +292,7 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
         )}
 
         {/* Rows */}
-        {renderRow('b2', 'violet', 'B2', 'news.drawer.audio.b2Narration')}
+        {renderRow('b2', 'violet', 'B1', 'news.drawer.audio.b1Narration')}
         {renderRow('a2', 'violet', 'A2', 'news.drawer.audio.a2Narration')}
         {renderRow('b1', 'violet', 'B1', 'news.drawer.audio.b1Narration')}
       </div>

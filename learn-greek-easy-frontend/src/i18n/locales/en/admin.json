@@ -596,7 +596,6 @@
         "es": "Spain"
       },
       "audio": {
-        "b2Narration": "B2 narration",
         "a2Narration": "A2 narration",
         "b1Narration": "B1 narration",
         "generatedFrom": "Generated · ElevenLabs · Greek female voice — last {{date}}",
@@ -616,9 +615,9 @@
       },
       "body": {
         "greekBody": "Greek body",
-        "greekBodyHelper": "Full article — shown to B2 learners; lower levels read a simplified scenario",
-        "scenarioB2": "Scenario — B2 (Greek)",
-        "scenarioB2Helper": "Visible to B2 learners as the article body",
+        "greekBodyHelper": "Full article — shown to B1 learners; lower levels read a simplified scenario",
+        "scenarioB1": "Scenario — B1 (Greek)",
+        "scenarioB1Helper": "Visible to B1 learners as the article body",
         "titleA2": "Title — A2 (Greek)",
         "scenarioA2": "Scenario — A2 (Greek)"
       },

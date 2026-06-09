@@ -243,7 +243,7 @@ export const NewsEditDrawer: React.FC = () => {
                 {t('news.drawer.publishedPill')}
               </Badge>
             )}
-            {item.description_el ? <Badge tone="violet">B2</Badge> : null}
+            {item.description_el ? <Badge tone="violet">B1</Badge> : null}
             {item.description_el_a2 ? <Badge tone="violet">A2</Badge> : null}
             {item.linked_situation !== null && (
               <Badge tone="blue">{t('news.drawer.linkedSituationLabel')}</Badge>
