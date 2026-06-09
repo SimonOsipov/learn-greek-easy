@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Kicker } from '@/components/ui/kicker';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { toast } from '@/hooks/use-toast';
 import { tDynamic } from '@/i18n/tDynamic';
 import type { NewsItemResponse } from '@/services/adminAPI';
 
@@ -82,10 +81,14 @@ export const NewsEditDrawerLinkedSituation: React.FC<Props> = ({
               <Button
                 variant="default"
                 aria-disabled="true"
-                className="cursor-not-allowed opacity-60"
+                className="relative cursor-not-allowed opacity-60"
                 onClick={(e) => e.preventDefault()}
               >
                 {t('news.drawer.linkedSituation.generate')}
+                <span
+                  className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
+                  aria-hidden="true"
+                />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t('comingSoon')}</TooltipContent>
@@ -155,14 +158,40 @@ export const NewsEditDrawerLinkedSituation: React.FC<Props> = ({
         style={{ borderTop: '1px dashed hsl(var(--fg) / 0.1)' }}
         data-testid="news-drawer-linked-situation-footer"
       >
-        <button className="btn-glass btn-sm" onClick={() => toast({ title: t('comingSoon') })}>
-          <X size={14} aria-hidden="true" />
-          {t('news.drawer.linkedSituation.unlink')}
-        </button>
-        <button className="btn-glass btn-sm" onClick={() => toast({ title: t('comingSoon') })}>
-          <Wand2 size={14} aria-hidden="true" />
-          {t('news.drawer.linkedSituation.regenerate')}
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              className="btn-glass btn-sm relative cursor-not-allowed opacity-60"
+              aria-disabled="true"
+              onClick={(e) => e.preventDefault()}
+            >
+              <X size={14} aria-hidden="true" />
+              {t('news.drawer.linkedSituation.unlink')}
+              <span
+                className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
+                aria-hidden="true"
+              />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{t('comingSoon')}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              className="btn-glass btn-sm relative cursor-not-allowed opacity-60"
+              aria-disabled="true"
+              onClick={(e) => e.preventDefault()}
+            >
+              <Wand2 size={14} aria-hidden="true" />
+              {t('news.drawer.linkedSituation.regenerate')}
+              <span
+                className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
+                aria-hidden="true"
+              />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{t('comingSoon')}</TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );

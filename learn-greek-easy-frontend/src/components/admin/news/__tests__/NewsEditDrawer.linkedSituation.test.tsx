@@ -479,7 +479,7 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
     expect(footer).toHaveStyle({ borderTop: '1px dashed hsl(var(--fg) / 0.1)' });
   });
 
-  it('Unlink button is enabled (no aria-disabled)', () => {
+  it('Unlink button is true-disabled (aria-disabled)', () => {
     const item = makeItem();
     render(
       <MemoryRouter>
@@ -487,7 +487,7 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
       </MemoryRouter>
     );
     const btn = screen.getByRole('button', { name: /Unlink/i });
-    expect(btn).not.toHaveAttribute('aria-disabled');
+    expect(btn).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('Unlink button has btn-glass class', () => {
@@ -513,7 +513,7 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
     expect(btn.querySelector('svg')).toBeInTheDocument();
   });
 
-  it('Regenerate button is enabled (no aria-disabled)', () => {
+  it('Regenerate button is true-disabled (aria-disabled)', () => {
     const item = makeItem();
     render(
       <MemoryRouter>
@@ -521,7 +521,7 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
       </MemoryRouter>
     );
     const btn = screen.getByRole('button', { name: /Regenerate from this article/i });
-    expect(btn).not.toHaveAttribute('aria-disabled');
+    expect(btn).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('Regenerate button has btn-glass class', () => {
@@ -546,7 +546,7 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
     expect(btn.querySelector('svg')).toBeInTheDocument();
   });
 
-  it('clicking Unlink calls toast with "Coming soon — backend in progress"', async () => {
+  it('clicking Unlink does not fire a toast (true-disabled stub)', async () => {
     const user = userEvent.setup();
     const item = makeItem();
     render(
@@ -556,10 +556,10 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
     );
     const btn = screen.getByRole('button', { name: /Unlink/i });
     await user.click(btn);
-    expect(mockToast).toHaveBeenCalledWith({ title: 'Coming soon' });
+    expect(mockToast).not.toHaveBeenCalled();
   });
 
-  it('clicking Regenerate calls toast with "Coming soon — backend in progress"', async () => {
+  it('clicking Regenerate does not fire a toast (true-disabled stub)', async () => {
     const user = userEvent.setup();
     const item = makeItem();
     render(
@@ -569,7 +569,7 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
     );
     const btn = screen.getByRole('button', { name: /Regenerate from this article/i });
     await user.click(btn);
-    expect(mockToast).toHaveBeenCalledWith({ title: 'Coming soon' });
+    expect(mockToast).not.toHaveBeenCalled();
   });
 });
 

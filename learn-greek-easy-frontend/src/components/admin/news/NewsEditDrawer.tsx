@@ -273,11 +273,15 @@ export const NewsEditDrawer: React.FC = () => {
                 <button
                   type="button"
                   aria-disabled="true"
-                  className="btn-glass inline-flex cursor-not-allowed items-center gap-1 opacity-60"
+                  className="btn-glass relative inline-flex cursor-not-allowed items-center gap-1 opacity-60"
                   onClick={(e) => e.preventDefault()}
                 >
                   <Wand2 className="size-3" />
                   {t('news.drawer.regenerateTranslations')}
+                  <span
+                    className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
+                    aria-hidden="true"
+                  />
                 </button>
               </TooltipTrigger>
               <TooltipContent>{t('comingSoon')}</TooltipContent>
