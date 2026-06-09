@@ -306,10 +306,6 @@ export const NewsEditDrawer: React.FC = () => {
         <SidePanel.Footer>
           <div className="flex w-full items-center justify-between">
             <div className="flex items-center gap-2 text-sm">
-              <Badge tone="green">
-                <Check className="mr-1 size-3" />
-                {t('news.drawer.allChecksPassed')}
-              </Badge>
               <span className="text-muted-foreground">
                 {t('news.drawer.updatedRelative', {
                   relative: formatDistanceToNow(new Date(item.updated_at), {

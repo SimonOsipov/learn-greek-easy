@@ -346,20 +346,6 @@ describe('NewsEditDrawer — Regenerate button with icon', () => {
   });
 });
 
-describe('NewsEditDrawer — allChecksPassed badge with Check icon', () => {
-  it('renders allChecksPassed badge containing a Check icon', () => {
-    const item = makeItem();
-    storeState.drawerItemId = item.id;
-    storeState.newsItems = [item];
-    renderDrawer();
-    const badgeText = screen.getByText('All checks passed');
-    // The badge wraps the text and the icon — find the parent badge div
-    const badge = badgeText.closest('.badge, [class*="badge"]') ?? badgeText.parentElement;
-    expect(badge).toBeInTheDocument();
-    expect(badge!.querySelector('svg')).toBeInTheDocument();
-  });
-});
-
 describe('NewsEditDrawer — tab strip', () => {
   beforeEach(() => {
     const item = makeItem();
@@ -415,11 +401,6 @@ describe('NewsEditDrawer — footer', () => {
     const item = makeItem();
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
-  });
-
-  it('renders allChecksPassed badge', () => {
-    renderDrawer();
-    expect(screen.getByText('All checks passed')).toBeInTheDocument();
   });
 
   it('renders updatedRelative text', () => {
