@@ -167,14 +167,14 @@ describe('NewsCard', () => {
     expect(screen.getByText('Русский заголовок')).toBeInTheDocument();
   });
 
-  it('renders B2 badge when description_el is non-empty', () => {
+  it('renders B1 badge when description_el is non-empty', () => {
     renderWithRouter(
       <NewsCard
         item={makeItem({ description_el: 'Some text' })}
         onRequestDelete={mockOnRequestDelete}
       />
     );
-    expect(screen.getByText('B2')).toBeInTheDocument();
+    expect(screen.getByText('B1')).toBeInTheDocument();
   });
 
   it('renders A2 badge when description_el_a2 is non-empty', () => {
@@ -187,14 +187,14 @@ describe('NewsCard', () => {
     expect(screen.getByText('A2')).toBeInTheDocument();
   });
 
-  it('renders both B2 and A2 badges when both are present', () => {
+  it('renders both B1 and A2 badges when both are present', () => {
     renderWithRouter(
       <NewsCard
-        item={makeItem({ description_el: 'B2', description_el_a2: 'A2' })}
+        item={makeItem({ description_el: 'B1', description_el_a2: 'A2' })}
         onRequestDelete={mockOnRequestDelete}
       />
     );
-    expect(screen.getByText('B2')).toBeInTheDocument();
+    expect(screen.getByText('B1')).toBeInTheDocument();
     expect(screen.getByText('A2')).toBeInTheDocument();
   });
 
@@ -321,7 +321,7 @@ describe('NewsCard', () => {
     expect(dateEl?.textContent).toBe('15 Mar 2025');
   });
 
-  it('NADM-16: B2 pill uses .news-level class (not <Badge>)', () => {
+  it('NADM-16: B1 pill uses .news-level class (not <Badge>)', () => {
     const { container } = renderWithRouter(
       <NewsCard
         item={makeItem({ description_el: 'Some text' })}
@@ -330,7 +330,7 @@ describe('NewsCard', () => {
     );
     const levelPill = container.querySelector('.news-level');
     expect(levelPill).toBeInTheDocument();
-    expect(levelPill?.textContent).toBe('B2');
+    expect(levelPill?.textContent).toBe('B1');
     // Verify it is a <span> (not shadcn Badge <div>)
     expect(levelPill?.tagName.toLowerCase()).toBe('span');
   });
@@ -347,17 +347,17 @@ describe('NewsCard', () => {
     expect(texts).toContain('A2');
   });
 
-  it('NADM-16: both B2 and A2 pills use .news-level class when both present', () => {
+  it('NADM-16: both B1 and A2 pills use .news-level class when both present', () => {
     const { container } = renderWithRouter(
       <NewsCard
-        item={makeItem({ description_el: 'B2 text', description_el_a2: 'A2 text' })}
+        item={makeItem({ description_el: 'B1 text', description_el_a2: 'A2 text' })}
         onRequestDelete={mockOnRequestDelete}
       />
     );
     const levelPills = container.querySelectorAll('.news-level');
     expect(levelPills).toHaveLength(2);
     const texts = Array.from(levelPills).map((el) => el.textContent);
-    expect(texts).toContain('B2');
+    expect(texts).toContain('B1');
     expect(texts).toContain('A2');
   });
 

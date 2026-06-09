@@ -81,7 +81,7 @@ function _buildItem(): import('@/services/adminAPI').NewsItemResponse {
     title_el: 'Ελληνικός τίτλος',
     title_en: 'English title',
     title_ru: 'Русский заголовок',
-    description_el: 'Περιγραφή B2',
+    description_el: 'Περιγραφή B1',
     description_en: 'Description EN',
     description_ru: 'Описание RU',
     publication_date: '2025-01-15',
@@ -223,9 +223,9 @@ describe('NewsEditDrawer — header rendering', () => {
     expect(screen.getByTestId('news-drawer-status-pill')).toHaveTextContent('Draft — not visible');
   });
 
-  it('renders B2 badge when description_el is present', () => {
+  it('renders B1 badge when description_el is present', () => {
     renderDrawer();
-    expect(screen.getByText('B2')).toBeInTheDocument();
+    expect(screen.getByText('B1')).toBeInTheDocument();
   });
 
   it('does not render A2 badge when description_el_a2 is null', () => {

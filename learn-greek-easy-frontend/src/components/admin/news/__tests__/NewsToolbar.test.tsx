@@ -79,11 +79,11 @@ describe('NewsToolbar — renders all controls', () => {
     expect(screen.queryByText('🌍 World')).not.toBeInTheDocument();
   });
 
-  it('renders Level SegControl with B2/A2/B1 options', () => {
+  it('renders Level SegControl with B1/A2 options', () => {
     renderWithRouter();
-    expect(screen.getByText('B2')).toBeInTheDocument();
-    expect(screen.getByText('A2')).toBeInTheDocument();
     expect(screen.getByText('B1')).toBeInTheDocument();
+    expect(screen.getByText('A2')).toBeInTheDocument();
+    expect(screen.queryByText('B2')).not.toBeInTheDocument();
   });
 
   it('renders search input', () => {
@@ -116,9 +116,9 @@ describe('NewsToolbar — URL hydration on mount', () => {
     expect(mockSetCountryFilter).toHaveBeenCalledWith('greece');
   });
 
-  it('calls setLevelFilter with "B2" when ?level=B2', () => {
-    renderWithRouter('?level=B2');
-    expect(mockSetLevelFilter).toHaveBeenCalledWith('B2');
+  it('calls setLevelFilter with "B1" when ?level=B1', () => {
+    renderWithRouter('?level=B1');
+    expect(mockSetLevelFilter).toHaveBeenCalledWith('B1');
   });
 
   it('calls setSearchQuery with "cyprus" when ?q=cyprus', () => {
@@ -132,9 +132,9 @@ describe('NewsToolbar — URL hydration on mount', () => {
   });
 
   it('calls all four setters when all params present', () => {
-    renderWithRouter('?country=greece&level=B2&q=cyprus&sort=oldest');
+    renderWithRouter('?country=greece&level=B1&q=cyprus&sort=oldest');
     expect(mockSetCountryFilter).toHaveBeenCalledWith('greece');
-    expect(mockSetLevelFilter).toHaveBeenCalledWith('B2');
+    expect(mockSetLevelFilter).toHaveBeenCalledWith('B1');
     expect(mockSetSearchQuery).toHaveBeenCalledWith('cyprus');
     expect(mockSetSortMode).toHaveBeenCalledWith('oldest');
   });
@@ -164,8 +164,8 @@ describe('NewsToolbar — URL write-back on SegControl change', () => {
   it('calls setLevelFilter when a level option is clicked', async () => {
     const user = userEvent.setup();
     renderWithRouter();
-    await user.click(screen.getByText('B2'));
-    expect(mockSetLevelFilter).toHaveBeenCalledWith('B2');
+    await user.click(screen.getByText('B1'));
+    expect(mockSetLevelFilter).toHaveBeenCalledWith('B1');
   });
 });
 

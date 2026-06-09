@@ -82,7 +82,7 @@ function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
     title_el: 'Ελληνικός τίτλος',
     title_en: 'English title',
     title_ru: 'Русский заголовок',
-    description_el: 'Περιγραφή B2',
+    description_el: 'Περιγραφή B1',
     description_en: 'Description EN',
     description_ru: 'Описание RU',
     publication_date: '2025-01-15',
