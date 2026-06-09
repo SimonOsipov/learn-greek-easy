@@ -405,7 +405,7 @@ function CardRecord({
   footerItems.push(
     <span key="variant" className="flex flex-col leading-tight">
       <span>{getVariantKeyLabel(card.variant_key)}</span>
-      <span className="font-mono text-[10px] text-muted-foreground/60">{card.variant_key}</span>
+      <span className="font-mono text-xs text-muted-foreground/60">{card.variant_key}</span>
     </span>
   );
   if (audioStatus) {
