@@ -23,6 +23,7 @@ import {
 vi.mock('@/services/adminAPI', () => ({
   adminAPI: {
     getNewsItems: vi.fn(),
+    getAdminNewsItems: vi.fn(),
     createNewsItem: vi.fn(),
     updateNewsItem: vi.fn(),
     deleteNewsItem: vi.fn(),
@@ -122,12 +123,12 @@ describe('adminNewsStore — NEWS-02 extensions', () => {
       expect(state.page).toBe(1);
     });
 
-    it('does NOT call adminAPI.getNewsItems', () => {
+    it('does NOT call adminAPI.getAdminNewsItems', () => {
       act(() => {
         useAdminNewsStore.getState().setLevelFilter('A2');
       });
 
-      expect(adminAPI.getNewsItems).not.toHaveBeenCalled();
+      expect(adminAPI.getAdminNewsItems).not.toHaveBeenCalled();
     });
 
     it('round-trips through all values', () => {
@@ -156,12 +157,12 @@ describe('adminNewsStore — NEWS-02 extensions', () => {
       expect(state.page).toBe(1);
     });
 
-    it('does NOT call adminAPI.getNewsItems', () => {
+    it('does NOT call adminAPI.getAdminNewsItems', () => {
       act(() => {
         useAdminNewsStore.getState().setSearchQuery('test');
       });
 
-      expect(adminAPI.getNewsItems).not.toHaveBeenCalled();
+      expect(adminAPI.getAdminNewsItems).not.toHaveBeenCalled();
     });
   });
 
@@ -181,12 +182,12 @@ describe('adminNewsStore — NEWS-02 extensions', () => {
       expect(state.page).toBe(1);
     });
 
-    it('does NOT call adminAPI.getNewsItems', () => {
+    it('does NOT call adminAPI.getAdminNewsItems', () => {
       act(() => {
         useAdminNewsStore.getState().setSortMode('updated');
       });
 
-      expect(adminAPI.getNewsItems).not.toHaveBeenCalled();
+      expect(adminAPI.getAdminNewsItems).not.toHaveBeenCalled();
     });
   });
 

@@ -113,11 +113,11 @@ test.describe('Culture deck detail — DDR review fixes (CULT2-4)', () => {
     await expect(page.getByTestId('question-detail-skeleton')).toHaveCount(0);
     await expect(page.getByTestId('question-detail-text')).toBeVisible({ timeout: 10000 });
 
-    // The A2/B2 toggle buttons must NOT be present for non-news questions.
+    // The A2/B1 toggle buttons must NOT be present for non-news questions.
     // They only render when: category === 'news' && (data.audio_url || data.audio_a2_url).
     // All decks in the standard seed are non-news categories.
     await expect(page.getByTestId('detail-level-toggle-a2')).toHaveCount(0);
-    await expect(page.getByTestId('detail-level-toggle-b2')).toHaveCount(0);
+    await expect(page.getByTestId('detail-level-toggle-b1')).toHaveCount(0);
 
     // NOTE: The news-question positive case (asserting the toggle IS shown for a
     // news-category deck question) is intentionally omitted. The standard E2E seed

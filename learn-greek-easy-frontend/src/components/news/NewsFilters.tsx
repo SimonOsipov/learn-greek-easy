@@ -85,13 +85,13 @@ export function NewsFilters({
           {t('news.level.a2')}
         </Button>
         <Button
-          variant={newsLevel === 'b2' ? 'default' : 'outline'}
+          variant={newsLevel === 'b1' ? 'default' : 'outline'}
           size="sm"
-          onClick={() => onLevelChange('b2')}
+          onClick={() => onLevelChange('b1')}
           className="rounded-full"
-          aria-pressed={newsLevel === 'b2'}
+          aria-pressed={newsLevel === 'b1'}
         >
-          {t('news.level.b2')}
+          {t('news.level.b1')}
         </Button>
       </div>
     </div>

@@ -86,12 +86,12 @@ export function computeCultureChips(question: AdminCultureQuestion): CultureChip
 
   // Audio chips
   if (question.news_item_id !== null) {
-    // News question: B2 + A2
+    // News question: B1 + A2
     chips.push({
-      name: 'audio-b2',
-      label: 'B2 Audio',
+      name: 'audio-b1',
+      label: 'B1 Audio',
       color: question.audio_s3_key ? 'green' : 'gray',
-      tooltip: question.audio_s3_key ? 'B2 audio present' : 'B2 audio missing',
+      tooltip: question.audio_s3_key ? 'B1 audio present' : 'B1 audio missing',
       visible: true,
     });
     chips.push({

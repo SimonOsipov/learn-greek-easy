@@ -124,7 +124,7 @@ export function CulturePracticePage() {
 
   // Compute effective question with audio URL based on selected news level.
   // A2 level prefers audio_a2_url, falling back to audio_url.
-  // B2 level prefers audio_url, falling back to audio_a2_url.
+  // B1 level prefers audio_url, falling back to audio_a2_url.
   const effectiveQuestion = useMemo(() => {
     if (!currentQuestion) return null;
     const q = currentQuestion.question;
@@ -387,7 +387,7 @@ export function CulturePracticePage() {
   }, [dismissRecovery, deckId, initializeSession]);
 
   /**
-   * Handle A2/B2 level toggle
+   * Handle A2/B1 level toggle
    */
   const handleNewsLevelChange = useCallback((level: NewsLevel) => {
     setPersistedNewsLevel(level);
@@ -640,12 +640,12 @@ export function CulturePracticePage() {
                     {t('common:news.level.a2')}
                   </Button>
                   <Button
-                    variant={newsLevel === 'b2' ? 'default' : 'outline'}
+                    variant={newsLevel === 'b1' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => handleNewsLevelChange('b2')}
-                    data-testid="level-toggle-b2"
+                    onClick={() => handleNewsLevelChange('b1')}
+                    data-testid="level-toggle-b1"
                   >
-                    {t('common:news.level.b2')}
+                    {t('common:news.level.b1')}
                   </Button>
                 </div>
               )}

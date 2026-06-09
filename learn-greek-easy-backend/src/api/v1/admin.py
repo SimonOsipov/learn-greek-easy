@@ -73,6 +73,7 @@ from src.db.models import (
     FeedbackCategory,
     FeedbackStatus,
     ListeningDialog,
+    NewsCountry,
     NewsItem,
     PartOfSpeech,
     PictureExercise,
@@ -149,7 +150,12 @@ from src.schemas.feedback import (
     AdminFeedbackUpdate,
     AuthorBriefResponse,
 )
-from src.schemas.news_item import NewsItemCreate, NewsItemResponse, NewsItemUpdate
+from src.schemas.news_item import (
+    NewsItemCreate,
+    NewsItemListResponse,
+    NewsItemResponse,
+    NewsItemUpdate,
+)
 from src.schemas.nlp import GeneratedNounData, NormalizedLemma, VerificationSummary
 from src.schemas.situation import (
     AdminExerciseListItem,
@@ -1410,6 +1416,31 @@ async def list_deck_questions(
 # ============================================================================
 # News Admin Endpoints
 # ============================================================================
+
+
+@router.get(
+    "/news",
+    response_model=NewsItemListResponse,
+    summary="List news items (admin)",
+    description=(
+        "List news items including drafts. The public `/news` endpoint hides drafts; "
+        "admin needs to see and manage them. Requires superuser privileges."
+    ),
+)
+async def list_news_items_admin(
+    page: int = Query(default=1, ge=1, description="Page number"),
+    page_size: int = Query(default=10, ge=1, le=50, description="Items per page"),
+    country: Optional[NewsCountry] = Query(
+        None, description="Filter by country: cyprus, greece, or world"
+    ),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> NewsItemListResponse:
+    """List news items for admin, including drafts (superuser only)."""
+    service = NewsItemService(db)
+    return await service.get_list(
+        page=page, page_size=page_size, country=country, published_only=False
+    )
 
 
 @router.post(

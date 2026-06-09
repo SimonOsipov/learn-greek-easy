@@ -92,6 +92,37 @@ def _valid_exercise_payload() -> dict:
 # =============================================================================
 
 
+class TestListNewsItemsAdminEndpoint:
+    """Test suite for GET /api/v1/admin/news — must include drafts."""
+
+    @pytest.mark.asyncio
+    async def test_admin_list_includes_drafts(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Admin list returns both published and draft items (unlike the public feed)."""
+        await NewsItemFactory.create(session=db_session, published=True)
+        await NewsItemFactory.create(session=db_session)  # draft
+
+        response = await client.get("/api/v1/admin/news", headers=superuser_auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 2
+
+    @pytest.mark.asyncio
+    async def test_admin_list_requires_superuser(
+        self,
+        client: AsyncClient,
+    ):
+        """Unauthenticated callers cannot reach the admin list."""
+        response = await client.get("/api/v1/admin/news")
+
+        assert response.status_code in (401, 403)
+
+
 class TestCreateNewsItemEndpoint:
     """Test suite for POST /api/v1/admin/news endpoint."""
 

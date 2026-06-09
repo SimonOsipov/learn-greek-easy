@@ -530,7 +530,7 @@ describe('CulturePracticePage', () => {
     });
   });
 
-  describe('A2/B2 level toggle visibility', () => {
+  describe('A2/B1 level toggle visibility', () => {
     it('hides toggle for cultural questions without original_article_url', () => {
       useCultureSessionStore.setState(createActiveSessionState(5));
       render(<CulturePracticePage />);

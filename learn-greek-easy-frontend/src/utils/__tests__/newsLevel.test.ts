@@ -36,9 +36,14 @@ describe('newsLevel', () => {
       expect(getPersistedNewsLevel()).toBe('a2');
     });
 
-    it('returns "b2" when "b2" is stored', () => {
+    it('returns "b1" when "b1" is stored', () => {
+      localStorage.setItem(NEWS_LEVEL_KEY, 'b1');
+      expect(getPersistedNewsLevel()).toBe('b1');
+    });
+
+    it('migrates legacy "b2" to "b1"', () => {
       localStorage.setItem(NEWS_LEVEL_KEY, 'b2');
-      expect(getPersistedNewsLevel()).toBe('b2');
+      expect(getPersistedNewsLevel()).toBe('b1');
     });
 
     it('returns "a2" when "a2" is stored', () => {
@@ -70,9 +75,9 @@ describe('newsLevel', () => {
   // ── setPersistedNewsLevel ──────────────────────────────────────────────────
 
   describe('setPersistedNewsLevel', () => {
-    it('persists "b2" to localStorage', () => {
-      setPersistedNewsLevel('b2');
-      expect(localStorage.getItem(NEWS_LEVEL_KEY)).toBe('b2');
+    it('persists "b1" to localStorage', () => {
+      setPersistedNewsLevel('b1');
+      expect(localStorage.getItem(NEWS_LEVEL_KEY)).toBe('b1');
     });
 
     it('persists "a2" to localStorage', () => {
@@ -84,14 +89,14 @@ describe('newsLevel', () => {
       vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {
         throw new Error('storage full');
       });
-      expect(() => setPersistedNewsLevel('b2')).not.toThrow();
+      expect(() => setPersistedNewsLevel('b1')).not.toThrow();
     });
 
     it('does nothing when window is undefined (SSR guard)', () => {
       const originalWindow = globalThis.window;
       // @ts-expect-error — simulating SSR
       delete globalThis.window;
-      expect(() => setPersistedNewsLevel('b2')).not.toThrow();
+      expect(() => setPersistedNewsLevel('b1')).not.toThrow();
       globalThis.window = originalWindow;
     });
   });

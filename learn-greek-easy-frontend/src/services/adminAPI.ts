@@ -1402,13 +1402,14 @@ export const adminAPI = {
   // ============================================
 
   /**
-   * Get a paginated list of news items
+   * Get a paginated list of news items (public feed)
    *
-   * Public endpoint, sorted by publication date descending.
+   * Public endpoint, sorted by publication date descending. Excludes drafts.
+   * Used by the learner-facing News page and dashboard NewsSection.
    *
    * @param page - Page number (1-indexed, default: 1)
    * @param pageSize - Items per page (1-50, default: 10)
-   * @returns Paginated list of news items
+   * @returns Paginated list of published news items
    */
   getNewsItems: async (
     page = 1,
@@ -1417,6 +1418,25 @@ export const adminAPI = {
   ): Promise<NewsItemListResponse> => {
     const queryString = buildQueryString({ page, page_size: pageSize, country });
     return api.get<NewsItemListResponse>(`/api/v1/news${queryString}`);
+  },
+
+  /**
+   * Get a paginated list of news items for the admin News tab (superuser)
+   *
+   * Unlike the public feed, this includes drafts so admin can review and publish
+   * unpublished items. Backed by `GET /api/v1/admin/news`.
+   *
+   * @param page - Page number (1-indexed, default: 1)
+   * @param pageSize - Items per page (1-50, default: 10)
+   * @returns Paginated list of news items including drafts
+   */
+  getAdminNewsItems: async (
+    page = 1,
+    pageSize = 10,
+    country?: NewsCountry
+  ): Promise<NewsItemListResponse> => {
+    const queryString = buildQueryString({ page, page_size: pageSize, country });
+    return api.get<NewsItemListResponse>(`/api/v1/admin/news${queryString}`);
   },
 
   /**

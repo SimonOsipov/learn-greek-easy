@@ -74,25 +74,25 @@ describe('NewsFilters', () => {
   });
 
   describe('Level Buttons', () => {
-    it('renders difficulty label and A2/B2 buttons', () => {
+    it('renders difficulty label and A2/B1 buttons', () => {
       render(<NewsFilters {...defaultProps} />);
 
       expect(screen.getByText('Difficulty:')).toBeInTheDocument();
 
       const filters = screen.getByTestId('news-filters');
       expect(within(filters).getByRole('button', { name: /A2/ })).toBeInTheDocument();
-      expect(within(filters).getByRole('button', { name: /B2/ })).toBeInTheDocument();
+      expect(within(filters).getByRole('button', { name: /B1/ })).toBeInTheDocument();
     });
 
     it('marks active level button with aria-pressed=true', () => {
-      render(<NewsFilters {...defaultProps} newsLevel="b2" />);
+      render(<NewsFilters {...defaultProps} newsLevel="b1" />);
 
       const filters = screen.getByTestId('news-filters');
       expect(within(filters).getByRole('button', { name: /A2/ })).toHaveAttribute(
         'aria-pressed',
         'false'
       );
-      expect(within(filters).getByRole('button', { name: /B2/ })).toHaveAttribute(
+      expect(within(filters).getByRole('button', { name: /B1/ })).toHaveAttribute(
         'aria-pressed',
         'true'
       );
@@ -104,9 +104,9 @@ describe('NewsFilters', () => {
       render(<NewsFilters {...defaultProps} onLevelChange={onLevelChange} />);
 
       const filters = screen.getByTestId('news-filters');
-      await user.click(within(filters).getByRole('button', { name: /B2/ }));
+      await user.click(within(filters).getByRole('button', { name: /B1/ }));
 
-      expect(onLevelChange).toHaveBeenCalledWith('b2');
+      expect(onLevelChange).toHaveBeenCalledWith('b1');
     });
   });
 

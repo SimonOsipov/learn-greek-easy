@@ -191,9 +191,9 @@ test.describe('MCNEWS - Dashboard Shows Pills Without Filter', () => {
     await expect(filters.getByRole('button', { name: /Cyprus/i })).toBeVisible();
     await expect(filters.getByRole('button', { name: /Greece/i })).toBeVisible();
     await expect(filters.getByRole('button', { name: /World/i })).toBeVisible();
-    // Verify the difficulty level buttons (A2/B2) are present
+    // Verify the difficulty level buttons (A2/B1) are present
     await expect(filters.getByRole('button', { name: /A2/i })).toBeVisible();
-    await expect(filters.getByRole('button', { name: /B2/i })).toBeVisible();
+    await expect(filters.getByRole('button', { name: /B1/i })).toBeVisible();
   });
 });
 

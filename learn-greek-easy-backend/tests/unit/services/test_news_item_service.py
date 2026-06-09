@@ -43,19 +43,24 @@ def mock_s3_service():
 
 @pytest.fixture
 async def sample_news_item(db_session: AsyncSession):
-    """Create a sample news item in the database."""
-    return await NewsItemFactory.create(session=db_session)
+    """Create a sample (published) news item in the database.
+
+    Published so it's visible through the public-feed get_by_id / get_list paths,
+    which now exclude drafts.
+    """
+    return await NewsItemFactory.create(session=db_session, published=True)
 
 
 @pytest.fixture
 async def multiple_news_items(db_session: AsyncSession):
-    """Create multiple news items."""
+    """Create multiple (published) news items."""
     items = []
     base_date = date.today()
 
     for i in range(5):
         item = await NewsItemFactory.create(
             session=db_session,
+            published=True,
             publication_date=base_date - timedelta(days=i),
         )
         items.append(item)
@@ -414,6 +419,60 @@ class TestCreate:
         assert result.title_el == data.scenario_el
         assert result.title_en == data.scenario_en
         assert result.publication_date == data.publication_date
+
+    @pytest.mark.asyncio
+    async def test_create_sets_b1_levels_without_a2(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """create() assigns Situation.levels = ['B1'] when no A2 text is provided
+        (ADMIN2-32: news must not be orphaned with empty levels)."""
+        from unittest.mock import patch
+
+        from sqlalchemy import select
+
+        from src.db.models import Situation
+
+        data = self._make_create_data()
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        mock_httpx_cls = self._make_httpx_patch()
+
+        with patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls):
+            result = await service.create(data)
+
+        situation = (
+            await db_session.execute(select(Situation).where(Situation.id == result.situation_id))
+        ).scalar_one()
+        assert situation.levels == ["B1"]
+
+    @pytest.mark.asyncio
+    async def test_create_sets_b1_a2_levels_with_a2(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """create() assigns Situation.levels = ['B1', 'A2'] when A2 text is provided."""
+        from unittest.mock import patch
+
+        from sqlalchemy import select
+
+        from src.db.models import Situation
+
+        data = self._make_create_data(
+            text_el_a2="Απλοποιημένο κείμενο.",
+            scenario_el_a2="Απλό σενάριο",
+        )
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        mock_httpx_cls = self._make_httpx_patch()
+
+        with patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls):
+            result = await service.create(data)
+
+        situation = (
+            await db_session.execute(select(Situation).where(Situation.id == result.situation_id))
+        ).scalar_one()
+        assert situation.levels == ["B1", "A2"]
 
     @pytest.mark.asyncio
     async def test_create_duplicate_url_raises_value_error(

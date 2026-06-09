@@ -47,7 +47,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
   newsLang: _newsLang,
   height = 'default',
   page,
-  level = 'b2',
+  level = 'b1',
   variant = 'full',
   eager,
 }) => {
@@ -77,7 +77,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         audio_duration_seconds: duration,
         page: pageName,
         playback_speed: 1,
-        level: level ?? 'b2',
+        level: level ?? 'b1',
       });
     },
     [article.id, pageName, level]
@@ -90,7 +90,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         paused_at_seconds: currentTime,
         audio_duration_seconds: 0, // Duration not available in onPause callback
         page: pageName,
-        level: level ?? 'b2',
+        level: level ?? 'b1',
       });
     },
     [article.id, pageName, level]
@@ -103,7 +103,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         news_item_id: article.id,
         audio_duration_seconds: duration,
         page: pageName,
-        level: level ?? 'b2',
+        level: level ?? 'b1',
       });
     },
     [article.id, pageName, level]
@@ -143,14 +143,14 @@ export const NewsCard: React.FC<NewsCardProps> = ({
       track('news_article_clicked', {
         item_id: article.id,
         article_domain: domain,
-        level: level ?? 'b2',
+        level: level ?? 'b1',
       });
     } catch {
       // If URL parsing fails, still track but without domain
       track('news_article_clicked', {
         item_id: article.id,
         article_domain: 'unknown',
-        level: level ?? 'b2',
+        level: level ?? 'b1',
       });
     }
   };

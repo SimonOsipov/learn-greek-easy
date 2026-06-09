@@ -198,9 +198,9 @@ describe('NewsCard', () => {
 describe('NewsCard Level Switching', () => {
   const a2Article = createMockArticle({
     has_a2_content: true,
-    title_el: 'B2 Τίτλος',
+    title_el: 'B1 Τίτλος',
     title_el_a2: 'A2 Τίτλος',
-    description_el: 'B2 Περιγραφή',
+    description_el: 'B1 Περιγραφή',
     description_el_a2: 'A2 Περιγραφή',
     audio_url: 'https://example.com/audio-b2.mp3',
     audio_a2_url: 'https://example.com/audio-a2.mp3',
@@ -212,21 +212,21 @@ describe('NewsCard Level Switching', () => {
     expect(screen.getByText('A2 Περιγραφή')).toBeInTheDocument();
   });
 
-  it('falls back to B2 when level is a2 but has_a2_content is false', () => {
+  it('falls back to B1 when level is a2 but has_a2_content is false', () => {
     const noA2 = createMockArticle({
       has_a2_content: false,
-      title_el: 'B2 Τίτλος',
-      description_el: 'B2 Περιγραφή',
+      title_el: 'B1 Τίτλος',
+      description_el: 'B1 Περιγραφή',
     });
     render(<NewsCard article={noA2} newsLang="el" level="a2" />);
-    expect(screen.getByText('B2 Τίτλος')).toBeInTheDocument();
-    expect(screen.getByText('B2 Περιγραφή')).toBeInTheDocument();
+    expect(screen.getByText('B1 Τίτλος')).toBeInTheDocument();
+    expect(screen.getByText('B1 Περιγραφή')).toBeInTheDocument();
   });
 
-  it('shows B2 content when level is b2 regardless of has_a2_content', () => {
-    render(<NewsCard article={a2Article} newsLang="el" level="b2" />);
-    expect(screen.getByText('B2 Τίτλος')).toBeInTheDocument();
-    expect(screen.getByText('B2 Περιγραφή')).toBeInTheDocument();
+  it('shows B1 content when level is b1 regardless of has_a2_content', () => {
+    render(<NewsCard article={a2Article} newsLang="el" level="b1" />);
+    expect(screen.getByText('B1 Τίτλος')).toBeInTheDocument();
+    expect(screen.getByText('B1 Περιγραφή')).toBeInTheDocument();
   });
 });
 

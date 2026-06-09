@@ -73,14 +73,14 @@ describe('computeCultureChips', () => {
     expect(opts?.label).toBe('Opts 2');
   });
 
-  it('returns B2+A2 audio chips for news question', () => {
+  it('returns B1+A2 audio chips for news question', () => {
     const q = makeQuestion({
       news_item_id: 'news-123',
       audio_s3_key: 'audio/b2.mp3',
       news_item_audio_a2_s3_key: 'audio/a2.mp3',
     });
     const chips = computeCultureChips(q);
-    expect(chips.find((c) => c.name === 'audio-b2')?.color).toBe('green');
+    expect(chips.find((c) => c.name === 'audio-b1')?.color).toBe('green');
     expect(chips.find((c) => c.name === 'audio-a2')?.color).toBe('green');
     expect(chips.find((c) => c.name === 'audio')).toBeUndefined();
   });
@@ -89,7 +89,7 @@ describe('computeCultureChips', () => {
     const q = makeQuestion({ news_item_id: null, audio_s3_key: 'audio.mp3' });
     const chips = computeCultureChips(q);
     expect(chips.find((c) => c.name === 'audio')?.color).toBe('green');
-    expect(chips.find((c) => c.name === 'audio-b2')).toBeUndefined();
+    expect(chips.find((c) => c.name === 'audio-b1')).toBeUndefined();
     expect(chips.find((c) => c.name === 'audio-a2')).toBeUndefined();
   });
 

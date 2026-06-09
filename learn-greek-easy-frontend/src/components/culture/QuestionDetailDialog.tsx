@@ -148,11 +148,11 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
 
             return (
               <>
-                {/* Tag row: A2/B2 toggles + separator + language pills */}
+                {/* Tag row: A2/B1 toggles + separator + language pills */}
                 <div className="cx-modal-tags">
                   {showLevelToggle && (
                     <>
-                      {(['a2', 'b2'] as NewsLevel[]).map((lv) => (
+                      {(['a2', 'b1'] as NewsLevel[]).map((lv) => (
                         <button
                           key={lv}
                           type="button"

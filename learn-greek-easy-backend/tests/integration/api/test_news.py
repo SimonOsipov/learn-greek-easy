@@ -35,7 +35,7 @@ class TestListNewsEndpoint:
     ):
         """Test that listing news items returns 200 OK."""
         # Create a news item
-        await NewsItemFactory.create()
+        await NewsItemFactory.create(published=True)
 
         response = await client.get("/api/v1/news")
 
@@ -57,7 +57,7 @@ class TestListNewsEndpoint:
         """Test pagination works correctly."""
         # Create 5 news items
         for _ in range(5):
-            await NewsItemFactory.create()
+            await NewsItemFactory.create(published=True)
 
         # Get first page of 2
         response = await client.get("/api/v1/news?page=1&page_size=2")
@@ -83,6 +83,24 @@ class TestListNewsEndpoint:
         assert page1_ids.isdisjoint(page2_ids)
 
     @pytest.mark.asyncio
+    async def test_list_news_hides_drafts(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+    ):
+        """Draft items must NOT appear in the public feed; only published ones do."""
+        published = await NewsItemFactory.create(published=True)
+        await NewsItemFactory.create()  # draft (factory default)
+
+        response = await client.get("/api/v1/news")
+
+        assert response.status_code == 200
+        data = response.json()
+        ids = {item["id"] for item in data["items"]}
+        assert str(published.id) in ids
+        assert data["total"] == 1
+
+    @pytest.mark.asyncio
     async def test_list_news_empty(
         self,
         client: AsyncClient,
@@ -102,7 +120,7 @@ class TestListNewsEndpoint:
         db_session: AsyncSession,
     ):
         """Test that response has all expected fields including audio_count."""
-        await NewsItemFactory.create()
+        await NewsItemFactory.create(published=True)
 
         response = await client.get("/api/v1/news")
 
@@ -167,7 +185,7 @@ class TestGetNewsItemEndpoint:
         db_session: AsyncSession,
     ):
         """Test that getting a news item by ID returns 200 OK."""
-        news_item = await NewsItemFactory.create()
+        news_item = await NewsItemFactory.create(published=True)
 
         response = await client.get(f"/api/v1/news/{news_item.id}")
 
@@ -191,6 +209,19 @@ class TestGetNewsItemEndpoint:
         assert error.get("error", {}).get("code") == "NOT_FOUND"
 
     @pytest.mark.asyncio
+    async def test_get_news_item_draft_returns_404(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+    ):
+        """A draft item must be treated as not-found on the public detail endpoint."""
+        draft = await NewsItemFactory.create()  # draft (factory default)
+
+        response = await client.get(f"/api/v1/news/{draft.id}")
+
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
     async def test_get_news_item_invalid_uuid_returns_422(
         self,
         client: AsyncClient,
@@ -207,7 +238,7 @@ class TestGetNewsItemEndpoint:
         db_session: AsyncSession,
     ):
         """Test that response has all expected fields."""
-        news_item = await NewsItemFactory.create()
+        news_item = await NewsItemFactory.create(published=True)
 
         response = await client.get(f"/api/v1/news/{news_item.id}")
 
@@ -241,7 +272,7 @@ class TestGetNewsItemEndpoint:
         db_session: AsyncSession,
     ):
         """Detail response must include linked_situation as a non-null nested object."""
-        news_item = await NewsItemFactory.create()
+        news_item = await NewsItemFactory.create(published=True)
 
         response = await client.get(f"/api/v1/news/{news_item.id}")
 
@@ -257,7 +288,7 @@ class TestGetNewsItemEndpoint:
         db_session: AsyncSession,
     ):
         """linked_situation contains all 11 required fields with correct types."""
-        news_item = await NewsItemFactory.create()
+        news_item = await NewsItemFactory.create(published=True)
 
         response = await client.get(f"/api/v1/news/{news_item.id}")
 
@@ -290,7 +321,7 @@ class TestGetNewsItemEndpoint:
         db_session: AsyncSession,
     ):
         """linked_situation.id matches the situation_id on the news item."""
-        news_item = await NewsItemFactory.create()
+        news_item = await NewsItemFactory.create(published=True)
 
         response = await client.get(f"/api/v1/news/{news_item.id}")
 
@@ -305,7 +336,7 @@ class TestGetNewsItemEndpoint:
         db_session: AsyncSession,
     ):
         """List response items must also include linked_situation (zero aggregates)."""
-        await NewsItemFactory.create()
+        await NewsItemFactory.create(published=True)
 
         response = await client.get("/api/v1/news")
 

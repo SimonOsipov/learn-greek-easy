@@ -152,7 +152,7 @@ describe('NewsSection Component', () => {
       await waitFor(() => {
         const filters = screen.getByTestId('news-filters');
         expect(within(filters).getByRole('button', { name: /A2/ })).toBeInTheDocument();
-        expect(within(filters).getByRole('button', { name: /B2/ })).toBeInTheDocument();
+        expect(within(filters).getByRole('button', { name: /B1/ })).toBeInTheDocument();
       });
     });
   });

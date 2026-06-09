@@ -106,7 +106,7 @@ export const useAdminNewsStore = create<AdminNewsState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await adminAPI.getNewsItems(
+          const response = await adminAPI.getAdminNewsItems(
             page,
             pageSize,
             countryFilter === 'all' ? undefined : countryFilter

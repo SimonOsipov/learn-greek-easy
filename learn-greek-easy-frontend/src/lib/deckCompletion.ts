@@ -20,7 +20,7 @@ import type { AdminVocabularyCard, AdminCultureQuestion } from '@/services/admin
 export interface DeckPill {
   /** Stable identifier, e.g. `'en' | 'ru' | 'audio-a2' | 'news'` */
   name: string;
-  /** Display label, e.g. `'EN 2/2'`, `'Audio ✓'`, `'B2 Audio'` */
+  /** Display label, e.g. `'EN 2/2'`, `'Audio ✓'`, `'B1 Audio'` */
   label: string;
   /** Numeric ratio (0..1) when the upstream chip carries one; otherwise undefined */
   value?: number;
@@ -92,7 +92,7 @@ export function getWordCompletion(card: AdminVocabularyCard): DeckPill[] {
  * - **Exam question** (`news_item_id === null`): emits `lang-el`, `lang-en`,
  *   `lang-ru`, `opts`, `audio`, `news` (no `audio-a2`).
  * - **News question** (`news_item_id !== null`): emits `lang-el`, `lang-en`,
- *   `lang-ru`, `opts`, `audio-b2`, `audio-a2`, `news`.
+ *   `lang-ru`, `opts`, `audio-b1`, `audio-a2`, `news`.
  *
  * Defensive contract: any `audio-a2` chip is forced to `visible: false` when
  * `question.news_item_id === null`, regardless of upstream drift.

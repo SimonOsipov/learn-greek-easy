@@ -1,4 +1,4 @@
-export type NewsLevel = 'a2' | 'b2';
+export type NewsLevel = 'a2' | 'b1';
 
 export const NEWS_LEVEL_KEY = 'greekly_news_level';
 export const DEFAULT_NEWS_LEVEL: NewsLevel = 'a2';
@@ -7,7 +7,9 @@ export function getPersistedNewsLevel(): NewsLevel {
   try {
     if (typeof window === 'undefined') return DEFAULT_NEWS_LEVEL;
     const stored = window.localStorage.getItem(NEWS_LEVEL_KEY);
-    return stored === 'b2' ? 'b2' : 'a2';
+    // 'b2' is the legacy value for the base news level (renamed to 'b1' to match
+    // the DB / admin tab). Map it forward so existing users keep the base level.
+    return stored === 'b1' || stored === 'b2' ? 'b1' : 'a2';
   } catch {
     return DEFAULT_NEWS_LEVEL;
   }

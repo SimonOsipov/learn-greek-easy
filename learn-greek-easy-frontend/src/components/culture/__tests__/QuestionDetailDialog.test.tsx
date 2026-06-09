@@ -264,8 +264,8 @@ describe('QuestionDetailDialog', () => {
     });
   });
 
-  describe('A2/B2 Level Toggle (DDR-05)', () => {
-    it('shows A2/B2 toggle for news category with leveled audio', async () => {
+  describe('A2/B1 Level Toggle (DDR-05)', () => {
+    it('shows A2/B1 toggle for news category with leveled audio', async () => {
       vi.mocked(cultureDeckAPI.getQuestionDetail).mockResolvedValue(
         makeDetailResponse({
           audio_url: 'https://example.com/b2.mp3',
@@ -277,10 +277,10 @@ describe('QuestionDetailDialog', () => {
       await waitFor(() => {
         expect(screen.getByTestId('detail-level-toggle-a2')).toBeInTheDocument();
       });
-      expect(screen.getByTestId('detail-level-toggle-b2')).toBeInTheDocument();
+      expect(screen.getByTestId('detail-level-toggle-b1')).toBeInTheDocument();
     });
 
-    it('does NOT show A2/B2 toggle for non-news category even with a2 audio', async () => {
+    it('does NOT show A2/B1 toggle for non-news category even with a2 audio', async () => {
       vi.mocked(cultureDeckAPI.getQuestionDetail).mockResolvedValue(
         makeDetailResponse({
           audio_url: 'https://example.com/b2.mp3',
@@ -293,7 +293,7 @@ describe('QuestionDetailDialog', () => {
         expect(screen.getByTestId('question-detail-text')).toBeInTheDocument();
       });
       expect(screen.queryByTestId('detail-level-toggle-a2')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('detail-level-toggle-b2')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('detail-level-toggle-b1')).not.toBeInTheDocument();
     });
 
     it('non-news card with only audio_a2_url still shows the audio player', async () => {

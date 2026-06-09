@@ -135,8 +135,8 @@ describe('getCultureCompletion', () => {
     expect(audio!.label).toBe('Audio');
   });
 
-  // Test 7 — News question: audio-b2 + audio-a2 both visible
-  it('(7) news question: audio-b2 "B2 Audio" and audio-a2 (visible:true) present', () => {
+  // Test 7 — News question: audio-b1 + audio-a2 both visible
+  it('(7) news question: audio-b1 "B1 Audio" and audio-a2 (visible:true) present', () => {
     const pills = getCultureCompletion(
       makeQuestion({
         news_item_id: '42',
@@ -144,9 +144,9 @@ describe('getCultureCompletion', () => {
         news_item_audio_a2_s3_key: 'a2.mp3',
       })
     );
-    const b2 = pills.find((p) => p.name === 'audio-b2');
-    expect(b2).toBeDefined();
-    expect(b2!.label).toBe('B2 Audio');
+    const b1 = pills.find((p) => p.name === 'audio-b1');
+    expect(b1).toBeDefined();
+    expect(b1!.label).toBe('B1 Audio');
 
     const a2 = pills.find((p) => p.name === 'audio-a2');
     expect(a2).toBeDefined();
@@ -154,17 +154,17 @@ describe('getCultureCompletion', () => {
   });
 
   // Test 8 — done derived from green color (no N/M ratio in label)
-  it('(8) done:true when chip has no N/M ratio but color is green (e.g. audio-b2 with s3 key)', () => {
+  it('(8) done:true when chip has no N/M ratio but color is green (e.g. audio-b1 with s3 key)', () => {
     const pills = getCultureCompletion(
       makeQuestion({
         news_item_id: '99',
         audio_s3_key: 'exists.mp3',
       })
     );
-    const b2 = pills.find((p) => p.name === 'audio-b2');
-    expect(b2).toBeDefined();
+    const b1 = pills.find((p) => p.name === 'audio-b1');
+    expect(b1).toBeDefined();
     // upstream sets color:'green' when audio_s3_key is truthy
-    expect(b2!.done).toBe(true);
+    expect(b1!.done).toBe(true);
   });
 
   // Test 9 — News badge visible when original_article_url is set

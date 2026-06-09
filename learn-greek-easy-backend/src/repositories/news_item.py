@@ -12,6 +12,7 @@ from src.db.models import (
     ListeningDialog,
     NewsCountry,
     NewsItem,
+    NewsItemStatus,
     Situation,
     SituationDescription,
     SituationPicture,
@@ -36,15 +37,26 @@ class NewsItemRepository(BaseRepository[NewsItem]):
         super().__init__(NewsItem, db)
 
     async def get_list(
-        self, *, skip: int = 0, limit: int = 20, country: NewsCountry | None = None
+        self,
+        *,
+        skip: int = 0,
+        limit: int = 20,
+        country: NewsCountry | None = None,
+        published_only: bool = True,
     ) -> list[Row]:
-        """Get news items with situation/description/picture via JOIN, ordered by publication_date DESC."""
+        """Get news items with situation/description/picture via JOIN, ordered by publication_date DESC.
+
+        When ``published_only`` is True (the default, for the public feed), draft
+        items are excluded. Admin callers pass False to see drafts too.
+        """
         query = (
             select(NewsItem, Situation, SituationDescription, SituationPicture)
             .join(Situation, Situation.id == NewsItem.situation_id)
             .join(SituationDescription, SituationDescription.situation_id == Situation.id)
             .outerjoin(SituationPicture, SituationPicture.situation_id == Situation.id)
         )
+        if published_only:
+            query = query.where(NewsItem.status == NewsItemStatus.PUBLISHED)
         if country is not None:
             query = query.where(SituationDescription.country == country)
         query = (
@@ -70,11 +82,14 @@ class NewsItemRepository(BaseRepository[NewsItem]):
         """
         return await self.exists(original_article_url=url)
 
-    async def count_all(self, country: NewsCountry | None = None) -> int:
+    async def count_all(
+        self, country: NewsCountry | None = None, *, published_only: bool = True
+    ) -> int:
         """Count news items (only those with situation/description via JOIN).
 
         Args:
             country: Optional country filter
+            published_only: Exclude drafts (default True, for the public feed)
 
         Returns:
             Total number of news items in the database (filtered if country provided)
@@ -85,16 +100,21 @@ class NewsItemRepository(BaseRepository[NewsItem]):
             .join(Situation, Situation.id == NewsItem.situation_id)
             .join(SituationDescription, SituationDescription.situation_id == Situation.id)
         )
+        if published_only:
+            query = query.where(NewsItem.status == NewsItemStatus.PUBLISHED)
         if country is not None:
             query = query.where(SituationDescription.country == country)
         result = await self.db.execute(query)
         return result.scalar_one()
 
-    async def count_with_audio(self, country: NewsCountry | None = None) -> int:
-        """Count news items that have B2 audio generated (via SituationDescription).
+    async def count_with_audio(
+        self, country: NewsCountry | None = None, *, published_only: bool = True
+    ) -> int:
+        """Count news items that have base (B1) audio generated (via SituationDescription).
 
         Args:
             country: Optional country filter
+            published_only: Exclude drafts (default True, for the public feed)
 
         Returns:
             Number of news items with a non-null audio_s3_key
@@ -106,12 +126,14 @@ class NewsItemRepository(BaseRepository[NewsItem]):
             .join(SituationDescription, SituationDescription.situation_id == Situation.id)
             .where(SituationDescription.audio_s3_key.isnot(None))
         )
+        if published_only:
+            query = query.where(NewsItem.status == NewsItemStatus.PUBLISHED)
         if country is not None:
             query = query.where(SituationDescription.country == country)
         result = await self.db.execute(query)
         return result.scalar_one()
 
-    async def count_with_b1_audio(self) -> int:
+    async def count_with_b1_audio(self, *, published_only: bool = True) -> int:
         """Count news items where Situation.levels contains 'B1' AND audio_s3_key is non-null.
 
         Returns:
@@ -125,10 +147,12 @@ class NewsItemRepository(BaseRepository[NewsItem]):
             .where(Situation.levels.contains(cast(["B1"], JSONB)))
             .where(SituationDescription.audio_s3_key.isnot(None))
         )
+        if published_only:
+            query = query.where(NewsItem.status == NewsItemStatus.PUBLISHED)
         result = await self.db.execute(query)
         return result.scalar_one()
 
-    async def count_b1_pending_regen(self) -> int:
+    async def count_b1_pending_regen(self, *, published_only: bool = True) -> int:
         """Count news items where Situation.levels contains 'B1' BUT audio_s3_key is null.
 
         Returns:
@@ -142,10 +166,12 @@ class NewsItemRepository(BaseRepository[NewsItem]):
             .where(Situation.levels.contains(cast(["B1"], JSONB)))
             .where(SituationDescription.audio_s3_key.is_(None))
         )
+        if published_only:
+            query = query.where(NewsItem.status == NewsItemStatus.PUBLISHED)
         result = await self.db.execute(query)
         return result.scalar_one()
 
-    async def count_by_country(self) -> dict[str, int]:
+    async def count_by_country(self, *, published_only: bool = True) -> dict[str, int]:
         """Count news items grouped by SituationDescription.country.
 
         Returns:
@@ -158,6 +184,8 @@ class NewsItemRepository(BaseRepository[NewsItem]):
             .join(SituationDescription, SituationDescription.situation_id == Situation.id)
             .group_by(SituationDescription.country)
         )
+        if published_only:
+            query = query.where(NewsItem.status == NewsItemStatus.PUBLISHED)
         result = await self.db.execute(query)
         rows = result.all()
         counts = {c.value: 0 for c in NewsCountry}
@@ -169,8 +197,14 @@ class NewsItemRepository(BaseRepository[NewsItem]):
                 counts[NewsCountry.CYPRUS.value] += count
         return counts
 
-    async def get_by_id_with_joins(self, news_item_id: UUID) -> Row | None:
-        """Fetch a single NewsItem with its Situation, SituationDescription, and SituationPicture via JOIN."""
+    async def get_by_id_with_joins(
+        self, news_item_id: UUID, *, published_only: bool = True
+    ) -> Row | None:
+        """Fetch a single NewsItem with its Situation, SituationDescription, and SituationPicture via JOIN.
+
+        When ``published_only`` is True (the default, for the public detail endpoint),
+        a draft item is treated as not found (returns None → 404).
+        """
         query = (
             select(NewsItem, Situation, SituationDescription, SituationPicture)
             .join(Situation, Situation.id == NewsItem.situation_id)
@@ -178,11 +212,13 @@ class NewsItemRepository(BaseRepository[NewsItem]):
             .outerjoin(SituationPicture, SituationPicture.situation_id == Situation.id)
             .where(NewsItem.id == news_item_id)
         )
+        if published_only:
+            query = query.where(NewsItem.status == NewsItemStatus.PUBLISHED)
         result = await self.db.execute(query)
         return result.first()
 
     async def get_by_id_for_detail(
-        self, news_item_id: UUID
+        self, news_item_id: UUID, *, published_only: bool = True
     ) -> tuple[NewsItem, Situation, SituationDescription, SituationPicture] | Row | None:
         """Fetch a single NewsItem for the admin detail view with full Situation graph.
 
@@ -199,7 +235,7 @@ class NewsItemRepository(BaseRepository[NewsItem]):
             Situation.dialog (if not None) has speakers/lines/exercises pre-loaded,
             or None if the news item does not exist.
         """
-        base_row = await self.get_by_id_with_joins(news_item_id)
+        base_row = await self.get_by_id_with_joins(news_item_id, published_only=published_only)
         if base_row is None:
             return None
 

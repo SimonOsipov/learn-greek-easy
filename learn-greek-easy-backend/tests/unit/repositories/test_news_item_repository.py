@@ -16,7 +16,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import DescriptionSourceType, NewsItem
+from src.db.models import DescriptionSourceType, NewsItem, NewsItemStatus
 from src.repositories.news_item import NewsItemRepository
 from tests.factories.news import NewsItemFactory
 from tests.factories.situation import SituationFactory
@@ -36,6 +36,7 @@ async def news_items(db_session: AsyncSession):
     for i in range(5):
         item = await NewsItemFactory.create(
             session=db_session,
+            published=True,
             publication_date=base_date - timedelta(days=i),
         )
         items.append(item)
@@ -123,6 +124,59 @@ class TestGetList:
         result = await repo.get_list()
 
         assert result == []
+
+
+# =============================================================================
+# Test status gating (drafts hidden from the public feed)
+# =============================================================================
+
+
+class TestStatusGating:
+    """Drafts must be excluded from public-feed queries but visible to admin."""
+
+    @pytest.mark.asyncio
+    async def test_get_list_hides_drafts_by_default(self, db_session: AsyncSession):
+        """get_list (published_only=True default) excludes draft items."""
+        await NewsItemFactory.create(session=db_session, published=True)
+        await NewsItemFactory.create(session=db_session)  # draft (factory default)
+
+        repo = NewsItemRepository(db_session)
+        result = await repo.get_list()
+
+        assert len(result) == 1
+        assert result[0][0].status == NewsItemStatus.PUBLISHED
+
+    @pytest.mark.asyncio
+    async def test_get_list_includes_drafts_for_admin(self, db_session: AsyncSession):
+        """get_list(published_only=False) returns drafts too (admin path)."""
+        await NewsItemFactory.create(session=db_session, published=True)
+        await NewsItemFactory.create(session=db_session)  # draft
+
+        repo = NewsItemRepository(db_session)
+        result = await repo.get_list(published_only=False)
+
+        assert len(result) == 2
+
+    @pytest.mark.asyncio
+    async def test_count_all_hides_drafts_by_default(self, db_session: AsyncSession):
+        """count_all (published_only=True default) counts published only."""
+        await NewsItemFactory.create(session=db_session, published=True)
+        await NewsItemFactory.create(session=db_session)  # draft
+
+        repo = NewsItemRepository(db_session)
+
+        assert await repo.count_all() == 1
+        assert await repo.count_all(published_only=False) == 2
+
+    @pytest.mark.asyncio
+    async def test_get_by_id_with_joins_404s_draft(self, db_session: AsyncSession):
+        """A draft is treated as not-found on the public detail path."""
+        draft = await NewsItemFactory.create(session=db_session)  # draft
+
+        repo = NewsItemRepository(db_session)
+
+        assert await repo.get_by_id_with_joins(draft.id) is None
+        assert await repo.get_by_id_with_joins(draft.id, published_only=False) is not None
 
 
 # =============================================================================
@@ -264,9 +318,13 @@ async def _make_news_item_with_b1(
     *,
     has_b1: bool,
     has_audio: bool,
+    published: bool = True,
 ) -> NewsItem:
     """Helper: create a NewsItem whose Situation.levels optionally contains 'B1'
-    and whose SituationDescription.audio_s3_key is optionally set."""
+    and whose SituationDescription.audio_s3_key is optionally set.
+
+    Defaults to published so it counts toward the public-feed aggregates.
+    """
     levels = ["B1"] if has_b1 else []
     situation = await SituationFactory.create(session=db_session, ready=True)
     situation.levels = levels
@@ -287,6 +345,7 @@ async def _make_news_item_with_b1(
         situation_id=situation.id,
         publication_date=date.today(),
         original_article_url=url,
+        status=NewsItemStatus.PUBLISHED if published else NewsItemStatus.DRAFT,
     )
     db_session.add(news_item)
     await db_session.flush()

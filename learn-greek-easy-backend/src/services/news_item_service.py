@@ -102,6 +102,11 @@ class NewsItemService:
         image_bytes, content_type = await self._download_image(str(data.source_image_url))
         s3_key = await self._upload_image_to_s3(image_bytes, content_type)
 
+        # CEFR levels: news base content is B1, plus A2 when a simplified text is
+        # provided. Mirrors the one-time backfill in 20260526_admin2_26_02 so news
+        # created after that migration is no longer orphaned with empty levels.
+        levels = ["B1", "A2"] if (data.text_el_a2 and data.text_el_a2.strip()) else ["B1"]
+
         situation = Situation(
             scenario_el=data.scenario_el,
             scenario_en=data.scenario_en,
@@ -112,6 +117,7 @@ class NewsItemService:
             source_title_en=data.scenario_en,
             source_title_el=data.scenario_el,
             source_title_ru=data.scenario_ru,
+            levels=levels,
         )
         self.db.add(situation)
         await self.db.flush()
@@ -184,7 +190,9 @@ class NewsItemService:
 
         return self._to_response(news_item, situation, description, picture)
 
-    async def get_by_id(self, news_item_id: UUID) -> NewsItemResponse:
+    async def get_by_id(
+        self, news_item_id: UUID, *, published_only: bool = True
+    ) -> NewsItemResponse:
         """Get a news item by ID with full linked situation summary.
 
         Uses the detail query which eager-loads the dialog graph
@@ -192,6 +200,7 @@ class NewsItemService:
 
         Args:
             news_item_id: UUID of the news item
+            published_only: Treat drafts as not-found (default True, for the public endpoint)
 
         Returns:
             NewsItemResponse with presigned image URL and linked_situation
@@ -199,7 +208,7 @@ class NewsItemService:
         Raises:
             NewsItemNotFoundException: If news item doesn't exist
         """
-        row = await self.repo.get_by_id_for_detail(news_item_id)
+        row = await self.repo.get_by_id_for_detail(news_item_id, published_only=published_only)
         if row is None:
             raise NewsItemNotFoundException(news_item_id=str(news_item_id))
         news_item, situation, description, picture = row
@@ -207,7 +216,12 @@ class NewsItemService:
         return self._to_response(news_item, situation, description, picture, linked_situation)
 
     async def get_list(
-        self, *, page: int = 1, page_size: int = 20, country: NewsCountry | None = None
+        self,
+        *,
+        page: int = 1,
+        page_size: int = 20,
+        country: NewsCountry | None = None,
+        published_only: bool = True,
     ) -> NewsItemListResponse:
         """Get paginated list of news items.
 
@@ -215,17 +229,25 @@ class NewsItemService:
             page: Page number (1-indexed)
             page_size: Number of items per page
             country: Optional country filter
+            published_only: Exclude drafts (default True, for the public feed).
+                Admin callers pass False to list drafts too.
 
         Returns:
             NewsItemListResponse with paginated news items and country counts
         """
         skip = (page - 1) * page_size
-        rows = await self.repo.get_list(skip=skip, limit=page_size, country=country)
-        total = await self.repo.count_all(country=country)
-        audio_count = await self.repo.count_with_audio(country=country)
-        country_counts = await self.repo.count_by_country()
-        b1_audio_count = await self.repo.count_with_b1_audio()
-        b1_pending_regen_count = await self.repo.count_b1_pending_regen()
+        rows = await self.repo.get_list(
+            skip=skip, limit=page_size, country=country, published_only=published_only
+        )
+        total = await self.repo.count_all(country=country, published_only=published_only)
+        audio_count = await self.repo.count_with_audio(
+            country=country, published_only=published_only
+        )
+        country_counts = await self.repo.count_by_country(published_only=published_only)
+        b1_audio_count = await self.repo.count_with_b1_audio(published_only=published_only)
+        b1_pending_regen_count = await self.repo.count_b1_pending_regen(
+            published_only=published_only
+        )
 
         return NewsItemListResponse(
             total=total,
@@ -247,7 +269,8 @@ class NewsItemService:
             NewsItemNotFoundException: If news item not found
             ValueError: If new image download or S3 upload fails
         """
-        row = await self.repo.get_by_id_with_joins(news_item_id)
+        # Admin write path: must operate on drafts too (published_only=False).
+        row = await self.repo.get_by_id_with_joins(news_item_id, published_only=False)
         if row is None:
             raise NewsItemNotFoundException(str(news_item_id))
 
@@ -261,8 +284,8 @@ class NewsItemService:
         await self._patch_picture(situation.id, data)
 
         await self.db.flush()
-        # Re-fetch to pick up the updated picture row for the response.
-        updated_row = await self.repo.get_by_id_with_joins(news_item.id)
+        # Re-fetch to pick up the updated picture row for the response (admin: include drafts).
+        updated_row = await self.repo.get_by_id_with_joins(news_item.id, published_only=False)
         assert updated_row is not None
         return self._to_response(updated_row[0], updated_row[1], updated_row[2], updated_row[3])
 
