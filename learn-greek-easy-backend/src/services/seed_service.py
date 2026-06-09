@@ -54,6 +54,7 @@ from src.db.models import (
     MockExamStatus,
     NewsCountry,
     NewsItem,
+    NewsItemStatus,
     Notification,
     NotificationType,
     PartOfSpeech,
@@ -2612,6 +2613,7 @@ class SeedService:
                 publication_date=publication_date,
                 original_article_url=article_url,
                 situation_id=situation.id,
+                status=NewsItemStatus.PUBLISHED,
             )
             self.db.add(news_item)
             await self.db.flush()
@@ -2775,6 +2777,7 @@ class SeedService:
             publication_date=date.today(),
             original_article_url="https://example.com/e2e-news-question-1",
             situation_id=situation_1.id,
+            status=NewsItemStatus.PUBLISHED,
         )
         self.db.add(news_1)
 
@@ -2800,6 +2803,7 @@ class SeedService:
             publication_date=date.today() - timedelta(days=1),
             original_article_url="https://example.com/e2e-news-question-2",
             situation_id=situation_2.id,
+            status=NewsItemStatus.PUBLISHED,
         )
         self.db.add(news_2)
 
@@ -2825,6 +2829,7 @@ class SeedService:
             publication_date=date.today() - timedelta(days=2),
             original_article_url="https://example.com/e2e-news-question-3-no-question",
             situation_id=situation_3.id,
+            status=NewsItemStatus.PUBLISHED,
         )
         self.db.add(news_3)
 
@@ -3081,6 +3086,7 @@ class SeedService:
                 publication_date=publication_date,
                 original_article_url=article_url,
                 situation_id=feed_situation.id,
+                status=NewsItemStatus.PUBLISHED,
             )
             self.db.add(news_item)
             await self.db.flush()
