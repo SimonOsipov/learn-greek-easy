@@ -4,12 +4,15 @@
  * Displays: Greek lemma echoed small (with audio cluster), green Answer block
  * (translation in Inter Tight), and example sentence block.
  *
- * Uses --practice-* tokens. MOB-13: no /NN opacity modifier on var-backed tokens.
+ * Uses explicit isDark-keyed rgb constants (MOB-13 + #5/#25 dark-mode fix).
+ * practice-* classNames are NOT used here — they always resolve to light values
+ * on native since darkMode:'class' is unconnected (nothing calls colorScheme.set).
  */
 import { View, Text } from 'react-native';
 import { Check } from 'lucide-react-native';
 
 import { AudioCluster } from './audio-cluster';
+import { reviewPalette } from '@/lib/review/presentation';
 import type { V2StudyQueueCard } from '@/types/review';
 
 // MOB-13: explicit rgba for tinted surfaces
@@ -47,17 +50,17 @@ export function CardBack({ card, locale, isDark, testID }: CardBackProps) {
   const correctBg   = isDark ? CORRECT_BG_DARK : CORRECT_BG_LIGHT;
   const correctBorder = isDark ? CORRECT_BORDER_DARK : CORRECT_BORDER_LIGHT;
   const exampleBg   = isDark ? EXAMPLE_BG_DARK : EXAMPLE_BG_LIGHT;
-  const cardBg      = isDark ? 'rgba(30,41,59,1)' : '#fff';
-  const borderColor = isDark ? 'rgba(71,85,105,0.5)' : 'rgba(203,213,225,0.8)';
+  // #5/#25/#29: derive card surface from isDark (practice-* classNames unconnected on native)
+  const palette     = reviewPalette(isDark);
 
   return (
     <View
       testID={testID ?? 'review-card-back'}
       className="rounded-2xl overflow-hidden"
       style={{
-        backgroundColor: cardBg,
+        backgroundColor: palette.cardBg,
         borderWidth: 1,
-        borderColor,
+        borderColor: palette.borderColor,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: isDark ? 0.3 : 0.1,
@@ -69,8 +72,8 @@ export function CardBack({ card, locale, isDark, testID }: CardBackProps) {
       <View className="px-5 pt-4 pb-3 items-center">
         <Text
           testID="review-back-lemma"
-          className="text-practice-text-muted text-[22px] text-center mb-3"
-          style={{ fontFamily: 'NotoSerif_400Regular' }}
+          className="text-[22px] text-center mb-3"
+          style={{ fontFamily: 'NotoSerif_400Regular', color: palette.textMuted }}
         >
           {main}
         </Text>
@@ -100,8 +103,8 @@ export function CardBack({ card, locale, isDark, testID }: CardBackProps) {
           {/* Translation */}
           <Text
             testID="review-back-answer"
-            className="text-practice-text text-[26px] font-bold tracking-tight"
-            style={{ fontFamily: 'InterTight_700Bold', letterSpacing: -0.5 }}
+            className="text-[26px] font-bold tracking-tight"
+            style={{ fontFamily: 'InterTight_700Bold', letterSpacing: -0.5, color: palette.text }}
           >
             {answer}
           </Text>
@@ -117,16 +120,16 @@ export function CardBack({ card, locale, isDark, testID }: CardBackProps) {
           >
             {/* Tag */}
             <Text
-              className="text-practice-text-dim text-[9px] font-bold uppercase tracking-widest mb-2"
-              style={{ fontFamily: 'SpaceMono_400Regular' }}
+              className="text-[9px] font-bold uppercase tracking-widest mb-2"
+              style={{ fontFamily: 'SpaceMono_400Regular', color: palette.textDim }}
             >
               Example
             </Text>
             {/* Greek sentence */}
             <Text
               testID="review-back-example-el"
-              className="text-practice-text text-[13px] font-semibold mb-1"
-              style={{ fontFamily: 'NotoSerif_400Regular' }}
+              className="text-[13px] font-semibold mb-1"
+              style={{ fontFamily: 'NotoSerif_400Regular', color: palette.text }}
             >
               {exampleEl}
             </Text>
@@ -144,8 +147,8 @@ export function CardBack({ card, locale, isDark, testID }: CardBackProps) {
             {exampleGloss ? (
               <Text
                 testID="review-back-example-gloss"
-                className="text-practice-text-muted text-[12px]"
-                style={{ fontFamily: 'NotoSerif_400Regular_Italic' }}
+                className="text-[12px]"
+                style={{ fontFamily: 'NotoSerif_400Regular_Italic', color: palette.textMuted }}
               >
                 {exampleGloss}
               </Text>

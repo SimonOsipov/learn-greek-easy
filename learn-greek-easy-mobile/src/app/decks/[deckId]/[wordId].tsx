@@ -429,7 +429,7 @@ export default function WordDetailScreen() {
           </View>
 
           {/* Article + lemma row + speaker */}
-          <View className="flex-row items-flex-end gap-2.5 mb-1">
+          <View className="flex-row items-end gap-2.5 mb-1">
             <View className="flex-row items-baseline gap-2 flex-1">
               {article ? (
                 <Text

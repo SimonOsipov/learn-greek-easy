@@ -33,6 +33,7 @@ import { RatingRow } from '@/components/review/rating-row';
 import { SessionSummary } from '@/components/review/session-summary';
 import { AllCaughtUp } from '@/components/review/all-caught-up';
 import { SkeletonCard } from '@/components/review/skeleton-card';
+import { reviewPalette } from '@/lib/review/presentation';
 
 // ── Screen state machine ──
 type ReviewPhase =
@@ -88,6 +89,10 @@ export default function ReviewScreen() {
 
   useEffect(() => {
     if (initializedRef.current) return;
+    // #1/#19: guard against stale data present during refetch (isFetching is true
+    // while refetch() is in-flight; data still holds the old queue from the last
+    // successful fetch).  Wait until the fetch has actually settled.
+    if (queueQuery.isFetching) return;
     if (queueQuery.isLoading || (!queueQuery.data && !queueQuery.isError)) return;
 
     initializedRef.current = true;
@@ -110,7 +115,7 @@ export default function ReviewScreen() {
     }
 
     setPhase(nextPhase);
-  }, [queueQuery.isLoading, queueQuery.isError, queueQuery.data, deckId]);
+  }, [queueQuery.isFetching, queueQuery.isLoading, queueQuery.isError, queueQuery.data, deckId]);
 
   // ── Card flip ──
   const handleFlip = useCallback(() => {
@@ -202,6 +207,10 @@ export default function ReviewScreen() {
     setCurrentIndex(0);
     setPhase('loading');
     startFiredRef.current = false;
+    // #1/#19: reset initializedRef so the init effect can re-run once the
+    // refetch settles (without this the init effect early-returns and phase
+    // stays 'loading' forever, leaving the user stuck on the SkeletonCard).
+    initializedRef.current = false;
     void queueQuery.refetch();
   }, [queueQuery]);
 
@@ -220,8 +229,12 @@ export default function ReviewScreen() {
     {} as Record<UIRating, string | undefined>,
   );
 
-  // ── Palette (applied as View bg + class toggle) ──
-  const bgColor = isDark ? 'hsl(222,47%,11%)' : 'hsl(210,40%,96%)';
+  // ── Palette (applied as View bg) ──
+  // #5/#25/#29: use explicit rgb constants keyed on isDark; hsl(var(...)) would also
+  // work here since it is a screen-level inline style (not a className), but using
+  // the presentation map keeps the source-of-truth in one place.
+  const palette = reviewPalette(isDark);
+  const bgColor = palette.screenBg;
 
   // ── Loading state ──
   if (phase === 'loading') {
@@ -264,12 +277,12 @@ export default function ReviewScreen() {
       >
         <Text
           testID="review-error-message"
-          className="text-practice-text text-[17px] font-semibold text-center mb-3"
-          style={{ fontFamily: 'InterTight_700Bold' }}
+          className="text-[17px] font-semibold text-center mb-3"
+          style={{ fontFamily: 'InterTight_700Bold', color: palette.text }}
         >
           {is403 ? 'Premium required' : "Couldn't load cards"}
         </Text>
-        <Text className="text-practice-text-muted text-[14px] text-center mb-6">
+        <Text className="text-[14px] text-center mb-6" style={{ color: palette.textMuted }}>
           {is403
             ? 'This deck requires a premium subscription.'
             : 'Please check your connection and try again.'}
@@ -278,9 +291,12 @@ export default function ReviewScreen() {
           <Pressable
             testID="review-error-retry"
             onPress={() => queueQuery.refetch()}
-            className="px-6 py-3 rounded-lg border border-practice-border mb-3 active:opacity-70"
+            className="px-6 py-3 rounded-lg mb-3 active:opacity-70"
+            style={{ borderWidth: 1, borderColor: palette.borderColor }}
           >
-            <Text className="text-practice-accent text-[14px] font-semibold">Retry</Text>
+            <Text className="text-[14px] font-semibold" style={{ color: palette.accent }}>
+              Retry
+            </Text>
           </Pressable>
         )}
         <Pressable
@@ -288,7 +304,7 @@ export default function ReviewScreen() {
           onPress={() => router.back()}
           className="px-6 py-3 active:opacity-70"
         >
-          <Text className="text-practice-text-muted text-[14px]">Go back</Text>
+          <Text className="text-[14px]" style={{ color: palette.textMuted }}>Go back</Text>
         </Pressable>
       </View>
     );

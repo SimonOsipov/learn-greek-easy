@@ -6,11 +6,13 @@
  * and Back to deck / Study more buttons.
  *
  * All stats are accumulated client-side. MOB-13: no /NN opacity modifier.
+ * Uses explicit isDark-keyed rgb constants (#5/#25 dark-mode fix).
  */
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { Check } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { reviewPalette } from '@/lib/review/presentation';
 import type { SessionStats } from '@/types/review';
 
 // MOB-13: explicit rgba for tinted surfaces
@@ -50,7 +52,9 @@ export function SessionSummary({
 
   const statCardBg = isDark ? 'rgba(148,163,184,0.08)' : 'rgba(100,116,139,0.06)';
   const statBorderColor = isDark ? 'rgba(148,163,184,0.14)' : 'rgba(100,116,139,0.12)';
-  const accentFg = isDark ? 'rgb(129,140,248)' : 'rgb(79,70,229)'; // --practice-accent
+  // #5/#25/#29: derive all practice-* colors from isDark prop (explicit rgb constants).
+  // practice-* classNames always resolve to light values on native (darkMode:'class' unconnected).
+  const palette = reviewPalette(isDark);
 
   return (
     <ScrollView
@@ -69,14 +73,14 @@ export function SessionSummary({
         </View>
         <Text
           testID="review-summary-heading"
-          className="text-practice-text text-[28px] font-bold tracking-tight mb-1"
-          style={{ fontFamily: 'InterTight_700Bold', letterSpacing: -0.8 }}
+          className="text-[28px] font-bold tracking-tight mb-1"
+          style={{ fontFamily: 'InterTight_700Bold', letterSpacing: -0.8, color: palette.text }}
         >
           Session summary
         </Text>
         <Text
-          className="text-practice-text-muted text-[16px]"
-          style={{ fontFamily: 'NotoSerif_400Regular_Italic' }}
+          className="text-[16px]"
+          style={{ fontFamily: 'NotoSerif_400Regular_Italic', color: palette.textMuted }}
         >
           Μπράβο.
         </Text>
@@ -100,14 +104,14 @@ export function SessionSummary({
           >
             <Text
               testID={`review-summary-stat-${s.label.toLowerCase().replace(/[^a-z]/g, '-')}`}
-              className="text-practice-text text-[22px] font-bold mb-0.5"
-              style={{ fontFamily: 'InterTight_700Bold' }}
+              className="text-[22px] font-bold mb-0.5"
+              style={{ fontFamily: 'InterTight_700Bold', color: palette.text }}
             >
               {s.value}
             </Text>
             <Text
-              className="text-practice-text-dim text-[10px] font-bold uppercase tracking-wider text-center"
-              style={{ fontFamily: 'SpaceMono_400Regular' }}
+              className="text-[10px] font-bold uppercase tracking-wider text-center"
+              style={{ fontFamily: 'SpaceMono_400Regular', color: palette.textDim }}
             >
               {s.label}
             </Text>
@@ -117,7 +121,7 @@ export function SessionSummary({
 
       {/* ── Accuracy note ── */}
       <View className="px-4 mb-3">
-        <Text className="text-practice-text-muted text-[13px] text-center">
+        <Text className="text-[13px] text-center" style={{ color: palette.textMuted }}>
           {accuracy}% correct (Good + Easy)
         </Text>
       </View>
@@ -129,8 +133,8 @@ export function SessionSummary({
       >
         <Text
           testID="review-summary-breakdown-label"
-          className="text-practice-text-dim text-[10px] font-bold uppercase tracking-wider mb-3"
-          style={{ fontFamily: 'SpaceMono_400Regular' }}
+          className="text-[10px] font-bold uppercase tracking-wider mb-3"
+          style={{ fontFamily: 'SpaceMono_400Regular', color: palette.textDim }}
         >
           Rating breakdown
         </Text>
@@ -139,7 +143,7 @@ export function SessionSummary({
             { label: 'Again', count: stats.again_count, color: 'rgb(220,38,38)' },
             { label: 'Hard',  count: stats.hard_count,  color: 'rgb(234,119,23)' },
             { label: 'Good',  count: stats.good_count,  color: 'rgb(20,184,103)' },
-            { label: 'Easy',  count: stats.easy_count,  color: isDark ? 'rgb(129,140,248)' : 'rgb(79,70,229)' },
+            { label: 'Easy',  count: stats.easy_count,  color: palette.accent },
           ].map((r) => (
             <View key={r.label} className="flex-1 items-center">
               <Text
@@ -150,8 +154,8 @@ export function SessionSummary({
                 {r.count}
               </Text>
               <Text
-                className="text-practice-text-dim text-[10px] font-bold uppercase"
-                style={{ fontFamily: 'SpaceMono_400Regular' }}
+                className="text-[10px] font-bold uppercase"
+                style={{ fontFamily: 'SpaceMono_400Regular', color: palette.textDim }}
               >
                 {r.label}
               </Text>
@@ -166,16 +170,19 @@ export function SessionSummary({
           testID="review-summary-back-btn"
           accessibilityRole="button"
           onPress={onBackToDeck}
-          className="flex-1 py-3.5 rounded-lg items-center justify-center border border-practice-border active:opacity-70"
+          className="flex-1 py-3.5 rounded-lg items-center justify-center active:opacity-70"
+          style={{ borderWidth: 1, borderColor: palette.borderColor }}
         >
-          <Text className="text-practice-text text-[15px] font-semibold">Back to deck</Text>
+          <Text className="text-[15px] font-semibold" style={{ color: palette.text }}>
+            Back to deck
+          </Text>
         </Pressable>
         <Pressable
           testID="review-summary-study-more-btn"
           accessibilityRole="button"
           onPress={onStudyMore}
           className="flex-1 py-3.5 rounded-lg items-center justify-center active:opacity-70"
-          style={{ backgroundColor: accentFg }}
+          style={{ backgroundColor: palette.accent }}
         >
           <Text className="text-[15px] font-bold" style={{ color: '#fff' }}>Study more</Text>
         </Pressable>

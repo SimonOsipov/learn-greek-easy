@@ -82,13 +82,13 @@ export function ReadinessDonut({ pct, reduceMotion = false }: ReadinessDonutProp
             <Stop offset="100%" stopColor="rgb(90,131,244)" />
           </LinearGradient>
         </Defs>
-        {/* Track circle */}
+        {/* Track circle — explicit rgb; react-native-svg cannot resolve hsl(var(...)) (#6/#27) */}
         <Circle
           cx={SIZE / 2}
           cy={SIZE / 2}
           r={RADIUS}
           fill="none"
-          stroke="hsl(var(--line))"
+          stroke="rgb(220,224,234)"
           strokeWidth={STROKE_WIDTH}
         />
         {/* Arc circle */}

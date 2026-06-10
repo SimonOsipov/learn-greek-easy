@@ -121,7 +121,8 @@ const CARD_1: V2StudyQueueCard = {
     answer: 'room',
     answer_sub: null,
   },
-  status: 'NEW',
+  // #21/#42: lowercase status values matching backend CardStatus serialization
+  status: 'new',
   is_new: true,
   is_early_practice: false,
   due_date: null,
@@ -135,10 +136,10 @@ const CARD_1: V2StudyQueueCard = {
   example_el: 'Το δωμάτιο είναι μεγάλο.',
   example_en: 'The room is big.',
   rating_previews: [
-    { rating: 1, quality: 0, interval: 0, next_review_date: '2026-06-12', new_status: 'LEARNING' },
-    { rating: 2, quality: 2, interval: 1, next_review_date: '2026-06-12', new_status: 'LEARNING' },
-    { rating: 3, quality: 4, interval: 3, next_review_date: '2026-06-14', new_status: 'REVIEW' },
-    { rating: 4, quality: 5, interval: 7, next_review_date: '2026-06-18', new_status: 'REVIEW' },
+    { rating: 1, quality: 0, interval: 0, next_review_date: '2026-06-12', new_status: 'learning' },
+    { rating: 2, quality: 2, interval: 1, next_review_date: '2026-06-12', new_status: 'learning' },
+    { rating: 3, quality: 4, interval: 3, next_review_date: '2026-06-14', new_status: 'review' },
+    { rating: 4, quality: 5, interval: 7, next_review_date: '2026-06-18', new_status: 'review' },
   ],
 };
 
@@ -438,20 +439,53 @@ describe('ReviewScreen', () => {
     expect(mockBack).toHaveBeenCalled();
   });
 
-  it('"Study more" on summary refetches queue', () => {
+  it('"Study more" on summary refetches queue and shows card front after refetch resolves', () => {
+    // #1/#19/#37: strengthened test — after Study more the init effect must
+    // re-run once the refetch settles (initializedRef is reset in handleStudyMore).
     const mockRefetch = jest.fn();
+
+    // Phase 1: initial queue with CARD_1; not fetching.
     mockUseStudyQueue.mockReturnValue({
       isLoading: false,
+      isFetching: false,
       isError: false,
       data: makeQueue([CARD_1]),
       error: null,
       refetch: mockRefetch,
     });
-    render(<ReviewScreen />);
+    const { rerender } = render(<ReviewScreen />);
+
+    // Rate the only card → session summary.
     fireEvent.press(screen.getByTestId('review-card-front'));
     fireEvent.press(screen.getByTestId('review-rating-good'));
+    expect(screen.getByTestId('review-screen-summary')).toBeTruthy();
+
+    // Tap Study more — triggers refetch; hook now returns isFetching:true.
+    mockUseStudyQueue.mockReturnValue({
+      isLoading: false,
+      isFetching: true,
+      isError: false,
+      data: makeQueue([CARD_1]),  // stale data still present
+      error: null,
+      refetch: mockRefetch,
+    });
     fireEvent.press(screen.getByTestId('review-summary-study-more-btn'));
     expect(mockRefetch).toHaveBeenCalled();
+
+    // Refetch settles — new queue with CARD_2; isFetching returns to false.
+    mockUseStudyQueue.mockReturnValue({
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      data: makeQueue([CARD_2]),
+      error: null,
+      refetch: mockRefetch,
+    });
+    rerender(<ReviewScreen />);
+
+    // Init effect re-runs because initializedRef was reset; card front reappears.
+    expect(screen.getByTestId('review-card-front')).toBeTruthy();
+    expect(screen.queryByTestId('review-screen-summary')).toBeNull();
   });
 
   it('back-to-deck on all-caught-up calls router.back()', () => {

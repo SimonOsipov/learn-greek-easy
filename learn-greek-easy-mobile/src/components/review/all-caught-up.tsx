@@ -3,9 +3,12 @@
  *
  * Shows: big check icon, "All caught up" heading, hint line, "Back to deck" button.
  * MOB-13: no /NN opacity modifier on var-backed tokens.
+ * Uses explicit isDark-keyed rgb constants (#5/#25 dark-mode fix).
  */
 import { View, Text, Pressable } from 'react-native';
 import { CheckCircle2 } from 'lucide-react-native';
+
+import { reviewPalette } from '@/lib/review/presentation';
 
 // MOB-13: explicit rgba
 const CORRECT_BG  = 'rgba(20,184,103,0.12)';
@@ -18,7 +21,9 @@ export interface AllCaughtUpProps {
 }
 
 export function AllCaughtUp({ isDark, onBackToDeck, testID }: AllCaughtUpProps) {
-  const accentFg = isDark ? 'rgb(129,140,248)' : 'rgb(79,70,229)'; // --practice-accent
+  // #5/#25/#29: derive all practice-* colors from isDark prop (explicit rgb constants).
+  // practice-* classNames always resolve to light values on native (darkMode:'class' unconnected).
+  const palette = reviewPalette(isDark);
 
   return (
     <View
@@ -36,8 +41,8 @@ export function AllCaughtUp({ isDark, onBackToDeck, testID }: AllCaughtUpProps) 
       {/* Heading */}
       <Text
         testID="review-caught-up-heading"
-        className="text-practice-text text-[30px] font-bold tracking-tight mb-3 text-center"
-        style={{ fontFamily: 'InterTight_700Bold', letterSpacing: -0.8 }}
+        className="text-[30px] font-bold tracking-tight mb-3 text-center"
+        style={{ fontFamily: 'InterTight_700Bold', letterSpacing: -0.8, color: palette.text }}
       >
         All caught up
       </Text>
@@ -45,7 +50,8 @@ export function AllCaughtUp({ isDark, onBackToDeck, testID }: AllCaughtUpProps) 
       {/* Hint */}
       <Text
         testID="review-caught-up-hint"
-        className="text-practice-text-muted text-[14px] text-center leading-relaxed mb-8"
+        className="text-[14px] text-center leading-relaxed mb-8"
+        style={{ color: palette.textMuted }}
       >
         No cards due in this deck right now. Come back later, or study ahead.
       </Text>
@@ -56,7 +62,7 @@ export function AllCaughtUp({ isDark, onBackToDeck, testID }: AllCaughtUpProps) 
         accessibilityRole="button"
         onPress={onBackToDeck}
         className="w-full py-4 rounded-lg items-center justify-center active:opacity-70"
-        style={{ backgroundColor: accentFg }}
+        style={{ backgroundColor: palette.accent }}
       >
         <Text className="text-[16px] font-bold" style={{ color: '#fff' }}>Back to deck</Text>
       </Pressable>

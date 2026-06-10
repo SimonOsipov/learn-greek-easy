@@ -31,7 +31,9 @@ export interface V2StudyQueueCard {
   front_content: Record<string, unknown>;
   /** Discriminated by card_type; keys include: answer, answer_sub, context, declension_table, full_sentence */
   back_content: Record<string, unknown>;
-  status: 'NEW' | 'LEARNING' | 'REVIEW' | 'RELEARNING' | 'MASTERED';
+  // #21/#42: backend CardStatus serializes lowercase; RELEARNING does not exist.
+  // (models.py:74-80: 'new'/'learning'/'review'/'mastered'). Fixed verbatim port.
+  status: 'new' | 'learning' | 'review' | 'mastered';
   is_new: boolean;
   is_early_practice: boolean;
   due_date: string | null;

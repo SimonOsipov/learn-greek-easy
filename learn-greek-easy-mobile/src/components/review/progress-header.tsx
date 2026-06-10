@@ -6,10 +6,14 @@
  *   - Center: "Card N of total" (mono) + thin accent progress bar
  *   - Right: EN/RU language segment + theme toggle (sun/moon)
  *
- * Uses --practice-* tokens. MOB-13: no /NN opacity modifier on var-backed tokens.
+ * Uses explicit isDark-keyed rgb constants (MOB-13 + #5/#25 dark-mode fix).
+ * practice-* classNames are NOT used here — they always resolve to light values
+ * on native since darkMode:'class' is unconnected (nothing calls colorScheme.set).
  */
 import { View, Text, Pressable } from 'react-native';
 import { X, Sun, Moon } from 'lucide-react-native';
+
+import { reviewPalette } from '@/lib/review/presentation';
 
 // MOB-13: explicit rgba — no /NN modifier on var-backed tokens
 const ICON_COLOR = 'rgb(100,116,139)';         // --practice-text-muted (light)
@@ -38,6 +42,10 @@ export function ProgressHeader({
 }: ProgressHeaderProps) {
   const progress = total > 0 ? (currentIndex / total) : 0;
   const iconColor = isDark ? ICON_COLOR_DARK : ICON_COLOR;
+  // #5/#25/#29: derive all practice-* colors from isDark prop (explicit rgb constants).
+  // NativeWind darkMode:'class' is unconnected on native, so practice-* classNames always
+  // resolve to light values — they cannot be used here.
+  const palette = reviewPalette(isDark);
 
   return (
     <View testID={testID ?? 'review-progress-header'} className="px-4 pt-2 pb-3">
@@ -55,10 +63,10 @@ export function ProgressHeader({
           <X size={18} color={iconColor} strokeWidth={2.2} />
         </Pressable>
 
-        {/* EN/RU language segment */}
+        {/* EN/RU language segment — explicit border + bg (practice-* classNames broken on native) */}
         <View
-          className="flex-row rounded-full overflow-hidden border border-practice-border"
-          style={{ gap: 0 }}
+          className="flex-row rounded-full overflow-hidden"
+          style={{ gap: 0, borderWidth: 1, borderColor: palette.borderColor }}
         >
           <Pressable
             testID="review-locale-en"
@@ -66,16 +74,15 @@ export function ProgressHeader({
             onPress={() => onLocaleChange('en')}
             className="px-3.5 py-1.5 active:opacity-70"
             style={{
-              backgroundColor: locale === 'en'
-                ? 'hsl(var(--practice-accent))'
-                : 'transparent',
+              // #6/#26: explicit rgb — hsl(var(--practice-accent)) is unparseable in RN style props
+              backgroundColor: locale === 'en' ? palette.localePillBg : 'transparent',
             }}
           >
             <Text
               className="text-[12px] font-bold"
               style={{
                 fontFamily: 'SpaceMono_400Regular',
-                color: locale === 'en' ? '#fff' : (isDark ? 'rgb(148,163,184)' : 'rgb(100,116,139)'),
+                color: locale === 'en' ? '#fff' : palette.iconColor,
               }}
             >
               EN
@@ -87,16 +94,15 @@ export function ProgressHeader({
             onPress={() => onLocaleChange('ru')}
             className="px-3.5 py-1.5 active:opacity-70"
             style={{
-              backgroundColor: locale === 'ru'
-                ? 'hsl(var(--practice-accent))'
-                : 'transparent',
+              // #6/#26: explicit rgb — hsl(var(--practice-accent)) is unparseable in RN style props
+              backgroundColor: locale === 'ru' ? palette.localePillBg : 'transparent',
             }}
           >
             <Text
               className="text-[12px] font-bold"
               style={{
                 fontFamily: 'SpaceMono_400Regular',
-                color: locale === 'ru' ? '#fff' : (isDark ? 'rgb(148,163,184)' : 'rgb(100,116,139)'),
+                color: locale === 'ru' ? '#fff' : palette.iconColor,
               }}
             >
               RU
@@ -125,22 +131,23 @@ export function ProgressHeader({
       <View className="items-center mb-3">
         <Text
           testID="review-card-counter"
-          className="text-practice-text-muted text-[13px] mb-2"
-          style={{ fontFamily: 'SpaceMono_400Regular' }}
+          className="text-[13px] mb-2"
+          style={{ fontFamily: 'SpaceMono_400Regular', color: palette.textMuted }}
         >
           Card {Math.min(currentIndex + 1, total)} of {total}
         </Text>
       </View>
 
-      {/* ── Progress bar ── */}
+      {/* ── Progress bar — explicit colors; practice-* classNames unconnected on native ── */}
       <View
         testID="review-progress-bar-track"
-        className="h-0.5 rounded-full bg-practice-border overflow-hidden"
+        className="h-0.5 rounded-full overflow-hidden"
+        style={{ backgroundColor: palette.borderColor }}
       >
         <View
           testID="review-progress-bar-fill"
-          className="h-full rounded-full bg-practice-accent"
-          style={{ width: `${progress * 100}%` }}
+          className="h-full rounded-full"
+          style={{ width: `${progress * 100}%`, backgroundColor: palette.accent }}
         />
       </View>
     </View>

@@ -53,7 +53,16 @@ import { useSubmitReview } from '@/hooks/use-submit-review';
 import { mapRatingToQuality } from '@/types/review';
 
 function makeClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  // #43: add mutations.gcTime:0 to prevent the mutation's default 5-min gcTime
+  // from holding a setTimeout that causes jest to force-exit the worker after
+  // mutateAsync() calls (verified root cause: TanStack Query v5 Mutation.removeObserver
+  // → scheduleGc() with 5*60*1000ms default when only queries.gcTime is overridden).
+  return new QueryClient({
+    defaultOptions: {
+      queries:   { retry: false, gcTime: 0 },
+      mutations: { gcTime: 0 },
+    },
+  });
 }
 
 function wrapper({ children }: { children: React.ReactNode }) {
