@@ -19,6 +19,9 @@ import { ChevronRight } from 'lucide-react-native';
 // Types
 // ---------------------------------------------------------------------------
 
+// fg-3 hsl(222 14% 56%) = rgb(127,136,159) — canonical ICON_FG3 (conventions.md §3)
+const ICON_FG3 = 'rgb(127,136,159)';
+
 export type SettingsRowId =
   | 'daily-goal'
   | 'notifications'
@@ -114,10 +117,8 @@ export function SettingsList({
               </Text>
             </View>
 
-            {/* Chevron */}
-            <View className="text-fg3">
-              <ChevronRight size={16} />
-            </View>
+            {/* Chevron — explicit color prop per conventions.md §3 */}
+            <ChevronRight size={16} color={ICON_FG3} strokeWidth={2} />
           </Pressable>
         );
       })}

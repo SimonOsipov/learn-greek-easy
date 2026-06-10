@@ -66,19 +66,18 @@ interface MiniCardProps {
 function MiniCard({ card, mastery, testID }: MiniCardProps) {
   const [flipped, setFlipped] = useState(false);
 
+  // FrontContentBase keys: prompt, main, sub, badge, hint (card_record.py:76–83).
+  // 'main' holds the Greek word; review screen's CardFront also reads front_content.main.
   const frontText =
-    typeof card.front_content['text'] === 'string'
-      ? card.front_content['text']
-      : typeof card.front_content['word'] === 'string'
-        ? card.front_content['word']
-        : String(Object.values(card.front_content)[0] ?? '');
+    typeof card.front_content['main'] === 'string'
+      ? card.front_content['main']
+      : String(Object.values(card.front_content)[0] ?? '');
 
+  // BackContentBase first key is 'answer' (card_record.py), which holds the translation.
   const backText =
-    typeof card.back_content['text'] === 'string'
-      ? card.back_content['text']
-      : typeof card.back_content['word'] === 'string'
-        ? card.back_content['word']
-        : String(Object.values(card.back_content)[0] ?? '');
+    typeof card.back_content['answer'] === 'string'
+      ? card.back_content['answer']
+      : String(Object.values(card.back_content)[0] ?? '');
 
   const promptText =
     card.card_type === 'meaning_el_to_en' ? 'What does this mean?' :
@@ -333,16 +332,9 @@ export default function WordDetailScreen() {
         }}
       >
         {/* Primary gradient wash using inline style (LinearGradient not needed for alpha wash) */}
+        {/* Hero gradient wash — bg-primary-06 token (rgba(36,99,235,0.06)) */}
         <View
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            // Start: primary-14, End: primary-04
-            backgroundColor: 'rgba(36,99,235,0.07)',
-          }}
+          className="absolute top-0 left-0 right-0 bottom-0 bg-primary-06"
         />
 
         {/* Watermark glyph */}
@@ -355,7 +347,7 @@ export default function WordDetailScreen() {
             fontFamily: 'NotoSerif_400Regular',
             fontSize: 200,
             lineHeight: 200,
-            color: 'rgba(36,99,235,0.06)',
+            color: 'rgba(36,99,235,0.06)', // primary-06 token
             fontWeight: '700',
             letterSpacing: -8,
           }}
@@ -394,10 +386,9 @@ export default function WordDetailScreen() {
         <View className="px-[22px] pt-[14px] pb-[22px]">
           {/* Badges row: POS + gender */}
           <View className="flex-row gap-1.5 mb-3.5">
-            {/* POS badge */}
+            {/* POS badge — bg-primary-10 token */}
             <View
-              className="rounded-full px-2.5 py-1"
-              style={{ backgroundColor: 'rgba(36,99,235,0.10)' }}
+              className="rounded-full px-2.5 py-1 bg-primary-10"
             >
               <Text
                 className="text-primary text-[10px] font-bold tracking-[0.08em] uppercase"
@@ -407,16 +398,15 @@ export default function WordDetailScreen() {
               </Text>
             </View>
 
-            {/* Gender badge */}
+            {/* Gender badge — bg-gender-masc-12 / bg-gender-fem-12 / bg-correct-14 tokens */}
             {genderFg && genderLabel ? (
               <View
-                className="rounded-full px-2.5 py-1"
-                style={{
-                  backgroundColor:
-                    gender === 'masculine' ? 'rgba(31,104,190,0.12)' :
-                    gender === 'feminine'  ? 'rgba(181,38,101,0.12)' :
-                    'rgba(37,177,130,0.14)',
-                }}
+                className={[
+                  'rounded-full px-2.5 py-1',
+                  gender === 'masculine' ? 'bg-gender-masc-12' :
+                  gender === 'feminine'  ? 'bg-gender-fem-12' :
+                  'bg-correct-14',
+                ].join(' ')}
               >
                 <Text
                   className="text-[10px] font-bold tracking-[0.08em] uppercase"
@@ -459,11 +449,10 @@ export default function WordDetailScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={isPlaying ? 'Pause audio' : 'Play pronunciation'}
                 onPress={handleSpeaker}
-                className="w-9 h-9 rounded-full items-center justify-center active:opacity-70 self-end mb-1"
+                className="w-9 h-9 rounded-full items-center justify-center active:opacity-70 self-end mb-1 bg-primary-10"
                 style={{
-                  backgroundColor: 'rgba(36,99,235,0.10)',
                   borderWidth: 1,
-                  borderColor: 'rgba(36,99,235,0.20)',
+                  borderColor: 'rgba(36,99,235,0.20)', // primary-20 token
                 }}
               >
                 <Volume2 size={16} color="rgb(36,99,235)" strokeWidth={2} />
@@ -512,17 +501,13 @@ export default function WordDetailScreen() {
               style={{ paddingVertical: 14, paddingBottom: 13 }}
             >
               <Text
-                className="text-[14px] font-semibold"
-                style={{ color: isActive ? 'rgb(36,99,235)' : undefined }}
+                className={isActive ? 'text-[14px] font-semibold text-primary' : 'text-[14px] font-semibold text-fg2'}
               >
                 {label}
               </Text>
               {pill ? (
                 <View
-                  className="rounded-full px-1.5 py-0.5"
-                  style={{
-                    backgroundColor: isActive ? 'rgba(36,99,235,0.12)' : undefined,
-                  }}
+                  className={isActive ? 'rounded-full px-1.5 py-0.5 bg-primary-10' : 'rounded-full px-1.5 py-0.5'}
                 >
                   <Text
                     className={isActive ? 'text-primary' : 'text-fg3'}
@@ -532,17 +517,11 @@ export default function WordDetailScreen() {
                   </Text>
                 </View>
               ) : null}
-              {/* Active underline */}
+              {/* Active underline — primary color via className */}
               {isActive ? (
                 <View
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: 2,
-                    backgroundColor: 'rgb(36,99,235)',
-                  }}
+                  className="absolute left-0 right-0 bottom-0 bg-primary"
+                  style={{ height: 2 }}
                 />
               ) : null}
             </Pressable>
@@ -823,13 +802,12 @@ function ExampleSpeaker({ audioUrl }: { audioUrl: string }) {
           setPlaying(true);
         }
       }}
-      className="items-center justify-center rounded-full active:opacity-70 flex-shrink-0"
+      className="items-center justify-center rounded-full active:opacity-70 flex-shrink-0 bg-primary-10"
       style={{
         width: 28,
         height: 28,
-        backgroundColor: 'rgba(36,99,235,0.10)',
         borderWidth: 1,
-        borderColor: 'rgba(36,99,235,0.20)',
+        borderColor: 'rgba(36,99,235,0.20)', // primary-20 token
       }}
     >
       <Volume2 size={13} color="rgb(36,99,235)" strokeWidth={2} />

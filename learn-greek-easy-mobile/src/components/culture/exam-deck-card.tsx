@@ -22,15 +22,28 @@ interface ExamDeckCardProps {
   onPress: (id: string) => void;
 }
 
-/** Extracts the short month abbreviation from an exam_date string like "Jul 2025" → "Jul" */
-function dateWatermark(examDate: string | null): string {
-  if (!examDate) return '';
-  return examDate.split(' ')[0]?.slice(0, 3) ?? '';
+/**
+ * Extracts the short month abbreviation from a deck name like "Cultural Exam Jul'25" → "Jul".
+ * api-map gap #9: there is no exam_date field on CultureDeckResponse; the date
+ * is derived from name_en (or name) as a best-effort visual hint. If no month
+ * abbreviation is found, returns '' (no watermark rendered).
+ */
+function dateWatermarkFromName(name: string | null | undefined): string {
+  if (!name) return '';
+  const match = name.match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/i);
+  return match ? (match[1] ?? '') : '';
 }
 
 export function ExamDeckCard({ deck, tint, onPress }: ExamDeckCardProps) {
-  const { id, name, exam_date, question_count, progress } = deck;
-  const watermark = dateWatermark(exam_date);
+  const { id, name, name_en, question_count, progress } = deck;
+  // Derive watermark from name_en preferred, then name (api-map gap #9 — no exam_date field)
+  const watermark = dateWatermarkFromName(name_en ?? name);
+  // Progress ratio: mastered / total, or 0 when progress is null (never-practiced user)
+  const progressRatio =
+    progress && progress.questions_total > 0
+      ? progress.questions_mastered / progress.questions_total
+      : 0;
+  const masteredCount = progress?.questions_mastered ?? 0;
 
   return (
     <Pressable
@@ -73,9 +86,9 @@ export function ExamDeckCard({ deck, tint, onPress }: ExamDeckCardProps) {
           </Text>
         ) : null}
 
-        {/* Top section: date kicker + title */}
+        {/* Top section: date kicker (derived from name) + title */}
         <View>
-          {exam_date ? (
+          {watermark ? (
             <Text
               style={{
                 fontFamily: 'SpaceMono_400Regular',
@@ -86,7 +99,7 @@ export function ExamDeckCard({ deck, tint, onPress }: ExamDeckCardProps) {
                 color: 'rgba(255,255,255,0.78)',
               }}
             >
-              {exam_date}
+              {watermark}
             </Text>
           ) : null}
           <Text
@@ -118,7 +131,7 @@ export function ExamDeckCard({ deck, tint, onPress }: ExamDeckCardProps) {
           >
             <View
               style={{
-                width: `${progress.progress * 100}%`,
+                width: `${progressRatio * 100}%`,
                 height: '100%',
                 backgroundColor: 'rgba(255,255,255,0.92)',
                 borderRadius: 9999,
@@ -132,7 +145,7 @@ export function ExamDeckCard({ deck, tint, onPress }: ExamDeckCardProps) {
               color: 'rgba(255,255,255,0.85)',
             }}
           >
-            <Text style={{ fontWeight: '700' }}>{progress.mastered}</Text>
+            <Text style={{ fontWeight: '700' }}>{masteredCount}</Text>
             <Text style={{ opacity: 0.7 }}>/{question_count} mastered</Text>
           </Text>
         </View>

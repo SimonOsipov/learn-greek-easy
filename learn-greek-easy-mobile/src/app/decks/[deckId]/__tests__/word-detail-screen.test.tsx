@@ -105,6 +105,9 @@ const WORD = {
   updated_at: '2026-01-01T00:00:00Z',
 };
 
+// Fixtures use real FrontContentBase keys (prompt/main/sub/badge/hint — card_record.py:76-83)
+// and BackContentBase keys (answer/... — card_record.py). MiniCard reads front_content.main
+// and back_content.answer (same as review screen's CardFront).
 const CARDS: CardRecordResponse[] = [
   {
     id: 'card-1',
@@ -113,8 +116,8 @@ const CARDS: CardRecordResponse[] = [
     card_type: 'meaning_el_to_en',
     tier: 1,
     variant_key: 'v1',
-    front_content: { text: 'δωμάτιο' },
-    back_content: { text: 'room' },
+    front_content: { prompt: 'What does this mean?', main: 'δωμάτιο', badge: 'Noun' },
+    back_content: { answer: 'room' },
     is_active: true,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
@@ -126,8 +129,8 @@ const CARDS: CardRecordResponse[] = [
     card_type: 'declension',
     tier: 1,
     variant_key: 'v1',
-    front_content: { text: 'δωμάτιο (genitive singular)' },
-    back_content: { text: 'του δωματίου' },
+    front_content: { prompt: 'Decline this form', main: 'δωμάτιο (gen. sg.)' },
+    back_content: { answer: 'του δωματίου' },
     is_active: true,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',

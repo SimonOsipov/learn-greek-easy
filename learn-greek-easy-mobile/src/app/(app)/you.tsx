@@ -29,6 +29,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Settings } from 'lucide-react-native';
 
+// fg hsl(222 32% 12%) = rgb(22,30,52) — used for Settings icon (primary content color)
+// Using text-fg token value: rgb(22,30,52) as documented in global.css
+const ICON_FG = 'rgb(22,30,52)'; // --fg hsl(222 32% 12%)
+
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useXpStats } from '@/hooks/use-xp-stats';
 import { useProgressDashboard } from '@/hooks/use-progress-dashboard';
@@ -251,9 +255,8 @@ export default function YouScreen() {
             onPress={handleGearPress}
             className="w-8 h-8 items-center justify-center rounded-full active:opacity-70"
           >
-            <View className="text-fg">
-              <Settings size={20} />
-            </View>
+            {/* Explicit color prop per conventions.md §3 — no wrapper-View for icon color */}
+            <Settings size={20} color={ICON_FG} strokeWidth={2} />
           </Pressable>
         </View>
 

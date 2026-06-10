@@ -136,41 +136,112 @@ import CultureScreen from '@/app/(app)/culture';
 import { track } from '@/lib/analytics';
 
 // ---------------------------------------------------------------------------
-// Fixtures
+// Fixtures — verbatim backend shapes (culture.py CultureReadinessResponse /
+// CultureDeckListResponse). These deliberately use snake_case field names from
+// the real API, not the fabricated ones.
 // ---------------------------------------------------------------------------
 
 const READINESS_DATA = {
-  overall: 46,
-  categories: [
-    { k: 'history',   l: 'History',   pct: 62 },
-    { k: 'politics',  l: 'Politics',  pct: 38 },
-    { k: 'geography', l: 'Geography', pct: 71 },
-    { k: 'language',  l: 'Language',  pct: 24 },
-    { k: 'society',   l: 'Society',   pct: 34 },
-  ],
+  readiness_percentage: 46,
   verdict: 'getting_there' as const,
+  questions_learned: 23,
+  questions_total: 50,
+  accuracy_percentage: 71.4,
+  total_answers: 35,
+  categories: [
+    {
+      category: 'history',
+      readiness_percentage: 62,
+      questions_mastered: 13,
+      questions_total: 21,
+      deck_ids: ['deck-hist-1'],
+      accuracy_percentage: 75.0,
+      needs_reinforcement: false,
+    },
+    {
+      category: 'politics',
+      readiness_percentage: 38,
+      questions_mastered: 4,
+      questions_total: 10,
+      deck_ids: ['deck-pol-1'],
+      accuracy_percentage: 60.0,
+      needs_reinforcement: false,
+    },
+    {
+      category: 'geography',
+      readiness_percentage: 71,
+      questions_mastered: 15,
+      questions_total: 21,
+      deck_ids: ['deck-geo-1'],
+      accuracy_percentage: 85.0,
+      needs_reinforcement: false,
+    },
+    {
+      category: 'language',
+      readiness_percentage: 24,
+      questions_mastered: 2,
+      questions_total: 8,
+      deck_ids: [],
+      accuracy_percentage: null,
+      needs_reinforcement: false,
+    },
+    {
+      category: 'society',
+      readiness_percentage: 34,
+      questions_mastered: 3,
+      questions_total: 9,
+      deck_ids: [],
+      accuracy_percentage: null,
+      needs_reinforcement: false,
+    },
+  ],
+  motivation: null,
 };
 
 const DECKS_DATA = {
-  items: [
+  total: 2,
+  decks: [
     {
       id: 'exam-jul-25',
       name: "Cultural Exam Jul'25",
-      name_en: null,
-      exam_date: 'Jul 2025',
+      description: null,
+      name_en: "Cultural Exam Jul'25",
+      name_ru: null,
+      description_en: null,
+      description_ru: null,
+      category: 'culture',
       question_count: 25,
-      progress: { mastered: 0, total: 25, progress: 0.0 },
+      is_premium: false,
+      progress: {
+        questions_total: 25,
+        questions_mastered: 0,
+        questions_learning: 0,
+        questions_new: 25,
+        last_practiced_at: null,
+      },
+      cover_image_url: null,
     },
     {
       id: 'exam-feb-25',
       name: "Cultural Exam Feb'25",
-      name_en: null,
-      exam_date: 'Feb 2025',
+      description: null,
+      name_en: "Cultural Exam Feb'25",
+      name_ru: null,
+      description_en: null,
+      description_ru: null,
+      category: 'culture',
       question_count: 25,
-      progress: { mastered: 3, total: 25, progress: 0.12 },
+      is_premium: false,
+      progress: {
+        questions_total: 25,
+        questions_mastered: 3,
+        questions_learning: 4,
+        questions_new: 18,
+        last_practiced_at: '2026-06-01T10:00:00Z',
+      },
+      cover_image_url: null,
     },
   ],
-  total: 2,
 };
 
 function setQueries({
@@ -295,12 +366,27 @@ describe('CultureScreen', () => {
       refetch: jest.fn().mockResolvedValue(undefined),
     });
     mockUseCultureDecks.mockReturnValue({
-      data: { items: [], total: 0 },
+      data: { total: 0, decks: [] },
       isLoading: false,
       isError: false,
       refetch: jest.fn().mockResolvedValue(undefined),
     });
     render(<CultureScreen />);
     expect(screen.queryByTestId('culture-decks-rail')).toBeNull();
+  });
+
+  it('maps verbatim backend JSON through real readiness_percentage/categories[].category fields', () => {
+    // This test feeds the exact wire-format backend shape (readiness_percentage,
+    // categories[].category + readiness_percentage) and asserts the screen renders
+    // the expected derived output — guarding against future type drift.
+    setQueries();
+    render(<CultureScreen />);
+    // Verdict mapped from 'getting_there' → 'Almost halfway'
+    expect(screen.getByTestId('culture-verdict')).toHaveTextContent('Almost halfway');
+    // Subtitle shows correct category count (5 categories in READINESS_DATA)
+    expect(screen.getByTestId('culture-subtitle')).toHaveTextContent(/5 topic areas/);
+    // Deck rail present with both deck cards (2 decks in DECKS_DATA)
+    expect(screen.getByTestId('exam-deck-card-exam-jul-25')).toBeTruthy();
+    expect(screen.getByTestId('exam-deck-card-exam-feb-25')).toBeTruthy();
   });
 });

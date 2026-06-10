@@ -135,11 +135,12 @@ module.exports = {
         'primary-06': 'rgba(36,99,235,0.06)',
         'primary-10': 'rgba(36,99,235,0.10)',
         'primary-20': 'rgba(36,99,235,0.20)',
-        // Gender badge background tints — masc/fem/neut.
-        // masc: 212 85% 45% = rgb(31,104,190); fem: 340 65% 50% = rgb(181,38,101).
+        // Gender badge background tints — masc/fem.
+        // Aligned with ARTICLE_COLOR (lib/decks/presentation.ts) per conventions.md §3:
+        //   masc: 212 80% 55% = rgb(48,135,232); fem: 340 75% 55% = rgb(226,54,112).
         // neut reuses correct-14 (37,177,130 at 0.14) — already defined.
-        'gender-masc-12': 'rgba(31,104,190,0.12)',
-        'gender-fem-12':  'rgba(181,38,101,0.12)',
+        'gender-masc-12': 'rgba(48,135,232,0.12)',
+        'gender-fem-12':  'rgba(226,54,112,0.12)',
         // === end MOB-12 word-detail tokens ===
 
         // === MOB-09 practice palette (card review) ===

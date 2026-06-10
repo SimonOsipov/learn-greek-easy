@@ -34,6 +34,7 @@ import {
   tintForDeckId,
   verdictLabel,
   weakestTopicLabels,
+  categoryLabel,
   SUBTOPICS,
 } from '@/lib/culture/presentation';
 
@@ -74,7 +75,7 @@ export default function CultureScreen() {
     if (readinessQuery.data && !viewedFired.current) {
       viewedFired.current = true;
       track('culture_screen_viewed', {
-        overall_pct: readinessQuery.data.overall,
+        overall_pct: readinessQuery.data.readiness_percentage,
         verdict: readinessQuery.data.verdict,
       });
     }
@@ -144,10 +145,10 @@ export default function CultureScreen() {
   }
 
   const readiness = readinessQuery.data!;
-  const decks = decksQuery.data?.items ?? [];
+  const decks = decksQuery.data?.decks ?? [];
 
   // Normalize overall from 0–100 → 0–1
-  const overallPct = readiness.overall / 100;
+  const overallPct = readiness.readiness_percentage / 100;
   const verdict = verdictLabel(readiness.verdict);
   const weakest = weakestTopicLabels(readiness.categories);
   const weakestSentence =
@@ -280,9 +281,9 @@ export default function CultureScreen() {
           >
             {readiness.categories.map((cat) => (
               <CategoryBar
-                key={cat.k}
-                label={cat.l}
-                pct={cat.pct / 100}
+                key={cat.category}
+                label={categoryLabel(cat.category)}
+                pct={cat.readiness_percentage / 100}
               />
             ))}
           </View>

@@ -101,13 +101,26 @@ describe('scoreBarColor', () => {
 // weakestTopicLabels
 // ---------------------------------------------------------------------------
 
+// Helper to build a minimal CategoryReadiness with real backend shape.
+function makeCategory(category: string, readiness_percentage: number): CategoryReadiness {
+  return {
+    category,
+    readiness_percentage,
+    questions_mastered: 0,
+    questions_total: 10,
+    deck_ids: [],
+    accuracy_percentage: null,
+    needs_reinforcement: false,
+  };
+}
+
 describe('weakestTopicLabels', () => {
   const categories: CategoryReadiness[] = [
-    { k: 'history',   l: 'History',   pct: 62 },
-    { k: 'politics',  l: 'Politics',  pct: 38 },
-    { k: 'geography', l: 'Geography', pct: 71 },
-    { k: 'language',  l: 'Language',  pct: 24 },
-    { k: 'society',   l: 'Society',   pct: 34 },
+    makeCategory('history',   62),
+    makeCategory('politics',  38),
+    makeCategory('geography', 71),
+    makeCategory('language',  24),
+    makeCategory('society',   34),
   ];
 
   it('returns up to 2 labels', () => {
@@ -115,15 +128,15 @@ describe('weakestTopicLabels', () => {
     expect(result).toHaveLength(2);
   });
 
-  it('returns the labels with the lowest pct first', () => {
+  it('returns the display labels for categories with the lowest readiness_percentage first', () => {
     const result = weakestTopicLabels(categories);
-    // Language (24) and Society (34) are the two weakest
+    // Language (24) and Society (34) are the two weakest; categoryLabel maps keys → display names
     expect(result[0]).toBe('Language');
     expect(result[1]).toBe('Society');
   });
 
   it('returns 1 label when there is only 1 category', () => {
-    const result = weakestTopicLabels([{ k: 'history', l: 'History', pct: 50 }]);
+    const result = weakestTopicLabels([makeCategory('history', 50)]);
     expect(result).toHaveLength(1);
   });
 

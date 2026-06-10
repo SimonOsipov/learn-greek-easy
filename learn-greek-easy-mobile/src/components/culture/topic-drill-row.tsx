@@ -20,6 +20,9 @@ import type { SubtopicItem } from '@/lib/culture/presentation';
 const MONOGRAM_FROM = 'rgb(36,99,235)';
 const MONOGRAM_TO   = 'rgb(90,131,244)';
 
+// fg-3 hsl(222 14% 56%) = rgb(127,136,159) — canonical ICON_FG3 (conventions.md §3)
+const ICON_FG3 = 'rgb(127,136,159)';
+
 interface TopicDrillRowProps {
   subtopic: SubtopicItem;
   onPress: (id: string) => void;
@@ -86,8 +89,8 @@ export function TopicDrillRow({ subtopic, onPress }: TopicDrillRowProps) {
         </Text>
       </View>
 
-      {/* Chevron */}
-      <ChevronRight size={18} className="text-fg3" />
+      {/* Chevron — explicit color prop per conventions.md §3 (no className on lucide icons) */}
+      <ChevronRight size={18} color={ICON_FG3} strokeWidth={2} />
     </Pressable>
   );
 }

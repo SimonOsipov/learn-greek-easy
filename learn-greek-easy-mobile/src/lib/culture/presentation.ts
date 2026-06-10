@@ -88,15 +88,15 @@ export function verdictLabel(verdict: string): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Returns up to two category labels with the lowest scores.
+ * Returns up to two category display-labels with the lowest readiness scores.
  * Used for the "Focus on X and Y" sentence in the readiness card.
- * `categories` pct values are 0–100 from the backend.
+ * `categories[].readiness_percentage` values are 0–100 from the backend.
  */
 export function weakestTopicLabels(categories: CategoryReadiness[]): string[] {
   return [...categories]
-    .sort((a, b) => a.pct - b.pct)
+    .sort((a, b) => a.readiness_percentage - b.readiness_percentage)
     .slice(0, 2)
-    .map((c) => c.l);
+    .map((c) => categoryLabel(c.category));
 }
 
 // ---------------------------------------------------------------------------

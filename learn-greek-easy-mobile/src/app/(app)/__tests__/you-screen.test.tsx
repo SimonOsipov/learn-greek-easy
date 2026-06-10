@@ -331,6 +331,27 @@ describe('YouScreen', () => {
     alertSpy.mockRestore();
   });
 
+  it('pressing the destructive Sign out button calls signOut and fires profile_signed_out analytics', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    setQueries();
+    render(<YouScreen />);
+    fireEvent.press(screen.getByTestId('you-sign-out-button'));
+
+    // Extract the buttons array from the Alert.alert call
+    const buttons = alertSpy.mock.calls[0]?.[2] as Array<{ text: string; onPress?: () => void | Promise<void> }>;
+    expect(buttons).toBeDefined();
+
+    // Find and invoke the destructive "Sign out" button
+    const destructiveBtn = buttons.find((b) => b.text === 'Sign out');
+    expect(destructiveBtn).toBeDefined();
+    await destructiveBtn?.onPress?.();
+
+    expect(mockSignOut).toHaveBeenCalledTimes(1);
+    expect(track).toHaveBeenCalledWith('profile_signed_out');
+
+    alertSpy.mockRestore();
+  });
+
   it('fires profile_screen_viewed analytics once when data loads', () => {
     setQueries();
     render(<YouScreen />);

@@ -12,17 +12,22 @@
 
 import type { CardType, CardMasteryStatus } from '@/types/word';
 import type { WordMasteryItem } from '@/types/deck';
+import { ARTICLE_COLOR } from '@/lib/decks/presentation';
 
 // ---------------------------------------------------------------------------
-// Gender badge accents (both themes — handoff "Design tokens" table)
+// Gender badge accents (both themes — canonical values from ARTICLE_COLOR)
 // ---------------------------------------------------------------------------
 
-/** Solid foreground colour per grammatical gender. */
-export const GENDER_FG: Record<string, string> = {
-  masculine: 'rgb(31,104,190)',  // hsl(212 85% 45%)
-  feminine:  'rgb(181,38,101)',  // hsl(340 65% 50%)
-  neuter:    'rgb(29,154,111)',  // hsl(160 60% 40%)
-};
+/**
+ * Solid foreground colour per grammatical gender.
+ *
+ * Unified onto ARTICLE_COLOR from lib/decks/presentation.ts (conventions.md §3:
+ * "gender accents as in ARTICLE_COLOR"). Previously GENDER_FG used a divergent
+ * palette (rgb(31,104,190) vs rgb(48,135,232) for masculine etc.) — fixed by
+ * re-exporting ARTICLE_COLOR under the GENDER_FG name so all callers get the
+ * canonical deck-detail gender colours.
+ */
+export const GENDER_FG: Record<string, string> = ARTICLE_COLOR;
 
 /** Short display label per grammatical gender. */
 export const GENDER_LABEL: Record<string, string> = {
