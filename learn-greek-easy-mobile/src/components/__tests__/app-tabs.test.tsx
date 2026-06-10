@@ -18,6 +18,8 @@
  *   covered by src/app/(app)/__tests__/decks-screen.test.tsx instead.
  *   Practice graduated from placeholder to a real screen in MOB-08 — it is now
  *   covered by src/app/(app)/__tests__/practice-screen.test.tsx instead.
+ *   Culture graduated from placeholder to a real screen in MOB-10 — it is now
+ *   covered by src/app/(app)/__tests__/culture-screen.test.tsx instead.
  */
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
@@ -47,7 +49,55 @@ jest.mock('react-native-safe-area-context', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Placeholder screens introduced in DASH-11
+// Mocks needed for CultureScreen (graduated from stub in MOB-10).
+// ---------------------------------------------------------------------------
+
+jest.mock('@/hooks/use-culture-readiness', () => ({
+  useCultureReadiness: () => ({ data: undefined, isLoading: true, isError: false, refetch: jest.fn() }),
+}));
+jest.mock('@/hooks/use-culture-decks', () => ({
+  useCultureDecks: () => ({ data: undefined, isLoading: true, isError: false, refetch: jest.fn() }),
+}));
+jest.mock('@/hooks/use-reduced-motion', () => ({
+  useReducedMotion: () => false,
+}));
+jest.mock('@/components/ui/toast', () => ({
+  useToast: () => ({ showComingSoonToast: jest.fn() }),
+}));
+jest.mock('react-native-reanimated', () => {
+  const { View } = require('react-native');
+  const NOOP = () => {};
+  const createAnimatedComponent = (C: unknown) => C;
+  return {
+    __esModule: true,
+    default: { View, createAnimatedComponent },
+    useSharedValue: (init: unknown) => ({ value: init }),
+    useAnimatedStyle: (fn: () => unknown) => fn(),
+    useAnimatedProps: (fn: () => unknown) => fn(),
+    withTiming: (toValue: unknown) => toValue,
+    Animated: { View, createAnimatedComponent },
+    Easing: { out: NOOP, quad: NOOP },
+    runOnJS: (fn: (...args: unknown[]) => unknown) => fn,
+    cancelAnimation: NOOP,
+    createAnimatedComponent,
+  };
+});
+jest.mock('react-native-svg', () => {
+  const { View } = require('react-native');
+  const ce = require('react').createElement;
+  const stub = ({ children, testID }: { children?: React.ReactNode; testID?: string }) =>
+    ce(View, { testID }, children);
+  return { __esModule: true, default: stub, Circle: stub, Defs: stub, LinearGradient: stub, Stop: stub };
+});
+jest.mock('lucide-react-native', () => {
+  const { View } = require('react-native');
+  const ce = require('react').createElement;
+  const stub = () => ce(View, { testID: 'icon-stub' });
+  return { ChevronRight: stub };
+});
+
+// ---------------------------------------------------------------------------
+// Screens
 // ---------------------------------------------------------------------------
 import PracticeScreen from '@/app/(app)/practice';
 import CultureScreen from '@/app/(app)/culture';
@@ -60,14 +110,10 @@ describe('Placeholder screens (DASH-11)', () => {
     expect(screen.getByTestId('practice-loading')).toBeTruthy();
   });
 
-  it('CultureScreen renders the "Culture" title', () => {
+  it('CultureScreen renders without crashing (loading state)', () => {
+    // CultureScreen is now a real screen (MOB-10); detailed tests in culture-screen.test.tsx.
     render(<CultureScreen />);
-    expect(screen.getByText('Culture')).toBeTruthy();
-  });
-
-  it('CultureScreen renders the "Coming soon" subtitle', () => {
-    render(<CultureScreen />);
-    expect(screen.getByText('Coming soon')).toBeTruthy();
+    expect(screen.getByTestId('culture-loading')).toBeTruthy();
   });
 
   it('YouScreen renders the "You" title', () => {
