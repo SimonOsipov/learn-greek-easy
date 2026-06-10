@@ -24,6 +24,7 @@ import type {
   ExerciseQueueItem,
   SelectCorrectAnswerPayload,
   TrueFalsePayload,
+  FillGapsPayload,
 } from '@/types/situation';
 
 // MOB-13: explicit rgba — no /NN modifier on var-backed tokens
@@ -37,6 +38,11 @@ const DANGER_30      = 'rgba(239,68,68,0.30)';
 const VIOLET_COLOR   = 'rgb(177,82,224)';          // hsl(280 70% 55%)
 const VIOLET_14      = 'rgba(177,82,224,0.14)';
 const WHITE          = 'rgba(255,255,255,0.96)';
+// #6/#26: explicit rgb for props that RN/SVG cannot resolve from hsl(var(...))
+const PRIMARY_COLOR  = 'rgb(36,99,235)';          // --primary hsl(221 83% 53%)
+const LINE_COLOR     = 'rgb(215,219,228)';         // --line hsl(221 20% 87%)
+const BG2_COLOR      = 'rgb(240,243,248)';         // --bg-2 hsl(221 30% 96%)
+const FG3_COLOR      = 'rgb(127,136,159)';         // --fg-3 hsl(222 14% 56%)
 
 // ---------------------------------------------------------------------------
 // Option model helpers
@@ -54,33 +60,33 @@ function extractOptions(exercise: ExerciseQueueItem): OptionModel[] {
   const payload = item.payload as Record<string, unknown>;
 
   if (exercise.exercise_type === 'select_correct_answer') {
+    // SelectCorrectAnswerPayload (exercise_payload.py:84-89):
+    // prompt:{el,en,ru}, options:[{el,en,ru}], correct_answer_index
     const p = payload as unknown as SelectCorrectAnswerPayload;
-    return (p.options ?? []).map((o) => ({
-      label: o.text_el,
-      isCorrect: o.is_correct,
+    return (p.options ?? []).map((o, i) => ({
+      label: o.el,
+      isCorrect: i === p.correct_answer_index,
     }));
   }
 
   if (exercise.exercise_type === 'true_false') {
+    // TrueFalsePayload (exercise_payload.py:67-74):
+    // statement_el/en/ru, correct_answer: bool, explanation
     const p = payload as unknown as TrueFalsePayload;
     return [
-      { label: 'Σωστό', isCorrect: p.is_true === true },
-      { label: 'Λάθος', isCorrect: p.is_true === false },
+      { label: 'Σωστό', isCorrect: p.correct_answer === true },
+      { label: 'Λάθος', isCorrect: p.correct_answer === false },
     ];
   }
 
-  // fill_gaps: show answer options if present, else just the blank answer
+  // fill_gaps: FillGapsPayload (exercise_payload.py:14-21):
+  // context_before, context_after, options:[str], correct_answer
   if (exercise.exercise_type === 'fill_gaps') {
-    const blanks = (payload.blanks ?? []) as { answer: string; options?: string[] }[];
-    const blank = blanks[0];
-    if (!blank) return [];
-    if (blank.options && blank.options.length > 0) {
-      return blank.options.map((o) => ({
-        label: o,
-        isCorrect: o === blank.answer,
-      }));
-    }
-    return [{ label: blank.answer, isCorrect: true }];
+    const p = payload as unknown as FillGapsPayload;
+    return (p.options ?? []).map((o) => ({
+      label: o,
+      isCorrect: o === p.correct_answer,
+    }));
   }
 
   return [];
@@ -92,17 +98,23 @@ function extractQuestion(exercise: ExerciseQueueItem): { el: string; en: string 
   const payload = item.payload as Record<string, unknown>;
 
   if (exercise.exercise_type === 'select_correct_answer') {
+    // prompt.el is the Greek question text (exercise_payload.py:84-89)
     const p = payload as unknown as SelectCorrectAnswerPayload;
-    return { el: p.question_el ?? '', en: p.question_en ?? null };
+    return { el: p.prompt?.el ?? '', en: p.prompt?.en ?? null };
   }
   if (exercise.exercise_type === 'true_false') {
+    // statement_el/en are the statement fields (exercise_payload.py:67-74)
     const p = payload as unknown as TrueFalsePayload;
     return { el: p.statement_el ?? '', en: p.statement_en ?? null };
   }
   if (exercise.exercise_type === 'fill_gaps') {
+    // Render as: context_before + ___ + context_after (exercise_payload.py:14-21)
+    const p = payload as unknown as FillGapsPayload;
+    const before = p.context_before ?? '';
+    const after = p.context_after ?? '';
     return {
-      el: (payload.sentence_el as string) ?? '',
-      en: (payload.sentence_en as string) ?? null,
+      el: before && after ? `${before} ___ ${after}` : before || after || '',
+      en: null,
     };
   }
   return { el: '', en: null };
@@ -153,7 +165,10 @@ export function ExerciseStep({ exercise, isLast, onComplete }: ExerciseStepProps
     onComplete(score, maxScore);
   };
 
-  const modalityLabel = exercise.modality === 'listening' ? 'Listening' : 'Reading';
+  // modality is nullable (exercise_queue.py:25) — only render pill when present
+  const modalityLabel = exercise.modality === 'listening' ? 'Listening'
+    : exercise.modality === 'reading' ? 'Reading'
+    : null;
 
   return (
     <View className="flex-1 bg-bg">
@@ -164,23 +179,25 @@ export function ExerciseStep({ exercise, isLast, onComplete }: ExerciseStepProps
       >
         {/* Modality + type row */}
         <View className="flex-row items-center gap-2 mb-3.5 px-1">
-          <View
-            style={{
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-              borderRadius: 9999,
-              backgroundColor: VIOLET_14,
-            }}
-          >
-            <Text
-              className="text-[11px] font-bold tracking-[0.06em] uppercase"
-              style={{ fontFamily: 'SpaceMono_400Regular', color: VIOLET_COLOR }}
+          {modalityLabel !== null && (
+            <View
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: 9999,
+                backgroundColor: VIOLET_14,
+              }}
             >
-              {modalityLabel}
-            </Text>
-          </View>
+              <Text
+                className="text-[11px] font-bold tracking-[0.06em] uppercase"
+                style={{ fontFamily: 'SpaceMono_400Regular', color: VIOLET_COLOR }}
+              >
+                {modalityLabel}
+              </Text>
+            </View>
+          )}
           <Text className="text-fg3 text-[12px]">
-            · {exerciseTypeLabel(exercise.exercise_type)}
+            {modalityLabel !== null ? '· ' : ''}{exerciseTypeLabel(exercise.exercise_type)}
           </Text>
         </View>
 
@@ -211,7 +228,8 @@ export function ExerciseStep({ exercise, isLast, onComplete }: ExerciseStepProps
             const isCorrectOpt = opt.isCorrect;
 
             let bgColor = 'transparent';
-            let borderColor = 'hsl(var(--line))';
+            // #6/#26: use explicit rgb — RN cannot resolve hsl(var(...)) in style props
+            let borderColor = LINE_COLOR; // --line
 
             if (checked) {
               if (isCorrectOpt) {
@@ -222,7 +240,7 @@ export function ExerciseStep({ exercise, isLast, onComplete }: ExerciseStepProps
                 borderColor = DANGER_COLOR;
               }
             } else if (isSelected) {
-              borderColor = 'hsl(var(--primary))';
+              borderColor = PRIMARY_COLOR; // --primary
             }
 
             return (
@@ -244,7 +262,7 @@ export function ExerciseStep({ exercise, isLast, onComplete }: ExerciseStepProps
                 }}
                 className="active:opacity-70"
               >
-                {/* Radio circle */}
+                {/* Radio circle — explicit rgb for RN style props (hsl(var(...)) unparseable) */}
                 <View
                   style={{
                     width: 22,
@@ -253,12 +271,12 @@ export function ExerciseStep({ exercise, isLast, onComplete }: ExerciseStepProps
                     borderWidth: 1.5,
                     borderColor: (checked && isCorrectOpt) ? CORRECT_COLOR
                       : (checked && isSelected) ? DANGER_COLOR
-                      : isSelected ? 'hsl(var(--primary))'
-                      : 'hsl(var(--line))',
+                      : isSelected ? PRIMARY_COLOR   // --primary
+                      : LINE_COLOR,                  // --line
                     backgroundColor: (checked && isCorrectOpt)
                       ? CORRECT_COLOR
                       : isSelected && !checked
-                      ? 'hsl(var(--primary))'
+                      ? PRIMARY_COLOR                // --primary
                       : 'transparent',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -358,7 +376,7 @@ export function ExerciseStep({ exercise, isLast, onComplete }: ExerciseStepProps
             </Pressable>
           </View>
         ) : (
-          /* Check button (disabled until option selected) */
+          /* Check button: explicit rgb; hsl(var(...)) is unparseable in RN style props */
           <Pressable
             testID="exercise-check"
             accessibilityRole="button"
@@ -367,7 +385,7 @@ export function ExerciseStep({ exercise, isLast, onComplete }: ExerciseStepProps
             style={{
               height: 52,
               borderRadius: 14,
-              backgroundColor: selectedIdx !== null ? 'hsl(var(--primary))' : 'hsl(var(--bg-2))',
+              backgroundColor: selectedIdx !== null ? PRIMARY_COLOR : BG2_COLOR,
               alignItems: 'center',
               justifyContent: 'center',
             }}
@@ -376,7 +394,7 @@ export function ExerciseStep({ exercise, isLast, onComplete }: ExerciseStepProps
             <Text
               className="text-[15px] font-bold"
               style={{
-                color: selectedIdx !== null ? WHITE : 'hsl(var(--fg-3))',
+                color: selectedIdx !== null ? WHITE : FG3_COLOR,
                 fontFamily: 'InterTight_700Bold',
               }}
             >

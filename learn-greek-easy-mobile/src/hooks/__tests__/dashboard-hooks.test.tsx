@@ -264,7 +264,7 @@ describe('useSituations', () => {
     renderHook(() => useSituations(), { wrapper: makeWrapper(client) });
 
     await waitFor(() => expect(mockApiGet).toHaveBeenCalledTimes(1));
-    expect(mockApiGet).toHaveBeenCalledWith('/api/v1/situations');
+    expect(mockApiGet).toHaveBeenCalledWith('/api/v1/situations?page_size=100');
   });
 
   it('is disabled when session is null', () => {

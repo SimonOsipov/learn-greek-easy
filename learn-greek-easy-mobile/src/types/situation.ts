@@ -50,11 +50,15 @@ export interface SituationDialogLine {
   word_timestamps: Record<string, unknown>[] | null;
 }
 
+/**
+ * LearnerDescriptionNested (src/schemas/learner_situation.py:9-19).
+ * NOTE: text_en / text_en_a2 do NOT exist in the learner endpoint —
+ * only the admin schema exposes them. The Translate toggle is therefore
+ * not available in the mobile flow; see #8/#18 in review-findings.md.
+ */
 export interface SituationDescription {
   text_el: string;
   text_el_a2: string | null;
-  text_en: string | null;
-  text_en_a2: string | null;
   audio_url: string | null;
   audio_a2_url: string | null;
   audio_duration_seconds: number | null;
@@ -103,25 +107,54 @@ export type ExerciseType =
 
 export type ExerciseModality = 'listening' | 'reading';
 export type AudioLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
-export type ExerciseStatus = 'new' | 'learning' | 'mastered';
+// ExerciseStatus: verbatim port of backend CardStatus (src/db/models.py:74-80)
+export type ExerciseStatus = 'new' | 'learning' | 'review' | 'mastered';
 
-// Supported exercise payload types
-export interface SelectCorrectAnswerPayload {
-  question_el: string;
-  question_en: string | null;
-  options: { text_el: string; is_correct: boolean }[];
+// Supported exercise payload types — verbatim ports of src/schemas/exercise_payload.py
+
+/** Trilingual text field used in SelectCorrectAnswerPayload (exercise_payload.py:6-11). */
+export interface MultilingualField {
+  el: string;
+  en: string;
+  ru: string;
 }
 
+/**
+ * SelectCorrectAnswerPayload (exercise_payload.py:84-89).
+ * prompt: question text (trilingual); options: answer choices (trilingual);
+ * correct_answer_index: 0-based index of the correct option.
+ */
+export interface SelectCorrectAnswerPayload {
+  prompt: MultilingualField;
+  options: MultilingualField[];
+  correct_answer_index: number;
+}
+
+/**
+ * TrueFalsePayload (exercise_payload.py:67-74).
+ * statement_el/en/ru: the statement text (trilingual);
+ * correct_answer: true = Σωστό, false = Λάθος;
+ * explanation: reason shown after answer.
+ */
 export interface TrueFalsePayload {
   statement_el: string;
-  statement_en: string | null;
-  is_true: boolean;
+  statement_en: string;
+  statement_ru: string;
+  correct_answer: boolean;
+  explanation: string;
 }
 
+/**
+ * FillGapsPayload (exercise_payload.py:14-21).
+ * Rendered as: context_before + ___ + context_after.
+ * options: the word choices; correct_answer: the correct word.
+ */
 export interface FillGapsPayload {
-  sentence_el: string;
-  sentence_en: string | null;
-  blanks: { index: number; answer: string; options?: string[] }[];
+  line_index: number;
+  correct_answer: string;
+  options: string[];
+  context_before: string;
+  context_after: string;
 }
 
 export type ExercisePayload =
@@ -133,8 +166,10 @@ export type ExercisePayload =
 export interface ExerciseQueueItem {
   exercise_id: string;
   exercise_type: ExerciseType;
-  modality: ExerciseModality;
-  audio_level: AudioLevel;
+  /** Nullable per backend ExerciseQueueItem (exercise_queue.py:25). */
+  modality: ExerciseModality | null;
+  /** Nullable per backend ExerciseQueueItem (exercise_queue.py:26). */
+  audio_level: AudioLevel | null;
   source_type: 'description' | 'dialog' | 'picture';
   status: ExerciseStatus;
   is_new: boolean;

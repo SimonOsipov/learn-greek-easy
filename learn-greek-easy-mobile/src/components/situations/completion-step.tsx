@@ -5,6 +5,8 @@ import { View, Text, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Trophy } from 'lucide-react-native';
 
+import { formatDuration } from '@/lib/situations/presentation';
+
 // CTA gradient (primary-2 → primary)
 const CTA_GRADIENT: readonly [string, string] = [
   'rgb(90,131,244)',  // --primary-2 hsl(221 83% 65%)
@@ -39,9 +41,8 @@ export function CompletionStep({
     return `${Math.round(s / 60)}m`;
   };
 
-  const audioLabel = audioSeconds > 0
-    ? `${Math.floor(audioSeconds / 60)}:${(audioSeconds % 60).toString().padStart(2, '0')}`
-    : '—';
+  // #12: use formatDuration so fractional float seconds don't produce "2:23.460000000000008"
+  const audioLabel = audioSeconds > 0 ? formatDuration(audioSeconds) : '—';
 
   const stats = [
     { label: 'Words new', value: '—' },

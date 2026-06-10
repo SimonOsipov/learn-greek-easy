@@ -14,7 +14,7 @@
  * (cover + retelling count + exercisesDone), skipping already-completed exercises.
  *
  * Flow state is in-memory only. Score is submitted per exercise via POST
- * /api/v1/exercises/{id}/review after each answer (best-effort; no retry UI).
+ * /api/v1/exercises/review after each answer (best-effort; no retry UI).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
@@ -56,7 +56,7 @@ export default function SituationFlowScreen() {
 
   const situationQuery = useSituationDetail(situationId);
   const exercisesQuery = useSituationExercises(situationId);
-  const reviewMutation = useReviewExercise();
+  const reviewMutation = useReviewExercise(situationId);
 
   const situation = situationQuery.data;
   const exercises = useMemo(
@@ -66,6 +66,8 @@ export default function SituationFlowScreen() {
   );
 
   // ── Build retelling sequence (A2 first if present, then B1) ──
+  // #8/#18: text_en / text_en_a2 do not exist in LearnerDescriptionNested —
+  // the Translate toggle is therefore not available; textEn is always null.
   const retellings = (() => {
     if (!situation?.description) return [];
     const result: {
@@ -79,7 +81,7 @@ export default function SituationFlowScreen() {
       result.push({
         level: 'A2',
         textEl: situation.description.text_el_a2,
-        textEn: situation.description.text_en ?? null,
+        textEn: null, // no EN text in learner endpoint (backend schema: LearnerDescriptionNested)
         audioUrl: situation.description.audio_a2_url ?? null,
         audioDurationSeconds: situation.description.audio_a2_duration_seconds ?? null,
       });
@@ -88,7 +90,7 @@ export default function SituationFlowScreen() {
       result.push({
         level: 'B1',
         textEl: situation.description.text_el,
-        textEn: situation.description.text_en ?? null,
+        textEn: null, // no EN text in learner endpoint (backend schema: LearnerDescriptionNested)
         audioUrl: situation.description.audio_url ?? null,
         audioDurationSeconds: situation.description.audio_duration_seconds ?? null,
       });
@@ -99,18 +101,24 @@ export default function SituationFlowScreen() {
   // Steps for StepHeader (cover not counted; completion not counted either):
   const headerStepCount = retellings.length + exercises.length;
 
-  // ── Resume: if in progress, start at the appropriate step ──
-  const initialStep = (() => {
-    if (!situation) return 0;
+  // ── Resume: one-shot init effect — must run after both queries resolve ──
+  // #7/#39: initialStep captured in useState before data loads is always 0
+  // on cold open. We defer to an effect that fires once both situation and
+  // exercises are loaded, setting the step to cover + retellings + done.
+  const [stepIndex, setStepIndex] = useState(0);
+  const didInitRef = useRef(false);
+  useEffect(() => {
+    if (didInitRef.current) return;
+    if (!situation || !exercisesQuery.data) return; // wait for both queries
+    didInitRef.current = true;
     const done = situation.exercise_completed;
     if (done > 0 && done < situation.exercise_total) {
-      // skip cover + retellings + already-done exercises
-      return 1 + retellings.length + Math.min(done, exercises.length);
+      // skip cover + retellings + already-done exercises (clamped to filtered list)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStepIndex(1 + retellings.length + Math.min(done, exercises.length));
     }
-    return 0;
-  })();
-
-  const [stepIndex, setStepIndex] = useState(initialStep);
+    // else: start at 0 (cover) — default
+  }, [situation, exercisesQuery.data, retellings.length, exercises.length]);
   // scores[i] = score for exercise index i (0 or 1)
   const [scores, setScores] = useState<number[]>([]);
   // Captured once when flow starts (not in render). useMemo ensures stable value.
@@ -191,7 +199,8 @@ export default function SituationFlowScreen() {
       completedFired.current = true;
       const correctCount = scores.filter((s) => s > 0).length;
       const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-      track('situation_completed', {
+      // #33: renamed to situation_flow_completed to pair with situation_flow_started
+      track('situation_flow_completed', {
         situation_id: situationId,
         correct_count: correctCount,
         total_count: exercises.length,
@@ -310,7 +319,9 @@ export default function SituationFlowScreen() {
           onClose={handleBack}
           topOffset={insets.top}
         />
+        {/* #38: key resets ExerciseStep state (selectedIdx/checked) on each new exercise */}
         <ExerciseStep
+          key={exercise.exercise_id}
           exercise={exercise}
           isLast={isLastExercise}
           onComplete={(score, maxScore) =>

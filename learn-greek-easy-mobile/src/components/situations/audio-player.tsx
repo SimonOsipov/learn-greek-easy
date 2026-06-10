@@ -10,15 +10,17 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, Animated } from 'react-native';
-import { useAudioPlayer } from 'expo-audio';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Pause, Play } from 'lucide-react-native';
 
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { formatDuration } from '@/lib/situations/presentation';
 
 // MOB-13: explicit rgba — no /NN modifier on var-backed tokens
-const PRIMARY_COLOR = 'rgb(36,99,235)';   // --primary hsl(221 83% 53%)
-const WAVE_MUTED    = 'rgba(100,116,139,0.35)'; // --fg-3 at 35% alpha
+const PRIMARY_COLOR = 'rgb(36,99,235)';         // --primary hsl(221 83% 53%)
+// #34: rgb(100,116,139) is slate-500 / --practice-text-muted, not --fg-3.
+// Used intentionally here for the waveform muted bar colour (matches the audio player design).
+const WAVE_MUTED    = 'rgba(100,116,139,0.35)'; // --practice-text-muted at 35% alpha
 
 /** Waveform bar heights (0–10 scale, 35 bars). Same pattern as the handoff mock. */
 const WAVE_HEIGHTS = [3, 5, 6, 8, 7, 9, 6, 7, 5, 4, 6, 8, 9, 7, 5, 4, 6, 7, 8, 6, 5, 4, 3, 5, 7, 8, 6, 4, 3, 5, 7, 6, 5, 4, 3];
@@ -35,6 +37,8 @@ export function AudioPlayer({ audioUrl, durationSeconds, testID }: AudioPlayerPr
   const [elapsed, setElapsed] = useState(0);
 
   const player = useAudioPlayer(audioUrl ?? '');
+  // #10: subscribe to playback status to detect end-of-track (didJustFinish)
+  const status = useAudioPlayerStatus(player);
   const [pulseAnim] = useState(() => new Animated.Value(1));
   const pulseLoop = useRef<Animated.CompositeAnimation | null>(null);
 
@@ -64,6 +68,18 @@ export function AudioPlayer({ audioUrl, durationSeconds, testID }: AudioPlayerPr
       pulseLoop.current?.stop();
     };
   }, [isPlaying, reduceMotion, pulseAnim]);
+
+  // #10: detect end-of-track via useAudioPlayerStatus — reset to paused + seek to 0
+  // so the play button reappears and tap → replay works correctly.
+  useEffect(() => {
+    if (status.didJustFinish) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsPlaying(false);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setElapsed(0);
+      player.seekTo(0);
+    }
+  }, [status.didJustFinish, player]);
 
   // Track elapsed time via polling
   useEffect(() => {

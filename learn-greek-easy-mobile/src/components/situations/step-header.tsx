@@ -6,7 +6,9 @@ import { View, Text, Pressable } from 'react-native';
 import { X } from 'lucide-react-native';
 
 // Icon colours — fixed, not token-backed
-const ICON_FG = 'rgb(100,116,139)'; // --fg-3 approximate (slate-500)
+// #34: rgb(100,116,139) is slate-500 / --practice-text-muted, NOT --fg-3.
+// Using intentionally for the situation flow close icon (matches close icons on other screens).
+const ICON_FG = 'rgb(100,116,139)'; // --practice-text-muted (slate-500) — intentional
 
 export interface StepHeaderProps {
   /** Zero-based current step index (0 = first inner step after cover). */
