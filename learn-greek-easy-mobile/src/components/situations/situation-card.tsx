@@ -82,17 +82,13 @@ export function SituationCard({ item, onPress }: SituationCardProps) {
 
       {/* ── Body column ── */}
       <View className="flex-1 py-3 px-3.5" style={{ minWidth: 0 }}>
-        {/* Level pill + domain */}
-        <View className="flex-row items-center gap-1.5 mb-1">
-          <View className="px-2 py-0.5 rounded-full bg-primary-15">
-            <Text
-              className="text-primary text-[10.5px] font-bold tracking-[0.04em]"
-              style={{ fontFamily: 'SpaceMono_400Regular' }}
-            >
-              B1
-            </Text>
-          </View>
-        </View>
+        {/*
+         * Level pill intentionally omitted: the backend list endpoint
+         * (LearnerSituationListItem) does not expose a `level` field — level
+         * is only available on the situation detail response.  Rendering a
+         * hardcoded "B1" pill here is fabricated data and has been removed.
+         * Re-add when the backend serialises level on the list endpoint.
+         */}
 
         {/* Greek headline */}
         <Text

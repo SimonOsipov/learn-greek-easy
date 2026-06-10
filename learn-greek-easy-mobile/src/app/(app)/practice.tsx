@@ -4,7 +4,7 @@
  * Blocks:
  *   1. Header — mono kicker "REAL CONVERSATIONS", "Practice" title (Inter Tight 30),
  *      one-line description.
- *   2. SituationFilterRail — All · Ready · In progress · B1 · B2 · A2; local UI state.
+ *   2. SituationFilterRail — All · Ready · In progress · Completed; local UI state.
  *   3. Vertical stack of SituationCards, each pushing to the situation flow.
  *
  * Data: useSituations(). Pull-to-refresh refetches.
@@ -36,10 +36,18 @@ function emptyCopyFor(filter: SituationFilter): string {
   if (filter === 'All') return 'No situations yet';
   if (filter === 'Ready') return 'No situations ready yet';
   if (filter === 'In progress') return 'No situations in progress yet';
-  return `No ${filter} situations yet`;
+  if (filter === 'Completed') return 'No completed situations yet';
+  return 'No situations yet';
 }
 
-/** Client-side filter — matches the SituationFilterRail pills. */
+/**
+ * Client-side filter — matches the SituationFilterRail pills.
+ *
+ * Only status-based filters are supported: All / Ready / In progress / Completed.
+ * Level filters (B1/B2/A2) have been removed because LearnerSituationListItem
+ * does not include a `level` field; adding them back requires a backend change.
+ * analytics: practice_filter_changed payload key `filter` now uses these values.
+ */
 function filterSituations(items: SituationItem[], filter: SituationFilter): SituationItem[] {
   if (filter === 'All') return items;
   if (filter === 'Ready') {
@@ -52,9 +60,11 @@ function filterSituations(items: SituationItem[], filter: SituationFilter): Situ
       (s) => clientStatusFor(s.exercise_completed, s.exercise_total) === 'In progress',
     );
   }
-  // Level filters (B1 / B2 / A2): the backend list doesn't include level, so
-  // all items pass these filters (they are present for UI parity with the
-  // handoff; a future backend change may add level to the list response).
+  if (filter === 'Completed') {
+    return items.filter(
+      (s) => clientStatusFor(s.exercise_completed, s.exercise_total) === 'Completed',
+    );
+  }
   return items;
 }
 

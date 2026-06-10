@@ -70,14 +70,21 @@ export function monogramForScenario(scenario_el: string): string {
 // Status helpers
 // ---------------------------------------------------------------------------
 
-export type SituationFilter = 'All' | 'Ready' | 'In progress' | 'B1' | 'B2' | 'A2';
+/**
+ * Status-based filters only — no level filters.
+ *
+ * NOTE: The backend's LearnerSituationListItem has no `level` field; CEFR level
+ * is only present on the detail response (situation audio_level). Filtering by
+ * level on the list screen is therefore not possible without a backend change.
+ * B1/B2/A2 filter pills have been removed to avoid fabricated UI behaviour
+ * (they previously fell through to show all items, indistinguishable from "All").
+ */
+export type SituationFilter = 'All' | 'Ready' | 'In progress' | 'Completed';
 export const SITUATION_FILTERS: readonly SituationFilter[] = [
   'All',
   'Ready',
   'In progress',
-  'B1',
-  'B2',
-  'A2',
+  'Completed',
 ];
 
 /**
