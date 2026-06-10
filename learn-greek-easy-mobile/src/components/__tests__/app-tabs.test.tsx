@@ -93,8 +93,36 @@ jest.mock('lucide-react-native', () => {
   const { View } = require('react-native');
   const ce = require('react').createElement;
   const stub = () => ce(View, { testID: 'icon-stub' });
-  return { ChevronRight: stub };
+  return {
+    ChevronRight: stub,
+    Settings: stub,
+    Flame: stub,
+    Check: stub,
+    Clock: stub,
+    Trophy: stub,
+  };
 });
+
+// ---------------------------------------------------------------------------
+// Mocks needed for YouScreen (graduated from stub in MOB-11).
+// ---------------------------------------------------------------------------
+
+jest.mock('@/hooks/use-user-profile', () => ({
+  useUserProfile: () => ({ data: undefined, isLoading: true, isError: false, refetch: jest.fn() }),
+}));
+jest.mock('@/hooks/use-xp-stats', () => ({
+  useXpStats: () => ({ data: undefined, isLoading: false, isError: false, refetch: jest.fn() }),
+}));
+jest.mock('@/hooks/use-progress-dashboard', () => ({
+  useProgressDashboard: () => ({ data: undefined, isLoading: true, isError: false, refetch: jest.fn() }),
+}));
+jest.mock('@/hooks/use-week-trends', () => ({
+  useWeekTrends: () => ({ data: undefined, isLoading: true, isError: false, refetch: jest.fn() }),
+}));
+jest.mock('@/stores/auth-store', () => ({
+  useAuthStore: (selector: (state: { signOut: jest.Mock }) => unknown) =>
+    selector({ signOut: jest.fn() }),
+}));
 
 // ---------------------------------------------------------------------------
 // Screens
@@ -116,13 +144,9 @@ describe('Placeholder screens (DASH-11)', () => {
     expect(screen.getByTestId('culture-loading')).toBeTruthy();
   });
 
-  it('YouScreen renders the "You" title', () => {
+  it('YouScreen renders without crashing (loading state)', () => {
+    // YouScreen is now a real screen (MOB-11); detailed tests in you-screen.test.tsx.
     render(<YouScreen />);
-    expect(screen.getByText('You')).toBeTruthy();
-  });
-
-  it('YouScreen renders the "Coming soon" subtitle', () => {
-    render(<YouScreen />);
-    expect(screen.getByText('Coming soon')).toBeTruthy();
+    expect(screen.getByTestId('you-loading')).toBeTruthy();
   });
 });
