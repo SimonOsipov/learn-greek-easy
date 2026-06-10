@@ -310,7 +310,7 @@ export default function HomeScreen() {
             goalProps={{
               kicker: 'DAILY GOAL',
               icon: <Trophy size={13} />,
-              title: `${reviewedToday} / ${dailyGoal} cards today`,
+              title: `${reviewedToday} / ${dailyGoal} ${dailyGoal === 1 ? 'card' : 'cards'} today`,
               body:
                 goalRemaining > 0
                   ? `Just ${goalRemaining} more ${goalRemaining === 1 ? 'card' : 'cards'} to hit your goal.`
