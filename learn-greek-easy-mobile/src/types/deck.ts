@@ -36,3 +36,57 @@ export interface DeckListResponse {
   page_size: number;
   decks: DeckResponse[];
 }
+
+// ---------------------------------------------------------------------------
+// Deck detail + word entries + word mastery (MOB-07 Decks tab)
+// Copy-first ports of the backend response schemas (snake_case verbatim):
+//   GET /api/v1/decks/{id}               → DeckDetailResponse (same shape as DeckResponse)
+//   GET /api/v1/decks/{id}/word-entries  → DeckWordEntriesResponse (src/schemas/deck.py:182)
+//   GET /api/v1/decks/{id}/word-mastery  → WordMasteryResponse (src/schemas/deck.py:219)
+// Only the read fields the mobile deck-detail screen consumes are copied.
+// ---------------------------------------------------------------------------
+
+/** Detail endpoint returns the same shape as the list item. */
+export type DeckDetailResponse = DeckResponse;
+
+export type WordGender = 'masculine' | 'feminine' | 'neuter';
+
+/**
+ * Subset of backend WordEntryResponse (src/schemas/word_entry.py:391).
+ * grammar_data is a raw JSONB dict; the deck screen only reads `gender`.
+ */
+export interface WordEntryResponse {
+  id: string;
+  deck_id: string | null;
+  lemma: string;
+  part_of_speech: string;
+  translation_en: string;
+  translation_ru: string | null;
+  /** Syllable pronunciation guide, e.g. "/spí·ti/". */
+  pronunciation: string | null;
+  grammar_data: { gender?: string; [key: string]: unknown } | null;
+  is_active: boolean;
+}
+
+export interface DeckWordEntriesResponse {
+  deck_id: string;
+  total: number;
+  page: number;
+  page_size: number;
+  word_entries: WordEntryResponse[];
+}
+
+export interface WordMasteryItem {
+  word_entry_id: string;
+  mastered_count: number;
+  studied_count: number;
+  total_count: number;
+}
+
+export interface WordMasteryResponse {
+  deck_id: string;
+  items: WordMasteryItem[];
+}
+
+/** Derived per-word learning status (derivation mirrors web WordBrowser.tsx:219-235). */
+export type WordStatus = 'new' | 'learning' | 'mastered';
