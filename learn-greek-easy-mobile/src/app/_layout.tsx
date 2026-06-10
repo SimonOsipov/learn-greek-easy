@@ -70,6 +70,8 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
             <Stack.Screen name="decks/[deckId]" />
             {/* Word detail is a root-stack push (MOB-12: nested under deck). */}
             <Stack.Screen name="decks/[deckId]/[wordId]" />
+            {/* Card review is a root-stack push (MOB-09: SRS flashcard loop). */}
+            <Stack.Screen name="decks/[deckId]/review" />
             {/* Situation flow is a root-stack push so it covers the (app) tab bar
                 (MOB-08 handoff: situation flow has no tab bar). */}
             <Stack.Screen name="situations/[situationId]" />

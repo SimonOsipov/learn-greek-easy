@@ -1,13 +1,13 @@
 /// <reference types="jest" />
 /**
- * MOB-07 — RNTL screen tests for the deck-detail route (src/app/decks/[deckId]/index.tsx).
+ * MOB-07 / MOB-09 — RNTL screen tests for the deck-detail route (src/app/decks/[deckId]/index.tsx).
  *
  * Tests:
  *   1. Loading → spinner.
  *   2. Error → retry + back affordances.
  *   3. Loaded → hero copy, stats strip values, word rows with derived status.
  *   4. Word-row press → router.push to word detail (MOB-12 wiring).
- *   5. Practice CTA → coming-soon marker visible, press fires the toast.
+ *   5. Practice CTA → press navigates to /decks/[deckId]/review (MOB-09 wiring).
  *   6. Back button pops the stack.
  */
 import React from 'react';
@@ -38,11 +38,6 @@ jest.mock('@/hooks/use-deck-detail', () => ({
 const mockUseDeckProgress = jest.fn();
 jest.mock('@/hooks/use-deck-progress', () => ({
   useDeckProgress: () => mockUseDeckProgress(),
-}));
-
-const mockShowComingSoonToast = jest.fn();
-jest.mock('@/components/ui/toast', () => ({
-  useToast: () => ({ showComingSoonToast: mockShowComingSoonToast }),
 }));
 
 jest.mock('@/lib/analytics', () => ({ track: jest.fn() }));
@@ -215,17 +210,15 @@ describe('DeckDetailScreen', () => {
     render(<DeckDetailScreen />);
     fireEvent.press(screen.getByTestId('word-row-w-domatio'));
     expect(mockPush).toHaveBeenCalledWith('/decks/house/w-domatio');
-    expect(mockShowComingSoonToast).not.toHaveBeenCalled();
   });
 
-  it('practice CTA is marked coming-soon and fires the toast', () => {
+  it('practice CTA navigates to the card review screen (MOB-09)', () => {
     setQueries();
     render(<DeckDetailScreen />);
-    expect(screen.getByTestId('deck-cta-coming-soon')).toHaveTextContent(/coming soon/i);
-    // The dot is accessibility-hidden (decorative) — include hidden elements.
-    expect(screen.getByTestId('coming-soon-dot', { includeHiddenElements: true })).toBeTruthy();
+    // Coming-soon marker is gone (MOB-09 wiring complete)
+    expect(screen.queryByTestId('deck-cta-coming-soon')).toBeNull();
     fireEvent.press(screen.getByTestId('deck-practice-cta'));
-    expect(mockShowComingSoonToast).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith('/decks/house/review');
   });
 
   it('back button pops the stack', () => {

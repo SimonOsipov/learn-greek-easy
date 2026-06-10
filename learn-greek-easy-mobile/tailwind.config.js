@@ -141,6 +141,32 @@ module.exports = {
         'gender-masc-12': 'rgba(31,104,190,0.12)',
         'gender-fem-12':  'rgba(181,38,101,0.12)',
         // === end MOB-12 word-detail tokens ===
+
+        // === MOB-09 practice palette (card review) ===
+        // HSL-var-backed tokens — DO NOT use /NN opacity modifier on native (MOB-13).
+        // Use explicit rgba tokens below for any translucent surface.
+        'practice-bg': 'hsl(var(--practice-bg))',
+        'practice-card': 'hsl(var(--practice-card))',
+        'practice-border': 'hsl(var(--practice-border))',
+        'practice-text': 'hsl(var(--practice-text))',
+        'practice-text-muted': 'hsl(var(--practice-text-muted))',
+        'practice-text-dim': 'hsl(var(--practice-text-dim))',
+        'practice-accent': 'hsl(var(--practice-accent))',
+        'practice-correct': 'hsl(var(--practice-correct))',
+        'practice-incorrect': 'hsl(var(--practice-incorrect))',
+        'practice-hard': 'hsl(var(--practice-hard))',
+        // MOB-13 explicit rgba opacity tokens for practice palette.
+        // Light theme values used as fixed rgba (no dark switching needed — review
+        // screen uses its own independent theme toggle, not the system theme).
+        // correct: light 160 84% 39% = rgb(20,184,103); dark 158 64% 52% = rgb(47,192,119)
+        // We use light-theme values as these are used for tinted surfaces (bg, border, etc.)
+        // The correct token itself is var-backed and will flip with the dark class.
+        'practice-correct-10': 'rgba(20,184,103,0.10)',  // light --practice-correct at 10%
+        'practice-correct-15': 'rgba(20,184,103,0.15)',  // light --practice-correct at 15%
+        'practice-incorrect-12': 'rgba(220,38,38,0.12)', // --practice-incorrect ≈ rgb(220,38,38) at 12%
+        'practice-hard-12': 'rgba(234,119,23,0.12)',     // --practice-hard ≈ rgb(234,119,23) at 12%
+        'practice-accent-12': 'rgba(79,70,229,0.12)',    // --practice-accent ≈ indigo at 12%
+        // === end MOB-09 practice palette ===
       },
       borderRadius: {
         sm: '10px',
