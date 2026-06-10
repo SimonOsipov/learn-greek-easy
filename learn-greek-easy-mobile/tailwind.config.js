@@ -100,6 +100,33 @@ module.exports = {
         'stat-violet': 'rgb(187,103,228)',           // 280 70% 65%
         'stat-violet-14': 'rgba(187,103,228,0.14)', // 280 70% 65%
         // === end MOB-13 explicit opacity tokens ===
+
+        // === MOB-08 situation-flow semantic accents ===
+        // Fixed in both themes — correct hsl(160 65% 42%) = rgb(37,177,130),
+        // incorrect hsl(0 78% 58%) = rgb(239,68,68) (same as danger),
+        // exercise modality violet hsl(280 70% 55%) = rgb(177,82,224) (same as entry-violet).
+        // MOB-13 explicit alpha variants for transparent surfaces:
+        'correct': 'rgb(37,177,130)',           // hsl(160 65% 42%) — correct answer solid
+        'correct-14': 'rgba(37,177,130,0.14)',  // option background on correct — MOB-13
+        'correct-10': 'rgba(37,177,130,0.10)',  // footer banner bg — MOB-13
+        'correct-30': 'rgba(37,177,130,0.30)',  // footer banner border — MOB-13
+        // incorrect = danger (already defined: danger, danger-18, danger-55, danger-70)
+        // exercise-violet = entry-violet (already defined: entry-violet, entry-violet-16, entry-violet-32)
+        // Scene gradient palette for situation tiles — 5 tones per handoff
+        // (amber|blue|cyan|green|violet). Two stop pairs, 135deg.
+        // Stored as solid start/end colours; gradient constructed in LinearGradient.
+        // hsl sources in comments; full rgb values per MOB-13 convention.
+        'scene-amber-from': 'rgb(246,168,35)',   // hsl(38 92% 55%)
+        'scene-amber-to':   'rgb(153,82,22)',     // hsl(20 85% 34%)  ≈ hsl(20 85% 34%)
+        'scene-blue-from':  'rgb(45,125,221)',    // hsl(212 80% 52%) ≈ rgb(45,125,221)
+        'scene-blue-to':    'rgb(33,57,131)',     // hsl(225 60% 32%)
+        'scene-cyan-from':  'rgb(26,178,199)',    // hsl(188 80% 44%)
+        'scene-cyan-to':    'rgb(30,90,160)',     // hsl(212 70% 37%)
+        'scene-green-from': 'rgb(37,177,130)',    // hsl(160 65% 42%)
+        'scene-green-to':   'rgb(20,110,90)',     // hsl(180 55% 25%)
+        'scene-violet-from':'rgb(164,82,224)',    // hsl(280 75% 60%)
+        'scene-violet-to':  'rgb(43,33,128)',     // hsl(248 59% 32%)
+        // === end MOB-08 semantic accents + scene palette ===
       },
       borderRadius: {
         sm: '10px',

@@ -110,6 +110,7 @@ const MOCK_SITUATION: SituationItem = {
   id: 'supreme-court',
   scenario_el: 'Το Ανώτατο Δικαστήριο απέρριψε',
   scenario_en: 'The Supreme Court rejected the appeal',
+  status: 'ready',
   has_audio: true,
   has_dialog: false,
   exercise_total: 4,
