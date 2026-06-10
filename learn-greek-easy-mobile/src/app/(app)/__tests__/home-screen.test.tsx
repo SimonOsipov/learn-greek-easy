@@ -134,9 +134,12 @@ function makeReturningSummary(overrides: Record<string, unknown> = {}) {
     firstName: 'Maria',
     currentStreak: 6,
     cardsDueToday: 12,
+    dailyGoal: 20,
+    dueDeckCount: 3,
     reviewedToday: 5,
     masteredCards: 80,
-    studyTimeSeconds: 720,
+    studyTimeTodaySeconds: 720,
+    allTimeStudySeconds: 4860,
     heatmap: [0, 1, 2, 3, 0, 5, 2],
     resumeDeck: null,
     decks: [],
@@ -337,7 +340,7 @@ describe('HomeScreen — returning-user branch', () => {
 describe('HomeScreen — reviewedToday non-zero in goal card', () => {
   it('renders reviewed count (reviewedToday=7) in the goal card title text', () => {
     mockUseDashboard.mockReturnValue(
-      makeReturningSummary({ reviewedToday: 7, cardsDueToday: 20 }),
+      makeReturningSummary({ reviewedToday: 7, dailyGoal: 20 }),
     );
     render(<HomeScreen />);
     // The amber goal card title should contain "7" (reviewed count)
@@ -350,12 +353,12 @@ describe('HomeScreen — reviewedToday non-zero in goal card', () => {
 
   it('goal card progress ratio is non-zero when reviewedToday > 0', () => {
     mockUseDashboard.mockReturnValue(
-      makeReturningSummary({ reviewedToday: 10, cardsDueToday: 20 }),
+      makeReturningSummary({ reviewedToday: 10, dailyGoal: 20 }),
     );
     render(<HomeScreen />);
     // Goal card renders — check progress fill has non-zero width
     const progressFill = screen.getByTestId('entry-card-progress-fill-amber');
-    // width="50%" when reviewedToday=10, cardsDueToday=20
+    // width="50%" when reviewedToday=10, dailyGoal=20
     expect(progressFill.props.style.width).toBe('50%');
   });
 });

@@ -5,7 +5,7 @@
  *   (1) Streak     — amber     — flame icon
  *   (2) Mastered   — green     — check icon
  *   (3) Time today — primary   — clock icon (value formatted via formatStudyTime)
- *   (4) Cards due  — violet    — trophy icon
+ *   (4) All time   — violet    — trophy icon (value formatted via formatStudyTime)
  *
  * Pure presentational — parent passes all values, no hooks inside.
  *
@@ -105,12 +105,15 @@ export interface StatGridProps {
   /** Total cards mastered. */
   masteredCards: number;
   /**
-   * Study time for today in SECONDS.
+   * Study time for TODAY in SECONDS (today.study_time_seconds).
    * Formatted by formatStudyTime from src/lib/dashboard/format-study-time.ts.
    */
-  studyTimeSeconds: number;
-  /** Number of cards due today. */
-  cardsDueToday: number;
+  studyTimeTodaySeconds: number;
+  /**
+   * All-time study time in SECONDS (overview.total_study_time_seconds).
+   * Formatted by formatStudyTime from src/lib/dashboard/format-study-time.ts.
+   */
+  allTimeStudySeconds: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -120,32 +123,34 @@ export interface StatGridProps {
 /**
  * 2×2 stat grid for the dashboard.
  *
- * Study time is formatted from seconds using `formatStudyTime` (the port of the
- * web timeFormatUtils.ts helper). All other stats are raw numbers.
+ * Study times are formatted from seconds using `formatStudyTime` (the port of
+ * the web timeFormatUtils.ts helper). All other stats are raw numbers.
+ *
+ * Layout: a plain column of two fixed rows. (A flex-wrap + w-full approach
+ * rendered all four tiles on ONE line on native, squeezing and truncating
+ * tile content — wrap forcing via width is unreliable in Yoga.)
  *
  * Usage:
  *   <StatGrid
  *     currentStreak={6}
  *     masteredCards={142}
- *     studyTimeSeconds={720}
- *     cardsDueToday={130}
+ *     studyTimeTodaySeconds={720}
+ *     allTimeStudySeconds={4860}
  *   />
  */
 export function StatGrid({
   currentStreak,
   masteredCards,
-  studyTimeSeconds,
-  cardsDueToday,
+  studyTimeTodaySeconds,
+  allTimeStudySeconds,
 }: StatGridProps) {
-  const formattedTime = formatStudyTime(studyTimeSeconds);
+  const formattedTimeToday = formatStudyTime(studyTimeTodaySeconds);
+  const formattedAllTime = formatStudyTime(allTimeStudySeconds);
 
   return (
-    <View
-      testID="stat-grid"
-      className="flex-row flex-wrap gap-2 mx-[18px] mt-3"
-    >
+    <View testID="stat-grid" className="gap-2 mx-[18px] mt-3">
       {/* Row 1 */}
-      <View className="flex-row gap-2 flex-1">
+      <View className="flex-row gap-2">
         <StatTile
           testID="stat-tile-streak"
           label="Streak"
@@ -163,18 +168,18 @@ export function StatGrid({
       </View>
 
       {/* Row 2 */}
-      <View className="flex-row gap-2 flex-1 w-full">
+      <View className="flex-row gap-2">
         <StatTile
           testID="stat-tile-time"
           label="Time today"
-          value={formattedTime}
+          value={formattedTimeToday}
           tone="primary"
           icon={<Clock size={12} />}
         />
         <StatTile
-          testID="stat-tile-due"
-          label="Cards due"
-          value={cardsDueToday}
+          testID="stat-tile-all-time"
+          label="All time"
+          value={formattedAllTime}
           tone="violet"
           icon={<Trophy size={12} />}
         />

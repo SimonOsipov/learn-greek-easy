@@ -132,8 +132,8 @@ describe('StatGrid', () => {
       <StatGrid
         currentStreak={6}
         masteredCards={142}
-        studyTimeSeconds={3660}
-        cardsDueToday={130}
+        studyTimeTodaySeconds={3660}
+        allTimeStudySeconds={130}
       />,
     );
     // The time tile should show the formatted value, not the raw seconds
@@ -149,8 +149,8 @@ describe('StatGrid', () => {
       <StatGrid
         currentStreak={0}
         masteredCards={0}
-        studyTimeSeconds={0}
-        cardsDueToday={0}
+        studyTimeTodaySeconds={0}
+        allTimeStudySeconds={60}
       />,
     );
     expect(screen.getByText('0m')).toBeTruthy();
@@ -161,14 +161,14 @@ describe('StatGrid', () => {
       <StatGrid
         currentStreak={6}
         masteredCards={142}
-        studyTimeSeconds={720}
-        cardsDueToday={130}
+        studyTimeTodaySeconds={720}
+        allTimeStudySeconds={4860}
       />,
     );
     expect(screen.getByTestId('stat-tile-streak')).toBeTruthy();
     expect(screen.getByTestId('stat-tile-mastered')).toBeTruthy();
     expect(screen.getByTestId('stat-tile-time')).toBeTruthy();
-    expect(screen.getByTestId('stat-tile-due')).toBeTruthy();
+    expect(screen.getByTestId('stat-tile-all-time')).toBeTruthy();
   });
 
   it('formats 3600 seconds as "1h" (drops minutes when 0)', () => {
@@ -176,22 +176,23 @@ describe('StatGrid', () => {
       <StatGrid
         currentStreak={1}
         masteredCards={10}
-        studyTimeSeconds={3600}
-        cardsDueToday={5}
+        studyTimeTodaySeconds={3600}
+        allTimeStudySeconds={90}
       />,
     );
     expect(screen.getByText('1h')).toBeTruthy();
   });
 
-  it('formats 86400 seconds as "1d" (drops hours when 0)', () => {
+  it('formats the all-time tile independently (86400s → "1d")', () => {
     render(
       <StatGrid
         currentStreak={1}
         masteredCards={10}
-        studyTimeSeconds={86400}
-        cardsDueToday={5}
+        studyTimeTodaySeconds={720}
+        allTimeStudySeconds={86400}
       />,
     );
+    expect(screen.getByText('12m')).toBeTruthy();
     expect(screen.getByText('1d')).toBeTruthy();
   });
 });

@@ -111,9 +111,16 @@ export interface DashboardViewModel {
 
   // 2×2 stat values
   masteredCards: number;
-  studyTimeSeconds: number;
+  /** Study time TODAY in seconds (from today.study_time_seconds). */
+  studyTimeTodaySeconds: number;
+  /** All-time study time in seconds (from overview.total_study_time_seconds). */
+  allTimeStudySeconds: number;
   currentStreak: number;
   cardsDueToday: number;
+  /** Daily goal in CARDS (from today.daily_goal on the progress dashboard). */
+  dailyGoal: number;
+  /** Number of decks with at least one card due today (from deck progress). */
+  dueDeckCount: number;
   /** Reviews completed today (from today.reviews_completed on the progress dashboard). */
   reviewedToday: number;
 
