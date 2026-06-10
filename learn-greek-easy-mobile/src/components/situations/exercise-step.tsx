@@ -57,12 +57,12 @@ function extractOptions(exercise: ExerciseQueueItem): OptionModel[] {
   const item = exercise.items[0];
   if (!item) return [];
 
-  const payload = item.payload as Record<string, unknown>;
+  const payload = item.payload;
 
   if (exercise.exercise_type === 'select_correct_answer') {
     // SelectCorrectAnswerPayload (exercise_payload.py:84-89):
     // prompt:{el,en,ru}, options:[{el,en,ru}], correct_answer_index
-    const p = payload as unknown as SelectCorrectAnswerPayload;
+    const p = payload as SelectCorrectAnswerPayload;
     return (p.options ?? []).map((o, i) => ({
       label: o.el,
       isCorrect: i === p.correct_answer_index,
@@ -72,7 +72,7 @@ function extractOptions(exercise: ExerciseQueueItem): OptionModel[] {
   if (exercise.exercise_type === 'true_false') {
     // TrueFalsePayload (exercise_payload.py:67-74):
     // statement_el/en/ru, correct_answer: bool, explanation
-    const p = payload as unknown as TrueFalsePayload;
+    const p = payload as TrueFalsePayload;
     return [
       { label: 'Σωστό', isCorrect: p.correct_answer === true },
       { label: 'Λάθος', isCorrect: p.correct_answer === false },
@@ -82,7 +82,7 @@ function extractOptions(exercise: ExerciseQueueItem): OptionModel[] {
   // fill_gaps: FillGapsPayload (exercise_payload.py:14-21):
   // context_before, context_after, options:[str], correct_answer
   if (exercise.exercise_type === 'fill_gaps') {
-    const p = payload as unknown as FillGapsPayload;
+    const p = payload as FillGapsPayload;
     return (p.options ?? []).map((o) => ({
       label: o,
       isCorrect: o === p.correct_answer,
@@ -95,21 +95,21 @@ function extractOptions(exercise: ExerciseQueueItem): OptionModel[] {
 function extractQuestion(exercise: ExerciseQueueItem): { el: string; en: string | null } {
   const item = exercise.items[0];
   if (!item) return { el: '', en: null };
-  const payload = item.payload as Record<string, unknown>;
+  const payload = item.payload;
 
   if (exercise.exercise_type === 'select_correct_answer') {
     // prompt.el is the Greek question text (exercise_payload.py:84-89)
-    const p = payload as unknown as SelectCorrectAnswerPayload;
+    const p = payload as SelectCorrectAnswerPayload;
     return { el: p.prompt?.el ?? '', en: p.prompt?.en ?? null };
   }
   if (exercise.exercise_type === 'true_false') {
     // statement_el/en are the statement fields (exercise_payload.py:67-74)
-    const p = payload as unknown as TrueFalsePayload;
+    const p = payload as TrueFalsePayload;
     return { el: p.statement_el ?? '', en: p.statement_en ?? null };
   }
   if (exercise.exercise_type === 'fill_gaps') {
     // Render as: context_before + ___ + context_after (exercise_payload.py:14-21)
-    const p = payload as unknown as FillGapsPayload;
+    const p = payload as FillGapsPayload;
     const before = p.context_before ?? '';
     const after = p.context_after ?? '';
     return {

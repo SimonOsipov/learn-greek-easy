@@ -24,7 +24,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Volume2, Flag } from 'lucide-react-native';
-import { useAudioPlayer } from 'expo-audio';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 
 import { useWordEntry, useWordCards, useWordMasteryItem } from '@/hooks/use-word-detail';
 import { useToast } from '@/components/ui/toast';
@@ -226,7 +226,17 @@ export default function WordDetailScreen() {
 
   // Audio playback
   const player = useAudioPlayer(word?.audio_url ?? '');
+  const playerStatus = useAudioPlayerStatus(player);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // Reset play state when track finishes naturally
+  useEffect(() => {
+    if (playerStatus.didJustFinish) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsPlaying(false);
+      player.seekTo(0);
+    }
+  }, [playerStatus.didJustFinish, player]);
 
   const handleSpeaker = useCallback(() => {
     if (!word?.audio_url || word.audio_status !== 'ready') return;
@@ -787,7 +797,17 @@ export default function WordDetailScreen() {
 
 function ExampleSpeaker({ audioUrl }: { audioUrl: string }) {
   const player = useAudioPlayer(audioUrl);
+  const status = useAudioPlayerStatus(player);
   const [playing, setPlaying] = useState(false);
+
+  // Reset play state when track finishes naturally
+  useEffect(() => {
+    if (status.didJustFinish) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPlaying(false);
+      player.seekTo(0);
+    }
+  }, [status.didJustFinish, player]);
 
   return (
     <Pressable

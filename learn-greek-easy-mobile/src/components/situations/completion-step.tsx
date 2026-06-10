@@ -58,7 +58,7 @@ export function CompletionStep({
     >
       {/* Trophy icon */}
       <LinearGradient
-        colors={TROPHY_GRADIENT as unknown as [string, string]}
+        colors={TROPHY_GRADIENT}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={{
@@ -137,7 +137,7 @@ export function CompletionStep({
         className="active:opacity-80"
       >
         <LinearGradient
-          colors={CTA_GRADIENT as unknown as [string, string]}
+          colors={CTA_GRADIENT}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={{

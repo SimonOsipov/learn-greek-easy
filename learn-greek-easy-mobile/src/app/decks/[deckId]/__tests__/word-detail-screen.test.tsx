@@ -48,9 +48,11 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 
-// expo-audio stub — useAudioPlayer returns a minimal player
+// expo-audio stub — useAudioPlayer returns a minimal player; useAudioPlayerStatus
+// returns a status object with didJustFinish=false (default non-completing state).
 jest.mock('expo-audio', () => ({
-  useAudioPlayer: () => ({ play: jest.fn(), pause: jest.fn(), currentTime: 0 }),
+  useAudioPlayer: () => ({ play: jest.fn(), pause: jest.fn(), seekTo: jest.fn(), currentTime: 0 }),
+  useAudioPlayerStatus: () => ({ didJustFinish: false }),
 }));
 
 jest.mock('lucide-react-native', () => {

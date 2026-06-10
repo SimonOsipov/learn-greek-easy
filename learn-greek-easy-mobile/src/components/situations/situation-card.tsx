@@ -23,7 +23,7 @@ export interface SituationCardProps {
 }
 
 export function SituationCard({ item, onPress }: SituationCardProps) {
-  const gradient = gradientForSituationId(item.id) as unknown as [string, string];
+  const gradient = gradientForSituationId(item.id);
   const mark = monogramForScenario(item.scenario_el);
   const clientStatus = clientStatusFor(item.exercise_completed, item.exercise_total);
   const progressRatio =

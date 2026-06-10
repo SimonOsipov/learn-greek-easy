@@ -198,7 +198,7 @@ export default function CultureScreen() {
             className="text-fg2 mt-1.5"
             style={{ fontSize: 13.5, lineHeight: 20, maxWidth: 320 }}
           >
-            {decks.length} past exams · {readiness.categories.length} topic areas · target 60% to pass
+            {decks.length} past {decks.length === 1 ? 'exam' : 'exams'} · {readiness.categories.length} topic areas · target 60% to pass
           </Text>
         </View>
 
