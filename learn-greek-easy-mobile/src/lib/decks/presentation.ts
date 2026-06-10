@@ -117,16 +117,20 @@ export function wordStatus(mastery: WordMasteryItem | undefined): WordStatus {
 // ---------------------------------------------------------------------------
 
 /**
- * Progress ratio for a deck in [0, 1] — mastered cards over card count.
- * Same derivation as the dashboard DeckCard (components/dashboard/deck-card.tsx:48).
+ * Progress ratio for a deck in [0, 1], from the backend's mastery_percentage
+ * (cards_mastered / total card records — consistent units, see
+ * progress_service.py:556). cards_mastered / deck.card_count is WRONG for V2
+ * decks: card_count counts words while cards_mastered counts typed cards, so
+ * the ratio overflows past 1 (verified on-sim against dev seeds). The
+ * dashboard DeckCard still uses the overflow-prone derivation — flagged as a
+ * follow-up, not changed here.
  */
 export function deckProgressRatio(
   deck: DeckResponse,
   progress: DeckProgressSummary | undefined,
 ): number {
   if (deck.card_count <= 0) return 0;
-  const mastered = progress?.cards_mastered ?? 0;
-  return Math.max(0, Math.min(1, mastered / deck.card_count));
+  return Math.max(0, Math.min(1, (progress?.mastery_percentage ?? 0) / 100));
 }
 
 export const DECK_FILTERS = ['All', 'Active', 'A1', 'A2', 'B1', 'B2'] as const;

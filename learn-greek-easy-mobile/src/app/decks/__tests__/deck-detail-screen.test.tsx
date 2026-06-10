@@ -195,9 +195,10 @@ describe('DeckDetailScreen', () => {
       'Things we have in the house in Greek.',
     );
 
-    // Stats strip — due/mastered from deck progress, cards from the deck
+    // Stats strip — due from deck progress, mastered = mastered WORDS from
+    // word-mastery (porta only), cards from the deck
     expect(screen.getByTestId('deck-stat-due')).toHaveTextContent('5');
-    expect(screen.getByTestId('deck-stat-mastered')).toHaveTextContent('3');
+    expect(screen.getByTestId('deck-stat-mastered')).toHaveTextContent('1');
     expect(screen.getByTestId('deck-stat-cards')).toHaveTextContent('7');
 
     // Word list — count, gendered articles, derived statuses

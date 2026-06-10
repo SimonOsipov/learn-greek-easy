@@ -116,7 +116,12 @@ export default function DeckDetailScreen() {
   const cover = coverForDeckId(deck.id) as unknown as [string, string];
   const mark = (deck.name_el ?? deck.name).slice(0, 2);
   const due = progress?.cards_due ?? 0;
-  const mastered = progress?.cards_mastered ?? 0;
+  // Mastered WORDS (not typed cards) — same unit as the Cards stat and the
+  // same word-mastery source the list statuses below use. progress.cards_mastered
+  // counts V2 typed cards and can exceed card_count (verified on-sim).
+  const mastered = (masteryQuery.data?.items ?? []).filter(
+    (m) => wordStatus(m) === 'mastered',
+  ).length;
 
   return (
     <View testID="deck-detail-screen" className="flex-1 bg-bg">

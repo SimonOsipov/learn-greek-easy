@@ -130,15 +130,25 @@ describe('wordStatus', () => {
 // ---------------------------------------------------------------------------
 
 describe('deckProgressRatio', () => {
-  it('mastered / card_count, clamped to [0, 1]', () => {
-    expect(deckProgressRatio(makeDeck(), makeProgress({ cards_mastered: 5 }))).toBe(0.5);
-    expect(deckProgressRatio(makeDeck(), makeProgress({ cards_mastered: 99 }))).toBe(1);
+  it('backend mastery_percentage / 100, clamped to [0, 1]', () => {
+    expect(deckProgressRatio(makeDeck(), makeProgress({ mastery_percentage: 50 }))).toBe(0.5);
+    expect(deckProgressRatio(makeDeck(), makeProgress({ mastery_percentage: 120 }))).toBe(1);
+  });
+
+  it('does NOT use cards_mastered / card_count (typed cards overflow word count)', () => {
+    // 24 typed cards mastered on a 10-word deck, backend says 60% — must be 0.6, not 1
+    expect(
+      deckProgressRatio(
+        makeDeck(),
+        makeProgress({ cards_mastered: 24, mastery_percentage: 60 }),
+      ),
+    ).toBe(0.6);
   });
 
   it('0 when there is no progress row or no cards', () => {
     expect(deckProgressRatio(makeDeck(), undefined)).toBe(0);
     expect(
-      deckProgressRatio(makeDeck({ card_count: 0 }), makeProgress({ cards_mastered: 3 })),
+      deckProgressRatio(makeDeck({ card_count: 0 }), makeProgress({ mastery_percentage: 30 })),
     ).toBe(0);
   });
 });
