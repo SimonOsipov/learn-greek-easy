@@ -127,6 +127,20 @@ module.exports = {
         'scene-violet-from':'rgb(164,82,224)',    // hsl(280 75% 60%)
         'scene-violet-to':  'rgb(43,33,128)',     // hsl(248 59% 32%)
         // === end MOB-08 semantic accents + scene palette ===
+
+        // === MOB-12 word-detail tokens ===
+        // Primary alpha tints for hero gradient wash + speaker/POS badge surfaces.
+        // Base: 221 83% 53% = rgb(36,99,235). MOB-13: explicit rgba, no /NN modifier.
+        'primary-04': 'rgba(36,99,235,0.04)',
+        'primary-06': 'rgba(36,99,235,0.06)',
+        'primary-10': 'rgba(36,99,235,0.10)',
+        'primary-20': 'rgba(36,99,235,0.20)',
+        // Gender badge background tints — masc/fem/neut.
+        // masc: 212 85% 45% = rgb(31,104,190); fem: 340 65% 50% = rgb(181,38,101).
+        // neut reuses correct-14 (37,177,130 at 0.14) — already defined.
+        'gender-masc-12': 'rgba(31,104,190,0.12)',
+        'gender-fem-12':  'rgba(181,38,101,0.12)',
+        // === end MOB-12 word-detail tokens ===
       },
       borderRadius: {
         sm: '10px',

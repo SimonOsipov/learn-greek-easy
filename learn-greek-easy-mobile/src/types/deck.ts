@@ -76,11 +76,20 @@ export interface DeckWordEntriesResponse {
   word_entries: WordEntryResponse[];
 }
 
+export interface CardTypeMastery {
+  card_type: string;
+  mastered_count: number;
+  studied_count: number;
+  total_count: number;
+}
+
 export interface WordMasteryItem {
   word_entry_id: string;
   mastered_count: number;
   studied_count: number;
   total_count: number;
+  /** Per-card-type mastery breakdown (used by word-detail Cards panel, MOB-12). */
+  type_progress: CardTypeMastery[];
 }
 
 export interface WordMasteryResponse {

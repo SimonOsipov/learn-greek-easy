@@ -15,7 +15,8 @@
  * Coming-soon placeholders (red-dot convention + toast):
  *   - The card-review flow the CTA launches is a follow-up ticket — the CTA
  *     carries a "Coming soon" dot label and fires the toast.
- *   - Per-word detail is out of scope — word rows fire the toast.
+ *
+ * Word rows now navigate to the word detail screen (MOB-12).
  *
  * Data: useDeck + useDeckWords + useDeckWordMastery, plus useDeckProgress for
  * the same due/mastered counts the dashboard and library use.
@@ -66,10 +67,13 @@ export default function DeckDetailScreen() {
     }
   }, [deck]);
 
-  const handleWordPress = useCallback(() => {
-    track('deck_word_tapped', { deck_id: deckId, coming_soon: true });
-    showComingSoonToast();
-  }, [deckId, showComingSoonToast]);
+  const handleWordPress = useCallback(
+    (wordId: string) => {
+      track('deck_word_tapped', { deck_id: deckId, word_id: wordId });
+      router.push(`/decks/${deckId}/${wordId}`);
+    },
+    [deckId, router],
+  );
 
   const handlePractice = useCallback(() => {
     track('deck_practice_tapped', { deck_id: deckId, coming_soon: true });

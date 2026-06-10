@@ -1,12 +1,12 @@
 /// <reference types="jest" />
 /**
- * MOB-07 — RNTL screen tests for the deck-detail route (src/app/decks/[deckId].tsx).
+ * MOB-07 — RNTL screen tests for the deck-detail route (src/app/decks/[deckId]/index.tsx).
  *
  * Tests:
  *   1. Loading → spinner.
  *   2. Error → retry + back affordances.
  *   3. Loaded → hero copy, stats strip values, word rows with derived status.
- *   4. Word-row press → coming-soon toast (word detail is out of scope).
+ *   4. Word-row press → router.push to word detail (MOB-12 wiring).
  *   5. Practice CTA → coming-soon marker visible, press fires the toast.
  *   6. Back button pops the stack.
  */
@@ -20,8 +20,9 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 jest.mock('nativewind');
 
 const mockBack = jest.fn();
+const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ back: mockBack, push: jest.fn() }),
+  useRouter: () => ({ back: mockBack, push: mockPush }),
   useLocalSearchParams: () => ({ deckId: 'house' }),
 }));
 
@@ -71,7 +72,7 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 
-import DeckDetailScreen from '@/app/decks/[deckId]';
+import DeckDetailScreen from '@/app/decks/[deckId]/index';
 import type { WordEntryResponse } from '@/types/deck';
 
 // ---------------------------------------------------------------------------
@@ -209,11 +210,12 @@ describe('DeckDetailScreen', () => {
     expect(screen.getByTestId('word-status-w-porta')).toHaveTextContent('mastered');
   });
 
-  it('word-row press fires the coming-soon toast', () => {
+  it('word-row press navigates to the word detail screen', () => {
     setQueries();
     render(<DeckDetailScreen />);
     fireEvent.press(screen.getByTestId('word-row-w-domatio'));
-    expect(mockShowComingSoonToast).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith('/decks/house/w-domatio');
+    expect(mockShowComingSoonToast).not.toHaveBeenCalled();
   });
 
   it('practice CTA is marked coming-soon and fires the toast', () => {
