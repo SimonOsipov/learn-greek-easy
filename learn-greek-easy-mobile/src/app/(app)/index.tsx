@@ -90,9 +90,12 @@ export default function HomeScreen() {
     firstName,
     currentStreak,
     cardsDueToday,
+    dailyGoal,
+    dueDeckCount,
     reviewedToday,
     masteredCards,
-    studyTimeSeconds,
+    studyTimeTodaySeconds,
+    allTimeStudySeconds,
     heatmap,
     resumeDeck,
     decks,
@@ -237,7 +240,8 @@ export default function HomeScreen() {
 
   // ReviewGoalPair — reviewedToday comes from today.reviews_completed in the
   // progress dashboard response, surfaced via useDashboard().reviewedToday.
-  // cardsDueToday acts as the daily goal target (today.cards_due from the backend).
+  // The goal target is today.daily_goal (the user's setting, in cards — D2).
+  const goalRemaining = Math.max(0, dailyGoal - reviewedToday);
 
   return (
     <SafeAreaView testID="home-returning" className="flex-1 bg-bg">
@@ -266,6 +270,7 @@ export default function HomeScreen() {
         <View testID="block-progress">
           <ProgressBand
             dueToday={cardsDueToday}
+            deckCount={dueDeckCount > 0 ? dueDeckCount : undefined}
             heat={heatmap}
             todayIndex={todayWeekIndex()}
           />
@@ -305,9 +310,12 @@ export default function HomeScreen() {
             goalProps={{
               kicker: 'DAILY GOAL',
               icon: <Trophy size={13} />,
-              title: `${reviewedToday} / ${cardsDueToday} cards today`,
-              body: `${Math.max(0, cardsDueToday - reviewedToday)} more cards to hit your goal.`,
-              progress: cardsDueToday > 0 ? reviewedToday / cardsDueToday : 0,
+              title: `${reviewedToday} / ${dailyGoal} cards today`,
+              body:
+                goalRemaining > 0
+                  ? `Just ${goalRemaining} more ${goalRemaining === 1 ? 'card' : 'cards'} to hit your goal.`
+                  : 'Goal reached for today.',
+              progress: dailyGoal > 0 ? Math.min(1, reviewedToday / dailyGoal) : 0,
               stat: { value: currentStreak, label: 'day streak 🔥' },
             }}
           />
@@ -337,8 +345,8 @@ export default function HomeScreen() {
           <StatGrid
             currentStreak={currentStreak}
             masteredCards={masteredCards}
-            studyTimeSeconds={studyTimeSeconds}
-            cardsDueToday={cardsDueToday}
+            studyTimeTodaySeconds={studyTimeTodaySeconds}
+            allTimeStudySeconds={allTimeStudySeconds}
           />
         </View>
 

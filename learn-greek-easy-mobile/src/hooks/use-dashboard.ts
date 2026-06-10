@@ -73,10 +73,18 @@ export function useDashboard(): DashboardViewModel {
   // 2×2 stat values
   // -------------------------------------------------------------------------
   const masteredCards = progressQuery.data?.overview.total_cards_mastered ?? 0;
-  const studyTimeSeconds = progressQuery.data?.overview.total_study_time_seconds ?? 0;
+  const studyTimeTodaySeconds = progressQuery.data?.today.study_time_seconds ?? 0;
+  const allTimeStudySeconds = progressQuery.data?.overview.total_study_time_seconds ?? 0;
   const currentStreak = progressQuery.data?.streak.current_streak ?? 0;
   const cardsDueToday = progressQuery.data?.today.cards_due ?? 0;
+  const dailyGoal = progressQuery.data?.today.daily_goal ?? 0;
   const reviewedToday = progressQuery.data?.today.reviews_completed ?? 0;
+
+  // Decks with at least one card due today — feeds the progress-band sentence
+  // ("N cards due across M decks today.").
+  const dueDeckCount = (deckProgressQuery.data?.decks ?? []).filter(
+    (d) => d.cards_due > 0,
+  ).length;
 
   // -------------------------------------------------------------------------
   // Decks joined with per-deck progress
@@ -145,9 +153,12 @@ export function useDashboard(): DashboardViewModel {
     resumeDeck,
     heatmap,
     masteredCards,
-    studyTimeSeconds,
+    studyTimeTodaySeconds,
+    allTimeStudySeconds,
     currentStreak,
     cardsDueToday,
+    dailyGoal,
+    dueDeckCount,
     reviewedToday,
     decks,
     news,
