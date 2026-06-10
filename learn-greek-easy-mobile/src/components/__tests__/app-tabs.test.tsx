@@ -10,9 +10,12 @@
  *   <AppTabs /> in Jest would require a brittle full-navigator mock that would
  *   re-test framework internals rather than our code.
  *
- *   Instead we test the four new placeholder screens directly — each one is a
+ *   Instead we test the placeholder screens directly — each one is a
  *   pure React component with no native dependencies, and together they
- *   prove the four new routes can render without crashing.
+ *   prove the routes can render without crashing.
+ *
+ *   Decks graduated from placeholder to a real screen in MOB-07 — it is now
+ *   covered by src/app/(app)/__tests__/decks-screen.test.tsx instead.
  */
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
@@ -20,22 +23,11 @@ import { render, screen } from '@testing-library/react-native';
 // ---------------------------------------------------------------------------
 // Placeholder screens introduced in DASH-11
 // ---------------------------------------------------------------------------
-import DecksScreen from '@/app/(app)/decks';
 import PracticeScreen from '@/app/(app)/practice';
 import CultureScreen from '@/app/(app)/culture';
 import YouScreen from '@/app/(app)/you';
 
 describe('Placeholder screens (DASH-11)', () => {
-  it('DecksScreen renders the "Decks" title', () => {
-    render(<DecksScreen />);
-    expect(screen.getByText('Decks')).toBeTruthy();
-  });
-
-  it('DecksScreen renders the "Coming soon" subtitle', () => {
-    render(<DecksScreen />);
-    expect(screen.getByText('Coming soon')).toBeTruthy();
-  });
-
   it('PracticeScreen renders the "Practice" title', () => {
     render(<PracticeScreen />);
     expect(screen.getByText('Practice')).toBeTruthy();

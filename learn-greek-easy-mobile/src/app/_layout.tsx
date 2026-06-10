@@ -65,6 +65,9 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
           </Stack.Protected>
           <Stack.Protected guard={!!session && onboardingComplete}>
             <Stack.Screen name="(app)" />
+            {/* Deck detail is a root-stack push so it covers the (app) tab bar
+                (MOB-07 handoff: deck detail has no tab bar). */}
+            <Stack.Screen name="decks/[deckId]" />
           </Stack.Protected>
           <Stack.Protected guard={!session}>
             <Stack.Screen name="(auth)" />
