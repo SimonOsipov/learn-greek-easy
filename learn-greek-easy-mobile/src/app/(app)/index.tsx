@@ -24,8 +24,9 @@
  * When isNewUser is true, renders: GreetingHeader + NewUserStart.
  * When isNewUser is false, renders the full returning-user layout above.
  *
- * All card presses either route to a real tab or fire showComingSoonToast()
- * when the destination screen doesn't exist yet.
+ * Most card presses route to a real tab/screen; showComingSoonToast() is used
+ * only for features whose destination screen doesn't exist yet (news detail,
+ * new dialogs chip, quick-wins shelf).
  *
  * Dark is the default theme (controlled by NativeWind + app _layout).
  */
@@ -286,9 +287,8 @@ export default function HomeScreen() {
               cardsTotal={heroCardsTotal}
               dueNow={heroDueNow}
               onResume={() => {
-                // Deck-review detail screen not yet built — toast
-                track('home_card_tapped', { section: 'continue', target: 'deck-review', coming_soon: true });
-                showComingSoonToast();
+                track('home_card_tapped', { section: 'continue', target: 'deck-review', coming_soon: false });
+                router.push(`/decks/${resumeDeck.deck_id}/review`);
               }}
             />
           </View>
@@ -413,10 +413,9 @@ export default function HomeScreen() {
                 <SituationCard
                   key={item.id}
                   item={item}
-                  onPress={() => {
-                    // Situation detail screen not yet built — toast
-                    track('home_card_tapped', { section: 'situations', target: 'situation-detail', coming_soon: true });
-                    showComingSoonToast();
+                  onPress={(id) => {
+                    track('home_card_tapped', { section: 'situations', target: 'situation-detail', coming_soon: false });
+                    router.push(`/situations/${id}`);
                   }}
                 />
               )}
@@ -451,10 +450,9 @@ export default function HomeScreen() {
                 <DeckCard
                   key={item.id}
                   deck={item}
-                  onPress={() => {
-                    // Deck review/study screen not yet built — toast
-                    track('home_card_tapped', { section: 'decks', target: 'deck-review', coming_soon: true });
-                    showComingSoonToast();
+                  onPress={(id) => {
+                    track('home_card_tapped', { section: 'decks', target: 'deck-detail', coming_soon: false });
+                    router.push(`/decks/${id}`);
                   }}
                 />
               )}
