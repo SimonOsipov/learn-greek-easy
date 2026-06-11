@@ -11,15 +11,31 @@ from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, status
 from pydantic import ValidationError
+from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.core.cache import get_cache
 from src.core.dependencies import get_current_user, get_locale_from_header
-from src.core.exceptions import DeckNotFoundException, ForbiddenException
+from src.core.exceptions import (
+    ConflictException,
+    DeckNotFoundException,
+    ForbiddenException,
+    NotFoundException,
+)
 from src.core.localization import get_localized_deck_content
 from src.db.dependencies import get_db
-from src.db.models import Deck, DeckLevel, PartOfSpeech, User
+from src.db.models import (
+    CardRecord,
+    Deck,
+    DeckLevel,
+    DeckWordEntry,
+    PartOfSpeech,
+    User,
+    Visibility,
+    WordEntry,
+)
 from src.repositories.card_record_review import CardRecordReviewRepository
 from src.repositories.card_record_statistics import CardRecordStatisticsRepository
 from src.repositories.deck import DeckRepository
@@ -37,6 +53,8 @@ from src.schemas.deck import (
     WordMasteryItem,
     WordMasteryResponse,
 )
+from src.schemas.word_entry import WordEntryResponse
+from src.services.card_generator_service import CardGeneratorService
 from src.services.s3_service import S3Service, get_s3_service
 from src.services.word_entry_response import word_entry_to_response
 from src.tasks.background import invalidate_cache_task
@@ -825,6 +843,178 @@ async def list_deck_word_entries(
         page_size=page_size,
         word_entries=[word_entry_to_response(entry) for entry in word_entries],
     )
+
+
+async def _get_owned_active_deck(db: AsyncSession, deck_id: UUID, current_user: User) -> Deck:
+    """Load an active deck and verify the current user owns it.
+
+    Raises:
+        DeckNotFoundException: If the deck doesn't exist or is inactive
+        ForbiddenException: If the deck is not owned by the current user
+            (system decks are managed via admin endpoints)
+    """
+    deck = await DeckRepository(db).get(deck_id)
+    if deck is None or not deck.is_active:
+        raise DeckNotFoundException(deck_id=str(deck_id))
+    if deck.owner_id != current_user.id:
+        raise ForbiddenException(detail="You can only modify words in your own decks")
+    return deck
+
+
+@router.post(
+    "/{deck_id}/word-entries/{word_entry_id}",
+    response_model=WordEntryResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add a word entry to own deck",
+    description=(
+        "Link an existing word entry to a deck owned by the current user. "
+        "Generates card records for the deck automatically, making the deck practiceable."
+    ),
+    responses={
+        201: {"description": "Word entry linked and cards generated"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Deck is not owned by the current user"},
+        404: {"description": "Deck or word entry not found"},
+        409: {"description": "Duplicate lemma+POS in deck or already linked"},
+    },
+)
+async def add_word_entry_to_my_deck(
+    deck_id: UUID,
+    word_entry_id: UUID,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> WordEntryResponse:
+    """Link an existing word entry to the user's own deck and generate its card records.
+
+    Mirrors the admin link endpoint (POST /admin/decks/{id}/word-entries/{id}/link)
+    but authorizes by deck ownership instead of superuser privileges.
+    """
+    await _get_owned_active_deck(db, deck_id, current_user)
+
+    word_entry_repo = WordEntryRepository(db)
+    word_entry = await word_entry_repo.get(word_entry_id)
+    # Private word entries owned by someone else are hidden (404, not 403) so the
+    # endpoint doesn't leak their existence.
+    if (
+        word_entry is None
+        or not word_entry.is_active
+        or (word_entry.visibility == Visibility.PRIVATE and word_entry.owner_id != current_user.id)
+    ):
+        raise NotFoundException(
+            resource="WordEntry",
+            detail=f"Word entry with id '{word_entry_id}' not found or inactive",
+        )
+
+    # Check if deck already has a word entry with same lemma+POS (via junction)
+    link_dup_filters = [
+        DeckWordEntry.deck_id == deck_id,
+        WordEntry.lemma == word_entry.lemma,
+        WordEntry.part_of_speech == word_entry.part_of_speech,
+        WordEntry.id != word_entry_id,
+    ]
+    if word_entry.gender is not None:
+        link_dup_filters.append(WordEntry.gender == word_entry.gender)
+
+    duplicate_check = await db.execute(
+        select(WordEntry.id)
+        .join(DeckWordEntry, DeckWordEntry.word_entry_id == WordEntry.id)
+        .where(*link_dup_filters)
+        .limit(1)
+    )
+    if duplicate_check.scalar_one_or_none() is not None:
+        raise ConflictException(
+            detail=f"Deck already has a word entry for '{word_entry.lemma}' ({word_entry.part_of_speech})"
+        )
+
+    # Check if already linked (since link_to_deck uses on_conflict_do_nothing)
+    already_linked = await word_entry_repo.is_linked_to_deck(word_entry_id, deck_id)
+    if already_linked:
+        raise ConflictException(detail="Word entry is already linked to this deck")
+
+    # Insert junction row
+    try:
+        await word_entry_repo.link_to_deck(word_entry_id, deck_id)
+    except IntegrityError:
+        await db.rollback()
+        raise ConflictException(detail="Word entry is already linked to this deck")
+
+    # Generate card records for this deck — sequential on the shared AsyncSession
+    # (INFRA-01: concurrent writes on one session collide in _connection_for_bind)
+    card_service = CardGeneratorService(db)
+    await card_service.generate_meaning_cards([word_entry], deck_id)
+    await card_service.generate_plural_form_cards([word_entry], deck_id)
+    await card_service.generate_sentence_translation_cards([word_entry], deck_id)
+    await card_service.generate_article_cards([word_entry], deck_id)
+    await card_service.generate_declension_cards([word_entry], deck_id)
+
+    await db.commit()
+    await db.refresh(word_entry)
+
+    if settings.feature_background_tasks:
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="deck",
+            entity_id=deck_id,
+        )
+
+    return word_entry_to_response(word_entry, deck_id=deck_id)
+
+
+@router.delete(
+    "/{deck_id}/word-entries/{word_entry_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remove a word entry from own deck",
+    description=(
+        "Remove a word entry's link to a deck owned by the current user. "
+        "Deletes associated card records but preserves the word entry."
+    ),
+    responses={
+        204: {"description": "Word entry removed from deck"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Deck is not owned by the current user"},
+        404: {"description": "Deck not found or word entry not linked"},
+    },
+)
+async def remove_word_entry_from_my_deck(
+    deck_id: UUID,
+    word_entry_id: UUID,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    """Remove a word entry from the user's own deck, deleting its card records."""
+    await _get_owned_active_deck(db, deck_id, current_user)
+
+    word_entry_repo = WordEntryRepository(db)
+    linked = await word_entry_repo.is_linked_to_deck(word_entry_id, deck_id)
+    if not linked:
+        raise NotFoundException(
+            resource="Link",
+            detail=f"Word entry '{word_entry_id}' is not linked to deck '{deck_id}'",
+        )
+
+    # Delete card records for (deck_id, word_entry_id)
+    await db.execute(
+        delete(CardRecord).where(
+            CardRecord.deck_id == deck_id,
+            CardRecord.word_entry_id == word_entry_id,
+        )
+    )
+
+    # Remove junction row
+    await word_entry_repo.unlink_from_deck(word_entry_id, deck_id)
+
+    await db.commit()
+
+    if settings.feature_background_tasks:
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="deck",
+            entity_id=deck_id,
+        )
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get(

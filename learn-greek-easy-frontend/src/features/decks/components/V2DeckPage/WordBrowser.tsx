@@ -322,6 +322,11 @@ export const WordBrowser: React.FC<WordBrowserProps> = ({ deckId, className }) =
       {/* Content */}
       {isLoading ? (
         <WordGridSkeleton count={12} />
+      ) : total === 0 ? (
+        <EmptyState
+          title={t('wordBrowser.emptyDeckTitle')}
+          description={t('wordBrowser.emptyDeckDescription')}
+        />
       ) : filteredEntries.length === 0 ? (
         <EmptyState
           title={t('wordBrowser.emptyTitle')}

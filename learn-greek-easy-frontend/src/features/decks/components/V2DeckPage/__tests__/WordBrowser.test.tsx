@@ -513,11 +513,14 @@ describe('WordBrowser Component', () => {
 
       render(<WordBrowser deckId="deck-1" />, { wrapper: createWrapper() });
 
+      // Truly-empty deck gets the add-words hint, not the filter empty state
       await waitFor(() => {
-        expect(screen.getByText('No words found')).toBeInTheDocument();
+        expect(screen.getByText('No words in this deck yet')).toBeInTheDocument();
       });
 
-      expect(screen.getByText('No words in this category.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Open any word page and use “Add to deck” to start building it.')
+      ).toBeInTheDocument();
     });
 
     it('should show search-specific empty state when search has no results', async () => {

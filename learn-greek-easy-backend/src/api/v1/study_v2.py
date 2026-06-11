@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import get_current_user
-from src.core.exceptions import DeckNotFoundException
+from src.core.exceptions import DeckNotFoundException, ForbiddenException
 from src.core.subscription import check_premium_deck_access, get_effective_access_level
 from src.db.dependencies import get_db
 from src.db.models import CardType, SubscriptionTier, User
@@ -90,6 +90,10 @@ async def get_v2_study_queue(
         deck = await DeckRepository(db).get(deck_id)
         if not deck or not deck.is_active:
             raise DeckNotFoundException(deck_id=str(deck_id))
+        # User-created decks can only be studied by their owner
+        # (system decks have owner_id=NULL and are accessible to all)
+        if deck.owner_id is not None and deck.owner_id != current_user.id:
+            raise ForbiddenException(detail="You do not have permission to access this deck")
         check_premium_deck_access(current_user, deck)
         exclude_premium = False
     else:

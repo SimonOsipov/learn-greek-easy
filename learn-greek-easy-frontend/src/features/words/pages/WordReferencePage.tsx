@@ -38,6 +38,7 @@ import type { AudioSpeed } from '@/utils/audioSpeed';
 import { getPersistedAudioSpeed, setPersistedAudioSpeed } from '@/utils/audioSpeed';
 
 import {
+  AddToDeckModal,
   AdjectiveDeclensionTable,
   CardsSummaryBar,
   CardTypeGroup,
@@ -220,6 +221,7 @@ export function WordReferencePage() {
   ).length;
 
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isAddToDeckOpen, setIsAddToDeckOpen] = useState(false);
   const [audioSpeed, setAudioSpeed] = useState<AudioSpeed>(getPersistedAudioSpeed);
   const [activeTab, setActiveTab] = useState('word-info');
   const [cardsView, setCardsView] = useState<CardsView>('grid');
@@ -315,6 +317,7 @@ export function WordReferencePage() {
         audioSpeed={audioSpeed}
         onSpeedChange={handleSpeedChange}
         onReportError={() => setIsReportModalOpen(true)}
+        onAddToDeck={() => setIsAddToDeckOpen(true)}
       />
 
       {/* Tabs */}
@@ -434,6 +437,15 @@ export function WordReferencePage() {
         cardId={wordEntry.id}
         cardType="WORD"
       />
+
+      {isAddToDeckOpen && (
+        <AddToDeckModal
+          open={isAddToDeckOpen}
+          onOpenChange={setIsAddToDeckOpen}
+          wordEntryId={wordEntry.id}
+          lemma={wordEntry.lemma}
+        />
+      )}
     </div>
   );
 }

@@ -8,7 +8,7 @@
 
 import { useState } from 'react';
 
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, FolderPlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
@@ -48,6 +48,8 @@ export interface WordHeroProps {
   audioSpeed: AudioSpeed;
   onSpeedChange: (s: AudioSpeed) => void;
   onReportError: () => void;
+  /** Opens the add-to-deck modal. Button is hidden when omitted. */
+  onAddToDeck?: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -64,6 +66,7 @@ export function WordHero({
   audioSpeed,
   onSpeedChange,
   onReportError,
+  onAddToDeck,
 }: WordHeroProps) {
   const { t } = useTranslation(['deck', 'review']);
 
@@ -91,7 +94,28 @@ export function WordHero({
             {t('deck:detail.goBack')}
           </Link>
 
-          <ReportErrorButton onClick={onReportError} data-testid="report-error-button" />
+          <div className="flex items-center gap-1">
+            {onAddToDeck && (
+              <button
+                type="button"
+                onClick={onAddToDeck}
+                className={cn(
+                  'flex items-center gap-2 rounded-lg px-3 py-2 text-sm',
+                  'text-muted-foreground hover:text-primary',
+                  'transition-colors duration-200',
+                  'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
+                )}
+                title={t('deck:wordReference.addToDeck.button')}
+                aria-label={t('deck:wordReference.addToDeck.button')}
+                data-testid="add-to-deck-button"
+              >
+                <FolderPlus className="h-4 w-4" aria-hidden="true" />
+                <span>{t('deck:wordReference.addToDeck.button')}</span>
+              </button>
+            )}
+
+            <ReportErrorButton onClick={onReportError} data-testid="report-error-button" />
+          </div>
         </div>
 
         {/* POS + gender tags */}

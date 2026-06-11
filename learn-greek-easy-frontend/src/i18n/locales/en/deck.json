@@ -286,6 +286,8 @@
     },
     "showing": "Showing {{count}} of {{total}} words",
     "emptyTitle": "No words found",
+    "emptyDeckTitle": "No words in this deck yet",
+    "emptyDeckDescription": "Open any word page and use “Add to deck” to start building it.",
     "emptySearchDescription": "No words match your search. Try a different term.",
     "emptyFilterDescription": "No words in this category.",
     "errorTitle": "Failed to load words",
@@ -357,7 +359,22 @@
     "groupCardCount": "{{n}} cards",
     "cardsViewToggleLabel": "Cards view",
     "cardsViewGrid": "Grid view",
-    "cardsViewList": "List view"
+    "cardsViewList": "List view",
+    "addToDeck": {
+      "button": "Add to deck",
+      "title": "Add to my deck",
+      "description": "Choose one of your decks for “{{lemma}}”. Click a deck to add or remove the word.",
+      "add": "Add",
+      "added": "Added",
+      "addedToast": "Added to “{{deckName}}”",
+      "removedToast": "Removed from “{{deckName}}”",
+      "addError": "Failed to add word to deck",
+      "removeError": "Failed to remove word from deck",
+      "empty": {
+        "title": "You don't have any decks yet",
+        "cta": "Create a deck"
+      }
+    }
   },
   "practice": {
     "title": "Practice",

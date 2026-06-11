@@ -17,7 +17,7 @@ from src.db.models import Deck, DeckWordEntry, User
 from src.repositories.card_record import CardRecordRepository
 from src.repositories.word_entry import WordEntryRepository
 from src.schemas.card_record import CardRecordResponse
-from src.schemas.word_entry import WordEntryResponse
+from src.schemas.word_entry import WordEntryMyDecksResponse, WordEntryResponse
 from src.services.word_entry_response import word_entry_to_response
 
 router = APIRouter(
@@ -220,3 +220,58 @@ async def get_word_entry_cards(
     active_cards = [cr for cr in card_records if cr.is_active]
 
     return [CardRecordResponse.model_validate(cr) for cr in active_cards]
+
+
+@router.get(
+    "/{word_entry_id}/my-decks",
+    response_model=WordEntryMyDecksResponse,
+    summary="List own decks containing a word entry",
+    description=(
+        "Return the IDs of the current user's active decks that contain this word entry. "
+        "Powers the add-to-deck picker on word pages."
+    ),
+    responses={
+        200: {"description": "Deck IDs of the user's decks containing the word entry"},
+        404: {"description": "Word entry not found or inactive"},
+    },
+)
+async def list_my_decks_for_word_entry(
+    word_entry_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> WordEntryMyDecksResponse:
+    """List the current user's active decks that contain this word entry.
+
+    Args:
+        word_entry_id: UUID of the word entry
+        db: Database session (injected)
+        current_user: Authenticated user (injected)
+
+    Returns:
+        WordEntryMyDecksResponse with the deck IDs
+
+    Raises:
+        401: If not authenticated
+        404: If word entry not found or inactive
+    """
+    word_entry_repo = WordEntryRepository(db)
+    word_entry = await word_entry_repo.get(word_entry_id)
+
+    if word_entry is None or not word_entry.is_active:
+        raise NotFoundException(
+            resource="WordEntry",
+            detail=f"Word entry with id '{word_entry_id}' not found",
+        )
+
+    result = await db.execute(
+        select(DeckWordEntry.deck_id)
+        .join(Deck, Deck.id == DeckWordEntry.deck_id)
+        .where(
+            DeckWordEntry.word_entry_id == word_entry_id,
+            Deck.owner_id == current_user.id,
+            Deck.is_active.is_(True),
+        )
+    )
+    deck_ids = [row[0] for row in result.all()]
+
+    return WordEntryMyDecksResponse(deck_ids=deck_ids)

@@ -169,6 +169,30 @@ Fired each time a user submits an answer during an exercise practice session.
 - `is_correct` (boolean) — whether the user's answer was correct.
 - `response_time_ms` (number) — milliseconds from exercise render to answer submission.
 
+## User Deck Word Events
+
+### `user_deck_word_added`
+
+Fired after a word entry is **successfully** added to one of the user's own decks from a word reference page.
+
+**Properties:**
+
+- `deck_id` (string) — UUID of the target personal deck.
+- `word_entry_id` (string) — UUID of the word entry added.
+- `lemma` (string) — Greek lemma of the word.
+- `source` (string) — where the action originated; currently always `word_reference`.
+
+### `user_deck_word_removed`
+
+Fired after a word entry is **successfully** removed from one of the user's own decks via the add-to-deck modal.
+
+**Properties:**
+
+- `deck_id` (string) — UUID of the personal deck.
+- `word_entry_id` (string) — UUID of the word entry removed.
+- `lemma` (string) — Greek lemma of the word.
+- `source` (string) — where the action originated; currently always `word_reference`.
+
 ## Admin Card Error Events (CER-59)
 
 > **Note:** These admin-only events are an exception to the "DO NOT create events for admin panel actions" rule. They are scoped to the `admin_card_error_` prefix and are used to track admin review workflows.
