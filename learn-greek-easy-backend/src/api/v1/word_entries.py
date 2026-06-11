@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.dependencies import get_current_user
 from src.core.exceptions import ForbiddenException, NotFoundException
 from src.db.dependencies import get_db
-from src.db.models import Deck, DeckWordEntry, User
+from src.db.models import Deck, DeckWordEntry, User, Visibility
 from src.repositories.card_record import CardRecordRepository
 from src.repositories.word_entry import WordEntryRepository
 from src.schemas.card_record import CardRecordResponse
@@ -257,7 +257,14 @@ async def list_my_decks_for_word_entry(
     word_entry_repo = WordEntryRepository(db)
     word_entry = await word_entry_repo.get(word_entry_id)
 
-    if word_entry is None or not word_entry.is_active:
+    # Private word entries owned by someone else are hidden (404) so the
+    # endpoint doesn't act as an existence oracle — same contract as the
+    # link endpoint in decks.py.
+    if (
+        word_entry is None
+        or not word_entry.is_active
+        or (word_entry.visibility == Visibility.PRIVATE and word_entry.owner_id != current_user.id)
+    ):
         raise NotFoundException(
             resource="WordEntry",
             detail=f"Word entry with id '{word_entry_id}' not found",

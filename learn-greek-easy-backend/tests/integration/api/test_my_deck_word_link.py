@@ -308,14 +308,17 @@ class TestAddWordEntryToMyDeck:
         client: AsyncClient,
         db_session: AsyncSession,
         auth_headers: dict[str, str],
+        test_user: User,
         user_owned_deck: Deck,
         shared_word: WordEntry,
     ):
         # Deck already contains a different word entry with the same
-        # lemma + part of speech + gender
+        # lemma + part of speech + gender. The twin is user-owned so it
+        # doesn't collide with the global (owner, lemma, pos, gender)
+        # unique constraint that shared_word occupies.
         twin = WordEntry(
             id=uuid4(),
-            owner_id=None,
+            owner_id=test_user.id,
             lemma=shared_word.lemma,
             part_of_speech=shared_word.part_of_speech,
             gender=shared_word.gender,
@@ -493,3 +496,135 @@ class TestStudyQueueDeckOwnership:
             headers=auth_headers,
         )
         assert response.status_code == 200
+
+
+class TestPremiumWordGate:
+    """Free users cannot link words that exist exclusively in premium system decks."""
+
+    @pytest.fixture
+    async def premium_deck_with_word(self, db_session: AsyncSession, shared_word: WordEntry):
+        """An active premium system deck containing shared_word."""
+        deck = Deck(
+            id=uuid4(),
+            name_en="Premium System Deck",
+            name_el="Πρίμιουμ",
+            name_ru="Премиум",
+            level=DeckLevel.B1,
+            is_active=True,
+            is_premium=True,
+        )
+        db_session.add(deck)
+        await db_session.flush()
+        db_session.add(DeckWordEntry(deck_id=deck.id, word_entry_id=shared_word.id))
+        await db_session.commit()
+        return deck
+
+    @pytest.mark.asyncio
+    async def test_free_user_blocked_for_premium_only_word(
+        self,
+        client: AsyncClient,
+        auth_headers: dict[str, str],
+        user_owned_deck: Deck,
+        shared_word: WordEntry,
+        premium_deck_with_word: Deck,
+    ):
+        response = await client.post(
+            f"/api/v1/decks/{user_owned_deck.id}/word-entries/{shared_word.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == 403
+        assert response.json()["error_code"] == "PREMIUM_REQUIRED"
+
+    @pytest.mark.asyncio
+    async def test_free_user_allowed_when_word_also_in_free_system_deck(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        auth_headers: dict[str, str],
+        user_owned_deck: Deck,
+        test_deck: Deck,
+        shared_word: WordEntry,
+        premium_deck_with_word: Deck,
+    ):
+        # The same word also lives in a free system deck -> not premium-exclusive
+        db_session.add(DeckWordEntry(deck_id=test_deck.id, word_entry_id=shared_word.id))
+        await db_session.commit()
+
+        response = await client.post(
+            f"/api/v1/decks/{user_owned_deck.id}/word-entries/{shared_word.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == 201
+
+
+class TestMyDecksPrivateWordGuard:
+    """my-decks endpoint must not act as an existence oracle for private words."""
+
+    @pytest.mark.asyncio
+    async def test_private_word_of_other_user_returns_404(
+        self,
+        client: AsyncClient,
+        auth_headers: dict[str, str],
+        private_word_of_other_user: WordEntry,
+    ):
+        response = await client.get(
+            f"/api/v1/word-entries/{private_word_of_other_user.id}/my-decks",
+            headers=auth_headers,
+        )
+        assert response.status_code == 404
+
+
+class TestDeckDetailIsOwned:
+    """GET /decks/{id} reports whether the deck is owned by the caller."""
+
+    @pytest.mark.asyncio
+    async def test_own_deck_is_owned_true(
+        self, client: AsyncClient, auth_headers: dict[str, str], user_owned_deck: Deck
+    ):
+        response = await client.get(f"/api/v1/decks/{user_owned_deck.id}", headers=auth_headers)
+        assert response.status_code == 200
+        assert response.json()["is_owned"] is True
+
+    @pytest.mark.asyncio
+    async def test_system_deck_is_owned_false(
+        self, client: AsyncClient, auth_headers: dict[str, str], test_deck: Deck
+    ):
+        response = await client.get(f"/api/v1/decks/{test_deck.id}", headers=auth_headers)
+        assert response.status_code == 200
+        assert response.json()["is_owned"] is False
+
+
+class TestCrossDeckQueueIsolation:
+    """Cards in other users' personal decks never enter the cross-deck study queue."""
+
+    @pytest.mark.asyncio
+    async def test_other_users_personal_deck_cards_excluded_from_unscoped_queue(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        auth_headers: dict[str, str],
+        other_user_deck: Deck,
+        shared_word: WordEntry,
+    ):
+        from src.db.models import CardRecord, CardType
+
+        # Another user's personal deck has a linked word with a generated card
+        db_session.add(DeckWordEntry(deck_id=other_user_deck.id, word_entry_id=shared_word.id))
+        card = CardRecord(
+            id=uuid4(),
+            word_entry_id=shared_word.id,
+            deck_id=other_user_deck.id,
+            card_type=CardType.MEANING_EL_TO_EN,
+            variant_key="default",
+            front_content={"text": "θάλασσα"},
+            back_content={"text": "sea"},
+            is_active=True,
+        )
+        db_session.add(card)
+        await db_session.commit()
+
+        # Unscoped (cross-deck) queue for the current user must not surface it
+        response = await client.get("/api/v1/study/queue/v2", headers=auth_headers)
+        assert response.status_code == 200
+        card_ids = [c["card_record_id"] for c in response.json()["cards"]]
+        assert str(card.id) not in card_ids

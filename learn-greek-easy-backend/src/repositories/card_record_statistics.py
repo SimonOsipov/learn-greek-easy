@@ -3,7 +3,7 @@
 from datetime import date
 from uuid import UUID
 
-from sqlalchemy import Date, and_, cast, delete, func, not_, select
+from sqlalchemy import Date, and_, cast, delete, func, not_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -137,6 +137,10 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
             .join(Deck, CardRecord.deck_id == Deck.id)
             .where(CardRecord.is_active == True)  # noqa: E712
             .where(Deck.is_active == True)  # noqa: E712
+            # New cards have no per-user statistics row to scope them, so restrict
+            # to system decks and the caller's own decks — without this, cards in
+            # other users' personal decks would surface in the cross-deck queue
+            .where(or_(Deck.owner_id.is_(None), Deck.owner_id == user_id))
             .where(not_(CardRecord.id.in_(studied_subq)))
             .order_by(CardRecord.created_at)
             .limit(limit)

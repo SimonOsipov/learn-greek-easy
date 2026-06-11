@@ -23,8 +23,11 @@ from src.core.exceptions import (
     DeckNotFoundException,
     ForbiddenException,
     NotFoundException,
+    PremiumRequiredException,
 )
 from src.core.localization import get_localized_deck_content
+from src.core.posthog import capture_event
+from src.core.subscription import get_effective_access_level
 from src.db.dependencies import get_db
 from src.db.models import (
     CardRecord,
@@ -32,6 +35,8 @@ from src.db.models import (
     DeckLevel,
     DeckWordEntry,
     PartOfSpeech,
+    SubscriptionStatus,
+    SubscriptionTier,
     User,
     Visibility,
     WordEntry,
@@ -699,6 +704,7 @@ async def get_deck(
         created_at=deck.created_at,
         updated_at=deck.updated_at,
         card_count=card_count,
+        is_owned=deck.owner_id == current_user.id,
         cover_image_url=_deck_cover_url(deck, s3),
     )
 
@@ -905,6 +911,42 @@ async def add_word_entry_to_my_deck(
             resource="WordEntry",
             detail=f"Word entry with id '{word_entry_id}' not found or inactive",
         )
+
+    # Premium gating: a word that exists exclusively in premium system decks is
+    # premium content — free users must not launder it into a personal (always
+    # non-premium) deck to practice it for free. Words that are also in a free
+    # system deck, or in no system deck at all (e.g. user-created), are not gated.
+    if get_effective_access_level(current_user) == SubscriptionTier.FREE:
+        system_premium_result = await db.execute(
+            select(Deck.is_premium)
+            .join(DeckWordEntry, DeckWordEntry.deck_id == Deck.id)
+            .where(
+                DeckWordEntry.word_entry_id == word_entry_id,
+                Deck.owner_id.is_(None),
+                Deck.is_active.is_(True),
+            )
+        )
+        system_premium_flags = [row[0] for row in system_premium_result.all()]
+        if system_premium_flags and all(system_premium_flags):
+            trial_eligible = current_user.subscription_status == SubscriptionStatus.NONE
+            capture_event(
+                distinct_id=str(current_user.id),
+                event="premium_gate_blocked",
+                properties={
+                    "gate_type": "premium_word",
+                    "deck_id": str(deck_id),
+                    "current_tier": SubscriptionTier.FREE.value,
+                    "subscription_status": current_user.subscription_status.value,
+                    "trial_eligible": trial_eligible,
+                },
+                user_email=current_user.email,
+            )
+            raise PremiumRequiredException(
+                detail="This word belongs to a Premium deck",
+                current_tier=SubscriptionTier.FREE.value,
+                trial_eligible=trial_eligible,
+                gate_type="premium_word",
+            )
 
     # Check if deck already has a word entry with same lemma+POS (via junction)
     link_dup_filters = [

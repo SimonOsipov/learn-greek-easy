@@ -502,7 +502,28 @@ describe('WordBrowser Component', () => {
   });
 
   describe('Empty State', () => {
-    it('should show empty state when no words exist', async () => {
+    it('should show the add-words hint for an empty own deck', async () => {
+      vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
+        deck_id: 'deck-1',
+        total: 0,
+        page: 1,
+        page_size: 40,
+        word_entries: [],
+      });
+
+      render(<WordBrowser deckId="deck-1" isOwnDeck={true} />, { wrapper: createWrapper() });
+
+      // Truly-empty own deck gets the add-words hint, not the filter empty state
+      await waitFor(() => {
+        expect(screen.getByText('No words in this deck yet')).toBeInTheDocument();
+      });
+
+      expect(
+        screen.getByText('Open any word page and use “Add to deck” to start building it.')
+      ).toBeInTheDocument();
+    });
+
+    it('should show the generic empty state for an empty system deck', async () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 0,
@@ -513,14 +534,11 @@ describe('WordBrowser Component', () => {
 
       render(<WordBrowser deckId="deck-1" />, { wrapper: createWrapper() });
 
-      // Truly-empty deck gets the add-words hint, not the filter empty state
+      // System decks can't be added to by the user — no add-words hint
       await waitFor(() => {
-        expect(screen.getByText('No words in this deck yet')).toBeInTheDocument();
+        expect(screen.getByText('No words found')).toBeInTheDocument();
       });
-
-      expect(
-        screen.getByText('Open any word page and use “Add to deck” to start building it.')
-      ).toBeInTheDocument();
+      expect(screen.queryByText('No words in this deck yet')).not.toBeInTheDocument();
     });
 
     it('should show search-specific empty state when search has no results', async () => {

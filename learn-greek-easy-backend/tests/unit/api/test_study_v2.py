@@ -43,6 +43,7 @@ class TestStudyV2Route:
         mock_deck = MagicMock(spec=Deck)
         mock_deck.is_active = True
         mock_deck.is_premium = True
+        mock_deck.owner_id = None  # system deck — passes the ownership check
 
         mock_repo = MagicMock()
         mock_repo.get = AsyncMock(return_value=mock_deck)
@@ -81,6 +82,7 @@ class TestStudyV2Route:
         deck_id = uuid4()
         mock_deck = MagicMock(spec=Deck)
         mock_deck.is_premium = False
+        mock_deck.owner_id = None  # system deck — passes the ownership check
         mock_repo = MagicMock()
         mock_repo.get = AsyncMock(return_value=mock_deck)
         mock_queue = _make_mock_queue()

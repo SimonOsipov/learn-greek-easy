@@ -84,7 +84,7 @@ export const V2DeckPage: React.FC<V2DeckPageProps> = ({ deckId }) => {
         <V2DeckHeader deck={selectedDeck} />
 
         {/* Word Browser Section */}
-        <WordBrowser deckId={deckId} />
+        <WordBrowser deckId={deckId} isOwnDeck={selectedDeck.isOwned ?? false} />
       </div>
     </div>
   );

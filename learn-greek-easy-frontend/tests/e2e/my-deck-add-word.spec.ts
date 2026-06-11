@@ -56,6 +56,18 @@ async function openAddToDeckModal(page: Page) {
   return modal;
 }
 
+/** Click an 'Added' deck row and confirm the destructive-removal dialog. */
+async function removeViaRow(page: Page, row: ReturnType<Page['locator']>) {
+  await row.click();
+  // Removal deletes practice progress — a confirmation dialog opens first
+  const confirmDialog = page.getByRole('dialog').filter({ hasText: 'Remove word from deck?' });
+  await expect(confirmDialog).toBeVisible({ timeout: 5000 });
+  await confirmDialog.getByRole('button', { name: 'Remove' }).click();
+  // .first(): the toaster renders the toast text in two nodes (visible + live region)
+  await expect(page.getByText(/Removed from/).first()).toBeVisible({ timeout: 10000 });
+  await expect(row.getByText('Add', { exact: true })).toBeVisible({ timeout: 10000 });
+}
+
 /**
  * Ensure the target deck row does NOT contain the word (cleanup from
  * earlier retries). Returns the row locator.
@@ -67,9 +79,7 @@ async function normalizeDeckRow(page: Page) {
   await expect(row).toBeVisible({ timeout: 10000 });
 
   if (await row.getByText('Added', { exact: true }).isVisible()) {
-    await row.click();
-    await expect(page.getByText(/Removed from/)).toBeVisible({ timeout: 10000 });
-    await expect(row.getByText('Add', { exact: true })).toBeVisible({ timeout: 10000 });
+    await removeViaRow(page, row);
   }
   return row;
 }
@@ -89,7 +99,7 @@ test.describe('My Deck - Add Word from Word Page', () => {
     // 3. Add the word to "Travel Phrases" (normalize first for retry safety)
     const targetRow = await normalizeDeckRow(page);
     await targetRow.click();
-    await expect(page.getByText(/Added to/)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/Added to/).first()).toBeVisible({ timeout: 10000 });
     await expect(targetRow.getByText('Added', { exact: true })).toBeVisible({ timeout: 10000 });
 
     // 4. Close the modal and open the personal deck — same V2 deck page as public decks
@@ -117,9 +127,7 @@ test.describe('My Deck - Add Word from Word Page', () => {
       .locator('[data-testid^="add-to-deck-row-"]')
       .filter({ hasText: TARGET_DECK_NAME });
     await expect(rowAfter.getByText('Added', { exact: true })).toBeVisible({ timeout: 10000 });
-    await rowAfter.click();
-    await expect(page.getByText(/Removed from/)).toBeVisible({ timeout: 10000 });
-    await expect(rowAfter.getByText('Add', { exact: true })).toBeVisible({ timeout: 10000 });
+    await removeViaRow(page, rowAfter);
 
     // 6. The personal deck is empty again and shows the add-words hint
     await page.keyboard.press('Escape');

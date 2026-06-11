@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 
 import { AlertCircle, BookOpen, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { DecksGrid, UserDeckEditModal } from '@/components/decks';
 import type { CreateSource } from '@/components/decks/UserDeckEditModal';
@@ -54,11 +54,18 @@ export const MyDecksPage: React.FC = () => {
   const { t } = useTranslation('deck');
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [decks, setDecks] = useState<Deck[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [createSource, setCreateSource] = useState<CreateSource>('my_decks_button');
+  // Arriving from the word page's add-to-deck modal opens the create dialog directly
+  const arrivedToCreate = Boolean(
+    (location.state as { openCreateDeck?: boolean } | null)?.openCreateDeck
+  );
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(arrivedToCreate);
+  const [createSource, setCreateSource] = useState<CreateSource>(
+    arrivedToCreate ? 'add_to_deck_modal' : 'my_decks_button'
+  );
 
   // Edit deck state
   const [editingDeck, setEditingDeck] = useState<Deck | null>(null);

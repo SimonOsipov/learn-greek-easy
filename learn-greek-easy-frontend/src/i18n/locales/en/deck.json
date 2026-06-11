@@ -373,6 +373,12 @@
       "empty": {
         "title": "You don't have any decks yet",
         "cta": "Create a deck"
+      },
+      "removeConfirm": {
+        "title": "Remove word from deck?",
+        "message": "Removing “{{lemma}}” from “{{deckName}}” deletes its cards and your practice progress for it in this deck. This cannot be undone.",
+        "confirm": "Remove",
+        "cancel": "Cancel"
       }
     }
   },

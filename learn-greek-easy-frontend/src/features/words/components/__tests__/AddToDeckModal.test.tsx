@@ -131,7 +131,7 @@ describe('AddToDeckModal', () => {
     expect(deckAPI.removeWordFromMyDeck).not.toHaveBeenCalled();
   });
 
-  it('removes the word when clicking a deck that already contains it', async () => {
+  it('removes the word after confirming when clicking a deck that already contains it', async () => {
     const user = userEvent.setup();
     vi.mocked(deckAPI.getMyDecks).mockResolvedValue(
       makeDeckList([makeDeck({ id: 'deck-1', name: 'My Greek Words' })])
@@ -143,11 +143,50 @@ describe('AddToDeckModal', () => {
 
     await user.click(await screen.findByTestId('add-to-deck-row-deck-1'));
 
+    // Removal is destructive (deletes progress) — a confirmation dialog opens first
+    expect(await screen.findByText('Remove word from deck?')).toBeInTheDocument();
+    expect(deckAPI.removeWordFromMyDeck).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Remove' }));
+
     await waitFor(() => {
       expect(deckAPI.removeWordFromMyDeck).toHaveBeenCalledWith('deck-1', WORD_ENTRY_ID);
     });
     expect(await screen.findByText('Removed from “My Greek Words”')).toBeInTheDocument();
     expect(deckAPI.addWordToMyDeck).not.toHaveBeenCalled();
+  });
+
+  it('does not remove the word when the confirmation is cancelled', async () => {
+    const user = userEvent.setup();
+    vi.mocked(deckAPI.getMyDecks).mockResolvedValue(
+      makeDeckList([makeDeck({ id: 'deck-1', name: 'My Greek Words' })])
+    );
+    vi.mocked(wordEntryAPI.getMyDecksForWord).mockResolvedValue({ deck_ids: ['deck-1'] });
+
+    renderModal();
+
+    await user.click(await screen.findByTestId('add-to-deck-row-deck-1'));
+    expect(await screen.findByText('Remove word from deck?')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Remove word from deck?')).not.toBeInTheDocument();
+    });
+    expect(deckAPI.removeWordFromMyDeck).not.toHaveBeenCalled();
+  });
+
+  it('shows an error state with retry when loading decks fails', async () => {
+    vi.mocked(deckAPI.getMyDecks).mockRejectedValue(new Error('500'));
+    vi.mocked(wordEntryAPI.getMyDecksForWord).mockResolvedValue({ deck_ids: [] });
+
+    renderModal();
+
+    expect(await screen.findByTestId('add-to-deck-error')).toBeInTheDocument();
+    expect(screen.getByText('Failed to load your decks')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Try Again' })).toBeInTheDocument();
+    // The misleading "no decks yet" empty state must NOT render on errors
+    expect(screen.queryByTestId('add-to-deck-empty')).not.toBeInTheDocument();
   });
 
   it('shows a destructive toast when adding fails', async () => {

@@ -18,7 +18,7 @@ import { deckAPI } from '@/services/deckAPI';
 
 import { UserDeckForm } from './UserDeckForm';
 
-export type CreateSource = 'my_decks_button' | 'empty_state_cta';
+export type CreateSource = 'my_decks_button' | 'empty_state_cta' | 'add_to_deck_modal';
 export type EditSource = 'grid_card' | 'detail_page';
 
 export interface UserDeckEditModalProps {

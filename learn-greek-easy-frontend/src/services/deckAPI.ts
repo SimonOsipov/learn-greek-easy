@@ -52,6 +52,8 @@ export interface DeckResponse {
  */
 export interface DeckDetailResponse extends DeckResponse {
   card_count: number;
+  /** True when the deck is a personal deck owned by the current user */
+  is_owned?: boolean;
 }
 
 /**
