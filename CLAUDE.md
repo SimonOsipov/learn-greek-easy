@@ -154,6 +154,14 @@ Periodically update `.claude/handoff.yaml` with:
 ### Setup (one-time per machine)
 See [docs/precompact-hook-setup.md](docs/precompact-hook-setup.md) for `.claude/` files to create.
 
+## Obsidian
+
+Project folder: `Simon Vault/Projects/Greekly/`
+- User stories: `Simon Vault/Projects/Greekly/User Stories/<EPIC>/` (archived: `User Stories/Archive/<EPIC>/`)
+- Roadmap canvas: `Simon Vault/Projects/Greekly/Features & Roadmap.canvas`
+
+The global workflow skills (`/post-merge-cleanup`, `/story-html`, etc.) resolve this project's vault paths from this section.
+
 ## Project Memory
 
 Auto-updated project state file: `~/.claude/projects/-Users-samosipov-Downloads-learn-greek-easy/memory/MEMORY.md`
