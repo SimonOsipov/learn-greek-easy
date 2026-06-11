@@ -12,6 +12,7 @@ import {
   monogramForScenario,
   clientStatusFor,
 } from '@/lib/situations/presentation';
+import { MissingDataDot } from '@/components/ui/missing-data-dot';
 import type { SituationItem } from '@/types/situation';
 
 // MOB-13: explicit rgba — no /NN modifier on var-backed tokens
@@ -83,12 +84,15 @@ export function SituationCard({ item, onPress }: SituationCardProps) {
       {/* ── Body column ── */}
       <View className="flex-1 py-3 px-3.5" style={{ minWidth: 0 }}>
         {/*
-         * Level pill intentionally omitted: the backend list endpoint
-         * (LearnerSituationListItem) does not expose a `level` field — level
-         * is only available on the situation detail response.  Rendering a
-         * hardcoded "B1" pill here is fabricated data and has been removed.
-         * Re-add when the backend serialises level on the list endpoint.
+         * Level pill slot: the backend list endpoint (LearnerSituationListItem)
+         * does not expose a `level` field — level is only available on the
+         * situation detail response. The MissingDataDot marks the gap; replace
+         * it with the real pill when the backend serialises level on the list
+         * endpoint.
          */}
+        <View className="flex-row items-center mb-1">
+          <MissingDataDot testID={`situation-card-level-gap-${item.id}`} />
+        </View>
 
         {/* Greek headline */}
         <Text

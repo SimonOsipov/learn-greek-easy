@@ -13,6 +13,7 @@
 import { View, Text, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import { MissingDataDot } from '@/components/ui/missing-data-dot';
 import type { CultureDeckResponse } from '@/types/culture';
 
 interface ExamDeckCardProps {
@@ -88,22 +89,27 @@ export function ExamDeckCard({ deck, tint, onPress }: ExamDeckCardProps) {
           </Text>
         ) : null}
 
-        {/* Top section: date kicker (derived from name) + title */}
+        {/* Top section: date kicker (derived from name) + title.
+            Backend gap (api-map #9): no exam_date field — the date is parsed
+            from the deck name; the MissingDataDot flags the gap. */}
         <View>
-          {watermark ? (
-            <Text
-              style={{
-                fontFamily: 'SpaceMono_400Regular',
-                fontSize: 10.5,
-                fontWeight: '700',
-                letterSpacing: 1.4,
-                textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.78)',
-              }}
-            >
-              {watermark}
-            </Text>
-          ) : null}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            {watermark ? (
+              <Text
+                style={{
+                  fontFamily: 'SpaceMono_400Regular',
+                  fontSize: 10.5,
+                  fontWeight: '700',
+                  letterSpacing: 1.4,
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.78)',
+                }}
+              >
+                {watermark}
+              </Text>
+            ) : null}
+            <MissingDataDot testID={`exam-deck-date-gap-${id}`} />
+          </View>
           <Text
             style={{
               marginTop: 6,

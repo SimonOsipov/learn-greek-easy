@@ -11,6 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowRight } from 'lucide-react-native';
 
 import { AudioPlayer } from './audio-player';
+import { MissingDataDot } from '@/components/ui/missing-data-dot';
 
 // CTA gradient (same as deck CTA: primary-2 → primary)
 const CTA_GRADIENT: readonly [string, string] = [
@@ -99,7 +100,7 @@ export function RetellingStep({
         className="flex-row gap-2.5 px-[18px] pb-5 pt-3 bg-bg"
         style={{ borderTopWidth: 0 }}
       >
-        {textEn && (
+        {textEn ? (
           <Pressable
             testID="retelling-translate-toggle"
             accessibilityRole="button"
@@ -110,6 +111,15 @@ export function RetellingStep({
               {showTranslation ? 'Hide translation' : 'Translate'}
             </Text>
           </Pressable>
+        ) : (
+          /* Translate-toggle slot: text_en is not exposed on the learner
+             endpoint (LearnerDescriptionNested) — the marker flags the gap. */
+          <View
+            testID="retelling-translate-gap"
+            className="h-12 px-3 rounded-[12px] border border-line items-center justify-center"
+          >
+            <MissingDataDot testID="retelling-translate-gap-dot" />
+          </View>
         )}
 
         <Pressable

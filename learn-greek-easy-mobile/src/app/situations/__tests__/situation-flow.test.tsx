@@ -613,3 +613,49 @@ describe('SituationFlowScreen', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Missing backend data markers (red dots)
+// ---------------------------------------------------------------------------
+
+describe('missing backend data markers', () => {
+  it('cover shows the level/domain pills gap dot', () => {
+    setQueries();
+    render(<SituationFlowScreen />);
+    expect(screen.getByTestId('situation-cover-pills-gap')).toBeTruthy();
+  });
+
+  it('cover shows no exercise gap dot when every exercise type is supported', () => {
+    setQueries();
+    render(<SituationFlowScreen />);
+    expect(screen.queryByTestId('situation-cover-exercise-gap')).toBeNull();
+  });
+
+  it('cover flags filtered unsupported exercise types with a gap dot', () => {
+    setQueries();
+    const supported = EXERCISES.exercises[0]!;
+    mockUseSituationExercises.mockReturnValue({
+      data: {
+        ...EXERCISES,
+        total_in_queue: 2,
+        exercises: [
+          supported,
+          { ...supported, exercise_id: 'ex-heard', exercise_type: 'select_heard' as const },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn().mockResolvedValue(undefined),
+    });
+    render(<SituationFlowScreen />);
+    expect(screen.getByTestId('situation-cover-exercise-gap')).toBeTruthy();
+  });
+
+  it('retelling shows the Translate gap marker instead of the toggle (text_en not exposed)', () => {
+    setQueries();
+    render(<SituationFlowScreen />);
+    fireEvent.press(screen.getByTestId('situation-cover-begin'));
+    expect(screen.getByTestId('retelling-translate-gap')).toBeTruthy();
+    expect(screen.queryByTestId('retelling-translate-toggle')).toBeNull();
+  });
+});

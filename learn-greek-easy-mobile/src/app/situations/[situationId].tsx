@@ -70,6 +70,10 @@ export default function SituationFlowScreen() {
       exercisesQuery.data ? filterSupportedExercises(exercisesQuery.data.exercises) : [],
     [exercisesQuery.data],
   );
+  // Exercises dropped by the filter (unsupported type / empty items) — surfaced
+  // on the cover as a missing-data marker next to the advertised count.
+  const unsupportedExerciseCount =
+    (exercisesQuery.data?.exercises.length ?? 0) - exercises.length;
 
   // ── Build retelling sequence (A2 first if present, then B1) ──
   // #8/#18: text_en / text_en_a2 do not exist in LearnerDescriptionNested —
@@ -282,6 +286,7 @@ export default function SituationFlowScreen() {
         onBack={handleBack}
         onBegin={handleBegin}
         topOffset={insets.top}
+        unsupportedExerciseCount={unsupportedExerciseCount}
       />
     );
   }

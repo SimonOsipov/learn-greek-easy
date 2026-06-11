@@ -10,6 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Play } from 'lucide-react-native';
 
 import { gradientForSituationId, monogramForScenario, formatDuration } from '@/lib/situations/presentation';
+import { MissingDataDot } from '@/components/ui/missing-data-dot';
 import type { SituationDetail } from '@/types/situation';
 
 // MOB-13: explicit rgba for over-gradient surfaces
@@ -28,9 +29,17 @@ export interface SituationCoverProps {
   onBack: () => void;
   onBegin: () => void;
   topOffset?: number;
+  /** Exercises dropped because their type has no mobile renderer yet. */
+  unsupportedExerciseCount?: number;
 }
 
-export function SituationCover({ situation, onBack, onBegin, topOffset = 0 }: SituationCoverProps) {
+export function SituationCover({
+  situation,
+  onBack,
+  onBegin,
+  topOffset = 0,
+  unsupportedExerciseCount = 0,
+}: SituationCoverProps) {
   const gradient = gradientForSituationId(situation.id) as unknown as [string, string];
   const mark = monogramForScenario(situation.scenario_el);
 
@@ -104,11 +113,12 @@ export function SituationCover({ situation, onBack, onBegin, topOffset = 0 }: Si
         }}
       >
         {/* Pills row — only honest data: exercise count if non-zero.
-            The B1 level pill is intentionally absent (level is not exposed on
-            SituationDetail in the learner endpoint — adding it would be fabricated data).
-            The 'Practice' domain pill is also removed for the same reason (no domain
-            field on the backend). Re-add when backend exposes these fields. */}
+            The B1 level pill and the 'Practice' domain pill are absent (neither
+            field is exposed on the learner SituationDetail endpoint — rendering
+            them would be fabricated data). The MissingDataDot marks that slot;
+            replace it with real pills when the backend exposes the fields. */}
         <View className="flex-row items-center gap-1.5 mb-3.5">
+          <MissingDataDot testID="situation-cover-pills-gap" />
           {exerciseCount > 0 && (
             <View
               style={{
@@ -166,6 +176,12 @@ export function SituationCover({ situation, onBack, onBegin, topOffset = 0 }: Si
             >
               {exerciseCount} exercises
             </Text>
+          )}
+          {/* Some exercise types (select_heard, word_order, picture types) have no
+              mobile renderer yet and are filtered out of the flow — flag the
+              mismatch between the advertised count and what actually plays. */}
+          {unsupportedExerciseCount > 0 && (
+            <MissingDataDot testID="situation-cover-exercise-gap" />
           )}
           {audioLabel && (
             <>

@@ -240,3 +240,38 @@ describe('WordDetailScreen', () => {
     expect(mockShowComingSoonToast).toHaveBeenCalledTimes(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Notes canon + missing-data markers
+// ---------------------------------------------------------------------------
+
+describe('notes block and gap markers', () => {
+  it('renders the note block from grammar_data.notes (web canon key)', () => {
+    setQueries();
+    mockUseWordEntry.mockReturnValue({
+      data: {
+        ...WORD,
+        grammar_data: { ...WORD.grammar_data, notes: 'Στο σπίτι means both at home and to the house.' },
+      },
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn().mockResolvedValue(undefined),
+    });
+    render(<WordDetailScreen />);
+    expect(screen.getByTestId('word-detail-note')).toBeTruthy();
+    expect(screen.getByText(/at home and to the house/)).toBeTruthy();
+  });
+
+  it('hides the note block when grammar_data has no notes', () => {
+    setQueries();
+    render(<WordDetailScreen />);
+    expect(screen.queryByTestId('word-detail-note')).toBeNull();
+  });
+
+  it('shows the card-type mastery granularity gap dot on the Cards tab', () => {
+    setQueries();
+    render(<WordDetailScreen />);
+    fireEvent.press(screen.getByTestId('word-tab-cards'));
+    expect(screen.getByTestId('word-cards-mastery-gap')).toBeTruthy();
+  });
+});

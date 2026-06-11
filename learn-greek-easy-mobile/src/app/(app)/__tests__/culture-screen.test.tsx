@@ -390,3 +390,16 @@ describe('CultureScreen', () => {
     expect(screen.getByTestId('exam-deck-card-exam-feb-25')).toBeTruthy();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Missing backend data markers (red dots)
+// ---------------------------------------------------------------------------
+
+describe('missing backend data markers', () => {
+  it('exam deck cards show the exam_date gap dot', () => {
+    setQueries();
+    render(<CultureScreen />);
+    expect(screen.getByTestId('exam-deck-date-gap-exam-jul-25')).toBeTruthy();
+    expect(screen.getByTestId('exam-deck-date-gap-exam-feb-25')).toBeTruthy();
+  });
+});

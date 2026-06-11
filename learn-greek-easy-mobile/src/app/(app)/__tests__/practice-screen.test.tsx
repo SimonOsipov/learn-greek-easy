@@ -179,3 +179,15 @@ describe('PracticeScreen', () => {
     expect(mockPush).toHaveBeenCalledWith('/situations/court');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Missing backend data markers (red dots)
+// ---------------------------------------------------------------------------
+
+describe('missing backend data markers', () => {
+  it('situation cards show the level-pill gap dot', () => {
+    setQueries();
+    render(<PracticeScreen />);
+    expect(screen.getByTestId('situation-card-level-gap-court')).toBeTruthy();
+  });
+});

@@ -28,6 +28,7 @@ import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 
 import { useWordEntry, useWordCards, useWordMasteryItem } from '@/hooks/use-word-detail';
 import { useToast } from '@/components/ui/toast';
+import { MissingDataDot } from '@/components/ui/missing-data-dot';
 import { track } from '@/lib/analytics';
 import {
   GENDER_FG,
@@ -670,8 +671,9 @@ export default function WordDetailScreen() {
               </View>
             ) : null}
 
-            {/* Note (optional — stored in grammar_data.note if present) */}
-            {typeof word.grammar_data?.['note'] === 'string' ? (
+            {/* Note (optional — stored in grammar_data.notes; matches the web
+                word-reference canon, which reads `notes`, not `note`) */}
+            {typeof word.grammar_data?.['notes'] === 'string' ? (
               <View
                 testID="word-detail-note"
                 className="rounded-xl px-4 py-3.5"
@@ -691,7 +693,7 @@ export default function WordDetailScreen() {
                   className="text-[13px] leading-[19px]"
                   style={{ color: NOTE_TEXT }}
                 >
-                  {word.grammar_data['note'] as string}
+                  {word.grammar_data['notes'] as string}
                 </Text>
               </View>
             ) : null}
@@ -730,9 +732,15 @@ export default function WordDetailScreen() {
                 {/* Mastery bar */}
                 <View testID="word-cards-mastery-bar">
                   <View className="flex-row justify-between items-center mb-1.5">
-                    <Text className="text-fg2 text-[12px] font-semibold">
-                      {masteredCardCount} of {totalCardCount} mastered
-                    </Text>
+                    <View className="flex-row items-center gap-1.5">
+                      <Text className="text-fg2 text-[12px] font-semibold">
+                        {masteredCardCount} of {totalCardCount} mastered
+                      </Text>
+                      {/* Backend gap: word-mastery is only exposed per card_type
+                          (type_progress), not per individual card — every card in
+                          a group shares its type's status. */}
+                      <MissingDataDot testID="word-cards-mastery-gap" />
+                    </View>
                     <Text
                       className="text-[11px] font-semibold"
                       style={{
