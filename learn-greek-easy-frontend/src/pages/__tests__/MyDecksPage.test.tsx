@@ -7,9 +7,11 @@
  *    tags null → [])
  * 2. cardCount null → 0 (via card_count ?? 0)
  * 3. level.toUpperCase guard — lowercase level from API is uppercased correctly
- * 4. Optimistic delete: success removes the deck from the list
- * 5. Delete failure: deck stays in list + destructive toast is shown
- * 6. createSource="empty_state_cta" is passed to UserDeckEditModal when CTA fires
+ * 4. createSource="empty_state_cta" / "my_decks_button" is passed to UserDeckEditModal
+ * 5. Empty state vs decks grid
+ *
+ * Edit/delete moved off the grid card onto the deck detail page (V2DeckPage) —
+ * those flows are covered in V2DeckPage.test.tsx.
  */
 
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
@@ -18,7 +20,6 @@ import { screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { render } from '@/lib/test-utils';
 import { deckAPI } from '@/services/deckAPI';
 import type { DeckResponse } from '@/services/deckAPI';
-import { track } from '@/lib/analytics';
 import { MyDecksPage } from '../MyDecksPage';
 
 // ---------------------------------------------------------------------------
@@ -48,42 +49,23 @@ vi.mock('react-router-dom', async () => {
 vi.mock('@/services/deckAPI', () => ({
   deckAPI: {
     getMyDecks: vi.fn(),
-    deleteMyDeck: vi.fn(),
   },
 }));
 
-// Mock toast — the page calls `const { toast } = useToast()`
-// The Toaster component (included in test-utils wrapper) also calls useToast()
-// and destructures `{ toasts }`, so we must provide both.
-const mockToast = vi.fn();
-vi.mock('@/hooks/use-toast', () => ({
-  useToast: () => ({ toast: mockToast, toasts: [] }),
-}));
-
-// Mock DecksGrid to expose deck cards as simple test elements with delete
-// and edit buttons so we can trigger callbacks without a full grid render.
+// Mock DecksGrid to expose deck cards as simple test elements. Edit/delete
+// actions no longer live on the grid — they moved to the deck detail page.
 vi.mock('@/components/decks', () => ({
   DecksGrid: ({
     decks,
-    onDeleteDeck,
-    onEditDeck,
     onDeckClick,
   }: {
     decks: { id: string; title: string }[];
-    onDeleteDeck?: (deck: { id: string; title: string }) => void;
-    onEditDeck?: (deck: { id: string; title: string }) => void;
     onDeckClick?: (id: string) => void;
   }) => (
     <div data-testid="decks-grid">
       {decks.map((d) => (
         <div key={d.id} data-testid={`deck-card-${d.id}`}>
           <span>{d.title}</span>
-          <button data-testid={`delete-${d.id}`} onClick={() => onDeleteDeck && onDeleteDeck(d)}>
-            delete
-          </button>
-          <button data-testid={`edit-${d.id}`} onClick={() => onEditDeck && onEditDeck(d)}>
-            edit
-          </button>
           <button data-testid={`click-${d.id}`} onClick={() => onDeckClick && onDeckClick(d.id)}>
             open
           </button>
@@ -111,29 +93,6 @@ vi.mock('@/components/decks', () => ({
         </button>
         <button onClick={onSuccess} data-testid="modal-success">
           success
-        </button>
-      </div>
-    ) : null,
-}));
-
-// Mock ConfirmDialog — captures the confirm/cancel callbacks
-vi.mock('@/components/dialogs/ConfirmDialog', () => ({
-  ConfirmDialog: ({
-    open,
-    onConfirm,
-    onCancel,
-  }: {
-    open: boolean;
-    onConfirm?: () => void;
-    onCancel?: () => void;
-  }) =>
-    open ? (
-      <div data-testid="confirm-dialog">
-        <button onClick={onConfirm} data-testid="confirm-ok">
-          confirm
-        </button>
-        <button onClick={onCancel} data-testid="confirm-cancel">
-          cancel
         </button>
       </div>
     ) : null,
@@ -274,109 +233,6 @@ describe('MyDecksPage — transformDeckResponse field mapping', () => {
   });
 });
 
-describe('MyDecksPage — optimistic delete (success)', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('removes the deck from the list after a successful delete', async () => {
-    const deck = makeDeckResponse({ id: 'deck-to-delete', name: 'Delete Me' });
-    (deckAPI.getMyDecks as Mock).mockResolvedValue(makeDecksResponse([deck]));
-    (deckAPI.deleteMyDeck as Mock).mockResolvedValue(undefined);
-
-    await renderAndWait();
-
-    expect(screen.getByText('Delete Me')).toBeInTheDocument();
-
-    // Click delete on the card to open confirm dialog
-    fireEvent.click(screen.getByTestId('delete-deck-to-delete'));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
-    });
-
-    // Confirm deletion
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('confirm-ok'));
-    });
-
-    await waitFor(() => {
-      expect(deckAPI.deleteMyDeck).toHaveBeenCalledWith('deck-to-delete');
-      // Deck is removed from the local state
-      expect(screen.queryByText('Delete Me')).not.toBeInTheDocument();
-    });
-  });
-
-  it('shows a (non-destructive) toast after successful delete', async () => {
-    const deck = makeDeckResponse({ id: 'deck-toast', name: 'Toast Deck' });
-    (deckAPI.getMyDecks as Mock).mockResolvedValue(makeDecksResponse([deck]));
-    (deckAPI.deleteMyDeck as Mock).mockResolvedValue(undefined);
-
-    await renderAndWait();
-
-    fireEvent.click(screen.getByTestId('delete-deck-toast'));
-    await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('confirm-ok'));
-    });
-
-    await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledTimes(1);
-      // Success toast does not have a destructive variant
-      const [callArg] = (mockToast as Mock).mock.calls[0];
-      expect(callArg.variant).not.toBe('destructive');
-    });
-  });
-});
-
-describe('MyDecksPage — optimistic delete (failure)', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('keeps the deck in the list when the delete API call fails', async () => {
-    const deck = makeDeckResponse({ id: 'deck-fail', name: 'Keep Me On Failure' });
-    (deckAPI.getMyDecks as Mock).mockResolvedValue(makeDecksResponse([deck]));
-    (deckAPI.deleteMyDeck as Mock).mockRejectedValue(new Error('Network error'));
-
-    await renderAndWait();
-
-    expect(screen.getByText('Keep Me On Failure')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByTestId('delete-deck-fail'));
-    await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('confirm-ok'));
-    });
-
-    // Deck should still be in the list (no optimistic removal on failure)
-    await waitFor(() => {
-      expect(screen.getByText('Keep Me On Failure')).toBeInTheDocument();
-    });
-  });
-
-  it('shows a destructive toast when the delete API call fails', async () => {
-    const deck = makeDeckResponse({ id: 'deck-err', name: 'Error Deck' });
-    (deckAPI.getMyDecks as Mock).mockResolvedValue(makeDecksResponse([deck]));
-    (deckAPI.deleteMyDeck as Mock).mockRejectedValue(new Error('Server error'));
-
-    await renderAndWait();
-
-    fireEvent.click(screen.getByTestId('delete-deck-err'));
-    await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('confirm-ok'));
-    });
-
-    await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
-    });
-  });
-});
-
 describe('MyDecksPage — createSource analytics', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -430,22 +286,6 @@ describe('MyDecksPage — createSource analytics', () => {
       const modal = screen.getByTestId('user-deck-edit-modal');
       expect(modal).toBeInTheDocument();
       expect(modal).toHaveAttribute('data-source', 'my_decks_button');
-    });
-  });
-
-  it('tracks user_deck_delete_started with correct payload when delete is initiated', async () => {
-    const deck = makeDeckResponse({ id: 'deck-track', name: 'Track Delete' });
-    (deckAPI.getMyDecks as Mock).mockResolvedValue(makeDecksResponse([deck]));
-    (deckAPI.deleteMyDeck as Mock).mockResolvedValue(undefined);
-
-    await renderAndWait();
-
-    fireEvent.click(screen.getByTestId('delete-deck-track'));
-
-    expect(track).toHaveBeenCalledWith('user_deck_delete_started', {
-      deck_id: 'deck-track',
-      deck_name: 'Track Delete',
-      source: 'grid_card',
     });
   });
 });
