@@ -533,7 +533,7 @@ class TestPremiumWordGate:
             headers=auth_headers,
         )
         assert response.status_code == 403
-        assert response.json()["error_code"] == "PREMIUM_REQUIRED"
+        assert response.json()["error"]["code"] == "PREMIUM_REQUIRED"
 
     @pytest.mark.asyncio
     async def test_free_user_allowed_when_word_also_in_free_system_deck(

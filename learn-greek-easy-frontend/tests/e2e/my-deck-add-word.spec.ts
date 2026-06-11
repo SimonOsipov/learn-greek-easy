@@ -56,6 +56,17 @@ async function openAddToDeckModal(page: Page) {
   return modal;
 }
 
+/**
+ * Close the add-to-deck modal via its Close button. (Escape would dismiss the
+ * success toast instead — Radix only dismisses the highest layer, and a toast
+ * registers its own dismissable layer above the dialog.)
+ */
+async function closeAddToDeckModal(page: Page) {
+  const modal = page.locator('[data-testid="add-to-deck-modal"]');
+  await modal.getByRole('button', { name: 'Close' }).click();
+  await expect(modal).not.toBeVisible({ timeout: 5000 });
+}
+
 /** Click an 'Added' deck row and confirm the destructive-removal dialog. */
 async function removeViaRow(page: Page, row: ReturnType<Page['locator']>) {
   await row.click();
@@ -103,8 +114,7 @@ test.describe('My Deck - Add Word from Word Page', () => {
     await expect(targetRow.getByText('Added', { exact: true })).toBeVisible({ timeout: 10000 });
 
     // 4. Close the modal and open the personal deck — same V2 deck page as public decks
-    await page.keyboard.press('Escape');
-    await expect(page.locator('[data-testid="add-to-deck-modal"]')).not.toBeVisible();
+    await closeAddToDeckModal(page);
 
     await page.goto('/my-decks');
     const myDeckCard = page
@@ -130,7 +140,7 @@ test.describe('My Deck - Add Word from Word Page', () => {
     await removeViaRow(page, rowAfter);
 
     // 6. The personal deck is empty again and shows the add-words hint
-    await page.keyboard.press('Escape');
+    await closeAddToDeckModal(page);
     await page.goto('/my-decks');
     await expect(myDeckCard).toBeVisible({ timeout: 15000 });
     await myDeckCard.click();
