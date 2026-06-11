@@ -27,6 +27,13 @@ export interface CompletionStepProps {
   audioSeconds: number;
   elapsedSeconds: number;
   onBack: () => void;
+  /**
+   * Number of exercises answered THIS session (from scores.length in the parent).
+   * When 0 (e.g. user resumed an already-completed situation without re-answering
+   * any exercises), the score sentence is hidden to avoid fabricated "0 of N right"
+   * display.
+   */
+  sessionExerciseCount: number;
 }
 
 export function CompletionStep({
@@ -35,6 +42,7 @@ export function CompletionStep({
   audioSeconds,
   elapsedSeconds,
   onBack,
+  sessionExerciseCount,
 }: CompletionStepProps) {
   const formatTime = (s: number) => {
     if (s < 60) return `${s}s`;
@@ -88,18 +96,22 @@ export function CompletionStep({
         Situation complete
       </Text>
 
-      {/* Score */}
-      <Text
-        testID="completion-score"
-        className="text-fg2 text-[14px] leading-[21px] text-center mt-1.5 mb-[22px]"
-        style={{ maxWidth: 280 }}
-      >
-        You got{' '}
-        <Text className="text-fg font-bold">
-          {correctCount} of {totalCount}
-        </Text>{' '}
-        right on the first try.
-      </Text>
+      {/* Score — only shown when exercises were answered this session */}
+      {sessionExerciseCount > 0 ? (
+        <Text
+          testID="completion-score"
+          className="text-fg2 text-[14px] leading-[21px] text-center mt-1.5 mb-[22px]"
+          style={{ maxWidth: 280 }}
+        >
+          You got{' '}
+          <Text className="text-fg font-bold">
+            {correctCount} of {sessionExerciseCount}
+          </Text>{' '}
+          right on the first try.
+        </Text>
+      ) : (
+        <View testID="completion-score-hidden" className="mt-1.5 mb-[22px]" />
+      )}
 
       {/* Stats row */}
       <View

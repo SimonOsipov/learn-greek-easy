@@ -36,6 +36,12 @@ export interface ProfileHeaderProps {
   levelName: string;
   /** 0–100 progress percentage to next level. */
   progressPct: number;
+  /**
+   * Current XP level number (1–15). When provided, the progress label reads
+   * "X% to Level {currentLevel + 1}". When at max level (15) shows "Max level".
+   * Falls back to the generic "% to next level" copy when not supplied.
+   */
+  currentLevel?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -50,6 +56,9 @@ const GRADIENT_COLORS: [string, string] = ['rgb(36,99,235)', 'rgb(124,58,237)'];
 // ProfileHeader
 // ---------------------------------------------------------------------------
 
+/** Max XP level in the system (backend: levels.py). */
+const MAX_LEVEL = 15;
+
 export function ProfileHeader({
   testID,
   fullName,
@@ -57,9 +66,20 @@ export function ProfileHeader({
   avatarUrl,
   levelName,
   progressPct,
+  currentLevel,
 }: ProfileHeaderProps) {
   // Clamp progress to [0, 1]
   const clampedPct = Math.max(0, Math.min(100, progressPct)) / 100;
+
+  // Build the progress sub-label: "X% to Level N+1" (or "Max level" at cap).
+  const progressLabel = (() => {
+    const pct = Math.round(Math.max(0, Math.min(100, progressPct)));
+    if (currentLevel !== undefined) {
+      if (currentLevel >= MAX_LEVEL) return 'Max level';
+      return `${pct}% to Level ${currentLevel + 1}`;
+    }
+    return `${pct}% to next level`;
+  })();
 
   return (
     <View
@@ -136,7 +156,7 @@ export function ProfileHeader({
             className="text-fg2"
             style={{ fontSize: 12, lineHeight: 18 }}
           >
-            {Math.round(Math.max(0, Math.min(100, progressPct)))}% to next level
+            {progressLabel}
           </Text>
         </View>
 

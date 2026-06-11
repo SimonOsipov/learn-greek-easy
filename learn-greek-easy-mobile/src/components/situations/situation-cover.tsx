@@ -103,38 +103,29 @@ export function SituationCover({ situation, onBack, onBegin, topOffset = 0 }: Si
           zIndex: 2,
         }}
       >
-        {/* Pills row */}
+        {/* Pills row — only honest data: exercise count if non-zero.
+            The B1 level pill is intentionally absent (level is not exposed on
+            SituationDetail in the learner endpoint — adding it would be fabricated data).
+            The 'Practice' domain pill is also removed for the same reason (no domain
+            field on the backend). Re-add when backend exposes these fields. */}
         <View className="flex-row items-center gap-1.5 mb-3.5">
-          <View
-            style={{
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-              borderRadius: 9999,
-              backgroundColor: WHITE_22,
-            }}
-          >
-            <Text
-              className="text-[10.5px] font-bold tracking-[0.08em] uppercase"
-              style={{ fontFamily: 'SpaceMono_400Regular', color: WHITE_96 }}
+          {exerciseCount > 0 && (
+            <View
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: 9999,
+                backgroundColor: WHITE_22,
+              }}
             >
-              B1
-            </Text>
-          </View>
-          <View
-            style={{
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-              borderRadius: 9999,
-              backgroundColor: SCRIM_25,
-            }}
-          >
-            <Text
-              className="text-[10.5px] font-bold tracking-[0.08em] uppercase"
-              style={{ fontFamily: 'SpaceMono_400Regular', color: WHITE_96 }}
-            >
-              Practice
-            </Text>
-          </View>
+              <Text
+                className="text-[10.5px] font-bold tracking-[0.08em] uppercase"
+                style={{ fontFamily: 'SpaceMono_400Regular', color: WHITE_96 }}
+              >
+                {exerciseCount} {exerciseCount === 1 ? 'exercise' : 'exercises'}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Greek headline */}

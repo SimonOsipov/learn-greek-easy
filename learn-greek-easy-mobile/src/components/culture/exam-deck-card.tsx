@@ -27,8 +27,10 @@ interface ExamDeckCardProps {
  * api-map gap #9: there is no exam_date field on CultureDeckResponse; the date
  * is derived from name_en (or name) as a best-effort visual hint. If no month
  * abbreviation is found, returns '' (no watermark rendered).
+ *
+ * Exported for unit-testing. Not part of the public component API.
  */
-function dateWatermarkFromName(name: string | null | undefined): string {
+export function dateWatermarkFromName(name: string | null | undefined): string {
   if (!name) return '';
   const match = name.match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/i);
   return match ? (match[1] ?? '') : '';

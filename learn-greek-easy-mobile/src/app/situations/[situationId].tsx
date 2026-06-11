@@ -40,6 +40,12 @@ const SUPPORTED_EXERCISE_TYPES = new Set([
 
 function filterSupportedExercises(exercises: ExerciseQueueItem[]): ExerciseQueueItem[] {
   return exercises.filter((ex) => {
+    // SF-4: skip exercises with an empty items array — they render a blank body
+    // with a permanently disabled Check button.
+    if (ex.items.length === 0) {
+      console.info('[SituationFlow] skipping exercise with empty items array:', ex.exercise_id);
+      return false;
+    }
     const supported = SUPPORTED_EXERCISE_TYPES.has(ex.exercise_type);
     if (!supported) {
       // Dev note — intentional deviation logged but not shown to user
@@ -104,21 +110,39 @@ export default function SituationFlowScreen() {
   // ── Resume: one-shot init effect — must run after both queries resolve ──
   // #7/#39: initialStep captured in useState before data loads is always 0
   // on cold open. We defer to an effect that fires once both situation and
-  // exercises are loaded, setting the step to cover + retellings + done.
+  // exercises are loaded.
+  //
+  // Resume semantics (QA fix): we use the per-exercise SM-2 status from the
+  // fetched queue (ExerciseQueueItem.status / is_new) rather than the raw
+  // situation.exercise_completed counter, which counts against ALL exercise
+  // types (including unsupported ones) and may produce a misleading offset.
+  //
+  // Rules:
+  //   - done===0 (all exercises are new)   → cover (index 0).
+  //   - done>0 and a 'new' exercise exists in the filtered list
+  //     → resume at cover + retellings + firstNewExerciseIndex.
+  //   - done>0 and NO 'new' exercise exists (all answered)
+  //     → land on COVER (never fabricate a 0-score completion screen).
   const [stepIndex, setStepIndex] = useState(0);
   const didInitRef = useRef(false);
   useEffect(() => {
     if (didInitRef.current) return;
     if (!situation || !exercisesQuery.data) return; // wait for both queries
     didInitRef.current = true;
-    const done = situation.exercise_completed;
-    if (done > 0 && done < situation.exercise_total) {
-      // skip cover + retellings + already-done exercises (clamped to filtered list)
+
+    // Count exercises whose SM-2 status marks them as not yet answered.
+    // is_new===true OR status==='new' both indicate an un-answered exercise.
+    const firstNewIdx = exercises.findIndex((ex) => ex.is_new || ex.status === 'new');
+    const anyDone = exercises.some((ex) => !ex.is_new && ex.status !== 'new');
+
+    if (anyDone && firstNewIdx >= 0) {
+      // Resume at the first un-answered exercise in the filtered list.
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setStepIndex(1 + retellings.length + Math.min(done, exercises.length));
+      setStepIndex(1 + retellings.length + firstNewIdx);
     }
-    // else: start at 0 (cover) — default
-  }, [situation, exercisesQuery.data, retellings.length, exercises.length]);
+    // else: all new (start at cover) or all answered (also land on cover —
+    // never jump to the completion step with a fabricated 0 score).
+  }, [situation, exercisesQuery.data, exercises, retellings.length]);
   // scores[i] = score for exercise index i (0 or 1)
   const [scores, setScores] = useState<number[]>([]);
   // Captured once when flow starts (not in render). useMemo ensures stable value.
@@ -271,6 +295,7 @@ export default function SituationFlowScreen() {
         audioSeconds={audioSeconds}
         elapsedSeconds={completionData?.elapsedSeconds ?? 0}
         onBack={handleBackToPractice}
+        sessionExerciseCount={scores.length}
       />
     );
   }

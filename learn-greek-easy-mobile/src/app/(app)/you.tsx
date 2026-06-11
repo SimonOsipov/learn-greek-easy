@@ -212,6 +212,7 @@ export default function YouScreen() {
 
   const levelName = xp?.level_name_english ?? 'Learner';
   const progressPct = xp?.progress_percentage ?? 0;
+  const currentLevel = xp?.current_level;
 
   const heat = buildHeatmap(trends?.daily_stats ?? []);
   const todayIndex = todayHeatmapIndex();
@@ -269,6 +270,7 @@ export default function YouScreen() {
             avatarUrl={profile.avatar_url}
             levelName={levelName}
             progressPct={progressPct}
+            currentLevel={currentLevel}
           />
         </View>
 

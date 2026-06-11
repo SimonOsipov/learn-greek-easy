@@ -387,22 +387,31 @@ describe('SituationFlowScreen', () => {
     expect(screen.getByTestId('exercise-check')).toBeTruthy();
   });
 
-  // #7/#39: resume — exercise_completed=2/exercise_total=4 should open on the third exercise
-  it('resumes at the correct exercise step when exercise_completed > 0', async () => {
+  // #7/#39: resume — exercises[0] and [1] already answered (status='review', is_new=false);
+  // exercises[2] and [3] are still new. Flow should open on the third exercise (index 2).
+  it('resumes at the first new exercise when some exercises are already answered', async () => {
     const resumeSituation = {
       ...SITUATION,
       exercise_total: 4,
       exercise_completed: 2,
     };
-    // Build a 4-exercise queue; the flow should skip to index 2 (third exercise)
-    const ex = (id: string, q: string): typeof EXERCISES_TWO['exercises'][0] => ({
+
+    type ExerciseStatus = 'new' | 'learning' | 'review' | 'mastered';
+
+    // Helper: build a single exercise fixture with explicit status
+    const ex = (
+      id: string,
+      q: string,
+      status: ExerciseStatus,
+      is_new: boolean,
+    ): typeof EXERCISES_TWO['exercises'][0] => ({
       exercise_id: id,
       exercise_type: 'select_correct_answer' as const,
       modality: 'reading' as const,
       audio_level: 'B1' as const,
       source_type: 'description' as const,
-      status: 'new' as const,
-      is_new: true,
+      status,
+      is_new,
       items: [{
         item_index: 0,
         payload: {
@@ -415,16 +424,17 @@ describe('SituationFlowScreen', () => {
         },
       }],
     });
+
     const fourExercises: ExerciseQueue = {
-      total_due: 4,
-      total_new: 4,
+      total_due: 2,
+      total_new: 2,
       total_early_practice: 0,
       total_in_queue: 4,
       exercises: [
-        ex('ex-r1', 'Ερώτηση 1;'),
-        ex('ex-r2', 'Ερώτηση 2;'),
-        ex('ex-r3', 'Ερώτηση 3;'),
-        ex('ex-r4', 'Ερώτηση 4;'),
+        ex('ex-r1', 'Ερώτηση 1;', 'review', false), // already answered
+        ex('ex-r2', 'Ερώτηση 2;', 'review', false), // already answered
+        ex('ex-r3', 'Ερώτηση 3;', 'new',    true),  // first un-answered
+        ex('ex-r4', 'Ερώτηση 4;', 'new',    true),  // second un-answered
       ],
     };
     mockUseSituationDetail.mockReturnValue({
@@ -445,10 +455,127 @@ describe('SituationFlowScreen', () => {
     // After both queries resolve, the init effect runs (within act)
     await act(async () => {});
 
-    // Should have jumped past cover + retellings (0) + 2 completed exercises → exercise index 2
-    // so step-header should be visible and the third exercise question should show
+    // Should have jumped to the first new exercise (index 2 in the filtered list)
     expect(screen.getByTestId('situation-flow-exercise')).toBeTruthy();
     expect(screen.getByTestId('exercise-question-el')).toHaveTextContent('Ερώτηση 3;');
+  });
+
+  // When all exercises are already answered (all non-new), resume must land on the
+  // cover — never the completion step with a fabricated 0 score.
+  it('lands on cover (not completion) when all exercises in the queue are already answered', async () => {
+    const allAnsweredSituation = {
+      ...SITUATION,
+      exercise_total: 2,
+      exercise_completed: 2,
+    };
+
+    type ExerciseStatus = 'new' | 'learning' | 'review' | 'mastered';
+    const ex = (id: string, q: string): typeof EXERCISES_TWO['exercises'][0] => ({
+      exercise_id: id,
+      exercise_type: 'select_correct_answer' as const,
+      modality: 'reading' as const,
+      audio_level: 'B1' as const,
+      source_type: 'description' as const,
+      status: 'review' as ExerciseStatus,
+      is_new: false,
+      items: [{
+        item_index: 0,
+        payload: {
+          prompt: { el: q, en: q, ru: q },
+          options: [{ el: 'Α', en: 'A', ru: 'A' }],
+          correct_answer_index: 0,
+        },
+      }],
+    });
+
+    mockUseSituationDetail.mockReturnValue({
+      data: allAnsweredSituation,
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn().mockResolvedValue(undefined),
+    });
+    mockUseSituationExercises.mockReturnValue({
+      data: {
+        total_due: 0,
+        total_new: 0,
+        total_early_practice: 0,
+        total_in_queue: 2,
+        exercises: [
+          ex('ex-done-1', 'Ερώτηση 1;'),
+          ex('ex-done-2', 'Ερώτηση 2;'),
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn().mockResolvedValue(undefined),
+    });
+
+    render(<SituationFlowScreen />);
+    await act(async () => {});
+
+    // Must land on cover, not the completion step
+    expect(screen.getByTestId('situation-cover')).toBeTruthy();
+    expect(screen.queryByTestId('completion-step')).toBeNull();
+  });
+
+  // SF-4: exercises with empty items array must be skipped (they render a blank body
+  // with a permanently disabled Check button).
+  it('skips exercises with empty items array and only shows valid exercises', async () => {
+    const situation = {
+      ...SITUATION,
+      exercise_total: 2,
+      exercise_completed: 0,
+    };
+
+    mockUseSituationDetail.mockReturnValue({
+      data: situation,
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn().mockResolvedValue(undefined),
+    });
+    mockUseSituationExercises.mockReturnValue({
+      data: {
+        total_due: 2,
+        total_new: 2,
+        total_early_practice: 0,
+        total_in_queue: 2,
+        exercises: [
+          {
+            ...EXERCISES.exercises[0],
+            exercise_id: 'ex-empty',
+            items: [], // empty — should be filtered out
+          },
+          {
+            ...EXERCISES.exercises[0],
+            exercise_id: 'ex-valid',
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn().mockResolvedValue(undefined),
+    });
+
+    render(<SituationFlowScreen />);
+    await act(async () => {});
+
+    // Cover should show; Begin navigates to retelling, then to the valid exercise
+    expect(screen.getByTestId('situation-cover')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('situation-cover-begin'));
+    fireEvent.press(screen.getByTestId('retelling-continue'));
+
+    // Only the valid exercise (ex-valid) should be present in the flow
+    expect(screen.getByTestId('situation-flow-exercise')).toBeTruthy();
+
+    // Check button should be present (no option selected yet)
+    expect(screen.getByTestId('exercise-check')).toBeTruthy();
+
+    // Select the correct answer (index 1 per EXERCISES fixture) and verify check advances
+    fireEvent.press(screen.getByTestId('exercise-option-1'));
+    fireEvent.press(screen.getByTestId('exercise-check'));
+
+    // After check on the only (last) exercise, button should read 'Finish'
+    expect(screen.getByTestId('exercise-next')).toHaveTextContent('Finish');
   });
 
   // #40: review mutation payload assertion — correct answer → score:1, wrong answer → score:0

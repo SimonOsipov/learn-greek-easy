@@ -67,9 +67,19 @@ describe('ProfileHeader', () => {
     expect(screen.getByTestId('profile-level-pill')).toHaveTextContent('Learner');
   });
 
-  it('displays rounded progress percentage', () => {
+  it('displays generic "% to next level" copy when currentLevel not provided', () => {
     render(<ProfileHeader {...baseProps} progressPct={62.7} />);
     expect(screen.getByTestId('profile-level-progress-text')).toHaveTextContent('63% to next level');
+  });
+
+  it('shows "X% to Level N+1" when currentLevel is provided', () => {
+    render(<ProfileHeader {...baseProps} progressPct={52} currentLevel={4} />);
+    expect(screen.getByTestId('profile-level-progress-text')).toHaveTextContent('52% to Level 5');
+  });
+
+  it('shows "Max level" when currentLevel is at cap (15)', () => {
+    render(<ProfileHeader {...baseProps} progressPct={100} currentLevel={15} />);
+    expect(screen.getByTestId('profile-level-progress-text')).toHaveTextContent('Max level');
   });
 
   it('renders progress bar fill', () => {

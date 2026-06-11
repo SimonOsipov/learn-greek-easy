@@ -21,6 +21,21 @@ export interface CardFrontProps {
   testID?: string;
 }
 
+/**
+ * Maps card_type enum values to human-readable display labels for the card-type badge.
+ * These are the ONLY valid card_type values (src/db/models.py CardType enum).
+ */
+const CARD_TYPE_LABEL: Record<string, string> = {
+  meaning_el_to_en:     'Meaning',
+  meaning_en_to_el:     'Meaning',
+  sentence_translation: 'Sentence',
+  declension:           'Declension',
+  conjugation:          'Conjugation',
+  cloze:                'Cloze',
+  plural_form:          'Plural',
+  article:              'Article',
+};
+
 export function CardFront({ card, isDark, onFlip, testID }: CardFrontProps) {
   const fc = card.front_content;
 
@@ -28,11 +43,14 @@ export function CardFront({ card, isDark, onFlip, testID }: CardFrontProps) {
   const prompt = typeof fc.prompt === 'string' ? fc.prompt : 'What does this mean?';
   const main = typeof fc.main === 'string' ? fc.main : '';
   const sub = typeof fc.sub === 'string' ? fc.sub : null;
-  // #13/#20: source badge from fc.badge (backend populates this with the POS,
-  // e.g. "Noun", "Verb" via card_generator_service.py:96). card_type is an internal
-  // enum (meaning_el_to_en, declension …) — never a POS — so it must NOT be shown
-  // in a POS badge. fc.badge already covers the display label; no second badge needed.
-  const badge = typeof fc.badge === 'string' ? fc.badge : card.variant_key;
+  // Card-type badge: derived from card.card_type via CARD_TYPE_LABEL map.
+  // POS badge: from fc.badge (backend sets this to POS e.g. "Noun", "Verb").
+  // Show both when fc.badge is present and differs from the card-type label
+  // (case-insensitive), to avoid showing the same text twice.
+  const cardTypeLabel = CARD_TYPE_LABEL[card.card_type] ?? card.variant_key;
+  const posLabel = typeof fc.badge === 'string' ? fc.badge : null;
+  // Only show POS badge when it carries different info than the card-type badge.
+  const showPosBadge = !!posLabel && posLabel.toLowerCase() !== cardTypeLabel.toLowerCase();
   const hint = typeof fc.hint === 'string' ? fc.hint : 'Tap to reveal';
 
   // #5/#25/#29: derive all practice-* colors from isDark prop (explicit rgb constants).
@@ -63,25 +81,59 @@ export function CardFront({ card, isDark, onFlip, testID }: CardFrontProps) {
         }}
       >
         {/* ── Badge row ── */}
+        {/* Design: TWO badges — card-type (accent-tinted) + POS (muted, shown when different). */}
         <View className="flex-row items-center gap-2 px-4 pt-4 pb-3">
-          {/* POS/variant badge sourced from fc.badge (backend sets part_of_speech.value.capitalize()) */}
+          {/* Badge 1: card-type label (accent-tinted, always shown) */}
           <View
+            testID="review-card-type-badge"
             className="px-2.5 py-1 rounded-full"
-            style={{ backgroundColor: 'rgba(234,89,74,0.12)' }}
+            style={{
+              backgroundColor: isDark
+                ? 'rgba(129,140,248,0.18)'  // practice-accent dark / 18% MOB-13 explicit rgba
+                : 'rgba(97,110,245,0.14)',  // practice-accent light / 14% MOB-13 explicit rgba
+              borderWidth: 1,
+              borderColor: isDark
+                ? 'rgba(129,140,248,0.32)'
+                : 'rgba(97,110,245,0.28)',
+            }}
           >
             <Text
+              testID="review-card-type-badge-text"
               className="text-[10px] font-bold uppercase tracking-widest"
               style={{
                 fontFamily: 'SpaceMono_400Regular',
-                color: 'rgb(234,89,74)',
+                color: palette.accent,
               }}
             >
-              {badge}
+              {cardTypeLabel}
             </Text>
           </View>
-          {/* Note: a second "POS badge" keyed on card_type has been removed (#13/#20).
-              card_type values are internal enum strings (meaning_el_to_en, declension …),
-              never part-of-speech labels. fc.badge already carries the correct POS. */}
+
+          {/* Badge 2: POS label (muted, shown only when different from card-type label) */}
+          {showPosBadge && (
+            <View
+              testID="review-pos-badge"
+              className="px-2.5 py-1 rounded-full"
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(234,239,245,0.06)'  // practice-text dark / 6% MOB-13 explicit rgba
+                  : 'rgba(15,23,42,0.06)',    // practice-text light / 6% MOB-13 explicit rgba
+                borderWidth: 1,
+                borderColor: palette.borderColor,
+              }}
+            >
+              <Text
+                testID="review-pos-badge-text"
+                className="text-[10px] font-bold uppercase tracking-widest"
+                style={{
+                  fontFamily: 'SpaceMono_400Regular',
+                  color: palette.textMuted,
+                }}
+              >
+                {posLabel}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* ── Card body ── */}
