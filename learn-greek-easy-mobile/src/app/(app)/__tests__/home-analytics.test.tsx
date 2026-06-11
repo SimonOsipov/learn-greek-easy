@@ -281,3 +281,91 @@ describe('DASH-12 — home_card_tapped analytics on navigation press', () => {
     expect(mockShowComingSoonToast).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// 4. Newly-wired navigation destinations (continue-hero, situations shelf, decks shelf)
+//    These were rewired from coming-soon stubs to real router.push in this PR.
+//    Each must assert: push called with exact path + home_card_tapped coming_soon=false.
+// ---------------------------------------------------------------------------
+
+describe('DASH-12 — newly-wired navigation: continue-hero, situations shelf, decks shelf', () => {
+  it('continue-hero resume button pushes /decks/{deck_id}/review with coming_soon=false', () => {
+    mockUseDashboard.mockReturnValue(
+      makeReturningSummary({
+        resumeDeck: {
+          deck_id: 'deck-abc',
+          deck_name: 'A1 Essentials',
+          cards_studied: 15,
+          cards_mastered: 5,
+          cards_due: 5,
+          mastery_percentage: 25,
+          completion_percentage: 30,
+          last_studied_at: '2026-06-10T10:00:00Z',
+        },
+      }),
+    );
+    render(<HomeScreen />);
+    fireEvent.press(screen.getByTestId('continue-resume-button'));
+    expect(mockPush).toHaveBeenCalledWith('/decks/deck-abc/review');
+    expect(mockTrack).toHaveBeenCalledWith('home_card_tapped', {
+      section: 'continue',
+      target: 'deck-review',
+      coming_soon: false,
+    });
+    expect(mockShowComingSoonToast).not.toHaveBeenCalled();
+  });
+
+  it('situations shelf card pushes /situations/{id} with coming_soon=false', () => {
+    mockUseDashboard.mockReturnValue(
+      makeReturningSummary({
+        situations: [
+          {
+            id: 'sit-123',
+            scenario_el: 'Στο αεροδρόμιο',
+            status: 'not_started',
+            exercise_completed: 0,
+            exercise_total: 3,
+          },
+        ],
+      }),
+    );
+    render(<HomeScreen />);
+    fireEvent.press(screen.getByTestId('situation-card-sit-123'));
+    expect(mockPush).toHaveBeenCalledWith('/situations/sit-123');
+    expect(mockTrack).toHaveBeenCalledWith('home_card_tapped', {
+      section: 'situations',
+      target: 'situation-detail',
+      coming_soon: false,
+    });
+    expect(mockShowComingSoonToast).not.toHaveBeenCalled();
+  });
+
+  it('decks shelf card pushes /decks/{id} with coming_soon=false', () => {
+    mockUseDashboard.mockReturnValue(
+      makeReturningSummary({
+        decks: [
+          {
+            id: 'deck-xyz',
+            name: 'A1 Core',
+            description: null,
+            level: 'a1' as const,
+            is_active: true,
+            card_count: 50,
+            created_at: '2026-01-01T00:00:00Z',
+            updated_at: '2026-01-01T00:00:00Z',
+            progress: undefined,
+          },
+        ],
+      }),
+    );
+    render(<HomeScreen />);
+    fireEvent.press(screen.getByTestId('deck-card-deck-xyz'));
+    expect(mockPush).toHaveBeenCalledWith('/decks/deck-xyz');
+    expect(mockTrack).toHaveBeenCalledWith('home_card_tapped', {
+      section: 'decks',
+      target: 'deck-detail',
+      coming_soon: false,
+    });
+    expect(mockShowComingSoonToast).not.toHaveBeenCalled();
+  });
+});

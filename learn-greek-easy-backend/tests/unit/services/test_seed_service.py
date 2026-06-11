@@ -1881,3 +1881,120 @@ class TestSeedAllNamespacingIsolation:
         assert (
             added_namespaced[0].supabase_id is None
         ), "supabase_id must be None when admin_client is None (not a MagicMock stub)"
+
+
+# ============================================================================
+# Prod-Exported Seed Content (situations + word enrichment)
+# ============================================================================
+
+
+class TestProdSeedContent:
+    """Contract tests for the production-exported seed data and its wiring."""
+
+    def test_prod_situations_have_full_media(self):
+        from src.services.seed_data.prod_content import PROD_SITUATIONS
+
+        assert len(PROD_SITUATIONS) == 3
+        for sit in PROD_SITUATIONS:
+            for field in ("scenario_el", "scenario_en", "scenario_ru", "text_el", "text_el_a2"):
+                assert isinstance(sit[field], str) and sit[field], field
+            assert sit["audio_s3_key"].startswith("situation-description-audio/")
+            assert sit["audio_a2_s3_key"].startswith("situation-description-audio/a2/")
+            assert sit["audio_duration_seconds"] > 0
+            assert sit["audio_a2_duration_seconds"] > 0
+            assert sit["picture"]["image_s3_key"].startswith("situation-pictures/")
+            assert sit["picture"]["scene_en"]
+
+    def test_prod_situation_exercise_payloads_match_select_correct_answer_contract(self):
+        """Payloads must validate against the canonical schema the clients parse."""
+        from src.schemas.exercise_payload import SelectCorrectAnswerPayload
+        from src.services.seed_data.prod_content import PROD_SITUATIONS
+
+        for sit in PROD_SITUATIONS:
+            payload = SelectCorrectAnswerPayload.model_validate(sit["exercise"]["payload"])
+            assert 0 <= payload.correct_answer_index < len(payload.options)
+            assert len(payload.options) == 4
+
+    def test_prod_word_enrichment_uses_flat_grammar_and_ready_audio(self):
+        from src.services.seed_data.prod_content import PROD_WORD_ENRICHMENT
+
+        assert set(PROD_WORD_ENRICHMENT) == {"σπίτι", "παιδί", "γυναίκα", "φίλος"}
+        for lemma, data in PROD_WORD_ENRICHMENT.items():
+            grammar = data["grammar_data"]
+            assert "cases" not in grammar, f"{lemma}: nested cases shape is legacy"
+            assert grammar["nominative_singular"]
+            assert grammar["genitive_plural"]
+            assert isinstance(grammar["notes"], str) and grammar["notes"]
+            assert data["audio_key"].startswith("word-audio/")
+            assert len(data["examples"]) == 2
+            for ex in data["examples"]:
+                assert ex["audio_key"].startswith("word-audio/")
+                assert ex["audio_status"] == "ready"
+
+    def test_flatten_grammar_cases_converts_nested_shape(self):
+        nested = {
+            "gender": "feminine",
+            "cases": {
+                "singular": {"nominative": "η γάτα", "genitive": "της γάτας"},
+                "plural": {"nominative": "οι γάτες"},
+            },
+        }
+        flat = SeedService._flatten_grammar_cases(nested)
+        assert flat == {
+            "gender": "feminine",
+            "nominative_singular": "η γάτα",
+            "genitive_singular": "της γάτας",
+            "nominative_plural": "οι γάτες",
+        }
+
+    def test_flatten_grammar_cases_passes_through_flat_and_none(self):
+        flat = {"gender": "neuter", "nominative_singular": "το σπίτι"}
+        assert SeedService._flatten_grammar_cases(flat) is flat
+        assert SeedService._flatten_grammar_cases(None) is None
+
+
+class TestSeedSituationsProdContent:
+    """seed_situations must create the prod-exported situations with media."""
+
+    @pytest.mark.asyncio
+    async def test_seed_situations_creates_didactic_plus_prod(
+        self, seed_service, mock_db, mock_settings_can_seed
+    ):
+        result = await seed_service.seed_situations()
+
+        assert result["success"] is True
+        assert result["count"] == 6  # 3 didactic + 3 prod-exported
+        # 4 didactic exercises (2 each for coffee shop + bus) + 3 prod exercises
+        assert result["exercises_created"] == 7
+
+        from src.db.models import DescriptionStatus, SituationDescription
+
+        descriptions = [
+            call.args[0]
+            for call in mock_db.add.call_args_list
+            if isinstance(call.args[0], SituationDescription)
+        ]
+        assert len(descriptions) == 6
+        with_audio = [d for d in descriptions if d.audio_s3_key and d.audio_a2_s3_key]
+        assert len(with_audio) == 3
+        for desc in with_audio:
+            assert desc.status == DescriptionStatus.AUDIO_READY
+            assert desc.audio_duration_seconds > 0
+
+    @pytest.mark.asyncio
+    async def test_seed_situations_creates_generated_pictures_for_prod(
+        self, seed_service, mock_db, mock_settings_can_seed
+    ):
+        from src.db.models import PictureStatus, SituationPicture
+
+        await seed_service.seed_situations()
+
+        pictures = [
+            call.args[0]
+            for call in mock_db.add.call_args_list
+            if isinstance(call.args[0], SituationPicture)
+        ]
+        generated = [p for p in pictures if p.status == PictureStatus.GENERATED]
+        assert len(generated) == 3
+        for pic in generated:
+            assert pic.image_s3_key.startswith("situation-pictures/")

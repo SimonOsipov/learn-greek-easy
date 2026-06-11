@@ -43,8 +43,21 @@ export interface TrendsDailyStat {
   reviews_count: number;
 }
 
+export interface TrendsSummary {
+  total_reviews: number;
+  total_study_time_seconds: number;
+  cards_mastered: number;
+  average_daily_reviews: number;
+  best_day: string | null;
+  quality_trend: 'improving' | 'stable' | 'declining';
+}
+
 export interface TrendsResponse {
+  period: string;
+  start_date: string;
+  end_date: string;
   daily_stats: TrendsDailyStat[];
+  summary: TrendsSummary;
 }
 
 export interface DeckProgressSummary {

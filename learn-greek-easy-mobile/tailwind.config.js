@@ -100,6 +100,74 @@ module.exports = {
         'stat-violet': 'rgb(187,103,228)',           // 280 70% 65%
         'stat-violet-14': 'rgba(187,103,228,0.14)', // 280 70% 65%
         // === end MOB-13 explicit opacity tokens ===
+
+        // === MOB-08 situation-flow semantic accents ===
+        // Fixed in both themes — correct hsl(160 65% 42%) = rgb(37,177,130),
+        // incorrect hsl(0 78% 58%) = rgb(239,68,68) (same as danger),
+        // exercise modality violet hsl(280 70% 55%) = rgb(177,82,224) (same as entry-violet).
+        // MOB-13 explicit alpha variants for transparent surfaces:
+        'correct': 'rgb(37,177,130)',           // hsl(160 65% 42%) — correct answer solid
+        'correct-14': 'rgba(37,177,130,0.14)',  // option background on correct — MOB-13
+        'correct-10': 'rgba(37,177,130,0.10)',  // footer banner bg — MOB-13
+        'correct-30': 'rgba(37,177,130,0.30)',  // footer banner border — MOB-13
+        // incorrect = danger (already defined: danger, danger-18, danger-55, danger-70)
+        // exercise-violet = entry-violet (already defined: entry-violet, entry-violet-16, entry-violet-32)
+        // Scene gradient palette for situation tiles — 5 tones per handoff
+        // (amber|blue|cyan|green|violet). Two stop pairs, 135deg.
+        // Stored as solid start/end colours; gradient constructed in LinearGradient.
+        // hsl sources in comments; full rgb values per MOB-13 convention.
+        'scene-amber-from': 'rgb(246,168,35)',   // hsl(38 92% 55%)
+        'scene-amber-to':   'rgb(153,82,22)',     // hsl(20 85% 34%)  ≈ hsl(20 85% 34%)
+        'scene-blue-from':  'rgb(45,125,221)',    // hsl(212 80% 52%) ≈ rgb(45,125,221)
+        'scene-blue-to':    'rgb(33,57,131)',     // hsl(225 60% 32%)
+        'scene-cyan-from':  'rgb(26,178,199)',    // hsl(188 80% 44%)
+        'scene-cyan-to':    'rgb(30,90,160)',     // hsl(212 70% 37%)
+        'scene-green-from': 'rgb(37,177,130)',    // hsl(160 65% 42%)
+        'scene-green-to':   'rgb(20,110,90)',     // hsl(180 55% 25%)
+        'scene-violet-from':'rgb(164,82,224)',    // hsl(280 75% 60%)
+        'scene-violet-to':  'rgb(43,33,128)',     // hsl(248 59% 32%)
+        // === end MOB-08 semantic accents + scene palette ===
+
+        // === MOB-12 word-detail tokens ===
+        // Primary alpha tints for hero gradient wash + speaker/POS badge surfaces.
+        // Base: 221 83% 53% = rgb(36,99,235). MOB-13: explicit rgba, no /NN modifier.
+        'primary-04': 'rgba(36,99,235,0.04)',
+        'primary-06': 'rgba(36,99,235,0.06)',
+        'primary-10': 'rgba(36,99,235,0.10)',
+        'primary-20': 'rgba(36,99,235,0.20)',
+        // Gender badge background tints — masc/fem.
+        // Aligned with ARTICLE_COLOR (lib/decks/presentation.ts) per conventions.md §3:
+        //   masc: 212 80% 55% = rgb(48,135,232); fem: 340 75% 55% = rgb(226,54,112).
+        // neut reuses correct-14 (37,177,130 at 0.14) — already defined.
+        'gender-masc-12': 'rgba(48,135,232,0.12)',
+        'gender-fem-12':  'rgba(226,54,112,0.12)',
+        // === end MOB-12 word-detail tokens ===
+
+        // === MOB-09 practice palette (card review) ===
+        // HSL-var-backed tokens — DO NOT use /NN opacity modifier on native (MOB-13).
+        // Use explicit rgba tokens below for any translucent surface.
+        'practice-bg': 'hsl(var(--practice-bg))',
+        'practice-card': 'hsl(var(--practice-card))',
+        'practice-border': 'hsl(var(--practice-border))',
+        'practice-text': 'hsl(var(--practice-text))',
+        'practice-text-muted': 'hsl(var(--practice-text-muted))',
+        'practice-text-dim': 'hsl(var(--practice-text-dim))',
+        'practice-accent': 'hsl(var(--practice-accent))',
+        'practice-correct': 'hsl(var(--practice-correct))',
+        'practice-incorrect': 'hsl(var(--practice-incorrect))',
+        'practice-hard': 'hsl(var(--practice-hard))',
+        // MOB-13 explicit rgba opacity tokens for practice palette.
+        // Light theme values used as fixed rgba (no dark switching needed — review
+        // screen uses its own independent theme toggle, not the system theme).
+        // correct: light 160 84% 39% = rgb(20,184,103); dark 158 64% 52% = rgb(47,192,119)
+        // We use light-theme values as these are used for tinted surfaces (bg, border, etc.)
+        // The correct token itself is var-backed and will flip with the dark class.
+        'practice-correct-10': 'rgba(20,184,103,0.10)',  // light --practice-correct at 10%
+        'practice-correct-15': 'rgba(20,184,103,0.15)',  // light --practice-correct at 15%
+        'practice-incorrect-12': 'rgba(220,38,38,0.12)', // --practice-incorrect ≈ rgb(220,38,38) at 12%
+        'practice-hard-12': 'rgba(234,119,23,0.12)',     // --practice-hard ≈ rgb(234,119,23) at 12%
+        'practice-accent-12': 'rgba(79,70,229,0.12)',    // --practice-accent ≈ indigo at 12%
+        // === end MOB-09 practice palette ===
       },
       borderRadius: {
         sm: '10px',

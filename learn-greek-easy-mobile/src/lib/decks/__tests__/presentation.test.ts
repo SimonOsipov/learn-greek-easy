@@ -52,6 +52,7 @@ function makeMastery(overrides: Partial<WordMasteryItem> = {}): WordMasteryItem 
     mastered_count: 0,
     studied_count: 0,
     total_count: 4,
+    type_progress: [],
     ...overrides,
   };
 }

@@ -22,6 +22,7 @@ from src.core.supabase_admin import get_supabase_admin_client
 from src.db.models import (
     Achievement,
     AnnouncementCampaign,
+    AudioStatus,
     BillingCycle,
     CardRecord,
     CardRecordReview,
@@ -37,6 +38,7 @@ from src.db.models import (
     DeckLevel,
     DeckWordEntry,
     DescriptionExercise,
+    DescriptionExerciseItem,
     DescriptionSourceType,
     DescriptionStatus,
     Exercise,
@@ -76,6 +78,7 @@ from src.db.models import (
 )
 from src.services.achievement_definitions import ACHIEVEMENTS as ACHIEVEMENT_DEFS
 from src.services.card_generator_service import CardGeneratorService
+from src.services.seed_data.prod_content import PROD_SITUATIONS, PROD_WORD_ENRICHMENT
 from src.services.xp_constants import get_level_from_xp
 
 logger = get_logger(__name__)
@@ -4200,7 +4203,9 @@ class SeedService:
         """Create sample situations with descriptions and exercises for E2E testing."""
         self._check_can_seed()
 
-        seed_scenario_ens = [s["scenario_en"] for s in self.SITUATIONS]
+        seed_scenario_ens = [s["scenario_en"] for s in self.SITUATIONS] + [
+            s["scenario_en"] for s in PROD_SITUATIONS
+        ]
         await self.db.execute(delete(Situation).where(Situation.scenario_en.in_(seed_scenario_ens)))
 
         created_situations = []
@@ -4301,6 +4306,78 @@ class SeedService:
                     "scenario_en": situation.scenario_en,
                     "description_id": str(description.id),
                     "picture_id": picture_id,
+                }
+            )
+
+        # Production-exported situations: full media (retelling audio, generated
+        # picture) + one approved exercise each. S3 keys reference objects copied
+        # from the production bucket (see src/services/seed_data/prod_content.py).
+        for prod_data in PROD_SITUATIONS:
+            situation = Situation(
+                scenario_el=prod_data["scenario_el"],
+                scenario_en=prod_data["scenario_en"],
+                scenario_ru=prod_data["scenario_ru"],
+                status=SituationStatus.READY,
+            )
+            self.db.add(situation)
+            await self.db.flush()
+
+            description = SituationDescription(
+                situation_id=situation.id,
+                text_el=prod_data["text_el"],
+                text_el_a2=prod_data["text_el_a2"],
+                source_type=DescriptionSourceType.NEWS,
+                status=DescriptionStatus.AUDIO_READY,
+                audio_s3_key=prod_data["audio_s3_key"],
+                audio_a2_s3_key=prod_data["audio_a2_s3_key"],
+                audio_duration_seconds=prod_data["audio_duration_seconds"],
+                audio_a2_duration_seconds=prod_data["audio_a2_duration_seconds"],
+            )
+            self.db.add(description)
+            await self.db.flush()
+
+            de = DescriptionExercise(
+                description_id=description.id,
+                exercise_type=ExerciseType.SELECT_CORRECT_ANSWER,
+                audio_level=DeckLevel.B1,
+                modality=ExerciseModality.LISTENING,
+                status=ExerciseStatus.APPROVED,
+                question_en=prod_data["exercise"]["question_en"],
+            )
+            self.db.add(de)
+            await self.db.flush()
+
+            item = DescriptionExerciseItem(
+                description_exercise_id=de.id,
+                item_index=0,
+                payload=prod_data["exercise"]["payload"],
+            )
+            self.db.add(item)
+
+            ex = Exercise(
+                source_type=ExerciseSourceType.DESCRIPTION,
+                description_exercise_id=de.id,
+            )
+            self.db.add(ex)
+            await self.db.flush()
+            exercises_created += 1
+
+            picture = SituationPicture(
+                situation_id=situation.id,
+                scene_en=prod_data["picture"]["scene_en"],
+                image_prompt=prod_data["picture"]["scene_en"],
+                status=PictureStatus.GENERATED,
+                image_s3_key=prod_data["picture"]["image_s3_key"],
+            )
+            self.db.add(picture)
+            await self.db.flush()
+
+            created_situations.append(
+                {
+                    "id": str(situation.id),
+                    "scenario_en": situation.scenario_en,
+                    "description_id": str(description.id),
+                    "picture_id": str(picture.id),
                 }
             )
 
@@ -4695,6 +4772,21 @@ class SeedService:
             "situations": situations_result,
         }
 
+    @staticmethod
+    def _flatten_grammar_cases(grammar_data: dict[str, Any] | None) -> dict[str, Any] | None:
+        """Convert the legacy nested {"cases": {"singular": {...}}} grammar shape
+        into the canonical flat keys (nominative_singular, ...).
+
+        Already-flat dicts (and None) pass through unchanged.
+        """
+        if not grammar_data or "cases" not in grammar_data:
+            return grammar_data
+        flat = {k: v for k, v in grammar_data.items() if k != "cases"}
+        for number, cases in grammar_data["cases"].items():
+            for case_name, value in cases.items():
+                flat[f"{case_name}_{number}"] = value
+        return flat
+
     async def _create_word_entries_from_vocab(
         self, vocabulary: list[dict[str, Any]]
     ) -> list[WordEntry]:
@@ -4722,6 +4814,10 @@ class SeedService:
                 pronunciation=word_data.get("pronunciation"),
                 grammar_data=word_data.get("grammar_data"),
                 examples=word_data.get("examples"),
+                audio_key=word_data.get("audio_key"),
+                audio_status=(
+                    AudioStatus.READY if word_data.get("audio_key") else AudioStatus.MISSING
+                ),
                 is_active=True,
             )
             self.db.add(word_entry)
@@ -5133,6 +5229,19 @@ class SeedService:
                 ],
             },
         ]
+        # Canonicalize + enrich the noun vocab before insertion:
+        # - flatten the legacy nested "cases" grammar shape into the canonical
+        #   flat keys (nominative_singular, ...) used by prod, the card
+        #   generator and both clients (the nested shape rendered nothing);
+        # - overlay production-exported enrichment (audio, examples with
+        #   per-example audio, pronunciation, notes) where the lemma exists
+        #   in prod (see src/services/seed_data/prod_content.py).
+        v2_nouns_vocabulary = [
+            {**word, **PROD_WORD_ENRICHMENT.get(word["lemma"], {})} for word in v2_nouns_vocabulary
+        ]
+        for word in v2_nouns_vocabulary:
+            word["grammar_data"] = self._flatten_grammar_cases(word.get("grammar_data"))
+
         v2_nouns_entries = await self._create_word_entries_from_vocab(v2_nouns_vocabulary)
         await self._link_entries_to_deck(v2_nouns_deck.id, v2_nouns_entries)
         card_gen_nouns = CardGeneratorService(self.db)

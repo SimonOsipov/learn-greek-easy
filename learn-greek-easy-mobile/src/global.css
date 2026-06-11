@@ -44,6 +44,20 @@
   --destructive-foreground: 0 0% 100%;
   --radius: 14px;
 
+  /* ── Practice palette (MOB-09 card review — slate system, independent of app surface tokens) ──
+     Light defaults; dark overrides in .dark block below.
+     Source: design_handoff_review/tokens.css. */
+  --practice-bg: 210 40% 96%;
+  --practice-card: 0 0% 100%;
+  --practice-border: 214 32% 91%;
+  --practice-text: 222 47% 11%;
+  --practice-text-muted: 215 16% 47%;
+  --practice-text-dim: 215 20% 65%;
+  --practice-accent: 239 84% 67%;
+  --practice-correct: 160 84% 39%;
+  --practice-incorrect: 0 84% 60%;
+  --practice-hard: 25 95% 53%;
+
   /* Mobile over-photo surface (theme-invariant; mobile-only) — see MOB-09 */
   --on-photo-fg: 0 0% 100%;          /* pure white — over-photo text + glass fills/borders via /opacity */
   --on-photo-scrim: 225 43% 5%;      /* rgba(8,11,20) — scrim + segmented track via /opacity */
@@ -56,6 +70,18 @@
 }
 
 .dark {
+  /* ── Practice palette (dark overrides, MOB-09) ── */
+  --practice-bg: 222 47% 11%;
+  --practice-card: 215 28% 17%;
+  --practice-border: 217 19% 27%;
+  --practice-text: 210 40% 96%;
+  --practice-text-muted: 215 20% 65%;
+  --practice-text-dim: 215 16% 47%;
+  --practice-accent: 234 89% 74%;
+  --practice-correct: 158 64% 52%;
+  --practice-incorrect: 0 91% 71%;
+  --practice-hard: 25 95% 63%;
+
   --bg: 224 35% 6%;
   --bg-2: 224 30% 9%;
   --card: 224 30% 11%;

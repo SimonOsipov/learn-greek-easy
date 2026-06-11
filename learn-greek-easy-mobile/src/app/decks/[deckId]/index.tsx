@@ -12,10 +12,8 @@
  *      pronunciation + gloss, NEW/LEARNING/MASTERED status).
  *   5. Sticky "Practice N cards" CTA over a bottom fade.
  *
- * Coming-soon placeholders (red-dot convention + toast):
- *   - The card-review flow the CTA launches is a follow-up ticket — the CTA
- *     carries a "Coming soon" dot label and fires the toast.
- *   - Per-word detail is out of scope — word rows fire the toast.
+ * Word rows navigate to the word detail screen (MOB-12).
+ * Practice CTA navigates to the SRS card review screen (MOB-09).
  *
  * Data: useDeck + useDeckWords + useDeckWordMastery, plus useDeckProgress for
  * the same due/mastered counts the dashboard and library use.
@@ -29,12 +27,10 @@ import { ChevronLeft, Play } from 'lucide-react-native';
 
 import { useDeck, useDeckWords, useDeckWordMastery } from '@/hooks/use-deck-detail';
 import { useDeckProgress } from '@/hooks/use-deck-progress';
-import { useToast } from '@/components/ui/toast';
 import { track } from '@/lib/analytics';
 import { coverForDeckId, CTA_GRADIENT, wordStatus } from '@/lib/decks/presentation';
 import { StatsStrip } from '@/components/decks/stats-strip';
 import { WordRow } from '@/components/decks/word-row';
-import { ComingSoonDot } from '@/components/dashboard/coming-soon-dot';
 
 // on-photo white at fixed alphas — over-gradient hero text (MOB-13: no /NN modifiers)
 const HERO_WHITE = 'rgba(255,255,255,0.96)';
@@ -43,8 +39,6 @@ export default function DeckDetailScreen() {
   const { deckId } = useLocalSearchParams<{ deckId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { showComingSoonToast } = useToast();
-
   const deckQuery = useDeck(deckId);
   const wordsQuery = useDeckWords(deckId);
   const masteryQuery = useDeckWordMastery(deckId);
@@ -66,15 +60,18 @@ export default function DeckDetailScreen() {
     }
   }, [deck]);
 
-  const handleWordPress = useCallback(() => {
-    track('deck_word_tapped', { deck_id: deckId, coming_soon: true });
-    showComingSoonToast();
-  }, [deckId, showComingSoonToast]);
+  const handleWordPress = useCallback(
+    (wordId: string) => {
+      track('deck_word_tapped', { deck_id: deckId, word_id: wordId });
+      router.push(`/decks/${deckId}/${wordId}`);
+    },
+    [deckId, router],
+  );
 
   const handlePractice = useCallback(() => {
-    track('deck_practice_tapped', { deck_id: deckId, coming_soon: true });
-    showComingSoonToast();
-  }, [deckId, showComingSoonToast]);
+    track('deck_practice_tapped', { deck_id: deckId });
+    router.push(`/decks/${deckId}/review`);
+  }, [deckId, router]);
 
   // ── Error state (deck fetch failed) ──
   if (deckQuery.isError && !deckQuery.isLoading) {
@@ -259,17 +256,6 @@ export default function DeckDetailScreen() {
         className="absolute left-0 right-0 bottom-0 bg-bg px-[18px] pt-3"
         style={{ paddingBottom: insets.bottom + 12 }}
       >
-        {/* Review flow is a follow-up ticket — honest coming-soon marker */}
-        <View className="flex-row items-center justify-center gap-1.5 mb-2">
-          <ComingSoonDot />
-          <Text
-            testID="deck-cta-coming-soon"
-            className="text-danger text-[10px] uppercase tracking-widest"
-            style={{ fontFamily: 'SpaceMono_400Regular' }}
-          >
-            Coming soon
-          </Text>
-        </View>
         <Pressable
           testID="deck-practice-cta"
           accessibilityRole="button"

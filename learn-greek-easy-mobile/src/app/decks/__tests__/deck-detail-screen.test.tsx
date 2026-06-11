@@ -1,13 +1,13 @@
 /// <reference types="jest" />
 /**
- * MOB-07 — RNTL screen tests for the deck-detail route (src/app/decks/[deckId].tsx).
+ * MOB-07 / MOB-09 — RNTL screen tests for the deck-detail route (src/app/decks/[deckId]/index.tsx).
  *
  * Tests:
  *   1. Loading → spinner.
  *   2. Error → retry + back affordances.
  *   3. Loaded → hero copy, stats strip values, word rows with derived status.
- *   4. Word-row press → coming-soon toast (word detail is out of scope).
- *   5. Practice CTA → coming-soon marker visible, press fires the toast.
+ *   4. Word-row press → router.push to word detail (MOB-12 wiring).
+ *   5. Practice CTA → press navigates to /decks/[deckId]/review (MOB-09 wiring).
  *   6. Back button pops the stack.
  */
 import React from 'react';
@@ -20,8 +20,9 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 jest.mock('nativewind');
 
 const mockBack = jest.fn();
+const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ back: mockBack, push: jest.fn() }),
+  useRouter: () => ({ back: mockBack, push: mockPush }),
   useLocalSearchParams: () => ({ deckId: 'house' }),
 }));
 
@@ -37,11 +38,6 @@ jest.mock('@/hooks/use-deck-detail', () => ({
 const mockUseDeckProgress = jest.fn();
 jest.mock('@/hooks/use-deck-progress', () => ({
   useDeckProgress: () => mockUseDeckProgress(),
-}));
-
-const mockShowComingSoonToast = jest.fn();
-jest.mock('@/components/ui/toast', () => ({
-  useToast: () => ({ showComingSoonToast: mockShowComingSoonToast }),
 }));
 
 jest.mock('@/lib/analytics', () => ({ track: jest.fn() }));
@@ -71,7 +67,7 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 
-import DeckDetailScreen from '@/app/decks/[deckId]';
+import DeckDetailScreen from '@/app/decks/[deckId]/index';
 import type { WordEntryResponse } from '@/types/deck';
 
 // ---------------------------------------------------------------------------
@@ -209,21 +205,20 @@ describe('DeckDetailScreen', () => {
     expect(screen.getByTestId('word-status-w-porta')).toHaveTextContent('mastered');
   });
 
-  it('word-row press fires the coming-soon toast', () => {
+  it('word-row press navigates to the word detail screen', () => {
     setQueries();
     render(<DeckDetailScreen />);
     fireEvent.press(screen.getByTestId('word-row-w-domatio'));
-    expect(mockShowComingSoonToast).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith('/decks/house/w-domatio');
   });
 
-  it('practice CTA is marked coming-soon and fires the toast', () => {
+  it('practice CTA navigates to the card review screen (MOB-09)', () => {
     setQueries();
     render(<DeckDetailScreen />);
-    expect(screen.getByTestId('deck-cta-coming-soon')).toHaveTextContent(/coming soon/i);
-    // The dot is accessibility-hidden (decorative) — include hidden elements.
-    expect(screen.getByTestId('coming-soon-dot', { includeHiddenElements: true })).toBeTruthy();
+    // Coming-soon marker is gone (MOB-09 wiring complete)
+    expect(screen.queryByTestId('deck-cta-coming-soon')).toBeNull();
     fireEvent.press(screen.getByTestId('deck-practice-cta'));
-    expect(mockShowComingSoonToast).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith('/decks/house/review');
   });
 
   it('back button pops the stack', () => {
