@@ -34,6 +34,12 @@ env:
     timeout: 30000
 - takeScreenshot: 02-level
 - tapOn: "A1"                 # SelectTile accessibilityLabel = enum value
+# The Save Password dialog can also appear LATE — after the wizard has rendered
+# and the early guard above has already passed (observed in release-verify run
+# 27326475121: dialog overlaid step 1 and blocked the Continue tap). Second guard.
+- tapOn:
+    text: "Not Now"
+    optional: true
 - tapOn: "Continue"
 
 # STEP 2: GOAL
