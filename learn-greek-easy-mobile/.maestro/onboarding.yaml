@@ -9,6 +9,35 @@ env:
     arguments:
       "--initialUrl": "http://127.0.0.1:8081"
 
+# The --initialUrl autoload is flaky (the CI "verify dev-client loads the JS
+# bundle" step retries it 5× for the same reason; release-verify run
+# 27328338377 died on the dev-launcher "No development servers found" screen).
+# If the launcher is showing instead of the app, relaunch — up to two retries.
+- extendedWaitUntil:
+    visible: "Welcome back"
+    timeout: 45000
+    optional: true
+- runFlow:
+    when:
+      visible: "Enter URL manually"
+    commands:
+      - stopApp
+      - launchApp:
+          arguments:
+            "--initialUrl": "http://127.0.0.1:8081"
+      - extendedWaitUntil:
+          visible: "Welcome back"
+          timeout: 45000
+          optional: true
+- runFlow:
+    when:
+      visible: "Enter URL manually"
+    commands:
+      - stopApp
+      - launchApp:
+          arguments:
+            "--initialUrl": "http://127.0.0.1:8081"
+
 # LOGIN (login fields have NO testID/accessibilityLabel — target by placeholder text)
 - extendedWaitUntil:
     visible: "Welcome back"
