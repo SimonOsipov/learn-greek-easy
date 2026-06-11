@@ -45,9 +45,12 @@ async function openDeckDetail(page: Page, title: string) {
 
 /**
  * Delete a personal deck via its detail page; resolves once redirected back to
- * /my-decks. Used for test cleanup as well as the delete flow itself.
+ * /my-decks. Used for test cleanup as well as the delete flow itself. Starts
+ * from /my-decks so it works regardless of the caller's current page (e.g. when
+ * called straight after an edit that left us on the deck detail page).
  */
 async function deleteDeckViaDetail(page: Page, title: string) {
+  await page.goto('/my-decks');
   await openDeckDetail(page, title);
   await page.locator('[data-testid="delete-deck-button"]').click();
   const dialog = page.getByRole('dialog');
