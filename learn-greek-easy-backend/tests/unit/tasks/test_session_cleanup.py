@@ -448,6 +448,145 @@ class TestSessionCleanupTaskErrorHandling:
                     mock_init.assert_not_called()
 
 
+# =============================================================================
+# INFRA-08 (QA Mode B): adversarial / edge / negative coverage
+# =============================================================================
+
+
+class TestSessionCleanupSharedClientSurvives:
+    """
+    IDEMPOTENT-ACROSS-RUNS: invoking the task twice against the SAME mock client
+    must never call close_redis (AC#2 — the shared client survives across hourly
+    runs and is never torn down by the task itself).
+    """
+
+    @pytest.mark.asyncio
+    async def test_close_redis_not_called_after_two_sequential_runs(self):
+        """
+        Run session_cleanup_task twice back-to-back with the same client instance.
+        close_redis must remain un-called across both runs, proving the shared
+        process client is not torn down between hourly scheduler ticks.
+        """
+        from src.tasks.scheduled import session_cleanup_task
+
+        with patch("src.core.redis.close_redis", new_callable=AsyncMock) as mock_close:
+            with patch("src.core.redis.get_redis") as mock_get_redis:
+                # Simulate one shared client instance across both runs
+                shared_mock_client = AsyncMock()
+                shared_mock_client.scan.return_value = (0, [])
+                mock_get_redis.return_value = shared_mock_client
+
+                await session_cleanup_task()
+                await session_cleanup_task()
+
+                # close_redis must never be called — neither run should tear down the client
+                mock_close.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_same_client_instance_used_across_runs(self):
+        """
+        The get_redis() return value must be the same object across runs (the
+        task calls get_redis() each time and uses whatever the scheduler process
+        has live — it does not create or destroy its own connection).
+        """
+        from src.tasks.scheduled import session_cleanup_task
+
+        shared_mock_client = AsyncMock()
+        shared_mock_client.scan.return_value = (0, [])
+
+        with patch("src.core.redis.get_redis", return_value=shared_mock_client) as mock_get:
+            await session_cleanup_task()
+            await session_cleanup_task()
+
+            # get_redis called once per run (twice total)
+            assert mock_get.call_count == 2
+            # Both calls returned the same object (no teardown between runs)
+            assert mock_get.return_value is shared_mock_client
+
+
+class TestSessionCleanupActualWork:
+    """
+    The lifecycle removal must not silently no-op the cleanup work.
+    Verify that with a client present the task still performs its scan+delete.
+    """
+
+    @pytest.mark.asyncio
+    async def test_cleanup_performs_actual_scan_and_delete_work(self):
+        """
+        With a real (mocked) Redis client that returns a no-TTL key,
+        the task must scan keys AND delete the offending one.
+        Guards against the lifecycle change silently skipping real work.
+        """
+        from src.tasks.scheduled import session_cleanup_task
+
+        mock_redis = AsyncMock()
+        # First scan: one no-TTL session key; second scan: no user_sessions
+        mock_redis.scan.side_effect = [
+            (0, ["refresh:u1:tok1"]),
+            (0, []),
+        ]
+        mock_redis.ttl.return_value = -1  # no TTL → should be deleted
+
+        with patch("src.core.redis.get_redis", return_value=mock_redis):
+            with patch("src.core.redis.close_redis", new_callable=AsyncMock) as mock_close:
+                await session_cleanup_task()
+
+                # Real cleanup work happened
+                mock_redis.scan.assert_called()
+                mock_redis.ttl.assert_called_once_with("refresh:u1:tok1")
+                mock_redis.delete.assert_called_once_with("refresh:u1:tok1")
+                # And still no teardown
+                mock_close.assert_not_called()
+
+
+class TestSessionCleanupErrorPathNoCLoseRedis:
+    """
+    On an exception DURING cleanup, the task must NOT call close_redis.
+    The old code had a `finally: await close_redis()` that fired on every
+    exception; that block is now gone — verify the absence holds.
+    """
+
+    @pytest.mark.asyncio
+    async def test_exception_during_scan_does_not_trigger_close_redis(self):
+        """
+        When redis.scan raises, the task must log + re-raise the exception
+        AND must not call close_redis (no finally teardown).
+        """
+        from src.tasks.scheduled import session_cleanup_task
+
+        mock_redis = AsyncMock()
+        mock_redis.scan.side_effect = ConnectionError("simulated scan failure")
+
+        with patch("src.core.redis.get_redis", return_value=mock_redis):
+            with patch("src.core.redis.close_redis", new_callable=AsyncMock) as mock_close:
+                with patch("src.tasks.scheduled.logger") as mock_logger:
+                    with pytest.raises(ConnectionError, match="simulated scan failure"):
+                        await session_cleanup_task()
+
+                    # Error must be logged (not swallowed)
+                    mock_logger.error.assert_called_once()
+                    error_msg = mock_logger.error.call_args[0][0]
+                    assert "Session cleanup failed" in error_msg
+
+                    # No teardown — the shared client must remain alive for the next run
+                    mock_close.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_exception_is_reraised_not_swallowed(self):
+        """
+        Exceptions from cleanup work must propagate to APScheduler so the
+        job_listener can log the failure. Verify re-raise behaviour is preserved.
+        """
+        from src.tasks.scheduled import session_cleanup_task
+
+        mock_redis = AsyncMock()
+        mock_redis.scan.side_effect = RuntimeError("unexpected redis error")
+
+        with patch("src.core.redis.get_redis", return_value=mock_redis):
+            with pytest.raises(RuntimeError, match="unexpected redis error"):
+                await session_cleanup_task()
+
+
 class TestSessionCleanupTaskConfiguration:
     """Test configuration usage in session_cleanup_task."""
 
