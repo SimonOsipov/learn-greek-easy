@@ -12,7 +12,12 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { masteredCount, learnedCount, stageDistribution } from '../progressGlossary';
+import {
+  masteredCount,
+  learnedCount,
+  stageDistribution,
+  deckCompletionPct,
+} from '../progressGlossary';
 
 import type { CardStatusCounts } from '../progressGlossary';
 
@@ -155,6 +160,44 @@ describe('progressGlossary', () => {
       const percentSum =
         dist.new.percent + dist.learning.percent + dist.review.percent + dist.mastered.percent;
       expect(percentSum).toBe(0);
+    });
+  });
+});
+
+// ============================================================================
+// PRACT2-7-04: deckCompletionPct — coverage-based deck completion selector
+// ============================================================================
+
+describe('deckCompletionPct (PRACT2-7-04)', () => {
+  // AC-1: basic coverage arithmetic
+  describe('test_deck_completion_pct_is_coverage', () => {
+    it('returns 70 for 7 of 10 cards studied', () => {
+      expect(deckCompletionPct({ cardsStudied: 7, cardsTotal: 10 })).toBe(70);
+    });
+
+    it('returns 0 (not NaN) for 0/0', () => {
+      const result = deckCompletionPct({ cardsStudied: 0, cardsTotal: 0 });
+      expect(result).toBe(0);
+      expect(Number.isNaN(result)).toBe(false);
+    });
+
+    it('returns 33 for 1 of 3 (rounds correctly)', () => {
+      expect(deckCompletionPct({ cardsStudied: 1, cardsTotal: 3 })).toBe(33);
+    });
+  });
+
+  // AC-1: card and detail mappings must yield the same integer for the same deck state
+  describe('test_card_and_detail_map_to_same_deckCompletionPct', () => {
+    it('card mapping and detail mapping both yield 70 for cards_studied=7,total=10,mastered=2', () => {
+      // Deck state: cards_studied=7, total=10, cards_mastered=2.
+      // Card stores cardsLearning = cards_studied - cards_mastered = 7 - 2 = 5,
+      // cardsMastered = 2. Card mapping: cardsStudied = cardsLearning + cardsMastered = 7.
+      const cardResult = deckCompletionPct({ cardsStudied: 7 - 2 + 2, cardsTotal: 10 });
+      // Detail mapping: cardsStudied = cards_studied = 7 directly.
+      const detailResult = deckCompletionPct({ cardsStudied: 7, cardsTotal: 10 });
+      expect(cardResult).toBe(70);
+      expect(detailResult).toBe(70);
+      expect(cardResult).toBe(detailResult);
     });
   });
 });

@@ -151,6 +151,29 @@ export const PROGRESS_TIERS = {
 } as const;
 
 // ============================================================================
+// Deck completion selector
+// ============================================================================
+
+/**
+ * Returns the deck completion percentage as a rounded integer.
+ *
+ * Coverage-based: how many cards has the learner studied (started or mastered)
+ * out of the total cards in the deck?
+ *
+ * Formula: Math.round(cardsStudied / cardsTotal * 100), 0 when cardsTotal === 0.
+ *
+ * Single canonical selector — both the DeckCard and the detail hero use this so
+ * they always show the same number for the same deck.
+ *
+ * @param input.cardsStudied - number of cards started (learning + mastered)
+ * @param input.cardsTotal   - total cards in the deck
+ * @returns rounded integer 0–100
+ */
+export function deckCompletionPct(_input: { cardsStudied: number; cardsTotal: number }): number {
+  return -1; /* TODO */
+}
+
+// ============================================================================
 // Selectors
 // ============================================================================
 

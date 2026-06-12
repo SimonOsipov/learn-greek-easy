@@ -19,15 +19,39 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import i18n from '@/i18n';
 import type { Deck } from '@/types/deck';
 
-import { DxResumeHero } from '../DxResumeHero';
+import { DxResumeHero, DxResumeHeroConnected } from '../DxResumeHero';
 
 // ============================================
 // Mocks
 // ============================================
 
+// useDeckStore mock — vi.fn() so tests can override via mockImplementation.
+// Default behaviour: empty rawDecks, no selectedDeckProgressDetail (matches existing tests).
+const mockUseDeckStore = vi.fn(
+  (selector: (s: { rawDecks: Deck[]; selectedDeckProgressDetail: unknown }) => unknown) =>
+    selector({ rawDecks: [], selectedDeckProgressDetail: null })
+);
+
 vi.mock('@/stores/deckStore', () => ({
-  useDeckStore: (selector: (s: { rawDecks: Deck[] }) => unknown) => selector({ rawDecks: [] }),
+  get useDeckStore() {
+    return mockUseDeckStore;
+  },
 }));
+
+// useQuery mock — vi.fn() so tests can control what wordMastery data is returned.
+// Default: return { data: undefined } so existing tests (which render DxResumeHero
+// directly and never hit useQuery) are unaffected.
+const mockUseQuery = vi.fn(() => ({ data: undefined }));
+
+vi.mock('@tanstack/react-query', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-query')>();
+  return {
+    ...actual,
+    get useQuery() {
+      return mockUseQuery;
+    },
+  };
+});
 
 // ============================================
 // Fixtures
@@ -78,6 +102,12 @@ function renderHero(deck: Deck, masteredWords: number, siblings: Deck[], progres
 describe('DxResumeHero', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset to safe defaults so existing presentational tests keep working.
+    mockUseDeckStore.mockImplementation(
+      (selector: (s: { rawDecks: Deck[]; selectedDeckProgressDetail: unknown }) => unknown) =>
+        selector({ rawDecks: [], selectedDeckProgressDetail: null })
+    );
+    mockUseQuery.mockReturnValue({ data: undefined });
   });
 
   it('renders 3 covers when siblings.length >= 2', () => {
@@ -306,5 +336,107 @@ describe('DxResumeHero', () => {
       expect(container.querySelector('.dx-hero-resume-el')).not.toBeInTheDocument();
       expect(container.querySelector('.dx-cover-3 .dx-cover-el')).not.toBeInTheDocument();
     });
+  });
+});
+
+// ============================================================================
+// PRACT2-7-04 AC-2: DxResumeHeroConnected headline uses card-coverage, not
+// the weighted word-mastery value
+//
+// Strategy: supply wordMastery where ALL words are mastered (→ deriveWordProgress
+// returns progressPct=100) BUT card coverage is only 70% (7/10).
+// After the executor's change, the headline must show 70 (coverage).
+// Currently it shows 100 (weighted word-mastery) → these tests will be RED.
+// ============================================================================
+
+describe('DxResumeHeroConnected — AC-2 (PRACT2-7-04)', () => {
+  // Deck fixture for connected tests: cardCount=10 (word count for the hero stats)
+  const connectedDeck = makeDeck('connected-deck', { cardCount: 10 });
+
+  // Helper: build a WordMasteryItem where the word is fully mastered
+  // (total_count > 0, mastered_count === total_count, studied_count = total_count).
+  const masteredItem = (id: string): import('@/services/progressAPI').WordMasteryItem => ({
+    word_entry_id: id,
+    total_count: 2,
+    mastered_count: 2,
+    studied_count: 2,
+    type_progress: [],
+  });
+
+  // 10 items all mastered → deriveWordProgress returns progressPct=100.
+  const allMasteredItems = Array.from({ length: 10 }, (_, i) => masteredItem(`w${i}`));
+
+  function renderConnected(deck: Deck) {
+    return render(
+      <I18nextProvider i18n={i18n}>
+        <DxResumeHeroConnected deck={deck} />
+      </I18nextProvider>
+    );
+  }
+
+  beforeEach(() => {
+    // Supply a disagreeing wordMastery: all 10 words mastered → weighted pct = 100.
+    // But selectedDeckProgressDetail says only 7/10 cards studied → coverage = 70.
+    mockUseQuery.mockReturnValue({
+      data: { deck_id: connectedDeck.id, items: allMasteredItems },
+    });
+
+    // selectedDeckProgressDetail with cards_studied=7, total_cards=10.
+    mockUseDeckStore.mockImplementation(
+      (selector: (s: { rawDecks: Deck[]; selectedDeckProgressDetail: unknown }) => unknown) =>
+        selector({
+          rawDecks: [],
+          selectedDeckProgressDetail: {
+            deck_id: connectedDeck.id,
+            deck_name: connectedDeck.title,
+            deck_level: connectedDeck.level,
+            deck_description: null,
+            progress: {
+              total_cards: 10,
+              cards_studied: 7,
+              cards_mastered: 2,
+              cards_due: 0,
+              cards_new: 3,
+              cards_learning: 5,
+              cards_review: 0,
+              mastery_percentage: 20,
+              completion_percentage: 70,
+            },
+            statistics: {
+              total_reviews: 0,
+              total_study_time_seconds: 0,
+              average_quality: 0,
+              average_easiness_factor: 2.5,
+              average_interval_days: 0,
+              deck_streak_current: 0,
+              deck_streak_longest: 0,
+              weekly_activity: [],
+            },
+            timeline: {
+              first_studied_at: null,
+              last_studied_at: null,
+              days_active: 0,
+              estimated_completion_days: null,
+            },
+          },
+        })
+    );
+  });
+
+  // AC-2 — detail headline uses deckCompletionPct (coverage), NOT deriveWordProgress
+  it('test_detail_headline_uses_deckCompletionPct_not_deriveWordProgress', () => {
+    // wordMastery: all 10 words mastered → deriveWordProgress would return progressPct=100.
+    // selectedDeckProgressDetail: cards_studied=7, total_cards=10 → coverage=70.
+    // AFTER executor change: headline must show 70, not 100.
+    // CURRENTLY (pre-implementation): headline shows 100 → test is RED.
+    const { container } = renderConnected(connectedDeck);
+
+    const statsEl = container.querySelector('.dx-hero-resume-stats');
+    expect(statsEl).toBeTruthy();
+
+    // Third stat is the completion % — must be coverage (70), not word-mastery (100).
+    const bTags = statsEl!.querySelectorAll('b');
+    const displayedPct = parseInt(bTags[2].textContent ?? '-1', 10);
+    expect(displayedPct).toBe(70);
   });
 });

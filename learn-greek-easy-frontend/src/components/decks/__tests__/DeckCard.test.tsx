@@ -631,4 +631,43 @@ describe('DeckCard', () => {
       expect(screen.getByTestId('deck-card-title')).toBeInTheDocument();
     });
   });
+
+  // ── PRACT2-7-04 AC-2: card uses deckCompletionPct glossary selector ───────
+  //
+  // Guard: after the executor routes DeckCard through deckCompletionPct, the
+  // rendered % must still equal Math.round(cardsStudied / cardsTotal * 100).
+  //
+  // This test does NOT mock deckCompletionPct — it verifies the rendered value
+  // is what deckCompletionPct({cardsStudied:7, cardsTotal:10}) would return (70),
+  // proving both paths agree.
+  //
+  // Expected status: GREEN (the card already shows 70 via calculateCompletionPercentage
+  // which produces the same formula). The executor will re-route through deckCompletionPct;
+  // this guard ensures the value is unchanged after the reroute.
+  describe('test_card_uses_glossary_selector (PRACT2-7-04)', () => {
+    it('shows 70% when cardsTotal=10, cardsLearning=5, cardsMastered=2 (cardsStudied=7)', () => {
+      // cardsLearning=5, cardsMastered=2 → cardsStudied = 7
+      // deckCompletionPct({ cardsStudied: 7, cardsTotal: 10 }) = 70
+      const deck = createMockDeck({
+        progress: {
+          deckId: 'test-deck-1',
+          status: 'in-progress',
+          cardsTotal: 10,
+          cardsNew: 3,
+          cardsLearning: 5,
+          cardsReview: 0,
+          cardsMastered: 2,
+          dueToday: 2,
+          streak: 1,
+          totalTimeSpent: 30,
+          accuracy: 70,
+        },
+      });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      const fill = screen.getByTestId('deck-card-progress-fill');
+      expect(fill.style.width).toBe('70%');
+      const pctLabel = screen.getByTestId('deck-card-progress-pct');
+      expect(pctLabel.textContent).toContain('70');
+    });
+  });
 });
