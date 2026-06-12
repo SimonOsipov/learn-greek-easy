@@ -4,6 +4,7 @@
 //
 // Renders:
 //   - Check label + answer text (font determined by isElAnswer)
+//   - Optional muted translation sub-line (plural_form only; page-computed)
 //   - Optional example block (Greek example + EN gloss / RU translation + example audio)
 //   - Inert typed-result chip slot (filled by PRACT2-1-08 type mode)
 //
@@ -78,6 +79,12 @@ export interface AnswerProps {
    * Defaults to 'en' to preserve existing behaviour.
    */
   lang?: 'en' | 'ru';
+  /**
+   * Optional translation gloss shown beneath the main answer.
+   * Currently only computed for `plural_form` cards (see V2FlashcardPracticePage).
+   * Page-computed so Answer stays presentational. Absent/null → no sub-line.
+   */
+  answerSub?: string | null;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -94,6 +101,7 @@ export function Answer({
   exampleAudioState,
   typedResult,
   lang = 'en',
+  answerSub,
 }: AnswerProps) {
   // Declension suppression: the filled paradigm table IS the answer (PRACT2-1-05)
   if (cardType === 'declension') {
@@ -140,6 +148,13 @@ export function Answer({
       ) : (
         <p className="pf-answer__text pf-answer__text--en" data-testid="pf-answer-text">
           {answerText}
+        </p>
+      )}
+
+      {/* Translation sub-line — only when computed by the page (plural_form only) */}
+      {answerSub && (
+        <p className="pf-answer__sub" data-testid="pf-answer-sub">
+          {answerSub}
         </p>
       )}
 
