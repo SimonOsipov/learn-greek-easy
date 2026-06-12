@@ -1,5 +1,7 @@
 """Unit tests for picture generation configuration."""
 
+import logging
+
 import pytest
 from pydantic import ValidationError
 
@@ -103,18 +105,40 @@ class TestDatabasePoolWarmMin:
         settings = Settings()
         assert settings.database_pool_warm_min == 10
 
-    def test_database_pool_warm_min_exceeding_pool_size_rejected(self, monkeypatch):
-        """Settings() raises ValidationError when database_pool_warm_min > database_pool_size."""
+    def test_database_pool_warm_min_exceeding_pool_size_clamps_to_pool_size(
+        self, monkeypatch, caplog
+    ):
+        """When warm_min > pool_size, Settings() must clamp warm_min to pool_size and log a warning — not raise."""
         from src.config import Settings
 
         monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
         monkeypatch.setenv("DATABASE_POOL_SIZE", "5")
         monkeypatch.setenv("DATABASE_POOL_WARM_MIN", "6")
 
-        with pytest.raises(ValidationError) as exc_info:
-            Settings()
+        with caplog.at_level(logging.WARNING):
+            settings = Settings()
 
-        assert "database_pool_warm_min" in str(exc_info.value).lower()
+        assert settings.database_pool_warm_min == 5
+        assert "6" in caplog.text
+        assert "5" in caplog.text
+
+    def test_database_pool_warm_min_below_pool_size_unchanged_no_warning(self, monkeypatch, caplog):
+        """When warm_min < pool_size, Settings() must not clamp and must not emit a clamp warning."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("DATABASE_POOL_SIZE", "15")
+        monkeypatch.setenv("DATABASE_POOL_WARM_MIN", "3")
+
+        with caplog.at_level(logging.WARNING):
+            settings = Settings()
+
+        assert settings.database_pool_warm_min == 3
+        # No clamp warning should be present
+        assert (
+            "database_pool_warm_min" not in caplog.text.lower()
+            or "clamp" not in caplog.text.lower()
+        )
 
     def test_database_pool_warm_min_equal_to_pool_size_accepted(self, monkeypatch):
         """warm_min == pool_size is valid — the validator uses strict >, not >=."""
@@ -137,3 +161,106 @@ class TestDatabasePoolWarmMin:
 
         settings = Settings()
         assert settings.database_pool_warm_min == 0
+
+    # -------------------------------------------------------------------------
+    # INFRA-05 adversarial / edge coverage
+    # -------------------------------------------------------------------------
+
+    def test_clamp_emits_warning_level_not_error_or_info(self, monkeypatch, caplog):
+        """The log record emitted during a clamp must be at WARNING level specifically."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("DATABASE_POOL_SIZE", "5")
+        monkeypatch.setenv("DATABASE_POOL_WARM_MIN", "6")
+
+        with caplog.at_level(logging.WARNING, logger="src.config"):
+            Settings()
+
+        clamp_records = [r for r in caplog.records if "clamping" in r.getMessage().lower()]
+        assert clamp_records, "Expected at least one log record mentioning 'clamping'"
+        assert all(
+            r.levelno == logging.WARNING for r in clamp_records
+        ), "Clamp log must be WARNING, not ERROR or INFO"
+
+    def test_clamp_log_message_contains_both_values(self, monkeypatch, caplog):
+        """The warning message must name the original warm_min AND pool_size values."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("DATABASE_POOL_SIZE", "7")
+        monkeypatch.setenv("DATABASE_POOL_WARM_MIN", "20")
+
+        with caplog.at_level(logging.WARNING, logger="src.config"):
+            settings = Settings()
+
+        assert settings.database_pool_warm_min == 7
+        # Both the input value (20) and the pool_size (7) must appear in the log.
+        assert "20" in caplog.text, "Log must name the original warm_min (20)"
+        assert "7" in caplog.text, "Log must name the pool_size (7)"
+
+    def test_clamp_far_above_pool_size_clamps_to_exactly_pool_size(self, monkeypatch):
+        """warm_min far above pool_size (999 vs 5) must clamp to exactly pool_size, not pool_size-1."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("DATABASE_POOL_SIZE", "5")
+        monkeypatch.setenv("DATABASE_POOL_WARM_MIN", "999")
+
+        settings = Settings()
+        assert (
+            settings.database_pool_warm_min == 5
+        ), f"Expected 5 (pool_size), got {settings.database_pool_warm_min}"
+        assert (
+            settings.database_pool_warm_min == settings.database_pool_size
+        ), "Clamped value must equal pool_size exactly"
+
+    def test_no_warning_emitted_when_warm_min_below_pool_size(self, monkeypatch, caplog):
+        """When warm_min < pool_size no clamp-related log record must be emitted at any level."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("DATABASE_POOL_SIZE", "15")
+        monkeypatch.setenv("DATABASE_POOL_WARM_MIN", "3")
+
+        with caplog.at_level(logging.DEBUG, logger="src.config"):
+            settings = Settings()
+
+        assert settings.database_pool_warm_min == 3
+        clamp_records = [r for r in caplog.records if "clamping" in r.getMessage().lower()]
+        assert (
+            not clamp_records
+        ), f"No clamp log expected when warm_min < pool_size, got: {[r.getMessage() for r in clamp_records]}"
+
+    def test_no_warning_emitted_when_warm_min_equals_pool_size(self, monkeypatch, caplog):
+        """When warm_min == pool_size no clamp-related log record must be emitted."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("DATABASE_POOL_SIZE", "10")
+        monkeypatch.setenv("DATABASE_POOL_WARM_MIN", "10")
+
+        with caplog.at_level(logging.DEBUG, logger="src.config"):
+            settings = Settings()
+
+        assert settings.database_pool_warm_min == 10
+        clamp_records = [r for r in caplog.records if "clamping" in r.getMessage().lower()]
+        assert (
+            not clamp_records
+        ), f"No clamp log expected when warm_min == pool_size, got: {[r.getMessage() for r in clamp_records]}"
+
+    def test_field_defaults_not_regressed(self, monkeypatch):
+        """database_pool_warm_min Field default is 5; database_pool_size Field default is 15.
+
+        Verifies the Field(default=...) declarations haven't been changed.  We read the defaults
+        directly from the model fields so the test is immune to .env overrides.
+        """
+        from src.config import Settings
+
+        warm_min_default = Settings.model_fields["database_pool_warm_min"].default
+        pool_size_default = Settings.model_fields["database_pool_size"].default
+
+        assert warm_min_default == 5, f"Expected Field default warm_min=5, got {warm_min_default}"
+        assert (
+            pool_size_default == 15
+        ), f"Expected Field default pool_size=15, got {pool_size_default}"

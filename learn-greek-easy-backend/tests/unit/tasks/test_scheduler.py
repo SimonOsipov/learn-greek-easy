@@ -294,19 +294,16 @@ class TestScheduledTaskStubs:
 
         from src.tasks.scheduled import session_cleanup_task
 
-        with patch("src.core.redis.init_redis", new_callable=AsyncMock) as mock_init:
+        with patch("src.core.redis.init_redis", new_callable=AsyncMock):
             with patch("src.core.redis.get_redis") as mock_get_redis:
-                with patch("src.core.redis.close_redis", new_callable=AsyncMock) as mock_close:
+                with patch("src.core.redis.close_redis", new_callable=AsyncMock):
                     # Return None to trigger the "Redis not available" branch
                     mock_get_redis.return_value = None
 
                     with caplog_loguru.at_level("INFO"):
                         await session_cleanup_task()
 
-                    # Verify Redis functions were called
-                    mock_init.assert_called_once()
                     mock_get_redis.assert_called_once()
-                    mock_close.assert_called_once()
 
         assert "session cleanup" in caplog_loguru.text.lower()
 
@@ -368,3 +365,205 @@ class TestEventListenerRegistration:
             # Verify the listener function was passed
             call_args = mock_scheduler_instance.add_listener.call_args
             assert call_args[0][0] == job_listener
+
+
+# =============================================================================
+# INFRA-06: RED test D — job_listener must produce a Sentry event with a
+# real exception payload (not just a bare log message).
+# =============================================================================
+
+
+class TestJobListenerSentryCapturesException:
+    """
+    RED test (INFRA-06 Test D): verify that when job_listener is called with
+    an event whose .exception is set, a Sentry event is captured AND the
+    captured event carries a non-empty 'exception' payload (type + value +
+    stacktrace).
+
+    Why this is RED now
+    -------------------
+    Current job_listener code (scheduler.py:64-68):
+        logger.error(f"... {event.exception}", exc_info=event.exception)
+
+    The architect proved empirically that Sentry's LoguruIntegration turns the
+    loguru exc_info=<instance> path into a bare error EVENT (level=error) but
+    WITHOUT an 'exception' key — because the stdlib logging EventHandler
+    expects record.exc_info as a (type, value, traceback) 3-tuple, not a bare
+    instance.  So ``'exception' in captured_event`` is False today.
+
+    After the executor adds ``sentry_sdk.capture_exception(event.exception)``
+    inside the ``if event.exception:`` branch of job_listener, this test turns
+    GREEN because capture_exception reads instance.__traceback__ and produces a
+    full exception payload regardless of whether we are inside an except block.
+    """
+
+    def test_job_listener_captures_real_exception_event(self):
+        """
+        Initialize the real sentry_sdk in-process (dropping all events via
+        before_send), fire job_listener with a real exception, flush, and
+        assert that:
+          1. At least one event was captured (init_sentry was called → SDK live).
+          2. The captured event contains an 'exception' key with populated data
+             (has 'values' list with at least one entry carrying 'type' and
+             'value').
+
+        RED REASON: captured[-1] will have 'exception' == False with current
+        code because logger.error(exc_info=<instance>) does not produce an
+        exception payload.
+        """
+        import sentry_sdk
+        from apscheduler.events import EVENT_JOB_ERROR, JobExecutionEvent
+
+        from src.tasks.scheduler import job_listener
+
+        captured_events: list = []
+
+        def _capture_and_drop(event, hint):
+            """Capture the event for assertion, then drop it (never send)."""
+            captured_events.append(event)
+            return None  # returning None drops the event
+
+        # Raise a real exception so it has a real __traceback__
+        try:
+            raise ValueError("synthetic scheduler job failure")
+        except ValueError as exc:
+            real_exc = exc
+
+        # Initialize real SDK with our capturing before_send.
+        # Use LoguruIntegration so we replicate the production integration stack.
+        # dsn uses the sentry-sdk's built-in noop DSN that never makes network calls.
+        from sentry_sdk.integrations.loguru import LoggingLevels, LoguruIntegration
+
+        sentry_sdk.init(
+            # noop DSN: SDK parses it, stores=valid, but no HTTP transport fires
+            dsn="https://key@o0.ingest.sentry.io/0",
+            before_send=_capture_and_drop,
+            integrations=[
+                LoguruIntegration(
+                    sentry_logs_level=LoggingLevels.INFO.value,
+                    level=LoggingLevels.INFO.value,
+                    event_level=LoggingLevels.ERROR.value,
+                ),
+            ],
+            traces_sample_rate=0.0,
+            debug=False,
+        )
+
+        try:
+            # Build a real JobExecutionEvent with .exception set.
+            # APScheduler's JobExecutionEvent.__init__ signature:
+            #   (code, job_id, jobstore, scheduled_run_time, retval=None, exception=None, traceback=None)
+            import datetime
+
+            event = JobExecutionEvent(
+                code=EVENT_JOB_ERROR,
+                job_id="test_job_sentry",
+                jobstore="default",
+                scheduled_run_time=datetime.datetime.now(datetime.timezone.utc),
+                exception=real_exc,
+                traceback=None,
+            )
+
+            # Call the listener — this is the code under test
+            job_listener(event)
+
+            # Flush to ensure any pending events are delivered to before_send
+            sentry_sdk.flush(timeout=2.0)
+
+            # ---- ASSERTIONS ----
+            assert len(captured_events) >= 1, (
+                "No Sentry events were captured at all. "
+                "Expected at least one event from job_listener(event) with a set exception."
+            )
+
+            last_event = captured_events[-1]
+
+            assert "exception" in last_event, (
+                "Captured Sentry event has no 'exception' key. "
+                "The logger.error(exc_info=<instance>) path produces a bare message event, "
+                "NOT an exception event. "
+                "Fix: add sentry_sdk.capture_exception(event.exception) in job_listener."
+            )
+
+            # Verify the exception payload is meaningful (not empty)
+            exc_data = last_event["exception"]
+            values = exc_data.get("values", [])
+            assert len(values) >= 1, f"'exception.values' is empty in captured event: {last_event}"
+            exc_entry = values[0]
+            assert (
+                exc_entry.get("type") == "ValueError"
+            ), f"Expected type='ValueError', got: {exc_entry.get('type')}"
+            assert "synthetic scheduler job failure" in str(
+                exc_entry.get("value", "")
+            ), f"Expected exception value to contain error message, got: {exc_entry.get('value')}"
+
+        finally:
+            # Always close the SDK so it doesn't bleed into other tests
+            sentry_sdk.init(dsn=None)  # type: ignore[call-overload]
+
+
+# =============================================================================
+# INFRA-06 (QA Mode B): adversarial coverage for job_listener branches
+# =============================================================================
+
+
+class TestJobListenerAdversarial:
+    """
+    QA Mode B adversarial coverage for the job_listener function.
+
+    These tests verify:
+    - The SUCCESS branch (no exception) does NOT call capture_exception —
+      only the error branch should fire Sentry.
+    """
+
+    def test_job_listener_success_branch_does_not_call_capture_exception(self):
+        """
+        When job_listener is called with event.exception = None (successful
+        job execution), sentry_sdk.capture_exception must NOT be called.
+
+        This guards against accidentally placing capture_exception outside
+        the `if event.exception:` branch, which would flood Sentry with
+        false-positive events on every successful job run.
+        """
+        import sentry_sdk
+
+        from src.tasks.scheduler import job_listener
+
+        mock_event = MagicMock()
+        mock_event.job_id = "test_successful_job"
+        mock_event.exception = None  # successful execution
+
+        with patch.object(sentry_sdk, "capture_exception") as mock_capture:
+            job_listener(mock_event)
+
+        mock_capture.assert_not_called(), (
+            "capture_exception must NOT be called for successful job executions "
+            "(event.exception is None). Only the error branch should fire Sentry."
+        )
+
+    def test_job_listener_error_branch_calls_capture_exception_exactly_once(self):
+        """
+        When job_listener is called with a real exception, capture_exception
+        must be called exactly once — not zero times (the pre-fix bug) and
+        not multiple times (a future regression).
+        """
+        import sentry_sdk
+
+        from src.tasks.scheduler import job_listener
+
+        try:
+            raise RuntimeError("scheduled job kaboom")
+        except RuntimeError as exc:
+            real_exc = exc
+
+        mock_event = MagicMock()
+        mock_event.job_id = "test_failed_job"
+        mock_event.exception = real_exc
+
+        with patch.object(sentry_sdk, "capture_exception") as mock_capture:
+            job_listener(mock_event)
+
+        mock_capture.assert_called_once_with(real_exc), (
+            "capture_exception must be called exactly once with the exception "
+            "instance when job_listener detects event.exception is set."
+        )

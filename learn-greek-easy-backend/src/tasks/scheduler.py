@@ -39,6 +39,7 @@ Usage:
 
 from typing import Optional
 
+import sentry_sdk
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, JobExecutionEvent
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -66,6 +67,11 @@ def job_listener(event: JobExecutionEvent) -> None:
             f"Scheduled job {event.job_id} failed: {event.exception}",
             exc_info=event.exception,
         )
+        # Explicit capture required: loguru exc_info=<instance> produces a bare
+        # Sentry event without an 'exception' payload (no stacktrace/grouping/Seer).
+        # capture_exception reads instance.__traceback__ and produces a full
+        # exception event even outside an active except block.
+        sentry_sdk.capture_exception(event.exception)
     else:
         logger.info(f"Scheduled job {event.job_id} completed successfully")
 
