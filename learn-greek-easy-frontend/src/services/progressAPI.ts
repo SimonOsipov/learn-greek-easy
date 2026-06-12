@@ -58,13 +58,17 @@ export interface StreakStats {
 }
 
 /**
- * Cards breakdown by status
+ * Cards breakdown by status.
+ * `due` is an optional scheduling dimension merged by the backend
+ * (`progress_service.py:217-221`) — it overlaps the stage buckets and is
+ * intentionally excluded from any stage-percentage denominator.
  */
 export interface CardsByStatus {
   new: number;
   learning: number;
   review: number;
   mastered: number;
+  due?: number;
 }
 
 /**
