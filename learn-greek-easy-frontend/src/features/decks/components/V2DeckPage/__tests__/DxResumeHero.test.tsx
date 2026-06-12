@@ -41,7 +41,7 @@ vi.mock('@/stores/deckStore', () => ({
 // useQuery mock — vi.fn() so tests can control what wordMastery data is returned.
 // Default: return { data: undefined } so existing tests (which render DxResumeHero
 // directly and never hit useQuery) are unaffected.
-const mockUseQuery = vi.fn(() => ({ data: undefined }));
+const mockUseQuery = vi.fn((): { data: unknown } => ({ data: undefined }));
 
 vi.mock('@tanstack/react-query', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-query')>();
