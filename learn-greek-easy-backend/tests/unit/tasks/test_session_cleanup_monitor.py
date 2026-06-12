@@ -35,16 +35,23 @@ import pytest
 
 _SCHEDULED_MODULE = "src.tasks.scheduled"
 
-# Sub-modules of src.tasks.scheduled that may also be cached and need eviction
-# so a fresh reload pulls in a clean copy.
+# Only src.tasks.scheduled (and any sub-modules) need eviction for the reload
+# spy to work.  We deliberately do NOT evict src.tasks (the package __init__)
+# or src.tasks.scheduler — those modules are imported at test-collection time
+# by test_scheduler.py (top-level `from src.tasks.scheduler import ...`).
+# Evicting the package forces Python to re-execute __init__.py, which
+# re-imports src.tasks.scheduler as a NEW module object — different from the
+# one already bound to test_scheduler.py's top-level names.  The two sets of
+# names then point to different _scheduler globals and six scheduler tests
+# silently fail.  Since src.tasks.__init__ does NOT import from
+# src.tasks.scheduled, we don't need to evict the package at all.
 _SUBMODULES_TO_EVICT = [
     "src.tasks.scheduled",
-    "src.tasks",  # the package __init__ re-exports names; evict it too
 ]
 
 
 def _evict_scheduled():
-    """Remove src.tasks.scheduled (and the tasks package) from sys.modules."""
+    """Remove src.tasks.scheduled from sys.modules (only that module)."""
     for key in list(sys.modules.keys()):
         for target in _SUBMODULES_TO_EVICT:
             if key == target or key.startswith(target + "."):
@@ -77,32 +84,47 @@ class TestMonitorAppliedWithCorrectSlug:
         the patch, then assert the spy was called exactly once with
         monitor_slug='scheduler-session-cleanup'.
 
+        sentry_sdk.crons.monitor is a DECORATOR FACTORY, used as:
+            @monitor(monitor_slug="...")   # step 1: factory call → returns decorator
+            async def fn(): ...           # step 2: decorator(fn) → wrapped fn
+
+        The spy must model this two-step protocol:
+          - factory_spy(monitor_slug="...") is called at import time (step 1)
+          - factory_spy.return_value(fn) is called immediately after (step 2)
+
+        Using MagicMock(side_effect=lambda fn: fn) was WRONG: the lambda
+        receives monitor_slug as an unexpected kwarg → TypeError on import.
+
         PRE-IMPLEMENTATION: FAILS because @monitor is not applied yet
-        → spy is never called → assert spy.call_count == 1 fails.
+        → spy is never called → assert factory_spy.call_count == 1 fails.
         """
-        # A pass-through spy: records calls and returns a transparent decorator
-        # so the reload doesn't break the module structure.
-        spy = MagicMock(side_effect=lambda fn: fn)
+        # factory_spy accepts any args/kwargs (MagicMock default), recording them.
+        # Its return_value is the inner decorator: a pass-through that returns fn
+        # unchanged so the module loads correctly.
+        factory_spy = MagicMock()
+        factory_spy.return_value = lambda fn: fn  # inner decorator: transparent
 
         _evict_scheduled()
         try:
-            with patch("sentry_sdk.crons.monitor", spy):
+            with patch("sentry_sdk.crons.monitor", factory_spy):
                 importlib.import_module(_SCHEDULED_MODULE)
 
-            # Assert called exactly once (one @monitor decoration)
-            assert spy.call_count == 1, (
+            # Assert factory was called exactly once (one @monitor decoration)
+            assert factory_spy.call_count == 1, (
                 f"Expected sentry_sdk.crons.monitor to be called exactly once "
-                f"during module load, but it was called {spy.call_count} time(s). "
+                f"during module load, but it was called {factory_spy.call_count} time(s). "
                 f"Has @monitor been applied to session_cleanup_task?"
             )
 
-            # Assert the slug is exactly right
-            call_kwargs = spy.call_args_list[0][1]  # kwargs of the first (only) call
-            assert call_kwargs.get("monitor_slug") == "scheduler-session-cleanup", (
-                f"Expected monitor_slug='scheduler-session-cleanup', " f"got: {call_kwargs!r}"
-            )
+            # Assert the slug is exactly right — check kwargs of the factory call
+            call_kwargs = factory_spy.call_args_list[0][1]  # kwargs of the first (only) call
+            assert (
+                call_kwargs.get("monitor_slug") == "scheduler-session-cleanup"
+            ), f"Expected monitor_slug='scheduler-session-cleanup', got: {call_kwargs!r}"
         finally:
-            # Restore the real (unpatched) module so later tests are unaffected
+            # Restore the real (unpatched) module so later tests are unaffected.
+            # This MUST run even if assertions fail to prevent module-state
+            # contamination that would cascade failures to other test modules.
             _restore_scheduled()
 
 
