@@ -13,6 +13,7 @@ import { useAnalytics } from '@/hooks/useAnalytics';
 import { useTourAutoTrigger } from '@/hooks/useTourAutoTrigger';
 import { getLocalizedDeckDescription, getLocalizedDeckName } from '@/lib/deckLocale';
 import { reportAPIError } from '@/lib/errorReporting';
+import { masteredCount } from '@/lib/progressGlossary';
 import { formatStudyTime } from '@/lib/timeFormatUtils';
 import { useAuthStore } from '@/stores/authStore';
 import { useDeckStore } from '@/stores/deckStore';
@@ -126,7 +127,12 @@ export const Dashboard: React.FC = () => {
       {
         id: '3',
         label: t('dashboard.metrics.mastered'),
-        value: wordStatus.mastered,
+        value: masteredCount({
+          new: wordStatus.new ?? 0,
+          learning: wordStatus.learning,
+          review: wordStatus.review,
+          mastered: wordStatus.mastered,
+        }),
         sublabel: t('dashboard.metrics.wordsTotal'),
         color: 'green',
         icon: '✅',

@@ -58,15 +58,12 @@ function renderStatsGrid(wordsLearned: number) {
 
 describe('StatsGrid wordsLearned tile (PRACT2-7-03 AC-1)', () => {
   it('test_statistics_learned_uses_learnedCount: wordsLearned card shows review+mastered (13), not totalCardsReviewed (137)', () => {
-    // Render with the CURRENT (wrong) value — what Statistics.tsx passes today.
-    // The test asserts the CORRECT value (13 = learnedCount), so it will FAIL
-    // as long as the wiring is still totalCardsReviewed.
-    //
-    // After the fix, Statistics.tsx will pass learnedCount (13) here and this
-    // test will pass.
+    // Render with the CORRECT value — what Statistics.tsx passes after the fix.
+    // Statistics.tsx now calls learnedCount({review:8, mastered:5}) = 13 and
+    // passes that to StatsGrid (instead of the old totalCardsReviewed=137).
     //
     // Note: i18n renders in English ("Words Learned") in the test environment.
-    renderStatsGrid(TOTAL_CARDS_REVIEWED);
+    renderStatsGrid(LEARNED_COUNT);
 
     // Find the "Words Learned" card heading (i18n key stats.wordsLearned)
     const heading = screen.getByText('Words Learned');
