@@ -4,6 +4,8 @@
 
 Automated execution of a single user story's Backlog subtasks through per-subtask quality gates (Architecture → Explore → Test-Spec* → Execution → QA Verify; *Test-Spec runs only for logic-bearing `Test-first: yes` subtasks), followed by a story-level visual QA gate (Phase 3.5) that checks the assembled feature against the original objective via the locked `release-verify.yml` run (web verification + artifacts) and the local-sim Maestro gate (mobile). Runs in an isolated git worktree so multiple stories can be worked in parallel from separate terminals without colliding.
 
+Stories arrive in one of two states: **basic** (intent-only — Objective, Core ACs, Out of Scope; produced by `/pm-review` basic mode; zero Backlog subtasks) or **pre-planned** (Backlog subtasks already exist). Basic stories are first planned **in-run** by Phase 0.6 (architecture finalization → unattended QA-verify debate → subtask generation); pre-planned stories skip Phase 0.6 entirely — legacy behavior unchanged.
+
 **Invocation**: `/ralph <STORY-ID>` (e.g., `/ralph SIT-07`). One story per invocation. To run multiple stories in parallel, open another terminal and invoke `/ralph SIT-09` — each invocation creates its own worktree, branch, and PR.
 
 ## Model Selection
@@ -83,9 +85,9 @@ Reference before making changes to related areas:
      status: "To Do"
    })
    ```
-4. **Topo-sort the subtasks** by their `dependencies` field → linear execution order.
-5. **Validate**: if zero subtasks returned, error with: "no To Do subtasks found for story <ID>; verify subtask-generator was run and the `story:<slug>` label is set on each subtask".
-6. **Log the plan**: print the story title, branch slug, and ordered subtask list so the user can see what will run.
+4. **Classify the story state**:
+   - **Zero subtasks returned** → the story is **BASIC** (intent-only, from `/pm-review` basic mode). Verify it has an `## Objective` and `## Core Acceptance Criteria` section — if it has neither subtasks in Backlog NOR the basic-story sections, error: "story <ID> is neither basic (no Objective/Core ACs) nor pre-planned (no Backlog subtasks) — run /pm-review first". Set `PLANNING_REQUIRED=true`; topo-sort and plan-logging happen at the end of Phase 0.6 instead.
+   - **Subtasks returned** → the story is **PRE-PLANNED**. Topo-sort by `dependencies` → linear execution order, log the plan (story title, branch slug, ordered subtask list), and skip Phase 0.6.
 
 ### Phase 0.5: Worktree Bootstrap
 
@@ -121,11 +123,40 @@ Reference before making changes to related areas:
 
 5. **All subsequent shell commands run inside `$WORKTREE_PATH`.** Pass it as the CWD to subagents that need to read/edit/test files.
 
-6. **Move all subtasks to "In Progress"**:
+6. **Move all subtasks to "In Progress"** (skip if `PLANNING_REQUIRED` — no subtasks exist yet; Phase 0.6c does this after creating them):
    ```
    For each subtask ID:
      mcp__backlog__task_edit(id=task_id, status="In Progress")
    ```
+
+### Phase 0.6: Planning (basic stories only)
+
+Runs ONLY when Phase 0 set `PLANNING_REQUIRED=true` — i.e. the story is in **basic state** (Objective, 3–7 Core ACs, Out of Scope, Constraints, Decisions; no Backlog subtasks). Pre-planned stories skip this phase entirely.
+
+All planning runs **inside the worktree** so every file reference is written against the code that will actually be modified — specs cannot rot because nothing waits.
+
+#### a. Architecture — finalize the story
+- Spawn `product-architecture-spec` (Opus) via Task tool, CWD = `$WORKTREE_PATH`, passing the FULL basic story content and its Obsidian path. Instruct it to operate per its "Expanding a Basic Story" section.
+- It rewrites the story file in Obsidian (same path) to final state: system design, **## Implementation Subtasks** (`[<STORY-ID>-NN]` with Category / Dependencies / Description / Acceptance Criteria / Order / Test-first classification + Test Specs tables for `Test-first: yes`), and a **## Decisions** section appending every assumption it made where the basic story was silent (decision, why, alternative rejected).
+- **Traceability rule (hard):** every derived AC and subtask must trace to the basic story's Objective or a Core AC. Nothing listed in Out of Scope may appear in any subtask.
+- **Checkpoint:** `STORY_FINALIZED`
+
+#### b. QA-Verify debate — UNATTENDED disposition
+- Run the `/qa-verify` protocol (`~/.claude/commands/qa-verify.md`) against the finalized story: `product-qa-spec` critic (**Sonnet**) vs `product-architecture-spec` architect (**Opus**), ≤3 rounds, citation-required — **including the Intent-Integrity checks** (AC→Objective traceability, Out-of-scope leakage = mechanical).
+- Use the protocol's **Unattended Mode** disposition table: mechanical+resolved+cited → auto-apply; judgment / unresolved / uncited → **conservative default** (the option closest to the basic story's explicit text, the smaller scope) + prominent log entry. NEVER block on the user.
+- Append the run to the story's `… QA Debate Log.md` as the standalone skill does, marking each disposition `auto-applied | conservative-default (reason)`.
+- **Checkpoint:** `PLAN_VERIFIED`
+
+#### c. Subtask generation — Backlog tasks
+- Execute the `subtask-generator` logic (`~/.claude/skills/subtask-generator/SKILL.md`) for the finalized story, passing the story explicitly (no context detection): spawn parallel `product-architecture-spec` agents → one Backlog task per subtask (description, acceptance_criteria, implementation_plan, references, labels `["story:<slug>", ...]`), then wire dependencies between the created task IDs.
+- Move all created subtasks to "In Progress" (this replaces the Phase 0.5 step that was skipped).
+- Topo-sort by dependencies → linear execution order. **Log the plan**: story title, branch slug, ordered subtask list, and the count of Decisions + conservative-default dispositions.
+- **Checkpoint:** `SUBTASKS_READY`
+
+#### d. Decisions surfacing (non-blocking)
+- When spawning the FIRST subtask's executor (Phase 1), instruct it to include in the draft PR description: the story's **## Decisions** section (PM defaults + architect assumptions + conservative-default debate dispositions) and a pointer to the QA Debate Log. This is the user's review surface — the run does NOT wait for input; completion gates remain CI + Phase 3.5 as always.
+
+Then proceed to Phase 1 exactly as for a pre-planned story.
 
 ### Phase 1: Sequential Subtask Execution
 
@@ -402,7 +433,10 @@ gh run list --branch "$BRANCH" --limit 1 --json databaseId,status -q '.[0]'
 | Executor authoring its own test coverage | Executor only drives the architect's pre-authored reds to green; QA owns new test coverage (Stage 4) |
 | Working in main checkout | Always work in `$WORKTREE_PATH`; main is the user's space |
 | Mixing subtasks from different stories on one branch | One story per branch, always |
-| Title-parsing Backlog tasks to find a story's subtasks | Use the `story:<slug>` label set by /subtask-generator |
+| Title-parsing Backlog tasks to find a story's subtasks | Use the `story:<slug>` label set by Phase 0.6c / /subtask-generator |
+| Erroring out on a story with zero Backlog subtasks | Zero subtasks + Objective/Core ACs present = BASIC story → run Phase 0.6 Planning |
+| Blocking on the user during Phase 0.6 (interview, judgment escalation) | Unattended disposition: defaults + conservative options, recorded in ## Decisions / QA Debate Log; user reviews via PR description |
+| Architect inventing scope while expanding a basic story | Every derived AC/subtask traces to Objective/Core AC; Out-of-scope leakage = mechanical fail (intent drift) |
 | Creating a Backlog parent task for the user story | The user story lives in Obsidian only |
 | Orchestrator running `git checkout -b` | Use `git worktree add -b`; the executor handles push and PR |
 | Auto-discovering To Do tasks across stories | `/ralph` runs one story at a time; user names which |
