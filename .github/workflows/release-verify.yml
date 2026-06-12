@@ -1134,7 +1134,6 @@ jobs:
           echo "URLs: $LIGHTHOUSE_URLS"
 
           lhci collect --config=lighthouserc.cjs
-          lhci assert --config=lighthouserc.cjs || true
           lhci upload --config=lighthouserc.cjs
 
           # Debug: List files in .lighthouseci
@@ -1157,7 +1156,12 @@ jobs:
             echo "desktop_a11y=0" >> $GITHUB_OUTPUT
           fi
 
+      - name: Assert Lighthouse (Desktop)
+        working-directory: learn-greek-easy-frontend
+        run: lhci assert --config=lighthouserc.cjs
+
       - name: Preserve Desktop Reports
+        if: always()
         working-directory: learn-greek-easy-frontend
         run: |
           # Save desktop reports before mobile run overwrites them
@@ -1174,6 +1178,7 @@ jobs:
           rm -rf .lighthouseci
 
       - name: Run Lighthouse CI (Mobile)
+        if: always()
         id: lhci-mobile
         working-directory: learn-greek-easy-frontend
         env:
@@ -1183,7 +1188,6 @@ jobs:
           echo "URLs: $LIGHTHOUSE_URLS"
 
           lhci collect --config=lighthouserc.mobile.cjs
-          lhci assert --config=lighthouserc.mobile.cjs || true
           lhci upload --config=lighthouserc.mobile.cjs
 
           # Debug: List files in .lighthouseci
@@ -1211,7 +1215,12 @@ jobs:
           cp -r .lighthouseci/*.html lighthouse-reports/mobile/ 2>/dev/null || true
           cp -r .lighthouseci/*.json lighthouse-reports/mobile/ 2>/dev/null || true
 
+      - name: Assert Lighthouse (Mobile)
+        working-directory: learn-greek-easy-frontend
+        run: lhci assert --config=lighthouserc.mobile.cjs
+
       - name: Aggregate Results
+        if: always()
         id: lighthouse
         working-directory: learn-greek-easy-frontend
         run: |
@@ -1230,6 +1239,7 @@ jobs:
           fi
 
       - name: Upload Lighthouse Reports
+        if: always()
         uses: actions/upload-artifact@v5
         with:
           name: lighthouse-reports
@@ -1237,6 +1247,7 @@ jobs:
           retention-days: 7
 
       - name: Parse Lighthouse Results
+        if: always()
         working-directory: learn-greek-easy-frontend
         env:
           LIGHTHOUSE_REPORT_URL: ${{ steps.lighthouse.outputs.report_url }}
@@ -1244,6 +1255,7 @@ jobs:
           node scripts/parse-lighthouse-results.cjs
 
       - name: Upload Lighthouse Summary
+        if: always()
         uses: actions/upload-artifact@v5
         with:
           name: lighthouse-summary
@@ -1253,6 +1265,7 @@ jobs:
           retention-days: 7
 
       - name: Set Lighthouse Status Check
+        if: always()
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -1295,7 +1308,7 @@ jobs:
   lighthouse-comment:
     name: Lighthouse PR Comment
     needs: [lighthouse]
-    if: needs.lighthouse.result == 'success'
+    if: always() && needs.lighthouse.result != 'skipped'
     runs-on: ubuntu-latest
 
     steps:
