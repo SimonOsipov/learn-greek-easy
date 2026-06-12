@@ -5,7 +5,7 @@ on a periodic basis using APScheduler's CronTrigger.
 
 Tasks:
 - streak_reset_task: Daily at midnight UTC - Check and log broken streaks
-- session_cleanup_task: Daily at 3 AM UTC - Clean up orphaned Redis sessions
+- session_cleanup_task: Hourly at minute 0 UTC - Clean up orphaned Redis sessions
 - stats_aggregate_task: Daily at 4 AM UTC - Aggregate user statistics for analytics
 """
 
@@ -210,7 +210,7 @@ async def _cleanup_orphaned_session_refs(redis: "Redis") -> tuple[int, int]:
 async def session_cleanup_task() -> None:
     """Clean up expired and orphaned sessions from Redis.
 
-    This task runs daily to ensure any orphaned session keys are removed.
+    This task runs hourly to ensure any orphaned session keys are removed.
     Redis TTL should handle most expiry, but this catches edge cases:
 
     1. Keys without TTL (shouldn't happen, but safety check)
@@ -222,9 +222,8 @@ async def session_cleanup_task() -> None:
     logger.info("Starting session cleanup task")
     start_time = datetime.now(timezone.utc)
 
-    from src.core.redis import close_redis, get_redis, init_redis
+    from src.core.redis import get_redis
 
-    await init_redis()
     redis = get_redis()
 
     try:
@@ -254,9 +253,6 @@ async def session_cleanup_task() -> None:
     except Exception as e:
         logger.error(f"Session cleanup failed: {e}", exc_info=True)
         raise
-
-    finally:
-        await close_redis()
 
 
 async def stats_aggregate_task() -> None:
