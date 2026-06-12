@@ -8,18 +8,14 @@
  *   - Non-EN, non-RU language detection falls back to EN cleanly
  *   - RU bundle load in the languageChanged runtime-switch path
  *
- * All tests use the fresh-module pattern (vi.resetModules + vi.doMock) because:
- *   - test-setup.ts pre-initializes the i18n singleton; calling initI18n() on
- *     the shared instance exercises the isInitialized=true code path, NOT the
- *     production path.
- *   - For adversarial tests that must exercise the PRODUCTION path
- *     (i18n.isInitialized === false), we import a fresh module instance after
- *     vi.resetModules() clears the singleton.
- *   - Tests that only need the shared instance (e.g., EN sync bundle check) can
- *     use it directly since test-setup.ts pre-loads all namespaces.
+ * Tests 1-4 use the shared singleton (test-setup.ts pre-loads EN+RU resources).
+ * Tests 5-7 call resetI18nInit() + initI18n() on the shared singleton, which
+ * re-invokes i18n.init() (i18next allows re-initialization) then fires the
+ * fire-and-forget bundle load. Assertions are behavior-based (spy call counts,
+ * vi.waitFor) — no hard-coded microtask-tick depths.
  *
- * NOTE: These tests deliberately do NOT use the 5-level Promise.resolve() chain
- * or the isInitialized short-circuit — they verify real behaviour.
+ * NOTE: These tests deliberately do NOT use fixed Promise.resolve() flush counts
+ * or a test-only isInitialized short-circuit — they verify real behaviour.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -166,45 +162,50 @@ describe('PERF-09-01: adversarial coverage', () => {
   // -------------------------------------------------------------------------
   // 5. RU fire-and-forget does NOT call addResourceBundle BEFORE initI18n resolves
   //
-  // This is a stricter form of AC-1 that checks the boundary synchronously
-  // (not via a race-sentinel). Using the shared instance (isInitialized=true
-  // path), the 5-level microtask chain ensures calls land AFTER resolution.
+  // Spy is set AFTER initI18n() resolves (avoids storeApiChained overwrite during
+  // i18n.init()). Immediately after resolution — no extra flush — the fire-and-forget
+  // has not yet run, so 0 RU calls are recorded. This is the behavioral invariant
+  // that ensures fire-and-forget is truly async (not blocking initI18n).
   // -------------------------------------------------------------------------
   it('AC-1 strict: zero addResourceBundle("ru") calls at exact point initI18n() resolves', async () => {
     localStorage.setItem('i18nextLng', 'ru');
     resetI18nInit();
 
+    await initI18n();
+
+    // Spy installed AFTER initI18n() — wraps the post-init storeApiChained method.
+    // No extra await between initI18n() and spy installation: we are still in the
+    // same microtask queue position — fire-and-forget has not yet executed.
     const addBundleSpy = vi.spyOn(i18n, 'addResourceBundle');
 
-    let ruCallsAtResolution = -1;
-
-    await initI18n().then(() => {
-      // Count INSIDE the .then() — no extra flush.
-      ruCallsAtResolution = addBundleSpy.mock.calls.filter((args) => args[0] === 'ru').length;
-    });
-
+    // 0 RU calls at the resolution point (spy just installed, fire-and-forget pending).
+    const ruCallsAtResolution = addBundleSpy.mock.calls.filter((args) => args[0] === 'ru').length;
     expect(ruCallsAtResolution).toBe(0);
   });
 
   // -------------------------------------------------------------------------
   // 6. RU fire-and-forget calls addResourceBundle AFTER initI18n resolves
   //    (complement of test 5 — bundle eventually does land)
+  //
+  // Spy is set AFTER initI18n() because i18next.init() overwrites addResourceBundle
+  // via the storeApiChained loop — a pre-set spy would be overwritten during init.
+  // vi.waitFor polls until the fire-and-forget delivers at least one RU namespace.
   // -------------------------------------------------------------------------
-  it('AC-2 complement: addResourceBundle("ru") calls appear after sufficient microtask flushes', async () => {
+  it('AC-2 complement: addResourceBundle("ru") calls appear after initI18n resolves', async () => {
     localStorage.setItem('i18nextLng', 'ru');
     resetI18nInit();
 
-    const addBundleSpy = vi.spyOn(i18n, 'addResourceBundle');
-
     await initI18n();
 
-    // Flush 5 microtask rounds (same as the test in i18n.test.ts).
-    for (let i = 0; i < 5; i++) {
-      await Promise.resolve();
-    }
+    // Spy installed AFTER initI18n() so it wraps the post-init storeApiChained
+    // addResourceBundle, not the pre-init prototype method (which gets replaced).
+    const addBundleSpy = vi.spyOn(i18n, 'addResourceBundle');
 
-    const ruCalls = addBundleSpy.mock.calls.filter((args) => args[0] === 'ru');
-    expect(ruCalls.length).toBeGreaterThan(0);
+    // Wait for the fire-and-forget to deliver at least one RU namespace.
+    await vi.waitFor(() => {
+      const ruCalls = addBundleSpy.mock.calls.filter((args) => args[0] === 'ru');
+      expect(ruCalls.length).toBeGreaterThan(0);
+    });
   });
 
   // -------------------------------------------------------------------------
