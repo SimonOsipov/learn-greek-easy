@@ -1157,6 +1157,8 @@ jobs:
           fi
 
       - name: Assert Lighthouse (Desktop)
+        id: assert-desktop
+        continue-on-error: true
         working-directory: learn-greek-easy-frontend
         run: lhci assert --config=lighthouserc.cjs
 
@@ -1216,6 +1218,8 @@ jobs:
           cp -r .lighthouseci/*.json lighthouse-reports/mobile/ 2>/dev/null || true
 
       - name: Assert Lighthouse (Mobile)
+        id: assert-mobile
+        continue-on-error: true
         working-directory: learn-greek-easy-frontend
         run: lhci assert --config=lighthouserc.mobile.cjs
 
@@ -1274,20 +1278,17 @@ jobs:
             const mobileScore = parseInt('${{ steps.lighthouse.outputs.mobile_score }}') || 0;
             const reportUrl = '${{ steps.lighthouse.outputs.report_url }}';
 
-            // Determine status based on thresholds
-            // Desktop: 80+ = success, 60-79 = warning, <60 = failure
-            // Mobile: 70+ = success, 50-69 = warning, <50 = failure
-            let state = 'success';
-            let description = `Desktop: ${desktopScore}, Mobile: ${mobileScore}`;
+            // Determine status from assert step outcomes (not composite score thresholds).
+            // outcome is 'success', 'failure', or 'skipped' — require both to be 'success'.
+            const assertDesktopOk = '${{ steps.assert-desktop.outcome }}' === 'success';
+            const assertMobileOk  = '${{ steps.assert-mobile.outcome }}'  === 'success';
+            const state = (assertDesktopOk && assertMobileOk) ? 'success' : 'failure';
 
-            if (desktopScore < 60 || mobileScore < 50) {
-              state = 'failure';
-              description = `❌ ${description} (below minimum)`;
+            // Keep score-based description for informational context.
+            let description = `Desktop: ${desktopScore}, Mobile: ${mobileScore}`;
+            if (!assertDesktopOk || !assertMobileOk) {
+              description = `❌ ${description} (assert failed)`;
             } else if (desktopScore < 80 || mobileScore < 70) {
-              // Warning state: still success but with warning indicator in description
-              // Note: GitHub only supports 'success', 'failure', 'pending', 'error' states
-              // Using 'pending' incorrectly appears as "waiting for result", so we use
-              // 'success' with a warning emoji in the description instead
               description = `⚠️ ${description} (below target)`;
             }
 
