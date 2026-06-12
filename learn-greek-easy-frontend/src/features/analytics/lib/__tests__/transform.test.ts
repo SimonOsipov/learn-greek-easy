@@ -389,6 +389,88 @@ describe('wordStatus — due excluded from denominator (PRACT2-7-02)', () => {
   });
 });
 
+// ── PRACT2-7-02 adversarial: due overlap, rounding, exact total ───────────
+
+describe('wordStatus — adversarial edge cases (PRACT2-7-02)', () => {
+  // Edge 1: due is LARGE relative to buckets; must not pollute the denominator.
+  // {new:2, learning:5, review:8, mastered:10, due:20} → total = 25, percents sum = 100.
+  it('due larger than bucket sum — total=25 and percents sum to exactly 100', () => {
+    const result = run({
+      dashboard: makeDashboard({
+        cards_by_status: {
+          new: 2,
+          learning: 5,
+          review: 8,
+          mastered: 10,
+          due: 20,
+        } as DashboardStatsResponse['cards_by_status'],
+      }),
+    });
+    expect(result.wordStatus.total).toBe(25);
+    const sum =
+      result.wordStatus.newPercent +
+      result.wordStatus.learningPercent +
+      result.wordStatus.reviewPercent +
+      result.wordStatus.masteredPercent;
+    expect(sum).toBe(100);
+  });
+
+  // Edge 2: naive floor-rounding would produce ≠100 (each bucket 33.33...%).
+  // {new:1, learning:1, review:1, mastered:0, due:5} — 3 non-zero buckets,
+  // 33+33+33 = 99 without largest-remainder fix.  Must be exactly 100.
+  it('naive rounding would yield 99 — largest-remainder ensures exactly 100', () => {
+    const result = run({
+      dashboard: makeDashboard({
+        cards_by_status: {
+          new: 1,
+          learning: 1,
+          review: 1,
+          mastered: 0,
+          due: 5,
+        } as DashboardStatsResponse['cards_by_status'],
+      }),
+    });
+    expect(result.wordStatus.total).toBe(3);
+    const sum =
+      result.wordStatus.newPercent +
+      result.wordStatus.learningPercent +
+      result.wordStatus.reviewPercent +
+      result.wordStatus.masteredPercent;
+    expect(sum).toBe(100);
+    // At least one bucket got the +1 remainder adjustment
+    const percents = [
+      result.wordStatus.newPercent,
+      result.wordStatus.learningPercent,
+      result.wordStatus.reviewPercent,
+      result.wordStatus.masteredPercent,
+    ];
+    expect(percents.filter((p) => p === 34).length).toBeGreaterThanOrEqual(1);
+    expect(percents.filter((p) => p === 33).length).toBeGreaterThanOrEqual(2);
+  });
+
+  // Edge 3: due present but all 4 buckets zero → total === 0 (empty state trigger)
+  it('due=999 but all stage buckets zero → total===0', () => {
+    const result = run({
+      dashboard: makeDashboard({
+        cards_by_status: {
+          new: 0,
+          learning: 0,
+          review: 0,
+          mastered: 0,
+          due: 999,
+        } as DashboardStatsResponse['cards_by_status'],
+      }),
+    });
+    expect(result.wordStatus.total).toBe(0);
+    const sum =
+      result.wordStatus.newPercent +
+      result.wordStatus.learningPercent +
+      result.wordStatus.reviewPercent +
+      result.wordStatus.masteredPercent;
+    expect(sum).toBe(0);
+  });
+});
+
 // ── basic summary / shape ─────────────────────────────────────────────────
 
 describe('summary mapping', () => {

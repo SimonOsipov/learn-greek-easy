@@ -161,6 +161,63 @@ describe('StageDistributionChart empty state (AC-3)', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Adversarial edge tests — PRACT2-7-02
+// ---------------------------------------------------------------------------
+
+// Edge 1: chart renders exactly 4 slices for a full normal payload.
+describe('StageDistributionChart — exactly 4 slices (adversarial)', () => {
+  it('pieData has exactly 4 entries and their original values cover all 4 stages', () => {
+    mockUseAnalytics.mockReturnValue({
+      data: makeData({
+        new: 10,
+        learning: 5,
+        review: 8,
+        mastered: 7,
+        newPercent: 33,
+        learningPercent: 17,
+        reviewPercent: 27,
+        masteredPercent: 23,
+        total: 30,
+      }),
+      loading: false,
+      error: null,
+    });
+
+    render(<StageDistributionChart />);
+
+    expect(capturedPieData).toHaveLength(4);
+    const originals = capturedPieData.map((d) => d.original).sort();
+    expect(originals).toEqual(['learning', 'mastered', 'new', 'review']);
+  });
+
+  // Edge 2: a slice with value=0 is filtered out — 3 slices, never 5+.
+  it('zero-count stage filtered out — 3 slices not 4, and no relearning added', () => {
+    mockUseAnalytics.mockReturnValue({
+      data: makeData({
+        new: 0,
+        learning: 5,
+        review: 8,
+        mastered: 7,
+        newPercent: 0,
+        learningPercent: 25,
+        reviewPercent: 40,
+        masteredPercent: 35,
+        total: 20,
+      }),
+      loading: false,
+      error: null,
+    });
+
+    render(<StageDistributionChart />);
+
+    // new=0 is filtered; only 3 slices
+    expect(capturedPieData).toHaveLength(3);
+    expect(capturedPieData.map((d) => d.original)).not.toContain('new');
+    expect(capturedPieData.map((d) => d.original)).not.toContain('relearning');
+  });
+});
+
 // AC-4: pieData must never include an entry with original === 'relearning'.
 //
 // The current code hardcodes a relearning entry in the pieData array and only
