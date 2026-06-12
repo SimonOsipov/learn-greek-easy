@@ -1,12 +1,15 @@
 /**
  * Async i18n initialization module.
  *
- * This module solves the race condition where i18next-browser-languagedetector
- * detects a non-English language on page load, but the Greek/Russian resources
- * haven't been loaded yet (since they're lazy-loaded for better LCP).
+ * English resources are bundled synchronously — i18n.init() resolves without
+ * waiting for any non-English bundle, so React mounts and first paint happen
+ * immediately for all users.
  *
- * Solution: Detect the initial language BEFORE i18n.init() and pre-load
- * the necessary resources so they're available immediately.
+ * For non-English (RU) users, the locale bundle is loaded fire-and-forget
+ * AFTER i18n.init() resolves. Once the bundle arrives, addResourceBundle()
+ * injects it into the live i18next store; react-i18next's bindI18nStore:'added
+ * removed' triggers a re-render so RU strings swap in post-paint with no flash
+ * of untranslated content beyond the initial EN render.
  *
  * @module i18n/init
  */
@@ -15,6 +18,9 @@ import i18n from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import { initReactI18next } from 'react-i18next';
 
+import log from '@/lib/logger';
+
+import { loadLanguageBundle } from './bundle-loader';
 import {
   DEFAULT_LANGUAGE,
   DETECTION_ORDER,
@@ -93,102 +99,22 @@ function detectInitialLanguage(): SupportedLanguage {
 }
 
 /**
- * Load Russian language resources.
- *
- * @returns Promise resolving to Russian resource bundle
- */
-async function loadRussianBundle(): Promise<Record<string, unknown>> {
-  const [
-    achievements,
-    admin,
-    auth,
-    changelog,
-    common,
-    culture,
-    deck,
-    feedback,
-    landing,
-    mockExam,
-    profile,
-    review,
-    settings,
-    statistics,
-    upgrade,
-    subscription,
-    waitlist,
-  ] = await Promise.all([
-    import('./locales/ru/achievements.json'),
-    import('./locales/ru/admin.json'),
-    import('./locales/ru/auth.json'),
-    import('./locales/ru/changelog.json'),
-    import('./locales/ru/common.json'),
-    import('./locales/ru/culture.json'),
-    import('./locales/ru/deck.json'),
-    import('./locales/ru/feedback.json'),
-    import('./locales/ru/landing.json'),
-    import('./locales/ru/mockExam.json'),
-    import('./locales/ru/profile.json'),
-    import('./locales/ru/review.json'),
-    import('./locales/ru/settings.json'),
-    import('./locales/ru/statistics.json'),
-    import('./locales/ru/upgrade.json'),
-    import('./locales/ru/subscription.json'),
-    import('./locales/ru/waitlist.json'),
-  ]);
-
-  return {
-    achievements: achievements.default,
-    admin: admin.default,
-    auth: auth.default,
-    changelog: changelog.default,
-    common: common.default,
-    culture: culture.default,
-    deck: deck.default,
-    feedback: feedback.default,
-    landing: landing.default,
-    mockExam: mockExam.default,
-    profile: profile.default,
-    review: review.default,
-    settings: settings.default,
-    statistics: statistics.default,
-    upgrade: upgrade.default,
-    subscription: subscription.default,
-    waitlist: waitlist.default,
-  };
-}
-
-/**
- * Pre-load language bundle if non-English.
- *
- * @param lang - Language code to load ('ru')
- * @returns Promise resolving to resource bundle or undefined for English
- */
-async function loadLanguageBundle(
-  lang: SupportedLanguage
-): Promise<Record<string, Record<string, unknown>> | undefined> {
-  if (lang === 'ru') {
-    const bundle = await loadRussianBundle();
-    return { ru: bundle };
-  }
-  // English is already bundled synchronously
-  return undefined;
-}
-
-/**
  * Track initialization state to prevent double-init.
  */
 let initialized = false;
 
 /**
- * Initialize i18n with proper language detection and resource pre-loading.
+ * Initialize i18n with fire-and-forget non-English locale loading.
  *
  * This function:
  * 1. Detects the initial language from localStorage/navigator BEFORE init
- * 2. Pre-loads the language resources if non-English
- * 3. Initializes i18n with all necessary resources already available
+ * 2. Initializes i18n immediately with synchronous English resources only
+ * 3. If non-English detected, fires the bundle load post-init (fire-and-forget)
+ *    so first paint is never blocked; RU strings swap in after the bundle arrives
  * 4. Sets up languageChanged event handler for runtime language switches
  *
- * @returns Promise that resolves when i18n is fully initialized
+ * @returns Promise that resolves when i18n is fully initialized (NOT when non-EN
+ *          bundle has loaded — that happens asynchronously after this resolves)
  */
 export async function initI18n(): Promise<typeof i18n> {
   if (initialized) {
@@ -198,22 +124,17 @@ export async function initI18n(): Promise<typeof i18n> {
   // Step 1: Detect initial language BEFORE i18n.init()
   const detectedLang = detectInitialLanguage();
 
-  // Step 2: Pre-load resources if non-English
-  const preloadedResources = await loadLanguageBundle(detectedLang);
-
-  // Step 3: Merge pre-loaded resources with English resources
-  const resources = {
-    ...englishResources,
-    ...preloadedResources,
-  };
-
-  // Step 4: Initialize i18n with resources already available
+  // Step 2: Initialize i18n with synchronous English resources only.
+  // Non-English bundles are NOT awaited here — they are loaded fire-and-forget
+  // after init resolves so React can mount and paint immediately.
   await i18n
     .use(LanguageDetector)
     .use(initReactI18next)
     .init({
-      // Resources
-      resources,
+      // Only the synchronous English bundle is passed here.
+      // Non-English resources are injected post-init via addResourceBundle.
+      resources: { ...englishResources },
+      lng: detectedLang,
       fallbackLng: DEFAULT_LANGUAGE,
       supportedLngs: [...SUPPORTED_LANGUAGES],
 
@@ -237,7 +158,7 @@ export async function initI18n(): Promise<typeof i18n> {
       react: {
         useSuspense: false, // Disable suspense to avoid flash during SSR/hydration
         bindI18n: 'languageChanged loaded',
-        bindI18nStore: 'added removed',
+        bindI18nStore: 'added removed', // Re-renders when bundles are added/removed
         transEmptyNodeValue: '',
         transSupportBasicHtmlNodes: true,
         transKeepBasicHtmlNodesFor: ['br', 'strong', 'em', 'i', 'b'],
@@ -258,8 +179,34 @@ export async function initI18n(): Promise<typeof i18n> {
       missingKeyHandler: makeMissingKeyHandler(import.meta.env.PROD ? 'report' : 'warn'),
     });
 
-  // Step 5: Defense in depth - handle runtime language changes
-  // This ensures resources are loaded if user switches language after init
+  // Step 3: Fire-and-forget non-English bundle load.
+  // i18next does NOT emit 'languageChanged' for the initial lng passed to
+  // init(), so we must populate the bundle explicitly here.
+  // bindI18nStore:'added removed' (above) ensures react-i18next re-renders
+  // components when the bundle arrives via addResourceBundle().
+  if (detectedLang !== DEFAULT_LANGUAGE) {
+    void loadLanguageBundle(detectedLang)
+      .then((bundle) => {
+        if (bundle) {
+          const langBundle = bundle[detectedLang];
+          if (langBundle) {
+            Object.entries(langBundle).forEach(([ns, translations]) => {
+              i18n.addResourceBundle(detectedLang, ns, translations, true, true);
+            });
+          }
+        }
+      })
+      .catch((err: unknown) => {
+        // RU bundle failed to load — user stays on EN fallback.
+        // This is a graceful degradation; do NOT let the rejection propagate.
+        log.warn('[i18n] Failed to load non-English bundle, falling back to EN:', err);
+      });
+  }
+
+  // Step 4: Defense in depth - handle runtime language changes.
+  // This ensures resources are loaded if user switches language after init.
+  // Note: this handler is NOT triggered by the initial lng set in init() above —
+  // that initial load is handled by the fire-and-forget in Step 3.
   i18n.on('languageChanged', async (lng: string) => {
     if (lng === 'ru' && !i18n.hasResourceBundle(lng, 'common')) {
       const bundle = await loadLanguageBundle(lng as SupportedLanguage);
