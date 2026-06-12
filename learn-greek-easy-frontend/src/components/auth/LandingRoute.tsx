@@ -2,7 +2,6 @@ import { useEffect, type ReactNode } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
-import { PageLoader } from '@/components/feedback';
 import { useAuthStore } from '@/stores/authStore';
 
 interface LandingRouteProps {
@@ -33,11 +32,6 @@ export const LandingRoute = ({ children }: LandingRouteProps) => {
       navigate('/dashboard', { replace: true });
     }
   }, [isAuthenticated, isLoading, navigate]);
-
-  // Show loading while checking auth (prevents flash of landing page)
-  if (isLoading) {
-    return <PageLoader />;
-  }
 
   // Only render children if not authenticated
   return isAuthenticated ? null : <>{children}</>;
