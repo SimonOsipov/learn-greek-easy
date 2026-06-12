@@ -388,9 +388,8 @@ export function V2FlashcardPracticePage() {
     currentCard.card_type === 'plural_form'
       ? (() => {
           const back = currentCard.back_content as Record<string, unknown>;
-          const sub =
-            cardLang === 'ru' ? (back.answer_sub_ru as string) : (back.answer_sub as string);
-          return sub || null;
+          const rawSub = cardLang === 'ru' ? back.answer_sub_ru : back.answer_sub;
+          return typeof rawSub === 'string' && rawSub.trim().length > 0 ? rawSub : null;
         })()
       : null;
 
