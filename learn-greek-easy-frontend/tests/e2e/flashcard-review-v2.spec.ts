@@ -1407,3 +1407,104 @@ test.describe('PRACT2-5 Practice Cleanup Pass', () => {
     test.skip(!exampleFound, '[P25-06] No card with a visible example block in queue — unbox covered by unit/CSS');
   });
 });
+
+// ============================================================================
+// PRACT2-6 Tests: RU plural_form answer — Greek main + Cyrillic sub-line
+// ============================================================================
+
+test.describe('PRACT2-6 RU Plural-Form Answer', () => {
+  test.use({ storageState: LEARNER_AUTH });
+
+  let p26DeckId: string;
+
+  test.beforeAll(async ({ request }) => {
+    const apiBaseUrl = getApiBaseUrl();
+    const accessToken = getLearnerAccessToken();
+    if (!accessToken) {
+      throw new Error(
+        '[P26] Could not read learner access token from storageState. ' +
+          'Ensure auth.setup.ts ran successfully.'
+      );
+    }
+
+    const response = await request.get(`${apiBaseUrl}/api/v1/decks?page_size=100`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    expect(response.ok()).toBe(true);
+
+    const data = await response.json();
+    const decks = data.decks as Array<{ id: string; name: string }>;
+    const deck = decks.find((d) => d.name.includes('Greek A1 Vocabulary'));
+
+    if (!deck) {
+      throw new Error(
+        `[P26] No V2 Nouns deck found in database. Available: ${decks.map((d) => d.name).join(', ')}`
+      );
+    }
+
+    p26DeckId = deck.id;
+    console.log(`[P26] Found deck: ${deck.name} (${p26DeckId})`);
+  });
+
+  // E2E-P26-01: RU plural_form reveal shows Greek main + Cyrillic sub-line
+  //
+  // Navigates directly to ?cardType=plural_form, switches to RU via the global
+  // LanguageSwitcher, reveals with Space, then asserts:
+  //   a. pf-answer-text has lang="el" and Greek-script content (not Cyrillic)
+  //   b. pf-answer-sub is visible and contains Cyrillic (the RU translation)
+  //
+  // Skip ONLY on genuine card-exhaustion. A visible card with a wrong reveal MUST FAIL.
+  test('E2E-P26-01: RU plural_form reveal shows Greek main + Cyrillic sub-line', async ({
+    page,
+  }) => {
+    await navigateToV2Practice(page, p26DeckId, 'plural_form');
+
+    const cardVisible = await page
+      .locator('[data-testid="pf-card"]')
+      .isVisible()
+      .catch(() => false);
+    test.skip(!cardVisible, '[P26-01] No card available — cards exhausted');
+
+    // Switch to RU via the global LanguageSwitcher BEFORE revealing so the
+    // resolver runs in RU context (mirrors P25-01 pattern at spec:1122-1132).
+    await page.locator('[data-testid="language-switcher-trigger"]').click();
+    await page.locator('[data-testid="language-option-ru"]').click();
+
+    // i18next changeLanguage is async — poll until the DOM attribute propagates
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.lang), { timeout: 5000 })
+      .toMatch(/^ru/i);
+    console.log('[P26-01] HTML lang switched to RU');
+
+    // Reveal the card with Space (mirrors the reveal pattern used by all V2 tests)
+    await page.keyboard.press('Space');
+    await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
+
+    // Assert (a): answer text has lang="el" and contains Greek-script characters.
+    // Greek: U+0370–U+03FF; Greek Extended: U+1F00–U+1FFF (covers polytonic accents).
+    const answer = page.locator('[data-testid="pf-answer-text"]');
+    await expect(answer).toBeVisible();
+    await expect(answer).toHaveAttribute('lang', 'el');
+
+    const answerText = (await answer.textContent())?.trim() ?? '';
+    console.log(`[P26-01] pf-answer-text content: "${answerText}"`);
+
+    // Must contain Greek-script characters
+    expect(answerText).toMatch(/[Ͱ-Ͽἀ-῿]/);
+    // Must NOT contain Cyrillic — the regression this story fixes
+    expect(answerText).not.toMatch(/[Ѐ-ӿ]/);
+
+    // Assert (b): sub-line is present and contains Cyrillic (the RU translation).
+    // PRACT2-6-02 introduced pf-answer-sub as the Cyrillic translation gloss.
+    const sub = page.locator('[data-testid="pf-answer-sub"]');
+    await expect(sub).toBeVisible();
+
+    const subText = (await sub.textContent())?.trim() ?? '';
+    console.log(`[P26-01] pf-answer-sub content: "${subText}"`);
+
+    // Must contain Cyrillic
+    expect(subText).toMatch(/[Ѐ-ӿ]/);
+  });
+});
