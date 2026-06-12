@@ -200,4 +200,39 @@ describe('deckCompletionPct (PRACT2-7-04)', () => {
       expect(cardResult).toBe(detailResult);
     });
   });
+
+  // ── PRACT2-7-04 adversarial rounding/boundary cases ──────────────────────
+  describe('adversarial rounding and boundary cases', () => {
+    // 2/3 = 0.6667 → Math.round = 67, not 66
+    it('returns 67 for cardsStudied=2, cardsTotal=3', () => {
+      expect(deckCompletionPct({ cardsStudied: 2, cardsTotal: 3 })).toBe(67);
+    });
+
+    // 1/6 = 0.1667 → Math.round = 17, not 16
+    it('returns 17 for cardsStudied=1, cardsTotal=6', () => {
+      expect(deckCompletionPct({ cardsStudied: 1, cardsTotal: 6 })).toBe(17);
+    });
+
+    // Full coverage: 5/5 = 100 exactly
+    it('returns 100 for cardsStudied=5, cardsTotal=5', () => {
+      expect(deckCompletionPct({ cardsStudied: 5, cardsTotal: 5 })).toBe(100);
+    });
+
+    // Over-studied edge: cards_studied > total_cards (data anomaly).
+    // The formula produces >100 — no clamp is applied. This is an advisory note:
+    // the backend prevents this (cards_studied <= total_cards), so it's out of scope
+    // to add a clamp here. Confirm the formula at least doesn't NaN or throw.
+    it('produces a value > 100 (no NaN / no throw) for cardsStudied > cardsTotal', () => {
+      const result = deckCompletionPct({ cardsStudied: 11, cardsTotal: 10 });
+      expect(Number.isNaN(result)).toBe(false);
+      expect(result).toBeGreaterThan(100);
+    });
+
+    // Zero studied, non-zero total → 0 (not NaN)
+    it('returns 0 for cardsStudied=0, cardsTotal=10', () => {
+      const result = deckCompletionPct({ cardsStudied: 0, cardsTotal: 10 });
+      expect(result).toBe(0);
+      expect(Number.isNaN(result)).toBe(false);
+    });
+  });
 });

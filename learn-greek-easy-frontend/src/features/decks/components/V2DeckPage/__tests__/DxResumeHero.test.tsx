@@ -439,4 +439,32 @@ describe('DxResumeHeroConnected — AC-2 (PRACT2-7-04)', () => {
     const displayedPct = parseInt(bTags[2].textContent ?? '-1', 10);
     expect(displayedPct).toBe(70);
   });
+
+  // ── PRACT2-7-04 adversarial: null selectedDeckProgressDetail ─────────────
+  //
+  // When selectedDeckProgressDetail is null (network error / not-yet-loaded),
+  // the ??0 fallback in DxResumeHeroConnected means deckCompletionPct({0,0})=0.
+  // Verify: no crash, no NaN, headline shows 0.
+  it('null selectedDeckProgressDetail: headline shows 0, no crash, no NaN', () => {
+    // Override: null progress detail, but wordMastery still has mastered items
+    // (to confirm the null-progress path overrides any mastery-based value).
+    mockUseDeckStore.mockImplementation(
+      (selector: (s: { rawDecks: Deck[]; selectedDeckProgressDetail: unknown }) => unknown) =>
+        selector({ rawDecks: [], selectedDeckProgressDetail: null })
+    );
+    mockUseQuery.mockReturnValue({
+      data: { deck_id: connectedDeck.id, items: allMasteredItems },
+    });
+
+    const { container } = renderConnected(connectedDeck);
+
+    const statsEl = container.querySelector('.dx-hero-resume-stats');
+    expect(statsEl).toBeTruthy();
+
+    const bTags = statsEl!.querySelectorAll('b');
+    const displayedPct = parseInt(bTags[2].textContent ?? '-1', 10);
+    // Must be 0, not NaN, not a crash
+    expect(Number.isNaN(displayedPct)).toBe(false);
+    expect(displayedPct).toBe(0);
+  });
 });
