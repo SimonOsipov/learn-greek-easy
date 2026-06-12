@@ -1015,6 +1015,22 @@
   word-break: break-word;
 }
 
+/* PRACT2-6-02: translation gloss beneath the Greek plural answer.
+   Muted, smaller — mirrors .pf-answer__example-ru. UI-language (non-Greek) font.
+   Spacing handled by the parent .pf-answer flex gap (no margin-top needed). */
+.pf-answer__sub {
+  font-family:
+    'Inter Tight',
+    Inter,
+    -apple-system,
+    sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: hsl(var(--fg-2));
+  text-align: center;
+  line-height: 1.4;
+}
+
 /* Inert typed-result chip slot — empty in reveal mode (PRACT2-1-08 fills it) */
 .pf-answer__type-slot {
   /* No visual — zero-height placeholder for type mode */

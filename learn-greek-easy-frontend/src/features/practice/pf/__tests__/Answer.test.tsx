@@ -410,6 +410,48 @@ describe('Answer', () => {
     expect(screen.queryByTestId('pf-answer-example-ru')).toBeNull();
   });
 
+  // ── PRACT2-6-02: answerSub translation sub-line ────────────────────────────
+
+  it('plural_form with answerSub renders pf-answer-sub node with that text', () => {
+    render(
+      <Answer
+        answerText="σπίτια"
+        cardType="plural_form"
+        card={makeCard({ card_type: 'plural_form' })}
+        answerSub="дома"
+      />
+    );
+    const sub = screen.getByTestId('pf-answer-sub');
+    expect(sub).toHaveTextContent('дома');
+    // Main answer text still renders
+    expect(screen.getByTestId('pf-answer-text')).toHaveTextContent('σπίτια');
+  });
+
+  it('no answerSub (omitted) → no pf-answer-sub node', () => {
+    render(
+      <Answer
+        answerText="σπίτια"
+        cardType="plural_form"
+        card={makeCard({ card_type: 'plural_form' })}
+      />
+    );
+    expect(screen.queryByTestId('pf-answer-sub')).toBeNull();
+    // Main answer text still renders
+    expect(screen.getByTestId('pf-answer-text')).toHaveTextContent('σπίτια');
+  });
+
+  it('null answerSub → no pf-answer-sub node', () => {
+    render(
+      <Answer
+        answerText="σπίτια"
+        cardType="plural_form"
+        card={makeCard({ card_type: 'plural_form' })}
+        answerSub={null}
+      />
+    );
+    expect(screen.queryByTestId('pf-answer-sub')).toBeNull();
+  });
+
   // ── RU mode unchanged ──────────────────────────────────────────────────────
 
   it('RU mode: shows sentence_ru and does NOT show EN example fields', () => {

@@ -416,19 +416,35 @@ describe('resolveAnswerText — lang param', () => {
     ).toBe('Good morning!');
   });
 
-  it('returns answer_sub_ru for plural_form when lang=ru and answer_sub_ru is present', () => {
-    // plural_form: main = Greek stem, answer = plural form; answer_sub_ru = RU gender label
+  it('returns the Greek plural form for plural_form when lang=ru (answer_sub_ru is a sub-label, not the answer)', () => {
+    // FIXTURE HYGIENE: PluralFormBack (card_record.py) has NO `main` key — do not add one.
+    // The fix relies on `main ?? answer` falling through to `answer`; a `main` key would
+    // short-circuit that and false-green this test.
+    // sg->pl direction: answer = Greek plural; answer_sub_ru = RU gloss (ignored).
+    expect(
+      resolveAnswerText('plural_form', { answer: 'σπίτια', answer_sub_ru: 'дома' }, 'ru')
+    ).toBe('σπίτια');
+  });
+
+  it('falls back to the Greek answer for plural_form when lang=ru and answer_sub_ru is absent', () => {
+    expect(resolveAnswerText('plural_form', { answer: 'σπίτια' }, 'ru')).toBe('σπίτια');
+  });
+
+  it('returns the Greek singular for plural_form pl->sg direction when lang=ru', () => {
+    // pl->sg: answer = Greek singular; answer_sub_ru ignored. Locks AC-05 both-directions.
+    expect(resolveAnswerText('plural_form', { answer: 'σπίτι', answer_sub_ru: 'дом' }, 'ru')).toBe(
+      'σπίτι'
+    );
+  });
+
+  it('does not leak answer_sub for plural_form when lang=ru (returns Greek answer)', () => {
     expect(
       resolveAnswerText(
         'plural_form',
-        { main: 'σπίτια', answer: 'σπίτια', answer_sub_ru: 'дома' },
+        { answer: 'σπίτια', answer_sub: 'houses', answer_sub_ru: 'дома' },
         'ru'
       )
-    ).toBe('дома');
-  });
-
-  it('falls back to main for plural_form when lang=ru but answer_sub_ru is absent', () => {
-    expect(resolveAnswerText('plural_form', { main: 'σπίτια' }, 'ru')).toBe('σπίτια');
+    ).toBe('σπίτια');
   });
 
   it('does not apply RU variant for article card type (no answer_ru field)', () => {

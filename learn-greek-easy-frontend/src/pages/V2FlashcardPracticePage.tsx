@@ -378,6 +378,21 @@ export function V2FlashcardPracticePage() {
     currentQueueCard?.translation_ru
       ? currentQueueCard.translation_ru
       : null;
+
+  // PRACT2-6-02: muted translation gloss under the Greek plural answer.
+  // GATED to plural_form — answer_sub is populated by many families and would
+  // otherwise leak onto article/singular/meaning cards.
+  // STRICT per-locale: RU → answer_sub_ru, EN → answer_sub. NO cross-locale
+  // fallback — blank sub-line when the active locale's field is empty (locked design).
+  const answerSub =
+    currentCard.card_type === 'plural_form'
+      ? (() => {
+          const back = currentCard.back_content as Record<string, unknown>;
+          const rawSub = cardLang === 'ru' ? back.answer_sub_ru : back.answer_sub;
+          return typeof rawSub === 'string' && rawSub.trim().length > 0 ? rawSub : null;
+        })()
+      : null;
+
   const pfFoot = (
     <>
       {currentQueueCard && (
@@ -394,6 +409,7 @@ export function V2FlashcardPracticePage() {
           card={currentQueueCard}
           lang={cardLang}
           exampleAudioState={audioState}
+          answerSub={answerSub}
         />
       )}
       <RatingRow
