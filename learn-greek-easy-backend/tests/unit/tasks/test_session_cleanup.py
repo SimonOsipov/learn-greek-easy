@@ -412,29 +412,11 @@ class TestSessionCleanupTaskErrorHandling:
                         assert "Session cleanup failed" in error_call[0][0]
 
     @pytest.mark.asyncio
-    async def test_closes_redis_on_error(self):
-        """Test that Redis connection is closed even after errors."""
+    async def test_does_not_call_close_redis(self):
+        """Regression: task must NOT call close_redis (shared client must survive across runs)."""
         from src.tasks.scheduled import session_cleanup_task
 
-        with patch("src.core.redis.init_redis", new_callable=AsyncMock):
-            with patch("src.core.redis.get_redis") as mock_get_redis:
-                with patch("src.core.redis.close_redis", new_callable=AsyncMock) as mock_close:
-                    mock_redis = AsyncMock()
-                    mock_get_redis.return_value = mock_redis
-                    mock_redis.scan.side_effect = Exception("Redis connection lost")
-
-                    with pytest.raises(Exception):
-                        await session_cleanup_task()
-
-                    # close_redis should still be called
-                    mock_close.assert_awaited_once()
-
-    @pytest.mark.asyncio
-    async def test_closes_redis_on_success(self):
-        """Test that Redis connection is closed after successful execution."""
-        from src.tasks.scheduled import session_cleanup_task
-
-        with patch("src.core.redis.init_redis", new_callable=AsyncMock):
+        with patch("src.core.redis.init_redis", new_callable=AsyncMock) as mock_init:
             with patch("src.core.redis.get_redis") as mock_get_redis:
                 with patch("src.core.redis.close_redis", new_callable=AsyncMock) as mock_close:
                     mock_redis = AsyncMock()
@@ -443,8 +425,27 @@ class TestSessionCleanupTaskErrorHandling:
 
                     await session_cleanup_task()
 
-                    # close_redis should be called
-                    mock_close.assert_awaited_once()
+                    # Task must NOT tear down the shared process client
+                    mock_close.assert_not_called()
+                    # Task must also NOT call init_redis (covered here as belt-and-suspenders)
+                    mock_init.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_does_not_call_init_redis(self):
+        """Regression: task must NOT call init_redis (scheduler_main owns lifecycle)."""
+        from src.tasks.scheduled import session_cleanup_task
+
+        with patch("src.core.redis.init_redis", new_callable=AsyncMock) as mock_init:
+            with patch("src.core.redis.get_redis") as mock_get_redis:
+                with patch("src.core.redis.close_redis", new_callable=AsyncMock):
+                    mock_redis = AsyncMock()
+                    mock_get_redis.return_value = mock_redis
+                    mock_redis.scan.return_value = (0, [])
+
+                    await session_cleanup_task()
+
+                    # Task must consume the process-shared client, not self-init
+                    mock_init.assert_not_called()
 
 
 class TestSessionCleanupTaskConfiguration:

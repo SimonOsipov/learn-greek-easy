@@ -294,19 +294,16 @@ class TestScheduledTaskStubs:
 
         from src.tasks.scheduled import session_cleanup_task
 
-        with patch("src.core.redis.init_redis", new_callable=AsyncMock) as mock_init:
+        with patch("src.core.redis.init_redis", new_callable=AsyncMock):
             with patch("src.core.redis.get_redis") as mock_get_redis:
-                with patch("src.core.redis.close_redis", new_callable=AsyncMock) as mock_close:
+                with patch("src.core.redis.close_redis", new_callable=AsyncMock):
                     # Return None to trigger the "Redis not available" branch
                     mock_get_redis.return_value = None
 
                     with caplog_loguru.at_level("INFO"):
                         await session_cleanup_task()
 
-                    # Verify Redis functions were called
-                    mock_init.assert_called_once()
                     mock_get_redis.assert_called_once()
-                    mock_close.assert_called_once()
 
         assert "session cleanup" in caplog_loguru.text.lower()
 
