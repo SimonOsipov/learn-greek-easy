@@ -98,6 +98,14 @@ export interface WordEntryListResponse {
   word_entries: WordEntryResponse[];
 }
 
+/**
+ * Response listing the current user's decks that contain a word entry.
+ * Matches WordEntryMyDecksResponse in src/schemas/word_entry.py.
+ */
+export interface WordEntryMyDecksResponse {
+  deck_ids: string[];
+}
+
 export interface ExampleSentenceUpdatePayload {
   id: string;
   greek: string;
@@ -229,6 +237,18 @@ export const wordEntryAPI = {
    */
   getCardsByWordEntry: async (wordEntryId: string): Promise<CardRecordResponse[]> => {
     return api.get<CardRecordResponse[]>(`/api/v1/word-entries/${wordEntryId}/cards`);
+  },
+
+  /**
+   * Get the IDs of the current user's decks that contain a word entry.
+   *
+   * Powers the add-to-deck picker on word pages.
+   *
+   * @param wordEntryId - UUID of the word entry
+   * @returns Object with deck_ids array
+   */
+  getMyDecksForWord: async (wordEntryId: string): Promise<WordEntryMyDecksResponse> => {
+    return api.get<WordEntryMyDecksResponse>(`/api/v1/word-entries/${wordEntryId}/my-decks`);
   },
 
   /**

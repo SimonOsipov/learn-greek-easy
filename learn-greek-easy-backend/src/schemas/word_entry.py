@@ -672,3 +672,12 @@ class WordEntryBulkResponse(BaseModel):
         ...,
         description="List of all created and updated word entries",
     )
+
+
+class WordEntryMyDecksResponse(BaseModel):
+    """Schema for listing the current user's decks that contain a word entry."""
+
+    deck_ids: list[UUID] = Field(
+        ...,
+        description="IDs of the current user's active decks containing the word entry",
+    )

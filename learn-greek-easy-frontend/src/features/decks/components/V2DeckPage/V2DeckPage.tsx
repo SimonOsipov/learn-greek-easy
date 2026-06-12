@@ -1,11 +1,13 @@
 // src/features/decks/components/V2DeckPage/V2DeckPage.tsx
 
-import React from 'react';
+import React, { useState } from 'react';
 
-import { AlertCircle, ChevronLeft } from 'lucide-react';
+import { AlertCircle, ChevronLeft, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
+import { UserDeckEditModal } from '@/components/decks';
+import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -14,7 +16,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 // detail deep-links. (A shared-barrel import lands in the common DxCover chunk,
 // whose CSS Vite does not reliably inject for static-import routes.)
 import '@/features/decks/dx/dx.css';
+import { useToast } from '@/hooks/use-toast';
+import { track } from '@/lib/analytics';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
+import { reportAPIError } from '@/lib/errorReporting';
+import { deckAPI, type DeckLevel } from '@/services/deckAPI';
 import { useDeckStore } from '@/stores/deckStore';
 
 import { V2DeckHeader } from './V2DeckHeader';
@@ -37,6 +43,12 @@ interface V2DeckPageProps {
 export const V2DeckPage: React.FC<V2DeckPageProps> = ({ deckId }) => {
   const { t, i18n } = useTranslation('deck');
   const { selectedDeck, isLoading, error, selectDeck } = useDeckStore();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Edit / delete state — only reachable for the deck owner (see isOwned below).
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   // V2DeckPage is the deck detail page for vocabulary decks.
   // At this point, the deck is already loaded in the store.
@@ -57,26 +69,95 @@ export const V2DeckPage: React.FC<V2DeckPageProps> = ({ deckId }) => {
     return <ErrorState error={error} onRetry={() => selectDeck(deckId)} />;
   }
 
+  // Personal decks belong to the user — their natural parent is /my-decks, and
+  // only their owner can edit or delete them.
+  const isOwned = selectedDeck.isOwned ?? false;
+  const backTo = isOwned ? '/my-decks' : '/decks';
+  const backLabel = isOwned ? t('myDecks.title') : t('detail.breadcrumb');
+
+  const handleDeckUpdated = () => {
+    setIsEditOpen(false);
+    // Refetch so the renamed/re-levelled deck is reflected in the header.
+    selectDeck(deckId);
+  };
+
+  const handleDeleteClick = () => {
+    track('user_deck_delete_started', {
+      deck_id: selectedDeck.id,
+      deck_name: selectedDeck.title,
+      source: 'deck_detail',
+    });
+    setIsDeleteOpen(true);
+  };
+
+  const handleDeleteCancel = () => {
+    track('user_deck_delete_cancelled', {
+      deck_id: selectedDeck.id,
+      deck_name: selectedDeck.title,
+      source: 'deck_detail',
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await deckAPI.deleteMyDeck(selectedDeck.id);
+      toast({ title: t('myDecks.deleteSuccess') });
+      // The deck no longer exists — return to the library.
+      navigate('/my-decks');
+    } catch (err) {
+      reportAPIError(err, { operation: 'deleteMyDeck', endpoint: `/decks/${selectedDeck.id}` });
+      toast({ title: t('myDecks.deleteError'), variant: 'destructive' });
+    }
+  };
+
   return (
     <div data-testid="v2-deck-detail" className="container mx-auto px-4 py-6 md:py-8">
-      {/* Breadcrumb Navigation */}
-      <nav
-        data-testid="breadcrumb"
-        className="mb-4 flex items-center gap-2 text-sm text-muted-foreground"
-        aria-label="Breadcrumb"
-      >
-        <Link
-          to="/decks"
-          className="flex items-center gap-1 transition-colors hover:text-foreground"
+      {/* Breadcrumb + owner actions */}
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <nav
+          data-testid="breadcrumb"
+          className="flex items-center gap-2 text-sm text-muted-foreground"
+          aria-label="Breadcrumb"
         >
-          <ChevronLeft className="h-4 w-4" />
-          {t('detail.breadcrumb')}
-        </Link>
-        <span>/</span>
-        <span className="truncate font-medium text-foreground">
-          {getLocalizedDeckName(selectedDeck, i18n.language)}
-        </span>
-      </nav>
+          <Link
+            to={backTo}
+            className="flex items-center gap-1 transition-colors hover:text-foreground"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            {backLabel}
+          </Link>
+          <span>/</span>
+          <span className="truncate font-medium text-foreground">
+            {getLocalizedDeckName(selectedDeck, i18n.language)}
+          </span>
+        </nav>
+
+        {isOwned && (
+          <div className="flex flex-shrink-0 items-center gap-2" data-testid="deck-detail-actions">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditOpen(true)}
+              data-testid="edit-deck-button"
+              aria-label={t('myDecks.editDeck')}
+            >
+              <Pencil className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">{t('myDecks.editDeck')}</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDeleteClick}
+              data-testid="delete-deck-button"
+              className="text-destructive hover:text-destructive"
+              aria-label={t('myDecks.deleteDeck')}
+            >
+              <Trash2 className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">{t('myDecks.deleteDeck')}</span>
+            </Button>
+          </div>
+        )}
+      </div>
 
       {/* Main Content */}
       <div className="space-y-6">
@@ -84,8 +165,38 @@ export const V2DeckPage: React.FC<V2DeckPageProps> = ({ deckId }) => {
         <V2DeckHeader deck={selectedDeck} />
 
         {/* Word Browser Section */}
-        <WordBrowser deckId={deckId} />
+        <WordBrowser deckId={deckId} isOwnDeck={isOwned} />
       </div>
+
+      {/* Owner: edit deck modal */}
+      {isEditOpen && (
+        <UserDeckEditModal
+          isOpen
+          onClose={() => setIsEditOpen(false)}
+          mode="edit"
+          source="detail_page"
+          deck={{
+            id: selectedDeck.id,
+            name: selectedDeck.title,
+            description: selectedDeck.description,
+            level: selectedDeck.level as DeckLevel,
+          }}
+          onSuccess={handleDeckUpdated}
+        />
+      )}
+
+      {/* Owner: delete confirmation */}
+      <ConfirmDialog
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        title={t('myDecks.delete.title')}
+        description={t('myDecks.delete.message', { deckName: selectedDeck.title })}
+        confirmText={t('myDecks.delete.confirm')}
+        cancelText={t('myDecks.delete.cancel')}
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        variant="destructive"
+      />
     </div>
   );
 };

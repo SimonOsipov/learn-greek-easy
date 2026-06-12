@@ -61,6 +61,8 @@ export interface Deck {
   updatedAt: Date;
   // User-specific data (injected from progress tracking)
   progress?: DeckProgress;
+  /** True when the deck is a personal deck owned by the current user (detail endpoint only) */
+  isOwned?: boolean;
   // Multilingual fields for client-side locale resolution
   nameEn?: string;
   nameRu?: string;

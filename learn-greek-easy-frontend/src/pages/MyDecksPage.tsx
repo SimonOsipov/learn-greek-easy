@@ -4,19 +4,16 @@ import React, { useCallback, useEffect, useState } from 'react';
 
 import { AlertCircle, BookOpen, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { DecksGrid, UserDeckEditModal } from '@/components/decks';
 import type { CreateSource } from '@/components/decks/UserDeckEditModal';
-import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { CardSkeleton } from '@/components/feedback';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { track } from '@/lib/analytics';
 import { reportAPIError } from '@/lib/errorReporting';
-import { deckAPI, type DeckLevel, type DeckResponse } from '@/services/deckAPI';
+import { deckAPI, type DeckResponse } from '@/services/deckAPI';
 import type { Deck, DeckProgress } from '@/types/deck';
 
 /**
@@ -52,20 +49,19 @@ const transformDeckResponse = (deck: DeckResponse): Deck => {
 
 export const MyDecksPage: React.FC = () => {
   const { t } = useTranslation('deck');
-  const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [decks, setDecks] = useState<Deck[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [createSource, setCreateSource] = useState<CreateSource>('my_decks_button');
-
-  // Edit deck state
-  const [editingDeck, setEditingDeck] = useState<Deck | null>(null);
-
-  // Delete deck state
-  const [deletingDeck, setDeletingDeck] = useState<Deck | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  // Arriving from the word page's add-to-deck modal opens the create dialog directly
+  const arrivedToCreate = Boolean(
+    (location.state as { openCreateDeck?: boolean } | null)?.openCreateDeck
+  );
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(arrivedToCreate);
+  const [createSource, setCreateSource] = useState<CreateSource>(
+    arrivedToCreate ? 'add_to_deck_modal' : 'my_decks_button'
+  );
 
   const fetchMyDecks = useCallback(async () => {
     setIsLoading(true);
@@ -107,66 +103,9 @@ export const MyDecksPage: React.FC = () => {
   };
 
   const handleDeckClick = (deckId: string) => {
-    // Navigate to V2 deck detail page (MyDeckDetailPage removed in SM2V2-06)
+    // Navigate to V2 deck detail page (MyDeckDetailPage removed in SM2V2-06).
+    // Edit/delete now live on the deck detail page itself, not the grid card.
     navigate(`/decks/${deckId}`);
-  };
-
-  // Edit deck handlers
-  const handleEditDeckClick = (deck: Deck) => {
-    setEditingDeck(deck);
-  };
-
-  const handleEditModalClose = () => {
-    setEditingDeck(null);
-  };
-
-  const handleDeckUpdated = () => {
-    fetchMyDecks();
-    setEditingDeck(null);
-  };
-
-  // Delete deck handlers
-  const handleDeleteDeckClick = (deck: Deck) => {
-    track('user_deck_delete_started', {
-      deck_id: deck.id,
-      deck_name: deck.title,
-      source: 'grid_card',
-    });
-    setDeletingDeck(deck);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!deletingDeck) return;
-
-    setIsDeleting(true);
-    try {
-      await deckAPI.deleteMyDeck(deletingDeck.id);
-      toast({
-        title: t('myDecks.deleteSuccess'),
-      });
-      // Remove deck from local state for immediate UI update
-      setDecks((prev) => prev.filter((d) => d.id !== deletingDeck.id));
-      setDeletingDeck(null);
-    } catch (err) {
-      reportAPIError(err, { operation: 'deleteMyDeck', endpoint: `/decks/${deletingDeck.id}` });
-      toast({
-        title: t('myDecks.deleteError'),
-        variant: 'destructive',
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    if (deletingDeck) {
-      track('user_deck_delete_cancelled', {
-        deck_id: deletingDeck.id,
-        deck_name: deletingDeck.title,
-        source: 'grid_card',
-      });
-    }
-    setDeletingDeck(null);
   };
 
   return (
@@ -210,13 +149,7 @@ export const MyDecksPage: React.FC = () => {
 
       {/* Decks Grid */}
       {!isLoading && !error && decks.length > 0 && (
-        <DecksGrid
-          decks={decks}
-          onDeckClick={handleDeckClick}
-          showActions={true}
-          onEditDeck={handleEditDeckClick}
-          onDeleteDeck={handleDeleteDeckClick}
-        />
+        <DecksGrid decks={decks} onDeckClick={handleDeckClick} />
       )}
 
       {/* Empty State */}
@@ -244,37 +177,6 @@ export const MyDecksPage: React.FC = () => {
         mode="create"
         source={createSource}
         onSuccess={handleDeckCreated}
-      />
-
-      {/* Edit Deck Modal */}
-      {editingDeck && (
-        <UserDeckEditModal
-          isOpen={true}
-          onClose={handleEditModalClose}
-          mode="edit"
-          source="grid_card"
-          deck={{
-            id: editingDeck.id,
-            name: editingDeck.title,
-            description: editingDeck.description,
-            level: editingDeck.level as DeckLevel,
-          }}
-          onSuccess={handleDeckUpdated}
-        />
-      )}
-
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        open={!!deletingDeck}
-        onOpenChange={(open) => !open && handleDeleteCancel()}
-        title={t('myDecks.delete.title')}
-        description={t('myDecks.delete.message', { deckName: deletingDeck?.title })}
-        confirmText={t('myDecks.delete.confirm')}
-        cancelText={t('myDecks.delete.cancel')}
-        onConfirm={handleDeleteConfirm}
-        onCancel={handleDeleteCancel}
-        variant="destructive"
-        loading={isDeleting}
       />
     </div>
   );

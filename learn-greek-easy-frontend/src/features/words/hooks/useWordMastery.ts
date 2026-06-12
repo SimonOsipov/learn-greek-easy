@@ -83,16 +83,21 @@ export function useWordMastery({
   const mergedCards = useMemo(() => {
     if (!cardRecords.length) return [];
     const mastery = masteryQuery.data;
-    return cardRecords
-      .filter((card) => card.is_active)
-      .map((card) => ({
-        id: card.id,
-        card_type: card.card_type,
-        front_content: card.front_content,
-        back_content: card.back_content,
-        mastery_status: deriveCardTypeMasteryStatus(mastery, card.card_type),
-      }));
-  }, [cardRecords, masteryQuery.data]);
+    return (
+      cardRecords
+        // deck_id filter: the cards endpoint returns cards across ALL decks the
+        // word belongs to; a word added to a personal deck would otherwise show
+        // every card twice on the word page
+        .filter((card) => card.is_active && card.deck_id === deckId)
+        .map((card) => ({
+          id: card.id,
+          card_type: card.card_type,
+          front_content: card.front_content,
+          back_content: card.back_content,
+          mastery_status: deriveCardTypeMasteryStatus(mastery, card.card_type),
+        }))
+    );
+  }, [cardRecords, masteryQuery.data, deckId]);
 
   const wordMasteryStatus = useMemo(() => {
     return deriveMasteryStatus(masteryQuery.data ?? null);

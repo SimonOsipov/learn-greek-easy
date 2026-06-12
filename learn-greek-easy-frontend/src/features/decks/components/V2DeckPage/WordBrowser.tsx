@@ -33,6 +33,8 @@ export type WordFilterStatus = 'all' | 'learned' | 'reviewing' | 'new';
 export interface WordBrowserProps {
   /** Deck ID to display words for */
   deckId: string;
+  /** True when the deck is the current user's own deck — gates the add-words hint */
+  isOwnDeck?: boolean;
   /** Optional className for container */
   className?: string;
 }
@@ -170,7 +172,7 @@ function FilterPills({ activeFilter, counts, onFilterChange, trailing }: FilterP
  * - Loading skeleton while fetching
  * - Empty state when no matches
  */
-export const WordBrowser: React.FC<WordBrowserProps> = ({ deckId, className }) => {
+export const WordBrowser: React.FC<WordBrowserProps> = ({ deckId, isOwnDeck, className }) => {
   const { t } = useTranslation('deck');
 
   // Data fetching
@@ -322,6 +324,17 @@ export const WordBrowser: React.FC<WordBrowserProps> = ({ deckId, className }) =
       {/* Content */}
       {isLoading ? (
         <WordGridSkeleton count={12} />
+      ) : total === 0 ? (
+        // The add-words hint only applies to the user's own decks; empty system
+        // decks fall back to the generic empty state
+        <EmptyState
+          title={isOwnDeck ? t('wordBrowser.emptyDeckTitle') : t('wordBrowser.emptyTitle')}
+          description={
+            isOwnDeck
+              ? t('wordBrowser.emptyDeckDescription')
+              : t('wordBrowser.emptyFilterDescription')
+          }
+        />
       ) : filteredEntries.length === 0 ? (
         <EmptyState
           title={t('wordBrowser.emptyTitle')}

@@ -156,7 +156,7 @@ const transformDeckDetailResponse = (
   deck: DeckDetailResponse,
   progressData?: DeckProgressSummary
 ): Deck => {
-  return transformDeckResponse(deck, progressData);
+  return { ...transformDeckResponse(deck, progressData), isOwned: deck.is_owned ?? false };
 };
 
 /**

@@ -113,6 +113,10 @@ class DeckDetailResponse(DeckResponse):
     """Schema for single deck response with card count."""
 
     card_count: int = Field(..., ge=0, description="Number of cards in the deck")
+    is_owned: bool = Field(
+        default=False,
+        description="True when the deck is a personal deck owned by the current user",
+    )
 
 
 class DeckListResponse(BaseModel):

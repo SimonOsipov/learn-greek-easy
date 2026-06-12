@@ -1,5 +1,8 @@
 // src/features/words/components/index.ts
 
+export { AddToDeckModal } from './AddToDeckModal';
+export type { AddToDeckModalProps } from './AddToDeckModal';
+
 export { ConjugationTable } from './ConjugationTable';
 export type { ConjugationTableProps } from './ConjugationTable';
 

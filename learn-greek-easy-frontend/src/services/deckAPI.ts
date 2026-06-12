@@ -11,6 +11,8 @@
 
 import { api, buildQueryString } from './api';
 
+import type { WordEntryResponse } from './wordEntryAPI';
+
 // ============================================
 // Types
 // ============================================
@@ -50,6 +52,8 @@ export interface DeckResponse {
  */
 export interface DeckDetailResponse extends DeckResponse {
   card_count: number;
+  /** True when the deck is a personal deck owned by the current user */
+  is_owned?: boolean;
 }
 
 /**
@@ -184,5 +188,21 @@ export const deckAPI = {
    */
   deleteMyDeck: async (deckId: string): Promise<void> => {
     return api.delete<void>(`/api/v1/decks/${deckId}`);
+  },
+
+  /**
+   * Add an existing word entry to a user's own deck.
+   * The backend links the word and generates its card records.
+   */
+  addWordToMyDeck: async (deckId: string, wordEntryId: string): Promise<WordEntryResponse> => {
+    return api.post<WordEntryResponse>(`/api/v1/decks/${deckId}/word-entries/${wordEntryId}`);
+  },
+
+  /**
+   * Remove a word entry from a user's own deck.
+   * Deletes the deck's card records for the word but preserves the word entry.
+   */
+  removeWordFromMyDeck: async (deckId: string, wordEntryId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/decks/${deckId}/word-entries/${wordEntryId}`);
   },
 };
