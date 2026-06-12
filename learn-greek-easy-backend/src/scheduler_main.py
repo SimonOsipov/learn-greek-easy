@@ -23,6 +23,7 @@ from typing import Optional
 from src.config import settings
 from src.core.logging import get_logger, setup_logging
 from src.core.redis import close_redis, init_redis
+from src.core.sentry import init_sentry, shutdown_sentry
 from src.db import close_db, init_db
 from src.tasks.scheduler import get_scheduler, setup_scheduler, shutdown_scheduler
 
@@ -61,6 +62,9 @@ async def main() -> None:
     signal.signal(signal.SIGINT, handle_shutdown)
 
     try:
+        # Initialize Sentry before any other I/O so early failures are captured
+        init_sentry()
+
         # Initialize Redis connection (needed for distributed operations)
         await init_redis()
         logger.info("Redis connection established")
@@ -95,6 +99,9 @@ async def main() -> None:
         raise
 
     finally:
+        # Flush pending Sentry events before closing connections
+        shutdown_sentry()
+
         # Cleanup
         logger.info("Shutting down scheduler...")
         shutdown_scheduler()
