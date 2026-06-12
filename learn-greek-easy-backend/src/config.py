@@ -1,6 +1,7 @@
 """Application configuration management using Pydantic Settings."""
 
 import json
+import logging
 from functools import lru_cache
 from typing import List, Optional
 
@@ -225,7 +226,12 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _validate_warm_min(self) -> "Settings":
         if self.database_pool_warm_min > self.database_pool_size:
-            raise ValueError("database_pool_warm_min cannot exceed database_pool_size")
+            logging.getLogger(__name__).warning(
+                "database_pool_warm_min (%s) exceeds database_pool_size (%s); clamping to pool size",
+                self.database_pool_warm_min,
+                self.database_pool_size,
+            )
+            self.database_pool_warm_min = self.database_pool_size
         return self
 
     @staticmethod
