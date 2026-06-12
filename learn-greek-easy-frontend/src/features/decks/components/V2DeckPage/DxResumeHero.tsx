@@ -17,6 +17,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
 import { getLocalizedDeckDescription, getLocalizedDeckName } from '@/lib/deckLocale';
+import { deckCompletionPct } from '@/lib/progressGlossary';
 import { progressAPI } from '@/services/progressAPI';
 import { useDeckStore } from '@/stores/deckStore';
 import type { Deck } from '@/types/deck';
@@ -157,12 +158,19 @@ export function DxResumeHeroConnected({ deck }: DxResumeHeroConnectedProps) {
   // Word-level mastery: a word counts as mastered only when all of its cards
   // are mastered. Shares the React Query cache with WordBrowser (same queryKey),
   // so this adds no extra network request.
+  const progressData = useDeckStore((s) => s.selectedDeckProgressDetail);
+
   const { data: wordMastery } = useQuery({
     queryKey: ['wordMastery', deck.id],
     queryFn: () => progressAPI.getWordMastery(deck.id),
   });
 
-  const { masteredWords, progressPct } = deriveWordProgress(wordMastery?.items ?? []);
+  const { masteredWords } = deriveWordProgress(wordMastery?.items ?? []);
+
+  const progressPct = deckCompletionPct({
+    cardsStudied: progressData?.progress.cards_studied ?? 0,
+    cardsTotal: progressData?.progress.total_cards ?? 0,
+  });
 
   return (
     <DxResumeHero

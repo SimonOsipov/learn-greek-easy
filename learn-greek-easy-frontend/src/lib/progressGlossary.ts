@@ -169,8 +169,8 @@ export const PROGRESS_TIERS = {
  * @param input.cardsTotal   - total cards in the deck
  * @returns rounded integer 0–100
  */
-export function deckCompletionPct(_input: { cardsStudied: number; cardsTotal: number }): number {
-  return -1; /* TODO */
+export function deckCompletionPct(input: { cardsStudied: number; cardsTotal: number }): number {
+  return input.cardsTotal > 0 ? Math.round((input.cardsStudied / input.cardsTotal) * 100) : 0;
 }
 
 // ============================================================================
