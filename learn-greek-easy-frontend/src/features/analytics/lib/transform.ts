@@ -1,3 +1,4 @@
+import { stageDistribution } from '@/lib/progressGlossary';
 import type {
   DashboardStatsResponse,
   LearningTrendsResponse,
@@ -82,19 +83,24 @@ export const transformToAnalyticsDashboardData = (
     cardsGraduatedRecently: 0,
   }));
 
-  // Build word status breakdown from dashboard data
-  const totalCards = Object.values(dashboard.cards_by_status).reduce((a, b) => a + b, 0);
+  // Build word status breakdown from dashboard data.
+  // Use stageDistribution() as the single selector — it excludes `due` from the
+  // denominator and applies largest-remainder rounding so percents sum to 100.
+  const stageDist = stageDistribution(dashboard.cards_by_status);
+  const totalCards =
+    stageDist.new.count +
+    stageDist.learning.count +
+    stageDist.review.count +
+    stageDist.mastered.count;
   const wordStatus: WordStatusBreakdown = {
-    new: dashboard.cards_by_status.new,
-    learning: dashboard.cards_by_status.learning,
-    review: dashboard.cards_by_status.review,
-    mastered: dashboard.cards_by_status.mastered,
-    relearning: 0,
-    newPercent: totalCards > 0 ? (dashboard.cards_by_status.new / totalCards) * 100 : 0,
-    learningPercent: totalCards > 0 ? (dashboard.cards_by_status.learning / totalCards) * 100 : 0,
-    reviewPercent: totalCards > 0 ? (dashboard.cards_by_status.review / totalCards) * 100 : 0,
-    masteredPercent: totalCards > 0 ? (dashboard.cards_by_status.mastered / totalCards) * 100 : 0,
-    relearningPercent: 0,
+    new: stageDist.new.count,
+    learning: stageDist.learning.count,
+    review: stageDist.review.count,
+    mastered: stageDist.mastered.count,
+    newPercent: stageDist.new.percent,
+    learningPercent: stageDist.learning.percent,
+    reviewPercent: stageDist.review.percent,
+    masteredPercent: stageDist.mastered.percent,
     total: totalCards,
     deckId: 'all',
     date: now,

@@ -31,7 +31,7 @@ interface PieDataItem {
 
 /**
  * PieChart showing distribution of words across learning stages
- * Displays: New, Learning, Review, Mastered, Relearning
+ * Displays: New, Learning, Review, Mastered
  */
 export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDistributionChartProps>(
   ({ height, className }, ref) => {
@@ -56,10 +56,6 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
       mastered: {
         label: t('charts.stageDistribution.stages.mastered'),
         color: 'hsl(var(--chart-2))',
-      },
-      relearning: {
-        label: t('charts.stageDistribution.stages.relearning'),
-        color: 'hsl(var(--chart-5))',
       },
     } satisfies ChartConfig;
 
@@ -91,12 +87,6 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
           percent: wordStatus.masteredPercent,
           original: 'mastered',
         },
-        {
-          name: t('charts.stageDistribution.stages.relearning'),
-          value: wordStatus.relearning,
-          percent: wordStatus.relearningPercent,
-          original: 'relearning',
-        },
       ].filter((item) => item.value > 0);
     }, [data?.wordStatus, t]);
 
@@ -105,7 +95,6 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
       learning: 'var(--color-learning)',
       review: 'var(--color-review)',
       mastered: 'var(--color-mastered)',
-      relearning: 'var(--color-relearning)',
     };
 
     // Note: data items carry their own `percent` field (already 0-100, e.g. 60.84),

@@ -124,14 +124,14 @@ export interface WordStatusBreakdown {
   learning: number; // Cards being learned (< 1 day interval)
   review: number; // Cards in review phase (1+ day interval)
   mastered: number; // Cards mastered (21+ day interval, 80%+ success)
-  relearning: number; // Cards that failed and need re-learning
+  relearning?: number; // Cards that failed and need re-learning (unused by pie chart — kept for test stubs)
 
   // Percentages (for labels on pie chart)
   newPercent: number; // (new / total) × 100
   learningPercent: number;
   reviewPercent: number;
   masteredPercent: number;
-  relearningPercent: number;
+  relearningPercent?: number;
 
   // Metadata
   total: number; // Sum of all cards
