@@ -871,13 +871,17 @@ class TestCategoryAccuracy:
         assert history_cat.accuracy_percentage == 70.0
 
     @pytest.mark.asyncio
-    async def test_accuracy_null_when_no_recent_answers(
+    async def test_accuracy_includes_old_answers_all_time(
         self,
         db_session: AsyncSession,
         test_user: User,
         culture_deck: CultureDeck,
     ):
-        """Answers older than 30 days → accuracy_percentage is None for that category."""
+        """All-time window (PRACT2-7-05 / D5): answers older than 30 days are STILL counted.
+
+        Previously a 30-day per-category window nulled these out, contradicting the
+        all-time overall accuracy. Both are now all-time, so 31-day-old answers count.
+        """
         questions = await create_questions_for_deck(db_session, culture_deck, 5)
         await create_stats_for_questions(db_session, test_user, questions, CardStatus.REVIEW)
 
@@ -891,21 +895,22 @@ class TestCategoryAccuracy:
         result = await service.get_culture_readiness(test_user.id)
 
         history_cat = next(c for c in result.categories if c.category == "history")
-        assert history_cat.accuracy_percentage is None
+        # All-time: 5 old correct answers count → 5/5 = 100.0% (no longer None).
+        assert history_cat.accuracy_percentage == 100.0
 
     @pytest.mark.asyncio
-    async def test_accuracy_30_day_window_boundary(
+    async def test_accuracy_all_time_no_window_boundary(
         self,
         db_session: AsyncSession,
         test_user: User,
         culture_deck: CultureDeck,
     ):
-        """Answer at 31 days ago is excluded; answer at 29 days ago is included."""
+        """All-time (PRACT2-7-05 / D5): no 30-day boundary — old and recent answers both count."""
         questions = await create_questions_for_deck(db_session, culture_deck, 2)
         await create_stats_for_questions(db_session, test_user, questions, CardStatus.REVIEW)
 
         now = datetime.utcnow()
-        # 31 days ago: outside window (excluded)
+        # 31 days ago: previously excluded by the 30-day window; now counted (correct).
         await create_answer_history_with_date(
             db_session,
             test_user,
@@ -913,7 +918,7 @@ class TestCategoryAccuracy:
             is_correct=True,
             created_at=now - timedelta(days=31),
         )
-        # 29 days ago: inside window (included), incorrect
+        # 29 days ago: counted (incorrect).
         await create_answer_history_with_date(
             db_session,
             test_user,
@@ -926,8 +931,8 @@ class TestCategoryAccuracy:
         result = await service.get_culture_readiness(test_user.id)
 
         history_cat = next(c for c in result.categories if c.category == "history")
-        # Only the incorrect answer within window counts → 0 correct / 1 total = 0.0%
-        assert history_cat.accuracy_percentage == 0.0
+        # All-time: both answers count → 1 correct / 2 total = 50.0%.
+        assert history_cat.accuracy_percentage == 50.0
 
     @pytest.mark.asyncio
     async def test_accuracy_culture_practical_merge(
