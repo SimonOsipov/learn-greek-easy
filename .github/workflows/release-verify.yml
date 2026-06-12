@@ -1158,7 +1158,6 @@ jobs:
 
       - name: Assert Lighthouse (Desktop)
         id: assert-desktop
-        continue-on-error: true
         working-directory: learn-greek-easy-frontend
         run: lhci assert --config=lighthouserc.cjs
 
@@ -1219,7 +1218,6 @@ jobs:
 
       - name: Assert Lighthouse (Mobile)
         id: assert-mobile
-        continue-on-error: true
         working-directory: learn-greek-easy-frontend
         run: lhci assert --config=lighthouserc.mobile.cjs
 
