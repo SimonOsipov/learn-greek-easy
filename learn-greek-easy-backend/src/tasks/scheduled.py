@@ -12,6 +12,7 @@ Tasks:
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
+from sentry_sdk.crons import monitor
 from sqlalchemy import text
 
 from src.config import settings
@@ -207,6 +208,7 @@ async def _cleanup_orphaned_session_refs(redis: "Redis") -> tuple[int, int]:
     return deleted_orphaned, deleted_empty_sets
 
 
+@monitor(monitor_slug="scheduler-session-cleanup")
 async def session_cleanup_task() -> None:
     """Clean up expired and orphaned sessions from Redis.
 
