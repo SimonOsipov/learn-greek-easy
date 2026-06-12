@@ -304,3 +304,86 @@ class TestCultureReadinessAccuracyWindow:
             "Empty categories (geography, 0 answers) must NOT contribute to the "
             "overall denominator — they are pulling the figure toward 0%."
         )
+
+    @pytest.mark.asyncio
+    async def test_overall_accuracy_is_pooled_not_averaged(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Adversarial: overall accuracy_percentage is pooled sum(correct)/sum(total)
+        across categories, NOT an average of per-category percentages.
+
+        Setup:
+          history:   9 correct / 10 total  → per-category = 90.0%
+          geography: 1 correct /  5 total  → per-category = 20.0%
+
+        Pooled:  (9 + 1) / (10 + 5) = 10/15 ≈ 66.7%
+        Averaged: (90.0 + 20.0) / 2       = 55.0%
+
+        The two values differ whenever categories have unequal answer counts.
+        This test locks in pooled semantics and fails if the implementation
+        ever switches to averaging per-category percentages.
+        """
+        history_deck = await _make_deck(db_session, "history", "History Deck")
+        geography_deck = await _make_deck(db_session, "geography", "Geography Deck")
+
+        history_qs = await _make_questions(db_session, history_deck, 10)
+        geography_qs = await _make_questions(db_session, geography_deck, 5)
+
+        await _make_stats(db_session, test_user, history_qs, CardStatus.REVIEW)
+        await _make_stats(db_session, test_user, geography_qs, CardStatus.REVIEW)
+
+        now = datetime.utcnow()
+
+        # history: 9 correct, 1 wrong
+        for i, q in enumerate(history_qs):
+            await _make_answer(
+                db_session,
+                test_user,
+                q,
+                deck_category="history",
+                is_correct=(i < 9),
+                created_at=now,
+            )
+
+        # geography: 1 correct, 4 wrong
+        for i, q in enumerate(geography_qs):
+            await _make_answer(
+                db_session,
+                test_user,
+                q,
+                deck_category="geography",
+                is_correct=(i < 1),
+                created_at=now,
+            )
+
+        service = CultureQuestionService(db_session)
+        result = await service.get_culture_readiness(test_user.id)
+
+        history_cat = next((c for c in result.categories if c.category == "history"), None)
+        geography_cat = next((c for c in result.categories if c.category == "geography"), None)
+
+        assert history_cat is not None
+        assert geography_cat is not None
+
+        # Per-category sanity checks
+        assert history_cat.accuracy_percentage == pytest.approx(
+            90.0, abs=0.1
+        ), f"Expected history accuracy ≈ 90.0%, got {history_cat.accuracy_percentage}"
+        assert geography_cat.accuracy_percentage == pytest.approx(
+            20.0, abs=0.1
+        ), f"Expected geography accuracy ≈ 20.0%, got {geography_cat.accuracy_percentage}"
+
+        # Overall must be pooled (66.7%), not the average-of-averages (55.0%)
+        pooled_expected = (9 + 1) / (10 + 5) * 100  # 66.666...%
+        averaged_expected = (90.0 + 20.0) / 2  # 55.0%
+
+        assert result.accuracy_percentage is not None
+        assert result.accuracy_percentage == pytest.approx(pooled_expected, abs=0.2), (
+            f"Overall accuracy_percentage = {result.accuracy_percentage}. "
+            f"Expected pooled ≈ {pooled_expected:.1f}% (sum(correct)/sum(total)), "
+            f"not average-of-averages {averaged_expected:.1f}%. "
+            "If this test fails, the implementation switched to averaging per-category "
+            "percentages instead of pooling raw answer rows."
+        )
