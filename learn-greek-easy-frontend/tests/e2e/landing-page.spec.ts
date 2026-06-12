@@ -44,6 +44,9 @@ test.describe('Landing Page - Unauthenticated', () => {
       await page.goto('/');
 
       await expect(page.getByTestId('hero-title')).toBeVisible();
+      // PERF-09: anon visitor must reach the hero WITHOUT the auth-loading spinner
+      // (RouteGuard de-gated in PERF-09-02 — isInitializing never true, so the spinner never mounts)
+      await expect(page.getByTestId('auth-loading')).toHaveCount(0);
       await expect(page.getByTestId('hero-subtitle')).toBeVisible();
       // Hero CTA is now the WaitlistForm email input + submit button
       // Use .first() since WaitlistForm appears in both Hero and FinalCTA
