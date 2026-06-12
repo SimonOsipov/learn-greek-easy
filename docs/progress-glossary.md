@@ -16,15 +16,18 @@ Source of truth: `learn-greek-easy-backend/src/core/sm2.py` — `determine_statu
 | **выучено / learned** | status ∈ {`review`, `mastered`} | `repetitions ≥ LEARNING_REPETITIONS_THRESHOLD` (= **3**) — card has graduated out of the initial learning phase. |
 | **освоено / mastered** | status == `mastered` | `easiness_factor ≥ MASTERY_EF_THRESHOLD` (= **2.3**) **AND** `interval ≥ MASTERY_INTERVAL_THRESHOLD` (= **21** days). |
 
-### Nesting
+### Relationships
 
-The three named tiers are **nested, not disjoint**:
+The named tiers **overlap; they are not fully nested**:
 
+```text
+mastered  ⊂  learned
+started   =  learning ∪ review
 ```
-mastered  ⊂  learned  ⊂  started
-```
 
-A mastered card is also counted as learned and (by extension) started.
+- A **mastered** card is also **learned** (`mastered ⊂ learned`), because `learned = {review, mastered}`.
+- **started** (`{learning, review}`) and **learned** (`{review, mastered}`) overlap on `review`: a `review` card is both started and learned.
+- **mastered** is **excluded from started** — a mastered card is no longer "merely started". So `learned ⊄ started`, and the chain `mastered ⊂ learned ⊂ started` does **not** hold.
 
 The **stage distribution pie** uses the four *disjoint* `CardStatus` buckets (`new` / `learning` / `review` / `mastered`), which partition the population — a card belongs to exactly one bucket.
 
