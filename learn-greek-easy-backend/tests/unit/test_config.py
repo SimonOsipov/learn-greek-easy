@@ -1,5 +1,7 @@
 """Unit tests for picture generation configuration."""
 
+import logging
+
 import pytest
 from pydantic import ValidationError
 
@@ -103,18 +105,40 @@ class TestDatabasePoolWarmMin:
         settings = Settings()
         assert settings.database_pool_warm_min == 10
 
-    def test_database_pool_warm_min_exceeding_pool_size_rejected(self, monkeypatch):
-        """Settings() raises ValidationError when database_pool_warm_min > database_pool_size."""
+    def test_database_pool_warm_min_exceeding_pool_size_clamps_to_pool_size(
+        self, monkeypatch, caplog
+    ):
+        """When warm_min > pool_size, Settings() must clamp warm_min to pool_size and log a warning — not raise."""
         from src.config import Settings
 
         monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
         monkeypatch.setenv("DATABASE_POOL_SIZE", "5")
         monkeypatch.setenv("DATABASE_POOL_WARM_MIN", "6")
 
-        with pytest.raises(ValidationError) as exc_info:
-            Settings()
+        with caplog.at_level(logging.WARNING):
+            settings = Settings()
 
-        assert "database_pool_warm_min" in str(exc_info.value).lower()
+        assert settings.database_pool_warm_min == 5
+        assert "6" in caplog.text
+        assert "5" in caplog.text
+
+    def test_database_pool_warm_min_below_pool_size_unchanged_no_warning(self, monkeypatch, caplog):
+        """When warm_min < pool_size, Settings() must not clamp and must not emit a clamp warning."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("DATABASE_POOL_SIZE", "15")
+        monkeypatch.setenv("DATABASE_POOL_WARM_MIN", "3")
+
+        with caplog.at_level(logging.WARNING):
+            settings = Settings()
+
+        assert settings.database_pool_warm_min == 3
+        # No clamp warning should be present
+        assert (
+            "database_pool_warm_min" not in caplog.text.lower()
+            or "clamp" not in caplog.text.lower()
+        )
 
     def test_database_pool_warm_min_equal_to_pool_size_accepted(self, monkeypatch):
         """warm_min == pool_size is valid — the validator uses strict >, not >=."""
