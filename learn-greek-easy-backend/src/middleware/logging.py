@@ -16,6 +16,7 @@ See: https://www.starlette.io/middleware/#pure-asgi-middleware
 import time
 import uuid
 from typing import Any
+from urllib.parse import unquote_plus
 
 from loguru import logger
 from starlette.datastructures import MutableHeaders
@@ -101,6 +102,29 @@ class RequestLoggingMiddleware:
             key: self.REDACTED if key.lower() in self.SENSITIVE_HEADERS else value
             for key, value in headers.items()
         }
+
+    def _redact_query(self, raw_query: str) -> str | None:
+        """Redact sensitive values from a raw query string.
+
+        Args:
+            raw_query: The raw query string (str(request.query_params)),
+                byte-faithful so +/%XX encoding is preserved.
+
+        Returns:
+            Query string with sensitive values replaced with REDACTED, or
+            None if the input is empty.
+        """
+        if not raw_query:
+            return None
+
+        redacted_segments: list[str] = []
+        for segment in raw_query.split("&"):
+            key, sep, _value = segment.partition("=")
+            if sep and unquote_plus(key).lower() in self.SENSITIVE_BODY_FIELDS:
+                redacted_segments.append(f"{key}={self.REDACTED}")
+            else:
+                redacted_segments.append(segment)
+        return "&".join(redacted_segments)
 
     def _redact_body(self, body: dict[str, Any] | None) -> dict[str, Any] | None:
         """Recursively redact sensitive fields from body.
@@ -191,7 +215,9 @@ class RequestLoggingMiddleware:
                 "Request started",
                 method=request.method,
                 path=request.url.path,
-                query=str(request.query_params) if request.query_params else None,
+                query=(
+                    self._redact_query(str(request.query_params)) if request.query_params else None
+                ),
                 client_ip=client_ip,
                 user_agent=request.headers.get("user-agent"),
             )
