@@ -18,7 +18,7 @@
  * or a test-only isInitialized short-circuit — they verify real behaviour.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_LANGUAGE, NAMESPACES } from '../constants';
 import i18n from '../index';

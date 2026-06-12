@@ -26,7 +26,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { act, render as rtlRender, screen, waitFor } from '@testing-library/react';
 
-import * as supabaseClientModule from '@/lib/supabaseClient';
 import { useAppStore } from '@/stores/appStore';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -210,7 +209,7 @@ describe('PERF-09-02 adversarial (a): protected route + unauthenticated visitor 
       expect(screen.getByTestId('login-page')).toBeInTheDocument();
     });
 
-    expect(capturedState?.from).toBe('/dashboard?tab=stats');
+    expect((capturedState as { from?: string } | null)?.from).toBe('/dashboard?tab=stats');
   });
 });
 
