@@ -87,23 +87,55 @@ describe('RouteGuard', () => {
     useAppStore.getState().reset();
   });
 
-  it('shows the loading screen until INITIAL_SESSION resolves', async () => {
+  // PERF-09-02: new contract — no-session visitor renders children immediately.
+  // isInitializing starts false unconditionally, so children paint before
+  // INITIAL_SESSION fires. checkAuth still runs in background (exactly once on
+  // INITIAL_SESSION) and authInitialized flips in the finally block after it resolves.
+  it('no-session visitor renders children immediately without spinner; checkAuth resolves in background', async () => {
+    // Use a deferred checkAuth so we can assert the child is already present
+    // while checkAuth is still pending.
+    let resolveCheckAuth!: () => void;
+    checkAuthSpy = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveCheckAuth = resolve;
+        })
+    );
+    useAuthStore.setState({ checkAuth: checkAuthSpy });
+
     render(
       <RouteGuard>
         <Child />
       </RouteGuard>
     );
 
-    // Before any auth event, the loading screen is shown.
-    expect(screen.getByTestId('auth-loading')).toBeInTheDocument();
-    expect(screen.queryByTestId('route-guard-child')).not.toBeInTheDocument();
+    // NEW CONTRACT: children render immediately — no spinner on first paint.
+    expect(screen.getByTestId('route-guard-child')).toBeInTheDocument();
+    expect(screen.queryByTestId('auth-loading')).not.toBeInTheDocument();
 
+    // Trigger INITIAL_SESSION → checkAuth runs in background.
     await emit('INITIAL_SESSION');
 
+    // checkAuth should have been called.
     await waitFor(() => {
-      expect(screen.getByTestId('route-guard-child')).toBeInTheDocument();
+      expect(checkAuthSpy).toHaveBeenCalledTimes(1);
     });
-    expect(screen.queryByTestId('auth-loading')).not.toBeInTheDocument();
+
+    // authInitialized must still be false while checkAuth is pending.
+    expect(useAppStore.getState().authInitialized).toBe(false);
+
+    // Resolve checkAuth — authInitialized flips in the finally block.
+    await act(async () => {
+      resolveCheckAuth();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(useAppStore.getState().authInitialized).toBe(true);
+    });
+    // Children still present after checkAuth resolves.
+    expect(screen.getByTestId('route-guard-child')).toBeInTheDocument();
   });
 
   it('calls checkAuth exactly once on INITIAL_SESSION and marks auth initialized', async () => {
@@ -397,8 +429,12 @@ describe('RouteGuard — de-gated persisted-session render (PERF-02)', () => {
     });
   });
 
-  // AC-3: unknown/unauthenticated session still shows loading (unchanged behavior)
-  it('AC-3: unknown session still shows loading screen, no auth bypass', async () => {
+  // PERF-09-02 flip of AC-3: under the new contract isInitializing starts false
+  // unconditionally. A no-persisted-session visitor (unauthenticated, hydrated)
+  // now renders children immediately — no spinner. The ProtectedRoute boundary
+  // (not RouteGuard) is what redirects unauthenticated users to /login, so there
+  // is no security regression. checkAuth still runs in the background.
+  it('AC-3 (new contract): no-session visitor renders children immediately; checkAuth runs in background', async () => {
     checkAuthSpy = vi.fn(() => new Promise<void>(() => {}));
     seedUnauthedSession(checkAuthSpy);
 
@@ -408,28 +444,49 @@ describe('RouteGuard — de-gated persisted-session render (PERF-02)', () => {
       </RouteGuard>
     );
 
+    // NEW CONTRACT: children render immediately — no spinner.
+    expect(screen.getByTestId('route-guard-child')).toBeInTheDocument();
+    expect(screen.queryByTestId('auth-loading')).not.toBeInTheDocument();
+
     await emit('INITIAL_SESSION');
 
-    // Give the event loop a tick.
+    // checkAuth still runs in the background (exactly once).
     await act(async () => {
       await Promise.resolve();
     });
 
-    // Loading must be shown -- selector is false, so isInitializing starts true.
-    expect(screen.getByTestId('auth-loading')).toBeInTheDocument();
+    expect(checkAuthSpy).toHaveBeenCalledTimes(1);
 
-    // Children must NOT be visible -- no bypass for unauthenticated sessions.
-    expect(screen.queryByTestId('route-guard-child')).not.toBeInTheDocument();
+    // Children remain visible while checkAuth is pending.
+    expect(screen.getByTestId('route-guard-child')).toBeInTheDocument();
+    expect(screen.queryByTestId('auth-loading')).not.toBeInTheDocument();
   });
 
-  // ADVERSARIAL — pre-hydration no-flash guard
-  // Seed _hasHydrated:false with stale authed fields. selectHasPersistedSession
-  // must return false, so isInitializing starts true and children do NOT paint.
-  // This guards the pre-hydration flash: persisted fields in localStorage could
-  // be truthy while Zustand hasn't yet finished rehydration.
-  it('ADVERSARIAL: pre-hydration store (_hasHydrated=false) shows loading, not children', async () => {
-    // Stale authed fields but NOT yet hydrated — selectHasPersistedSession
-    // requires _hasHydrated:true, so it returns false here.
+  // PERF-09-02 flip of ADVERSARIAL pre-hydration guard
+  //
+  // OLD contract: _hasHydrated:false → selectHasPersistedSession returns false
+  //   → isInitializing starts true → spinner shown, no children.
+  //
+  // NEW contract: isInitializing starts false UNCONDITIONALLY (the lazy-init is
+  //   removed). selectHasPersistedSession is no longer consulted on mount.
+  //   Children render immediately regardless of hydration state.
+  //
+  // Safety: ProtectedRoute (ProtectedRoute.tsx:22) guards `!_hasHydrated` and
+  //   renders a spinner itself until hydration completes, then redirects
+  //   unauthenticated users to /login (L34). RouteGuard is NOT responsible for
+  //   preventing pre-hydration leaks of protected content — that boundary is
+  //   owned by ProtectedRoute. Rendering RouteGuard children immediately for an
+  //   unhydrated visitor is safe: they will hit ProtectedRoute's own guard
+  //   before seeing any protected content.
+  //
+  // NOTE: This flip was NOT taken lightly. The original adversarial test was
+  //   guarding a real property (no-flash before hydration). The new contract
+  //   intentionally removes that guard FROM RouteGuard and relies on
+  //   ProtectedRoute to provide the equivalent safety on protected subtrees.
+  //   Public routes (landing, login, register) have no such guard — and
+  //   correctly so, because they contain no protected content.
+  it('ADVERSARIAL (new contract): pre-hydration store (_hasHydrated=false) renders children immediately', async () => {
+    // Stale authed fields, NOT yet hydrated.
     checkAuthSpy = vi.fn(() => new Promise<void>(() => {}));
     useAuthStore.setState({
       _hasHydrated: false,
@@ -446,22 +503,23 @@ describe('RouteGuard — de-gated persisted-session render (PERF-02)', () => {
       </RouteGuard>
     );
 
-    // At this point isInitializing was set by the lazy initializer BEFORE any
-    // INITIAL_SESSION event, so the loading screen must be showing immediately.
-    expect(screen.getByTestId('auth-loading')).toBeInTheDocument();
-    expect(screen.queryByTestId('route-guard-child')).not.toBeInTheDocument();
+    // NEW CONTRACT: isInitializing starts false unconditionally.
+    // Children render immediately — no spinner on first paint.
+    expect(screen.getByTestId('route-guard-child')).toBeInTheDocument();
+    expect(screen.queryByTestId('auth-loading')).not.toBeInTheDocument();
 
     await emit('INITIAL_SESSION');
 
-    // Give the event loop a tick — checkAuth still never resolves.
+    // checkAuth fires in the background.
     await act(async () => {
       await Promise.resolve();
     });
 
-    // Children must STILL not be shown: isInitializing was true at mount
-    // (selector was false) and checkAuth hasn't resolved to flip it.
-    expect(screen.getByTestId('auth-loading')).toBeInTheDocument();
-    expect(screen.queryByTestId('route-guard-child')).not.toBeInTheDocument();
+    expect(checkAuthSpy).toHaveBeenCalledTimes(1);
+
+    // Children remain visible while checkAuth is pending.
+    expect(screen.getByTestId('route-guard-child')).toBeInTheDocument();
+    expect(screen.queryByTestId('auth-loading')).not.toBeInTheDocument();
   });
 });
 
