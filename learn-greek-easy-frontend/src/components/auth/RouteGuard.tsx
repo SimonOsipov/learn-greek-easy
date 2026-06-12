@@ -6,7 +6,7 @@ import { APP_NAME } from '@/lib/constants';
 import log from '@/lib/logger';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppStore } from '@/stores/appStore';
-import { useAuthStore, selectHasPersistedSession } from '@/stores/authStore';
+import { useAuthStore } from '@/stores/authStore';
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -45,9 +45,7 @@ function AuthLoadingScreen() {
 export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const setAuthInitialized = useAppStore((state) => state.setAuthInitialized);
-  const [isInitializing, setIsInitializing] = useState(
-    () => !selectHasPersistedSession(useAuthStore.getState())
-  );
+  const [isInitializing, setIsInitializing] = useState(false);
   const hasInitializedRef = useRef(false);
   const initialSessionHandledRef = useRef(false);
 
