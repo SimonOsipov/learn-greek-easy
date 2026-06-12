@@ -220,16 +220,14 @@ export function resolveAnswerText(
     return '';
   }
 
-  // When lang === 'ru', prefer _ru variant of the answer field when present.
-  // Only sentence_translation carries answer_ru; plural_form carries answer_sub_ru.
+  // When lang === 'ru', prefer the _ru variant of the answer field when present.
+  // Only sentence_translation localizes its answer (answer_ru). plural_form's answer
+  // is the Greek form itself (back_content.answer) and is NOT localized — answer_sub_ru
+  // is a sub-label, not the answer, so plural_form falls through to the shared path below.
   // Falls back to English when the _ru field is absent/empty.
   if (lang === 'ru') {
     if (cardType === 'sentence_translation') {
       const ruVal = backContent['answer_ru'];
-      if (typeof ruVal === 'string' && ruVal.length > 0) return ruVal;
-    }
-    if (cardType === 'plural_form') {
-      const ruVal = backContent['answer_sub_ru'];
       if (typeof ruVal === 'string' && ruVal.length > 0) return ruVal;
     }
   }
