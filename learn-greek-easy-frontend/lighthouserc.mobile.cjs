@@ -52,6 +52,13 @@ module.exports = {
         'categories:accessibility': ['error', { minScore: 0.9 }],
         'categories:best-practices': ['warn', { minScore: 0.8 }],
         'categories:seo': ['warn', { minScore: 0.8 }],
+
+        // LCP gate floor = 4000ms = the "poor" boundary (matches parse-lighthouse-results.cjs
+        // lcp.poor and the Web Vitals poor line). This is the failing FLOOR, not the 2.5s
+        // "good" target — error@2500 would flake on single-run lab noise (numberOfRuns:1,
+        // mobile 4xCPU/4G) and tempt re-adding `|| true`. The 2.5s target is tracked as a
+        // FIELD metric, not enforced as a lab gate.
+        'largest-contentful-paint': ['error', { maxNumericValue: 4000 }],
       },
     },
 

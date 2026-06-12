@@ -40,7 +40,12 @@ module.exports = {
 
         // Core Web Vitals thresholds
         'first-contentful-paint': ['warn', { maxNumericValue: 2000 }],
-        'largest-contentful-paint': ['warn', { maxNumericValue: 3000 }],
+        // LCP gate floor = 4000ms = the "poor" boundary (matches parse-lighthouse-results.cjs
+        // lcp.poor and the Web Vitals poor line). This is the failing FLOOR, not the 2.5s
+        // "good" target — error@2500 would flake on single-run lab noise (numberOfRuns:1,
+        // mobile 4xCPU/4G) and tempt re-adding `|| true`. The 2.5s target is tracked as a
+        // FIELD metric, not enforced as a lab gate.
+        'largest-contentful-paint': ['error', { maxNumericValue: 4000 }],
         'cumulative-layout-shift': ['warn', { maxNumericValue: 0.1 }],
         'total-blocking-time': ['warn', { maxNumericValue: 300 }],
       },
