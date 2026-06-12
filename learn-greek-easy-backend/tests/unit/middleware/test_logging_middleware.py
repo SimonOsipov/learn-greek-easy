@@ -1217,3 +1217,199 @@ class TestLogContext:
             # bind_log_context should NOT be called for excluded paths
             mock_bind.assert_not_called()
             mock_clear.assert_not_called()
+
+
+class TestQueryParamRedaction:
+    """Tests for sensitive query parameter redaction in 'Request started' log.
+
+    These tests verify that _redact_query() replaces sensitive values with
+    [REDACTED] in the query= kwarg of logger.info("Request started", ...).
+
+    Tests 1,2,3,6,7,8,9 expect [REDACTED] and are RED against the current
+    unredacted implementation. Tests 4,5,10,11,12 assert pass-through
+    behaviour and may already be green.
+    """
+
+    # Realistic 3-part JWT for negative-assertion tests.
+    SAMPLE_JWT = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NSJ9.abc123sig"
+
+    @pytest.fixture
+    def app(self) -> FastAPI:
+        """Create test FastAPI app with middleware."""
+        app = FastAPI()
+        app.add_middleware(RequestLoggingMiddleware)
+
+        @app.get("/api/v1/test")
+        async def test_endpoint():
+            return {"status": "ok"}
+
+        @app.get("/api/v1/sse")
+        async def sse_endpoint():
+            return {"status": "ok"}
+
+        return app
+
+    @pytest.fixture
+    def client(self, app: FastAPI) -> TestClient:
+        """Create test client."""
+        return TestClient(app)
+
+    def _get_started_call(self, mock_logger):
+        """Return the call_args for the 'Request started' logger.info call."""
+        started_calls = [
+            call for call in mock_logger.info.call_args_list if call.args[0] == "Request started"
+        ]
+        assert (
+            len(started_calls) == 1
+        ), f"Expected 1 'Request started' call, got {len(started_calls)}"
+        return started_calls[0]
+
+    # ------------------------------------------------------------------ #
+    # 1. Single sensitive field: token
+    # ------------------------------------------------------------------ #
+    def test_query_token_is_redacted(self, client: TestClient):
+        """Token value in query string must be replaced with [REDACTED]."""
+        with mock_logger_contextualize() as (mock_logger, _, _):
+            client.get("/api/v1/test?token=abc.def.ghi")
+
+            started_call = self._get_started_call(mock_logger)
+            assert started_call.kwargs["query"] == "token=[REDACTED]"
+
+    # ------------------------------------------------------------------ #
+    # 2. All sensitive field names redacted simultaneously
+    # ------------------------------------------------------------------ #
+    def test_query_redacts_all_sensitive_field_names(self, client: TestClient):
+        """Every sensitive field name must have its value replaced."""
+        qs = "password=p&secret=s&api_key=k&access_token=a&refresh_token=r&apikey=z"
+        with mock_logger_contextualize() as (mock_logger, _, _):
+            client.get(f"/api/v1/test?{qs}")
+
+            started_call = self._get_started_call(mock_logger)
+            expected = (
+                "password=[REDACTED]"
+                "&secret=[REDACTED]"
+                "&api_key=[REDACTED]"
+                "&access_token=[REDACTED]"
+                "&refresh_token=[REDACTED]"
+                "&apikey=[REDACTED]"
+            )
+            assert started_call.kwargs["query"] == expected
+
+    # ------------------------------------------------------------------ #
+    # 3. JWT must never appear anywhere in the log call (positive + negative)
+    # ------------------------------------------------------------------ #
+    def test_jwt_never_appears_anywhere_in_log_call(self, client: TestClient):
+        """JWT token must not appear in any part of the logger.info call args."""
+        jwt = self.SAMPLE_JWT
+        with mock_logger_contextualize() as (mock_logger, _, _):
+            client.get(f"/api/v1/sse?token={jwt}")
+
+            started_call = self._get_started_call(mock_logger)
+            # Positive: value replaced
+            assert started_call.kwargs["query"] == "token=[REDACTED]"
+            # Negative: JWT string absent from the entire repr of the call
+            assert jwt not in str(mock_logger.info.call_args)
+
+    # ------------------------------------------------------------------ #
+    # 4. Non-sensitive param preserved unchanged (EXPECTED ALREADY GREEN)
+    # ------------------------------------------------------------------ #
+    def test_non_sensitive_query_param_preserved(self, client: TestClient):
+        """Non-sensitive query param must be logged verbatim."""
+        with mock_logger_contextualize() as (mock_logger, _, _):
+            client.get("/api/v1/test?lang=ru")
+
+            started_call = self._get_started_call(mock_logger)
+            assert started_call.kwargs["query"] == "lang=ru"
+
+    # ------------------------------------------------------------------ #
+    # 5. No query string → query is None (EXPECTED ALREADY GREEN)
+    # ------------------------------------------------------------------ #
+    def test_query_is_none_when_no_query_string(self, client: TestClient):
+        """Absent query string must produce query=None in the log."""
+        with mock_logger_contextualize() as (mock_logger, _, _):
+            client.get("/api/v1/test")
+
+            started_call = self._get_started_call(mock_logger)
+            assert started_call.kwargs["query"] is None
+
+    # ------------------------------------------------------------------ #
+    # 6. Mixed sensitive and non-sensitive params
+    # ------------------------------------------------------------------ #
+    def test_mixed_sensitive_and_non_sensitive(self, client: TestClient):
+        """Only sensitive values are redacted; non-sensitive pass through."""
+        with mock_logger_contextualize() as (mock_logger, _, _):
+            client.get("/api/v1/test?lang=ru&token=abc&page=2")
+
+            started_call = self._get_started_call(mock_logger)
+            assert started_call.kwargs["query"] == "lang=ru&token=[REDACTED]&page=2"
+
+    # ------------------------------------------------------------------ #
+    # 7. Case-insensitive key match, original key casing preserved
+    # ------------------------------------------------------------------ #
+    def test_query_key_match_is_case_insensitive(self, client: TestClient):
+        """Sensitive key match is case-insensitive; original casing kept in output."""
+        with mock_logger_contextualize() as (mock_logger, _, _):
+            client.get("/api/v1/test?Token=abc&SECRET=xyz")
+
+            started_call = self._get_started_call(mock_logger)
+            assert started_call.kwargs["query"] == "Token=[REDACTED]&SECRET=[REDACTED]"
+
+    # ------------------------------------------------------------------ #
+    # 8. Substring match must NOT redact (only exact key match)
+    # ------------------------------------------------------------------ #
+    def test_query_substring_key_not_redacted(self, client: TestClient):
+        """Keys that contain a sensitive name as substring must NOT be redacted."""
+        with mock_logger_contextualize() as (mock_logger, _, _):
+            client.get("/api/v1/test?mytoken=abc&tokenized=def")
+
+            started_call = self._get_started_call(mock_logger)
+            assert started_call.kwargs["query"] == "mytoken=abc&tokenized=def"
+
+    # ------------------------------------------------------------------ #
+    # 9. Repeated sensitive key — all occurrences redacted
+    # ------------------------------------------------------------------ #
+    def test_repeated_sensitive_key_all_redacted(self, client: TestClient):
+        """When a sensitive key appears multiple times, every value is redacted."""
+        with mock_logger_contextualize() as (mock_logger, _, _):
+            client.get("/api/v1/test?token=a&token=b")
+
+            started_call = self._get_started_call(mock_logger)
+            assert started_call.kwargs["query"] == "token=[REDACTED]&token=[REDACTED]"
+
+    # ------------------------------------------------------------------ #
+    # 10. Repeated non-sensitive key — all occurrences preserved (EXPECTED ALREADY GREEN)
+    # ------------------------------------------------------------------ #
+    def test_repeated_non_sensitive_key_preserved(self, client: TestClient):
+        """Repeated non-sensitive keys must pass through unchanged."""
+        with mock_logger_contextualize() as (mock_logger, _, _):
+            client.get("/api/v1/test?tag=x&tag=y")
+
+            started_call = self._get_started_call(mock_logger)
+            assert started_call.kwargs["query"] == "tag=x&tag=y"
+
+    # ------------------------------------------------------------------ #
+    # 11. Encoding preserved; non-sensitive portion untouched
+    # ------------------------------------------------------------------ #
+    def test_query_redaction_preserves_encoding(self, client: TestClient):
+        """URL-encoded non-sensitive params must pass through byte-for-byte."""
+        jwt = self.SAMPLE_JWT
+        with mock_logger_contextualize() as (mock_logger, _, _):
+            client.get(f"/api/v1/test?q=hello+world&token={jwt}")
+
+            started_call = self._get_started_call(mock_logger)
+            query = started_call.kwargs["query"]
+            assert "q=hello+world" in query
+            assert "token=[REDACTED]" in query
+
+    # ------------------------------------------------------------------ #
+    # 12. Existing visible query params still logged (regression guard — EXPECTED ALREADY GREEN)
+    # ------------------------------------------------------------------ #
+    def test_existing_visible_query_still_works(self, client: TestClient):
+        """Pagination params must appear unmodified in the log."""
+        with mock_logger_contextualize() as (mock_logger, _, _):
+            client.get("/api/v1/test?page=1&limit=10")
+
+            started_call = self._get_started_call(mock_logger)
+            query = started_call.kwargs["query"]
+            assert "page=1" in query
+            assert "limit=10" in query
