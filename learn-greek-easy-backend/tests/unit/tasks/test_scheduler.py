@@ -503,3 +503,70 @@ class TestJobListenerSentryCapturesException:
         finally:
             # Always close the SDK so it doesn't bleed into other tests
             sentry_sdk.init(dsn=None)  # type: ignore[call-overload]
+
+
+# =============================================================================
+# INFRA-06 (QA Mode B): adversarial coverage for job_listener branches
+# =============================================================================
+
+
+class TestJobListenerAdversarial:
+    """
+    QA Mode B adversarial coverage for the job_listener function.
+
+    These tests verify:
+    - The SUCCESS branch (no exception) does NOT call capture_exception —
+      only the error branch should fire Sentry.
+    """
+
+    def test_job_listener_success_branch_does_not_call_capture_exception(self):
+        """
+        When job_listener is called with event.exception = None (successful
+        job execution), sentry_sdk.capture_exception must NOT be called.
+
+        This guards against accidentally placing capture_exception outside
+        the `if event.exception:` branch, which would flood Sentry with
+        false-positive events on every successful job run.
+        """
+        import sentry_sdk
+
+        from src.tasks.scheduler import job_listener
+
+        mock_event = MagicMock()
+        mock_event.job_id = "test_successful_job"
+        mock_event.exception = None  # successful execution
+
+        with patch.object(sentry_sdk, "capture_exception") as mock_capture:
+            job_listener(mock_event)
+
+        mock_capture.assert_not_called(), (
+            "capture_exception must NOT be called for successful job executions "
+            "(event.exception is None). Only the error branch should fire Sentry."
+        )
+
+    def test_job_listener_error_branch_calls_capture_exception_exactly_once(self):
+        """
+        When job_listener is called with a real exception, capture_exception
+        must be called exactly once — not zero times (the pre-fix bug) and
+        not multiple times (a future regression).
+        """
+        import sentry_sdk
+
+        from src.tasks.scheduler import job_listener
+
+        try:
+            raise RuntimeError("scheduled job kaboom")
+        except RuntimeError as exc:
+            real_exc = exc
+
+        mock_event = MagicMock()
+        mock_event.job_id = "test_failed_job"
+        mock_event.exception = real_exc
+
+        with patch.object(sentry_sdk, "capture_exception") as mock_capture:
+            job_listener(mock_event)
+
+        mock_capture.assert_called_once_with(real_exc), (
+            "capture_exception must be called exactly once with the exception "
+            "instance when job_listener detects event.exception is set."
+        )
