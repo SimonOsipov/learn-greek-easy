@@ -499,3 +499,281 @@ class TestShutdownEventGlobal:
         # Create fresh event
         scheduler_main_module.shutdown_event = asyncio.Event()
         assert not scheduler_main_module.shutdown_event.is_set()
+
+
+# =============================================================================
+# INFRA-06: RED tests for Sentry init ordering in scheduler_main.main()
+# =============================================================================
+
+
+def _make_scheduler_mock() -> MagicMock:
+    """Return a mock scheduler that appears running with no jobs."""
+    m = MagicMock()
+    m.running = True
+    m.get_jobs.return_value = []
+    return m
+
+
+class TestSentryInitOrdering:
+    """
+    RED tests (INFRA-06 Test A): assert init_sentry is called BEFORE
+    init_redis and init_db, and shutdown_sentry before close_redis/close_db.
+
+    All tests in this class will FAIL until the executor wires init_sentry /
+    shutdown_sentry into scheduler_main.main().
+    """
+
+    @pytest.mark.asyncio
+    async def test_main_calls_init_sentry_before_redis_and_db(self):
+        """
+        init_sentry must be called exactly once, and its call index in the
+        parent mock's call list must be strictly less than both init_redis
+        and init_db.
+
+        RED REASON: scheduler_main.main() does not call init_sentry at all yet,
+        so init_sentry.assert_called_once() will fail with AssertionError.
+        """
+        test_event = asyncio.Event()
+        scheduler_main_module.shutdown_event = test_event
+
+        # Parent mock records all child calls in order via attach_mock.
+        parent = MagicMock()
+
+        mock_init_sentry = MagicMock(name="init_sentry")
+        mock_shutdown_sentry = MagicMock(name="shutdown_sentry")
+        mock_init_redis = AsyncMock(name="init_redis")
+        mock_init_db = AsyncMock(name="init_db")
+        mock_close_redis = AsyncMock(name="close_redis")
+        mock_close_db = AsyncMock(name="close_db")
+
+        parent.attach_mock(mock_init_sentry, "init_sentry")
+        parent.attach_mock(mock_init_redis, "init_redis")
+        parent.attach_mock(mock_init_db, "init_db")
+
+        async def trigger_shutdown():
+            await asyncio.sleep(0.01)
+            test_event.set()
+
+        with (
+            patch.object(scheduler_main_module, "settings") as mock_settings,
+            patch.object(scheduler_main_module, "init_sentry", mock_init_sentry, create=True),
+            patch.object(
+                scheduler_main_module, "shutdown_sentry", mock_shutdown_sentry, create=True
+            ),
+            patch.object(scheduler_main_module, "init_redis", mock_init_redis),
+            patch.object(scheduler_main_module, "init_db", mock_init_db),
+            patch.object(scheduler_main_module, "close_redis", mock_close_redis),
+            patch.object(scheduler_main_module, "close_db", mock_close_db),
+            patch.object(scheduler_main_module, "setup_scheduler"),
+            patch.object(scheduler_main_module, "get_scheduler") as mock_get_scheduler,
+            patch.object(scheduler_main_module, "shutdown_scheduler"),
+        ):
+            mock_settings.feature_background_tasks = True
+            mock_settings.log_level = "INFO"
+            mock_get_scheduler.return_value = _make_scheduler_mock()
+
+            await asyncio.gather(scheduler_main_module.main(), trigger_shutdown())
+
+        # init_sentry must have been called exactly once
+        mock_init_sentry.assert_called_once()
+
+        # Determine call order from the parent's recorded mock_calls
+        call_names = [str(c) for c in parent.mock_calls]
+
+        def index_of(name: str) -> int:
+            for i, c in enumerate(call_names):
+                if name in c:
+                    return i
+            return 99999  # sentinel – not found → ordering assert fails
+
+        idx_sentry = index_of("init_sentry")
+        idx_redis = index_of("init_redis")
+        idx_db = index_of("init_db")
+
+        assert (
+            idx_sentry < idx_redis
+        ), f"init_sentry (idx={idx_sentry}) must precede init_redis (idx={idx_redis})"
+        assert (
+            idx_sentry < idx_db
+        ), f"init_sentry (idx={idx_sentry}) must precede init_db (idx={idx_db})"
+
+    @pytest.mark.asyncio
+    async def test_main_calls_shutdown_sentry_in_finally_before_close(self):
+        """
+        shutdown_sentry must be called in the finally block, before
+        close_redis and close_db.
+
+        RED REASON: shutdown_sentry is not called by main() yet.
+        """
+        test_event = asyncio.Event()
+        scheduler_main_module.shutdown_event = test_event
+
+        parent = MagicMock()
+
+        mock_shutdown_sentry = MagicMock(name="shutdown_sentry")
+        mock_close_redis = AsyncMock(name="close_redis")
+        mock_close_db = AsyncMock(name="close_db")
+
+        parent.attach_mock(mock_shutdown_sentry, "shutdown_sentry")
+        parent.attach_mock(mock_close_redis, "close_redis")
+        parent.attach_mock(mock_close_db, "close_db")
+
+        async def trigger_shutdown():
+            await asyncio.sleep(0.01)
+            test_event.set()
+
+        with (
+            patch.object(scheduler_main_module, "settings") as mock_settings,
+            patch.object(scheduler_main_module, "init_sentry", MagicMock(), create=True),
+            patch.object(
+                scheduler_main_module, "shutdown_sentry", mock_shutdown_sentry, create=True
+            ),
+            patch.object(scheduler_main_module, "init_redis", new_callable=AsyncMock),
+            patch.object(scheduler_main_module, "init_db", new_callable=AsyncMock),
+            patch.object(scheduler_main_module, "close_redis", mock_close_redis),
+            patch.object(scheduler_main_module, "close_db", mock_close_db),
+            patch.object(scheduler_main_module, "setup_scheduler"),
+            patch.object(scheduler_main_module, "get_scheduler") as mock_get_scheduler,
+            patch.object(scheduler_main_module, "shutdown_scheduler"),
+        ):
+            mock_settings.feature_background_tasks = True
+            mock_settings.log_level = "INFO"
+            mock_get_scheduler.return_value = _make_scheduler_mock()
+
+            await asyncio.gather(scheduler_main_module.main(), trigger_shutdown())
+
+        mock_shutdown_sentry.assert_called_once()
+
+        call_names = [str(c) for c in parent.mock_calls]
+
+        def index_of(name: str) -> int:
+            for i, c in enumerate(call_names):
+                if name in c:
+                    return i
+            return 99999
+
+        idx_sentry_down = index_of("shutdown_sentry")
+        idx_close_redis = index_of("close_redis")
+        idx_close_db = index_of("close_db")
+
+        assert (
+            idx_sentry_down < idx_close_redis
+        ), f"shutdown_sentry (idx={idx_sentry_down}) must precede close_redis (idx={idx_close_redis})"
+        assert (
+            idx_sentry_down < idx_close_db
+        ), f"shutdown_sentry (idx={idx_sentry_down}) must precede close_db (idx={idx_close_db})"
+
+
+class TestSentryInitOnException:
+    """
+    RED tests (INFRA-06 Test B): init_sentry still runs when a later step
+    raises, and shutdown_sentry runs in finally before close_redis/close_db.
+    """
+
+    @pytest.mark.asyncio
+    async def test_init_sentry_called_even_when_init_redis_raises(self):
+        """
+        When init_redis raises, init_sentry must still have been called (it
+        ran before init_redis), and shutdown_sentry must run in finally
+        before close_redis and close_db.
+
+        RED REASON: init_sentry is not wired into main() yet.
+        """
+        scheduler_main_module.shutdown_event = asyncio.Event()
+
+        parent = MagicMock()
+
+        mock_init_sentry = MagicMock(name="init_sentry")
+        mock_shutdown_sentry = MagicMock(name="shutdown_sentry")
+        mock_init_redis = AsyncMock(name="init_redis")
+        mock_close_redis = AsyncMock(name="close_redis")
+        mock_close_db = AsyncMock(name="close_db")
+
+        mock_init_redis.side_effect = Exception("Redis connection failed")
+
+        parent.attach_mock(mock_init_sentry, "init_sentry")
+        parent.attach_mock(mock_shutdown_sentry, "shutdown_sentry")
+        parent.attach_mock(mock_close_redis, "close_redis")
+        parent.attach_mock(mock_close_db, "close_db")
+
+        with (
+            patch.object(scheduler_main_module, "settings") as mock_settings,
+            patch.object(scheduler_main_module, "init_sentry", mock_init_sentry, create=True),
+            patch.object(
+                scheduler_main_module, "shutdown_sentry", mock_shutdown_sentry, create=True
+            ),
+            patch.object(scheduler_main_module, "init_redis", mock_init_redis),
+            patch.object(scheduler_main_module, "init_db", new_callable=AsyncMock),
+            patch.object(scheduler_main_module, "close_redis", mock_close_redis),
+            patch.object(scheduler_main_module, "close_db", mock_close_db),
+            patch.object(scheduler_main_module, "shutdown_scheduler"),
+        ):
+            mock_settings.feature_background_tasks = True
+            mock_settings.log_level = "INFO"
+
+            with pytest.raises(Exception, match="Redis connection failed"):
+                await scheduler_main_module.main()
+
+        # init_sentry must have been called even though init_redis raised
+        mock_init_sentry.assert_called_once()
+
+        # shutdown_sentry must have run in finally
+        mock_shutdown_sentry.assert_called_once()
+
+        # And shutdown_sentry must precede close_redis / close_db
+        call_names = [str(c) for c in parent.mock_calls]
+
+        def index_of(name: str) -> int:
+            for i, c in enumerate(call_names):
+                if name in c:
+                    return i
+            return 99999
+
+        idx_sentry_down = index_of("shutdown_sentry")
+        idx_close_redis = index_of("close_redis")
+        idx_close_db = index_of("close_db")
+
+        assert (
+            idx_sentry_down < idx_close_redis
+        ), f"shutdown_sentry (idx={idx_sentry_down}) must precede close_redis (idx={idx_close_redis})"
+        assert (
+            idx_sentry_down < idx_close_db
+        ), f"shutdown_sentry (idx={idx_sentry_down}) must precede close_db (idx={idx_close_db})"
+
+
+class TestSentryNoDsnNoOp:
+    """
+    Test C (INFRA-06): calling the real init_sentry() with no DSN (or in
+    testing mode) is a silent no-op: no raise, Sentry stays disabled.
+
+    Expected to be GREEN already (init_sentry() gates on is_testing / no DSN).
+    Documents the contract so regressions are caught.
+    """
+
+    def test_no_dsn_init_sentry_is_silent_noop(self):
+        """
+        With TESTING=true (set by global conftest), init_sentry() exits early
+        at the is_testing guard without raising and without setting
+        _sentry_initialized.
+
+        This test is GREEN from day one — it validates the existing safe-init
+        contract and will catch regressions if the guard is accidentally removed.
+        """
+        import src.core.sentry as sentry_module
+        from src.core.sentry import init_sentry, is_sentry_enabled
+
+        # Baseline: reset state in case a previous test left it set
+        original_state = sentry_module._sentry_initialized
+        sentry_module._sentry_initialized = False
+
+        try:
+            # settings.is_testing is True because conftest set TESTING=true
+            # init_sentry() should exit silently at line 141 (is_testing guard)
+            init_sentry()  # must not raise
+
+            assert (
+                not is_sentry_enabled()
+            ), "is_sentry_enabled() must be False when init_sentry() no-ops (testing mode)"
+        finally:
+            # Restore global state so other tests are unaffected
+            sentry_module._sentry_initialized = original_state
