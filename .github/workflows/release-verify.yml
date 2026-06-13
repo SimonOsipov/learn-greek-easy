@@ -392,12 +392,12 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
       - name: Download Health Check Results
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: health-check-results
           path: health-data/
@@ -527,7 +527,7 @@ jobs:
           fi
 
       - name: Setup Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
@@ -761,7 +761,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
@@ -913,12 +913,12 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
       - name: Download K6 Reports
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: k6-performance-reports
           path: k6-data/
@@ -974,7 +974,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
@@ -1056,12 +1056,12 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
       - name: Download Accessibility Report
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: accessibility-report
           path: accessibility-data/
@@ -1117,7 +1117,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
@@ -1312,7 +1312,7 @@ jobs:
 
     steps:
       - name: Download Lighthouse Summary
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: lighthouse-summary
           path: lighthouse-data/
