@@ -66,7 +66,8 @@ interface AuthState {
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
-  checkAuth: (options?: { signal?: AbortSignal }) => Promise<void>;
+  requestEmailChange: (newEmail: string) => Promise<void>;
+  checkAuth: (options?: { signal?: AbortSignal; force?: boolean }) => Promise<void>;
   clearError: () => void;
 }
 
@@ -193,6 +194,23 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      // Request email change action — triggers Supabase double-confirm flow.
+      // Surfaces the raw Supabase error to the caller; error mapping is done in the component.
+      requestEmailChange: async (newEmail: string) => {
+        const { user } = get();
+
+        if (!user) {
+          throw new Error('No user logged in');
+        }
+
+        const supabase = await getSupabase();
+        const { error } = await supabase.auth.updateUser({ email: newEmail });
+
+        if (error) {
+          throw error;
+        }
+      },
+
       // Update password action (Supabase doesn't require current password)
       updatePassword: async (newPassword: string) => {
         const { user } = get();
@@ -224,8 +242,9 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      // Check auth on app load — deduplicated via in-flight guard + freshness window
-      checkAuth: async (options?: { signal?: AbortSignal }) => {
+      // Check auth on app load — deduplicated via in-flight guard + freshness window.
+      // Pass force:true to bypass the freshness gate (e.g. after a USER_UPDATED event).
+      checkAuth: async (options?: { signal?: AbortSignal; force?: boolean }) => {
         // --- In-flight guard ---
         // If another checkAuth call is already in flight, share that Promise
         // instead of issuing a second GET /auth/me.
@@ -236,8 +255,13 @@ export const useAuthStore = create<AuthState>()(
         // --- Freshness window ---
         // If we successfully fetched the profile very recently (< 30 s ago)
         // AND the store already holds a user, skip the refetch entirely.
+        // Pass force:true to bypass this gate (used after USER_UPDATED events).
         const { user } = get();
-        if (user !== null && Date.now() - _profileFetchedAt < PROFILE_FRESHNESS_MS) {
+        if (
+          !options?.force &&
+          user !== null &&
+          Date.now() - _profileFetchedAt < PROFILE_FRESHNESS_MS
+        ) {
           return;
         }
 
