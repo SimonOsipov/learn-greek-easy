@@ -100,6 +100,7 @@ export function CultureDeckDetailPage() {
     level: 'A1' as const,
     category: 'culture' as const,
     coverImageUrl: deck.cover_image_url ?? undefined,
+    coverImageVariants: deck.cover_image_variants ?? undefined,
   };
 
   const heroKicker = `${cultureCategory.charAt(0).toUpperCase() + cultureCategory.slice(1)} · ${total} ${t('culture:deck.questions', 'questions')}`;

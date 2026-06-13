@@ -47,13 +47,15 @@ export interface CultureHeroProps {
    * Cover for the front of the stack.
    * When undefined the right cover-stack column is not rendered.
    */
-  coverDeck?: Pick<Deck, 'id' | 'level' | 'category' | 'coverImageUrl'>;
+  coverDeck?: Pick<Deck, 'id' | 'level' | 'category' | 'coverImageUrl' | 'coverImageVariants'>;
   /**
    * Two sibling covers shown behind the front cover (rotated/dimmed).
    * Requires coverDeck. Fewer than 2 hides the stack.
    */
   siblingDecks?: Array<
-    Pick<Deck, 'id' | 'level' | 'category' | 'coverImageUrl'> & { title: string }
+    Pick<Deck, 'id' | 'level' | 'category' | 'coverImageUrl' | 'coverImageVariants'> & {
+      title: string;
+    }
   >;
   /** Optional cover foot label (e.g. progress %) — shown on front cover */
   coverFootLabel?: string;
