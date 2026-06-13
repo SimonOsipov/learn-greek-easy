@@ -455,29 +455,26 @@ def test_verify_get_clienterror_is_isolated_per_object_not_fatal() -> None:
 
 
 @pytest.mark.unit
-def test_upload_object_returns_false_verify_still_runs_and_run_fails() -> None:
-    """When upload_object returns False (put failed silently), the verify GET
-    still runs because the script does not check the return value.
+def test_upload_object_returns_false_skips_verify_and_run_fails() -> None:
+    """When upload_object returns False (PUT failed silently), the verify GET must
+    NOT run for that object, a WARNING must be logged, and the run must exit non-zero.
 
-    This exposes a real risk: a failed upload is not counted as an error; instead
-    the verify GET decides the outcome.  If the verify GET returns a wrong
-    CacheControl (simulating the object never receiving the intended header because
-    the put never happened), the mismatch is counted as unverified → SystemExit(1).
-
-    NOTE: the complementary case — upload returns False but verify GET returns the
-    intended directive from a pre-existing object → false-zero exit — is NOT tested
-    because the current impl cannot distinguish it.  This is a known limitation:
-    upload_object return value is silently ignored (line 71 of backfill script).
+    Closing the CodeRabbit-identified gap: previously the script ignored the return
+    value so the verify GET decided the outcome, risking a false-success when a
+    pre-existing object happened to serve the correct CacheControl.  Now the script
+    captures the return: False → log WARNING, return False from _rewrite_and_verify
+    → caller counts as unverified → SystemExit(1), verify GET never issued.
     """
     objects = [{"Key": "images/photo.jpg"}]
 
+    # Even if the verify GET would return the intended directive, it must never be called.
     mock_client = _build_mock_client(
         objects=objects,
-        get_object_cache_control="no-cache",  # verify GET returns wrong directive
+        get_object_cache_control=_INTENDED_DIRECTIVE,
     )
     mock_service = MagicMock()
     mock_service._get_client.return_value = mock_client
-    # upload_object returns False (put silently failed).
+    # upload_object returns False (PUT silently failed).
     mock_service.upload_object.return_value = False
 
     from src.scripts.backfill_s3_cache_control import backfill
@@ -490,19 +487,16 @@ def test_upload_object_returns_false_verify_still_runs_and_run_fails() -> None:
         with pytest.raises(SystemExit) as exc_info:
             backfill(dry_run=False)
 
-    # Non-zero exit: verify mismatch counts as unverified.
-    assert (
-        exc_info.value.code != 0
-    ), "Expected non-zero exit when upload fails and verify GET returns wrong CacheControl"
+    # (a) Non-zero exit: failed PUT is counted as unverified.
+    assert exc_info.value.code != 0, "Expected non-zero exit when upload_object returns False"
 
-    # Verify GET was still called despite upload returning False (documents current behavior:
-    # the script does not check upload_object's return value before issuing the verify GET).
+    # (b) Verify ranged GET must NOT have been issued for the object whose PUT failed.
     range_calls = [
         c for c in mock_client.get_object.call_args_list if c.kwargs.get("Range") == "bytes=0-0"
     ]
-    assert len(range_calls) >= 1, (
-        "Verify GET was expected to run even when upload_object returned False "
-        "(script does not check upload return value)"
+    assert len(range_calls) == 0, (
+        f"Verify GET must be skipped when upload_object returns False, "
+        f"but found {len(range_calls)} ranged GET call(s)"
     )
 
 

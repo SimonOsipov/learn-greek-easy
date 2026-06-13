@@ -68,7 +68,12 @@ def _rewrite_and_verify(
     # Fetch body, re-upload with correct Cache-Control via put_object.
     obj_response = client.get_object(Bucket=bucket, Key=key)
     body = obj_response["Body"].read()
-    service.upload_object(key, body, content_type)
+    upload_ok = service.upload_object(key, body, content_type)
+    if not upload_ok:
+        logger.warning(
+            f"upload_object returned False for {key!r} — PUT failed, treating as unverified"
+        )
+        return False
     logger.info(f"Rewrote {key!r}: content_type={content_type!r} CacheControl={intended!r}")
 
     # Verify-after-write: ranged GET (bytes=0-0) is used instead of HEAD because
