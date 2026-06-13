@@ -161,6 +161,11 @@ async def propagate_email_change(user: Any, new_email: str) -> None:
             )
 
     # --- Resend user audience ---
+    # NOTE (EMAIL-17): The Resend Contacts API typically requires a contact *id*
+    # (not email) to update an existing contact.  This call shape (update-by-email)
+    # may silently no-op or error depending on the SDK version.  EMAIL-17 owns the
+    # full user-audience sync and must resolve the id-lookup strategy before this
+    # block is activated (resend_user_audience_id is empty by default).
     if settings.resend_user_audience_id:
         try:
             resend.Contacts.update(
