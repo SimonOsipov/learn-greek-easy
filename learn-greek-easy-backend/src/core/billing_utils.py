@@ -4,6 +4,8 @@ Pure-mapping functions for converting Stripe price IDs and subscription
 statuses to internal enum values. No I/O or side effects beyond logging.
 """
 
+from typing import Any
+
 from src.config import settings
 from src.core.logging import get_logger
 from src.db.models import BillingCycle, SubscriptionStatus
@@ -119,3 +121,21 @@ def stripe_status_to_subscription_status(
         )
 
     return result
+
+
+# ============================================================================
+# EMAIL-19-03 stub — propagate_email_change
+#
+# This is a minimal importable no-op so that patch targets in EMAIL-19-02 RED
+# tests resolve without ImportError.  The real Stripe/Resend logic is the
+# responsibility of EMAIL-19-03; this stub must NOT be extended beyond what
+# is needed for the patch target to exist.
+# ============================================================================
+
+
+async def propagate_email_change(user: Any, new_email: str) -> None:
+    """No-op stub: propagate an email change to downstream systems.
+
+    EMAIL-19-03 will replace this with the real Stripe customer update +
+    Resend contact update logic.  Do not add any I/O here.
+    """
