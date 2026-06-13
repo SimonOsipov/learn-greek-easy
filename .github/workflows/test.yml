@@ -145,18 +145,14 @@ jobs:
           #   fastapi ^0.115 (starlette <0.47.0); fix requires fastapi bump (tracked separately).
           #   CVE-2026-32274 — black CVE, fix=26.x (major version bump, dev-only linter, deferred).
           #   CVE-2025-71176 — pytest CVE, fix=9.0.x (major version bump, dev-only runner, deferred).
-          poetry run pip-audit \
-            --ignore-vuln CVE-2025-54121 \
-            --ignore-vuln CVE-2025-62727 \
-            --ignore-vuln PYSEC-2026-161 \
-            --ignore-vuln CVE-2026-32274 \
-            --ignore-vuln CVE-2025-71176 \
-          || poetry run pip-audit \
-            --ignore-vuln CVE-2025-54121 \
-            --ignore-vuln CVE-2025-62727 \
-            --ignore-vuln PYSEC-2026-161 \
-            --ignore-vuln CVE-2026-32274 \
+          IGNORE_VULNS=(
+            --ignore-vuln CVE-2025-54121
+            --ignore-vuln CVE-2025-62727
+            --ignore-vuln PYSEC-2026-161
+            --ignore-vuln CVE-2026-32274
             --ignore-vuln CVE-2025-71176
+          )
+          poetry run pip-audit "${IGNORE_VULNS[@]}" || { sleep 5; poetry run pip-audit "${IGNORE_VULNS[@]}"; }
 
       - name: Check Black formatting
         working-directory: learn-greek-easy-backend

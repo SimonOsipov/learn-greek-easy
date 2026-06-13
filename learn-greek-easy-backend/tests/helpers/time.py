@@ -167,8 +167,8 @@ def create_expired_token(
     }
     payload = {
         "sub": str(user_id),
-        "exp": int((datetime.utcnow() - timedelta(hours=hours_ago)).timestamp()),
-        "iat": int((datetime.utcnow() - timedelta(hours=hours_ago + 1)).timestamp()),
+        "exp": int((datetime.now(timezone.utc) - timedelta(hours=hours_ago)).timestamp()),
+        "iat": int((datetime.now(timezone.utc) - timedelta(hours=hours_ago + 1)).timestamp()),
         "type": token_type,
     }
     return jwt.encode({"alg": "HS256"}, payload, key).decode("ascii")
@@ -206,8 +206,8 @@ def create_future_token(
     }
     payload = {
         "sub": str(user_id),
-        "exp": int((datetime.utcnow() + timedelta(hours=expires_in_hours)).timestamp()),
-        "iat": int(datetime.utcnow().timestamp()),
+        "exp": int((datetime.now(timezone.utc) + timedelta(hours=expires_in_hours)).timestamp()),
+        "iat": int(datetime.now(timezone.utc).timestamp()),
         "type": token_type,
     }
     return jwt.encode({"alg": "HS256"}, payload, key).decode("ascii")

@@ -37,8 +37,10 @@ def test_no_jose_imports_in_repo():
     for py_file in _python_files():
         try:
             source = py_file.read_text(encoding="utf-8")
-        except OSError:
-            continue
+        except OSError as exc:
+            pytest.fail(
+                f"Supply-chain gate could not read {py_file.relative_to(_BACKEND_ROOT)}: {exc}"
+            )
         if _JOSE_PATTERNS.search(source):
             # Record path relative to backend root for readable output
             offenders.append(str(py_file.relative_to(_BACKEND_ROOT)))

@@ -63,7 +63,7 @@ class TestTamperResistance:
             "kty": "oct",
             "k": base64.urlsafe_b64encode(wrong_secret.encode()).rstrip(b"=").decode(),
         }
-        with pytest.raises((BadSignatureError, Exception)):
+        with pytest.raises(BadSignatureError):
             authlib_jwt.decode(token, wrong_key)
 
     def test_future_token_wrong_key_raises(self):
@@ -79,12 +79,13 @@ class TestTamperResistance:
             "kty": "oct",
             "k": base64.urlsafe_b64encode(wrong_secret.encode()).rstrip(b"=").decode(),
         }
-        with pytest.raises((BadSignatureError, Exception)):
+        with pytest.raises(BadSignatureError):
             authlib_jwt.decode(token, wrong_key)
 
     def test_signature_mutation_rejected(self):
         """Mutating the signature segment of a token must cause decode to reject it."""
         from authlib.jose import jwt as authlib_jwt
+        from authlib.jose.errors import BadSignatureError, DecodeError
 
         user_id = uuid4()
         token = create_expired_token(user_id)
@@ -104,7 +105,7 @@ class TestTamperResistance:
             "kty": "oct",
             "k": base64.urlsafe_b64encode(secret.encode()).rstrip(b"=").decode(),
         }
-        with pytest.raises(Exception):
+        with pytest.raises((BadSignatureError, DecodeError)):
             authlib_jwt.decode(corrupted_token, key)
 
 
@@ -166,16 +167,16 @@ class TestTimingPrecision:
     def test_expired_token_exp_approximately_hours_ago(self):
         """Expired token exp should be ≈ hours_ago hours before now (within 5s tolerance).
 
-        Note: uses datetime.utcnow().timestamp() to match how the helpers compute exp
-        (naive-datetime .timestamp() is local-timezone-aware; using the same basis avoids
-        a spurious 3-hour delta on machines in non-UTC zones with Python 3.14).
+        Note: uses datetime.now(timezone.utc).timestamp() to match how the helpers compute exp
+        (tz-aware UTC epoch is unambiguous regardless of the host's local timezone).
         """
         from datetime import datetime as _dt
+        from datetime import timezone as _tz
 
         hours_ago = 3
-        before_ts = _dt.utcnow().timestamp()
+        before_ts = _dt.now(_tz.utc).timestamp()
         token = create_expired_token(uuid4(), hours_ago=hours_ago)
-        after_ts = _dt.utcnow().timestamp()
+        after_ts = _dt.now(_tz.utc).timestamp()
 
         claims = _decode_hs256_raw(token, _settings_secret())
         exp = claims["exp"]
@@ -190,14 +191,15 @@ class TestTimingPrecision:
     def test_future_token_exp_approximately_hours_ahead(self):
         """Future token exp should be ≈ expires_in_hours ahead of now (within 5s tolerance).
 
-        Note: uses datetime.utcnow().timestamp() to match how the helpers compute exp.
+        Note: uses datetime.now(timezone.utc).timestamp() to match how the helpers compute exp.
         """
         from datetime import datetime as _dt
+        from datetime import timezone as _tz
 
         hours_ahead = 12
-        before_ts = _dt.utcnow().timestamp()
+        before_ts = _dt.now(_tz.utc).timestamp()
         token = create_future_token(uuid4(), expires_in_hours=hours_ahead)
-        after_ts = _dt.utcnow().timestamp()
+        after_ts = _dt.now(_tz.utc).timestamp()
 
         claims = _decode_hs256_raw(token, _settings_secret())
         exp = claims["exp"]
@@ -211,12 +213,13 @@ class TestTimingPrecision:
     def test_hours_ago_zero_produces_past_or_equal_exp(self):
         """hours_ago=0 edge case: exp should be <= now (boundary: just expired or exactly now).
 
-        Uses datetime.utcnow().timestamp() to match the helpers' epoch basis.
+        Uses datetime.now(timezone.utc).timestamp() to match the helpers' epoch basis.
         """
         from datetime import datetime as _dt
+        from datetime import timezone as _tz
 
         token = create_expired_token(uuid4(), hours_ago=0)
-        after_ts = _dt.utcnow().timestamp()
+        after_ts = _dt.now(_tz.utc).timestamp()
 
         claims = _decode_hs256_raw(token, _settings_secret())
         exp = claims["exp"]

@@ -64,7 +64,7 @@ def downgrade() -> None:
     # Restore the prior definition without SET search_path (no proconfig entry).
     op.execute(
         """
-        CREATE OR REPLACE FUNCTION immutable_unaccent(text)
+        CREATE OR REPLACE FUNCTION public.immutable_unaccent(text)
         RETURNS text LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
         AS $$ SELECT public.unaccent('public.unaccent', $1) $$
         """
