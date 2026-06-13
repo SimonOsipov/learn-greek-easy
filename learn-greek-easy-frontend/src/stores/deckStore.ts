@@ -137,6 +137,7 @@ const transformDeckResponse = (deck: DeckResponse, progressData?: DeckProgressSu
     tags: deck.tags || [],
     thumbnail: `/images/decks/${deck.level.toLowerCase()}.jpg`,
     coverImageUrl: deck.cover_image_url ?? undefined,
+    coverImageVariants: deck.cover_image_variants ?? undefined,
     createdBy: 'Greeklish', // Default author
     createdAt: new Date(deck.created_at),
     updatedAt: new Date(deck.updated_at),

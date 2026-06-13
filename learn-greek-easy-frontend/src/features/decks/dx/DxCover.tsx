@@ -16,6 +16,7 @@
 
 import React from 'react';
 
+import { pickBestSrc } from '@/lib/imageVariants';
 import type { Deck } from '@/types/deck';
 
 import { deckGradient } from './deckGradient';
@@ -23,7 +24,7 @@ import { deckGradient } from './deckGradient';
 export type DxCoverVariant = 'card' | 'stack-front' | 'stack-1' | 'stack-2';
 
 export interface DxCoverProps {
-  deck: Pick<Deck, 'id' | 'level' | 'category' | 'coverImageUrl'>;
+  deck: Pick<Deck, 'id' | 'level' | 'category' | 'coverImageUrl' | 'coverImageVariants'>;
   variant?: DxCoverVariant;
   className?: string;
   children?: React.ReactNode;
@@ -48,18 +49,19 @@ export function DxCover({ deck, variant = 'card', className, children }: DxCover
     [cssVarName]: gradient,
   };
 
+  // Pick the best-fit WebP derivative (~400px wide), falling back to the original URL.
+  const coverSrc = pickBestSrc(deck.coverImageVariants, 400, deck.coverImageUrl);
+
   // `has-cover` lets the scrim darken the left text column more on photo covers.
-  const cls = ['dx-cover-host', deck.coverImageUrl && 'has-cover', className]
-    .filter(Boolean)
-    .join(' ');
+  const cls = ['dx-cover-host', coverSrc && 'has-cover', className].filter(Boolean).join(' ');
 
   return (
     <div className={cls} style={style} data-variant={variant}>
-      {deck.coverImageUrl && (
+      {coverSrc && (
         <div
           className="dx-cover-img"
           data-testid="dx-cover-img"
-          style={{ backgroundImage: `url("${deck.coverImageUrl}")` }}
+          style={{ backgroundImage: `url("${coverSrc}")` }}
           aria-hidden="true"
         />
       )}
