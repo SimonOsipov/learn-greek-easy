@@ -217,6 +217,16 @@ jobs:
             --environment production \
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
 
+      - name: Set version variables on Backend service
+        env:
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+        run: |
+          railway variables \
+            --set "RAILWAY_GIT_COMMIT_SHA=${{ github.sha }}" \
+            --set "RAILWAY_GIT_BRANCH=${{ github.ref_name }}" \
+            --service Backend \
+            --skip-deploys
+
       - name: Deploy Backend (wait for health)
         id: deploy
         env:
