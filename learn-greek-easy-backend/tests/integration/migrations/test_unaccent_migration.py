@@ -123,7 +123,8 @@ class TestImmutableUnaccentSearchPath:
         inside the function body, preventing search_path hijacking.
 
         RED today: proconfig is NULL (no search_path at all).
-        GREEN after: proconfig contains 'search_path='.
+        GREEN after: proconfig contains an empty search_path entry
+        (PostgreSQL serialises SET search_path = '' as 'search_path=""').
         """
         result = await db_session.execute(
             text(
@@ -142,10 +143,14 @@ class TestImmutableUnaccentSearchPath:
         proconfig = row[0]
         assert proconfig is not None, "immutable_unaccent has no proconfig — search_path= not set"
 
-        # PostgreSQL serialises SET search_path = '' as 'search_path=' (empty RHS)
-        assert any(e == "search_path=" for e in proconfig), (
-            f"Expected 'search_path=' in proconfig {proconfig!r}, "
-            "meaning SET search_path = '' — got a different value"
+        # PostgreSQL serialises SET search_path = '' with a quoted empty value,
+        # i.e. the proconfig entry is exactly 'search_path=""' (older/!quoted
+        # variants may render as bare 'search_path='). Either way the value is
+        # EMPTY — a non-empty path such as 'search_path=public' must still fail,
+        # so the security property (forced full qualification) is preserved.
+        assert any(e in ('search_path=""', "search_path=") for e in proconfig), (
+            f"Expected an empty search_path entry in proconfig {proconfig!r} "
+            "(SET search_path = '') — got a non-empty or missing value"
         )
 
 
