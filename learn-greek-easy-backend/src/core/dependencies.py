@@ -84,21 +84,30 @@ def _parse_cached_uuid(cached: dict) -> UUID | None:
 
 
 async def _reconcile_email(
-    db: AsyncSession, cache: CacheService, user: User, identity_key: str, new_email: str
-) -> bool:
-    """Attempt to update user.email in-place and propagate the change.
+    db: AsyncSession,
+    cache: CacheService,
+    user: User,
+    identity_key: str,
+    claims: SupabaseUserClaims,
+) -> User:
+    """Reconcile user.email to the JWT claim on the supabase_id cold path.
 
-    Called on the supabase_id cold-path when claims.email differs from the
-    stored user.email (case-insensitive comparison already done by caller).
+    Called when claims.email differs from the stored user.email (case-insensitive
+    comparison already done by caller). Returns the User the caller should hand
+    back:
 
-    Returns True when the reconciliation write succeeded (flush + propagation
-    dispatched).  Returns False when an IntegrityError was caught (duplicate
-    email): the DB transaction is rolled back, a warning is logged, and the
-    caller should return the user with its pre-reconciliation email.
+    - On success: the same ``user`` instance (email updated + flushed), with the
+      identity cache busted and Stripe/Resend propagation dispatched best-effort.
+    - On a duplicate-email ``IntegrityError``: the transaction is rolled back and
+      a FRESH, fully-loaded user is re-queried and returned — never the original
+      instance, which the rollback has expired (a later attribute access on an
+      expired async ORM instance raises MissingGreenlet). This mirrors the
+      create-path race handling below.
     """
-    # Capture the id BEFORE any flush/rollback: a rollback expires the ORM
-    # instance, so a later `user.id` access would trigger a lazy reload
-    # (MissingGreenlet in async). Bind the captured value in the log instead.
+    new_email = claims.email
+    if not new_email:  # defensive; caller already guards that claims.email is set
+        return user
+    # Capture the id BEFORE any flush/rollback (rollback expires the instance).
     user_id = str(user.id)
     user.email = new_email
     try:
@@ -108,7 +117,14 @@ async def _reconcile_email(
         logger.bind(user_id=user_id).warning(
             "Email reconciliation skipped: new email already taken"
         )
-        return False
+        # The rollback expired every loaded instance; re-query a fresh, fully
+        # loaded user so the caller never touches an expired attribute.
+        refreshed = await db.execute(
+            select(User)
+            .options(selectinload(User.settings))
+            .where(User.supabase_id == claims.supabase_id)
+        )
+        return refreshed.scalar_one_or_none() or user
     await cache.delete(identity_key)
     try:
         await propagate_email_change(user, new_email)
@@ -116,7 +132,7 @@ async def _reconcile_email(
         logger.bind(user_id=user_id).warning(
             "Email propagation failed; change persisted, mirror-sync deferred"
         )
-    return True
+    return user
 
 
 async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> User:  # noqa: C901
@@ -162,11 +178,11 @@ async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> Us
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
     if user is not None:
-        # EMAIL-19-02: reconcile email from JWT claim (cold path only)
+        # EMAIL-19-02: reconcile email from JWT claim (cold path only). Returns a
+        # fresh, fully-loaded user on the duplicate-email rollback path, so the
+        # value cached/returned below is never an expired ORM instance.
         if claims.email and claims.email.lower() != user.email.lower():
-            ok = await _reconcile_email(db, cache, user, identity_key, claims.email)
-            if not ok:
-                return user
+            user = await _reconcile_email(db, cache, user, identity_key, claims)
 
         await cache.set(
             identity_key,
