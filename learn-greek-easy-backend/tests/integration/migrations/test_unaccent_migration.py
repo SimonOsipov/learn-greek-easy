@@ -299,7 +299,12 @@ class TestImmutableUnaccentFunctionProperties:
         )
         row = result.fetchone()
         assert row is not None, "immutable_unaccent not found in public schema"
-        assert row[0] == "i", (
+        # provolatile is a Postgres "char" column — the driver may return it as
+        # bytes (b'i') or str ('i'); normalise before comparing.
+        provolatile = row[0]
+        if isinstance(provolatile, (bytes, bytearray)):
+            provolatile = provolatile.decode("ascii")
+        assert provolatile == "i", (
             f"Expected provolatile='i' (IMMUTABLE), got {row[0]!r}. "
             "The INFRA-10-04 migration may have dropped the IMMUTABLE qualifier."
         )
