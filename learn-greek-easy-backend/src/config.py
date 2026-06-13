@@ -190,6 +190,10 @@ class Settings(BaseSettings):
         default="",
         description="Resend Audience ID for the Waitlist contact list",
     )
+    resend_user_audience_id: str = Field(
+        default="",
+        description="Resend audience for registered users (populated by EMAIL-17)",
+    )
     waitlist_frontend_base_url: str = Field(
         default="",
         description="Frontend base URL for waitlist confirmation links (e.g., https://learngreekeasy.com)",

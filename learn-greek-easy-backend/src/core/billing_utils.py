@@ -6,8 +6,11 @@ statuses to internal enum values. No I/O or side effects beyond logging.
 
 from typing import Any
 
+import resend
+
 from src.config import settings
 from src.core.logging import get_logger
+from src.core.stripe import get_stripe_client, is_stripe_configured
 from src.db.models import BillingCycle, SubscriptionStatus
 
 logger = get_logger(__name__)
@@ -124,18 +127,51 @@ def stripe_status_to_subscription_status(
 
 
 # ============================================================================
-# EMAIL-19-03 stub — propagate_email_change
+# EMAIL-19-03 — propagate_email_change
 #
-# This is a minimal importable no-op so that patch targets in EMAIL-19-02 RED
-# tests resolve without ImportError.  The real Stripe/Resend logic is the
-# responsibility of EMAIL-19-03; this stub must NOT be extended beyond what
-# is needed for the patch target to exist.
+# Best-effort: each downstream integration is independently isolated.
+# Neither Stripe nor Resend failures propagate to the caller.
 # ============================================================================
 
 
 async def propagate_email_change(user: Any, new_email: str) -> None:
-    """No-op stub: propagate an email change to downstream systems.
+    """Propagate an email change to downstream systems (best-effort, never raises).
 
-    EMAIL-19-03 will replace this with the real Stripe customer update +
-    Resend contact update logic.  Do not add any I/O here.
+    Stripe: updates the Stripe customer record if user has a stripe_customer_id
+    and Stripe is configured.
+
+    Resend: updates the user-audience contact if resend_user_audience_id is set.
+    Gated ONLY on resend_user_audience_id — does NOT use the waitlist audience.
+
+    Both integrations are independently wrapped in try/except; a failure in one
+    does not prevent the other from running.  The function always returns None.
     """
+    # --- Stripe ---
+    if user.stripe_customer_id and is_stripe_configured():
+        try:
+            await get_stripe_client().v1.customers.update_async(
+                user.stripe_customer_id,
+                params={"email": new_email},
+            )
+        except Exception as exc:
+            logger.warning(
+                "propagate_email_change: Stripe update failed (best-effort, swallowed)",
+                user_id=str(user.id),
+                error=str(exc),
+            )
+
+    # --- Resend user audience ---
+    if settings.resend_user_audience_id:
+        try:
+            resend.Contacts.update(
+                {
+                    "audience_id": settings.resend_user_audience_id,
+                    "email": new_email,
+                }
+            )
+        except Exception as exc:
+            logger.warning(
+                "propagate_email_change: Resend update failed (best-effort, swallowed)",
+                user_id=str(user.id),
+                error=str(exc),
+            )
