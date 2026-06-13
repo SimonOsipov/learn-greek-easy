@@ -422,7 +422,7 @@ jobs:
         run: npm run test:coverage
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         with:
           files: learn-greek-easy-frontend/coverage/lcov.info
           flags: unittests
@@ -823,7 +823,7 @@ jobs:
           poetry run coverage report > pytest-coverage.txt
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         with:
           files: learn-greek-easy-backend/coverage.xml
           flags: backend
