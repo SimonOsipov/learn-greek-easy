@@ -96,12 +96,16 @@ async def _reconcile_email(
     email): the DB transaction is rolled back, a warning is logged, and the
     caller should return the user with its pre-reconciliation email.
     """
+    # Capture the id BEFORE any flush/rollback: a rollback expires the ORM
+    # instance, so a later `user.id` access would trigger a lazy reload
+    # (MissingGreenlet in async). Bind the captured value in the log instead.
+    user_id = str(user.id)
     user.email = new_email
     try:
         await db.flush()
     except IntegrityError:
         await db.rollback()
-        logger.bind(user_id=str(user.id)).warning(
+        logger.bind(user_id=user_id).warning(
             "Email reconciliation skipped: new email already taken"
         )
         return False
@@ -109,7 +113,7 @@ async def _reconcile_email(
     try:
         await propagate_email_change(user, new_email)
     except Exception:
-        logger.bind(user_id=str(user.id)).warning(
+        logger.bind(user_id=user_id).warning(
             "Email propagation failed; change persisted, mirror-sync deferred"
         )
     return True
