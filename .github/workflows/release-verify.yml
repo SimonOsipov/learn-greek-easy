@@ -570,7 +570,7 @@ jobs:
 
       - name: Cache native simulator app
         id: app-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: learn-greek-easy-mobile/build
           key: ios-app-${{ runner.os }}-xcode26.4-development-${{ steps.fp.outputs.hash }}
