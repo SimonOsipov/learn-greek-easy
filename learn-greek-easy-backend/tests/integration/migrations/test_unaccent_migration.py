@@ -266,6 +266,85 @@ class TestImmutableUnaccentBehaviourPreservation:
         assert row[0] == "hello world", f"Plain ASCII text should be unchanged, got {row[0]!r}"
 
 
+class TestImmutableUnaccentFunctionProperties:
+    """Adversarial guards: verify pg_proc properties survive the migration.
+
+    The migration uses CREATE OR REPLACE, which preserves volatility and
+    strictness only if they are explicitly re-stated.  If the DDL drifts
+    (e.g., STRICT or IMMUTABLE dropped), these tests catch it.
+    """
+
+    async def test_immutable_unaccent_is_immutable(self, db_session: AsyncSession) -> None:
+        """provolatile must be 'i' (IMMUTABLE) after the INFRA-10-04 migration.
+
+        ADVERSARIAL-GUARD: if the CREATE OR REPLACE DDL accidentally drops
+        IMMUTABLE, the expression index on word_entries would silently stop
+        using the index (Postgres refuses STABLE/VOLATILE functions in indexes).
+        """
+        result = await db_session.execute(
+            text(
+                """
+                SELECT p.provolatile
+                FROM pg_proc p
+                JOIN pg_namespace n ON n.oid = p.pronamespace
+                WHERE p.proname = 'immutable_unaccent'
+                  AND n.nspname = 'public'
+                """
+            )
+        )
+        row = result.fetchone()
+        assert row is not None, "immutable_unaccent not found in public schema"
+        assert row[0] == "i", (
+            f"Expected provolatile='i' (IMMUTABLE), got {row[0]!r}. "
+            "The INFRA-10-04 migration may have dropped the IMMUTABLE qualifier."
+        )
+
+    async def test_immutable_unaccent_is_strict(self, db_session: AsyncSession) -> None:
+        """proisstrict must be True (STRICT / RETURNS NULL ON NULL INPUT) after migration.
+
+        ADVERSARIAL-GUARD: dropping STRICT would change NULL-handling semantics
+        and break any caller that relies on NULL propagation.
+        """
+        result = await db_session.execute(
+            text(
+                """
+                SELECT p.proisstrict
+                FROM pg_proc p
+                JOIN pg_namespace n ON n.oid = p.pronamespace
+                WHERE p.proname = 'immutable_unaccent'
+                  AND n.nspname = 'public'
+                """
+            )
+        )
+        row = result.fetchone()
+        assert row is not None, "immutable_unaccent not found in public schema"
+        assert row[0] is True, (
+            f"Expected proisstrict=True (STRICT), got {row[0]!r}. "
+            "The INFRA-10-04 migration may have dropped the STRICT qualifier."
+        )
+
+    async def test_immutable_unaccent_strips_mixed_greek_and_latin_diacritics(
+        self, db_session: AsyncSession
+    ) -> None:
+        """Mixed Greek + Latin accented string must have ALL diacritics stripped.
+
+        ADVERSARIAL-GUARD: confirms both Greek (polytonic/monotonic) and Latin
+        combining diacritics are removed in one call.  A broken unaccent dictionary
+        path (e.g., wrong schema for the dict after SET search_path='') would
+        cause this to raise or return an incorrect result.
+        """
+        result = await db_session.execute(
+            text("SELECT public.immutable_unaccent('Ελλάδα Café naïve')")
+        )
+        row = result.fetchone()
+        assert row is not None, "immutable_unaccent returned no result for mixed input"
+        stripped = row[0]
+        assert stripped == "Ελλαδα Cafe naive", (
+            f"Expected all diacritics stripped from mixed Greek+Latin input, got {stripped!r}. "
+            "The unaccent dictionary resolution may be broken (check SET search_path='' interaction)."
+        )
+
+
 class TestFuzzystrmatchSchema:
     """Verify fuzzystrmatch is NOT in the public schema after INFRA-10-04.
 
