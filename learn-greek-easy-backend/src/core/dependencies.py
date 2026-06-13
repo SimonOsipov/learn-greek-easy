@@ -313,6 +313,17 @@ async def get_current_user_with_settings(
     rather than ``user.settings`` (which would trip ``lazy="raise"``), so a warm
     identity-map hit that already carries settings adds zero round-trips.
 
+    Load mechanism — why ``selectinload`` and NOT ``db.refresh(user, ["settings"])``:
+    ``User.settings`` is ``lazy="raise"``.  ``Session.refresh`` forces an
+    ``immediateload`` only for relationships bound to a ``select`` (lazy) loader;
+    the ``raise`` strategy is honored, so ``refresh(user, ["settings"])`` re-emits
+    the raise guard and raises ``InvalidRequestError`` (surfacing as a 500) for any
+    user whose ``settings`` were never loaded into the session — exactly the
+    cache-HIT ``db.get(User, id)`` path.  We therefore issue an explicit
+    ``select(User).options(selectinload(User.settings))`` (the same mechanism the
+    PATCH ``/me`` reload uses), which bypasses the ``raise`` guard and populates
+    ``settings`` via a deterministic eager load.
+
     Args:
         current_user: The authenticated user (from get_current_user).
         db: Database session (injected).
@@ -321,7 +332,9 @@ async def get_current_user_with_settings(
         User: The authenticated user with ``settings`` eagerly loaded.
     """
     if "settings" not in current_user.__dict__:
-        await db.refresh(current_user, ["settings"])
+        stmt = select(User).options(selectinload(User.settings)).where(User.id == current_user.id)
+        result = await db.execute(stmt)
+        return result.scalar_one()
     return current_user
 
 
