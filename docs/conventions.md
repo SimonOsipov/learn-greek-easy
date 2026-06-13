@@ -72,6 +72,14 @@ Architectural decisions and established patterns. All agents (Feature, Architect
 | Create-event test | Only add an event if it informs a stated product decision | docs/analytics-events.md |
 | Forbidden prefixes | No `my_`, `admin_`, or `page_` prefixes | docs/analytics-events.md |
 
+## Progress Metrics
+
+| Decision | Convention | Reference |
+|----------|-----------|-----------|
+| Glossary | One canonical definition per progress term (started/learned/mastered = начато/выучено/освоено) — same label → same value everywhere | [docs/progress-glossary.md](progress-glossary.md) |
+| Single selector | Each metric (mastered count, learned count, stage distribution, deck completion %) has exactly one computation in `src/lib/progressGlossary.ts`; no surface recomputes it independently | [docs/progress-glossary.md](progress-glossary.md) |
+| `due` excluded | `due` from `cards_by_status` is an overlapping scheduling dimension; never included in stage-percentage denominators | [docs/progress-glossary.md](progress-glossary.md) |
+
 ## Design System
 
 | Decision | Convention | Reference |

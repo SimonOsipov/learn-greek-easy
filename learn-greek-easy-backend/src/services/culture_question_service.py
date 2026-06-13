@@ -38,7 +38,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, selectinload
 
 from src.constants import (
-    ACCURACY_WINDOW_DAYS,
     LOGICAL_CATEGORIES,
     MOTIVATION_DELTA_DAYS,
     MOTIVATION_DELTA_DECLINING_THRESHOLD,
@@ -992,9 +991,7 @@ class CultureQuestionService:
         # Sort ascending: weakest categories first, alphabetical tie-break
         categories_list.sort(key=lambda c: (c.readiness_percentage, c.category))
 
-        # Per-category accuracy from last 30 days
-        accuracy_cutoff = datetime.utcnow() - timedelta(days=ACCURACY_WINDOW_DAYS)
-
+        # Per-category accuracy (all-time, matching overall accuracy window)
         logical_cat_acc = case(
             (CultureAnswerHistory.deck_category == "practical", literal("culture")),
             else_=CultureAnswerHistory.deck_category,
@@ -1013,7 +1010,6 @@ class CultureQuestionService:
             )
             .where(
                 CultureAnswerHistory.user_id == user_id,
-                CultureAnswerHistory.created_at >= accuracy_cutoff,
                 CultureAnswerHistory.deck_category.in_(ReadinessConstants.INCLUDED_CATEGORIES),
             )
             .group_by(logical_cat_acc)

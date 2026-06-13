@@ -319,6 +319,158 @@ describe('wordStatus percentages', () => {
   });
 });
 
+// ── PRACT2-7-02: due-key exclusion from wordStatus denominator ────────────
+//
+// BUG: Object.values(cards_by_status).reduce() includes the optional `due`
+// key in the denominator, inflating `total` and making the 4 stage-percents
+// sum to < 100 when due > 0.
+//
+// CORRECT BEHAVIOUR (post-fix): total = new+learning+review+mastered (never
+// includes `due`); the four *Percent fields sum to exactly 100.
+
+describe('wordStatus — due excluded from denominator (PRACT2-7-02)', () => {
+  // AC-1: four percents must sum to 100 even when due is present
+  it('test_transform_pie_percents_sum_100_with_due', () => {
+    const result = run({
+      dashboard: makeDashboard({
+        cards_by_status: {
+          new: 5,
+          learning: 3,
+          review: 2,
+          mastered: 7,
+          due: 4,
+        } as DashboardStatsResponse['cards_by_status'],
+      }),
+    });
+    const sum =
+      result.wordStatus.newPercent +
+      result.wordStatus.learningPercent +
+      result.wordStatus.reviewPercent +
+      result.wordStatus.masteredPercent;
+    // With the bug: total=21 (includes due=4), sum ≈ 80.95 — not 100.
+    // After fix:    total=17 (new+learning+review+mastered), sum = 100.
+    expect(sum).toBeCloseTo(100, 5);
+  });
+
+  // AC-2: total must exclude the due key
+  it('test_transform_total_excludes_due', () => {
+    const result = run({
+      dashboard: makeDashboard({
+        cards_by_status: {
+          new: 1,
+          learning: 1,
+          review: 1,
+          mastered: 1,
+          due: 6,
+        } as DashboardStatsResponse['cards_by_status'],
+      }),
+    });
+    // With the bug: total = 1+1+1+1+6 = 10.
+    // After fix:    total = 1+1+1+1   = 4.
+    expect(result.wordStatus.total).toBe(4);
+  });
+
+  // AC-3: only-due-nonzero → total must be 0 (triggers empty-state in chart)
+  it('test_empty_state_when_only_due_nonzero', () => {
+    const result = run({
+      dashboard: makeDashboard({
+        cards_by_status: {
+          new: 0,
+          learning: 0,
+          review: 0,
+          mastered: 0,
+          due: 6,
+        } as DashboardStatsResponse['cards_by_status'],
+      }),
+    });
+    // With the bug: total = 6 (due counted), non-zero → chart renders.
+    // After fix:    total = 0  → chart renders empty state.
+    expect(result.wordStatus.total).toBe(0);
+  });
+});
+
+// ── PRACT2-7-02 adversarial: due overlap, rounding, exact total ───────────
+
+describe('wordStatus — adversarial edge cases (PRACT2-7-02)', () => {
+  // Edge 1: due is LARGE relative to buckets; must not pollute the denominator.
+  // {new:2, learning:5, review:8, mastered:10, due:20} → total = 25, percents sum = 100.
+  it('due larger than bucket sum — total=25 and percents sum to exactly 100', () => {
+    const result = run({
+      dashboard: makeDashboard({
+        cards_by_status: {
+          new: 2,
+          learning: 5,
+          review: 8,
+          mastered: 10,
+          due: 20,
+        } as DashboardStatsResponse['cards_by_status'],
+      }),
+    });
+    expect(result.wordStatus.total).toBe(25);
+    const sum =
+      result.wordStatus.newPercent +
+      result.wordStatus.learningPercent +
+      result.wordStatus.reviewPercent +
+      result.wordStatus.masteredPercent;
+    expect(sum).toBe(100);
+  });
+
+  // Edge 2: naive floor-rounding would produce ≠100 (each bucket 33.33...%).
+  // {new:1, learning:1, review:1, mastered:0, due:5} — 3 non-zero buckets,
+  // 33+33+33 = 99 without largest-remainder fix.  Must be exactly 100.
+  it('naive rounding would yield 99 — largest-remainder ensures exactly 100', () => {
+    const result = run({
+      dashboard: makeDashboard({
+        cards_by_status: {
+          new: 1,
+          learning: 1,
+          review: 1,
+          mastered: 0,
+          due: 5,
+        } as DashboardStatsResponse['cards_by_status'],
+      }),
+    });
+    expect(result.wordStatus.total).toBe(3);
+    const sum =
+      result.wordStatus.newPercent +
+      result.wordStatus.learningPercent +
+      result.wordStatus.reviewPercent +
+      result.wordStatus.masteredPercent;
+    expect(sum).toBe(100);
+    // At least one bucket got the +1 remainder adjustment
+    const percents = [
+      result.wordStatus.newPercent,
+      result.wordStatus.learningPercent,
+      result.wordStatus.reviewPercent,
+      result.wordStatus.masteredPercent,
+    ];
+    expect(percents.filter((p) => p === 34).length).toBeGreaterThanOrEqual(1);
+    expect(percents.filter((p) => p === 33).length).toBeGreaterThanOrEqual(2);
+  });
+
+  // Edge 3: due present but all 4 buckets zero → total === 0 (empty state trigger)
+  it('due=999 but all stage buckets zero → total===0', () => {
+    const result = run({
+      dashboard: makeDashboard({
+        cards_by_status: {
+          new: 0,
+          learning: 0,
+          review: 0,
+          mastered: 0,
+          due: 999,
+        } as DashboardStatsResponse['cards_by_status'],
+      }),
+    });
+    expect(result.wordStatus.total).toBe(0);
+    const sum =
+      result.wordStatus.newPercent +
+      result.wordStatus.learningPercent +
+      result.wordStatus.reviewPercent +
+      result.wordStatus.masteredPercent;
+    expect(sum).toBe(0);
+  });
+});
+
 // ── basic summary / shape ─────────────────────────────────────────────────
 
 describe('summary mapping', () => {

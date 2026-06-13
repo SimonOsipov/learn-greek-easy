@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { learnedCount } from '@/lib/progressGlossary';
 import { useAuthStore } from '@/stores/authStore';
 import { useXPStore, selectXPStats } from '@/stores/xpStore';
 
@@ -185,7 +186,12 @@ const Statistics: React.FC = () => {
         </h2>
         <StatsGrid
           streak={currentStreak}
-          wordsLearned={analyticsData?.summary?.totalCardsReviewed ?? 0}
+          wordsLearned={learnedCount({
+            new: analyticsData?.wordStatus?.new ?? 0,
+            learning: analyticsData?.wordStatus?.learning ?? 0,
+            review: analyticsData?.wordStatus?.review ?? 0,
+            mastered: analyticsData?.wordStatus?.mastered ?? 0,
+          })}
           totalXP={xpStats?.total_xp ?? 0}
           cultureQuestionsMastered={analyticsData?.summary?.cultureQuestionsMastered ?? 0}
           joinedDate={stats.joinedDate}

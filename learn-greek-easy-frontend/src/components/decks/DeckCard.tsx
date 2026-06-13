@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { DxCover, Kicker } from '@/features/decks/dx';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
-import { calculateCompletionPercentage } from '@/lib/progressUtils';
+import { deckCompletionPct } from '@/lib/progressGlossary';
 import { cn } from '@/lib/utils';
 import type { Deck } from '@/types/deck';
 
@@ -48,7 +48,12 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   const localizedName = getLocalizedDeckName(deck, i18n.language);
 
   // Derived progress values — R9 resolved: progress is wired via store
-  const pct = deck.progress ? calculateCompletionPercentage(deck.progress) : 0;
+  const pct = deck.progress
+    ? deckCompletionPct({
+        cardsStudied: deck.progress.cardsLearning + deck.progress.cardsMastered,
+        cardsTotal: deck.progress.cardsTotal,
+      })
+    : 0;
   // Bar % stays coverage-based for all decks. "Complete" reflects MASTERY for
   // culture decks (honor the transform's mastery-based status), but stays
   // coverage-based for vocabulary decks (unchanged). See CULT2-3 / CHR-01.

@@ -87,7 +87,7 @@ Donut chart showing card distribution by learning stage.
 **Data Source**: `useAnalytics().data?.wordStatus`
 
 **Features**:
-- 5 segments: New (gray), Learning (blue), Review (yellow), Mastered (green), Relearning (red)
+- 4 segments: New (gray), Learning (blue), Review (yellow), Mastered (green)
 - Custom legend with counts
 - Percentage labels
 
