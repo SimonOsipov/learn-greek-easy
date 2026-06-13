@@ -167,11 +167,14 @@ class CultureDeckService:
             progress = await self._get_deck_progress(user_id, deck.id)
 
         cover_image_url = None
+        cover_image_variants = None
         if deck.cover_image_s3_key:
             s3 = get_s3_service()
             cover_image_url = s3.generate_presigned_url(
                 deck.cover_image_s3_key, expiry_seconds=_COVER_IMAGE_URL_EXPIRY_SECONDS
             )
+            raw = s3.get_derivative_presigned_urls(deck.cover_image_s3_key)
+            cover_image_variants = raw if isinstance(raw, dict) and raw else None
 
         return CultureDeckResponse(
             id=deck.id,
@@ -188,6 +191,7 @@ class CultureDeckService:
             is_premium=deck.is_premium,
             progress=progress,
             cover_image_url=cover_image_url,
+            cover_image_variants=cover_image_variants,
         )
 
     def _build_localized_detail_response(
@@ -210,11 +214,14 @@ class CultureDeckService:
             CultureDeckDetailResponse with single-language content
         """
         cover_image_url = None
+        cover_image_variants = None
         if deck.cover_image_s3_key:
             s3 = get_s3_service()
             cover_image_url = s3.generate_presigned_url(
                 deck.cover_image_s3_key, expiry_seconds=_COVER_IMAGE_URL_EXPIRY_SECONDS
             )
+            raw = s3.get_derivative_presigned_urls(deck.cover_image_s3_key)
+            cover_image_variants = raw if isinstance(raw, dict) and raw else None
 
         return CultureDeckDetailResponse(
             id=deck.id,
@@ -234,6 +241,7 @@ class CultureDeckService:
             created_at=deck.created_at,
             updated_at=deck.updated_at,
             cover_image_url=cover_image_url,
+            cover_image_variants=cover_image_variants,
             time_on_deck_seconds=time_on_deck_seconds,
         )
 

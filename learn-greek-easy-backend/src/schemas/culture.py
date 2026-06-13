@@ -121,6 +121,9 @@ class CultureDeckResponse(BaseModel):
         None, description="User progress (null for unauthenticated)"
     )
     cover_image_url: Optional[str] = Field(None, description="Cover image presigned URL")
+    cover_image_variants: Optional[dict[int, str]] = Field(
+        None, description="Cover image WebP derivative presigned URLs by width"
+    )
 
 
 class CultureDeckDetailResponse(CultureDeckResponse):
@@ -134,7 +137,9 @@ class CultureDeckDetailResponse(CultureDeckResponse):
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     time_on_deck_seconds: int = Field(
-        0, ge=0, description="Total study time on this deck in seconds for the authenticated user"
+        0,
+        ge=0,
+        description="Total study time on this deck in seconds for the authenticated user",
     )
 
 
@@ -528,7 +533,9 @@ class CultureAnswerResponseFast(BaseModel):
     is_correct: bool = Field(..., description="Whether the answer was correct")
     correct_option: int = Field(..., ge=1, le=4, description="The correct answer (1-4)")
     xp_earned: int = Field(
-        ..., ge=0, description="Exact base XP awarded (excludes first-review-of-day bonus)"
+        ...,
+        ge=0,
+        description="Exact base XP awarded (excludes first-review-of-day bonus)",
     )
     message: Optional[str] = Field(None, description="Feedback message for UI")
     deck_category: str = Field(..., description="Deck category for achievement tracking")

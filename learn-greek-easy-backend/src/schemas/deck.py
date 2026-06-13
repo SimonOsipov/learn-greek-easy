@@ -107,6 +107,7 @@ class DeckResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     cover_image_url: str | None = None
+    cover_image_variants: dict[int, str] | None = None
 
 
 class DeckDetailResponse(DeckResponse):
