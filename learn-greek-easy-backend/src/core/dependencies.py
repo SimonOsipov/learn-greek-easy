@@ -32,7 +32,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.config import settings
-from src.core.cache import get_cache
+from src.core.billing_utils import propagate_email_change
+from src.core.cache import CacheService, get_cache
 from src.core.exceptions import (
     ConflictException,
     ForbiddenException,
@@ -40,7 +41,7 @@ from src.core.exceptions import (
     TokenInvalidException,
     UnauthorizedException,
 )
-from src.core.logging import bind_log_context
+from src.core.logging import bind_log_context, get_logger
 from src.core.posthog import capture_event
 from src.core.sentry import set_user_context
 from src.core.supabase_auth import SupabaseUserClaims, verify_supabase_token
@@ -51,6 +52,8 @@ from src.db.session import get_session_factory
 # HTTPBearer security scheme with auto_error=False
 # This allows us to handle missing auth gracefully for optional auth endpoints
 security_scheme = HTTPBearer(auto_error=False)
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -80,7 +83,34 @@ def _parse_cached_uuid(cached: dict) -> UUID | None:
         return None
 
 
-async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> User:
+async def _reconcile_email(
+    db: AsyncSession, cache: CacheService, user: User, identity_key: str, new_email: str
+) -> bool:
+    """Attempt to update user.email in-place and propagate the change.
+
+    Called on the supabase_id cold-path when claims.email differs from the
+    stored user.email (case-insensitive comparison already done by caller).
+
+    Returns True when the reconciliation write succeeded (flush + propagation
+    dispatched).  Returns False when an IntegrityError was caught (duplicate
+    email): the DB transaction is rolled back, a warning is logged, and the
+    caller should return the user with its pre-reconciliation email.
+    """
+    user.email = new_email
+    try:
+        await db.flush()
+        await cache.delete(identity_key)
+        await propagate_email_change(user, new_email)
+        return True
+    except IntegrityError:
+        await db.rollback()
+        logger.bind(user_id=str(user.id)).warning(
+            "Email reconciliation skipped: new email already taken"
+        )
+        return False
+
+
+async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> User:  # noqa: C901
     """Get or create a user based on Supabase JWT claims.
 
     This function implements auto-provisioning: on first login with a valid
@@ -123,6 +153,12 @@ async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> Us
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
     if user is not None:
+        # EMAIL-19-02: reconcile email from JWT claim (cold path only)
+        if claims.email and claims.email.lower() != user.email.lower():
+            ok = await _reconcile_email(db, cache, user, identity_key, claims.email)
+            if not ok:
+                return user
+
         await cache.set(
             identity_key,
             {"id": str(user.id), "is_active": user.is_active, "is_superuser": user.is_superuser},
