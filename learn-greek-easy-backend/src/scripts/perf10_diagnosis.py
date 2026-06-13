@@ -9,7 +9,7 @@ probes whether the already-shipped PERF-05 cache / PERF-07 warm-pool config is
 actually engaged, and replays the dashboard read sequence to count its
 sequential DB round-trips.  Its purpose is to attribute the "still slow"
 hot-path latency to a verified root cause and gate the conditional PERF-10-02
-… 04 subtasks (see ``docs/perf-10-diagnosis.md``).
+… 04 subtasks.
 
 Public API (used by the tests and the ``__main__`` harness):
 

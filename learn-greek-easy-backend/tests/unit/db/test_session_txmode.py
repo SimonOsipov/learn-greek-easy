@@ -2,7 +2,7 @@
 
 This is a **born-GREEN regression lock**, NOT a test-first RED.
 
-PERF-10-01's diagnosis (`docs/perf-10-diagnosis.md`) resolved the transaction-mode
+PERF-10-01's diagnosis resolved the transaction-mode
 lever to a documented NO-OP: tx-mode stays REJECTED on a correctness fact (it breaks
 asyncpg prepared statements) and the per-query slowness was count-bound, not Supavisor
 session-mode proxy overhead. PERF-10-04 therefore makes NO engine change.
