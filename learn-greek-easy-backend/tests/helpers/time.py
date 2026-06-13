@@ -155,17 +155,23 @@ def create_expired_token(
         response = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {expired_token}"})
         assert response.status_code == 401
     """
-    from jose import jwt
+    import base64
+
+    from authlib.jose import jwt
 
     from src.config import settings
 
+    key = {
+        "kty": "oct",
+        "k": base64.urlsafe_b64encode(settings.jwt_secret_key.encode()).rstrip(b"=").decode(),
+    }
     payload = {
         "sub": str(user_id),
-        "exp": datetime.utcnow() - timedelta(hours=hours_ago),
-        "iat": datetime.utcnow() - timedelta(hours=hours_ago + 1),
+        "exp": int((datetime.utcnow() - timedelta(hours=hours_ago)).timestamp()),
+        "iat": int((datetime.utcnow() - timedelta(hours=hours_ago + 1)).timestamp()),
         "type": token_type,
     }
-    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    return jwt.encode({"alg": "HS256"}, payload, key).decode("ascii")
 
 
 def create_future_token(
@@ -188,17 +194,23 @@ def create_future_token(
         token = create_future_token(user.id, expires_in_hours=1)
         # Use for testing near-expiration scenarios
     """
-    from jose import jwt
+    import base64
+
+    from authlib.jose import jwt
 
     from src.config import settings
 
+    key = {
+        "kty": "oct",
+        "k": base64.urlsafe_b64encode(settings.jwt_secret_key.encode()).rstrip(b"=").decode(),
+    }
     payload = {
         "sub": str(user_id),
-        "exp": datetime.utcnow() + timedelta(hours=expires_in_hours),
-        "iat": datetime.utcnow(),
+        "exp": int((datetime.utcnow() + timedelta(hours=expires_in_hours)).timestamp()),
+        "iat": int(datetime.utcnow().timestamp()),
         "type": token_type,
     }
-    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    return jwt.encode({"alg": "HS256"}, payload, key).decode("ascii")
 
 
 def get_token_expiration(token: str) -> datetime:
@@ -214,17 +226,19 @@ def get_token_expiration(token: str) -> datetime:
         exp = get_token_expiration(access_token)
         assert exp > datetime.utcnow()
     """
-    from jose import jwt
+    import base64
+
+    from authlib.jose import jwt
 
     from src.config import settings
 
-    payload = jwt.decode(
-        token,
-        settings.jwt_secret_key,
-        algorithms=[settings.jwt_algorithm],
-        options={"verify_exp": False},  # Don't verify, just extract
-    )
-    return datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
+    key = {
+        "kty": "oct",
+        "k": base64.urlsafe_b64encode(settings.jwt_secret_key.encode()).rstrip(b"=").decode(),
+    }
+    # Decode without calling validate() so expired tokens don't raise ExpiredTokenError
+    claims = jwt.decode(token, key)
+    return datetime.fromtimestamp(claims["exp"], tz=timezone.utc)
 
 
 # =============================================================================
