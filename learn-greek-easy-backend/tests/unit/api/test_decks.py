@@ -900,3 +900,165 @@ class TestGetDeckAuthorizationUnit:
             assert data["success"] is False
             assert data["error"]["code"] == "FORBIDDEN"
             assert "permission" in data["error"]["message"].lower()
+
+
+# =============================================================================
+# INFRA-11-03: cover_image_variants field on DeckResponse / DeckDetailResponse
+# These tests are RED until the executor adds cover_image_variants to
+# DeckResponse and populates it at all 5 call sites in decks.py.
+# =============================================================================
+
+
+class TestDeckCoverImageVariants:
+    """Schema-level tests for cover_image_variants on DeckResponse/DeckDetailResponse.
+
+    These tests construct the Pydantic schema directly (no DB / HTTP stack
+    needed) so they fail at assertion time rather than at fixture setup.
+
+    - BEFORE implementation: Pydantic raises ValidationError (extra field
+      forbidden) OR the field is absent from model_dump output — both cause
+      AssertionError in the assertions below.
+    - AFTER implementation: pass because the field exists and model_dump
+      includes it.
+    """
+
+    def test_deck_response_includes_cover_variants(self):
+        """DeckResponse schema: cover_image_variants present and populated.
+
+        Build a DeckResponse passing cover_image_variants={400,800,1600} and
+        verify the serialized dict contains that key.
+        FAILS RED until cover_image_variants is added to DeckResponse.
+        """
+        from datetime import datetime, timezone
+
+        from src.schemas.deck import DeckResponse
+
+        deck_id = uuid4()
+        now = datetime(2024, 1, 1, tzinfo=timezone.utc)
+
+        # Pydantic will raise ValidationError here if the field does not exist
+        # (model_config forbids extra by default in these schemas).
+        # That error is caught as an AssertionError by pytest (it's an exception,
+        # not a collection/import error).
+        try:
+            resp = DeckResponse(
+                id=deck_id,
+                name="Cover Deck",
+                description="A deck with a cover",
+                name_en="Cover Deck",
+                name_ru="Cover",
+                name_el="Deck",
+                description_en="A deck with a cover",
+                description_ru="Desc",
+                description_el="Desc",
+                level=DeckLevel.A1,
+                is_active=True,
+                is_premium=False,
+                card_count=5,
+                created_at=now,
+                updated_at=now,
+                cover_image_url="cover-url",
+                cover_image_variants={400: "u400", 800: "u800", 1600: "u1600"},
+            )
+            data = resp.model_dump(mode="json")
+        except Exception as exc:
+            # Field not in schema yet — treat as assertion failure (RED state)
+            assert False, f"DeckResponse does not accept cover_image_variants yet: {exc}"
+
+        assert data.get("cover_image_url") == "cover-url"
+
+        variants = data.get("cover_image_variants", "__MISSING__")
+        assert variants == {
+            "400": "u400",
+            "800": "u800",
+            "1600": "u1600",
+        }, f"Expected cover_image_variants dict in DeckResponse, got: {variants!r}"
+
+    def test_deck_without_cover_has_null_variants(self):
+        """DeckResponse schema: cover_image_variants is None when no cover key.
+
+        FAILS RED until cover_image_variants field is added to DeckResponse.
+        """
+        from datetime import datetime, timezone
+
+        from src.schemas.deck import DeckResponse
+
+        deck_id = uuid4()
+        now = datetime(2024, 1, 1, tzinfo=timezone.utc)
+
+        try:
+            resp = DeckResponse(
+                id=deck_id,
+                name="No Cover Deck",
+                description=None,
+                name_en="No Cover Deck",
+                name_ru="No cover",
+                name_el="No cover",
+                description_en=None,
+                description_ru=None,
+                description_el=None,
+                level=DeckLevel.A1,
+                is_active=True,
+                is_premium=False,
+                card_count=0,
+                created_at=now,
+                updated_at=now,
+                cover_image_url=None,
+                cover_image_variants=None,
+            )
+            data = resp.model_dump(mode="json")
+        except Exception as exc:
+            assert False, f"DeckResponse does not accept cover_image_variants yet: {exc}"
+
+        assert data.get("cover_image_url") is None
+
+        variants = data.get("cover_image_variants", "__MISSING__")
+        assert (
+            variants is None
+        ), f"Expected cover_image_variants=None for no-cover deck, got: {variants!r}"
+
+    def test_deck_detail_inherits_cover_variants(self):
+        """DeckDetailResponse schema: inherits cover_image_variants from DeckResponse.
+
+        FAILS RED until cover_image_variants is added to DeckResponse (parent class).
+        """
+        from datetime import datetime, timezone
+
+        from src.schemas.deck import DeckDetailResponse
+
+        deck_id = uuid4()
+        now = datetime(2024, 1, 1, tzinfo=timezone.utc)
+
+        try:
+            resp = DeckDetailResponse(
+                id=deck_id,
+                name="Detail Cover Deck",
+                description="Detail",
+                name_en="Detail Cover Deck",
+                name_ru="Detail",
+                name_el="Detail",
+                description_en="Detail",
+                description_ru="Detail",
+                description_el="Detail",
+                level=DeckLevel.B1,
+                is_active=True,
+                is_premium=False,
+                card_count=10,
+                is_owned=False,
+                created_at=now,
+                updated_at=now,
+                cover_image_url="cover-url",
+                cover_image_variants={400: "u400", 800: "u800", 1600: "u1600"},
+            )
+            data = resp.model_dump(mode="json")
+        except Exception as exc:
+            assert False, f"DeckDetailResponse does not accept cover_image_variants yet: {exc}"
+
+        assert data.get("cover_image_url") == "cover-url"
+
+        variants = data.get("cover_image_variants", "__MISSING__")
+        assert variants == {
+            "400": "u400",
+            "800": "u800",
+            "1600": "u1600",
+        }, f"Expected cover_image_variants dict on DeckDetailResponse, got: {variants!r}"
