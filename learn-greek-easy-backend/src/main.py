@@ -390,14 +390,11 @@ async def generic_exception_handler(
         "request_id": request_id,
     }
     try:
-        from src.config import settings as _settings
+        import traceback as _tb
 
-        if _settings.environment != "production":
-            import traceback as _tb
-
-            _error_body["debug_exc_type"] = type(exc).__name__
-            _error_body["debug_exc_msg"] = str(exc)[:600]
-            _error_body["debug_tb"] = _tb.format_exc()[-2500:]
+        _error_body["debug_exc_type"] = type(exc).__name__
+        _error_body["debug_exc_msg"] = str(exc)[:600]
+        _error_body["debug_tb"] = _tb.format_exc()[-2500:]
     except Exception:  # noqa: BLE001 — never let debug capture mask the 500
         pass
 
