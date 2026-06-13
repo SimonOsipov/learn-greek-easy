@@ -295,49 +295,6 @@ async def get_current_user(
     return user
 
 
-async def get_current_user_with_settings(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> User:
-    """Like get_current_user, but guarantees the settings relationship is loaded.
-
-    The profile endpoint ``GET /auth/me`` serializes ``user.settings`` and would
-    hit the ``lazy="raise"`` guard (→ MissingGreenlet) if settings were not
-    loaded.  The base ``get_current_user`` deliberately leaves settings unloaded
-    on its warm cache-HIT path (``db.get`` may be a 0-round-trip identity-map
-    hit) so the ~77 endpoints that never touch settings pay no extra round-trip.
-
-    This dependency is scoped to ONLY the profile read endpoint: it issues a single
-    targeted settings load — and only when settings are absent.  Presence is
-    tested with the async-safe identity-dict sentinel ``'settings' in __dict__``
-    rather than ``user.settings`` (which would trip ``lazy="raise"``), so a warm
-    identity-map hit that already carries settings adds zero round-trips.
-
-    Load mechanism — why ``selectinload`` and NOT ``db.refresh(user, ["settings"])``:
-    ``User.settings`` is ``lazy="raise"``.  ``Session.refresh`` forces an
-    ``immediateload`` only for relationships bound to a ``select`` (lazy) loader;
-    the ``raise`` strategy is honored, so ``refresh(user, ["settings"])`` re-emits
-    the raise guard and raises ``InvalidRequestError`` (surfacing as a 500) for any
-    user whose ``settings`` were never loaded into the session — exactly the
-    cache-HIT ``db.get(User, id)`` path.  We therefore issue an explicit
-    ``select(User).options(selectinload(User.settings))`` (the same mechanism the
-    PATCH ``/me`` reload uses), which bypasses the ``raise`` guard and populates
-    ``settings`` via a deterministic eager load.
-
-    Args:
-        current_user: The authenticated user (from get_current_user).
-        db: Database session (injected).
-
-    Returns:
-        User: The authenticated user with ``settings`` eagerly loaded.
-    """
-    if "settings" not in current_user.__dict__:
-        stmt = select(User).options(selectinload(User.settings)).where(User.id == current_user.id)
-        result = await db.execute(stmt)
-        return result.scalar_one()
-    return current_user
-
-
 async def get_current_superuser(
     current_user: User = Depends(get_current_user),
 ) -> User:
@@ -591,7 +548,6 @@ def get_locale_from_header(
 __all__ = [
     "SSEAuthResult",
     "get_current_user",
-    "get_current_user_with_settings",
     "get_current_superuser",
     "get_current_user_optional",
     "get_locale_from_header",

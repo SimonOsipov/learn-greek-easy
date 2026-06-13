@@ -164,7 +164,7 @@ class ErrorHandlingMiddleware:
         }
 
         # Include debug information only in debug mode
-        if settings.debug or True:  # TEMP-PERF10-DEBUG: force traceback, REVERT before merge
+        if settings.debug:
             error_content["debug"] = {
                 "type": type(exc).__name__,
                 "message": str(exc),

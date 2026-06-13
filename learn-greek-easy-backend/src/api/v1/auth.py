@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.core.dependencies import get_current_user, get_current_user_with_settings
+from src.core.dependencies import get_current_user
 from src.core.logging import get_logger
 from src.core.subscription import get_effective_access_level
 from src.db.dependencies import get_db
@@ -269,23 +269,23 @@ async def logout_all(
 )
 async def get_me(
     request: Request,
-    current_user: User = Depends(get_current_user_with_settings),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ) -> UserProfileResponse:
     """Get the current authenticated user's profile.
 
     Returns the user's profile information including their settings.
     Requires a valid JWT access token in the Authorization header.
 
-    Reuses the user resolved by get_current_user_with_settings, which delivers
-    it with settings eagerly loaded, so no extra reload is needed to serialize
-    the ORM object safely (avoids MissingGreenlet on the lazy="raise" settings
-    relationship).
+    Reloads user from database to ensure clean session state and avoid
+    MissingGreenlet errors when serializing ORM objects across async contexts.
 
     The user's settings (daily_goal, email_notifications) are included
     in the response for convenience.
 
     Args:
         current_user: The authenticated user (injected via dependency)
+        db: Database session (injected)
 
     Returns:
         UserProfileResponse: User profile with embedded settings
@@ -318,12 +318,12 @@ async def get_me(
             }
         }
     """
-    # current_user is delivered by get_current_user_with_settings with settings
-    # already loaded (selectinload on the cache-MISS path; a single targeted
-    # refresh on the cache-HIT path, only when absent).  Reuse it directly
-    # instead of issuing a second redundant select(User).selectinload(settings)
-    # round-trip (PERF-10-03).
-    return _build_user_profile_response(current_user, auth_provider=_extract_auth_provider(request))
+    # Reload user with settings to ensure clean session state
+    stmt = select(User).options(selectinload(User.settings)).where(User.id == current_user.id)
+    result = await db.execute(stmt)
+    user = result.scalar_one()
+
+    return _build_user_profile_response(user, auth_provider=_extract_auth_provider(request))
 
 
 @router.patch(

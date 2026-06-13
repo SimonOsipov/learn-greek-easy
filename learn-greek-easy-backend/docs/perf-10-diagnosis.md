@@ -20,8 +20,10 @@ round-trips**, not the per-query latency.
 Net result: **the diagnosis is mostly "no-ops"** — the cache is already live, the
 background-tasks deferral is moot (review-submit is already fast), and a
 transaction-mode migration is **not** warranted. The one clearly-warranted lever
-is **dashboard round-trip reduction** (PERF-10-02), with a modest secondary win
-from **removing get_me's redundant settings reload** (PERF-10-03).
+is **dashboard round-trip reduction** (PERF-10-02). The previously-hypothesized
+get_me settings-reload removal (PERF-10-03) turned out to be a **documented no-op**:
+the reload is NOT redundant — it is required for safe Pydantic serialization
+(removing it raises `MissingGreenlet` on expired scalar attributes).
 
 ---
 
@@ -133,15 +135,25 @@ measurement). The synchronous pre-persist sequence (`reviews_v2.py:34/54` →
 latency problem in practice. The `feature_background_tasks` deferral is therefore a
 **documented no-op** — there is nothing slow to defer.
 
-### 5. get_me — redundant second settings reload is real but bounded
+### 5. get_me — settings reload is NOT redundant (documented no-op)
 
 Prod get_me is **p50 190ms / p95 2165ms** (only 17 samples — noisy; treat
-directionally). The cache is live, so the identity cache (PERF-05-05) is engaged.
-But the handler **unconditionally** re-queries `select(User).selectinload(settings)`
-at `auth.py:322` after `get_current_user` already resolved the user — a second
-serial round-trip the identity cache does **not** eliminate. With the cache live,
-this redundant reload is a **real, removable round-trip**, but the win is **bounded**
-(one round-trip on a path whose p50 is ~190ms). → PERF-10-03 warranted, modest.
+directionally). The handler reloads the user via
+`select(User).options(selectinload(User.settings)).where(User.id == ...)` +
+`scalar_one()` at `auth.py` before serializing. The PERF-10-03 hypothesis was
+that this reload is a removable redundant round-trip (the identity cache already
+resolved the user in `get_current_user`).
+
+**That premise was wrong.** Reusing the memoized / identity-cached `current_user`
+directly raises `MissingGreenlet: greenlet_spawn has not been called` —
+root-caused via an E2E/CI traceback at `auth.py:75`,
+`UserProfileResponse.model_validate(user)` → Pydantic ValidationError on field
+`updated_at`. The cached instance has **expired scalar attributes** (e.g.
+`updated_at`); serializing it makes Pydantic attempt a lazy DB load outside the
+async greenlet → 500. The reload exists precisely to return a clean, fully-loaded
+instance that is safe to serialize (its original docstring said exactly this). The
+estimated win was marginal anyway — one round-trip only on the first, pre-cache
+call. → **PERF-10-03 documented NO-OP; get_me left at origin behavior.**
 
 ---
 
@@ -150,7 +162,7 @@ this redundant reload is a **real, removable round-trip**, but the win is **boun
 | Lever | Verdict | Evidence |
 |-------|---------|----------|
 | **PERF-10-02** dashboard round-trip reduction | **WARRANTED (dominant)** | ~57 sequential queries/request ≈ 950ms p50 ≈ the whole endpoint; count-bound, cache-miss-heavy |
-| **PERF-10-03** get_me redundant settings reload | **WARRANTED (modest)** | `auth.py:322` unconditional 2nd reload; cache live ⇒ removable but bounded (~1 round-trip on a ~190ms p50 path) |
+| **PERF-10-03** get_me settings reload | **NO-OP (documented)** | the reload is NOT redundant — it returns a clean, fully-loaded instance required for safe Pydantic serialization. Reusing the memoized/identity-cached `current_user` directly raises `MissingGreenlet` on expired scalar attributes (`updated_at`) — root-caused via an E2E traceback at `auth.py:75`. Estimated win was marginal (one round-trip on the first pre-cache call only). get_me left at origin behavior |
 | **PERF-10-04** `redis_url` config flip | **NO-OP (documented)** | cache already live in prod: 1920 redis spans/7d @ p50 1.8ms |
 | **PERF-10-04** `feature_background_tasks` flip | **NO-OP (documented)** | review-submit already p50 10ms / p95 32ms; nothing slow to defer |
 | **PERF-10-04** transaction-mode migration (6543) | **NO-OP (documented) — stays REJECTED on correctness** | **Primary (load-bearing):** tx-mode breaks asyncpg prepared statements — already REJECTED in `docs/supabase-database.md`; this is a *correctness* blocker that holds **independent of** the (locally unmeasured) direct-vs-Supavisor proxy delta. **Corroborating (not load-bearing):** the session-mode-pooled per-query median is fast (~9–17ms, prod Sentry — **not** a direct-asyncpg number) and the slowness is count + tail, so even the perf case doesn't point at proxy overhead. The missing direct-vs-pooled delta could only *strengthen* a reject, never overturn the correctness blocker |
@@ -166,10 +178,12 @@ this redundant reload is a **real, removable round-trip**, but the win is **boun
   single session) over multi-session `asyncio.gather` fan-out; fan-out only if
   consolidation can't hit target AND the ≤30 Supavisor budget (INFRA-03: API 15+5,
   scheduler 3+2) is shown to hold with a documented concurrency cap.
-- **get_me second settings reload a measurable serial round-trip?** → **YES**
-  (`auth.py:322`). PERF-10-03 proceeds with the **sentinel-check** technique
-  (`'settings' in user.__dict__`, async-safe) so the warm 0-round-trip identity-map
-  hit at `dependencies.py:112` is **not** regressed into a guaranteed SELECT.
+- **get_me second settings reload a removable serial round-trip?** → **NO.**
+  The reload is required for serialization safety: reusing the memoized/identity-cached
+  `current_user` raises `MissingGreenlet` on expired scalar attributes (`updated_at`)
+  during `UserProfileResponse.model_validate(user)` — root-caused via an E2E traceback
+  at `auth.py:75`. PERF-10-03 is a **documented no-op**; get_me is left at origin
+  behavior (the reload stays).
 - **Baseline floor = Supavisor session-mode proxy overhead specifically?** → **NO**
   (session-mode-pooled median fast; slowness is count + tail). Transaction-mode
   **not warranted** — keep session mode. Note the gating logic: tx-mode is rejected
@@ -234,7 +248,7 @@ figures are superseded where prod tells a different story — noted inline).
 | Path | Baseline (prod) | Target | Lever |
 |------|-----------------|--------|-------|
 | **dashboard** `GET /dashboard` | p50 **762ms** / p95 **2484ms** | p50 **≤ ~300–400ms** / p95 materially down | PERF-10-02 query consolidation (cut ~57 → far fewer round-trips) |
-| **get_me** `GET /auth/me` | p50 **190ms** / p95 2165ms (17 samples, noisy) | p50 shaved by ~1 round-trip; **no warm-hit regression** | PERF-10-03 remove redundant settings reload |
+| **get_me** `GET /auth/me` | p50 **190ms** / p95 2165ms (17 samples, noisy) | **no change expected** (reload retained for serialization safety) | none — PERF-10-03 documented no-op |
 | **review-submit** `POST /reviews/v2` | p50 **10ms** / p95 **32ms** | **no change expected** (already fast) | none — documented no-op |
 
 > Story-header baselines (dashboard p50 750ms / p95 3.0s; review-submit p50 872ms;
@@ -314,7 +328,7 @@ Supporting span baselines (for tail/cache context):
 | Path | Expectation (directional) | Absolute gate | Attributable to |
 |------|---------------------------|---------------|-----------------|
 | **dashboard** | p50 drops **materially** from 762ms. PERF-10-02 cut the uncached compute from **20→11** SQL round-trips (−9); at the prod `span.op:db` p50 ≈16ms/query that removes ~**145ms** of sequential DB time at the median, plus tail compression (each removed query is one fewer chance to hit the long tail). Directional aspiration: toward the diagnosis's ~300–450ms target; realistically a *clear* reduction from 762ms — confirm post-merge. | **p95 ≤ 1800ms** (post-merge gate, per the PERF-10-01 QA advisory: fewer serial round-trips ⇒ fewer tail-exposure points; 1800ms is a conservative, justifiable ceiling below the 2484ms baseline that a 9-of-20 round-trip cut should comfortably clear). | **PERF-10-02** (dashboard 20→11 round-trip consolidation) |
-| **get_me** | p50 shaved by ~**one round-trip** on the happy path: PERF-10-03 removed 1 of 2 user/settings reloads (the redundant `select(User).selectinload(settings)`). Bounded — the cache is live, so the win is one serial round-trip on a ~190ms-p50 path; the warm identity-map hit must **not** regress (sentinel check `'settings' in __dict__` keeps it 0-round-trip). | No absolute p50 gate — **17-sample N makes absolute targeting noisy/unreliable**; assert *direction only* (p50 not worse; no warm-hit regression) over a ≥7d window with more samples. | **PERF-10-03** (get_me 2→1 settings reload) |
+| **get_me** | **NO change expected** (reload retained for serialization safety). PERF-10-03 is a documented no-op: the settings reload is NOT redundant — it returns a clean, fully-loaded instance required for safe Pydantic serialization. Reusing the memoized/identity-cached `current_user` directly raises `MissingGreenlet` on expired scalar attributes (`updated_at`) — root-caused via an E2E traceback at `auth.py:75`. The estimated win was marginal (one round-trip on the first pre-cache call only). get_me is left at origin behavior. | No absolute p50 gate — **17-sample N makes absolute targeting noisy/unreliable**; an **expected-flat path is NOT a regression**. | none (PERF-10-03 documented no-op) |
 | **review-submit** | **NO change expected.** PERF-10-04's `feature_background_tasks` flip is a documented no-op (path is already p50 10ms / p95 32ms — nothing slow to defer). | An **expected-flat path is NOT a regression** — flat p50/p95 here is a PASS, not a miss. | none (PERF-10-04 documented no-op) |
 
 ### Methodology — exact Sentry MCP `search_events` re-run (run post-merge)
@@ -367,12 +381,10 @@ Evidence:
   `get_dashboard_answer_aggregates`, `get_dashboard_mock_aggregates`) execute on
   `self.db` and **fewer** queries than before (20→11), so the change **reduces**
   concurrent pool demand rather than adding to it.
-- **get_me adds no connection.** PERF-10-03 swapped `get_me` onto the new
-  `get_current_user_with_settings` dependency, which reuses the **already-injected
-  `get_db` session** (`await db.refresh(current_user, ["settings"])`, and only when
-  settings are absent) and **removed** the endpoint's own redundant
-  `select(User).selectinload(settings)` reload — a net **−1 round-trip**, **0** new
-  connections, on the same session.
+- **get_me adds no connection.** PERF-10-03 is a documented no-op: `get_me` is left
+  at origin behavior (the `select(User).selectinload(settings)` reload on the
+  already-injected `get_db` session is **retained** — it is required for safe Pydantic
+  serialization, not redundant). No new dependency, session, or connection is added.
 
 **Conclusion:** the ≤30 Supavisor connection budget (API 15 + 5 overflow, scheduler
 3 + 2) is **preserved — no pool/engine/connection change in the branch.** The only
