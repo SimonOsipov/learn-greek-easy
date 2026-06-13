@@ -286,3 +286,156 @@ class TestGetMeSettingsLoad:
         assert (
             "daily_goal" in settings
         ), "settings.daily_goal must be present — empty stub indicates partial load"
+
+
+# ---------------------------------------------------------------------------
+# Mode-B addition: refresh-branch coverage
+# ---------------------------------------------------------------------------
+
+
+@contextmanager
+def _capture_settings_selects(engine: AsyncEngine) -> Generator[list[str], None, None]:
+    """Capture SQL statements that SELECT from user_settings.
+
+    Used to assert that exactly one targeted settings load fires when settings
+    are absent from the user's identity dict (the refresh branch).
+    """
+    stmts: list[str] = []
+
+    def _hook(conn, cursor, statement, parameters, context, executemany):  # noqa: ANN001
+        if "user_settings" in statement.lower():
+            stmts.append(statement)
+
+    sync_engine = engine.sync_engine
+    event.listen(sync_engine, "before_cursor_execute", _hook)
+    try:
+        yield stmts
+    finally:
+        event.remove(sync_engine, "before_cursor_execute", _hook)
+
+
+@pytest.mark.integration
+@pytest.mark.auth
+class TestGetMeRefreshBranch:
+    """Mode-B coverage: the refresh branch of get_current_user_with_settings.
+
+    The committed RED tests (TestGetMeSettingsLoad) only exercise the
+    NO-refresh branch because the ``auth_headers`` fixture overrides
+    ``get_current_user`` to return a user loaded with
+    ``selectinload(User.settings)``, which puts settings into ``__dict__``.
+
+    This class exercises the YES-refresh branch:
+    - Override ``get_current_user`` to return a user fetched via ``db.get()``
+      (no selectinload) so that ``'settings' not in current_user.__dict__``.
+    - ``get_current_user_with_settings`` must then call
+      ``db.refresh(current_user, ["settings"])`` before the handler runs.
+    - ``GET /auth/me`` must return 200 with a non-null settings block.
+    - Exactly one ``user_settings`` SQL statement must be issued (the refresh).
+
+    RED-meaningful guard:
+    - If the sentinel were ``user.settings`` instead of ``'settings' not in
+      current_user.__dict__``, the dependency would raise ``MissingGreenlet``
+      on the test user (lazy="raise"), producing a 500 instead of 200.
+    - If ``db.refresh`` were omitted entirely, ``_build_user_profile_response``
+      → ``UserProfileResponse.model_validate(user)`` would access
+      ``user.settings`` on an instance with lazy="raise" → 500.
+    Both failure modes are caught by the ``response.status_code == 200``
+    assertion.  The ``user_settings`` SQL counter additionally verifies that
+    the refresh actually fires (not that the handler silently swallowed an
+    error in some other way).
+    """
+
+    @pytest.mark.asyncio
+    async def test_get_me_refresh_branch_fires_when_settings_absent(
+        self,
+        client: AsyncClient,
+        test_user: User,
+        db_session: AsyncSession,
+        db_engine: AsyncEngine,
+    ) -> None:
+        """get_current_user_with_settings must db.refresh settings when absent.
+
+        Simulates the cache-HIT cold path: ``get_current_user`` returns a user
+        whose ``settings`` are NOT in ``__dict__`` (fetched via ``db.get``
+        without selectinload).  The sentinel check
+        ``'settings' not in current_user.__dict__`` must fire, trigger
+        ``db.refresh(current_user, ['settings'])``, and the handler must
+        return 200 with a populated settings block.
+
+        Assertions:
+        1. response.status_code == 200 (no MissingGreenlet / lazy-raise 500)
+        2. data["settings"] is a non-null dict with "daily_goal"
+        3. Exactly one user_settings SELECT was issued (the refresh) —
+           confirming the refresh branch ran and did not issue redundant loads.
+        """
+        from src.core.dependencies import get_current_user
+        from src.main import app as fastapi_app
+
+        # Build an override that returns the test user WITHOUT settings loaded.
+        # db.get() goes through the SQLAlchemy identity map; if the user is
+        # already cached there (from the test_user fixture creation), it returns
+        # the cached object.  We call db.session.expire(user) first to clear
+        # any loaded attributes — this guarantees a fresh fetch on next access
+        # without settings being in __dict__.
+        user_id = test_user.id
+
+        async def override_get_current_user_no_settings():
+            """Return test user fetched via db.get — settings NOT in __dict__."""
+            # Expire the in-session cached object so all attributes are cleared
+            db_session.expire(test_user)
+            # db.get() re-fetches the user from DB (or identity map), but
+            # without any selectinload — settings won't be in __dict__.
+            user = await db_session.get(User, user_id)
+            assert user is not None, "test_user must exist in DB"
+            # Guard: confirm settings are genuinely absent before the request.
+            assert "settings" not in user.__dict__, (
+                "Test pre-condition failed: settings are in __dict__ after "
+                "db.get() — the refresh branch won't be exercised.  "
+                "The expire() call above should have cleared them."
+            )
+            return user
+
+        # Install the override (replaces anything auth_headers may have set)
+        fastapi_app.dependency_overrides[get_current_user] = override_get_current_user_no_settings
+
+        try:
+            with _capture_settings_selects(db_engine) as settings_selects:
+                response = await client.get(
+                    "/api/v1/auth/me",
+                    headers={"Authorization": "Bearer test-refresh-branch-token"},
+                )
+        finally:
+            # Remove the specific override so subsequent tests use their own
+            fastapi_app.dependency_overrides.pop(get_current_user, None)
+
+        # 1. No MissingGreenlet / lazy-raise → 500
+        assert response.status_code == 200, (
+            f"GET /auth/me returned {response.status_code} when settings were "
+            f"absent from __dict__.  Expected 200 — a 500 indicates the "
+            f"refresh branch did not fire or the sentinel is broken.  "
+            f"Response: {response.text}"
+        )
+
+        # 2. settings block is present and populated
+        data = response.json()
+        settings = data.get("settings")
+        assert settings is not None and isinstance(settings, dict), (
+            f"settings must be a non-null dict; got {settings!r}.  "
+            "The refresh branch did not load settings correctly."
+        )
+        assert (
+            "daily_goal" in settings
+        ), "settings.daily_goal must be present after refresh-branch load"
+        assert settings["user_id"] == str(test_user.id), "settings.user_id must match test_user.id"
+
+        # 3. Exactly one user_settings SELECT fired (the db.refresh call)
+        assert len(settings_selects) >= 1, (
+            f"Expected at least 1 SELECT FROM user_settings (the refresh), "
+            f"but counted {len(settings_selects)}.  "
+            "The refresh branch may not have fired."
+        )
+        assert len(settings_selects) <= 2, (
+            f"Expected at most 2 user_settings SELECTs (refresh + any ORM "
+            f"follow-up), but counted {len(settings_selects)}: "
+            f"{settings_selects}.  Possible double-load regression."
+        )
