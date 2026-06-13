@@ -276,3 +276,106 @@ combined report:
 - **No fabricated numbers** — local DB was unreachable; all latency attribution
   cites prod Sentry (with sample-count caveats), and the harness stays in-repo to
   produce live deltas on a prod-like re-run.
+
+---
+
+## PERF-10-05 — Post-Deploy Re-Measure
+
+**This is the FINAL subtask and the backend substitute for the RALPH visual gate.**
+It (1) locks the real, already-measured prod BEFORE baselines, (2) states the AFTER
+as a **post-merge obligation** with the exact methodology to run it and the expected
+*directional* improvement per path (no invented "after" numbers — a true before/after
+needs the merged change live in prod with ≥7d of real traffic, which only exists
+**after** this PR merges), and (3) records the Supavisor budget-preservation result
+(verifiable now by code inspection of the whole branch).
+
+> **Honesty caveat (read first).** No "after" latency below is measured. Pre-merge,
+> prod is still running `origin/main` code; the branch is not deployed, so the only
+> honest "after" is an *expectation* plus the query to confirm it post-merge. Any
+> table cell labelled "expected" is a hypothesis to be validated, not a result.
+
+### BEFORE baselines (LOCKED — real prod Sentry, `greekly-backend`, de.sentry.io)
+
+These are the authoritative anchor. They are the prod-measured numbers captured at
+diagnosis/now; the story-header figures are retained only for traceability.
+
+| Path | Transaction | Prod measured (window) | Story-header baseline |
+|------|-------------|------------------------|-----------------------|
+| **dashboard** | `src.api.v1.progress.get_dashboard_stats` | p50 **762ms** / p95 **2484ms** (31 samples, 14d); p50 597ms / p95 3040ms (13 samples, 7d) | p50 750ms / p95 3.0s |
+| **get_me** | `src.api.v1.auth.get_me` | p50 **190ms** / p95 **2165ms** (17 samples, 7d — noisy / low-N) | p50 681ms |
+| **review-submit** | `src.api.v1.reviews_v2.submit_v2_review` | p50 **10ms** / p95 **32ms** (608 samples, 14d) | p50 872ms (**STALE** — already fast) |
+
+Supporting span baselines (for tail/cache context):
+- `span.op:db` — p50 **9.3ms** / p95 **39.8ms** / p99 **152ms** / max **1753ms** (5597 spans / 7d). Per-query DB is fast; the dashboard cost is **count + tail**, not per-query latency.
+- `span.op:db.redis` — 1920 spans @ p50 **1.8ms** (cache is live in prod — corroborates PERF-10-04's "cache already engaged" no-op finding).
+
+### AFTER — expectations (to CONFIRM post-merge; NOT measured)
+
+| Path | Expectation (directional) | Absolute gate | Attributable to |
+|------|---------------------------|---------------|-----------------|
+| **dashboard** | p50 drops **materially** from 762ms. PERF-10-02 cut the uncached compute from **20→11** SQL round-trips (−9); at the prod `span.op:db` p50 ≈16ms/query that removes ~**145ms** of sequential DB time at the median, plus tail compression (each removed query is one fewer chance to hit the long tail). Directional aspiration: toward the diagnosis's ~300–450ms target; realistically a *clear* reduction from 762ms — confirm post-merge. | **p95 ≤ 1800ms** (post-merge gate, per the PERF-10-01 QA advisory: fewer serial round-trips ⇒ fewer tail-exposure points; 1800ms is a conservative, justifiable ceiling below the 2484ms baseline that a 9-of-20 round-trip cut should comfortably clear). | **PERF-10-02** (dashboard 20→11 round-trip consolidation) |
+| **get_me** | p50 shaved by ~**one round-trip** on the happy path: PERF-10-03 removed 1 of 2 user/settings reloads (the redundant `select(User).selectinload(settings)`). Bounded — the cache is live, so the win is one serial round-trip on a ~190ms-p50 path; the warm identity-map hit must **not** regress (sentinel check `'settings' in __dict__` keeps it 0-round-trip). | No absolute p50 gate — **17-sample N makes absolute targeting noisy/unreliable**; assert *direction only* (p50 not worse; no warm-hit regression) over a ≥7d window with more samples. | **PERF-10-03** (get_me 2→1 settings reload) |
+| **review-submit** | **NO change expected.** PERF-10-04's `feature_background_tasks` flip is a documented no-op (path is already p50 10ms / p95 32ms — nothing slow to defer). | An **expected-flat path is NOT a regression** — flat p50/p95 here is a PASS, not a miss. | none (PERF-10-04 documented no-op) |
+
+### Methodology — exact Sentry MCP `search_events` re-run (run post-merge)
+
+Run each query once prod has accrued **≥7d of real traffic on the merged change**.
+Use the Sentry MCP `search_events` tool against org `greekly-backend` (de.sentry.io):
+
+- **Dataset:** `spans` (the transaction/http-server spans), filtered to server spans:
+  `span.op:http.server`.
+- **Per-path filter:** the transaction name, one query each:
+  - dashboard → `span.op:http.server transaction:"src.api.v1.progress.get_dashboard_stats"`
+  - get_me → `span.op:http.server transaction:"src.api.v1.auth.get_me"`
+  - review-submit → `span.op:http.server transaction:"src.api.v1.reviews_v2.submit_v2_review"`
+- **Aggregates:** request `p50(span.duration)` and `p95(span.duration)` (plus `count()` so the sample-N is visible and low-N noise is flagged).
+- **Window:** `statsPeriod` of **≥7d** post-merge (14d preferred for dashboard/get_me given their low daily sample counts). Mirror the BEFORE windows above so the comparison is apples-to-apples.
+- **Supporting re-checks (optional, for attribution):** `span.op:db count()` grouped by the dashboard transaction to confirm the per-request round-trip count dropped (≈20→≈11); `span.op:db.redis` to confirm cache still live.
+
+Compare each path's post-merge p50/p95 against the **LOCKED BEFORE** table above.
+Pass criteria: dashboard p50 materially down **and** p95 ≤ 1800ms; get_me direction
+not worse (no warm-hit regression); review-submit flat.
+
+> **AFTER numbers are a post-merge obligation.** Run this section's queries once prod
+> has accrued ≥7d of traffic on the merged change, then fill the AFTER table with the
+> measured p50/p95 and record PASS/MISS against the gates. Do not backfill these cells
+> pre-merge — there is no honest "after" until the change is live.
+
+### Supavisor budget-preservation check (AC3 / AC5) — verified across the whole branch
+
+Method: `git diff origin/main -- learn-greek-easy-backend/src`, inspected for any
+pool-sizing, engine, session, or connection-adding change. Result: **PASS — no
+connection-adding change anywhere in the branch.**
+
+Evidence:
+- **Pool config unchanged.** `src/config.py` `database_pool_size` = **15** and
+  `database_max_overflow` = **5** are byte-identical between `origin/main` and the
+  branch (diff on `src/config.py` is **empty**). `src/db/session.py` (the only file
+  that reads those into engine kwargs) is **untouched** (empty diff).
+- **No new engine / session / connection in any runtime path.** A grep of all added
+  (`^+`) lines across the branch for `create_async_engine` / `sessionmaker` /
+  `async_sessionmaker` / `AsyncSession(` / `.connect()` / `Redis(` / `ConnectionPool`
+  matches **only inside `src/scripts/perf10_diagnosis.py`** — a standalone diagnostic
+  CLI (`_time_pooled` builds a throwaway `create_async_engine(pool_size=2,
+  max_overflow=2)` that is `await engine.dispose()`-d in a `finally`, and is **never
+  imported by the API runtime**). Zero matches in any request-path module.
+- **Dashboard consolidation is single-session sequential, no fan-out.**
+  `ProgressService._compute_dashboard_stats` issues every read as
+  `await self.<repo>.<method>(...)` on the **single shared `self.db` AsyncSession**
+  (INFRA-01) — no `asyncio.gather`, no parallel checkout, no new session. The three
+  new aggregate repo methods (`get_dashboard_review_aggregates`,
+  `get_dashboard_answer_aggregates`, `get_dashboard_mock_aggregates`) execute on
+  `self.db` and **fewer** queries than before (20→11), so the change **reduces**
+  concurrent pool demand rather than adding to it.
+- **get_me adds no connection.** PERF-10-03 swapped `get_me` onto the new
+  `get_current_user_with_settings` dependency, which reuses the **already-injected
+  `get_db` session** (`await db.refresh(current_user, ["settings"])`, and only when
+  settings are absent) and **removed** the endpoint's own redundant
+  `select(User).selectinload(settings)` reload — a net **−1 round-trip**, **0** new
+  connections, on the same session.
+
+**Conclusion:** the ≤30 Supavisor connection budget (API 15 + 5 overflow, scheduler
+3 + 2) is **preserved — no pool/engine/connection change in the branch.** The only
+engine instantiation introduced is in a non-runtime diagnostic script that disposes
+its throwaway engine. AC3 (no budget regression) and AC5 (no pool/connection change)
+hold.
