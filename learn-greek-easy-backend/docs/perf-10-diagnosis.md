@@ -145,7 +145,7 @@ this redundant reload is a **real, removable round-trip**, but the win is **boun
 | **PERF-10-03** get_me redundant settings reload | **WARRANTED (modest)** | `auth.py:322` unconditional 2nd reload; cache live ⇒ removable but bounded (~1 round-trip on a ~190ms p50 path) |
 | **PERF-10-04** `redis_url` config flip | **NO-OP (documented)** | cache already live in prod: 1920 redis spans/7d @ p50 1.8ms |
 | **PERF-10-04** `feature_background_tasks` flip | **NO-OP (documented)** | review-submit already p50 10ms / p95 32ms; nothing slow to defer |
-| **PERF-10-04** transaction-mode migration (6543) | **NO-OP (documented) — stays REJECTED** | per-query **median** fast (9–17ms); slowness is **count + tail**, not Supavisor proxy overhead. `docs/supabase-database.md` records tx-mode REJECTED (breaks asyncpg prepared statements); the diagnosis does not re-open it |
+| **PERF-10-04** transaction-mode migration (6543) | **NO-OP (documented) — stays REJECTED on correctness** | **Primary (load-bearing):** tx-mode breaks asyncpg prepared statements — already REJECTED in `docs/supabase-database.md`; this is a *correctness* blocker that holds **independent of** the (locally unmeasured) direct-vs-Supavisor proxy delta. **Corroborating (not load-bearing):** the session-mode-pooled per-query median is fast (~9–17ms, prod Sentry — **not** a direct-asyncpg number) and the slowness is count + tail, so even the perf case doesn't point at proxy overhead. The missing direct-vs-pooled delta could only *strengthen* a reject, never overturn the correctness blocker |
 | **`pool_pre_ping` drop** | **INVESTIGATE → default KEEP** | harness could not measure the pre-ping vs no-pre-ping delta locally (DB unreachable). Conservative default: **keep** `pool_pre_ping=True`; drop only if a prod-like harness run shows a material per-checkout delta AND the PERF-07 keepalive is proven to hold connections live |
 
 ### Decision-tree mapping (from the story's conditional tree)
@@ -163,8 +163,21 @@ this redundant reload is a **real, removable round-trip**, but the win is **boun
   (`'settings' in user.__dict__`, async-safe) so the warm 0-round-trip identity-map
   hit at `dependencies.py:112` is **not** regressed into a guaranteed SELECT.
 - **Baseline floor = Supavisor session-mode proxy overhead specifically?** → **NO**
-  (median fast; slowness is count + tail). Transaction-mode **not warranted** — keep
-  session mode (conservative default).
+  (session-mode-pooled median fast; slowness is count + tail). Transaction-mode
+  **not warranted** — keep session mode. Note the gating logic: tx-mode is rejected
+  on a **correctness** fact (it breaks asyncpg prepared statements; see
+  `docs/supabase-database.md`), independent of the unmeasured proxy delta — so the
+  door is legitimately closed even though the harness could not produce the
+  direct-vs-pooled number locally.
+
+  **Falsifier (to keep this conditional auditable):** re-run the harness against a
+  prod-like DB (`measure_query_baseline` from a Railway shell / dev env on the
+  Supavisor DSN); **if** the direct-asyncpg-vs-Supavisor-pooled delta is large
+  (e.g. > ~30ms) **and** PERF-10-02's round-trip reduction misses the dashboard p50
+  target, **then** re-open transaction mode — but only after first solving the
+  asyncpg prepared-statement break (`statement_cache_size=0` + a load-test gate, per
+  the story constraint). The harness is left in-repo precisely as the re-run vehicle
+  for this falsifier.
 - **review-submit slow because `feature_background_tasks=False`?** → **NO**
   (already p50 10ms). Flag flip is a no-op.
 
