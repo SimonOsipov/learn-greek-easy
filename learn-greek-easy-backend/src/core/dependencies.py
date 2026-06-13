@@ -99,15 +99,20 @@ async def _reconcile_email(
     user.email = new_email
     try:
         await db.flush()
-        await cache.delete(identity_key)
-        await propagate_email_change(user, new_email)
-        return True
     except IntegrityError:
         await db.rollback()
         logger.bind(user_id=str(user.id)).warning(
             "Email reconciliation skipped: new email already taken"
         )
         return False
+    await cache.delete(identity_key)
+    try:
+        await propagate_email_change(user, new_email)
+    except Exception:
+        logger.bind(user_id=str(user.id)).warning(
+            "Email propagation failed; change persisted, mirror-sync deferred"
+        )
+    return True
 
 
 async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> User:  # noqa: C901
