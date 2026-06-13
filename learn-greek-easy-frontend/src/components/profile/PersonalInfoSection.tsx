@@ -102,16 +102,20 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
     },
   });
 
-  // On mount (and after successful submit), check Supabase for a pending email change
+  // On mount (and after successful submit), check Supabase for a pending email change.
+  // Read from the LOCAL session (getSession) rather than getUser(): getSession is
+  // network-free and has no auth side-effects, so it can never trigger a token refresh
+  // or SIGNED_OUT event that would disturb the page. The local session reflects the
+  // pending new_email after updateUser() resolves, and the USER_UPDATED forced refresh
+  // (RouteGuard) reconciles once the change completes.
   const refreshPendingEmailState = async () => {
     try {
       const supabase = await getSupabase();
       const {
-        data: { user: supabaseUser },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } = await supabase.auth.getSession();
       // Supabase exposes new_email on the user object when a change is pending
-      const newEmail = (supabaseUser as { new_email?: string } | null)?.new_email ?? null;
-      setPendingNewEmail(newEmail);
+      setPendingNewEmail(session?.user?.new_email ?? null);
     } catch {
       // Non-critical — banner simply won't show if we can't read the state
     }

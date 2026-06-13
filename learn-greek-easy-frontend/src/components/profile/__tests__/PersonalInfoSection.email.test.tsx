@@ -42,13 +42,13 @@ vi.mock('@/stores/authStore', () => ({
 }));
 
 // Mock Supabase client so we can control the pending email state
-let mockGetUserNewEmail: string | null = null;
-const mockGetUser = vi.fn();
+let mockGetSessionNewEmail: string | null = null;
+const mockGetSession = vi.fn();
 vi.mock('@/lib/supabaseClient', () => ({
   getSupabase: vi.fn(() =>
     Promise.resolve({
       auth: {
-        getUser: mockGetUser,
+        getSession: mockGetSession,
       },
     })
   ),
@@ -105,10 +105,10 @@ const renderComponent = () => render(<PersonalInfoSection user={mockUser} />);
 describe('PersonalInfoSection — email change UI (EMAIL-19-01)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetUserNewEmail = null;
+    mockGetSessionNewEmail = null;
     // Default: no pending change
-    mockGetUser.mockResolvedValue({
-      data: { user: { new_email: mockGetUserNewEmail } },
+    mockGetSession.mockResolvedValue({
+      data: { session: { user: { new_email: mockGetSessionNewEmail } } },
     });
   });
 
@@ -174,7 +174,7 @@ describe('PersonalInfoSection — email change UI (EMAIL-19-01)', () => {
   it('submitting the email form calls requestEmailChange with the new email', async () => {
     const user = userEvent.setup();
     mockRequestEmailChange.mockResolvedValue(undefined);
-    mockGetUser.mockResolvedValue({ data: { user: { new_email: null } } });
+    mockGetSession.mockResolvedValue({ data: { session: { user: { new_email: null } } } });
 
     renderComponent();
 
@@ -193,7 +193,7 @@ describe('PersonalInfoSection — email change UI (EMAIL-19-01)', () => {
   it('shows emailChangeSent toast on successful submission', async () => {
     const user = userEvent.setup();
     mockRequestEmailChange.mockResolvedValue(undefined);
-    mockGetUser.mockResolvedValue({ data: { user: { new_email: null } } });
+    mockGetSession.mockResolvedValue({ data: { session: { user: { new_email: null } } } });
 
     renderComponent();
 
@@ -214,7 +214,7 @@ describe('PersonalInfoSection — email change UI (EMAIL-19-01)', () => {
   it('shows emailChangeError toast when requestEmailChange throws a generic error', async () => {
     const user = userEvent.setup();
     mockRequestEmailChange.mockRejectedValue(new Error('Something went wrong'));
-    mockGetUser.mockResolvedValue({ data: { user: { new_email: null } } });
+    mockGetSession.mockResolvedValue({ data: { session: { user: { new_email: null } } } });
 
     renderComponent();
 
@@ -238,7 +238,7 @@ describe('PersonalInfoSection — email change UI (EMAIL-19-01)', () => {
   it('maps "already in use" Supabase error to emailInUse field-level error', async () => {
     const user = userEvent.setup();
     mockRequestEmailChange.mockRejectedValue(new Error('Email already registered'));
-    mockGetUser.mockResolvedValue({ data: { user: { new_email: null } } });
+    mockGetSession.mockResolvedValue({ data: { session: { user: { new_email: null } } } });
 
     renderComponent();
 
@@ -261,7 +261,7 @@ describe('PersonalInfoSection — email change UI (EMAIL-19-01)', () => {
   // -------------------------------------------------------------------------
   it('blocks submission of an invalid email format with a validation message', async () => {
     const user = userEvent.setup();
-    mockGetUser.mockResolvedValue({ data: { user: { new_email: null } } });
+    mockGetSession.mockResolvedValue({ data: { session: { user: { new_email: null } } } });
 
     renderComponent();
 
@@ -280,8 +280,8 @@ describe('PersonalInfoSection — email change UI (EMAIL-19-01)', () => {
   // AC 8: pending banner renders when Supabase user has new_email set
   // -------------------------------------------------------------------------
   it('shows pending change banner when Supabase reports a pending new_email', async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { new_email: 'pending@example.com' } },
+    mockGetSession.mockResolvedValue({
+      data: { session: { user: { new_email: 'pending@example.com' } } },
     });
 
     renderComponent();
@@ -298,15 +298,15 @@ describe('PersonalInfoSection — email change UI (EMAIL-19-01)', () => {
   // AC 9: no pending banner when new_email is null
   // -------------------------------------------------------------------------
   it('does NOT show the pending banner when there is no pending new_email', async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { new_email: null } },
+    mockGetSession.mockResolvedValue({
+      data: { session: { user: { new_email: null } } },
     });
 
     renderComponent();
 
     // Wait for mount effect to resolve
     await waitFor(() => {
-      expect(mockGetUser).toHaveBeenCalled();
+      expect(mockGetSession).toHaveBeenCalled();
     });
 
     expect(screen.queryByText('personalInfo.emailChangePending')).not.toBeInTheDocument();
