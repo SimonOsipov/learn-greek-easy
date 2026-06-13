@@ -90,40 +90,43 @@ class ProgressService:
 
     async def _compute_dashboard_stats(self, user_id: UUID) -> DashboardStatsResponse:
         # Group 1: status counts and overview metrics
-        vocab_status: dict[str, int]
-        culture_status: dict[str, int]
-        accuracy_stats: dict[str, int]
         # Sequential on the shared AsyncSession (INFRA-01) — see module note below.
-        vocab_status = await self.card_stats_repo.count_by_status(user_id)
-        culture_status = await self.culture_stats_repo.count_all_by_status(user_id)
-        accuracy_stats = await self.card_review_repo.get_accuracy_stats(user_id, days=30)
+        vocab_status: dict[str, int] = await self.card_stats_repo.count_by_status(user_id)
+        culture_status: dict[str, int] = await self.culture_stats_repo.count_all_by_status(user_id)
+
+        # PERF-10-02: per-table consolidation. Three new aggregate repo methods
+        # fold the dashboard's vocab-review (5→1), culture-answer (4→1), and
+        # mock-exam (2→1) scalar reads into one round-trip each. Every FILTER
+        # predicate is copied verbatim from the method it replaces, so each
+        # value feeds the SAME downstream arithmetic as before (byte-identical
+        # DashboardStatsResponse). All on the single shared self.db, sequential.
+        review_agg = await self.card_review_repo.get_dashboard_review_aggregates(user_id)
+        culture_answer_agg = await self.culture_answer_repo.get_dashboard_answer_aggregates(user_id)
+        mock_agg = await self.mock_exam_repo.get_dashboard_mock_aggregates(user_id)
+
+        accuracy_stats: dict[str, int] = {
+            "correct": review_agg["correct_30d"],
+            "total": review_agg["total_30d"],
+        }
 
         # Group 2: counts and study times
         culture_mastered = await self.culture_stats_repo.count_mastered_questions(user_id)
         distinct_decks = await self.card_stats_repo.count_distinct_decks(user_id)
-        last_review_date = await self.card_review_repo.get_last_review_date(user_id)
-        total_study_time_vocab = await self.card_review_repo.get_total_study_time(user_id)
-        total_study_time_culture = await self.culture_answer_repo.get_total_study_time(user_id)
-        total_study_time_mock = await self.mock_exam_repo.get_total_study_time(user_id)
-        weekly_study_time_culture = await self.culture_answer_repo.get_study_time_this_week(user_id)
+        last_reviewed_at = review_agg["last_reviewed_at"]
+        last_review_date = last_reviewed_at.date() if last_reviewed_at is not None else None
         culture_mastered_int: int = culture_mastered
         distinct_decks_int: int = distinct_decks
-        total_study_time_vocab_int: int = total_study_time_vocab
-        total_study_time_culture_int: int = total_study_time_culture
-        total_study_time_mock_int: int = total_study_time_mock
-        weekly_study_time_culture_int: int = weekly_study_time_culture
+        total_study_time_vocab_int: int = review_agg["total_study_time"]
+        total_study_time_culture_int: int = culture_answer_agg["total_study_time"]
+        total_study_time_mock_int: int = mock_agg["total_study_time"]
+        weekly_study_time_culture_int: int = culture_answer_agg["study_time_week"]
 
         # Group 3: today stats
-        reviews_today: int
-        culture_answers_today: int
-        study_time_today_vocab: int
-        study_time_today_culture: int
-        study_time_today_mock: int
-        reviews_today = await self.card_review_repo.count_reviews_today(user_id)
-        culture_answers_today = await self.culture_answer_repo.count_answers_today(user_id)
-        study_time_today_vocab = await self.card_review_repo.get_study_time_today(user_id)
-        study_time_today_culture = await self.culture_answer_repo.get_study_time_today(user_id)
-        study_time_today_mock = await self.mock_exam_repo.get_study_time_today(user_id)
+        reviews_today: int = review_agg["reviews_today"]
+        culture_answers_today: int = culture_answer_agg["answers_today"]
+        study_time_today_vocab: int = review_agg["study_time_today"]
+        study_time_today_culture: int = culture_answer_agg["study_time_today"]
+        study_time_today_mock: int = mock_agg["study_time_today"]
 
         # Overview
         vocab_studied = sum(v for k, v in vocab_status.items() if k not in ("new", "due"))

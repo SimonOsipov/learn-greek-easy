@@ -53,7 +53,7 @@ jobs:
       # 128. The pull_request path doesn't need this, but release-verify is always
       # dispatched, so check out before filtering.
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -92,7 +92,7 @@ jobs:
       deploy: ${{ steps.check.outputs.deploy }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -130,7 +130,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Show deployment context
         run: |
@@ -306,7 +306,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Warm up Backend
         run: |
@@ -389,15 +389,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
       - name: Download Health Check Results
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: health-check-results
           path: health-data/
@@ -509,7 +509,7 @@ jobs:
       API_URL: ${{ needs.deploy.outputs.frontend_url }}
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Select Xcode 26.4
         uses: maxim-lobanov/setup-xcode@v1
@@ -527,7 +527,7 @@ jobs:
           fi
 
       - name: Setup Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
@@ -570,7 +570,7 @@ jobs:
 
       - name: Cache native simulator app
         id: app-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: learn-greek-easy-mobile/build
           key: ios-app-${{ runner.os }}-xcode26.4-development-${{ steps.fp.outputs.hash }}
@@ -759,9 +759,9 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
@@ -809,7 +809,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup k6 with browser support
         uses: grafana/setup-k6-action@v1
@@ -910,15 +910,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
       - name: Download K6 Reports
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: k6-performance-reports
           path: k6-data/
@@ -971,10 +971,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
@@ -1053,15 +1053,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
       - name: Download Accessibility Report
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: accessibility-report
           path: accessibility-data/
@@ -1114,10 +1114,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
@@ -1312,7 +1312,7 @@ jobs:
 
     steps:
       - name: Download Lighthouse Summary
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: lighthouse-summary
           path: lighthouse-data/
