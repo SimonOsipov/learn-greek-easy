@@ -196,6 +196,65 @@ class CardRecordReviewRepository(BaseRepository[CardRecordReview]):
         row = result.one()
         return {"correct": int(row.correct or 0), "total": int(row.total or 0)}
 
+    async def get_dashboard_review_aggregates(self, user_id: UUID) -> dict:
+        """Return all dashboard vocab-review scalar aggregates in ONE query.
+
+        PERF-10-02: consolidates five separate dashboard round-trips into a
+        single conditional-aggregate SELECT over ``card_record_reviews`` scoped
+        to ``user_id``.  Each value reproduces its source method bit-for-bit by
+        copying that method's WHERE/cutoff predicate verbatim into a FILTER:
+
+        - ``total_30d`` / ``correct_30d`` → :meth:`get_accuracy_stats` (days=30):
+          ``reviewed_at >= cutoff_30d`` where
+          ``cutoff_30d = datetime.combine(date.today()-timedelta(days=30), min.time())``;
+          ``correct`` reuses the same ``case(quality>=3,1,0)`` expression.
+        - ``last_reviewed_at`` → :meth:`get_last_review_date`: ``max(reviewed_at)``
+          (caller maps ``.date()``).
+        - ``total_study_time`` → :meth:`get_total_study_time`:
+          ``coalesce(sum(time_taken),0)`` (no time filter).
+        - ``reviews_today`` → :meth:`count_reviews_today`:
+          ``count() FILTER (reviewed_at >= today_start)``.
+        - ``study_time_today`` → :meth:`get_study_time_today`:
+          ``coalesce(sum(time_taken) FILTER (reviewed_at >= today_start), 0)``.
+
+        ``today_start = datetime.combine(date.today(), min.time())`` — identical
+        to the source methods.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            Dict with keys ``total_30d``, ``correct_30d``, ``last_reviewed_at``,
+            ``total_study_time``, ``reviews_today``, ``study_time_today``.
+        """
+        cutoff_30d = datetime.combine(date.today() - timedelta(days=30), datetime.min.time())
+        today_start = datetime.combine(date.today(), datetime.min.time())
+        query = select(
+            func.count().filter(CardRecordReview.reviewed_at >= cutoff_30d).label("total_30d"),
+            func.sum(case((CardRecordReview.quality >= 3, 1), else_=0))
+            .filter(CardRecordReview.reviewed_at >= cutoff_30d)
+            .label("correct_30d"),
+            func.max(CardRecordReview.reviewed_at).label("last_reviewed_at"),
+            func.coalesce(func.sum(CardRecordReview.time_taken), 0).label("total_study_time"),
+            func.count().filter(CardRecordReview.reviewed_at >= today_start).label("reviews_today"),
+            func.coalesce(
+                func.sum(CardRecordReview.time_taken).filter(
+                    CardRecordReview.reviewed_at >= today_start
+                ),
+                0,
+            ).label("study_time_today"),
+        ).where(CardRecordReview.user_id == user_id)
+        result = await self.db.execute(query)
+        row = result.one()
+        return {
+            "total_30d": int(row.total_30d or 0),
+            "correct_30d": int(row.correct_30d or 0),
+            "last_reviewed_at": row.last_reviewed_at,
+            "total_study_time": int(row.total_study_time),
+            "reviews_today": int(row.reviews_today or 0),
+            "study_time_today": int(row.study_time_today),
+        }
+
     async def get_daily_vocab_combined_stats(
         self,
         user_id: UUID,
