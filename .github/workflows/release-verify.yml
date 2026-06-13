@@ -397,7 +397,7 @@ jobs:
           node-version: '20'
 
       - name: Download Health Check Results
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: health-check-results
           path: health-data/
@@ -918,7 +918,7 @@ jobs:
           node-version: '20'
 
       - name: Download K6 Reports
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: k6-performance-reports
           path: k6-data/
@@ -1061,7 +1061,7 @@ jobs:
           node-version: '20'
 
       - name: Download Accessibility Report
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: accessibility-report
           path: accessibility-data/
@@ -1312,7 +1312,7 @@ jobs:
 
     steps:
       - name: Download Lighthouse Summary
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: lighthouse-summary
           path: lighthouse-data/
