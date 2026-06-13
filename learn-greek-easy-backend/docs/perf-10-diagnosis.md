@@ -191,6 +191,41 @@ this redundant reload is a **real, removable round-trip**, but the win is **boun
 
 ---
 
+## PERF-10-04 — Lever Outcomes
+
+PERF-10-04 acts on the per-lever verdict above. **All four levers + `pool_pre_ping`
+resolve to documented no-ops** — there is **no request-path code change and no config
+flip** in this subtask. Each outcome is recorded below with its cited evidence (AC #1:
+"each lever has a recorded outcome — applied or documented no-op with why"). The only
+artifact shipped is a born-GREEN **regression-lock** test
+(`tests/unit/db/test_session_txmode.py`, F1 NOT-WARRANTED branch) that pins the current
+session-mode engine config so a future silent flip is caught by CI.
+
+| Lever | Outcome | Evidence (cited) |
+|-------|---------|------------------|
+| **`redis_url` config flip** | **NO-OP — cache already live in prod** | Sentry `span.op:db.redis` shows **1920 spans / 7d @ p50 1.8ms** (org `greekly-backend`). `get_redis()` is non-None and the PERF-05 read-through cache + PERF-05-05 identity cache are engaged in prod. No `redis_url` change needed; no Railway env edit. (The local harness printed `cache_live=False`, but a bare script never calls `init_redis()` and the local env has no Redis — not evidence about prod.) |
+| **`feature_background_tasks` flip** | **NO-OP — nothing slow to defer** | review-submit (`reviews_v2.submit_v2_review`) is already **p50 10ms / p95 32ms** (608 samples / 14d, a solid sample). The synchronous persist/XP/achievement path is fast; deferring it to `persist_deck_review_task` / `invalidate_cache_task` would add eventual-consistency complexity for **no latency benefit**. The flag stays `False` (config.py:352). |
+| **transaction-mode migration (port 6543)** | **NO-OP — stays REJECTED** | **Correctness (load-bearing):** tx-mode breaks asyncpg prepared statements — already REJECTED in `docs/supabase-database.md`; this blocker holds independent of any proxy-delta measurement. **Corroborating:** per-query DB exec is fast — `span.op:db` **p50 9.3ms / p95 39.8ms / p99 152ms** (5597 spans / 7d); the slowness was query **count** (dashboard, addressed by PERF-10-02), not Supavisor session-mode proxy overhead per query. The diagnosis did **not** prove proxy overhead is the floor, so the door stays closed. No engine change; `docs/supabase-database.md` unchanged (tx-mode remains REJECTED). |
+| **`pool_pre_ping` drop** | **NO-OP — KEEP (conservative default)** | The harness **could not measure** the pre-ping-vs-no-pre-ping per-checkout delta against a live DB (local `DATABASE_URL` → unreachable `localhost:5433`, not the Supavisor cross-region path). Per the story Decision, dropping `pool_pre_ping` requires keepalive-liveness evidence that it is safe to remove — **none was obtained** — so `pool_pre_ping=True` is **kept** (`src/db/session.py`). |
+
+### What shipped in PERF-10-04
+
+- **Docs:** this section (the per-lever no-op record with cited evidence).
+- **Regression-lock test** (`tests/unit/db/test_session_txmode.py`,
+  `test_session_mode_engine_config_unchanged`, `@pytest.mark.unit`): a born-GREEN F1
+  lock — **not** a test-first RED. It asserts the engine stays Supavisor session-mode:
+  budgeted pool default **15 + 5** (env-independent `Settings` field default — the ≤30
+  Supavisor budget, the recorded outcome of the pool-budget lever: **KEEP, no evidence
+  to change**), `pool_pre_ping is True`, **no** asyncpg statement-cache override in
+  `connect_args` (forbids **both** spellings — `statement_cache_size` and
+  `prepared_statement_cache_size`), and DB URL port **5432** (not tx-mode 6543).
+  Verified to go RED on a simulated tx-mode flip (injecting `statement_cache_size=0`
+  into `connect_args`), so the lock is not a vacuous green.
+- **No change** to `src/db/session.py`, `src/config.py`, request-path code, pool
+  sizing, or any engine kwargs.
+
+---
+
 ## Per-path latency targets (for PERF-10-05 before/after)
 
 Baselines below are the **prod Sentry** numbers (the story-header 750/872/681ms
