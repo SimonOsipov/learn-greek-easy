@@ -382,15 +382,30 @@ async def generic_exception_handler(
         },
     )
 
+    # TEMP-PERF10-DEBUG: surface exception detail in non-prod to capture the
+    # backend traceback via the E2E response body. REVERT before merge.
+    _error_body = {
+        "code": "INTERNAL_SERVER_ERROR",
+        "message": "An unexpected error occurred",
+        "request_id": request_id,
+    }
+    try:
+        from src.config import settings as _settings
+
+        if _settings.environment != "production":
+            import traceback as _tb
+
+            _error_body["debug_exc_type"] = type(exc).__name__
+            _error_body["debug_exc_msg"] = str(exc)[:600]
+            _error_body["debug_tb"] = _tb.format_exc()[-2500:]
+    except Exception:  # noqa: BLE001 — never let debug capture mask the 500
+        pass
+
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "success": False,
-            "error": {
-                "code": "INTERNAL_SERVER_ERROR",
-                "message": "An unexpected error occurred",
-                "request_id": request_id,
-            },
+            "error": _error_body,
         },
         headers={"X-Request-ID": request_id},
     )
