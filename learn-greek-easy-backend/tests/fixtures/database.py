@@ -276,8 +276,9 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:  # noqa: C901
             text(
                 """
                 CREATE OR REPLACE FUNCTION immutable_unaccent(text)
-                RETURNS text LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE AS
-                $$ SELECT public.unaccent('public.unaccent', $1) $$
+                RETURNS text LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
+                SET search_path = ''
+                AS $$ SELECT public.unaccent('public.unaccent', $1) $$
                 """
             )
         )
