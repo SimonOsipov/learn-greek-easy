@@ -19,7 +19,7 @@ sqlalchemy = "^2.0.35"
 alembic = "^1.13.2"
 psycopg2-binary = "^2.9.9"
 asyncpg = "^0.30.0"
-redis = "^5.0.8"
+redis = ">=5.0.8,<9.0.0"
 python-dateutil = "^2.9.0"
 pytz = "^2024.1"
 httpx = {version = "^0.27.0", extras = ["http2"]}
