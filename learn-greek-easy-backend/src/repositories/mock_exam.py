@@ -449,6 +449,45 @@ class MockExamRepository(BaseRepository[MockExamSession]):
         result = await self.db.execute(query)
         return [row.session_date for row in result.all()]
 
+    async def get_dashboard_mock_aggregates(self, user_id: UUID) -> dict:
+        """Return dashboard mock-exam study-time aggregates in ONE query.
+
+        PERF-10-02: consolidates :meth:`get_total_study_time` and
+        :meth:`get_study_time_today` into a single SELECT over
+        ``mock_exam_sessions``.  Both source methods scope
+        ``status == COMPLETED``, so that predicate is the shared WHERE; the
+        today value adds ``func.date(completed_at) == today`` as a FILTER,
+        copied verbatim from :meth:`get_study_time_today`.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            Dict with keys ``total_study_time`` and ``study_time_today``.
+        """
+        today = date.today()
+        query = (
+            select(
+                func.coalesce(func.sum(MockExamSession.time_taken_seconds), 0).label(
+                    "total_study_time"
+                ),
+                func.coalesce(
+                    func.sum(MockExamSession.time_taken_seconds).filter(
+                        func.date(MockExamSession.completed_at) == today
+                    ),
+                    0,
+                ).label("study_time_today"),
+            )
+            .where(MockExamSession.user_id == user_id)
+            .where(MockExamSession.status == MockExamStatus.COMPLETED)
+        )
+        result = await self.db.execute(query)
+        row = result.one()
+        return {
+            "total_study_time": int(row.total_study_time),
+            "study_time_today": int(row.study_time_today),
+        }
+
     async def get_study_time_today(self, user_id: UUID) -> int:
         """Get total mock exam study time in seconds for today.
 

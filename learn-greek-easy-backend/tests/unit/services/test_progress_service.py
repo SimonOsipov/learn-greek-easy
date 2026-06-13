@@ -82,11 +82,22 @@ def _setup_dashboard_mocks(
     stats.count_cards_mastered_in_range = AsyncMock(return_value=0)
 
     review = review_cls.return_value
-    review.count_reviews_today = AsyncMock(return_value=reviews_today)
-    review.get_total_study_time = AsyncMock(return_value=0)
-    review.get_study_time_today = AsyncMock(return_value=0)
-    review.get_accuracy_stats = AsyncMock(return_value=accuracy_stats)
-    review.get_last_review_date = AsyncMock(return_value=last_review_date)
+    # PERF-10-02: dashboard reads vocab-review scalars via the consolidated
+    # get_dashboard_review_aggregates; map the legacy kwargs onto its dict.
+    review.get_dashboard_review_aggregates = AsyncMock(
+        return_value={
+            "total_30d": accuracy_stats["total"],
+            "correct_30d": accuracy_stats["correct"],
+            "last_reviewed_at": (
+                datetime.combine(last_review_date, datetime.min.time())
+                if last_review_date is not None
+                else None
+            ),
+            "total_study_time": 0,
+            "reviews_today": reviews_today,
+            "study_time_today": 0,
+        }
+    )
     review.get_unique_dates = AsyncMock(return_value=[])
     review.get_all_unique_dates = AsyncMock(return_value=[])
     review.get_daily_stats = AsyncMock(return_value=daily_stats)
@@ -97,16 +108,25 @@ def _setup_dashboard_mocks(
     cstats.count_due_questions = AsyncMock(return_value=0)
 
     canswer = culture_answer_cls.return_value
-    canswer.count_answers_today = AsyncMock(return_value=culture_answers_today)
-    canswer.get_total_study_time = AsyncMock(return_value=0)
-    canswer.get_study_time_today = AsyncMock(return_value=0)
-    canswer.get_study_time_this_week = AsyncMock(return_value=culture_weekly_study_time)
+    # PERF-10-02: dashboard reads culture-answer scalars via the consolidated
+    # get_dashboard_answer_aggregates.
+    canswer.get_dashboard_answer_aggregates = AsyncMock(
+        return_value={
+            "total_study_time": 0,
+            "study_time_week": culture_weekly_study_time,
+            "answers_today": culture_answers_today,
+            "study_time_today": 0,
+        }
+    )
     canswer.get_unique_dates = AsyncMock(return_value=[])
     canswer.get_all_unique_dates = AsyncMock(return_value=[])
 
     mexam = mock_exam_cls.return_value
-    mexam.get_total_study_time = AsyncMock(return_value=0)
-    mexam.get_study_time_today = AsyncMock(return_value=0)
+    # PERF-10-02: dashboard reads mock-exam scalars via the consolidated
+    # get_dashboard_mock_aggregates.
+    mexam.get_dashboard_mock_aggregates = AsyncMock(
+        return_value={"total_study_time": 0, "study_time_today": 0}
+    )
     mexam.get_unique_dates = AsyncMock(return_value=[])
     mexam.get_all_unique_dates = AsyncMock(return_value=[])
 
@@ -245,9 +265,10 @@ class TestGetDashboardStats:
             service = ProgressService(mock_db)
             result = await service.get_dashboard_stats(mock_user_id)
 
-        # Sourced from culture_answer_repo.get_study_time_this_week (culture-only).
+        # PERF-10-02: sourced from the consolidated culture-answer aggregate
+        # (study_time_week key), culture-only rolling 7-day window.
         assert result.overview.culture_weekly_study_time_seconds == 540
-        ca_cls.return_value.get_study_time_this_week.assert_awaited_once_with(mock_user_id)
+        ca_cls.return_value.get_dashboard_answer_aggregates.assert_awaited_once_with(mock_user_id)
 
     async def test_recent_activity_built_from_daily_stats(self, mock_db, mock_user_id):
         """recent_activity list is built from card_review_repo.get_daily_stats rows."""

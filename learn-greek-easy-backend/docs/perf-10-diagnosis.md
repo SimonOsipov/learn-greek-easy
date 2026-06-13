@@ -116,6 +116,14 @@ the conclusion is the same and **stronger**: dashboard latency is dominated by
 **sequential round-trip count on the shared single AsyncSession** (INFRA-01: one
 in-flight query per session). **This is the dominant, clearly-actionable lever.**
 
+> **Correction (PERF-10-02):** the ~57 figure is a Sentry `span.op:db` count,
+> which the SqlAlchemy integration inflates with transaction-control spans
+> (BEGIN/COMMIT) and the per-request auth user-load on top of each real
+> statement. The `before_cursor_execute` hook (which fires only on real SQL)
+> counts **20 actual SQL statements** per dashboard request. PERF-10-02
+> consolidates these to **11**. The dominant-lever conclusion above is
+> unchanged — the lever is just measured at 20→11 real statements, not 57.
+
 ### 4. review-submit — already fast; the 872ms baseline is STALE
 
 Prod review-submit is **p50 10ms / p95 32ms** (608 samples — a solid sample). The

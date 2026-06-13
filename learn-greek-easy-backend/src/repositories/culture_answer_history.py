@@ -139,6 +139,62 @@ class CultureAnswerHistoryRepository(BaseRepository[CultureAnswerHistory]):
         result = await self.db.execute(query)
         return int(result.scalar_one())
 
+    async def get_dashboard_answer_aggregates(self, user_id: UUID) -> dict:
+        """Return all dashboard culture-answer scalar aggregates in ONE query.
+
+        PERF-10-02: consolidates four separate dashboard round-trips into a
+        single conditional-aggregate SELECT over ``culture_answer_history``
+        scoped to ``user_id``.  Each capped study-time value uses the same
+        ``func.least(time_taken_seconds, MAX_ANSWER_TIME_SECONDS)`` outlier cap
+        as its source method, and each FILTER copies that method's time
+        predicate VERBATIM — the three predicates DIFFER and are intentionally
+        kept distinct:
+
+        - ``total_study_time`` → :meth:`get_total_study_time`:
+          ``coalesce(sum(capped),0)`` (no time filter).
+        - ``study_time_week`` → :meth:`get_study_time_this_week`: rolling 7x24h
+          tz-aware cutoff, ``created_at >= cutoff_week`` where
+          ``cutoff_week = datetime.now(timezone.utc) - timedelta(days=7)``.
+        - ``answers_today`` → :meth:`count_answers_today`: datetime cutoff,
+          ``created_at >= today_start`` where
+          ``today_start = datetime.combine(date.today(), min.time())``.
+        - ``study_time_today`` → :meth:`get_study_time_today`: calendar-day
+          match, ``func.date(created_at) == today``.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            Dict with keys ``total_study_time``, ``study_time_week``,
+            ``answers_today``, ``study_time_today``.
+        """
+        capped_time = func.least(CultureAnswerHistory.time_taken_seconds, MAX_ANSWER_TIME_SECONDS)
+        cutoff_week = datetime.now(timezone.utc) - timedelta(days=7)
+        today_start = datetime.combine(date.today(), datetime.min.time())
+        today = date.today()
+        query = select(
+            func.coalesce(func.sum(capped_time), 0).label("total_study_time"),
+            func.coalesce(
+                func.sum(capped_time).filter(CultureAnswerHistory.created_at >= cutoff_week),
+                0,
+            ).label("study_time_week"),
+            func.count()
+            .filter(CultureAnswerHistory.created_at >= today_start)
+            .label("answers_today"),
+            func.coalesce(
+                func.sum(capped_time).filter(func.date(CultureAnswerHistory.created_at) == today),
+                0,
+            ).label("study_time_today"),
+        ).where(CultureAnswerHistory.user_id == user_id)
+        result = await self.db.execute(query)
+        row = result.one()
+        return {
+            "total_study_time": int(row.total_study_time or 0),
+            "study_time_week": int(row.study_time_week or 0),
+            "answers_today": int(row.answers_today or 0),
+            "study_time_today": int(row.study_time_today or 0),
+        }
+
     async def get_total_answers(self, user_id: UUID) -> int:
         """Get total number of culture answers for a user.
 

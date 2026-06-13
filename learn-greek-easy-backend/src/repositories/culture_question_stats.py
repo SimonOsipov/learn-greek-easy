@@ -74,24 +74,37 @@ class CultureQuestionStatsRepository(BaseRepository[CultureQuestionStats]):
         Use Case:
             Dashboard Stage Distribution chart - combined with vocabulary cards
         """
-        # Get total culture questions across all decks
+        # Get total culture questions across all decks.  Table-global (no user
+        # scope), so it cannot merge with the user-scoped stats query without a
+        # cross join — kept as its own statement.
         total_questions_query = select(func.count(CultureQuestion.id))
         total_result = await self.db.execute(total_questions_query)
         total_questions = total_result.scalar_one()
 
-        # Get counts by status for this user (across all decks)
+        # PERF-10-02: merge the per-status GROUP BY and the standalone due count
+        # into ONE query (3→2).  The per-status ``due`` FILTER reuses the same
+        # ``next_review_date <= today`` predicate as the old standalone due
+        # query; summing the per-status due counts in Python is value-identical
+        # because the old due query had NO status predicate (same reasoning as
+        # count_by_status's SQLCON-03 derivation).
+        today = date.today()
         status_query = (
             select(
                 CultureQuestionStats.status,
                 func.count(CultureQuestionStats.id).label("count"),
+                func.count(CultureQuestionStats.id)
+                .filter(CultureQuestionStats.next_review_date <= today)
+                .label("due"),
             )
             .where(CultureQuestionStats.user_id == user_id)
             .group_by(CultureQuestionStats.status)
         )
         status_result = await self.db.execute(status_query)
         status_counts: dict[str, int] = {}
+        due_count: int = 0
         for row in status_result:
             status_counts[row.status.value] = row.count  # type: ignore[assignment]
+            due_count += int(row.due or 0)
 
         # Calculate counts
         learning_count: int = status_counts.get(CardStatus.LEARNING.value, 0)
@@ -99,15 +112,6 @@ class CultureQuestionStatsRepository(BaseRepository[CultureQuestionStats]):
         mastered_count: int = status_counts.get(CardStatus.MASTERED.value, 0)
         in_progress_count: int = learning_count + review_count + mastered_count
         new_count: int = total_questions - in_progress_count
-
-        # Count due questions (today or overdue)
-        today = date.today()
-        due_query = select(func.count(CultureQuestionStats.id)).where(
-            CultureQuestionStats.user_id == user_id,
-            CultureQuestionStats.next_review_date <= today,
-        )
-        due_result = await self.db.execute(due_query)
-        due_count: int = due_result.scalar_one() or 0
 
         return {
             "new": new_count,
