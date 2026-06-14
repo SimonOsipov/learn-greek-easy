@@ -13,7 +13,7 @@
 
 import { render, screen, within } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, afterAll, beforeEach } from 'vitest';
 
 import i18n from '@/i18n';
 import type { DeckStatistics, ProgressMetrics } from '@/services/progressAPI';
