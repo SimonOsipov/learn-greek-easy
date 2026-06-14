@@ -15,8 +15,67 @@
  * Note: Visual regression tests are handled by Chromatic, not Playwright screenshots.
  */
 
+import * as fs from 'fs';
+
 import { test, expect } from '@playwright/test';
+import type { APIRequestContext } from '@playwright/test';
+
 import { verifyAuthSucceeded } from './helpers/auth-helpers';
+import { getSupabaseStorageKey } from './helpers/supabase-test-client';
+
+// ---------------------------------------------------------------------------
+// Shared deterministic-theme reset for the authenticated suites.
+//
+// The authenticated Dark Mode tests share the e2e_learner account and run
+// serially (playwright.config: fullyParallel:false, workers:1 in CI). The theme
+// is persisted to the backend (ThemeContext debounced PATCH /api/v1/auth/me) and
+// re-applied on auth load: when settings.theme === 'dark', ThemeContext forces
+// the DOM to dark regardless of localStorage. So a test ending in dark leaks a
+// dark start into the next test. Clearing localStorage alone does NOT fix this —
+// the backend re-apply wins.
+//
+// resetThemeToLight() PATCHes the account's persisted theme back to 'light' so
+// the login-sync re-apply is a no-op (it only overrides when userTheme !== 'light').
+// Combined with each test's localStorage clear, every authenticated test then
+// starts from a deterministic light state. (See ThemeContext.tsx login-sync effect.)
+// ---------------------------------------------------------------------------
+
+const LEARNER_AUTH = 'playwright/.auth/learner.json';
+
+function getApiBaseUrl(): string {
+  return process.env.E2E_API_URL || process.env.VITE_API_URL || 'http://localhost:8000';
+}
+
+function getLearnerAccessToken(): string | null {
+  try {
+    const storageKey = getSupabaseStorageKey();
+    const authState = JSON.parse(fs.readFileSync(LEARNER_AUTH, 'utf-8'));
+    const sessionEntry = authState.origins?.[0]?.localStorage?.find(
+      (item: { name: string; value: string }) => item.name === storageKey
+    );
+    if (sessionEntry) {
+      const session = JSON.parse(sessionEntry.value);
+      return session?.access_token || null;
+    }
+  } catch {
+    // Fall through
+  }
+  return null;
+}
+
+/**
+ * Reset the shared learner account's persisted theme to 'light' so the next test
+ * starts deterministically. Best-effort: if the token is unavailable the test's
+ * own localStorage clear + explicit normalization still apply.
+ */
+async function resetThemeToLight(request: APIRequestContext): Promise<void> {
+  const token = getLearnerAccessToken();
+  if (!token) return;
+  await request.patch(`${getApiBaseUrl()}/api/v1/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { theme: 'light' },
+  });
+}
 
 /**
  * UNAUTHENTICATED TESTS - Guest Theme Toggle
@@ -119,6 +178,15 @@ test.describe('Dark Mode - Guest Theme Toggle on Landing Page', () => {
 test.describe('Dark Mode - Authenticated Theme Persistence', () => {
   // Uses default storageState from config (learner user)
 
+  // Deterministic light start: reset the shared account's backend theme so the
+  // login-sync re-apply can't carry a prior test's dark theme into this one.
+  test.beforeEach(async ({ request }) => {
+    await resetThemeToLight(request);
+  });
+  test.afterEach(async ({ request }) => {
+    await resetThemeToLight(request);
+  });
+
   test('DM-05: should toggle theme when logged in', async ({ page }) => {
     // Clear theme at the start
     await page.goto('/dashboard');
@@ -159,11 +227,10 @@ test.describe('Dark Mode - Authenticated Theme Persistence', () => {
       timeout: 15000,
     });
 
-    // Normalize to dark WITHOUT assuming the start state. removeItem('theme')
-    // does NOT guarantee a light start: on auth load ThemeContext re-applies the
-    // account's persisted backend theme, which other DM tests may have left as
-    // dark (shared e2e_learner account, serial workers). Click only if needed —
-    // same pattern as DM-12/DM-13 (commit 210de389).
+    // The describe-level beforeEach resets the account's backend theme to light,
+    // so combined with removeItem('theme') the start state is deterministically
+    // light. Toggle to dark; the defensive guard keeps this robust even if a
+    // prior debounced sync raced in (same pattern as DM-12/DM-13).
     const html = page.locator('html');
     if (!(await html.evaluate((el) => el.classList.contains('dark')))) {
       await page.getByTestId('theme-switcher').click();
@@ -190,6 +257,14 @@ test.describe('Dark Mode - Authenticated Theme Persistence', () => {
  * Tests changing theme from the profile settings page.
  */
 test.describe('Dark Mode - Settings Page Theme Change', () => {
+  // Deterministic light start (shared account, serial workers — see resetThemeToLight).
+  test.beforeEach(async ({ request }) => {
+    await resetThemeToLight(request);
+  });
+  test.afterEach(async ({ request }) => {
+    await resetThemeToLight(request);
+  });
+
   /**
    * Helper to navigate to preferences section
    */
@@ -293,6 +368,16 @@ test.describe('Dark Mode - Settings Page Theme Change', () => {
  * Tests that theme preference is maintained after logging out.
  */
 test.describe('Dark Mode - Theme Persists on Logout', () => {
+  // Deterministic light start (shared account, serial workers — see resetThemeToLight).
+  // afterEach matters here too: these tests log out and leave the account in dark
+  // (DM-12) which would otherwise contaminate any later authenticated test.
+  test.beforeEach(async ({ request }) => {
+    await resetThemeToLight(request);
+  });
+  test.afterEach(async ({ request }) => {
+    await resetThemeToLight(request);
+  });
+
   /**
    * Helper to perform logout via UI
    * The app redirects to / after logout, not /login
