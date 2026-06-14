@@ -363,11 +363,7 @@ export function V2FlashcardPracticePage() {
     return null;
   }
 
-  // Toast: only show if the toast belongs to the currently displayed card
-  const activeToast =
-    toast && currentQueueCard && toast.forCardId === currentQueueCard.card_record_id ? toast : null;
-
-  // Shared pf foot — Answer + RatingRow + Toast (replaces PracticeCard answer section)
+  // Shared pf foot — Answer + RatingRow (replaces PracticeCard answer section)
   // resolveAnswerText is used for consistency with judge's answer target.
   // meaning_el_to_en stores only the English translation in back_content, so for
   // RU users we swap in the word-level Russian translation (matches legacy
@@ -425,7 +421,6 @@ export function V2FlashcardPracticePage() {
         <kbd className="pf-kbd">4</kbd>
         <span> {t('practice.rateHint.suffix')}</span>
       </div>
-      {activeToast && <Toast interval={activeToast.interval} onDismiss={clearToast} />}
     </>
   );
 
@@ -630,9 +625,6 @@ export function V2FlashcardPracticePage() {
                         <kbd className="pf-kbd">4</kbd>
                         <span> {t('practice.rateHint.suffix')}</span>
                       </div>
-                      {activeToast && (
-                        <Toast interval={activeToast.interval} onDismiss={clearToast} />
-                      )}
                     </>
                   }
                 />
@@ -657,6 +649,19 @@ export function V2FlashcardPracticePage() {
             );
           })()}
         </div>
+
+        {/* Toast overlay — rendered OUTSIDE the sliding card so it is never
+            affected by pf-leave-left/right opacity animation or by the 320ms
+            displayIndex lag. Mounts whenever the store has a toast (regardless
+            of which card is displayed); key={toast.forCardId} gives a fresh
+            mount (re-triggers the enter animation + self-dismiss timer) on each
+            new rating. The store nulls toast on the next rateCard so it never
+            bleeds across cards. */}
+        {toast && (
+          <div className="pf-toast-overlay">
+            <Toast key={toast.forCardId} interval={toast.interval} onDismiss={clearToast} />
+          </div>
+        )}
       </div>
     </PracticeApp>
   );

@@ -52,9 +52,9 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   useEffect(() => {
     const abortController = new AbortController();
 
-    const handleAuthEvent = async () => {
+    const handleAuthEvent = async (force = false) => {
       try {
-        await checkAuth({ signal: abortController.signal });
+        await checkAuth({ signal: abortController.signal, force });
       } catch {
         // Auth check failed - non-critical, user proceeds as unauthenticated
       } finally {
@@ -88,7 +88,9 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
               handleAuthEvent();
             }
           } else if (event === 'USER_UPDATED') {
-            handleAuthEvent();
+            // Force-bypass the freshness gate so the reconciled email renders
+            // without a manual reload after a Supabase email-change confirmation.
+            handleAuthEvent(true);
           } else if (event === 'SIGNED_OUT') {
             // User signed out - clear auth state
             useAuthStore.setState({

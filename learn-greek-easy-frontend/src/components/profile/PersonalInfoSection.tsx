@@ -1,11 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Camera, Lock, Loader2, Trash2 } from 'lucide-react';
+import { Camera, Mail, Loader2, Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import log from '@/lib/logger';
+import { getSupabase } from '@/lib/supabaseClient';
 import { authAPI } from '@/services/authAPI';
 import { useAuthStore } from '@/stores/authStore';
 import type { User } from '@/types/auth';
@@ -41,6 +43,14 @@ export const createProfileSchema = (t: TFunction<'profile'>) =>
 
 type ProfileFormData = z.infer<ReturnType<typeof createProfileSchema>>;
 
+// Schema for the email change form
+const createEmailChangeSchema = (t: TFunction<'profile'>) =>
+  z.object({
+    newEmail: z.string().trim().email(t('personalInfo.emailInvalid')),
+  });
+
+type EmailChangeFormData = z.infer<ReturnType<typeof createEmailChangeSchema>>;
+
 // Helper function to get user initials
 const getInitials = (name: string): string => {
   return name
@@ -54,13 +64,18 @@ const getInitials = (name: string): string => {
 export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }) => {
   const { t } = useTranslation('profile');
   const updateProfile = useAuthStore((state) => state.updateProfile);
+  const requestEmailChange = useAuthStore((state) => state.requestEmailChange);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isRemovingAvatar, setIsRemovingAvatar] = useState(false);
+  const [isEmailFormOpen, setIsEmailFormOpen] = useState(false);
+  const [isEmailSubmitting, setIsEmailSubmitting] = useState(false);
+  const [pendingNewEmail, setPendingNewEmail] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const profileSchema = createProfileSchema(t);
+  const emailChangeSchema = createEmailChangeSchema(t);
 
   const {
     register,
@@ -73,6 +88,42 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
       name: user.name,
     },
   });
+
+  const {
+    register: registerEmail,
+    handleSubmit: handleSubmitEmail,
+    formState: { errors: emailErrors },
+    reset: resetEmailForm,
+    setError: setEmailError,
+  } = useForm<EmailChangeFormData>({
+    resolver: zodResolver(emailChangeSchema),
+    defaultValues: {
+      newEmail: '',
+    },
+  });
+
+  // On mount (and after successful submit), check Supabase for a pending email change.
+  // Read from the LOCAL session (getSession) rather than getUser(): getSession is
+  // network-free and has no auth side-effects, so it can never trigger a token refresh
+  // or SIGNED_OUT event that would disturb the page. The local session reflects the
+  // pending new_email after updateUser() resolves, and the USER_UPDATED forced refresh
+  // (RouteGuard) reconciles once the change completes.
+  const refreshPendingEmailState = async () => {
+    try {
+      const supabase = await getSupabase();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      // Supabase exposes new_email on the user object when a change is pending
+      setPendingNewEmail(session?.user?.new_email ?? null);
+    } catch {
+      // Non-critical — banner simply won't show if we can't read the state
+    }
+  };
+
+  useEffect(() => {
+    refreshPendingEmailState();
+  }, []);
 
   const onSubmit = async (data: ProfileFormData) => {
     setIsLoading(true);
@@ -91,6 +142,38 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const onEmailChangeSubmit = async (data: EmailChangeFormData) => {
+    setIsEmailSubmitting(true);
+    try {
+      await requestEmailChange(data.newEmail);
+      // Re-read pending state from Supabase (new_email is now set)
+      await refreshPendingEmailState();
+      toast({
+        title: t('personalInfo.emailChangeSent'),
+      });
+      setIsEmailFormOpen(false);
+      resetEmailForm();
+    } catch (error) {
+      // Map known Supabase errors to specific copy
+      const message = error instanceof Error ? error.message : '';
+      const isAlreadyInUse =
+        message.toLowerCase().includes('already') ||
+        message.toLowerCase().includes('in use') ||
+        message.toLowerCase().includes('registered') ||
+        message.toLowerCase().includes('taken');
+      if (isAlreadyInUse) {
+        setEmailError('newEmail', { message: t('personalInfo.emailInUse') });
+      } else {
+        toast({
+          title: t('personalInfo.emailChangeError'),
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setIsEmailSubmitting(false);
     }
   };
 
@@ -273,24 +356,106 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
           {errors.name && <p className="mt-1 text-sm text-destructive">{errors.name.message}</p>}
         </div>
 
-        {/* Email (Read-only) */}
+        {/* Email — editable change-email flow */}
         <div>
           <Label htmlFor="email" className="mb-2 block text-sm font-medium text-foreground">
             {t('personalInfo.email')}
           </Label>
-          <div className="relative">
+
+          {/* Pending change banner */}
+          {pendingNewEmail && (
+            <Alert className="mb-3">
+              <Mail className="h-4 w-4" />
+              <AlertDescription>
+                {t('personalInfo.emailChangePending', {
+                  current: user.email,
+                  newEmail: pendingNewEmail,
+                })}
+              </AlertDescription>
+              <div className="mt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEmailFormOpen(true)}
+                >
+                  {t('personalInfo.emailChangeResubmit')}
+                </Button>
+              </div>
+            </Alert>
+          )}
+
+          {/* Current email display */}
+          <div className="flex items-center gap-2">
             <Input
               id="email"
               type="email"
               value={user.email}
               readOnly
-              className="cursor-default pr-10 text-muted-foreground"
+              className="cursor-default text-muted-foreground"
             />
-            <Lock className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            {!isEmailFormOpen && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEmailFormOpen(true)}
+                className="shrink-0"
+              >
+                {t('personalInfo.changeEmail')}
+              </Button>
+            )}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {t('personalInfo.emailCannotChange')}
-          </p>
+
+          {/* Inline email change form */}
+          {isEmailFormOpen && (
+            <div className="mt-3 space-y-2 rounded-lg border border-border p-4">
+              <Label htmlFor="newEmail" className="mb-1 block text-sm font-medium text-foreground">
+                {t('personalInfo.newEmailLabel')}
+              </Label>
+              <Input
+                id="newEmail"
+                type="email"
+                {...registerEmail('newEmail')}
+                placeholder={t('personalInfo.newEmailPlaceholder')}
+                className={emailErrors.newEmail ? 'border-destructive' : ''}
+                disabled={isEmailSubmitting}
+                autoFocus
+              />
+              {emailErrors.newEmail && (
+                <p className="text-sm text-destructive">{emailErrors.newEmail.message}</p>
+              )}
+              <div className="flex gap-2 pt-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleSubmitEmail(onEmailChangeSubmit)}
+                  disabled={isEmailSubmitting}
+                >
+                  {isEmailSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {t('personalInfo.saving')}
+                    </>
+                  ) : (
+                    t('personalInfo.saveChanges')
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsEmailFormOpen(false);
+                    resetEmailForm();
+                  }}
+                  disabled={isEmailSubmitting}
+                >
+                  {t('personalInfo.cancel')}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Submit Button */}
