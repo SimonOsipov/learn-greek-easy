@@ -8,11 +8,12 @@
  * - Mastered card shows cards_mastered/total_cards + pct
  * - Streak + WeekHeat render real backend data (R1, R2 wired); no UnwiredDot markers
  * - Total UnwiredDots in the strip === 0
+ * - PRACT2-8: pluralized RU unit word appended to Due value (RED until implementation)
  */
 
 import { render, screen, within } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
 import i18n from '@/i18n';
 import type { DeckStatistics, ProgressMetrics } from '@/services/progressAPI';
@@ -198,5 +199,67 @@ describe('DxMetricStrip', () => {
     const strip = container.querySelector('[data-testid="dx-metric-strip"]');
     const allDots = strip?.querySelectorAll('.dx-unwired-dot');
     expect(allDots?.length).toBe(0);
+  });
+});
+
+// ============================================
+// PRACT2-8: Pluralized RU unit word in Due card
+// RED until implementation adds metricDueUnit i18n keys + <small> in DxMetricStrip
+// ============================================
+
+describe('DxMetricStrip — PRACT2-8 Due card pluralized RU unit (RED)', () => {
+  beforeAll(async () => {
+    await i18n.changeLanguage('ru');
+  });
+
+  afterAll(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  it('count=7 → due value contains "7" AND "карточек" (many form)', () => {
+    const progress7 = { ...mockProgress, cards_due: 7 };
+    renderStrip(progress7, mockStatistics);
+    const dueCard = screen.getByTestId('dx-metric-due');
+    const value = within(dueCard).getByTestId('dx-metric-due-value');
+    expect(value.textContent).toContain('7');
+    expect(value.textContent).toContain('карточек');
+  });
+
+  it('count=41 → due value contains "41" AND "карточка" (one form), NOT "карточек" or "карточки"', () => {
+    const progress41 = { ...mockProgress, cards_due: 41 };
+    renderStrip(progress41, mockStatistics);
+    const dueCard = screen.getByTestId('dx-metric-due');
+    const value = within(dueCard).getByTestId('dx-metric-due-value');
+    expect(value.textContent).toContain('41');
+    expect(value.textContent).toContain('карточка');
+    expect(value.textContent).not.toContain('карточек');
+    expect(value.textContent).not.toContain('карточки');
+  });
+
+  it('count=3 → due value contains "3" AND "карточки" (few form)', () => {
+    const progress3 = { ...mockProgress, cards_due: 3 };
+    renderStrip(progress3, mockStatistics);
+    const dueCard = screen.getByTestId('dx-metric-due');
+    const value = within(dueCard).getByTestId('dx-metric-due-value');
+    expect(value.textContent).toContain('3');
+    expect(value.textContent).toContain('карточки');
+  });
+
+  it('count=0 → due value contains "0" AND "карточек" (many/zero form)', () => {
+    const progress0 = { ...mockProgress, cards_due: 0 };
+    renderStrip(progress0, mockStatistics);
+    const dueCard = screen.getByTestId('dx-metric-due');
+    const value = within(dueCard).getByTestId('dx-metric-due-value');
+    expect(value.textContent).toContain('0');
+    expect(value.textContent).toContain('карточек');
+  });
+
+  it('count=7 → leading numeric token in due value is "7" (no recount, value === cards_due)', () => {
+    const progress7 = { ...mockProgress, cards_due: 7 };
+    renderStrip(progress7, mockStatistics);
+    const dueCard = screen.getByTestId('dx-metric-due');
+    const value = within(dueCard).getByTestId('dx-metric-due-value');
+    const numericToken = value.textContent?.match(/\d+/)?.[0];
+    expect(numericToken).toBe('7');
   });
 });
