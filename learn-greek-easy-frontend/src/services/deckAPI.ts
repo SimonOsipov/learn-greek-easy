@@ -45,6 +45,7 @@ export interface DeckResponse {
   updated_at: string;
   /** Presigned S3 URL for deck cover image */
   cover_image_url?: string | null;
+  cover_image_variants?: Record<number, string> | null;
 }
 
 /**

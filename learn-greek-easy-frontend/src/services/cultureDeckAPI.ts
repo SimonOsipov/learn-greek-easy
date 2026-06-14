@@ -55,6 +55,7 @@ export interface CultureDeckResponse {
   question_count: number;
   is_premium?: boolean;
   cover_image_url?: string | null;
+  cover_image_variants?: Record<number, string> | null;
   progress?: CultureDeckProgress;
 }
 

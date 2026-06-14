@@ -56,6 +56,7 @@ export interface Deck {
   isPremium: boolean;
   thumbnail?: string;
   coverImageUrl?: string;
+  coverImageVariants?: Record<number, string>;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;

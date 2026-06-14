@@ -85,6 +85,13 @@ def _deck_cover_url(deck: Deck, s3: S3Service) -> str | None:
     return s3.generate_presigned_url(deck.cover_image_s3_key, expiry_seconds=2592000)
 
 
+def _deck_cover_variants(deck: Deck, s3: S3Service) -> dict[int, str] | None:
+    if not deck.cover_image_s3_key:
+        return None
+    raw = s3.get_derivative_presigned_urls(deck.cover_image_s3_key)
+    return raw if isinstance(raw, dict) and raw else None
+
+
 def _map_trilingual_create_fields(create_data: dict) -> None:
     """Map name/description fields to trilingual columns in-place for deck creation.
 
@@ -225,6 +232,7 @@ async def list_decks(
                     created_at=deck.created_at,
                     updated_at=deck.updated_at,
                     cover_image_url=_deck_cover_url(deck, s3),
+                    cover_image_variants=_deck_cover_variants(deck, s3),
                 )
             )
 
@@ -477,6 +485,7 @@ async def search_decks(
                 created_at=deck.created_at,
                 updated_at=deck.updated_at,
                 cover_image_url=_deck_cover_url(deck, s3),
+                cover_image_variants=_deck_cover_variants(deck, s3),
             )
         )
 
@@ -595,6 +604,7 @@ async def list_my_decks(
                 created_at=deck.created_at,
                 updated_at=deck.updated_at,
                 cover_image_url=_deck_cover_url(deck, s3),
+                cover_image_variants=_deck_cover_variants(deck, s3),
             )
         )
 
@@ -706,6 +716,7 @@ async def get_deck(
         card_count=card_count,
         is_owned=deck.owner_id == current_user.id,
         cover_image_url=_deck_cover_url(deck, s3),
+        cover_image_variants=_deck_cover_variants(deck, s3),
     )
 
 
@@ -1264,6 +1275,7 @@ async def update_deck(
         created_at=updated_deck.created_at,
         updated_at=updated_deck.updated_at,
         cover_image_url=_deck_cover_url(updated_deck, s3),
+        cover_image_variants=_deck_cover_variants(updated_deck, s3),
     )
 
 

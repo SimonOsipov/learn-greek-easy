@@ -70,6 +70,7 @@ export const transformCultureDeckResponse = (deck: CultureDeckResponse): Deck =>
     tags: [deck.category], // Use culture category as tag (history, geography, etc.)
     thumbnail: `/images/culture/${deck.category}.jpg`,
     coverImageUrl: deck.cover_image_url ?? undefined,
+    coverImageVariants: deck.cover_image_variants ?? undefined,
     createdBy: 'Greeklish',
     createdAt: new Date(),
     updatedAt: new Date(),

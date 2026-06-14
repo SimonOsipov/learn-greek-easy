@@ -845,3 +845,140 @@ class TestSoftDeleteDeck:
 
             with pytest.raises(CultureDeckNotFoundException):
                 await service.soft_delete_deck(deck_id)
+
+
+# =============================================================================
+# INFRA-11-03: cover_image_variants field on CultureDeckResponse /
+# CultureDeckDetailResponse.
+# These tests are RED until the executor adds cover_image_variants to
+# CultureDeckResponse and populates it in _build_localized_deck_response /
+# _build_localized_detail_response inside culture_deck_service.py.
+# =============================================================================
+
+
+class TestCultureDeckCoverImageVariants:
+    """Tests for cover_image_variants field on CultureDeck public responses."""
+
+    @pytest.mark.asyncio
+    async def test_culture_deck_response_includes_cover_variants(self, mock_db_session: MagicMock):
+        """list_decks builder: CultureDeckResponse gets cover_image_variants when cover key set.
+
+        Expects cover_image_variants == {400: "u400", 800: "u800", 1600: "u1600"}
+        and a non-null cover_image_url.
+        FAILS RED until cover_image_variants is added to CultureDeckResponse and
+        _build_localized_deck_response populates it.
+        """
+        service = CultureDeckService(mock_db_session)
+
+        mock_deck = MagicMock()
+        mock_deck.id = uuid4()
+        mock_deck.name_en = "Culture Cover Deck"
+        mock_deck.name_el = "Πολιτισμός με Εξώφυλλο"
+        mock_deck.name_ru = "Культура с обложкой"
+        mock_deck.description_en = "Culture deck with cover"
+        mock_deck.description_el = "Πολιτισμική τράπουλα με εξώφυλλο"
+        mock_deck.description_ru = "Культурная колода с обложкой"
+        mock_deck.category = "culture"
+        mock_deck.is_active = True
+        mock_deck.is_premium = False
+        mock_deck.cover_image_s3_key = "culture/decks/abc/cover.jpg"
+
+        mock_s3 = MagicMock()
+        mock_s3.generate_presigned_url.return_value = "cover-url"
+        mock_s3.get_derivative_presigned_urls.return_value = {
+            400: "u400",
+            800: "u800",
+            1600: "u1600",
+        }
+
+        with (
+            patch.object(service.deck_repo, "list_active", new_callable=AsyncMock) as mock_list,
+            patch.object(service.deck_repo, "count_active", new_callable=AsyncMock) as mock_count,
+            patch.object(
+                service.deck_repo, "get_batch_question_counts", new_callable=AsyncMock
+            ) as mock_batch,
+            patch("src.services.culture_deck_service.get_s3_service", return_value=mock_s3),
+        ):
+            mock_list.return_value = [mock_deck]
+            mock_count.return_value = 1
+            mock_batch.return_value = {mock_deck.id: 10}
+
+            result = await service.list_decks()
+
+            assert len(result.decks) == 1
+            deck_resp = result.decks[0]
+
+            # cover_image_url must be populated
+            assert deck_resp.cover_image_url == "cover-url"
+
+            # RED: cover_image_variants is not on CultureDeckResponse yet
+            variants = getattr(deck_resp, "cover_image_variants", "__MISSING__")
+            assert variants == {
+                400: "u400",
+                800: "u800",
+                1600: "u1600",
+            }, f"Expected cover_image_variants dict on CultureDeckResponse, got: {variants!r}"
+
+    @pytest.mark.asyncio
+    async def test_culture_deck_detail_includes_cover_variants(self, mock_db_session: MagicMock):
+        """get_deck builder: CultureDeckDetailResponse gets cover_image_variants.
+
+        FAILS RED until cover_image_variants is added to CultureDeckResponse
+        (parent) and _build_localized_detail_response populates it.
+        """
+        from datetime import datetime
+
+        service = CultureDeckService(mock_db_session)
+        deck_id = uuid4()
+
+        mock_deck = MagicMock()
+        mock_deck.id = deck_id
+        mock_deck.name_en = "Culture Detail Cover"
+        mock_deck.name_el = "Λεπτομέρεια Πολιτισμού"
+        mock_deck.name_ru = "Детальная культура"
+        mock_deck.description_en = "Culture detail with cover"
+        mock_deck.description_el = "Λεπτομέρεια πολιτιστικής τράπουλας"
+        mock_deck.description_ru = "Детальная культурная колода"
+        mock_deck.category = "history"
+        mock_deck.is_active = True
+        mock_deck.is_premium = False
+        mock_deck.created_at = datetime(2024, 1, 1)
+        mock_deck.updated_at = datetime(2024, 1, 15)
+        mock_deck.cover_image_s3_key = "culture/decks/xyz/cover.jpg"
+
+        mock_s3 = MagicMock()
+        mock_s3.generate_presigned_url.return_value = "cover-url"
+        mock_s3.get_derivative_presigned_urls.return_value = {
+            400: "u400",
+            800: "u800",
+            1600: "u1600",
+        }
+
+        with (
+            patch.object(service.deck_repo, "get", new_callable=AsyncMock) as mock_get,
+            patch.object(
+                service.deck_repo, "count_questions", new_callable=AsyncMock
+            ) as mock_count_q,
+            patch.object(
+                service.answer_history_repo,
+                "get_study_time_for_deck",
+                new_callable=AsyncMock,
+                return_value=0,
+            ),
+            patch("src.services.culture_deck_service.get_s3_service", return_value=mock_s3),
+        ):
+            mock_get.return_value = mock_deck
+            mock_count_q.return_value = 20
+
+            result = await service.get_deck(deck_id)
+
+            # cover_image_url must be populated
+            assert result.cover_image_url == "cover-url"
+
+            # RED: cover_image_variants is not on CultureDeckDetailResponse yet
+            variants = getattr(result, "cover_image_variants", "__MISSING__")
+            assert variants == {
+                400: "u400",
+                800: "u800",
+                1600: "u1600",
+            }, f"Expected cover_image_variants dict on CultureDeckDetailResponse, got: {variants!r}"
