@@ -13,7 +13,7 @@
 
 import { render, screen, within } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
 import i18n from '@/i18n';
 import type { DeckStatistics, ProgressMetrics } from '@/services/progressAPI';
@@ -261,5 +261,95 @@ describe('DxMetricStrip — PRACT2-8 Due card pluralized RU unit (RED)', () => {
     const value = within(dueCard).getByTestId('dx-metric-due-value');
     const numericToken = value.textContent?.match(/\d+/)?.[0];
     expect(numericToken).toBe('7');
+  });
+});
+
+// ============================================
+// PRACT2-8: Adversarial / edge coverage
+// AC2: CLDR RU plural boundary guards
+// AC4: EN locale renders resolved string (not raw key)
+// ============================================
+
+describe('DxMetricStrip — PRACT2-8 adversarial edge coverage', () => {
+  // ── RU CLDR boundary guards ───────────────────────────────────────────────
+
+  describe('RU plural boundary guards', () => {
+    beforeEach(async () => {
+      await i18n.changeLanguage('ru');
+    });
+
+    afterAll(async () => {
+      await i18n.changeLanguage('en');
+    });
+
+    it('count=21 → "карточка" (CLDR one: ends in 1, not 11 — guards "not just ==41")', () => {
+      // CLDR RU rule: one = n%10==1 && n%100!=11
+      // 21 satisfies this: 21%10=1, 21%100=21 (not 11) → "карточка"
+      const progress21 = { ...mockProgress, cards_due: 21 };
+      renderStrip(progress21, mockStatistics);
+      const value = within(screen.getByTestId('dx-metric-due')).getByTestId('dx-metric-due-value');
+      expect(value.textContent).toContain('21');
+      expect(value.textContent).toContain('карточка');
+      expect(value.textContent).not.toContain('карточек');
+      expect(value.textContent).not.toContain('карточки');
+    });
+
+    it('count=11 → "карточек" (CLDR many: ends in 11 overrides ends-in-1 rule)', () => {
+      // CLDR RU rule: 11 ends in 1 but n%100==11 → NOT one → falls to many
+      const progress11 = { ...mockProgress, cards_due: 11 };
+      renderStrip(progress11, mockStatistics);
+      const value = within(screen.getByTestId('dx-metric-due')).getByTestId('dx-metric-due-value');
+      expect(value.textContent).toContain('11');
+      expect(value.textContent).toContain('карточек');
+      expect(value.textContent).not.toContain('карточка');
+      expect(value.textContent).not.toContain('карточки');
+    });
+
+    it('count=5 → "карточек" (CLDR many: 5–20 range)', () => {
+      const progress5 = { ...mockProgress, cards_due: 5 };
+      renderStrip(progress5, mockStatistics);
+      const value = within(screen.getByTestId('dx-metric-due')).getByTestId('dx-metric-due-value');
+      expect(value.textContent).toContain('5');
+      expect(value.textContent).toContain('карточек');
+      expect(value.textContent).not.toContain('карточка');
+      expect(value.textContent).not.toContain('карточки');
+    });
+
+    it('due value contains a <small> element (unit word is wrapped, not inline text)', () => {
+      // Guards against regressing the <small> wrapper being removed — the unit
+      // text lives inside <small>, so if the wrapper is dropped the text is still
+      // present but the structural contract breaks.
+      const { container } = renderStrip({ ...mockProgress, cards_due: 3 }, mockStatistics);
+      const dueValue = container.querySelector('[data-testid="dx-metric-due-value"]');
+      const small = dueValue?.querySelector('small');
+      expect(small).not.toBeNull();
+      expect(small?.textContent).toContain('карточки');
+    });
+  });
+
+  // ── EN locale AC4 guard ──────────────────────────────────────────────────
+
+  describe('EN locale — metricDueUnit resolves to real string (AC4)', () => {
+    beforeEach(async () => {
+      await i18n.changeLanguage('en');
+    });
+
+    it('count=1 → due value contains "card" (EN singular, not raw key string)', () => {
+      // AC4: EN fallback must resolve to "card"/"cards", not "detail.metricDueUnit_one"
+      const progress1 = { ...mockProgress, cards_due: 1 };
+      renderStrip(progress1, mockStatistics);
+      const value = within(screen.getByTestId('dx-metric-due')).getByTestId('dx-metric-due-value');
+      expect(value.textContent).toContain('1');
+      expect(value.textContent).toContain('card');
+      expect(value.textContent).not.toContain('metricDueUnit');
+    });
+
+    it('count=7 → due value contains "cards" (EN plural)', () => {
+      renderStrip(mockProgress, mockStatistics); // mockProgress.cards_due = 7
+      const value = within(screen.getByTestId('dx-metric-due')).getByTestId('dx-metric-due-value');
+      expect(value.textContent).toContain('7');
+      expect(value.textContent).toContain('cards');
+      expect(value.textContent).not.toContain('metricDueUnit');
+    });
   });
 });
