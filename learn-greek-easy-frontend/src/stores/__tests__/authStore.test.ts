@@ -968,3 +968,69 @@ describe('authStore — checkAuth background revalidation (PERF-02)', () => {
     expect(state.isAuthenticated).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// EMAIL-19-01: checkAuth force option — bypasses the freshness gate
+//
+// Contract: when force:true is passed, checkAuth must issue a real
+// authAPI.getProfile call even if _profileFetchedAt is fresh (within
+// PROFILE_FRESHNESS_MS). This is what the USER_UPDATED event path uses to
+// render the reconciled email without a manual reload.
+//
+// Strategy (per advisor): let the first checkAuth() set _profileFetchedAt
+// naturally, then reset the spy call count, then call checkAuth({ force: true })
+// and assert getProfile was called again. Avoids coupling to the private field.
+// ---------------------------------------------------------------------------
+
+const minimalProfileEmail19 = {
+  id: 'user-email19',
+  email: 'email19@test.com',
+  full_name: 'Email19 User',
+  avatar_url: null,
+  is_active: true,
+  is_superuser: false,
+  created_at: '2025-01-01T00:00:00Z',
+  updated_at: '2025-01-01T00:00:00Z',
+};
+
+describe('authStore — checkAuth force option bypasses freshness gate (EMAIL-19-01)', () => {
+  const getSession = mockSupabase.auth.getSession as ReturnType<typeof vi.fn>;
+  const getProfile = authAPI.getProfile as ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+    });
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok-e19' } } });
+    getProfile.mockResolvedValue(minimalProfileEmail19);
+  });
+
+  it('force:true bypasses the freshness gate — getProfile is called even when profile is fresh', async () => {
+    // First call: populates the store and stamps _profileFetchedAt as fresh
+    await useAuthStore.getState().checkAuth();
+    expect(getProfile).toHaveBeenCalledTimes(1);
+
+    // Reset spy so we can track the forced call independently
+    vi.mocked(getProfile).mockClear();
+
+    // Second call without force: freshness gate suppresses it
+    await useAuthStore.getState().checkAuth();
+    expect(getProfile).toHaveBeenCalledTimes(0); // suppressed
+
+    // Third call WITH force:true: must bypass the gate and issue a real fetch
+    await useAuthStore.getState().checkAuth({ force: true });
+    expect(getProfile).toHaveBeenCalledTimes(1);
+  });
+
+  it('force:false (explicit) still respects the freshness gate', async () => {
+    await useAuthStore.getState().checkAuth();
+    vi.mocked(getProfile).mockClear();
+
+    await useAuthStore.getState().checkAuth({ force: false });
+    expect(getProfile).toHaveBeenCalledTimes(0); // freshness gate still applies
+  });
+});

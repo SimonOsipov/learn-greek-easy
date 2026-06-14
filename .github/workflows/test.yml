@@ -361,8 +361,8 @@ jobs:
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           FEATURE_BACKGROUND_TASKS: "true"
         run: |
-          poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000 &
-          echo "Backend server started in background"
+          poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000 > /tmp/backend-e2e.log 2>&1 &
+          echo "Backend server started in background (logs → /tmp/backend-e2e.log)"
 
       - name: Wait for backend health check
         run: |
@@ -575,8 +575,8 @@ jobs:
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           FEATURE_BACKGROUND_TASKS: "true"
         run: |
-          poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000 &
-          echo "Backend server started in background"
+          poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000 > /tmp/backend-e2e.log 2>&1 &
+          echo "Backend server started in background (logs → /tmp/backend-e2e.log)"
 
       - name: Wait for backend health check
         run: |
@@ -681,6 +681,14 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: npx playwright test --project=${{ matrix.browser }} --shard=${{ matrix.shard }}/3 --grep-invert @lcp-baseline
+
+      - name: Dump backend logs on failure
+        if: failure()
+        run: |
+          echo "===== backend WARN/ERROR + tracebacks ====="
+          grep -nE "WARNING|ERROR|Traceback|Error|reconcile|Greenlet|InvalidRequest|IntegrityError|PendingRollback" /tmp/backend-e2e.log | tail -200 || true
+          echo "===== last 150 backend log lines ====="
+          tail -150 /tmp/backend-e2e.log || true
 
       - name: Save Playwright browsers cache
         if: always() && steps.playwright-cache.outputs.cache-hit != 'true'
