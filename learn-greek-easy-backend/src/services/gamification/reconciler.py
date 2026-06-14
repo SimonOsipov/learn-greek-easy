@@ -241,16 +241,14 @@ class GamificationReconciler:
         candidate_ids: list[str] = sorted(snapshot.unlocked - existing_unlocks)
 
         # TEMP-GAMIF04-DEBUG: diagnose why reconcile-on-read does not unlock an
-        # earned-but-missing achievement in CI E2E. Remove once root-caused.
+        # earned-but-missing achievement in CI E2E. Inlined into the message
+        # because the console sink does not render bound extras. Remove once root-caused.
         logger.info(
-            "gamif04.debug.reconcile",
-            event="gamif04.debug.reconcile",
-            user_id=str(user_id),
-            mode=str(mode),
-            snapshot_unlocked_count=len(snapshot.unlocked),
-            first_word_in_snapshot=("learning_first_word" in snapshot.unlocked),
-            first_word_in_existing=("learning_first_word" in existing_unlocks),
-            candidate_ids=candidate_ids,
+            f"gamif04.debug.reconcile user={user_id} mode={mode} "
+            f"snap_count={len(snapshot.unlocked)} "
+            f"fw_in_snap={'learning_first_word' in snapshot.unlocked} "
+            f"fw_in_existing={'learning_first_word' in existing_unlocks} "
+            f"candidates={candidate_ids}"
         )
 
         # 3a. Ensure parent achievements rows exist before inserting user_achievements,
