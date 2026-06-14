@@ -66,9 +66,14 @@ async def get_xp_stats(
     current_user: User = Depends(get_current_user),
 ) -> XPStatsResponse:
     """Get XP statistics for the current user."""
+    # Best-effort reconcile-on-read self-heal. Intentionally NOT wrapped in
+    # db.begin_nested(): a SAVEPOINT here raises InvalidRequestError
+    # ("session is provisioning a new connection; concurrent operations are not
+    # permitted") on the live FastAPI/asyncpg request path — see the revert in
+    # commit bcd12438. The reconciler is convergent and uses on_conflict_do_nothing,
+    # so a partial failure is logged and we serve existing data rather than 500.
     try:
-        async with db.begin_nested():
-            await GamificationReconciler.reconcile(db, current_user.id, mode=ReconcileMode.QUIET)
+        await GamificationReconciler.reconcile(db, current_user.id, mode=ReconcileMode.QUIET)
     except Exception as exc:
         logger.opt(exception=True).warning(
             "gamification.reconcile.error",
@@ -152,9 +157,14 @@ async def get_achievements(
     current_user: User = Depends(get_current_user),
 ) -> AchievementsListResponse:
     """Get all achievements with user's progress."""
+    # Best-effort reconcile-on-read self-heal. Intentionally NOT wrapped in
+    # db.begin_nested(): a SAVEPOINT here raises InvalidRequestError
+    # ("session is provisioning a new connection; concurrent operations are not
+    # permitted") on the live FastAPI/asyncpg request path — see the revert in
+    # commit bcd12438. The reconciler is convergent and uses on_conflict_do_nothing,
+    # so a partial failure is logged and we serve existing data rather than 500.
     try:
-        async with db.begin_nested():
-            await GamificationReconciler.reconcile(db, current_user.id, mode=ReconcileMode.QUIET)
+        await GamificationReconciler.reconcile(db, current_user.id, mode=ReconcileMode.QUIET)
     except Exception as exc:
         logger.opt(exception=True).warning(
             "gamification.reconcile.error",
