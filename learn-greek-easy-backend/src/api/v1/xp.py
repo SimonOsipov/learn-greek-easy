@@ -67,9 +67,10 @@ async def get_xp_stats(
 ) -> XPStatsResponse:
     """Get XP statistics for the current user."""
     try:
-        await GamificationReconciler.reconcile(db, current_user.id, mode=ReconcileMode.QUIET)
+        async with db.begin_nested():
+            await GamificationReconciler.reconcile(db, current_user.id, mode=ReconcileMode.QUIET)
     except Exception as exc:
-        logger.warning(
+        logger.opt(exception=True).warning(
             "gamification.reconcile.error",
             event="gamification.reconcile.error",
             endpoint="/api/v1/xp/stats",
@@ -152,9 +153,10 @@ async def get_achievements(
 ) -> AchievementsListResponse:
     """Get all achievements with user's progress."""
     try:
-        await GamificationReconciler.reconcile(db, current_user.id, mode=ReconcileMode.QUIET)
+        async with db.begin_nested():
+            await GamificationReconciler.reconcile(db, current_user.id, mode=ReconcileMode.QUIET)
     except Exception as exc:
-        logger.warning(
+        logger.opt(exception=True).warning(
             "gamification.reconcile.error",
             event="gamification.reconcile.error",
             endpoint="/api/v1/xp/achievements",

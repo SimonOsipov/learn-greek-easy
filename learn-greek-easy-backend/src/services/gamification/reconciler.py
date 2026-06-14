@@ -16,14 +16,20 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import noload
 
 from src.core.logging import get_logger
 from src.db.models import Achievement, UserAchievement, UserXP
-from src.services.achievement_definitions import get_achievement_by_id
+from src.services.achievement_definitions import ACHIEVEMENTS, get_achievement_by_id
 from src.services.gamification.projection import GamificationProjection
 from src.services.gamification.types import GamificationSnapshot, ReconcileMode
 from src.services.notification_service import NotificationService
 from src.services.xp_constants import get_level_definition
+
+# Stable sort_order lookup derived from the canonical ACHIEVEMENTS list order.
+# Matches the index used by seed_achievements() so reconciler-seeded rows are
+# consistent with the admin seed.
+_ACHIEVEMENT_SORT_ORDER: dict[str, int] = {ach.id: i for i, ach in enumerate(ACHIEVEMENTS)}
 
 logger = get_logger(__name__)
 
@@ -82,6 +88,10 @@ async def _ensure_achievements_exist(db: AsyncSession, achievement_ids: list[str
                 icon=ach_def.icon,
                 threshold=ach_def.threshold,
                 xp_reward=ach_def.xp_reward,
+                # sort_order is NOT NULL with no DB-level default; include it so
+                # a self-seed in a clean environment does not raise a NOT NULL
+                # constraint violation.  Index matches seed_achievements().
+                sort_order=_ACHIEVEMENT_SORT_ORDER.get(ach_def.id, 0),
             )
             .on_conflict_do_nothing(index_elements=["id"])
         )
@@ -95,6 +105,14 @@ async def _get_or_create_user_xp(db: AsyncSession, user_id: UUID) -> UserXP:
     maintains a request-scoped cache that would be polluted by the reconciler
     calling it from background or admin contexts.
 
+    ``noload(UserXP.user)`` suppresses the ``lazy="selectin"`` relationship load
+    on UserXP.user.  Without it, the selectin fires a secondary SELECT that
+    attempts to back-populate ``User.xp`` on the already-loaded User instance;
+    since ``User.xp`` has ``lazy="raise"`` and is not pre-loaded by the auth
+    dependency (which only eagerly loads User.settings), the back-populate check
+    triggers an implicit lazy-load and raises ``InvalidRequestError``.  The
+    reconciler never accesses ``user_xp.user``, so suppressing this load is safe.
+
     TODO(GAMIF-04): the read-then-insert path has a small race window when two
     concurrent reconciles both find no UserXP and both insert. The
     ``UserXP.user_id UNIQUE`` constraint will surface the second insert as an
@@ -102,7 +120,9 @@ async def _get_or_create_user_xp(db: AsyncSession, user_id: UUID) -> UserXP:
     ``pg_insert(UserXP).on_conflict_do_nothing(index_elements=["user_id"])``
     + re-select for atomic creation.
     """
-    result = await db.execute(select(UserXP).where(UserXP.user_id == user_id))
+    result = await db.execute(
+        select(UserXP).options(noload(UserXP.user)).where(UserXP.user_id == user_id)
+    )
     user_xp = result.scalar_one_or_none()
     if user_xp is None:
         user_xp = UserXP(user_id=user_id, total_xp=0, current_level=1)
