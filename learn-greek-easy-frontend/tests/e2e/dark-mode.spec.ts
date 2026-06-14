@@ -159,9 +159,16 @@ test.describe('Dark Mode - Authenticated Theme Persistence', () => {
       timeout: 15000,
     });
 
-    // Toggle to dark
-    await page.getByTestId('theme-switcher').click();
-    await expect(page.locator('html')).toHaveClass(/dark/);
+    // Normalize to dark WITHOUT assuming the start state. removeItem('theme')
+    // does NOT guarantee a light start: on auth load ThemeContext re-applies the
+    // account's persisted backend theme, which other DM tests may have left as
+    // dark (shared e2e_learner account, serial workers). Click only if needed —
+    // same pattern as DM-12/DM-13 (commit 210de389).
+    const html = page.locator('html');
+    if (!(await html.evaluate((el) => el.classList.contains('dark')))) {
+      await page.getByTestId('theme-switcher').click();
+    }
+    await expect(html).toHaveClass(/dark/);
 
     // Reload page (without clearing theme)
     await page.reload();
