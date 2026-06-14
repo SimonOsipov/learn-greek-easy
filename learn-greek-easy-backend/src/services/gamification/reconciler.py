@@ -240,17 +240,6 @@ class GamificationReconciler:
         # 3. Diff: achievements present in projection but absent from DB
         candidate_ids: list[str] = sorted(snapshot.unlocked - existing_unlocks)
 
-        # TEMP-GAMIF04-DEBUG: diagnose why reconcile-on-read does not unlock an
-        # earned-but-missing achievement in CI E2E. Inlined into the message
-        # because the console sink does not render bound extras. Remove once root-caused.
-        logger.info(
-            f"gamif04.debug.reconcile user={user_id} mode={mode} "
-            f"snap_count={len(snapshot.unlocked)} "
-            f"fw_in_snap={'learning_first_word' in snapshot.unlocked} "
-            f"fw_in_existing={'learning_first_word' in existing_unlocks} "
-            f"candidates={candidate_ids}"
-        )
-
         # 3a. Ensure parent achievements rows exist before inserting user_achievements,
         # otherwise a not-yet-seeded code-defined achievement triggers an FK violation
         # that aborts the entire transaction.

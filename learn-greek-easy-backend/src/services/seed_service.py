@@ -3160,13 +3160,18 @@ class SeedService:
         Idempotent: safe to call multiple times.
         1. DELETE UserAchievement row for (user_id, achievement_id)
         2. UPDATE UserXP.projection_version = 0 for the user
+        3. If the user has no CardRecordReview rows (e.g. because a prior test
+           deleted them), restore card statistics + reviews from any deck that
+           still has active CardRecord rows. This ensures the projection can
+           re-compute earned achievements so reconcile-on-read can self-heal.
 
         Args:
             user_id: User whose gamification state to reset
             achievement_id: Achievement to un-unlock
 
         Returns:
-            dict with deleted_rows and projection_version_reset
+            dict with deleted_rows, projection_version_reset, and
+            card_history_restored
 
         Raises:
             RuntimeError: If seeding not allowed
@@ -3196,10 +3201,39 @@ class SeedService:
             user_xp.projection_version = 0
             projection_version_reset = True
 
+        # Restore card history if a prior test deleted it.
+        # CardRecord rows are never deleted by reset_user_to_near_threshold, so
+        # we can always find a deck to re-seed against.
+        card_history_restored = False
+        review_count_result = await self.db.execute(
+            select(CardRecordReview.id).where(CardRecordReview.user_id == user_id).limit(1)
+        )
+        has_reviews = review_count_result.scalar_one_or_none() is not None
+        if not has_reviews:
+            # Find any deck that has active CardRecord rows
+            deck_result = await self.db.execute(
+                select(CardRecord.deck_id)
+                .where(CardRecord.is_active == True)  # noqa: E712
+                .limit(1)
+            )
+            restore_deck_id = deck_result.scalar_one_or_none()
+            if restore_deck_id is not None:
+                await self.seed_v2_card_record_statistics(
+                    user_id=user_id,
+                    deck_id=restore_deck_id,
+                    progress_percent=60,
+                )
+                await self.seed_v2_card_record_reviews(
+                    user_id=user_id,
+                    deck_id=restore_deck_id,
+                )
+                card_history_restored = True
+
         return {
             "success": True,
             "deleted_rows": deleted_rows,
             "projection_version_reset": projection_version_reset,
+            "card_history_restored": card_history_restored,
         }
 
     async def reset_user_to_near_threshold(
