@@ -3201,33 +3201,37 @@ class SeedService:
             user_xp.projection_version = 0
             projection_version_reset = True
 
-        # Restore card history if a prior test deleted it.
-        # CardRecord rows are never deleted by reset_user_to_near_threshold, so
-        # we can always find a deck to re-seed against.
+        # Restore a known card-history baseline so the projection computes the
+        # earned achievements (the "stuck but earned" contract), independent of
+        # whether a prior test (e.g. reset_user_to_near_threshold in the
+        # immediate-toast spec) wiped the learner's stats/reviews.
+        #
+        # Delete-then-seed is required for idempotency: seed_v2_card_record_statistics
+        # does plain INSERTs and would violate uq_user_card_record (user_id,
+        # card_record_id) if partial stats already exist for this user/deck.
         card_history_restored = False
-        review_count_result = await self.db.execute(
-            select(CardRecordReview.id).where(CardRecordReview.user_id == user_id).limit(1)
+        deck_result = await self.db.execute(
+            select(CardRecord.deck_id).where(CardRecord.is_active == True).limit(1)  # noqa: E712
         )
-        has_reviews = review_count_result.scalar_one_or_none() is not None
-        if not has_reviews:
-            # Find any deck that has active CardRecord rows
-            deck_result = await self.db.execute(
-                select(CardRecord.deck_id)
-                .where(CardRecord.is_active == True)  # noqa: E712
-                .limit(1)
+        restore_deck_id = deck_result.scalar_one_or_none()
+        if restore_deck_id is not None:
+            await self.db.execute(
+                delete(CardRecordReview).where(CardRecordReview.user_id == user_id)
             )
-            restore_deck_id = deck_result.scalar_one_or_none()
-            if restore_deck_id is not None:
-                await self.seed_v2_card_record_statistics(
-                    user_id=user_id,
-                    deck_id=restore_deck_id,
-                    progress_percent=60,
-                )
-                await self.seed_v2_card_record_reviews(
-                    user_id=user_id,
-                    deck_id=restore_deck_id,
-                )
-                card_history_restored = True
+            await self.db.execute(
+                delete(CardRecordStatistics).where(CardRecordStatistics.user_id == user_id)
+            )
+            await self.db.flush()
+            await self.seed_v2_card_record_statistics(
+                user_id=user_id,
+                deck_id=restore_deck_id,
+                progress_percent=60,
+            )
+            await self.seed_v2_card_record_reviews(
+                user_id=user_id,
+                deck_id=restore_deck_id,
+            )
+            card_history_restored = True
 
         return {
             "success": True,
