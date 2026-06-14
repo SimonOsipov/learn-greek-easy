@@ -118,6 +118,8 @@
     "metricMasteredValue": "{{mastered}}/{{total}}",
     "metricDueTodayTrend": "ready to practice",
     "metricDueAllCaughtUp": "all caught up",
+    "metricDueUnit_one": "card",
+    "metricDueUnit_other": "cards",
     "metricStreakLabel": "day streak",
     "metricStreakSub": "this deck",
     "metricTimeMin": "min",

@@ -78,7 +78,7 @@ describe('DxMetricStrip', () => {
     renderStrip(mockProgress, mockStatistics);
     const dueCard = screen.getByTestId('dx-metric-due');
     const value = within(dueCard).getByTestId('dx-metric-due-value');
-    expect(value.textContent).toBe('7');
+    expect(value.textContent).toContain('7');
   });
 
   it('Due card has NO UnwiredDot', () => {
@@ -208,7 +208,7 @@ describe('DxMetricStrip', () => {
 // ============================================
 
 describe('DxMetricStrip — PRACT2-8 Due card pluralized RU unit (RED)', () => {
-  beforeAll(async () => {
+  beforeEach(async () => {
     await i18n.changeLanguage('ru');
   });
 
