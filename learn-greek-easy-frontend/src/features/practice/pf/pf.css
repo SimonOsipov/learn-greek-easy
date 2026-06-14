@@ -1259,6 +1259,15 @@
   color: hsl(var(--fg));
 }
 
+/* Stable toast container — sibling of .pf-card-slide-wrapper, unaffected by
+   the slide-out animation. Centers the pill horizontally at the bottom of the
+   card area so it appears in the same visual position it occupied in the foot. */
+.pf-toast-overlay {
+  display: flex;
+  justify-content: center;
+  padding-top: 12px;
+}
+
 /* =========================================================================
    PRACT2-1-08: TypedInput + typed-result chip
    ========================================================================= */
