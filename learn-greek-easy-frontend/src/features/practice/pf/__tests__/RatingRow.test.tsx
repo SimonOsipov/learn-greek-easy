@@ -6,6 +6,7 @@
 //   - Buttons disabled when isFlipped=false               [PRACT2-1-07]
 //   - Interval hints rendered per rating when previews provided [PRACT2-3-06]
 //   - Graceful absence: no hint when previews omitted         [PRACT2-3-06]
+//   - Identical-interval hint suppression                 [PRACT2-9-01]
 
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
@@ -94,22 +95,82 @@ function makePreview(rating: 1 | 2 | 3 | 4, interval: number): RatingPreview {
 describe('RatingRow — interval hints (PRACT2-3-06)', () => {
   const toneMap: Record<number, string> = { 1: 'forgot', 2: 'tough', 3: 'ok', 4: 'easy' };
 
-  it('renders .pf-rating-btn__hint with formatReviewInterval text for each button when previews provided', () => {
-    const intervals = { 1: 1, 2: 1, 3: 1, 4: 1 };
-    const previews: RatingPreview[] = [1, 2, 3, 4].map((r) =>
-      makePreview(r as 1 | 2 | 3 | 4, intervals[r as 1 | 2 | 3 | 4])
+  // ── AC-1: suppresses all hints when all four formatted intervals are identical
+  // [PRACT2-9-01] RED: current component renders hints regardless of identity;
+  // after implementation it must suppress them when allHintsIdentical=true.
+  it('suppresses all hints when all four formatted intervals are identical', () => {
+    // All four previews have interval=1 → formatReviewInterval(1) = "1 day" for all
+    const previews: RatingPreview[] = [1, 2, 3, 4].map((r) => makePreview(r as 1 | 2 | 3 | 4, 1));
+
+    const { container } = render(
+      <RatingRow onRate={vi.fn()} isFlipped={true} previews={previews} />
     );
 
-    render(<RatingRow onRate={vi.fn()} isFlipped={true} previews={previews} />);
-
-    for (const rating of [1, 2, 3, 4] as const) {
-      const btn = screen.getByTestId(`pf-rating-btn-${toneMap[rating]}`);
-      const hint = btn.querySelector('.pf-rating-btn__hint');
-      expect(hint).not.toBeNull();
-      expect(hint?.textContent).toBe(formatReviewInterval(intervals[rating]));
-    }
+    // After implementation: zero hints when all four format identically
+    expect(container.querySelectorAll('.pf-rating-btn__hint')).toHaveLength(0);
   });
 
+  // ── AC-1: treats intervals that format to the same string as identical
+  // [PRACT2-9-01] RED: 30 days → "1 month", 31 days → "1 month" (Math.round(30/30)=1,
+  // Math.round(31/30)=1), so all four format-collide → suppression must trigger.
+  it('treats intervals that format to the same string as identical (format-collision)', () => {
+    // Intervals 30, 31, 30, 31 all produce "1 month" via formatReviewInterval
+    const intervalsByRating: Record<1 | 2 | 3 | 4, number> = { 1: 30, 2: 31, 3: 30, 4: 31 };
+    const previews: RatingPreview[] = [1, 2, 3, 4].map((r) =>
+      makePreview(r as 1 | 2 | 3 | 4, intervalsByRating[r as 1 | 2 | 3 | 4])
+    );
+
+    // Verify the formatter actually produces the same string for all four
+    // (documents the invariant so a future formatter change doesn't silently break this test)
+    const formatted = [30, 31, 30, 31].map(formatReviewInterval);
+    expect(new Set(formatted).size).toBe(1); // must all be the same string
+
+    const { container } = render(
+      <RatingRow onRate={vi.fn()} isFlipped={true} previews={previews} />
+    );
+
+    // All four format to the same string → hints must be suppressed
+    expect(container.querySelectorAll('.pf-rating-btn__hint')).toHaveLength(0);
+  });
+
+  // ── AC-2: shows hints when only one rating differs after formatting
+  // [PRACT2-9-01] RED: intervals 1,1,1,8 → "1 day","1 day","1 day","1 week"
+  // (not all identical) → all four hints must render.
+  it('shows all four hints when only one rating differs after formatting', () => {
+    // rating=4 has interval=8 → formatReviewInterval(8) = "1 week" (7≤8<14 → count=1)
+    // ratings 1,2,3 have interval=1 → "1 day" — not all identical → show hints
+    const intervalsByRating: Record<1 | 2 | 3 | 4, number> = { 1: 1, 2: 1, 3: 1, 4: 8 };
+    const previews: RatingPreview[] = [1, 2, 3, 4].map((r) =>
+      makePreview(r as 1 | 2 | 3 | 4, intervalsByRating[r as 1 | 2 | 3 | 4])
+    );
+
+    const { container } = render(
+      <RatingRow onRate={vi.fn()} isFlipped={true} previews={previews} />
+    );
+
+    // Not all identical → all four hints must render
+    expect(container.querySelectorAll('.pf-rating-btn__hint')).toHaveLength(4);
+  });
+
+  // ── AC-2 (edge): incomplete previews render available hints, not suppressed
+  // [PRACT2-9-01] RED: when fewer than 4 previews are provided (here: only ratings
+  // 1 and 2), the suppression logic must NOT fire even if those two happen to be
+  // identical. Exactly 2 hints should render for the 2 buttons that have previews.
+  it('renders available hints without suppression when previews are incomplete (<4)', () => {
+    // Only ratings 1 and 2 provided, both interval=1 → "1 day"
+    // Incomplete set → suppression must not trigger → 2 hints rendered
+    const previews: RatingPreview[] = [makePreview(1, 1), makePreview(2, 1)];
+
+    const { container } = render(
+      <RatingRow onRate={vi.fn()} isFlipped={true} previews={previews} />
+    );
+
+    expect(container.querySelectorAll('.pf-rating-btn__hint')).toHaveLength(2);
+  });
+
+  // ── AC-2 / AC-3 (regression-guard): renders all four hints AND keeps structure
+  // when intervals diverge. EXTENDS the original PRACT2-3-06 divergent test with
+  // structural assertions. This test stays GREEN both before and after implementation.
   it('renders correct interval text per rating using formatReviewInterval', () => {
     // Use varied intervals to assert each matches the formatter output
     const intervalsByRating: Record<1 | 2 | 3 | 4, number> = { 1: 1, 2: 1, 3: 6, 4: 15 };
@@ -134,6 +195,33 @@ describe('RatingRow — interval hints (PRACT2-3-06)', () => {
     expect(easyBtn.querySelector('.pf-rating-btn__hint')?.textContent).toBe(
       formatReviewInterval(15)
     );
+
+    // AC-3 structural coverage: each button still has bar, keycap, and label
+    for (const rating of [1, 2, 3, 4] as const) {
+      const btn = screen.getByTestId(`pf-rating-btn-${toneMap[rating]}`);
+      expect(btn.querySelector('.pf-rating-btn__bar')).not.toBeNull();
+      expect(btn.querySelector('.pf-rating-btn__key')).not.toBeNull();
+      expect(btn.querySelector('.pf-rating-btn__label')).not.toBeNull();
+    }
+  });
+
+  // ── AC-3: tone bar, keycap, and label remain in suppressed state
+  // [PRACT2-9-01] RED: with identical intervals, hints are suppressed, but
+  // bar/key/label and data-tone must still render correctly on all four buttons.
+  it('keeps tone bar, keycap, and label on every button when hints are suppressed', () => {
+    // All identical → hints suppressed, but structural elements must survive
+    const previews: RatingPreview[] = [1, 2, 3, 4].map((r) => makePreview(r as 1 | 2 | 3 | 4, 1));
+
+    render(<RatingRow onRate={vi.fn()} isFlipped={true} previews={previews} />);
+
+    const expectedTones = ['forgot', 'tough', 'ok', 'easy'] as const;
+    for (const tone of expectedTones) {
+      const btn = screen.getByTestId(`pf-rating-btn-${tone}`);
+      expect(btn.querySelector('.pf-rating-btn__bar')).not.toBeNull();
+      expect(btn.querySelector('.pf-rating-btn__key')).not.toBeNull();
+      expect(btn.querySelector('.pf-rating-btn__label')).not.toBeNull();
+      expect(btn.getAttribute('data-tone')).toBe(tone);
+    }
   });
 
   it('renders no .pf-rating-btn__hint when previews prop is omitted', () => {
