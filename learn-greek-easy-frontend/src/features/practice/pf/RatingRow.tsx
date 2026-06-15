@@ -59,6 +59,20 @@ const RATING_OPTIONS: RatingOption[] = [
  */
 export function RatingRow({ onRate, isFlipped = true, previews }: RatingRowProps) {
   const { t } = useTranslation('deck');
+
+  // PRACT2-9-01: Suppress hints when all four formatted intervals are identical.
+  // Comparison is on the formatted string (not the raw interval number) so that
+  // two intervals that render the same (e.g. 30 and 31 → "1 month") are treated
+  // as identical. Only suppresses when all four ratings have a preview.
+  const allHintsIdentical = (() => {
+    const formattedStrings = ([1, 2, 3, 4] as const).map((r) => {
+      const p = previews?.find((preview) => preview.rating === r);
+      return p ? formatReviewInterval(p.interval) : null;
+    });
+    if (formattedStrings.some((s) => s === null)) return false;
+    return new Set(formattedStrings).size === 1;
+  })();
+
   return (
     <div
       className="pf-rating-row"
@@ -84,8 +98,8 @@ export function RatingRow({ onRate, isFlipped = true, previews }: RatingRowProps
             <span className="pf-rating-btn__bar" aria-hidden="true" />
             {/* Label */}
             <span className="pf-rating-btn__label">{label}</span>
-            {/* Projected interval hint (PRACT2-3-06) — shown only when previews provided */}
-            {preview && (
+            {/* Projected interval hint (PRACT2-3-06) — suppressed when all four are identical */}
+            {preview && !allHintsIdentical && (
               <span className="pf-rating-btn__hint" aria-hidden="true">
                 {formatReviewInterval(preview.interval)}
               </span>
