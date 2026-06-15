@@ -236,3 +236,125 @@ describe('RatingRow — interval hints (PRACT2-3-06)', () => {
     expect(hints).toHaveLength(0);
   });
 });
+
+// ── PRACT2-9-01: Adversarial / edge / negative coverage ──────────────────────
+
+describe('RatingRow — hint suppression adversarial (PRACT2-9-01)', () => {
+  // ── Edge: previews array in reverse order → predicate uses find-by-rating,
+  // not index, so the result must be the same as forward order.
+  it('suppresses hints when all four intervals are identical regardless of previews array order', () => {
+    // Provide previews in reverse order [4,3,2,1] — predicate must still detect identity.
+    const previews: RatingPreview[] = [4, 3, 2, 1].map((r) => makePreview(r as 1 | 2 | 3 | 4, 1));
+
+    const { container } = render(
+      <RatingRow onRate={vi.fn()} isFlipped={true} previews={previews} />
+    );
+
+    // All four format to "1 day" regardless of array order → suppressed
+    expect(container.querySelectorAll('.pf-rating-btn__hint')).toHaveLength(0);
+  });
+
+  // ── Edge: previews array in shuffled order with DIFFERENT intervals →
+  // predicate must still find the correct interval per rating.
+  it('shows all four hints when intervals differ and previews array is shuffled', () => {
+    // Provide previews in shuffled order [3,1,4,2] with varied intervals
+    const shuffled = [makePreview(3, 6), makePreview(1, 1), makePreview(4, 15), makePreview(2, 1)];
+
+    const { container } = render(
+      <RatingRow onRate={vi.fn()} isFlipped={true} previews={shuffled} />
+    );
+
+    // rating=3→"6 days", rating=4→"2 weeks" differ → not all identical → 4 hints
+    expect(container.querySelectorAll('.pf-rating-btn__hint')).toHaveLength(4);
+  });
+
+  // ── Boundary: three identical + one different → NOT all identical → show hints.
+  it('shows all four hints when three intervals are identical but one differs', () => {
+    // ratings 1,2,3 → interval=1 ("1 day"), rating=4 → interval=8 ("1 week")
+    const previews: RatingPreview[] = [
+      makePreview(1, 1),
+      makePreview(2, 1),
+      makePreview(3, 1),
+      makePreview(4, 8),
+    ];
+
+    const { container } = render(
+      <RatingRow onRate={vi.fn()} isFlipped={true} previews={previews} />
+    );
+
+    // Only 3 of 4 are identical → suppression must NOT fire → 4 hints shown
+    expect(container.querySelectorAll('.pf-rating-btn__hint')).toHaveLength(4);
+  });
+
+  // ── Edge: format-collision in only 3 of 4 ratings → not all identical → show hints.
+  it('shows all four hints when format-collision covers only 3 of 4 ratings', () => {
+    // ratings 1,2,3 → interval=30 → "1 month"; rating=4 → interval=365 → "1 year"
+    const formatted30 = formatReviewInterval(30);
+    const formatted365 = formatReviewInterval(365);
+    expect(formatted30).not.toBe(formatted365); // precondition: they differ
+
+    const previews: RatingPreview[] = [
+      makePreview(1, 30),
+      makePreview(2, 30),
+      makePreview(3, 30),
+      makePreview(4, 365),
+    ];
+
+    const { container } = render(
+      <RatingRow onRate={vi.fn()} isFlipped={true} previews={previews} />
+    );
+
+    // 3×"1 month" + 1×"1 year" → not all identical → hints must show
+    expect(container.querySelectorAll('.pf-rating-btn__hint')).toHaveLength(4);
+  });
+
+  // ── Edge: single preview present (1 of 4) → 1 hint, no suppression.
+  it('renders exactly one hint and does not suppress when only one preview is provided', () => {
+    const previews: RatingPreview[] = [makePreview(3, 1)];
+
+    const { container } = render(
+      <RatingRow onRate={vi.fn()} isFlipped={true} previews={previews} />
+    );
+
+    // Only rating=3 has a preview → incomplete set → suppression off → 1 hint
+    expect(container.querySelectorAll('.pf-rating-btn__hint')).toHaveLength(1);
+    // And it's on the OK button
+    const okBtn = screen.getByTestId('pf-rating-btn-ok');
+    expect(okBtn.querySelector('.pf-rating-btn__hint')).not.toBeNull();
+  });
+
+  // ── Edge: duplicate rating entries in previews array → find() returns first
+  // match; predicate must still work correctly (not crash, not miscount).
+  it('handles duplicate rating entries by using first match and suppresses when all four are identical', () => {
+    // rating=1 appears twice; the second entry has a different interval —
+    // find() will pick the first. All four ratings effectively map to interval=1 → suppress.
+    const previews: RatingPreview[] = [
+      makePreview(1, 1),
+      makePreview(1, 99), // duplicate — should be ignored by find()
+      makePreview(2, 1),
+      makePreview(3, 1),
+      makePreview(4, 1),
+    ];
+
+    const { container } = render(
+      <RatingRow onRate={vi.fn()} isFlipped={true} previews={previews} />
+    );
+
+    // First match for rating=1 is interval=1 → all four identical → suppressed
+    expect(container.querySelectorAll('.pf-rating-btn__hint')).toHaveLength(0);
+  });
+
+  // ── AC-3 negative: buttons remain disabled (isFlipped=false) even when hints
+  // are suppressed — suppression must not inadvertently re-enable buttons.
+  it('keeps all buttons disabled (isFlipped=false) when hints are suppressed', () => {
+    const previews: RatingPreview[] = [1, 2, 3, 4].map((r) => makePreview(r as 1 | 2 | 3 | 4, 1));
+
+    render(<RatingRow onRate={vi.fn()} isFlipped={false} previews={previews} />);
+
+    const buttons = screen.getAllByRole('button');
+    expect(buttons).toHaveLength(4);
+    for (const btn of buttons) {
+      expect(btn).toBeDisabled();
+    }
+  });
+});
