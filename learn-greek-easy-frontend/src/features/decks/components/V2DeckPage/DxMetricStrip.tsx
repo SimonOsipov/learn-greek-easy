@@ -50,6 +50,7 @@ export function DxMetricStrip({ progress, statistics, wordProgress }: DxMetricSt
           <div className="dx-metric-l">{t('detail.metricDueToday')}</div>
           <div className="dx-metric-v" data-testid="dx-metric-due-value">
             {due}
+            <small>{t('detail.metricDueUnit', { count: due })}</small>
           </div>
           <div
             className={['dx-metric-trend', due === 0 ? 'is-flat' : ''].filter(Boolean).join(' ')}
