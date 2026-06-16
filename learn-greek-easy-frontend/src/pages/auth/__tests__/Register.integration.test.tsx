@@ -232,41 +232,6 @@ describe.skip('Registration Flow Integration Tests (Legacy - needs Auth0 rewrite
   });
 
   describe('Form Validation', () => {
-    it('should show validation error for empty name field', async () => {
-      const user = userEvent.setup();
-
-      render(<Register />);
-
-      // Submit without name
-      await user.type(screen.getByLabelText(/email/i), 'test@example.com');
-      await user.type(screen.getByLabelText(/^password$/i), 'Password123!');
-      await user.type(screen.getByLabelText(/confirm password/i), 'Password123!');
-      await user.click(screen.getByRole('checkbox', { name: /terms and conditions/i }));
-      await user.click(screen.getByRole('button', { name: /create account/i }));
-
-      // Should show name validation error
-      await waitFor(() => {
-        expect(screen.getByText(/name is required/i)).toBeInTheDocument();
-      });
-    });
-
-    it('should show validation error for name less than 2 characters', async () => {
-      const user = userEvent.setup();
-
-      render(<Register />);
-
-      await user.type(screen.getByLabelText(/full name/i), 'A');
-      await user.type(screen.getByLabelText(/email/i), 'test@example.com');
-      await user.type(screen.getByLabelText(/^password$/i), 'Password123!');
-      await user.type(screen.getByLabelText(/confirm password/i), 'Password123!');
-      await user.click(screen.getByRole('checkbox', { name: /terms and conditions/i }));
-      await user.click(screen.getByRole('button', { name: /create account/i }));
-
-      await waitFor(() => {
-        expect(screen.getByText(/at least 2 characters/i)).toBeInTheDocument();
-      });
-    });
-
     it('should show validation error for invalid email format', async () => {
       const user = userEvent.setup();
 
@@ -276,7 +241,6 @@ describe.skip('Registration Flow Integration Tests (Legacy - needs Auth0 rewrite
       // Use email format that passes HTML5 validation but fails Zod stricter validation
       await user.type(screen.getByLabelText(/email/i), 'invalid@');
       await user.type(screen.getByLabelText(/^password$/i), 'Password123!');
-      await user.type(screen.getByLabelText(/confirm password/i), 'Password123!');
       await user.click(screen.getByRole('checkbox', { name: /terms and conditions/i }));
       await user.click(screen.getByRole('button', { name: /create account/i }));
 
@@ -301,29 +265,11 @@ describe.skip('Registration Flow Integration Tests (Legacy - needs Auth0 rewrite
       await user.type(screen.getByLabelText(/full name/i), 'John Doe');
       await user.type(screen.getByLabelText(/email/i), 'john@example.com');
       await user.type(screen.getByLabelText(/^password$/i), 'short');
-      await user.type(screen.getByLabelText(/confirm password/i), 'short');
       await user.click(screen.getByRole('checkbox', { name: /terms and conditions/i }));
       await user.click(screen.getByRole('button', { name: /create account/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/at least 8 characters/i)).toBeInTheDocument();
-      });
-    });
-
-    it('should show validation error when passwords do not match', async () => {
-      const user = userEvent.setup();
-
-      render(<Register />);
-
-      await user.type(screen.getByLabelText(/full name/i), 'John Doe');
-      await user.type(screen.getByLabelText(/email/i), 'john@example.com');
-      await user.type(screen.getByLabelText(/^password$/i), 'Password123!');
-      await user.type(screen.getByLabelText(/confirm password/i), 'DifferentPassword123!');
-      await user.click(screen.getByRole('checkbox', { name: /terms and conditions/i }));
-      await user.click(screen.getByRole('button', { name: /create account/i }));
-
-      await waitFor(() => {
-        expect(screen.getByText(/passwords do not match/i)).toBeInTheDocument();
       });
     });
 
@@ -336,7 +282,6 @@ describe.skip('Registration Flow Integration Tests (Legacy - needs Auth0 rewrite
       await user.type(screen.getByLabelText(/full name/i), 'John Doe');
       await user.type(screen.getByLabelText(/email/i), 'john@example.com');
       await user.type(screen.getByLabelText(/^password$/i), 'Password123!');
-      await user.type(screen.getByLabelText(/confirm password/i), 'Password123!');
       await user.click(screen.getByRole('button', { name: /create account/i }));
 
       await waitFor(() => {
@@ -468,26 +413,6 @@ describe.skip('Registration Flow Integration Tests (Legacy - needs Auth0 rewrite
       expect(passwordInput.type).toBe('password');
     });
 
-    it('should toggle confirm password visibility', async () => {
-      const user = userEvent.setup();
-
-      render(<Register />);
-
-      const confirmPasswordInput = screen.getByLabelText(/confirm password/i) as HTMLInputElement;
-
-      // Initially hidden
-      expect(confirmPasswordInput.type).toBe('password');
-
-      // Type something first to ensure the field is focused
-      await user.type(confirmPasswordInput, 'test');
-
-      // Click show password for confirm field
-      const showButtons = screen.getAllByRole('button', { name: /show password/i });
-      await user.click(showButtons[1]); // Second show button (confirm password field)
-
-      expect(confirmPasswordInput.type).toBe('text');
-    });
-
     // Loading state tests are skipped because mockAuthAPI skips delays in test mode (NODE_ENV='test')
     // The API call completes instantly, making it impossible to catch transient loading states
     it.skip('should disable form inputs during registration submission', async () => {
@@ -498,13 +423,11 @@ describe.skip('Registration Flow Integration Tests (Legacy - needs Auth0 rewrite
       const nameInput = screen.getByLabelText(/full name/i);
       const emailInput = screen.getByLabelText(/email/i);
       const passwordInput = screen.getByLabelText(/^password$/i);
-      const confirmPasswordInput = screen.getByLabelText(/confirm password/i);
       const submitButton = screen.getByRole('button', { name: /create account/i });
 
       await user.type(nameInput, 'John Doe');
       await user.type(emailInput, 'john@example.com');
       await user.type(passwordInput, 'Password123!');
-      await user.type(confirmPasswordInput, 'Password123!');
       await user.click(screen.getByRole('checkbox', { name: /terms and conditions/i }));
       await user.click(submitButton);
 
@@ -512,7 +435,6 @@ describe.skip('Registration Flow Integration Tests (Legacy - needs Auth0 rewrite
       expect(nameInput).toBeDisabled();
       expect(emailInput).toBeDisabled();
       expect(passwordInput).toBeDisabled();
-      expect(confirmPasswordInput).toBeDisabled();
       expect(submitButton).toBeDisabled();
 
       // Wait for completion
@@ -534,7 +456,6 @@ describe.skip('Registration Flow Integration Tests (Legacy - needs Auth0 rewrite
       await user.type(screen.getByLabelText(/full name/i), 'John Doe');
       await user.type(screen.getByLabelText(/email/i), 'john@example.com');
       await user.type(screen.getByLabelText(/^password$/i), 'Password123!');
-      await user.type(screen.getByLabelText(/confirm password/i), 'Password123!');
       await user.click(screen.getByRole('checkbox', { name: /terms and conditions/i }));
       await user.click(screen.getByRole('button', { name: /create account/i }));
 
@@ -552,7 +473,6 @@ describe.skip('Registration Flow Integration Tests (Legacy - needs Auth0 rewrite
       const nameInput = screen.getByLabelText(/full name/i);
       const emailInput = screen.getByLabelText(/email/i);
       const passwordInput = screen.getByLabelText(/^password$/i);
-      const confirmPasswordInput = screen.getByLabelText(/confirm password/i);
 
       expect(nameInput).toHaveAttribute('type', 'text');
       expect(nameInput).toHaveAttribute('autoComplete', 'name');
@@ -561,25 +481,6 @@ describe.skip('Registration Flow Integration Tests (Legacy - needs Auth0 rewrite
       expect(emailInput).toHaveAttribute('autoComplete', 'email');
 
       expect(passwordInput).toHaveAttribute('autoComplete', 'new-password');
-      expect(confirmPasswordInput).toHaveAttribute('autoComplete', 'new-password');
-    });
-
-    it('should associate error messages with form fields using aria-describedby', async () => {
-      const user = userEvent.setup();
-
-      render(<Register />);
-
-      // Submit empty form to trigger validation
-      await user.click(screen.getByRole('button', { name: /create account/i }));
-
-      await waitFor(() => {
-        const nameInput = screen.getByLabelText(/full name/i);
-        const nameError = screen.getByText(/name is required/i);
-
-        expect(nameInput).toHaveAttribute('aria-invalid', 'true');
-        expect(nameInput).toHaveAttribute('aria-describedby', 'name-error');
-        expect(nameError).toHaveAttribute('id', 'name-error');
-      });
     });
   });
 });
