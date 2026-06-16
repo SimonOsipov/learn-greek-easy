@@ -378,7 +378,7 @@ export const RegisterForm: React.FC = () => {
 
             {/* Name field */}
             <div className="space-y-2">
-              <Label htmlFor="name">{t('register.name')}</Label>
+              <Label htmlFor="name">{t('register.nameOptional')}</Label>
               <Input
                 id="name"
                 data-testid="name-input"
@@ -452,7 +452,7 @@ export const RegisterForm: React.FC = () => {
                   {getErrorMessage(errors.password.message)}
                 </p>
               )}
-              <PasswordStrengthIndicator password={passwordValue} />
+              <PasswordStrengthIndicator password={passwordValue} showRequirements={false} />
             </div>
 
             {/* Terms checkbox */}
