@@ -60,7 +60,7 @@ type FormState = 'form' | 'verification' | 'error';
  * Registration form validation schema
  * Password validation requirements
  */
-const registerSchema = z
+export const registerSchema = z
   .object({
     name: z.string().min(1, 'nameRequired').min(2, 'nameMinLength').max(50, 'nameMaxLength'),
     email: z.string().min(1, 'emailRequired').email('emailInvalid'),

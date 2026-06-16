@@ -39,10 +39,11 @@ describe('RegisterForm auto-scroll behavior', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      const nameElement = document.getElementById('name');
-      expect(nameElement).not.toBeNull();
+      // After name becomes optional, the first error on an empty form is email → scroll target shifts
+      const emailElement = document.getElementById('email');
+      expect(emailElement).not.toBeNull();
       expect(scrollSpy).toHaveBeenCalled();
-      expect(scrollSpy.mock.instances.at(-1)).toBe(nameElement);
+      expect(scrollSpy.mock.instances.at(-1)).toBe(emailElement);
       expect(scrollSpy).toHaveBeenLastCalledWith({ behavior: 'smooth', block: 'center' });
     });
   });
