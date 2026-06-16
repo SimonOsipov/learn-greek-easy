@@ -27,6 +27,12 @@ interface PasswordStrengthIndicatorProps {
   password: string;
   /** Additional CSS classes for the container */
   className?: string;
+  /**
+   * Whether to render the requirements checklist.
+   * Defaults to true (reset-password page shows it).
+   * Pass false on the signup form to hide the checklist while keeping the advisory bar.
+   */
+  showRequirements?: boolean;
 }
 
 interface StrengthResult {
@@ -150,6 +156,7 @@ const RequirementItem: React.FC<RequirementItemProps> = ({ met, label }) => (
 export const PasswordStrengthIndicator: React.FC<PasswordStrengthIndicatorProps> = ({
   password,
   className,
+  showRequirements = true,
 }) => {
   const { t } = useTranslation('auth');
 
@@ -159,11 +166,13 @@ export const PasswordStrengthIndicator: React.FC<PasswordStrengthIndicatorProps>
 
   return (
     <div className={cn('space-y-2', className)} data-testid="password-strength-indicator">
-      <ul className="space-y-1" data-testid="password-requirements-list">
-        {REQUIREMENT_KEYS.map(({ key, i18nKey }) => (
-          <RequirementItem key={key} met={requirements[key]} label={tDynamic(t, i18nKey)} />
-        ))}
-      </ul>
+      {showRequirements && (
+        <ul className="space-y-1" data-testid="password-requirements-list">
+          {REQUIREMENT_KEYS.map(({ key, i18nKey }) => (
+            <RequirementItem key={key} met={requirements[key]} label={tDynamic(t, i18nKey)} />
+          ))}
+        </ul>
+      )}
       {password && (
         <div className="space-y-1" data-testid="password-strength-bar">
           <Progress
