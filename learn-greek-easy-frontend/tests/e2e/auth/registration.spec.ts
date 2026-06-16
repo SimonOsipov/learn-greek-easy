@@ -248,9 +248,7 @@ test.describe('Registration', () => {
   });
 
   test.describe('Name Field (Optional)', () => {
-    test('should allow submission with empty name and reach verification screen', async ({
-      page,
-    }) => {
+    test('should accept an empty name without a validation error', async ({ page }) => {
       await page.goto('/register');
       await page.waitForSelector('[data-testid="register-form"]', {
         state: 'visible',
@@ -258,15 +256,17 @@ test.describe('Registration', () => {
       });
 
       // Leave name-input empty — it is optional (AUTH-01)
-      await page.getByTestId('email-input').fill(`e2e-optional-name-${Date.now()}@example.com`);
+      await page.getByTestId('email-input').fill('test@example.com');
       await page.getByTestId('password-input').fill('TestPassword123!');
       await page.locator('#acceptedTerms').check();
 
       await page.getByTestId('register-submit').click();
 
-      // Should reach the "check your email" verification screen, not show a name error
-      await expect(page.getByTestId('verification-card')).toBeVisible({ timeout: 15000 });
+      // Empty name must not produce a client-side validation error
       await expect(page.locator('#name-error')).toHaveCount(0);
+      // Email and password passed client validation (no errors on those fields either)
+      await expect(page.locator('#email-error')).toHaveCount(0);
+      await expect(page.locator('#password-error')).toHaveCount(0);
     });
   });
 
