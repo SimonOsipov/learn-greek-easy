@@ -165,4 +165,36 @@ describe('PasswordStrengthIndicator', () => {
       expect(screen.getByTestId('password-strength-indicator')).toBeInTheDocument();
     });
   });
+
+  describe('showRequirements={false} (signup form usage)', () => {
+    it('does not render password-requirements-list for empty password', () => {
+      render(<PasswordStrengthIndicator password="" showRequirements={false} />);
+
+      expect(screen.queryByTestId('password-requirements-list')).not.toBeInTheDocument();
+    });
+
+    it('does not render password-requirements-list for non-empty password', () => {
+      render(<PasswordStrengthIndicator password="Abcdefg1!" showRequirements={false} />);
+
+      expect(screen.queryByTestId('password-requirements-list')).not.toBeInTheDocument();
+    });
+
+    it('still renders the container when showRequirements is false', () => {
+      render(<PasswordStrengthIndicator password="" showRequirements={false} />);
+
+      expect(screen.getByTestId('password-strength-indicator')).toBeInTheDocument();
+    });
+
+    it('shows the strength bar once a password is typed with showRequirements={false}', () => {
+      render(<PasswordStrengthIndicator password="Abcdefg1!" showRequirements={false} />);
+
+      expect(screen.getByTestId('password-strength-bar')).toBeInTheDocument();
+    });
+
+    it('does not show strength bar for empty password with showRequirements={false}', () => {
+      render(<PasswordStrengthIndicator password="" showRequirements={false} />);
+
+      expect(screen.queryByTestId('password-strength-bar')).not.toBeInTheDocument();
+    });
+  });
 });

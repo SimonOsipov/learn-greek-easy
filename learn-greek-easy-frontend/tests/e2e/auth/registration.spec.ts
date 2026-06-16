@@ -5,10 +5,11 @@
  *
  * Test coverage:
  * - Form display and elements
- * - Name/email/password validation
+ * - Email/password validation
  * - Password strength indicator
  * - Password visibility toggle
  * - Terms checkbox requirement
+ * - Optional name field
  * - Navigation links
  * - Google Signup Button
  */
@@ -35,7 +36,8 @@ test.describe('Registration', () => {
       await expect(page.getByTestId('name-input')).toBeVisible();
       await expect(page.getByTestId('email-input')).toBeVisible();
       await expect(page.getByTestId('password-input')).toBeVisible();
-      await expect(page.getByTestId('confirm-password-input')).toBeVisible();
+      // No confirm-password-input on the signup form (AUTH-01)
+      await expect(page.getByTestId('confirm-password-input')).toHaveCount(0);
 
       await expect(page.locator('#acceptedTerms')).toBeVisible();
       await expect(page.getByTestId('register-submit')).toBeVisible();
@@ -60,46 +62,7 @@ test.describe('Registration', () => {
 
       const passwordInput = page.getByTestId('password-input');
       await expect(passwordInput).toHaveAttribute('autocomplete', 'new-password');
-
-      const confirmPasswordInput = page.getByTestId('confirm-password-input');
-      await expect(confirmPasswordInput).toHaveAttribute('autocomplete', 'new-password');
-    });
-  });
-
-  test.describe('Name Validation', () => {
-    test('should show error for empty name on submit', async ({ page }) => {
-      await page.goto('/register');
-      await page.waitForSelector('[data-testid="register-form"]', {
-        state: 'visible',
-        timeout: 10000,
-      });
-
-      await page.getByTestId('email-input').fill('test@example.com');
-      await page.getByTestId('password-input').fill('TestPassword123!');
-      await page.getByTestId('confirm-password-input').fill('TestPassword123!');
-      await page.locator('#acceptedTerms').check();
-
-      await page.getByTestId('register-submit').click();
-
-      await expect(page.locator('#name-error')).toBeVisible();
-    });
-
-    test('should show error for name less than 2 characters', async ({ page }) => {
-      await page.goto('/register');
-      await page.waitForSelector('[data-testid="register-form"]', {
-        state: 'visible',
-        timeout: 10000,
-      });
-
-      await page.getByTestId('name-input').fill('A');
-      await page.getByTestId('email-input').fill('test@example.com');
-      await page.getByTestId('password-input').fill('TestPassword123!');
-      await page.getByTestId('confirm-password-input').fill('TestPassword123!');
-      await page.locator('#acceptedTerms').check();
-
-      await page.getByTestId('register-submit').click();
-
-      await expect(page.locator('#name-error')).toBeVisible();
+      // No confirm-password-input on the signup form (AUTH-01)
     });
   });
 
@@ -113,7 +76,6 @@ test.describe('Registration', () => {
 
       await page.getByTestId('name-input').fill('Test User');
       await page.getByTestId('password-input').fill('TestPassword123!');
-      await page.getByTestId('confirm-password-input').fill('TestPassword123!');
       await page.locator('#acceptedTerms').check();
 
       await page.getByTestId('register-submit').click();
@@ -132,7 +94,6 @@ test.describe('Registration', () => {
       await page.getByTestId('name-input').fill('Test User');
       await page.getByTestId('email-input').fill('notanemail');
       await page.getByTestId('password-input').fill('TestPassword123!');
-      await page.getByTestId('confirm-password-input').fill('TestPassword123!');
       await page.locator('#acceptedTerms').check();
 
       await page.getByTestId('register-submit').click();
@@ -168,7 +129,6 @@ test.describe('Registration', () => {
       await page.getByTestId('name-input').fill('Test User');
       await page.getByTestId('email-input').fill('test@example.com');
       await page.getByTestId('password-input').fill('short');
-      await page.getByTestId('confirm-password-input').fill('short');
       await page.locator('#acceptedTerms').check();
 
       await page.getByTestId('register-submit').click();
@@ -176,44 +136,28 @@ test.describe('Registration', () => {
       await expect(page.locator('#password-error')).toBeVisible();
     });
 
-    test('should show error when passwords do not match', async ({ page }) => {
-      await page.goto('/register');
-      await page.waitForSelector('[data-testid="register-form"]', {
-        state: 'visible',
-        timeout: 10000,
-      });
-
-      await page.getByTestId('name-input').fill('Test User');
-      await page.getByTestId('email-input').fill('test@example.com');
-      await page.getByTestId('password-input').fill('TestPassword123!');
-      await page.getByTestId('confirm-password-input').fill('DifferentPassword123!');
-      await page.locator('#acceptedTerms').check();
-
-      await page.getByTestId('register-submit').click();
-
-      await expect(page.locator('#confirmPassword-error')).toBeVisible();
-    });
+    // Deleted: 'should show error when passwords do not match' — confirm-password field removed (AUTH-01)
+    // Deleted: 'should toggle confirm password visibility independently' — confirm-password field removed (AUTH-01)
   });
 
   test.describe('Password Strength Indicator', () => {
-    test('should show checklist but not progress bar when password is empty', async ({ page }) => {
+    test('should not show requirements checklist or strength bar when password is empty', async ({
+      page,
+    }) => {
       await page.goto('/register');
       await page.waitForSelector('[data-testid="register-form"]', {
         state: 'visible',
         timeout: 10000,
       });
 
-      const strengthIndicator = page.getByTestId('password-strength-indicator');
-      await expect(strengthIndicator).toBeVisible();
+      // The signup form passes showRequirements={false} — checklist is never rendered
+      await expect(page.getByTestId('password-requirements-list')).toHaveCount(0);
 
-      const requirementsList = page.getByTestId('password-requirements-list');
-      await expect(requirementsList).toBeVisible();
-
-      const strengthBar = page.getByTestId('password-strength-bar');
-      await expect(strengthBar).not.toBeVisible();
+      // Strength bar only appears once a password is typed
+      await expect(page.getByTestId('password-strength-bar')).toHaveCount(0);
     });
 
-    test('should show strength indicator when password is entered', async ({ page }) => {
+    test('should show strength bar when password is entered', async ({ page }) => {
       await page.goto('/register');
       await page.waitForSelector('[data-testid="register-form"]', {
         state: 'visible',
@@ -224,6 +168,12 @@ test.describe('Registration', () => {
 
       const strengthIndicator = page.getByTestId('password-strength-indicator');
       await expect(strengthIndicator).toBeVisible();
+
+      // Bar appears once password is typed
+      await expect(page.getByTestId('password-strength-bar')).toBeVisible();
+
+      // Checklist remains absent (showRequirements={false} on signup)
+      await expect(page.getByTestId('password-requirements-list')).toHaveCount(0);
     });
 
     test('should show weak strength for simple password', async ({ page }) => {
@@ -276,25 +226,7 @@ test.describe('Registration', () => {
       await expect(passwordInput).toHaveAttribute('type', 'text');
     });
 
-    test('should toggle confirm password visibility independently', async ({ page }) => {
-      await page.goto('/register');
-      await page.waitForSelector('[data-testid="register-form"]', {
-        state: 'visible',
-        timeout: 10000,
-      });
-
-      const confirmPasswordInput = page.getByTestId('confirm-password-input');
-      await expect(confirmPasswordInput).toHaveAttribute('type', 'password');
-
-      await confirmPasswordInput.fill('TestPassword123!');
-
-      const toggleButtons = page.locator(
-        'button[aria-label*="Show"], button[aria-label*="Hide"]'
-      );
-      await toggleButtons.nth(1).click();
-
-      await expect(confirmPasswordInput).toHaveAttribute('type', 'text');
-    });
+    // Deleted: 'should toggle confirm password visibility independently' — confirm-password field removed (AUTH-01)
   });
 
   test.describe('Terms Checkbox', () => {
@@ -308,11 +240,33 @@ test.describe('Registration', () => {
       await page.getByTestId('name-input').fill('Test User');
       await page.getByTestId('email-input').fill('test@example.com');
       await page.getByTestId('password-input').fill('TestPassword123!');
-      await page.getByTestId('confirm-password-input').fill('TestPassword123!');
 
       await page.getByTestId('register-submit').click();
 
       await expect(page.locator('#acceptedTerms-error')).toBeVisible();
+    });
+  });
+
+  test.describe('Name Field (Optional)', () => {
+    test('should accept an empty name without a validation error', async ({ page }) => {
+      await page.goto('/register');
+      await page.waitForSelector('[data-testid="register-form"]', {
+        state: 'visible',
+        timeout: 10000,
+      });
+
+      // Leave name-input empty — it is optional (AUTH-01)
+      await page.getByTestId('email-input').fill('test@example.com');
+      await page.getByTestId('password-input').fill('TestPassword123!');
+      await page.locator('#acceptedTerms').check();
+
+      await page.getByTestId('register-submit').click();
+
+      // Empty name must not produce a client-side validation error
+      await expect(page.locator('#name-error')).toHaveCount(0);
+      // Email and password passed client validation (no errors on those fields either)
+      await expect(page.locator('#email-error')).toHaveCount(0);
+      await expect(page.locator('#password-error')).toHaveCount(0);
     });
   });
 

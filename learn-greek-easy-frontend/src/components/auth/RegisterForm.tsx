@@ -60,20 +60,14 @@ type FormState = 'form' | 'verification' | 'error';
  * Registration form validation schema
  * Password validation requirements
  */
-const registerSchema = z
-  .object({
-    name: z.string().min(1, 'nameRequired').min(2, 'nameMinLength').max(50, 'nameMaxLength'),
-    email: z.string().min(1, 'emailRequired').email('emailInvalid'),
-    password: z.string().min(1, 'passwordRequired').min(8, 'passwordMinLength'),
-    confirmPassword: z.string().min(1, 'confirmPasswordRequired'),
-    acceptedTerms: z.boolean().refine((val) => val === true, {
-      message: 'termsRequired',
-    }),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'passwordsMismatch',
-    path: ['confirmPassword'],
-  });
+export const registerSchema = z.object({
+  name: z.string().trim().max(50, 'nameMaxLength').optional(),
+  email: z.string().min(1, 'emailRequired').email('emailInvalid'),
+  password: z.string().min(1, 'passwordRequired').min(8, 'passwordMinLength'),
+  acceptedTerms: z.boolean().refine((val) => val === true, {
+    message: 'termsRequired',
+  }),
+});
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
@@ -107,7 +101,6 @@ export const RegisterForm: React.FC = () => {
 
   // Password visibility
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // React Hook Form
   const {
@@ -122,7 +115,6 @@ export const RegisterForm: React.FC = () => {
       name: '',
       email: '',
       password: '',
-      confirmPassword: '',
       acceptedTerms: false,
     },
     mode: 'onSubmit',
@@ -147,7 +139,7 @@ export const RegisterForm: React.FC = () => {
         email: data.email,
         password: data.password,
         options: {
-          data: { full_name: data.name },
+          data: { full_name: data.name ?? '' },
           emailRedirectTo: `${window.location.origin}/callback`,
         },
       });
@@ -386,7 +378,7 @@ export const RegisterForm: React.FC = () => {
 
             {/* Name field */}
             <div className="space-y-2">
-              <Label htmlFor="name">{t('register.name')}</Label>
+              <Label htmlFor="name">{t('register.nameOptional')}</Label>
               <Input
                 id="name"
                 data-testid="name-input"
@@ -460,49 +452,7 @@ export const RegisterForm: React.FC = () => {
                   {getErrorMessage(errors.password.message)}
                 </p>
               )}
-              <PasswordStrengthIndicator password={passwordValue} />
-            </div>
-
-            {/* Confirm Password field */}
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">{t('register.confirmPassword')}</Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  data-testid="confirm-password-input"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder={t('register.confirmPasswordPlaceholder')}
-                  autoComplete="new-password"
-                  aria-invalid={errors.confirmPassword ? 'true' : 'false'}
-                  aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
-                  disabled={isFormDisabled}
-                  {...register('confirmPassword')}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  disabled={isFormDisabled}
-                  aria-label={
-                    showConfirmPassword
-                      ? t('passwordVisibility.hide')
-                      : t('passwordVisibility.show')
-                  }
-                >
-                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </Button>
-              </div>
-              {errors.confirmPassword && (
-                <p
-                  id="confirmPassword-error"
-                  className="mt-1 text-sm text-destructive"
-                  role="alert"
-                >
-                  {getErrorMessage(errors.confirmPassword.message)}
-                </p>
-              )}
+              <PasswordStrengthIndicator password={passwordValue} showRequirements={false} />
             </div>
 
             {/* Terms checkbox */}
