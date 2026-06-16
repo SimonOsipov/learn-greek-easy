@@ -47,6 +47,23 @@ describe('registerSchema — name field', () => {
       expect(nameIssue?.message).toBe('nameMaxLength');
     }
   });
+
+  it('name_exactly_50_passes: name of exactly 50 chars should succeed (boundary)', () => {
+    const exactName = 'a'.repeat(50);
+    const result = registerSchema.safeParse({ ...BASE_VALID, name: exactName });
+    expect(result.success).toBe(true);
+  });
+
+  it('name_whitespace_only_passes: whitespace-only name trims to empty and succeeds as optional', () => {
+    // .trim() converts "   " → "" before max(50) check; empty string satisfies optional.
+    // The form sends full_name: "" → authStore uses email local-part as fallback.
+    const result = registerSchema.safeParse({ ...BASE_VALID, name: '   ' });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      // Confirm trim() stripped the whitespace so the stored value is empty
+      expect(result.data.name).toBe('');
+    }
+  });
 });
 
 // ── password field ───────────────────────────────────────────────────────────
