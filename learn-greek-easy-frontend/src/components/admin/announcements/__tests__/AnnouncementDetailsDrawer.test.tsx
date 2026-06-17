@@ -300,6 +300,31 @@ describe('AnnouncementDetailsDrawer', () => {
       render(<AnnouncementDetailsDrawer {...defaultProps} />);
       expect(document.querySelector('.drawer-bcrumb')).toBeNull();
     });
+
+    // ADMIN2-33-02 regression guard: the "33% read" pill must not reappear
+    it('read percentage pill is absent from the header (ADMIN2-33-02)', () => {
+      const ann = makeAnnouncement({ read_count: 80, total_recipients: 200 });
+      setupStore(buildStoreState({ selectedAnnouncement: ann }));
+      render(<AnnouncementDetailsDrawer {...defaultProps} />);
+
+      // The removed <Badge> rendered text like "40% read" — assert it is gone
+      expect(screen.queryByText(/% .*read/i)).toBeNull();
+      // Also verify no badge with a "% " prefix exists anywhere in the header
+      const headRow = document.querySelector('.drawer-head-row');
+      expect(headRow).not.toBeNull();
+      expect(headRow!.textContent).not.toMatch(/\d+%/);
+    });
+
+    // ADMIN2-33-02 regression guard: Delivered badge must still render inline
+    it('Delivered badge renders inside .drawer-head-row (ADMIN2-33-02)', () => {
+      const ann = makeAnnouncement();
+      setupStore(buildStoreState({ selectedAnnouncement: ann }));
+      render(<AnnouncementDetailsDrawer {...defaultProps} />);
+
+      const headRow = document.querySelector('.drawer-head-row');
+      expect(headRow).not.toBeNull();
+      expect(headRow!.textContent).toContain('Delivered');
+    });
   });
 
   // ── SidePanel primitive consumption (ADMIN2-20) ───────────────────────────
