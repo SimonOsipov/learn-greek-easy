@@ -2,10 +2,11 @@
  * Reset Password Flow Integration Tests
  *
  * Covers the most security-sensitive write in the app:
- * - mismatched passwords block updateUser (client-side zod refine)
  * - password < 8 chars fails client-side and never calls updateUser
  * - successful update renders the success card
  * - a Supabase "session expired" error maps to the correct alert copy
+ * - no confirm-password field (AUTH-02)
+ * - no requirements checklist — advisory bar only (AUTH-02)
  *
  * NOTE: ResetPassword is intentionally NOT wrapped in PublicRoute (see the
  * component docstring): Supabase fires SIGNED_IN before PASSWORD_RECOVERY, so
@@ -54,38 +55,18 @@ describe('ResetPassword Flow Integration Tests', () => {
 
     expect(await screen.findByTestId('reset-password-card')).toBeInTheDocument();
     expect(screen.getByTestId('password-input')).toBeInTheDocument();
-    expect(screen.getByTestId('confirm-password-input')).toBeInTheDocument();
-  });
-
-  it('blocks updateUser when passwords do not match', async () => {
-    const user = userEvent.setup();
-    render(<ResetPassword />);
-
-    await user.type(screen.getByTestId('password-input'), 'ValidPass123!');
-    await user.type(screen.getByTestId('confirm-password-input'), 'DifferentPass123!');
-    await user.click(screen.getByTestId('reset-password-submit'));
-
-    // Mismatch error surfaces and the Supabase write is never attempted.
-    await waitFor(() => {
-      expect(screen.getByText(/passwords do not match/i)).toBeInTheDocument();
-    });
-    expect(mockUpdateUser).not.toHaveBeenCalled();
-    // Still on the form (no success card).
-    expect(screen.queryByTestId('reset-password-success-card')).not.toBeInTheDocument();
+    // No confirm-password field (AUTH-02).
+    expect(screen.queryByTestId('confirm-password-input')).not.toBeInTheDocument();
   });
 
   it('fails client-side and does not call updateUser when password is under 8 characters', async () => {
     const user = userEvent.setup();
     render(<ResetPassword />);
 
-    // Both fields match so only the min-length rule can fail.
     await user.type(screen.getByTestId('password-input'), 'short');
-    await user.type(screen.getByTestId('confirm-password-input'), 'short');
     await user.click(screen.getByTestId('reset-password-submit'));
 
-    // Assert on the field-level zod error (the PasswordStrengthIndicator also
-    // renders an "At least 8 characters" requirement hint, so scope to the
-    // error node by id).
+    // Assert on the field-level zod error.
     await waitFor(() => {
       const error = document.getElementById('password-error');
       expect(error).toHaveTextContent(/password must be at least 8 characters/i);
@@ -98,7 +79,6 @@ describe('ResetPassword Flow Integration Tests', () => {
     render(<ResetPassword />);
 
     await user.type(screen.getByTestId('password-input'), 'ValidPass123!');
-    await user.type(screen.getByTestId('confirm-password-input'), 'ValidPass123!');
     await user.click(screen.getByTestId('reset-password-submit'));
 
     await waitFor(() => {
@@ -121,7 +101,6 @@ describe('ResetPassword Flow Integration Tests', () => {
     render(<ResetPassword />);
 
     await user.type(screen.getByTestId('password-input'), 'ValidPass123!');
-    await user.type(screen.getByTestId('confirm-password-input'), 'ValidPass123!');
     await user.click(screen.getByTestId('reset-password-submit'));
 
     await waitFor(() => {
@@ -143,13 +122,78 @@ describe('ResetPassword Flow Integration Tests', () => {
     render(<ResetPassword />);
 
     await user.type(screen.getByTestId('password-input'), 'ValidPass123!');
-    await user.type(screen.getByTestId('confirm-password-input'), 'ValidPass123!');
     await user.click(screen.getByTestId('reset-password-submit'));
 
     await waitFor(() => {
       expect(
         screen.getByText(/failed to update password\. please try again\./i)
       ).toBeInTheDocument();
+    });
+  });
+
+  // ── AUTH-02-01 specs (now green) ────────────────────────────────────────────
+  // These tests pin the new contract for the reset-password form:
+  //   • no confirm-password field
+  //   • no requirements checklist (advisory bar only)
+  //   • length-only validation — no char-class required, no cross-field refine
+
+  describe('AUTH-02-01 new contract', () => {
+    it('AC-2: does not render the confirm-password field', async () => {
+      render(<ResetPassword />);
+
+      // The form must be visible before we assert absence.
+      expect(await screen.findByTestId('reset-password-card')).toBeInTheDocument();
+
+      expect(screen.queryByTestId('confirm-password-input')).not.toBeInTheDocument();
+    });
+
+    it('AC-1: does not render the requirements checklist', async () => {
+      render(<ResetPassword />);
+      expect(await screen.findByTestId('reset-password-card')).toBeInTheDocument();
+
+      // PSI is advisory-bar-only (checklist removed entirely in AUTH-02).
+      expect(screen.queryByTestId('password-requirements-list')).not.toBeInTheDocument();
+    });
+
+    it('AC-1 (guard): shows the advisory strength bar after typing', async () => {
+      const user = userEvent.setup();
+      render(<ResetPassword />);
+      expect(await screen.findByTestId('reset-password-card')).toBeInTheDocument();
+
+      // The bar always renders once a password is typed.
+      await user.type(screen.getByTestId('password-input'), 'anything');
+      expect(screen.getByTestId('password-strength-bar')).toBeInTheDocument();
+    });
+
+    it('AC-3 (guard): rejects a <8 char password client-side without calling updateUser', async () => {
+      const user = userEvent.setup();
+      render(<ResetPassword />);
+      expect(await screen.findByTestId('reset-password-card')).toBeInTheDocument();
+
+      await user.type(screen.getByTestId('password-input'), 'short');
+      await user.click(screen.getByTestId('reset-password-submit'));
+
+      await waitFor(() => {
+        const error = document.getElementById('password-error');
+        expect(error).toHaveTextContent(/password must be at least 8 characters/i);
+      });
+      expect(mockUpdateUser).not.toHaveBeenCalled();
+    });
+
+    it('AC-3/AC-4: accepts an 8+ char lowercase-only password and calls updateUser (no confirm field needed)', async () => {
+      const user = userEvent.setup();
+      render(<ResetPassword />);
+      expect(await screen.findByTestId('reset-password-card')).toBeInTheDocument();
+
+      // Deliberately no upper/number/special chars — length-only schema must accept this.
+      // Deliberately NO confirm-password fill — the field does not exist.
+      await user.type(screen.getByTestId('password-input'), 'lowercaseonly');
+      await user.click(screen.getByTestId('reset-password-submit'));
+
+      await waitFor(() => {
+        expect(mockUpdateUser).toHaveBeenCalledWith({ password: 'lowercaseonly' });
+      });
+      expect(await screen.findByTestId('reset-password-success-card')).toBeInTheDocument();
     });
   });
 });

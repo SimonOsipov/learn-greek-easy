@@ -150,7 +150,7 @@ test.describe('Registration', () => {
         timeout: 10000,
       });
 
-      // The signup form passes showRequirements={false} — checklist is never rendered
+      // Checklist removed entirely in AUTH-02 (PasswordStrengthIndicator is advisory-bar-only)
       await expect(page.getByTestId('password-requirements-list')).toHaveCount(0);
 
       // Strength bar only appears once a password is typed
@@ -172,7 +172,7 @@ test.describe('Registration', () => {
       // Bar appears once password is typed
       await expect(page.getByTestId('password-strength-bar')).toBeVisible();
 
-      // Checklist remains absent (showRequirements={false} on signup)
+      // Checklist remains absent (checklist removed entirely in AUTH-02)
       await expect(page.getByTestId('password-requirements-list')).toHaveCount(0);
     });
 

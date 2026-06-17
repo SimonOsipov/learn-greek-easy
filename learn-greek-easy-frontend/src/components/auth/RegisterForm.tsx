@@ -452,7 +452,7 @@ export const RegisterForm: React.FC = () => {
                   {getErrorMessage(errors.password.message)}
                 </p>
               )}
-              <PasswordStrengthIndicator password={passwordValue} showRequirements={false} />
+              <PasswordStrengthIndicator password={passwordValue} />
             </div>
 
             {/* Terms checkbox */}

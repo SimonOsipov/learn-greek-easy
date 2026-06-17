@@ -1,8 +1,9 @@
 /**
  * PasswordStrengthIndicator Unit Tests
  *
- * Tests the password requirements checklist, progress bar visibility,
- * and strength color coding behavior.
+ * Tests the advisory strength bar visibility and color coding behavior.
+ * The requirements checklist was removed in AUTH-02; these tests cover the
+ * advisory-bar-only contract.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -15,11 +16,6 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => {
       const translations: Record<string, string> = {
-        'register.passwordRequirements.minLength': 'At least 8 characters',
-        'register.passwordRequirements.hasLowercase': 'One lowercase letter',
-        'register.passwordRequirements.hasUppercase': 'One uppercase letter',
-        'register.passwordRequirements.hasNumber': 'One number',
-        'register.passwordRequirements.hasSpecial': 'One special character',
         'register.passwordStrength.label': 'Password strength:',
         'register.passwordStrength.weak': 'Weak',
         'register.passwordStrength.fair': 'Fair',
@@ -32,31 +28,6 @@ vi.mock('react-i18next', () => ({
 
 describe('PasswordStrengthIndicator', () => {
   describe('Empty password', () => {
-    it('renders checklist with 5 items when password is empty', () => {
-      render(<PasswordStrengthIndicator password="" />);
-
-      const list = screen.getByTestId('password-requirements-list');
-      const items = list.querySelectorAll('li');
-      expect(items).toHaveLength(5);
-    });
-
-    it('shows all 5 items with X (unchecked) when password is empty', () => {
-      render(<PasswordStrengthIndicator password="" />);
-
-      expect(screen.getByText('At least 8 characters')).toBeInTheDocument();
-      expect(screen.getByText('One lowercase letter')).toBeInTheDocument();
-      expect(screen.getByText('One uppercase letter')).toBeInTheDocument();
-      expect(screen.getByText('One number')).toBeInTheDocument();
-      expect(screen.getByText('One special character')).toBeInTheDocument();
-
-      // All items should have muted-foreground (unchecked) color
-      const items = screen.getByTestId('password-requirements-list').querySelectorAll('li');
-      items.forEach((item) => {
-        const span = item.querySelector('span');
-        expect(span).toHaveClass('text-muted-foreground');
-      });
-    });
-
     it('does not show progress bar when password is empty', () => {
       render(<PasswordStrengthIndicator password="" />);
 
@@ -74,35 +45,6 @@ describe('PasswordStrengthIndicator', () => {
   });
 
   describe('Non-empty password', () => {
-    it('shows all 5 items checked (green) for a fully valid password', () => {
-      render(<PasswordStrengthIndicator password="Abcdefg1!" />);
-
-      const items = screen.getByTestId('password-requirements-list').querySelectorAll('li');
-      expect(items).toHaveLength(5);
-      items.forEach((item) => {
-        const span = item.querySelector('span');
-        expect(span).toHaveClass('text-success');
-      });
-    });
-
-    it('shows only hasLowercase checked for password "abc"', () => {
-      render(<PasswordStrengthIndicator password="abc" />);
-
-      const list = screen.getByTestId('password-requirements-list');
-      const items = list.querySelectorAll('li');
-
-      // minLength: not met (abc < 8)
-      expect(items[0].querySelector('span')).toHaveClass('text-muted-foreground');
-      // hasLowercase: met
-      expect(items[1].querySelector('span')).toHaveClass('text-success');
-      // hasUppercase: not met
-      expect(items[2].querySelector('span')).toHaveClass('text-muted-foreground');
-      // hasNumber: not met
-      expect(items[3].querySelector('span')).toHaveClass('text-muted-foreground');
-      // hasSpecial: not met
-      expect(items[4].querySelector('span')).toHaveClass('text-muted-foreground');
-    });
-
     it('shows progress bar when password is non-empty', () => {
       render(<PasswordStrengthIndicator password="weakpass" />);
 
@@ -163,38 +105,6 @@ describe('PasswordStrengthIndicator', () => {
       render(<PasswordStrengthIndicator password="test" />);
 
       expect(screen.getByTestId('password-strength-indicator')).toBeInTheDocument();
-    });
-  });
-
-  describe('showRequirements={false} (signup form usage)', () => {
-    it('does not render password-requirements-list for empty password', () => {
-      render(<PasswordStrengthIndicator password="" showRequirements={false} />);
-
-      expect(screen.queryByTestId('password-requirements-list')).not.toBeInTheDocument();
-    });
-
-    it('does not render password-requirements-list for non-empty password', () => {
-      render(<PasswordStrengthIndicator password="Abcdefg1!" showRequirements={false} />);
-
-      expect(screen.queryByTestId('password-requirements-list')).not.toBeInTheDocument();
-    });
-
-    it('still renders the container when showRequirements is false', () => {
-      render(<PasswordStrengthIndicator password="" showRequirements={false} />);
-
-      expect(screen.getByTestId('password-strength-indicator')).toBeInTheDocument();
-    });
-
-    it('shows the strength bar once a password is typed with showRequirements={false}', () => {
-      render(<PasswordStrengthIndicator password="Abcdefg1!" showRequirements={false} />);
-
-      expect(screen.getByTestId('password-strength-bar')).toBeInTheDocument();
-    });
-
-    it('does not show strength bar for empty password with showRequirements={false}', () => {
-      render(<PasswordStrengthIndicator password="" showRequirements={false} />);
-
-      expect(screen.queryByTestId('password-strength-bar')).not.toBeInTheDocument();
     });
   });
 });

@@ -8,7 +8,7 @@
  * Flow:
  * 1. User clicks reset link in email → redirected to /reset-password#access_token=...
  * 2. Supabase client detects token, establishes session
- * 3. User enters new password + confirmation
+ * 3. User enters new password
  * 4. Submit calls supabase.auth.updateUser({ password })
  * 5. Success screen with link to dashboard
  *
@@ -50,17 +50,12 @@ import { mapSupabaseResetError } from '@/utils/auth-errors';
 type FormState = 'form' | 'success';
 
 /**
- * Password validation schema
+ * Password validation schema — length-only, no char-class rules (AC-3).
+ * Confirm-password field removed (AC-2).
  */
-const resetPasswordSchema = z
-  .object({
-    password: z.string().min(1, 'passwordRequired').min(8, 'passwordMinLength'),
-    confirmPassword: z.string().min(1, 'confirmPasswordRequired'),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'passwordsMismatch',
-    path: ['confirmPassword'],
-  });
+const resetPasswordSchema = z.object({
+  password: z.string().min(1, 'passwordRequired').min(8, 'passwordMinLength'),
+});
 
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
@@ -72,7 +67,6 @@ export const ResetPassword: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // React Hook Form
   const {
@@ -84,7 +78,6 @@ export const ResetPassword: React.FC = () => {
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
       password: '',
-      confirmPassword: '',
     },
     mode: 'onSubmit',
     reValidateMode: 'onChange',
@@ -253,48 +246,6 @@ export const ResetPassword: React.FC = () => {
                 </p>
               )}
               <PasswordStrengthIndicator password={passwordValue} className="mt-1" />
-            </div>
-
-            {/* Confirm Password field */}
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">{t('resetPassword.confirmPassword')}</Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  data-testid="confirm-password-input"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder={t('resetPassword.confirmPasswordPlaceholder')}
-                  autoComplete="new-password"
-                  aria-invalid={errors.confirmPassword ? 'true' : 'false'}
-                  aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
-                  disabled={isFormDisabled}
-                  {...register('confirmPassword')}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  disabled={isFormDisabled}
-                  aria-label={
-                    showConfirmPassword
-                      ? t('passwordVisibility.hide')
-                      : t('passwordVisibility.show')
-                  }
-                >
-                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </Button>
-              </div>
-              {errors.confirmPassword && (
-                <p
-                  id="confirmPassword-error"
-                  className="mt-1 text-sm text-destructive"
-                  role="alert"
-                >
-                  {getErrorMessage(errors.confirmPassword.message)}
-                </p>
-              )}
             </div>
 
             <SubmitButton
