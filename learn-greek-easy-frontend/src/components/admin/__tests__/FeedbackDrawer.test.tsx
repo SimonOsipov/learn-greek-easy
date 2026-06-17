@@ -48,12 +48,9 @@ vi.mock('react-i18next', () => ({
         'feedback.v2.drawer.status.wont_fix': "Won't fix",
         'feedback.v2.drawer.status.duplicate': 'Duplicate',
         'feedback.v2.drawer.responseHintSuffix': ' — public, learner will see this verbatim',
-        'feedback.v2.drawer.saveNotice': opts?.name
-          ? `Saving will notify ${opts.name} in-app`
-          : 'Saving will notify the user in-app',
         'feedback.v2.drawer.theUser': 'the user',
-        'feedback.v2.drawer.footer.ready': 'Ready',
-        'feedback.v2.drawer.footer.noReplyYet': 'No reply yet',
+        'feedback.v2.drawer.idCopied': 'Feedback ID copied',
+        'feedback.v2.drawer.idCopyAria': 'Copy feedback ID',
         'feedback.v2.drawer.saving': 'Saving…',
         'feedback.v2.drawer.admin': 'Admin',
         'feedback.v2.drawer.notFound': 'Feedback not found.',
@@ -201,6 +198,53 @@ describe('FeedbackDrawer', () => {
       renderDrawer(feedback.id, 'reply');
 
       expect(screen.getByRole('button', { name: 'Save & notify' })).toBeInTheDocument();
+    });
+  });
+
+  // ── Header — truncated ID + copy button ───────────────────────────────────
+
+  describe('Header — truncated ID + copy button', () => {
+    it('renders the truncated ID (first 8 chars + ellipsis)', () => {
+      const feedback = makeFeedback({ id: 'fbdr-test-001-full-uuid' });
+      mockStoreWith(feedback);
+
+      renderDrawer(feedback.id, 'reply');
+
+      // First 8 chars of 'fbdr-test-001-full-uuid' = 'fbdr-tes'
+      expect(screen.getByText('fbdr-tes…')).toBeInTheDocument();
+    });
+
+    it('renders the copy-ID button with correct aria-label', () => {
+      const feedback = makeFeedback();
+      mockStoreWith(feedback);
+
+      renderDrawer(feedback.id, 'reply');
+
+      const copyBtn = screen.getByTestId('feedback-drawer-copy-id');
+      expect(copyBtn).toBeInTheDocument();
+      expect(copyBtn).toHaveAttribute('aria-label', 'Copy feedback ID');
+    });
+
+    it('clicking copy-ID writes the full id to clipboard and fires a toast', async () => {
+      const user = userEvent.setup();
+      const feedback = makeFeedback({ id: 'fbdr-test-001' });
+      mockStoreWith(feedback);
+
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText },
+        writable: true,
+        configurable: true,
+      });
+
+      renderDrawer(feedback.id, 'reply');
+
+      await user.click(screen.getByTestId('feedback-drawer-copy-id'));
+
+      expect(writeText).toHaveBeenCalledWith('fbdr-test-001');
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Feedback ID copied' })
+      );
     });
   });
 

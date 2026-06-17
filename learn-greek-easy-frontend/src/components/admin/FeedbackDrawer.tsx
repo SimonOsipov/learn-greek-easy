@@ -12,12 +12,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { format, formatDistanceToNow } from 'date-fns';
 import { el } from 'date-fns/locale/el';
 import { ru } from 'date-fns/locale/ru';
+import { Copy } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
 import { Badge } from '@/components/ui/badge';
-import type { BadgeTone } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { SidePanel } from '@/components/ui/side-panel';
@@ -169,11 +169,6 @@ function ReplyTab({ feedbackId, onClose, onRequestDelete, form }: ReplyTabProps)
     }
   }
 
-  const footerBadgeTone: BadgeTone = responseValue.trim() ? 'green' : 'gray';
-  const footerBadgeLabel = responseValue.trim()
-    ? t('feedback.v2.drawer.footer.ready')
-    : t('feedback.v2.drawer.footer.noReplyYet');
-
   return (
     <>
       <SidePanel.Body>
@@ -190,45 +185,41 @@ function ReplyTab({ feedbackId, onClose, onRequestDelete, form }: ReplyTabProps)
         </div>
 
         <form id="reply-form" onSubmit={form.handleSubmit(handleSave)} noValidate>
-          <Field
-            label={t('feedback.v2.reply.status_label')}
-            hint={t('feedback.v2.reply.status_hint')}
-          >
-            <StatusGrid
-              options={STATUS_PICKER.map((s) => ({ ...s, label: tDynamic(t, s.label) }))}
-              value={selectedStatus}
-              onChange={(next) => form.setValue('status', next, { shouldDirty: true })}
-            />
-          </Field>
+          <div className="dr-fields">
+            <Field
+              label={t('feedback.v2.reply.status_label')}
+              hint={t('feedback.v2.reply.status_hint')}
+            >
+              <StatusGrid
+                options={STATUS_PICKER.map((s) => ({ ...s, label: tDynamic(t, s.label) }))}
+                value={selectedStatus}
+                onChange={(next) => form.setValue('status', next, { shouldDirty: true })}
+              />
+            </Field>
 
-          <Field
-            label={t('feedback.v2.reply.response_label')}
-            hint={
-              <>
-                <span data-testid="feedback-drawer-char-counter">{charCount}/500</span>
-                {t('feedback.v2.drawer.responseHintSuffix')}
-              </>
-            }
-          >
-            <Textarea
-              rows={6}
-              maxLength={500}
-              data-testid="feedback-drawer-textarea"
-              {...form.register('admin_response')}
-            />
-          </Field>
+            <Field
+              label={t('feedback.v2.reply.response_label')}
+              hint={
+                <>
+                  <span data-testid="feedback-drawer-char-counter">{charCount}/500</span>
+                  {t('feedback.v2.drawer.responseHintSuffix')}
+                </>
+              }
+            >
+              <Textarea
+                rows={6}
+                maxLength={500}
+                data-testid="feedback-drawer-textarea"
+                {...form.register('admin_response')}
+              />
+            </Field>
+          </div>
         </form>
       </SidePanel.Body>
 
       <SidePanel.Footer>
-        {/* Left: Delete (destructive) + status block — status block removed in ADMIN2-33-03 */}
+        {/* Left: Delete (destructive) */}
         <div className="drawer-foot-left">
-          <Badge tone={footerBadgeTone}>{footerBadgeLabel}</Badge>
-          <span className="text-sm text-muted-foreground">
-            {t('feedback.v2.drawer.saveNotice', {
-              name: feedback.author?.full_name ?? t('feedback.v2.drawer.theUser'),
-            })}
-          </span>
           <Button type="button" variant="destructive" onClick={() => onRequestDelete(feedback.id)}>
             {t('feedback.delete.button')}
           </Button>
@@ -330,6 +321,7 @@ export function FeedbackDrawer({
   onRequestDelete,
 }: FeedbackDrawerProps) {
   const { t, i18n } = useTranslation('admin');
+  const { toast } = useToast();
 
   const feedback = useAdminFeedbackStore((s) => s.feedbackList.find((f) => f.id === feedbackId));
 
@@ -362,13 +354,25 @@ export function FeedbackDrawer({
           <div className="drawer-head-content">
             <div className="drawer-bcrumb">
               {t('feedback.v2.drawer.headerPrefix')}
-              {feedback.id} ·{' '}
+              <code>{feedback.id.slice(0, 8)}…</code>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(feedback.id);
+                  toast({ title: t('feedback.v2.drawer.idCopied') });
+                }}
+                data-testid="feedback-drawer-copy-id"
+                aria-label={t('feedback.v2.drawer.idCopyAria')}
+              >
+                <Copy className="size-3.5" aria-hidden="true" />
+              </button>{' '}
+              ·{' '}
               {format(new Date(feedback.created_at), 'PP', {
                 locale: getDateLocale(i18n.language),
               })}
             </div>
-            <h2 className="drawer-h">{feedback.title}</h2>
-            <div className="drawer-meta">
+            <div className="drawer-head-row">
+              <h2 className="drawer-h">{feedback.title}</h2>
               <Badge tone={CATEGORY_TONE[feedback.category]}>
                 {feedback.category === 'bug_incorrect_data'
                   ? t('feedback.v2.type.bug')
