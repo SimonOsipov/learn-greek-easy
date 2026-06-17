@@ -11,7 +11,7 @@
 
 import { useEffect } from 'react';
 
-import { ExternalLink, Trash2 } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -217,8 +217,19 @@ export function AnnouncementDetailsDrawer({
 
         {/* ── Footer ───────────────────────────────────────────────────── */}
         <SidePanel.Footer>
-          {/* Left: dim helper */}
+          {/* Left: Delete (destructive) + dim helper — helper removed in ADMIN2-33-02 */}
           <div className="drawer-foot-left">
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (announcementId) onRequestDelete(announcementId);
+              }}
+              disabled={!announcement || isLoadingDetail}
+              data-testid="announcement-details-delete-button"
+            >
+              {t('announcements.delete.button')}
+            </Button>
             <span className="drawer-foot-helper">
               {announcement
                 ? `${t('announcements.v2.details.announcementLabel')} #${announcement.id.slice(0, 8)} · ${t('announcements.v2.details.sent')} ${footerDate}`
@@ -228,21 +239,6 @@ export function AnnouncementDetailsDrawer({
 
           {/* Right: action buttons */}
           <div className="drawer-foot-right">
-            {/* Delete — glass, danger text; parent owns ConfirmDialog */}
-            <button
-              type="button"
-              className="btn btn-glass"
-              style={{ color: 'hsl(var(--destructive))' }}
-              onClick={() => {
-                if (announcementId) onRequestDelete(announcementId);
-              }}
-              disabled={!announcement || isLoadingDetail}
-              data-testid="announcement-details-delete-button"
-            >
-              <Trash2 className="size-4" aria-hidden="true" />
-              {t('announcements.delete.button')}
-            </button>
-
             {/* Close — primary */}
             <Button
               type="button"

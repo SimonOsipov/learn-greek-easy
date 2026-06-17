@@ -12,7 +12,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { format, formatDistanceToNow } from 'date-fns';
 import { el } from 'date-fns/locale/el';
 import { ru } from 'date-fns/locale/ru';
-import { Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
@@ -222,25 +221,21 @@ function ReplyTab({ feedbackId, onClose, onRequestDelete, form }: ReplyTabProps)
       </SidePanel.Body>
 
       <SidePanel.Footer>
-        <div className="flex flex-1 items-center gap-2">
+        {/* Left: Delete (destructive) + status block — status block removed in ADMIN2-33-03 */}
+        <div className="drawer-foot-left">
           <Badge tone={footerBadgeTone}>{footerBadgeLabel}</Badge>
           <span className="text-sm text-muted-foreground">
             {t('feedback.v2.drawer.saveNotice', {
               name: feedback.author?.full_name ?? t('feedback.v2.drawer.theUser'),
             })}
           </span>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => onRequestDelete(feedback.id)}
-            className="text-destructive"
-          >
-            <Trash2 className="size-4" aria-hidden="true" />
+          <Button type="button" variant="destructive" onClick={() => onRequestDelete(feedback.id)}>
             {t('feedback.delete.button')}
           </Button>
+        </div>
 
+        {/* Right: safe actions */}
+        <div className="drawer-foot-right">
           <Button type="button" variant="ghost" onClick={onClose}>
             {t('feedback.v2.reply.cancel')}
           </Button>
