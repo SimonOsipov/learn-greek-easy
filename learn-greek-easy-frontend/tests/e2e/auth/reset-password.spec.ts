@@ -25,8 +25,21 @@ test.describe('Reset Password', () => {
       await expect(page.getByTestId('reset-password-title')).toBeVisible();
       await expect(page.getByTestId('reset-password-description')).toBeVisible();
       await expect(page.getByTestId('password-input')).toBeVisible();
-      await expect(page.getByTestId('confirm-password-input')).toBeVisible();
+      // No confirm-password field (AUTH-02).
+      await expect(page.getByTestId('confirm-password-input')).toHaveCount(0);
       await expect(page.getByTestId('reset-password-submit')).toBeVisible();
+    });
+
+    test('should not show requirements checklist', async ({ page }) => {
+      await page.goto('/reset-password');
+
+      await page.waitForSelector('[data-testid="reset-password-card"]', {
+        state: 'visible',
+        timeout: 10000,
+      });
+
+      // Checklist removed entirely in AUTH-02 (PSI is advisory-bar-only).
+      await expect(page.getByTestId('password-requirements-list')).toHaveCount(0);
     });
 
     test('should have hidden email input for password managers', async ({ page }) => {
