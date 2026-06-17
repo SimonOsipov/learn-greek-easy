@@ -1128,4 +1128,69 @@ describe('ChangelogEditorDrawer', () => {
       expect(mockUpdateEntry).not.toHaveBeenCalled();
     });
   });
+
+  // ── ADMIN2-33-04: Preview badge localizes to the active content language ──
+
+  it('preview_badge_localizes_to_ru_content_tab: preview badge shows "Новая функция" when lang=ru (tag=new_feature, admin UI=EN)', () => {
+    // Admin UI locale stays EN (test-setup default: lng='en').
+    // Content tab is RU.
+    mockStoreState.lang = 'ru';
+    mockStoreState.panelMode = 'form';
+
+    render(
+      <ChangelogEditorDrawer
+        open={true}
+        onClose={vi.fn()}
+        entry={makeEntry({ tag: 'new_feature' })}
+      />
+    );
+
+    // The preview badge must resolve to the RU label driven by the content lang tab.
+    // BUG: currently resolves in i18n.language (EN) → shows "New Feature".
+    // This assertion FAILS until { lng: lang } is added to the tDynamic call.
+    expect(screen.getByTestId('changelog-preview-tag-badge')).toHaveTextContent('Новая функция');
+  });
+
+  it('preview_badge_localizes_to_en_content_tab: preview badge shows "New Feature" when lang=en (tag=new_feature, admin UI=EN)', () => {
+    // Both admin UI locale and content tab are EN — badge must show EN label.
+    mockStoreState.lang = 'en';
+    mockStoreState.panelMode = 'form';
+
+    render(
+      <ChangelogEditorDrawer
+        open={true}
+        onClose={vi.fn()}
+        entry={makeEntry({ tag: 'new_feature' })}
+      />
+    );
+
+    // This passes today (EN is current behaviour) but must stay green after the fix.
+    expect(screen.getByTestId('changelog-preview-tag-badge')).toHaveTextContent('New Feature');
+  });
+
+  it('preview_badge_decoupled_from_admin_ui_locale: with admin UI=EN and content lang=ru, pill shows EN label while badge shows RU label', async () => {
+    // Admin UI stays EN (test-setup default).
+    // Content tab = RU → badge must show RU label.
+    mockStoreState.lang = 'ru';
+    mockStoreState.panelMode = 'form';
+
+    render(
+      <ChangelogEditorDrawer
+        open={true}
+        onClose={vi.fn()}
+        entry={makeEntry({ tag: 'new_feature' })}
+      />
+    );
+
+    // Part (a): top type-selector pill follows admin UI locale (EN) — admin chrome.
+    // EN admin UI → pill must show "New Feature" (current correct behaviour; stays green).
+    const pill = screen.getByTestId('changelog-editor-tag-new_feature');
+    expect(pill).toHaveTextContent('New Feature');
+
+    // Part (b): preview badge follows content lang (RU), NOT admin UI locale.
+    // BUG: currently resolves in i18n.language (EN) → shows "New Feature".
+    // This assertion FAILS until { lng: lang } is added.
+    const badge = screen.getByTestId('changelog-preview-tag-badge');
+    expect(badge).toHaveTextContent('Новая функция');
+  });
 });
