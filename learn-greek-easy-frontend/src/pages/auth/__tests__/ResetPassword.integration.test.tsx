@@ -152,4 +152,78 @@ describe('ResetPassword Flow Integration Tests', () => {
       ).toBeInTheDocument();
     });
   });
+
+  // ── AUTH-02-01 RED specs ────────────────────────────────────────────────────
+  // These tests define the NEW contract for the reset-password form:
+  //   • no confirm-password field
+  //   • no requirements checklist (advisory bar only)
+  //   • length-only validation — no char-class required, no cross-field refine
+  //
+  // They are intentionally RED against the current implementation and will turn
+  // GREEN once AUTH-02-01 (drop confirm field + checklist) is implemented.
+
+  describe('AUTH-02-01 new contract', () => {
+    it('AC-2: does not render the confirm-password field', async () => {
+      render(<ResetPassword />);
+
+      // The form must be visible before we assert absence.
+      expect(await screen.findByTestId('reset-password-card')).toBeInTheDocument();
+
+      // After impl: confirm field is gone. Currently it renders → RED.
+      expect(screen.queryByTestId('confirm-password-input')).not.toBeInTheDocument();
+    });
+
+    it('AC-1: does not render the requirements checklist', async () => {
+      render(<ResetPassword />);
+      expect(await screen.findByTestId('reset-password-card')).toBeInTheDocument();
+
+      // After impl: PasswordStrengthIndicator called with showRequirements={false}.
+      // Currently it defaults to true → list renders → RED.
+      expect(screen.queryByTestId('password-requirements-list')).not.toBeInTheDocument();
+    });
+
+    it('AC-1 (guard): shows the advisory strength bar after typing', async () => {
+      const user = userEvent.setup();
+      render(<ResetPassword />);
+      expect(await screen.findByTestId('reset-password-card')).toBeInTheDocument();
+
+      // The bar is NOT gated by showRequirements — it always renders once a
+      // password is typed. This passes now and must keep passing after impl.
+      await user.type(screen.getByTestId('password-input'), 'anything');
+      expect(screen.getByTestId('password-strength-bar')).toBeInTheDocument();
+    });
+
+    it('AC-3 (guard): rejects a <8 char password client-side without calling updateUser', async () => {
+      const user = userEvent.setup();
+      render(<ResetPassword />);
+      expect(await screen.findByTestId('reset-password-card')).toBeInTheDocument();
+
+      await user.type(screen.getByTestId('password-input'), 'short');
+      await user.click(screen.getByTestId('reset-password-submit'));
+
+      await waitFor(() => {
+        const error = document.getElementById('password-error');
+        expect(error).toHaveTextContent(/password must be at least 8 characters/i);
+      });
+      expect(mockUpdateUser).not.toHaveBeenCalled();
+    });
+
+    it('AC-3/AC-4: accepts an 8+ char lowercase-only password and calls updateUser (no confirm field needed)', async () => {
+      const user = userEvent.setup();
+      render(<ResetPassword />);
+      expect(await screen.findByTestId('reset-password-card')).toBeInTheDocument();
+
+      // Deliberately no upper/number/special chars — length-only schema must accept this.
+      // Deliberately NO confirm-password fill — the field must not exist post-impl.
+      await user.type(screen.getByTestId('password-input'), 'lowercaseonly');
+      await user.click(screen.getByTestId('reset-password-submit'));
+
+      // After impl: form submits, updateUser called with the typed password.
+      // Currently: confirmPassword field required → zod refine blocks submit → RED.
+      await waitFor(() => {
+        expect(mockUpdateUser).toHaveBeenCalledWith({ password: 'lowercaseonly' });
+      });
+      expect(await screen.findByTestId('reset-password-success-card')).toBeInTheDocument();
+    });
+  });
 });
