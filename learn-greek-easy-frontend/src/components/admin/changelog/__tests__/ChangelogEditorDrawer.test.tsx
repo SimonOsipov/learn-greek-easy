@@ -1146,8 +1146,7 @@ describe('ChangelogEditorDrawer', () => {
     );
 
     // The preview badge must resolve to the RU label driven by the content lang tab.
-    // BUG: currently resolves in i18n.language (EN) → shows "New Feature".
-    // This assertion FAILS until { lng: lang } is added to the tDynamic call.
+    // Badge follows the content-language tab (RU here), independent of the admin UI locale.
     expect(screen.getByTestId('changelog-preview-tag-badge')).toHaveTextContent('Новая функция');
   });
 
@@ -1188,8 +1187,7 @@ describe('ChangelogEditorDrawer', () => {
     expect(pill).toHaveTextContent('New Feature');
 
     // Part (b): preview badge follows content lang (RU), NOT admin UI locale.
-    // BUG: currently resolves in i18n.language (EN) → shows "New Feature".
-    // This assertion FAILS until { lng: lang } is added.
+    // Badge follows content language (RU), while the selector pills follow the admin UI locale.
     const badge = screen.getByTestId('changelog-preview-tag-badge');
     expect(badge).toHaveTextContent('Новая функция');
   });
