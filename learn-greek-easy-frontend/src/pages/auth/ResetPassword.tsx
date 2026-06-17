@@ -245,11 +245,7 @@ export const ResetPassword: React.FC = () => {
                   {getErrorMessage(errors.password.message)}
                 </p>
               )}
-              <PasswordStrengthIndicator
-                password={passwordValue}
-                className="mt-1"
-                showRequirements={false}
-              />
+              <PasswordStrengthIndicator password={passwordValue} className="mt-1" />
             </div>
 
             <SubmitButton
