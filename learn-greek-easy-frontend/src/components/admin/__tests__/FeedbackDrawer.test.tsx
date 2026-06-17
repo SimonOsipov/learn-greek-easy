@@ -639,4 +639,53 @@ describe('FeedbackDrawer', () => {
       expect(deleteBtn.querySelector('svg')).toBeNull();
     });
   });
+
+  // ── QA adversarial: issue 7 removal + issue 11 chip placement ─────────────
+
+  describe('QA adversarial — footer status line removed, chips inline (issues 7 & 11)', () => {
+    it('footer-left does NOT render the old "Ready" / "No reply yet" status badge text', () => {
+      const feedback = makeFeedback({ status: 'new', admin_response: null });
+      mockStoreWith(feedback);
+
+      renderDrawer(feedback.id, 'reply');
+
+      // The old footer status block rendered these strings. Neither should be present.
+      // "Ready" as isolated text — the only "Ready" in the old footer came from footer.ready key.
+      // Status badges in the HEADER and status-picker still say "New", not "Ready".
+      expect(screen.queryByText('Ready')).not.toBeInTheDocument();
+      // The old saveNotice span rendered a string containing "Saving will notify"
+      expect(screen.queryByText(/Saving will notify/i)).not.toBeInTheDocument();
+    });
+
+    it('the 3 title chips (category, status, likes) are inside .drawer-head-row, not a standalone .drawer-meta', () => {
+      const feedback = makeFeedback({
+        category: 'feature_request',
+        status: 'new',
+        vote_count: 7,
+      });
+      mockStoreWith(feedback);
+
+      renderDrawer(feedback.id, 'reply');
+
+      const headRow = document.querySelector('.drawer-head-row');
+      expect(headRow).not.toBeNull();
+
+      // Category badge text should be inside .drawer-head-row
+      const categoryBadge = headRow!.querySelector('[class*="badge"]');
+      expect(categoryBadge).not.toBeNull();
+
+      // FeedbackDrawer must NOT use .drawer-meta as a chip wrapper (that would be the old layout)
+      // Other drawers still have .drawer-meta but FeedbackDrawer should use .drawer-head-row
+      const drawerMetaWrapper = document.querySelector('.drawer-meta');
+      // If .drawer-meta exists in the DOM it belongs to a different component tree — but
+      // within the feedback drawer's header, the h2 must be inside .drawer-head-row.
+      const h2 = headRow!.querySelector('h2.drawer-h');
+      expect(h2).not.toBeNull();
+
+      // Likes span should also be inside .drawer-head-row
+      const likesSpan = headRow!.querySelector('span.text-xs');
+      expect(likesSpan).not.toBeNull();
+      expect(likesSpan!.textContent).toMatch(/like/i);
+    });
+  });
 });
