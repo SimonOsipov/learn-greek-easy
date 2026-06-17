@@ -488,7 +488,7 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
                   <div className="cl-preview-card">
                     <div className="cl-preview-head">
                       <Badge tone={TAG_TONE[form.tag]} data-testid="changelog-preview-tag-badge">
-                        {tDynamic(t, CHANGELOG_TAG_CONFIG[form.tag].labelKey)}
+                        {tDynamic(t, CHANGELOG_TAG_CONFIG[form.tag].labelKey, { lng: lang })}
                       </Badge>
                       {form.version && (
                         <span className="cl-preview-v" data-testid="changelog-preview-version">
