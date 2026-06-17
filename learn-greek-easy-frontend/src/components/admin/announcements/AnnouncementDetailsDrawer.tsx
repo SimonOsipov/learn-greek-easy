@@ -104,7 +104,6 @@ export function AnnouncementDetailsDrawer({
       )
     : 0;
   const sentDate = announcement ? formatSentDate(announcement.created_at, i18n.language) : '';
-  const footerDate = announcement ? formatSentDate(announcement.created_at, i18n.language) : '';
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -130,15 +129,10 @@ export function AnnouncementDetailsDrawer({
             </div>
             <div className="drawer-head-row">
               <h2 className="drawer-title">{announcement ? announcement.title : ''}</h2>
-            </div>
-            {announcement && (
-              <div className="drawer-meta">
+              {announcement && (
                 <Badge tone="green">{t('announcements.v2.details.delivered')}</Badge>
-                <Badge tone={readPct >= 20 ? 'blue' : 'gray'}>
-                  {readPct}% {t('announcements.v2.details.read')}
-                </Badge>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </SidePanel.Header>
 
@@ -217,7 +211,7 @@ export function AnnouncementDetailsDrawer({
 
         {/* ── Footer ───────────────────────────────────────────────────── */}
         <SidePanel.Footer>
-          {/* Left: Delete (destructive) + dim helper — helper removed in ADMIN2-33-02 */}
+          {/* Left: Delete (destructive) */}
           <div className="drawer-foot-left">
             <Button
               type="button"
@@ -230,11 +224,6 @@ export function AnnouncementDetailsDrawer({
             >
               {t('announcements.delete.button')}
             </Button>
-            <span className="drawer-foot-helper">
-              {announcement
-                ? `${t('announcements.v2.details.announcementLabel')} #${announcement.id.slice(0, 8)} · ${t('announcements.v2.details.sent')} ${footerDate}`
-                : ''}
-            </span>
           </div>
 
           {/* Right: action buttons */}

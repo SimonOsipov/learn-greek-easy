@@ -1282,7 +1282,10 @@
     margin-bottom: 6px;
   }
   .drawer-head-row {
-    display: block;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
   }
   .drawer-tabs {
     display: flex;

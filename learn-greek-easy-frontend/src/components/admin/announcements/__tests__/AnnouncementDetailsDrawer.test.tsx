@@ -231,9 +231,11 @@ describe('AnnouncementDetailsDrawer', () => {
 
     // breadcrumb and head-row are always present
     expect(wrapper!.querySelector('.drawer-breadcrumb')).not.toBeNull();
-    expect(wrapper!.querySelector('.drawer-head-row')).not.toBeNull();
-    // drawer-meta renders conditionally when announcement is loaded
-    expect(wrapper!.querySelector('.drawer-meta')).not.toBeNull();
+    const headRow = wrapper!.querySelector('.drawer-head-row');
+    expect(headRow).not.toBeNull();
+    // Delivered badge renders inline inside .drawer-head-row (not in a separate .drawer-meta)
+    expect(headRow!.textContent).toContain('Delivered');
+    expect(wrapper!.querySelector('.drawer-meta')).toBeNull();
   });
 
   // ── Footer button classlists + icons (ANDD-04) ────────────────────────────
