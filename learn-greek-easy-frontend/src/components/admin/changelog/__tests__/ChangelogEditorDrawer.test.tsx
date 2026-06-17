@@ -1193,4 +1193,66 @@ describe('ChangelogEditorDrawer', () => {
     const badge = screen.getByTestId('changelog-preview-tag-badge');
     expect(badge).toHaveTextContent('Новая функция');
   });
+
+  // ── ADMIN2-33-04 (adversarial): fix is not hardcoded to new_feature ──────
+
+  it('preview_badge_localizes_bug_fix_to_ru: preview badge shows "Исправление ошибки" when tag=bug_fix and lang=ru', () => {
+    // Proves the { lng: lang } fix is data-driven, not hardcoded to new_feature.
+    mockStoreState.lang = 'ru';
+    mockStoreState.panelMode = 'form';
+
+    render(
+      <ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry({ tag: 'bug_fix' })} />
+    );
+
+    expect(screen.getByTestId('changelog-preview-tag-badge')).toHaveTextContent(
+      'Исправление ошибки'
+    );
+  });
+
+  it('preview_badge_localizes_announcement_to_ru: preview badge shows "Объявление" when tag=announcement and lang=ru', () => {
+    // Proves the { lng: lang } fix is data-driven, not hardcoded to new_feature.
+    mockStoreState.lang = 'ru';
+    mockStoreState.panelMode = 'form';
+
+    render(
+      <ChangelogEditorDrawer
+        open={true}
+        onClose={vi.fn()}
+        entry={makeEntry({ tag: 'announcement' })}
+      />
+    );
+
+    expect(screen.getByTestId('changelog-preview-tag-badge')).toHaveTextContent('Объявление');
+  });
+
+  it('preview_badge_flips_live_on_lang_switch_en_to_ru: switching content lang en→ru flips badge from EN to RU label', () => {
+    // Verifies the badge is reactive: re-render with lang=ru shows RU, not a stale EN render.
+    mockStoreState.lang = 'en';
+    mockStoreState.panelMode = 'form';
+
+    const { rerender } = render(
+      <ChangelogEditorDrawer
+        open={true}
+        onClose={vi.fn()}
+        entry={makeEntry({ tag: 'new_feature' })}
+      />
+    );
+
+    // EN tab → badge shows EN label
+    expect(screen.getByTestId('changelog-preview-tag-badge')).toHaveTextContent('New Feature');
+
+    // Switch content tab to RU
+    mockStoreState.lang = 'ru';
+    rerender(
+      <ChangelogEditorDrawer
+        open={true}
+        onClose={vi.fn()}
+        entry={makeEntry({ tag: 'new_feature' })}
+      />
+    );
+
+    // Badge must now show RU label — proves reactivity to content lang change
+    expect(screen.getByTestId('changelog-preview-tag-badge')).toHaveTextContent('Новая функция');
+  });
 });
