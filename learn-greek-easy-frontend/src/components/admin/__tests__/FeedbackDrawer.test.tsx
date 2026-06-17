@@ -677,8 +677,8 @@ describe('FeedbackDrawer', () => {
       // FeedbackDrawer must NOT use .drawer-meta as a chip wrapper (that would be the old layout)
       // Other drawers still have .drawer-meta but FeedbackDrawer should use .drawer-head-row
       const drawerMetaWrapper = document.querySelector('.drawer-meta');
-      // If .drawer-meta exists in the DOM it belongs to a different component tree — but
-      // within the feedback drawer's header, the h2 must be inside .drawer-head-row.
+      expect(drawerMetaWrapper).toBeNull();
+      // .drawer-meta is absent — within the feedback drawer's header, the h2 must be inside .drawer-head-row.
       const h2 = headRow!.querySelector('h2.drawer-h');
       expect(h2).not.toBeNull();
 
