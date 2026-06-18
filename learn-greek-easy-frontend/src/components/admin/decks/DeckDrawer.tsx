@@ -128,6 +128,7 @@ export function DeckDrawer() {
       stripCloseParams();
       void queryClient.invalidateQueries({ queryKey: ['admin', 'decks'] });
       void useAdminTabCountsStore.getState().fetchCounts();
+      toast({ title: t('toast.deckDeactivated') });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : t('errors.saveFailed');
       toast({

@@ -864,6 +864,45 @@ describe('DeckDrawer', () => {
     });
   });
 
+  // A2b. Delete SUCCESS path: when deleteVocabularyDeck resolves, a success toast
+  // with title = t('toast.deckDeactivated') MUST be fired — mirroring the row
+  // delete path in AdminPage.handleDeleteConfirm. Paired with A2 (error path) so
+  // the drawer delete flow has both a success-toast test and an error-toast test.
+  it('delete success fires a deckDeactivated toast', async () => {
+    const user = userEvent.setup();
+
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
+    (adminAPI.deleteVocabularyDeck as Mock).mockResolvedValue(undefined);
+
+    renderDrawer('/admin?tab=decks&edit=deck-vocab-1');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId('deck-drawer-footer-delete'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-delete-confirm')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId('deck-delete-confirm'));
+
+    await waitFor(() => {
+      expect(adminAPI.deleteVocabularyDeck as Mock).toHaveBeenCalledWith('deck-vocab-1');
+    });
+
+    // Success toast fires with the same key the row path uses.
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Deck deactivated' })
+      );
+    });
+
+    // No destructive toast on success.
+    expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
+  });
+
   // (item= stripping on close is already covered by test #3, which seeds
   // ?item=word-1 and asserts it is purged via the same stripCloseParams helper
   // the delete path calls — so no separate delete-with-item= spec is needed, and
