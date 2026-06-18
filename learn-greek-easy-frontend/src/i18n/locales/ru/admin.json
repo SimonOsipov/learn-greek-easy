@@ -733,6 +733,7 @@
       "noFilteredResults": "Нет отзывов, соответствующих выбранным фильтрам"
     },
     "deleteAction": "Удалить",
+    "editAction": "Изменить",
     "delete": {
       "button": "Удалить",
       "title": "Удалить отзыв",

@@ -721,6 +721,7 @@
       "noFilteredResults": "No feedback matches the selected filters"
     },
     "deleteAction": "Delete",
+    "editAction": "Edit",
     "delete": {
       "button": "Delete",
       "title": "Delete Feedback",
