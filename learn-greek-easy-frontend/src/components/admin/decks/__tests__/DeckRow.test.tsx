@@ -162,4 +162,30 @@ describe('DeckRow', () => {
     expect(actions.className).toContain('opacity-0');
     expect(actions.className).toContain('group-hover:opacity-100');
   });
+
+  // ── status badge (ADMIN2-35-02) ──────────────────────────────────────────
+
+  // TEST SPEC: row_shows_active_badge
+  // AC-1: deck.is_active === true → deck-row-status contains "Active"
+  it('row_shows_active_badge: is_active:true renders deck-row-status containing "Active"', () => {
+    renderRow({
+      deck: makeDeck({ is_active: true }),
+      locale: 'en',
+      onOpenDrawer: vi.fn(),
+      onDelete: vi.fn(),
+    });
+    expect(screen.getByTestId('deck-row-status')).toHaveTextContent('Active');
+  });
+
+  // TEST SPEC: row_shows_deactivated_badge
+  // AC-1: deck.is_active === false → deck-row-status contains "Deactivated"
+  it('row_shows_deactivated_badge: is_active:false renders deck-row-status containing "Deactivated"', () => {
+    renderRow({
+      deck: makeDeck({ is_active: false }),
+      locale: 'en',
+      onOpenDrawer: vi.fn(),
+      onDelete: vi.fn(),
+    });
+    expect(screen.getByTestId('deck-row-status')).toHaveTextContent('Deactivated');
+  });
 });
