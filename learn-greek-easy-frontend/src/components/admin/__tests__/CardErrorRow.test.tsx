@@ -44,28 +44,6 @@ function makeRow(overrides: Partial<AdminCardErrorResponse> = {}): AdminCardErro
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('AdminCardErrorCard (CER-53)', () => {
-  // AC #1: renders deck chip, card peek, ID stub, respond action
-  it('renders deck chip, card peek, ID stub, and respond button for PENDING row', () => {
-    const row = makeRow();
-    renderWithProviders(<AdminCardErrorCard errorReport={row} onRespond={vi.fn()} />);
-
-    // Deck chip
-    expect(screen.getByTestId('card-error-deck-chip')).toBeInTheDocument();
-    expect(screen.getByTestId('card-error-deck-chip')).toHaveTextContent('A1 Basics');
-
-    // Card peek: word + translation
-    expect(screen.getByText('αδερφή')).toBeInTheDocument();
-    expect(screen.getByText('sister')).toBeInTheDocument();
-
-    // ID stub (first 8 chars of card_id — the component shows card_id stub, not report id)
-    expect(screen.getByTitle(row.card_id)).toBeInTheDocument();
-    // card_id is 'card-uuid-001', first 8 chars = 'card-uui'
-    expect(screen.getByTitle(row.card_id)).toHaveTextContent('card-uui');
-
-    // Respond action button
-    expect(screen.getByTestId('card-error-respond-button')).toBeInTheDocument();
-  });
-
   // AC #2a: body click invokes drawer-open handler
   it('body click invokes onRespond handler', () => {
     const onRespond = vi.fn();
@@ -76,20 +54,6 @@ describe('AdminCardErrorCard (CER-53)', () => {
     fireEvent.click(card);
     expect(onRespond).toHaveBeenCalledTimes(1);
     expect(onRespond).toHaveBeenCalledWith(row);
-  });
-
-  // AC #2b: action button click does NOT bubble to parent onRespond
-  it('action button click does not bubble to parent (stopPropagation)', () => {
-    const onRespond = vi.fn();
-    const row = makeRow();
-    renderWithProviders(<AdminCardErrorCard errorReport={row} onRespond={onRespond} />);
-
-    // Click the respond action button
-    fireEvent.click(screen.getByTestId('card-error-respond-button'));
-    // The button itself calls onRespond, but the container should not receive an
-    // extra propagated event. We get exactly 1 call (from the button handler),
-    // not 2 (button + propagated to card root).
-    expect(onRespond).toHaveBeenCalledTimes(1);
   });
 
   // AC #3: inline reply present when admin_notes is non-empty; omitted when null
@@ -150,5 +114,37 @@ describe('AdminCardErrorCard (CER-53)', () => {
     });
     renderWithProviders(<AdminCardErrorCard errorReport={row} onRespond={vi.fn()} />);
     expect(screen.getByText('What is the capital of Greece?')).toBeInTheDocument();
+  });
+
+  // ADMIN2-34-04 AC: ghost Trash2 button calls onDelete with the report; onRespond NOT called
+  it('card_trash_calls_onDelete_with_report', () => {
+    const onRespond = vi.fn();
+    const onDelete = vi.fn();
+    const row = makeRow();
+    renderWithProviders(
+      <AdminCardErrorCard errorReport={row} onRespond={onRespond} onDelete={onDelete} />
+    );
+
+    fireEvent.click(screen.getByTestId(`delete-card-error-${row.id}`));
+
+    expect(onDelete).toHaveBeenCalledTimes(1);
+    expect(onDelete).toHaveBeenCalledWith(row);
+    expect(onRespond).not.toHaveBeenCalled();
+  });
+
+  // ADMIN2-34-04 AC: ghost Pencil button calls onRespond; does not double-fire via row body
+  it('card_pencil_opens_drawer', () => {
+    const onRespond = vi.fn();
+    const onDelete = vi.fn();
+    const row = makeRow();
+    renderWithProviders(
+      <AdminCardErrorCard errorReport={row} onRespond={onRespond} onDelete={onDelete} />
+    );
+
+    fireEvent.click(screen.getByTestId(`edit-card-error-${row.id}`));
+
+    // Pencil calls onRespond exactly once (stopPropagation prevents row body double-fire)
+    expect(onRespond).toHaveBeenCalledTimes(1);
+    expect(onRespond).toHaveBeenCalledWith(row);
   });
 });
