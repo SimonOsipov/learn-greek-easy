@@ -115,6 +115,10 @@ async function runWebVerify() {
     try {
       await page.goto(`${FRONTEND_URL}/practice/culture-exam`, { waitUntil: 'domcontentloaded', timeout: 30000 });
       await page.locator('[data-testid="mock-exam-page"]').waitFor({ state: 'visible', timeout: 15000 });
+      // Wait for the LOADED state (not the loading skeleton): start-exam-button
+      // only mounts once statistics resolve (!isLoading && !error). A timeout
+      // here falls through to the catch's best-effort capture (non-fatal).
+      await page.locator('[data-testid="start-exam-button"]').waitFor({ state: 'visible', timeout: 20000 });
       await page.screenshot({ path: path.join(REPORTS_DIR, '04-mock-exam-landing.png'), fullPage: true });
       console.log('  Screenshot: 04-mock-exam-landing.png');
     } catch (mockExamErr) {
