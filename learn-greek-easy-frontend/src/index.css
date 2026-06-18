@@ -946,6 +946,8 @@
     margin-bottom: 24px;
   }
   .stat-card {
+    display: flex;
+    flex-direction: column;
     padding: 18px 20px;
     border-radius: 16px;
     background: hsl(var(--card));
@@ -1021,7 +1023,16 @@
     font-weight: 700;
     line-height: 1;
     letter-spacing: -0.025em;
+    /* `margin-top: auto` bottom-anchors the number → sparkline → footer block as a
+       group inside the flex-column card. Grid-row siblings already share an outer
+       height (grid stretch), so anchoring the lower block lands the number,
+       sparkline and footer on a common baseline even when one card's header wraps
+       to two lines (e.g. RU "Ожидают проверки"). `auto` absorbs free space rather
+       than forcing a fixed gap, so single-line cards across every KPI tab gain no
+       visible gap (no header min-height needed). The 10px bottom keeps the number→
+       sparkline gap; the 14px top is the spacing on a fully-packed card. */
     margin: 14px 0 10px;
+    margin-top: auto;
   }
   .stat-bars {
     display: flex;
@@ -2284,41 +2295,6 @@
     line-height: 1.5;
     white-space: pre-wrap;
     word-break: break-word;
-  }
-
-  /* Canned reply pills (CER-51) */
-  .admin-canned {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .admin-canned-label {
-    font-size: 12px;
-    font-weight: 500;
-    color: hsl(var(--muted-foreground));
-  }
-  .admin-canned-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .admin-canned-pill {
-    padding: 4px 10px;
-    border-radius: 9999px;
-    border: 1px solid hsl(var(--border));
-    background: hsl(var(--muted) / 0.4);
-    color: hsl(var(--fg));
-    font-size: 12px;
-    line-height: 1;
-    cursor: pointer;
-    transition: background 120ms ease;
-  }
-  .admin-canned-pill:hover {
-    background: hsl(var(--muted) / 0.7);
-  }
-  .admin-canned-pill:focus-visible {
-    outline: 2px solid hsl(var(--ring));
-    outline-offset: 2px;
   }
 
   /* ── Card Error preview snapshot (CER-28) ── */
