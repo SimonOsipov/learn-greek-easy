@@ -115,36 +115,27 @@ describe('DeckSettingsTab', () => {
     vi.useRealTimers();
   });
 
-  // ── 1. Three blocks render in order ────────────────────────────────────────
+  // ── 1. Settings tab renders the embedded form (Identity + Access) ───────────
+  // The "Danger zone" delete block was hoisted to DeckDrawer (ADMIN2-35-04), so
+  // this tab now renders ONLY the embedded edit form (Identity + Access).
 
-  it('renders all three section blocks in fixed order: Identity/Access (form), Danger zone', () => {
+  it('renders the embedded vocab edit form (Identity/Access) and no danger zone', () => {
     renderTab(makeVocabDeck());
 
     // The embedded form is present
     expect(screen.getByTestId('vocabulary-deck-edit-form')).toBeInTheDocument();
 
-    // Danger zone section is present
-    expect(screen.getByTestId('deck-settings-danger-zone')).toBeInTheDocument();
-
-    // Danger zone heading text
-    expect(screen.getByText('Danger zone')).toBeInTheDocument();
-
-    // Delete button
-    expect(screen.getByTestId('deck-settings-delete-btn')).toBeInTheDocument();
-
-    // Form (Identity + Access) appears before Danger zone in DOM order
-    const form = screen.getByTestId('vocabulary-deck-edit-form');
-    const dangerZone = screen.getByTestId('deck-settings-danger-zone');
-    expect(
-      form.compareDocumentPosition(dangerZone) & Node.DOCUMENT_POSITION_FOLLOWING
-    ).toBeTruthy();
+    // Danger zone + footer were hoisted to DeckDrawer — they must NOT be here.
+    expect(screen.queryByTestId('deck-settings-danger-zone')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('deck-settings-delete-btn')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('deck-settings-footer')).not.toBeInTheDocument();
   });
 
   it('renders culture deck form for culture type', () => {
     renderTab(makeCultureDeck());
 
     expect(screen.getByTestId('culture-deck-edit-form')).toBeInTheDocument();
-    expect(screen.getByTestId('deck-settings-danger-zone')).toBeInTheDocument();
+    expect(screen.queryByTestId('deck-settings-danger-zone')).not.toBeInTheDocument();
   });
 
   // ── 2. Save — vocab deck calls updateVocabularyDeck ───────────────────────
@@ -293,12 +284,6 @@ describe('DeckSettingsTab', () => {
     expect(screen.getByText('Access Control')).toBeInTheDocument();
   });
 
-  it('renders Danger zone section heading', () => {
-    renderTab(makeCultureDeck());
-
-    expect(screen.getByText('Danger zone')).toBeInTheDocument();
-  });
-
   // ── 7. CEFR row hidden for culture decks ─────────────────────────────────
 
   it('culture deck does not render CEFR level select', () => {
@@ -326,67 +311,12 @@ describe('DeckSettingsTab', () => {
     expect(screen.getByTestId('deck-edit-level')).toBeInTheDocument();
   });
 
-  // ── 8. Delete button opens DeckDeleteDialog ───────────────────────────────
+  // NOTE: the delete flow (Delete button → DeckDeleteDialog → confirm →
+  // deleteVocabularyDeck/deleteCultureDeck) was hoisted from this tab into
+  // DeckDrawer (ADMIN2-35-04). Its coverage now lives in DeckDrawer.test.tsx
+  // (the footer_delete_* / confirm_delete_* specs).
 
-  it('clicking Delete deck button opens DeckDeleteDialog', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-
-    renderTab(makeVocabDeck());
-
-    expect(screen.queryByTestId('deck-delete-dialog')).not.toBeInTheDocument();
-
-    await user.click(screen.getByTestId('deck-settings-delete-btn'));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('deck-delete-dialog')).toBeInTheDocument();
-    });
-  });
-
-  // ── 9. Delete confirm calls deleteVocabularyDeck for vocab deck ───────────
-
-  it('confirming delete calls adminAPI.deleteVocabularyDeck', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    (adminAPI.deleteVocabularyDeck as Mock).mockResolvedValue(undefined);
-
-    renderTab(makeVocabDeck());
-
-    await user.click(screen.getByTestId('deck-settings-delete-btn'));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('deck-delete-dialog')).toBeInTheDocument();
-    });
-
-    await user.click(screen.getByTestId('deck-delete-confirm'));
-
-    await waitFor(() => {
-      expect(adminAPI.deleteVocabularyDeck).toHaveBeenCalledWith('deck-vocab-1');
-    });
-    expect(adminAPI.deleteCultureDeck).not.toHaveBeenCalled();
-  });
-
-  // ── 10. Delete confirm calls deleteCultureDeck for culture deck ───────────
-
-  it('confirming delete calls adminAPI.deleteCultureDeck', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    (adminAPI.deleteCultureDeck as Mock).mockResolvedValue(undefined);
-
-    renderTab(makeCultureDeck());
-
-    await user.click(screen.getByTestId('deck-settings-delete-btn'));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('deck-delete-dialog')).toBeInTheDocument();
-    });
-
-    await user.click(screen.getByTestId('deck-delete-confirm'));
-
-    await waitFor(() => {
-      expect(adminAPI.deleteCultureDeck).toHaveBeenCalledWith('deck-culture-1');
-    });
-    expect(adminAPI.deleteVocabularyDeck).not.toHaveBeenCalled();
-  });
-
-  // ── 11. Culture deck: save payload preserves original category (AC #5) ──────
+  // ── 8. Culture deck: save payload preserves original category (AC #5) ──────
 
   it('updateCultureDeck payload preserves original category when category input is hidden', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });

@@ -12,7 +12,7 @@
     "category": "Категория",
     "categoryPlaceholder": "Выберите категорию",
     "isActive": "Активна",
-    "isActiveDescription": "Неактивные колоды скрыты от учеников",
+    "isActiveDescription": "Деактивированные колоды скрыты от учеников",
     "isPremium": "Премиум",
     "isPremiumDescription": "Премиум-колоды требуют подписки для доступа",
     "save": "Сохранить изменения",
@@ -105,21 +105,13 @@
     "byOwner": "от {{owner}}",
     "deactivated": "Деактивировано"
   },
-  "deckList": {
-    "hideDeactivated": "Скрыть неактивные"
-  },
+  "deckList": {},
   "deckTypes": {
     "vocabulary": "Словарь",
     "culture": "Культура"
   },
   "search": {
     "placeholder": "Поиск колод..."
-  },
-  "filter": {
-    "type": "Фильтр по типу",
-    "allTypes": "Все типы",
-    "vocabulary": "Словарь",
-    "culture": "Культура"
   },
   "pagination": {
     "showing": "Показано {{from}}-{{to}} из {{total}}",
@@ -136,7 +128,8 @@
   },
   "toast": {
     "deckCreated": "Колода успешно создана",
-    "deckDeleted": "Колода успешно удалена"
+    "deckDeleted": "Колода успешно удалена",
+    "deckDeactivated": "Колода деактивирована"
   },
   "deckDelete": {
     "title": "Удалить колоду",
@@ -2122,7 +2115,6 @@
     "discardConfirm": "Отменить",
     "discardCancel": "Продолжить редактирование",
     "activityPlaceholder": "Здесь появятся последние правки, время последнего повтора и статистика учеников.",
-    "autoSavedJustNow": "Сохранено · только что",
     "backToAllQuestions": "К списку вопросов",
     "editQuestion": "Редактировать вопрос",
     "statusReady": "Готово",
@@ -2141,15 +2133,33 @@
       "editQuestionLabel": "Редактировать вопрос",
       "deleteQuestionLabel": "Удалить вопрос"
     },
-    "allComplete": "Все карточки заполнены",
-    "saveAndClose": "Сохранить и закрыть",
     "saveChanges": "Сохранить изменения",
     "typeCulture": "Культура",
     "typeVocabulary": "Словарный запас",
     "statusActive": "Активно",
-    "statusInactive": "Неактивно",
-    "questions": "вопросов",
-    "words": "слов",
+    "statusDeactivated": "Деактивировано",
+    "filters": {
+      "type": {
+        "label": "Фильтр по типу",
+        "all": "Все",
+        "vocab": "Словарные",
+        "culture": "Культура"
+      },
+      "status": {
+        "label": "Фильтр по статусу",
+        "all": "Все",
+        "active": "Активные",
+        "deactivated": "Деактивированные"
+      }
+    },
+    "wordCount_one": "{{count}} слово",
+    "wordCount_few": "{{count}} слова",
+    "wordCount_many": "{{count}} слов",
+    "wordCount_other": "{{count}} слов",
+    "questionCount_one": "{{count}} вопрос",
+    "questionCount_few": "{{count}} вопроса",
+    "questionCount_many": "{{count}} вопросов",
+    "questionCount_other": "{{count}} вопросов",
     "stats": {
       "totalDecks": "Всего колод",
       "vocabulary": "Словарные",

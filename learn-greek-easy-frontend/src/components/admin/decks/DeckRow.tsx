@@ -105,13 +105,22 @@ export function DeckRow({ deck, locale, onOpenDrawer, onDelete }: DeckRowProps) 
         </div>
       </TableCell>
 
-      {/* Col 2: Type */}
+      {/* Col 2: Type + status */}
       <TableCell>
-        <Badge variant="outline" className="text-xs">
-          {deck.type === 'vocabulary'
-            ? t('decks.row.typeVocabBadge')
-            : t('decks.row.typeCultureBadge')}
-        </Badge>
+        <div className="flex flex-col gap-1">
+          <Badge variant="outline" className="text-xs">
+            {deck.type === 'vocabulary'
+              ? t('decks.row.typeVocabBadge')
+              : t('decks.row.typeCultureBadge')}
+          </Badge>
+          <Badge
+            tone={deck.is_active ? 'green' : 'red'}
+            data-testid="deck-row-status"
+            className="text-xs"
+          >
+            {deck.is_active ? t('decks.statusActive') : t('decks.statusDeactivated')}
+          </Badge>
+        </div>
       </TableCell>
 
       {/* Col 3: Owner (hidden on xs) */}

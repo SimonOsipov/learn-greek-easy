@@ -12,7 +12,7 @@
     "category": "Category",
     "categoryPlaceholder": "Select category",
     "isActive": "Active",
-    "isActiveDescription": "Inactive decks are hidden from learners",
+    "isActiveDescription": "Deactivated decks are hidden from learners",
     "isPremium": "Premium",
     "isPremiumDescription": "Premium decks require a subscription to access",
     "save": "Save Changes",
@@ -99,21 +99,13 @@
     "byOwner": "by {{owner}}",
     "deactivated": "Deactivated"
   },
-  "deckList": {
-    "hideDeactivated": "Hide deactivated"
-  },
+  "deckList": {},
   "deckTypes": {
     "vocabulary": "Vocabulary",
     "culture": "Culture"
   },
   "search": {
     "placeholder": "Search decks, words, or codes…"
-  },
-  "filter": {
-    "type": "Filter by type",
-    "allTypes": "All Types",
-    "vocabulary": "Vocabulary",
-    "culture": "Culture"
   },
   "pagination": {
     "showing": "Showing {{from}}-{{to}} of {{total}}",
@@ -130,7 +122,8 @@
   },
   "toast": {
     "deckCreated": "Deck created successfully",
-    "deckDeleted": "Deck deleted successfully"
+    "deckDeleted": "Deck deleted successfully",
+    "deckDeactivated": "Deck deactivated"
   },
   "deckDelete": {
     "title": "Delete Deck",
@@ -2103,7 +2096,6 @@
     "discardConfirm": "Discard",
     "discardCancel": "Keep editing",
     "activityPlaceholder": "Recent edits, last reviewed time, and learner stats will live here.",
-    "autoSavedJustNow": "Auto-saved · just now",
     "backToAllQuestions": "Back to all questions",
     "editQuestion": "Edit question",
     "statusReady": "Ready",
@@ -2129,15 +2121,29 @@
       "editQuestionLabel": "Edit question",
       "deleteQuestionLabel": "Delete question"
     },
-    "allComplete": "All cards complete",
-    "saveAndClose": "Save & close",
     "saveChanges": "Save changes",
     "typeCulture": "Culture",
     "typeVocabulary": "Vocabulary",
     "statusActive": "Active",
-    "statusInactive": "Inactive",
-    "questions": "questions",
-    "words": "words",
+    "statusDeactivated": "Deactivated",
+    "filters": {
+      "type": {
+        "label": "Filter by type",
+        "all": "All",
+        "vocab": "Vocab",
+        "culture": "Culture"
+      },
+      "status": {
+        "label": "Filter by status",
+        "all": "All",
+        "active": "Active",
+        "deactivated": "Deactivated"
+      }
+    },
+    "wordCount_one": "{{count}} word",
+    "wordCount_other": "{{count}} words",
+    "questionCount_one": "{{count}} question",
+    "questionCount_other": "{{count}} questions",
     "stats": {
       "totalDecks": "Total decks",
       "vocabulary": "Vocabulary",
