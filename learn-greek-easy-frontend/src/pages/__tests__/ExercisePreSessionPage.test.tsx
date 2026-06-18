@@ -1,5 +1,5 @@
 /**
- * ExercisePreSessionPage Smoke Tests — PRACT2-12-03
+ * ExercisePreSessionPage Smoke Tests — PRACT2-12-03 + PRACT2-12-06
  *
  * Render-smoke assertions: each red-dot (unbacked) panel renders a
  * data-testid="unwired-dot" element (no-crash + honest-placeholder guard).
@@ -11,15 +11,24 @@
  *
  * Also asserts the REAL Recommended panel renders (empty state or cards)
  * and the Current streak metric wires to real data.
+ *
+ * PRACT2-12-06 adds: completion banner show/dismiss/guard specs (RED first).
  */
 
 import { createElement } from 'react';
 
 import { QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { screen, waitFor, render as rtlRender } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { I18nextProvider } from 'react-i18next';
 
+import i18n from '@/i18n';
+import { LanguageProvider } from '@/contexts/LanguageContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import { createTestQueryClient, renderWithProviders } from '@/lib/test-utils';
+import { useExercisePracticeStore } from '@/stores/exercisePracticeStore';
 
 import { ExercisePreSessionPage } from '../ExercisePreSessionPage';
 
@@ -188,5 +197,155 @@ describe('ExercisePreSessionPage — red-dot panels smoke tests', () => {
       // 4 family rows × 1 UnwiredDot each
       expect(dots.length).toBeGreaterThanOrEqual(4);
     });
+  });
+});
+
+// ─── PRACT2-12-06: Completion banner (RED specs) ────────────────────────────
+//
+// DOM contract the executor MUST implement:
+//   • Banner root:        data-testid="xd-completion-banner"
+//   • Dismiss control:    <button> whose accessible name matches /dismiss/i
+//   • Practice again:     <button> whose accessible name matches /practice again/i
+//   • Correct count:      the number 4 appears in the banner (e.g. data-testid or text)
+//   • Missed count:       the number 1 appears in the banner (missed = total − correct = 5 − 4)
+//   • Binary split only:  NO partial count; only correct + missed
+//
+// Guard contract (Decision 6 — route-state only, no new store field):
+//   • Banner shows IFF sessionSummary !== null AND location.state.fromFinish === true
+//   • Organic visit (no route-state) → no banner even when sessionSummary is set
+//   • Null summary + fromFinish → no banner
+
+describe('completion banner (PRACT2-12-06)', () => {
+  // A realistic session summary: 5 total, 4 correct, 1 missed, 80% accuracy
+  const fullSummary = {
+    total: 5,
+    correct: 4,
+    accuracy_pct: 80,
+    duration_seconds: 120,
+  };
+
+  // Render the overview page inside a MemoryRouter whose initial entry carries
+  // route-state — the same shape the session page will use when navigating on finish.
+  // Wraps all required providers but uses MemoryRouter directly (not renderWithProviders
+  // which uses BrowserRouter and cannot carry initialEntries route-state).
+  function renderWithRouteState(
+    routeState: { fromFinish: boolean } | null,
+    queryClient = createTestQueryClient()
+  ) {
+    const initialEntry = routeState
+      ? { pathname: '/practice/exercises', state: routeState }
+      : '/practice/exercises';
+
+    return rtlRender(
+      <I18nextProvider i18n={i18n}>
+        <LanguageProvider>
+          <ThemeProvider>
+            <QueryClientProvider client={queryClient}>
+              <MemoryRouter initialEntries={[initialEntry]}>
+                <Routes>
+                  <Route path="/practice/exercises" element={<ExercisePreSessionPage />} />
+                  <Route path="/practice/exercises/session" element={<div>Session</div>} />
+                </Routes>
+              </MemoryRouter>
+            </QueryClientProvider>
+          </ThemeProvider>
+        </LanguageProvider>
+      </I18nextProvider>
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Reset exercise store to initial state before each test
+    useExercisePracticeStore.setState({
+      sessionSummary: null,
+    });
+    // Keep the existing exerciseAPI mock returning an empty queue
+    mockGetQueue.mockResolvedValue(emptyQueue);
+  });
+
+  // ── AC-show: banner renders on finish arrival with summary ──────────────────
+  it('banner shows when arriving from finish with summary', async () => {
+    // Given: sessionSummary is set in the store
+    useExercisePracticeStore.setState({ sessionSummary: fullSummary });
+
+    // When: overview mounts with fromFinish route-state
+    renderWithRouteState({ fromFinish: true });
+
+    // Then: the banner is present
+    await waitFor(() => {
+      expect(screen.getByTestId('xd-completion-banner')).toBeInTheDocument();
+    });
+
+    // And: it shows the BINARY correct count (4) and missed count (1 = total − correct)
+    const banner = screen.getByTestId('xd-completion-banner');
+    expect(banner).toHaveTextContent('4'); // correct
+    expect(banner).toHaveTextContent('1'); // missed = 5 − 4
+
+    // And: it does NOT show a third "partial" bucket (no 3-way split)
+    // Verify by confirming the two visible counts are 4 and 1, not 3 distinct non-zero numbers
+    // The banner should have Dismiss and Practice again controls
+    expect(screen.getByRole('button', { name: /dismiss/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /practice again/i })).toBeInTheDocument();
+  });
+
+  // ── AC-dismiss: clicking Dismiss calls clearSessionSummary and removes banner ──
+  it('Dismiss clears summary and removes banner', async () => {
+    const user = userEvent.setup();
+
+    // Given: summary set + fromFinish route-state → banner is visible
+    useExercisePracticeStore.setState({ sessionSummary: fullSummary });
+    renderWithRouteState({ fromFinish: true });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('xd-completion-banner')).toBeInTheDocument();
+    });
+
+    // When: user clicks Dismiss
+    const dismissBtn = screen.getByRole('button', { name: /dismiss/i });
+    await user.click(dismissBtn);
+
+    // Then: clearSessionSummary was called — store sessionSummary is now null
+    await waitFor(() => {
+      expect(useExercisePracticeStore.getState().sessionSummary).toBeNull();
+    });
+
+    // And: the banner is gone from the DOM
+    expect(screen.queryByTestId('xd-completion-banner')).not.toBeInTheDocument();
+  });
+
+  // ── AC-guard (1): null summary → no banner even with fromFinish ─────────────
+  it('no banner on organic visit when sessionSummary is null', async () => {
+    // Given: sessionSummary is null (no finished session in store)
+    useExercisePracticeStore.setState({ sessionSummary: null });
+
+    // When: overview mounts WITH fromFinish route-state (as if user navigated here manually)
+    renderWithRouteState({ fromFinish: true });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('exercise-pre-session-page')).toBeInTheDocument();
+    });
+
+    // Then: no banner rendered — null summary is the primary guard
+    expect(screen.queryByTestId('xd-completion-banner')).not.toBeInTheDocument();
+  });
+
+  // ── AC-guard (2): summary set but no fromFinish route-state → no banner ─────
+  // This is the key D6 test: proves the route-state guard (not just the summary) controls
+  // visibility — a stale summary from a prior session must NOT re-show on a later
+  // organic visit to /practice/exercises.
+  it('no banner on organic visit when sessionSummary is set but fromFinish is absent', async () => {
+    // Given: sessionSummary is still in the store (leftover from a previous session)
+    useExercisePracticeStore.setState({ sessionSummary: fullSummary });
+
+    // When: overview mounts WITHOUT fromFinish route-state (organic navigation)
+    renderWithRouteState(null);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('exercise-pre-session-page')).toBeInTheDocument();
+    });
+
+    // Then: no banner — the route-state guard prevents stale banner from showing
+    expect(screen.queryByTestId('xd-completion-banner')).not.toBeInTheDocument();
   });
 });
