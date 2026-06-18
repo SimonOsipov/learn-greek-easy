@@ -721,6 +721,7 @@
       "noFilteredResults": "No feedback matches the selected filters"
     },
     "deleteAction": "Delete",
+    "editAction": "Edit",
     "delete": {
       "button": "Delete",
       "title": "Delete Feedback",
@@ -897,8 +898,6 @@
           "title": "Delete this report?"
         },
         "deleteSuccess": "Report deleted",
-        "notifyCaption": "Saving will notify {{name}} in-app",
-        "resolvedCaption": "Resolved {{rel}} · by {{by}}",
         "save": "Save response"
       },
       "tabs": {
@@ -964,29 +963,6 @@
         "label": "Admin notes",
         "placeholder": "What did you find? What changed?"
       },
-      "quick": {
-        "confirmedFixed": {
-          "body": "Confirmed — fixed in the deck. Marking this report as resolved.",
-          "label": "Confirmed & fixed"
-        },
-        "duplicate": {
-          "body": "Duplicate of an earlier report — closing this one. The fix will ship in the next batch.",
-          "label": "Duplicate"
-        },
-        "heading": "Quick responses",
-        "needMoreInfo": {
-          "body": "Thanks for the report. Could you share which level (A2 / B1 / B2) you were practicing at when this came up? That helps narrow it down.",
-          "label": "Need more info"
-        },
-        "notAnError": {
-          "body": "After checking, this is the correct form. Closing without changes — please reach out via Feedback if you'd like a more detailed explanation.",
-          "label": "Not an error"
-        },
-        "reRecordAudio": {
-          "body": "Re-recorded with native speaker and re-uploaded. Will roll out in the next release.",
-          "label": "Re-record audio"
-        }
-      },
       "resolvedBanner": {
         "by": "by {{name}}",
         "fallbackName": "Admin",
@@ -1003,9 +979,8 @@
     },
     "respond": "Respond",
     "row": {
-      "editResponse": "Edit response",
-      "inDeck": "in deck",
-      "respond": "Respond"
+      "editAria": "Edit error report",
+      "inDeck": "in deck"
     },
     "search": {
       "filteredCount": "{{filtered}} of {{total}} reports",

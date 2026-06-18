@@ -25,6 +25,7 @@ vi.mock('react-i18next', () => ({
         'feedback.v2.card.openReply': opts?.title ? `Open reply for ${opts.title}` : 'Open reply',
         'feedback.v2.card.adminResponseLabel': '✓ Admin response',
         'feedback.deleteAction': 'Delete',
+        'feedback.editAction': 'Edit',
         'feedback.category.bug': 'Bug',
         'feedback.category.featureRequest': 'Feature request',
         'feedback.status.new': 'New',
@@ -186,6 +187,32 @@ describe('AdminFeedbackCard (HN-style re-skin)', () => {
       // onRespond receives a string id, not an object
       expect(typeof onRespond.mock.calls[0][0]).toBe('string');
       expect(onRespond.mock.calls[0][0]).toBe('id-check-001');
+    });
+  });
+
+  // ── Edit pencil (opens drawer) ─────────────────────────────────────────────
+
+  describe('Edit pencil', () => {
+    it('clicking the edit pencil calls onRespond once with the feedback id', async () => {
+      const user = userEvent.setup();
+      const onRespond = vi.fn();
+      const feedback = makeFeedback({ id: 'pencil-test-id' });
+
+      render(<AdminFeedbackCard feedback={feedback} onRespond={onRespond} />);
+
+      await user.click(screen.getByTestId('edit-feedback-pencil-test-id'));
+
+      // stopPropagation must keep the body wrapper's onRespond from also firing.
+      expect(onRespond).toHaveBeenCalledOnce();
+      expect(onRespond).toHaveBeenCalledWith('pencil-test-id');
+    });
+
+    it('renders the edit pencil even when onDelete is not provided', () => {
+      render(
+        <AdminFeedbackCard feedback={makeFeedback({ id: 'no-delete-id' })} onRespond={vi.fn()} />
+      );
+
+      expect(screen.getByTestId('edit-feedback-no-delete-id')).toBeInTheDocument();
     });
   });
 

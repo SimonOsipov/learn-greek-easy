@@ -26,7 +26,6 @@
 // Analytics batch 11 (CER-59):
 //   admin_card_error_opened        — on drawer open
 //   admin_card_error_status_changed — on status select change (pre-save)
-//   admin_card_error_canned_reply_used — on canned pill click
 //   admin_card_error_saved         — on successful PATCH
 //   admin_card_error_deleted       — on successful DELETE
 //
@@ -35,16 +34,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  BookOpen,
-  Check,
-  Copy,
-  ExternalLink,
-  Globe,
-  Loader2,
-  ShieldCheck,
-  Trash,
-} from 'lucide-react';
+import { BookOpen, Check, Copy, ExternalLink, Globe, Loader2, ShieldCheck } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
@@ -70,7 +60,6 @@ import { adminAPI } from '@/services/adminAPI';
 import { useAdminCardErrorStore } from '@/stores/adminCardErrorStore';
 import type { AdminCardErrorResponse, AdminCardErrorUpdateRequest } from '@/types/cardError';
 
-import CannedReplyPills from './CannedReplyPills';
 import { CardErrorStatusBadge } from './CardErrorStatusBadge';
 import { CardPreview } from './CardPreview';
 import { MetaTable } from './MetaTable';
@@ -109,16 +98,6 @@ const CE_STATUS_OPTIONS: StatusOption<CEStatus>[] = [
   { key: 'FIXED', label: '', dotTone: 'success' },
   { key: 'DISMISSED', label: '', dotTone: 'gray' },
 ];
-
-// ── Canned reply keys (CER-32) ────────────────────────────────────────────────
-
-const QUICK_REPLY_KEYS = [
-  'confirmedFixed',
-  'needMoreInfo',
-  'reRecordAudio',
-  'notAnError',
-  'duplicate',
-] as const;
 
 // ============================================
 // Form Schema
@@ -388,13 +367,6 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
     label: tDynamic(t, `cardErrors.reply.status.${opt.key.toLowerCase()}`),
   }));
 
-  // ── Canned reply pills (CER-32) ───────────────────────────────────────────────
-  const cannedPills = QUICK_REPLY_KEYS.map((key) => ({
-    key,
-    label: tDynamic(t, `cardErrors.reply.quick.${key}.label`),
-    body: tDynamic(t, `cardErrors.reply.quick.${key}.body`),
-  }));
-
   // ── Resolved banner (CER-33) ──────────────────────────────────────────────────
   const resolverName =
     report.resolver?.full_name?.trim() || t('cardErrors.reply.resolvedBanner.fallbackName');
@@ -586,15 +558,6 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
                   )}
                 />
 
-                {/* ── CER-32: Canned reply pills ── */}
-                <CannedReplyPills
-                  label={t('cardErrors.reply.quick.heading')}
-                  pills={cannedPills}
-                  onSelect={(body) => {
-                    form.setValue('admin_notes', body);
-                  }}
-                />
-
                 {/* ── CER-30 + CER-31: Admin notes with hint and updated placeholder ── */}
                 <FormField
                   control={form.control}
@@ -739,41 +702,27 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
         )}
       </SidePanel.Body>
 
-      {/* ── Footer ── */}
+      {/* ── Footer (ADMIN2-34: ADMIN2-33 standard) ── */}
       <SidePanel.Footer>
+        {/* Left: Delete (destructive, solid, no icon) */}
         <div className="drawer-foot-left">
-          {/* ── CER-37: Live status mirror + dim caption ── */}
-          <CardErrorStatusBadge status={liveStatus} />
-          <p className="text-xs text-muted-foreground" data-testid="foot-caption">
-            {report.resolved_at
-              ? t('cardErrors.drawer.foot.resolvedCaption', {
-                  rel: formatRelative(report.resolved_at),
-                  by: report.resolver?.full_name?.trim() ?? '',
-                })
-              : t('cardErrors.drawer.foot.notifyCaption', {
-                  name: report.reporter?.full_name?.trim() ?? '',
-                })}
-          </p>
-        </div>
-
-        <div className="drawer-foot-right">
-          {/* ── CER-38: Delete destructive action ── */}
           <Button
             type="button"
-            variant="outline"
-            size="sm"
+            variant="destructive"
             onClick={() => setDeleteConfirmOpen(true)}
             disabled={isDeleting || isUpdating}
-            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             aria-label={t('cardErrors.drawer.foot.delete')}
             data-testid="delete-button"
           >
-            <Trash className="h-4 w-4" />
+            {t('cardErrors.drawer.foot.delete')}
           </Button>
+        </div>
 
+        {/* Right: safe actions */}
+        <div className="drawer-foot-right">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             onClick={() => onOpenChange(false)}
             disabled={isUpdating}
             data-testid="cancel-button"
