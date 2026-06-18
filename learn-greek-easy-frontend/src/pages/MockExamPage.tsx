@@ -27,6 +27,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import '@/features/decks/dx/dx.css';
+import { Breadcrumb, Kicker } from '@/features/decks/dx';
 import { track } from '@/lib/analytics';
 import log from '@/lib/logger';
 import { mockExamAPI } from '@/services/mockExamAPI';
@@ -317,12 +319,18 @@ export const MockExamPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-8" data-testid="mock-exam-page">
-      {/* Page Header */}
-      <div>
-        <h1
-          className="text-2xl font-semibold text-foreground md:text-3xl"
-          data-testid="mock-exam-title"
-        >
+      {/* Breadcrumb */}
+      <Breadcrumb
+        trail={[
+          { label: t('breadcrumb.culture', 'Culture'), to: '/culture' },
+          { label: t('breadcrumb.mock', 'Mock Exam') },
+        ]}
+      />
+
+      {/* Index head: kicker + H1 + subtitle */}
+      <div className="dx-index-head">
+        <Kicker tone="violet">{t('page.kicker')}</Kicker>
+        <h1 className="dx-index-h" data-testid="mock-exam-title">
           {t('page.title')}
         </h1>
         <p className="mt-2 text-muted-foreground">{t('page.subtitle')}</p>
