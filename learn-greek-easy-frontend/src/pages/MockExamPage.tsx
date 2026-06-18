@@ -10,23 +10,26 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   GraduationCap,
   AlertCircle,
-  Trophy,
   Target,
   TrendingUp,
   Award,
   Clock,
   CheckCircle2,
   XCircle,
+  BookOpen,
   PlayCircle,
   RotateCcw,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
+import { CultureMetricStrip } from '@/components/culture/redesign/CultureMetricStrip';
+import type { CultureMetric } from '@/components/culture/redesign/CultureMetricStrip';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import '@/features/decks/dx/dx.css';
+import { Breadcrumb, Kicker } from '@/features/decks/dx';
 import { track } from '@/lib/analytics';
 import log from '@/lib/logger';
 import { mockExamAPI } from '@/services/mockExamAPI';
@@ -59,39 +62,24 @@ function formatDate(dateString: string): string {
 }
 
 /**
- * Loading skeleton for stats cards
+ * Loading skeleton for the metric strip (mirrors the dx-metric 4-up layout)
  */
 const StatsLoadingSkeleton: React.FC = () => (
-  <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-    {[1, 2, 3, 4].map((i) => (
-      <Card key={i}>
-        <CardContent className="pt-6">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="mt-2 h-8 w-16" />
-        </CardContent>
-      </Card>
+  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    {Array.from({ length: 4 }).map((_, i) => (
+      <Skeleton key={i} className="h-24 rounded-2xl" />
     ))}
   </div>
 );
 
 /**
- * Loading skeleton for history list
+ * Loading skeleton for the recent-attempts section (mirrors cx-attempts rows)
  */
 const HistoryLoadingSkeleton: React.FC = () => (
   <div className="space-y-3">
-    {[1, 2, 3].map((i) => (
-      <Card key={i}>
-        <CardContent className="flex items-center justify-between py-4">
-          <div className="flex items-center gap-4">
-            <Skeleton className="h-8 w-8 rounded-full" />
-            <div>
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="mt-1 h-3 w-24" />
-            </div>
-          </div>
-          <Skeleton className="h-6 w-16" />
-        </CardContent>
-      </Card>
+    <Skeleton className="h-6 w-56" />
+    {Array.from({ length: 3 }).map((_, i) => (
+      <Skeleton key={i} className="h-16 w-full rounded-xl" />
     ))}
   </div>
 );
@@ -105,59 +93,39 @@ interface StatsGridProps {
 
 const StatsGrid: React.FC<StatsGridProps> = ({ stats }) => {
   const { t } = useTranslation('mockExam');
+  const hasExams = Boolean(stats?.total_exams);
 
-  const statsConfig = [
+  const metrics: CultureMetric[] = [
     {
-      key: 'totalExams',
+      icon: <GraduationCap aria-hidden="true" />,
       label: t('stats.totalExams'),
       value: stats?.total_exams ?? 0,
-      icon: GraduationCap,
-      color: 'text-primary',
-      bgColor: 'bg-primary/15',
+      tone: 'primary',
     },
     {
-      key: 'passRate',
+      icon: <Target aria-hidden="true" />,
       label: t('stats.passRate'),
-      value: stats?.total_exams ? `${Math.round(stats.pass_rate)}%` : t('stats.notAvailable'),
-      icon: Target,
-      color: 'text-success',
-      bgColor: 'bg-success/15',
+      value: hasExams ? Math.round(stats!.pass_rate) : t('stats.notAvailable'),
+      sub: hasExams ? '%' : undefined,
+      tone: 'green',
     },
     {
-      key: 'averageScore',
+      icon: <TrendingUp aria-hidden="true" />,
       label: t('stats.averageScore'),
-      value: stats?.total_exams ? `${Math.round(stats.average_score)}%` : t('stats.notAvailable'),
-      icon: TrendingUp,
-      color: 'text-practice-accent',
-      bgColor: 'bg-practice-accent/15',
+      value: hasExams ? Math.round(stats!.average_score) : t('stats.notAvailable'),
+      sub: hasExams ? '%' : undefined,
+      tone: 'violet',
     },
     {
-      key: 'bestScore',
+      icon: <Award aria-hidden="true" />,
       label: t('stats.bestScore'),
-      value: stats?.total_exams ? `${Math.round(stats.best_score)}%` : t('stats.notAvailable'),
-      icon: Award,
-      color: 'text-practice-gold',
-      bgColor: 'bg-practice-gold/15',
+      value: hasExams ? Math.round(stats!.best_score) : t('stats.notAvailable'),
+      sub: hasExams ? '%' : undefined,
+      tone: 'amber',
     },
   ];
 
-  return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-      {statsConfig.map(({ key, label, value, icon: Icon, color, bgColor }) => (
-        <Card key={key}>
-          <CardContent className="flex items-center gap-3 pt-6">
-            <div className={`rounded-full p-3 ${bgColor}`}>
-              <Icon className={`h-5 w-5 ${color}`} />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{label}</p>
-              <p className="text-2xl font-bold text-foreground">{value}</p>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
+  return <CultureMetricStrip metrics={metrics} />;
 };
 
 /**
@@ -171,45 +139,30 @@ const HistoryItemCard: React.FC<HistoryItemProps> = ({ exam }) => {
   const { t } = useTranslation('mockExam');
   const { minutes, seconds } = formatTime(exam.time_taken_seconds);
   const percentage = Math.round((exam.score / exam.total_questions) * 100);
+  const passStr = String(exam.passed);
 
   return (
-    <Card>
-      <CardContent className="flex items-center justify-between py-4">
-        <div className="flex items-center gap-4">
-          <div
-            className={`flex h-10 w-10 items-center justify-center rounded-full ${
-              exam.passed ? 'bg-success/15' : 'bg-danger/15'
-            }`}
-          >
-            {exam.passed ? (
-              <CheckCircle2 className="h-5 w-5 text-success" />
-            ) : (
-              <XCircle className="h-5 w-5 text-danger" />
-            )}
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-foreground">
-                {t('history.score', { score: exam.score, total: exam.total_questions })}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                ({t('history.percentage', { percentage })})
-              </span>
-            </div>
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <span>{formatDate(exam.completed_at || exam.started_at)}</span>
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {t('history.timeTaken', { minutes, seconds })}
-              </span>
-            </div>
-          </div>
+    <div className="cx-attempt">
+      <span className="cx-attempt-icon" data-pass={passStr}>
+        {exam.passed ? <CheckCircle2 aria-hidden="true" /> : <XCircle aria-hidden="true" />}
+      </span>
+      <div className="cx-attempt-body">
+        <div className="cx-attempt-h">
+          {exam.score}/{exam.total_questions} <small>({percentage}%)</small>
         </div>
-        <span className={`badge ${exam.passed ? 'b-green' : 'b-red'}`}>
-          {exam.passed ? t('history.passed') : t('history.failed')}
-        </span>
-      </CardContent>
-    </Card>
+        <div className="cx-attempt-meta">
+          {formatDate(exam.completed_at || exam.started_at)}
+          <span>·</span>
+          <Clock aria-hidden="true" style={{ width: 12, height: 12 }} />
+          {/* span isolates the duration text node for the unit-test matcher; cx-attempt-meta styles children inline */}
+          <span>{t('history.timeTaken', { minutes, seconds })}</span>
+        </div>
+      </div>
+      <span className="cx-attempt-score">{percentage}%</span>
+      <span className="cx-attempt-tag" data-pass={passStr}>
+        {exam.passed ? t('history.passed') : t('history.failed')}
+      </span>
+    </div>
   );
 };
 
@@ -220,11 +173,9 @@ const EmptyHistoryState: React.FC = () => {
   const { t } = useTranslation('mockExam');
 
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="rounded-full bg-muted p-4">
-        <Trophy className="h-8 w-8 text-muted-foreground" />
-      </div>
-      <p className="mt-4 max-w-sm text-muted-foreground">{t('history.empty')}</p>
+    <div className="cx-attempts-empty">
+      <BookOpen aria-hidden="true" style={{ width: 40, height: 40, opacity: 0.4 }} />
+      <p>{t('history.empty')}</p>
     </div>
   );
 };
@@ -317,12 +268,18 @@ export const MockExamPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-8" data-testid="mock-exam-page">
-      {/* Page Header */}
-      <div>
-        <h1
-          className="text-2xl font-semibold text-foreground md:text-3xl"
-          data-testid="mock-exam-title"
-        >
+      {/* Breadcrumb */}
+      <Breadcrumb
+        trail={[
+          { label: t('breadcrumb.culture', 'Culture'), to: '/culture' },
+          { label: t('breadcrumb.mock', 'Mock Exam') },
+        ]}
+      />
+
+      {/* Index head: kicker + H1 + subtitle */}
+      <div className="dx-index-head">
+        <Kicker tone="violet">{t('page.kicker')}</Kicker>
+        <h1 className="dx-index-h" data-testid="mock-exam-title">
           {t('page.title')}
         </h1>
         <p className="mt-2 text-muted-foreground">{t('page.subtitle')}</p>
@@ -353,14 +310,8 @@ export const MockExamPage: React.FC = () => {
       {isLoading && !error && (
         <>
           <StatsLoadingSkeleton />
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-6 w-48" />
-            </CardHeader>
-            <CardContent>
-              <HistoryLoadingSkeleton />
-            </CardContent>
-          </Card>
+          <Skeleton className="h-14 w-full rounded-xl" />
+          <HistoryLoadingSkeleton />
         </>
       )}
 
@@ -371,60 +322,85 @@ export const MockExamPage: React.FC = () => {
           <StatsGrid stats={statistics?.stats ?? null} />
 
           {/* Action Buttons */}
-          <div className="flex flex-wrap gap-4">
-            {hasRecoverableSession && (
-              <Button
-                size="lg"
+          {hasRecoverableSession ? (
+            <div className="cx-hero-ctas">
+              <button
+                type="button"
+                className="cx-cta-primary"
                 onClick={handleContinueExam}
-                className="gap-2"
                 data-testid="continue-exam-button"
               >
-                <RotateCcw className="h-5 w-5" />
+                <RotateCcw aria-hidden="true" />
                 {t('actions.continueExam')}
-              </Button>
-            )}
-            <Button
-              size="lg"
-              variant={hasRecoverableSession ? 'outline' : 'default'}
+              </button>
+              <button
+                type="button"
+                className="cx-cta-ghost"
+                onClick={handleStartExam}
+                disabled={!canStartExam}
+                data-testid="start-exam-button"
+              >
+                {t('actions.startExam')}
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="dx-action-cta"
               onClick={handleStartExam}
               disabled={!canStartExam}
-              className="gap-2"
               data-testid="start-exam-button"
             >
-              <PlayCircle className="h-5 w-5" />
+              <PlayCircle aria-hidden="true" />
               {t('actions.startExam')}
-            </Button>
-          </div>
+            </button>
+          )}
 
           {/* Not enough questions warning */}
           {!canStartExam && queueInfo && (
-            <Card className="border-warning/40 bg-warning/10">
-              <CardContent className="flex items-start gap-3 pt-6">
-                <AlertCircle className="h-5 w-5 flex-shrink-0 text-warning" />
-                <p className="text-sm text-warning">{t('states.notEnoughQuestions')}</p>
-              </CardContent>
-            </Card>
+            <div className="cx-nudge" role="note">
+              <span className="cx-nudge-icon">
+                <AlertCircle aria-hidden="true" />
+              </span>
+              <span>{t('states.notEnoughQuestions')}</span>
+            </div>
           )}
 
-          <Separator />
-
           {/* Recent History */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">{t('history.title')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {statistics?.recent_exams && statistics.recent_exams.length > 0 ? (
-                <div className="space-y-3">
-                  {statistics.recent_exams.slice(0, 5).map((exam) => (
-                    <HistoryItemCard key={exam.id} exam={exam} />
-                  ))}
+          {(() => {
+            const recentExams = statistics?.recent_exams?.slice(0, 5) ?? [];
+            const hasAttempts = recentExams.length > 0;
+            return (
+              <section className="dx-section">
+                <div className="dx-section-head">
+                  <div className="dx-section-eyebrow">
+                    <Kicker tone="amber">{t('history.eyebrow')}</Kicker>
+                    <h2 className="dx-section-h">
+                      {t('history.titleN', { n: recentExams.length })}
+                    </h2>
+                  </div>
+                  {hasAttempts && statistics?.stats && (
+                    <span className="cx-section-meta">
+                      {t('history.meta', {
+                        passRate: Math.round(statistics.stats.pass_rate),
+                        best: Math.round(statistics.stats.best_score),
+                      })}
+                    </span>
+                  )}
                 </div>
-              ) : (
-                <EmptyHistoryState />
-              )}
-            </CardContent>
-          </Card>
+
+                {hasAttempts ? (
+                  <div className="cx-attempts">
+                    {recentExams.map((exam) => (
+                      <HistoryItemCard key={exam.id} exam={exam} />
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyHistoryState />
+                )}
+              </section>
+            );
+          })()}
         </>
       )}
     </div>

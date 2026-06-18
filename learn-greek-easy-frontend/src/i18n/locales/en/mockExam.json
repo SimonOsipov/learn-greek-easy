@@ -1,5 +1,10 @@
 {
+  "breadcrumb": {
+    "culture": "Culture",
+    "mock": "Mock Exam"
+  },
   "page": {
+    "kicker": "Mock exam · 25 questions",
     "title": "Culture Exam Practice",
     "subtitle": "Practice for the Cypriot history and culture exam with timed mock tests. Each exam contains 25 questions with a 45-minute time limit. You need 60% (16/25) to pass."
   },
@@ -11,12 +16,12 @@
     "notAvailable": "N/A"
   },
   "history": {
-    "title": "Recent Exam History",
+    "eyebrow": "Recent mock exams",
+    "titleN": "Last {{n}} attempts",
+    "meta": "Pass rate: {{passRate}}% · Best: {{best}}%",
     "empty": "You haven't taken any exams yet. Start your first mock exam to begin tracking your progress!",
     "passed": "Passed",
     "failed": "Failed",
-    "score": "{{score}}/{{total}}",
-    "percentage": "{{percentage}}%",
     "timeTaken": "{{minutes}}m {{seconds}}s"
   },
   "actions": {

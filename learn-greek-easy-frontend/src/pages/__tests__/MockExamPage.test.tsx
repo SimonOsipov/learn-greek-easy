@@ -63,6 +63,9 @@ vi.mock('react-i18next', async () => {
           t: (key: string, opts?: Record<string, unknown>) => {
             // Minimal translations needed for the tested behaviours
             const map: Record<string, string | ((...a: unknown[]) => string)> = {
+              'breadcrumb.culture': 'Culture',
+              'breadcrumb.mock': 'Mock Exam',
+              'page.kicker': 'Mock exam · 25 questions',
               'page.title': 'Culture Exam Practice',
               'page.subtitle': 'Practice subtitle',
               'stats.totalExams': 'Total Exams',
@@ -70,12 +73,12 @@ vi.mock('react-i18next', async () => {
               'stats.averageScore': 'Average Score',
               'stats.bestScore': 'Best Score',
               'stats.notAvailable': 'N/A',
-              'history.title': 'Recent Exam History',
+              'history.eyebrow': 'Recent mock exams',
+              'history.titleN': `Last ${opts?.n} attempts`,
+              'history.meta': `Pass rate: ${opts?.passRate}% · Best: ${opts?.best}%`,
               'history.empty': "You haven't taken any exams yet.",
               'history.passed': 'Passed',
               'history.failed': 'Failed',
-              'history.score': `${opts?.score}/${opts?.total}`,
-              'history.percentage': `${opts?.percentage}%`,
               'history.timeTaken': `${opts?.minutes}m ${opts?.seconds}s`,
               'actions.startExam': 'Start Mock Exam',
               'actions.continueExam': 'Continue Exam',
