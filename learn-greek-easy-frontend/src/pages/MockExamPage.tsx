@@ -9,15 +9,14 @@ import React, { useEffect, useRef } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 import {
-  GraduationCap,
   AlertCircle,
-  Target,
   TrendingUp,
   Award,
   Clock,
   CheckCircle2,
   XCircle,
   BookOpen,
+  Flame,
   PlayCircle,
   RotateCcw,
   Zap,
@@ -35,7 +34,7 @@ import { cultureDeckAPI } from '@/services/cultureDeckAPI';
 import type { CategoryReadiness, CultureReadinessResponse } from '@/services/cultureDeckAPI';
 import { mockExamAPI } from '@/services/mockExamAPI';
 import { useMockExamSessionStore } from '@/stores/mockExamSessionStore';
-import type { MockExamStatisticsResponse, MockExamHistoryItem } from '@/types/mockExam';
+import type { MockExamHistoryItem } from '@/types/mockExam';
 
 /**
  * Format seconds to "Xm Ys" format
@@ -278,43 +277,69 @@ function CategoryPanel({ categories }: { categories: CategoryReadiness[] }) {
 }
 
 /**
- * Statistics grid displaying exam performance metrics
+ * The single curated metric strip (Decision 1 + Decision 5).
+ *
+ * Curated set = Accuracy · Learned · Best score · Streak. The readiness donut
+ * (hero) owns Readiness%, so it is NOT repeated here; the exam-volume stats
+ * (Total exams / Pass rate / Average) are demoted to the recent-attempts meta
+ * line, so they are not repeated as cards either (AC-4). Streak stays the
+ * unwired `—` placeholder — there is no streak endpoint (AC-8 / Decision 4).
+ *
+ * Accuracy / Learned / category count come from readiness; Best score comes
+ * from the mock-exam statistics. Both sources can be null (a readiness or stats
+ * failure must not block the page, AC-6) — each metric degrades to `—`.
+ *
+ * NOTE: labels resolve via the `culture` namespace (the readiness sub-components
+ * still do too, pre-flip). PRACT2-11-03 migrates the whole `readiness` key block
+ * — including `metricBestScore` — to the `mockExam` namespace in one move.
  */
-interface StatsGridProps {
-  stats: MockExamStatisticsResponse['stats'] | null;
+interface CuratedMetricStripProps {
+  readiness: CultureReadinessResponse | null;
+  bestScore: number | null;
 }
 
-const StatsGrid: React.FC<StatsGridProps> = ({ stats }) => {
-  const { t } = useTranslation('mockExam');
-  const hasExams = Boolean(stats?.total_exams);
+const CuratedMetricStrip: React.FC<CuratedMetricStripProps> = ({ readiness, bestScore }) => {
+  const { t } = useTranslation('culture');
+
+  const accuracy = readiness?.accuracy_percentage ?? null;
 
   const metrics: CultureMetric[] = [
     {
-      icon: <GraduationCap aria-hidden="true" />,
-      label: t('stats.totalExams'),
-      value: stats?.total_exams ?? 0,
-      tone: 'primary',
-    },
-    {
-      icon: <Target aria-hidden="true" />,
-      label: t('stats.passRate'),
-      value: hasExams ? Math.round(stats!.pass_rate) : t('stats.notAvailable'),
-      sub: hasExams ? '%' : undefined,
-      tone: 'green',
-    },
-    {
       icon: <TrendingUp aria-hidden="true" />,
-      label: t('stats.averageScore'),
-      value: hasExams ? Math.round(stats!.average_score) : t('stats.notAvailable'),
-      sub: hasExams ? '%' : undefined,
+      label: t('readiness.metricAccuracy', 'Accuracy'),
+      value: accuracy !== null ? Math.round(accuracy) : '—',
+      sub: accuracy !== null ? '%' : undefined,
+      trend: t('readiness.metricAccuracyTrend', 'on attempted questions'),
+      trendTone: 'flat',
+      tone: 'amber',
+    },
+    {
+      icon: <BookOpen aria-hidden="true" />,
+      label: t('readiness.metricLearned', 'Learned'),
+      value: readiness?.questions_learned ?? '—',
+      sub: readiness ? `/ ${readiness.questions_total}` : undefined,
+      trend: t('readiness.metricLearnedTrend', {
+        n: readiness?.categories.length ?? 0,
+        defaultValue: 'across {{n}} categories',
+      }),
+      trendTone: 'flat',
       tone: 'violet',
     },
     {
       icon: <Award aria-hidden="true" />,
-      label: t('stats.bestScore'),
-      value: hasExams ? Math.round(stats!.best_score) : t('stats.notAvailable'),
-      sub: hasExams ? '%' : undefined,
-      tone: 'amber',
+      label: t('readiness.metricBestScore', 'Best Score'),
+      value: bestScore !== null ? Math.round(bestScore) : '—',
+      sub: bestScore !== null ? '%' : undefined,
+      tone: 'green',
+    },
+    {
+      icon: <Flame aria-hidden="true" />,
+      label: t('readiness.metricStreak', 'Streak'),
+      value: '—',
+      sub: t('readiness.days', 'days'),
+      unwired: true,
+      unwiredLabel: 'Streak — not yet connected to backend data.',
+      tone: 'primary',
     },
   ];
 
@@ -557,8 +582,15 @@ export const MockExamPage: React.FC = () => {
             </div>
           )}
 
-          {/* Statistics Grid (still the old StatsGrid — strip curation is PRACT2-11-02) */}
-          <StatsGrid stats={statistics?.stats ?? null} />
+          {/* The single curated metric strip: Accuracy · Learned · Best · Streak.
+              Best score is null until there is at least one exam (so it renders
+              `—`, not a meaningless 0). The donut owns Readiness% and the
+              exam-volume stats live in the attempts meta — neither is duplicated
+              here (AC-4). */}
+          <CuratedMetricStrip
+            readiness={readiness}
+            bestScore={statistics?.stats.total_exams ? statistics.stats.best_score : null}
+          />
 
           {/* Category progress panel (only when readiness data is present) */}
           {readiness?.categories && readiness.categories.length > 0 && (

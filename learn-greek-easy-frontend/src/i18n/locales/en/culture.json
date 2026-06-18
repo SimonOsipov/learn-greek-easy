@@ -212,6 +212,7 @@
     "metricLearned": "Learned",
     "metricLearnedTrend": "across {{n}} categories",
     "metricStreak": "Streak",
+    "metricBestScore": "Best Score",
     "days": "days",
     "catEyebrow": "Where you're weakest",
     "catTitle": "Progress by category",
