@@ -48,7 +48,9 @@ describe('AdminCardErrorCard (CER-53)', () => {
   it('body click invokes onRespond handler', () => {
     const onRespond = vi.fn();
     const row = makeRow();
-    renderWithProviders(<AdminCardErrorCard errorReport={row} onRespond={onRespond} />);
+    renderWithProviders(
+      <AdminCardErrorCard errorReport={row} onRespond={onRespond} onDelete={vi.fn()} />
+    );
 
     const card = screen.getByTestId('admin-card-error-card');
     fireEvent.click(card);
@@ -59,20 +61,26 @@ describe('AdminCardErrorCard (CER-53)', () => {
   // AC #3: inline reply present when admin_notes is non-empty; omitted when null
   it('renders inline reply preview when admin_notes is non-empty', () => {
     const rowWithNotes = makeRow({ admin_notes: 'Fixed in v2' });
-    renderWithProviders(<AdminCardErrorCard errorReport={rowWithNotes} onRespond={vi.fn()} />);
+    renderWithProviders(
+      <AdminCardErrorCard errorReport={rowWithNotes} onRespond={vi.fn()} onDelete={vi.fn()} />
+    );
     expect(screen.getByTestId('card-error-admin-notes')).toBeInTheDocument();
     expect(screen.getByTestId('card-error-admin-notes')).toHaveTextContent('Fixed in v2');
   });
 
   it('omits inline reply when admin_notes is null', () => {
     const rowNoNotes = makeRow({ admin_notes: null });
-    renderWithProviders(<AdminCardErrorCard errorReport={rowNoNotes} onRespond={vi.fn()} />);
+    renderWithProviders(
+      <AdminCardErrorCard errorReport={rowNoNotes} onRespond={vi.fn()} onDelete={vi.fn()} />
+    );
     expect(screen.queryByTestId('card-error-admin-notes')).not.toBeInTheDocument();
   });
 
   it('omits inline reply when admin_notes is empty string', () => {
     const rowEmpty = makeRow({ admin_notes: '' });
-    renderWithProviders(<AdminCardErrorCard errorReport={rowEmpty} onRespond={vi.fn()} />);
+    renderWithProviders(
+      <AdminCardErrorCard errorReport={rowEmpty} onRespond={vi.fn()} onDelete={vi.fn()} />
+    );
     expect(screen.queryByTestId('card-error-admin-notes')).not.toBeInTheDocument();
   });
 
@@ -84,7 +92,9 @@ describe('AdminCardErrorCard (CER-53)', () => {
     ['DISMISSED' as const, 'triaged'],
   ])('%s row has data-state="%s"', (status, expectedState) => {
     const row = makeRow({ status });
-    renderWithProviders(<AdminCardErrorCard errorReport={row} onRespond={vi.fn()} />);
+    renderWithProviders(
+      <AdminCardErrorCard errorReport={row} onRespond={vi.fn()} onDelete={vi.fn()} />
+    );
     const card = screen.getByTestId('admin-card-error-card');
     expect(card).toHaveAttribute('data-state', expectedState);
   });
@@ -93,7 +103,7 @@ describe('AdminCardErrorCard (CER-53)', () => {
   it('timestamp has the ce-card-when mono font class', () => {
     const row = makeRow();
     const { container } = renderWithProviders(
-      <AdminCardErrorCard errorReport={row} onRespond={vi.fn()} />
+      <AdminCardErrorCard errorReport={row} onRespond={vi.fn()} onDelete={vi.fn()} />
     );
     const timestamp = container.querySelector('.ce-card-when');
     expect(timestamp).not.toBeNull();
@@ -112,7 +122,9 @@ describe('AdminCardErrorCard (CER-53)', () => {
         correct_index: 0,
       },
     });
-    renderWithProviders(<AdminCardErrorCard errorReport={row} onRespond={vi.fn()} />);
+    renderWithProviders(
+      <AdminCardErrorCard errorReport={row} onRespond={vi.fn()} onDelete={vi.fn()} />
+    );
     expect(screen.getByText('What is the capital of Greece?')).toBeInTheDocument();
   });
 

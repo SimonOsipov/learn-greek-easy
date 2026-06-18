@@ -150,10 +150,12 @@ describe('AdminCardErrorSection — delete ConfirmDialog (ADMIN2-34-04)', () => 
         errorList: [sampleReport],
         selectedError: null,
         page: 1,
+        pageSize: 10,
         total: 1,
         totalPages: 1,
         filters: { status: null, cardType: null },
         isLoading: false,
+        isUpdating: false,
         error: null,
         fetchErrorList: vi.fn(),
         setFilters: vi.fn(),
@@ -162,6 +164,7 @@ describe('AdminCardErrorSection — delete ConfirmDialog (ADMIN2-34-04)', () => 
         setSelectedError: vi.fn(),
         updateError: vi.fn(),
         deleteError: mockDeleteError,
+        clearError: vi.fn(),
       };
       return typeof selector === 'function' ? selector(state) : state;
     });
