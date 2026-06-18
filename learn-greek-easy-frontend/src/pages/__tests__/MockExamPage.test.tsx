@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@/lib/test-utils';
+import { render, screen, waitFor, within } from '@/lib/test-utils';
 import type { CultureReadinessResponse } from '@/services/cultureDeckAPI';
 import { useMockExamSessionStore } from '@/stores/mockExamSessionStore';
 import type { MockExamStatisticsResponse, MockExamQueueResponse } from '@/types/mockExam';
@@ -179,6 +179,55 @@ function makeReadiness(overrides?: Partial<CultureReadinessResponse>): CultureRe
     accuracy_percentage: null,
     total_answers: 0,
     categories: [],
+    motivation: null,
+    ...overrides,
+  };
+}
+
+// A rich readiness payload harvested from the deleted CultureReadinessPage.test
+// (`readinessFixture`). Drives the merged hero / verdict / metric-strip /
+// category-panel assertions now that those sections live on MockExamPage.
+// Categories are ordered ASCENDING by readiness_percentage (the API contract),
+// so history (22%) is the weakest and owns the hero/category "Practice" CTA.
+function makeRichReadiness(
+  overrides?: Partial<CultureReadinessResponse>
+): CultureReadinessResponse {
+  return {
+    readiness_percentage: 45,
+    verdict: 'getting_there',
+    questions_learned: 220,
+    questions_total: 490,
+    accuracy_percentage: 72,
+    total_answers: 650,
+    categories: [
+      {
+        category: 'history',
+        readiness_percentage: 22,
+        questions_mastered: 25,
+        questions_total: 110,
+        deck_ids: ['deck-history-1'],
+        accuracy_percentage: 65,
+        needs_reinforcement: true,
+      },
+      {
+        category: 'politics',
+        readiness_percentage: 38,
+        questions_mastered: 42,
+        questions_total: 110,
+        deck_ids: ['deck-politics-1'],
+        accuracy_percentage: 70,
+        needs_reinforcement: false,
+      },
+      {
+        category: 'geography',
+        readiness_percentage: 60,
+        questions_mastered: 66,
+        questions_total: 110,
+        deck_ids: ['deck-geo-1'],
+        accuracy_percentage: null,
+        needs_reinforcement: false,
+      },
+    ],
     motivation: null,
     ...overrides,
   };
@@ -456,19 +505,178 @@ describe('MockExamPage', () => {
       expect(await screen.findByText(/haven't taken any exams yet/i)).toBeInTheDocument();
     });
 
-    it('still shows stats grid with zeroed values when stats is null', async () => {
+    it('renders the curated metric strip with Best=— when stats is null (no old StatsGrid)', async () => {
+      // PRACT2-11-02 removed the old StatsGrid; the page now shows the curated
+      // CultureMetricStrip (Accuracy · Learned · Best · Streak). When stats fails
+      // but readiness + queue succeed: the launcher still renders, Best degrades
+      // to `—` (best score comes from stats), Streak stays `—` (unwired, no
+      // endpoint), and Accuracy / Learned come from readiness (AC-6).
       mockGetStatistics.mockRejectedValue(new Error('Stats unavailable'));
+      mockGetReadiness.mockResolvedValue(makeRichReadiness());
       mockGetQuestionQueue.mockResolvedValue(makeQueue({ can_start_exam: true }));
 
       render(<MockExamPage />);
 
-      // Stats grid renders only after stats settle; mock-exam-page is present
-      // during loading, so wait for the value itself, not the container.
-      // stats?.total_exams ?? 0 → "0" for total exams
-      expect(await screen.findByText('0')).toBeInTheDocument();
-      // stats?.total_exams is falsy so pass rate / average / best show "N/A"
-      const naElements = screen.getAllByText('N/A');
-      expect(naElements.length).toBeGreaterThanOrEqual(3);
+      // Launcher still renders (AC-6 — a stats failure must not block the page).
+      expect(await screen.findByTestId('start-exam-button')).toBeInTheDocument();
+
+      const strip = await screen.findByTestId('culture-metric-strip');
+      // Cards are ordered: 0 Accuracy · 1 Learned · 2 Best · 3 Streak.
+      // Accuracy (from readiness) → 72; Learned (from readiness) → 220.
+      expect(within(screen.getByTestId('culture-metric-0')).getByText('72')).toBeInTheDocument();
+      expect(within(screen.getByTestId('culture-metric-1')).getByText('220')).toBeInTheDocument();
+      // Best degrades to `—` because the stats source failed (no best_score).
+      expect(within(screen.getByTestId('culture-metric-2')).getByText('—')).toBeInTheDocument();
+      // Streak is the permanently-unwired placeholder `—`.
+      expect(within(screen.getByTestId('culture-metric-3')).getByText('—')).toBeInTheDocument();
+      // Sanity: there is no leftover StatsGrid — the strip is the only metric block.
+      expect(strip).toBeInTheDocument();
+    });
+
+    // F5 — symmetric to the stats-failure cases above: readiness REJECTS while
+    // stats + queue SUCCEED. Readiness sections are ADDITIVE, so the exam launcher
+    // must still render and the hero / category panel are simply omitted (AC-6).
+    it('still renders the exam launcher when readiness fails but stats+queue succeed (F5)', async () => {
+      mockGetReadiness.mockRejectedValue(new Error('Readiness unavailable'));
+      mockGetStatistics.mockResolvedValue(makeStats());
+      mockGetQuestionQueue.mockResolvedValue(makeQueue({ can_start_exam: true }));
+
+      render(<MockExamPage />);
+
+      // Launcher renders and is enabled — no crash, no error screen.
+      const startButton = await screen.findByTestId('start-exam-button');
+      expect(startButton).not.toBeDisabled();
+      expect(screen.queryByText(/failed to load exam data/i)).not.toBeInTheDocument();
+
+      // Readiness-derived sections are omitted when readiness is absent.
+      // The donut carries an aria-label "{pct}% readiness"; none should exist.
+      expect(screen.queryByLabelText(/readiness/i)).not.toBeInTheDocument();
+      // "What this means" hero kicker and the category panel are gone too.
+      expect(screen.queryByText(/what this means/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/where you're weakest/i)).not.toBeInTheDocument();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Merged readiness content — hero, verdict, metric strip, category panel
+  // (harvested from the deleted CultureReadinessPage.test.tsx)
+  // ---------------------------------------------------------------------------
+
+  describe('merged readiness content renders on the page', () => {
+    beforeEach(() => {
+      // Stats + queue succeed throughout this block; readiness is the variable.
+      mockGetStatistics.mockResolvedValue(
+        makeStats({ stats: { ...makeStats().stats, best_score: 88 } })
+      );
+      mockGetQuestionQueue.mockResolvedValue(makeQueue());
+    });
+
+    it('renders the readiness donut percentage and verdict pill', async () => {
+      mockGetReadiness.mockResolvedValue(makeRichReadiness());
+
+      render(<MockExamPage />);
+
+      // Donut center shows the rounded readiness % (45). Scope to the donut via
+      // its aria-label to avoid colliding with the per-category % values.
+      const donut = await screen.findByLabelText('45% readiness');
+      expect(within(donut).getByText('45%')).toBeInTheDocument();
+      // Verdict pill resolves the verdict enum to its label.
+      expect(screen.getByText('Getting There')).toBeInTheDocument();
+    });
+
+    it('renders the "what this means" explainer with learned + accuracy', async () => {
+      mockGetReadiness.mockResolvedValue(makeRichReadiness());
+
+      render(<MockExamPage />);
+
+      // Hero kicker + heroTitle ("{learned} of {total} questions learned").
+      expect(await screen.findByText('What this means')).toBeInTheDocument();
+      expect(screen.getByText('220 of 490 questions learned')).toBeInTheDocument();
+      // Overall accuracy line (accuracy_percentage = 72).
+      expect(screen.getByText('Overall accuracy 72%')).toBeInTheDocument();
+    });
+
+    it('renders the curated metric strip with readiness-derived Accuracy + Learned and stats-derived Best', async () => {
+      mockGetReadiness.mockResolvedValue(makeRichReadiness());
+
+      render(<MockExamPage />);
+
+      await screen.findByTestId('culture-metric-strip');
+      // 0 Accuracy → 72 · 1 Learned → 220 · 2 Best → 88 (stats) · 3 Streak → `—`.
+      expect(within(screen.getByTestId('culture-metric-0')).getByText('72')).toBeInTheDocument();
+      expect(within(screen.getByTestId('culture-metric-1')).getByText('220')).toBeInTheDocument();
+      expect(within(screen.getByTestId('culture-metric-2')).getByText('88')).toBeInTheDocument();
+      expect(within(screen.getByTestId('culture-metric-3')).getByText('—')).toBeInTheDocument();
+    });
+
+    it('renders category rows weakest-first with a "Practice {weakest}" CTA to its deck', async () => {
+      mockGetReadiness.mockResolvedValue(makeRichReadiness());
+
+      render(<MockExamPage />);
+
+      await screen.findByText('History');
+      // All three category labels render (capitalised from the lowercase API).
+      expect(screen.getByText('History')).toBeInTheDocument();
+      expect(screen.getByText('Politics')).toBeInTheDocument();
+      expect(screen.getByText('Geography')).toBeInTheDocument();
+
+      // The weakest category (history, 22%) is the first row, and its panel CTA
+      // links to the first deck id. catCta text → "Practice History — 22% ready".
+      const catCta = screen.getByRole('link', { name: /practice history — 22% ready/i });
+      expect(catCta).toHaveAttribute('href', '/culture/decks/deck-history-1');
+
+      // A category with null accuracy shows the "No attempts yet" fallback.
+      expect(screen.getByText('No attempts yet')).toBeInTheDocument();
+    });
+
+    it('renders the hero ghost "Practice {weakest}" CTA pointing at the weakest deck', async () => {
+      mockGetReadiness.mockResolvedValue(makeRichReadiness());
+
+      render(<MockExamPage />);
+
+      // Hero CTA copy is just "Practice {category}" (no % suffix) → "Practice History".
+      const heroCta = await screen.findByRole('link', { name: /^practice history$/i });
+      expect(heroCta).toHaveAttribute('href', '/culture/decks/deck-history-1');
+    });
+
+    it('renders the motivation nudge when motivation is set', async () => {
+      mockGetReadiness.mockResolvedValue(
+        makeRichReadiness({
+          motivation: {
+            message_key: 'You are making great progress!',
+            params: {},
+            delta_direction: 'improving',
+            delta_percentage: 5,
+          },
+        })
+      );
+
+      render(<MockExamPage />);
+
+      const nudge = await screen.findByText('You are making great progress!');
+      expect(nudge).toBeInTheDocument();
+    });
+
+    it('hides the motivation nudge when motivation is null', async () => {
+      mockGetReadiness.mockResolvedValue(makeRichReadiness()); // motivation: null
+
+      render(<MockExamPage />);
+
+      // Wait for the page to settle on the readiness hero.
+      await screen.findByLabelText('45% readiness');
+      // The nudge is the only role="note" carrying the motivation message; with
+      // motivation null and can_start_exam true, no nudge/warning note exists.
+      expect(screen.queryByRole('note')).not.toBeInTheDocument();
+    });
+
+    it('omits the category panel when readiness has no categories', async () => {
+      mockGetReadiness.mockResolvedValue(makeReadiness({ readiness_percentage: 10 }));
+
+      render(<MockExamPage />);
+
+      // Hero still renders (readiness present), but no category panel.
+      await screen.findByLabelText('10% readiness');
+      expect(screen.queryByText(/where you're weakest/i)).not.toBeInTheDocument();
     });
   });
 

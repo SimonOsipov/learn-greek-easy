@@ -47,6 +47,69 @@ async function setLanguage(page: Page, lang: 'en' | 'ru'): Promise<void> {
 }
 
 /**
+ * A sensible, fully-populated readiness payload for the merged hub. Drives the
+ * readiness donut/verdict hero + curated metric strip + category panel that now
+ * live on the mock-exam landing page (PRACT2-11). The same payload is reused for
+ * the empty-stats and with-stats scenarios — the hero/category content is
+ * readiness-derived and orthogonal to the exam-statistics state, so a single
+ * representative payload keeps the baselines focused on the readiness sections.
+ * Categories are ordered ascending by readiness_percentage (the API contract).
+ */
+function readinessBody(): string {
+  return JSON.stringify({
+    readiness_percentage: 45,
+    verdict: 'getting_there',
+    questions_learned: 220,
+    questions_total: 490,
+    accuracy_percentage: 72,
+    total_answers: 650,
+    categories: [
+      {
+        category: 'history',
+        readiness_percentage: 22,
+        questions_mastered: 25,
+        questions_total: 110,
+        deck_ids: ['deck-history-1'],
+        accuracy_percentage: 65,
+        needs_reinforcement: true,
+      },
+      {
+        category: 'politics',
+        readiness_percentage: 38,
+        questions_mastered: 42,
+        questions_total: 110,
+        deck_ids: ['deck-politics-1'],
+        accuracy_percentage: 70,
+        needs_reinforcement: false,
+      },
+      {
+        category: 'geography',
+        readiness_percentage: 60,
+        questions_mastered: 66,
+        questions_total: 110,
+        deck_ids: ['deck-geo-1'],
+        accuracy_percentage: null,
+        needs_reinforcement: false,
+      },
+    ],
+    motivation: null,
+  });
+}
+
+/**
+ * Mock the culture readiness endpoint with the representative payload above.
+ */
+async function mockReadiness(page: Page): Promise<void> {
+  await page.route('**/api/v1/culture/readiness', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: readinessBody(),
+    });
+  });
+}
+
+/**
  * Mock empty statistics API response
  */
 async function mockEmptyStatistics(page: Page): Promise<void> {
@@ -151,6 +214,7 @@ async function mockStatisticsWithHistory(page: Page): Promise<void> {
 test.describe('Mock Exam Landing - Empty State Visual Tests', () => {
   test.beforeEach(async ({ page }) => {
     await mockEmptyStatistics(page);
+    await mockReadiness(page);
     await loginForVisualTest(page);
   });
 
@@ -198,6 +262,7 @@ test.describe('Mock Exam Landing - Empty State Visual Tests', () => {
 test.describe('Mock Exam Landing - With Statistics Visual Tests', () => {
   test.beforeEach(async ({ page }) => {
     await mockStatisticsWithHistory(page);
+    await mockReadiness(page);
     await loginForVisualTest(page);
   });
 
@@ -279,6 +344,20 @@ test.describe('Mock Exam Landing - Loading State Visual Tests', () => {
       });
     });
 
+    // F4: the page's initial skeleton stays mounted until ALL THREE reads settle
+    // (readiness || stats || queue). Delay readiness by the SAME ~10s so it stays
+    // pending alongside stats+queue — otherwise an instant readiness fulfillment
+    // would flip isLoading false (once stats/queue also resolve) but, worse here,
+    // could let the hero paint over the skeleton and pollute the loading baseline.
+    await page.route('**/api/v1/culture/readiness', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: readinessBody(),
+      });
+    });
+
     await loginForVisualTest(page);
     await page.setViewportSize(VIEWPORTS.desktop);
     await setTheme(page, 'light');
@@ -317,6 +396,10 @@ test.describe('Mock Exam Landing - Error State Visual Tests', () => {
         body: JSON.stringify({ can_start_exam: false }),
       });
     });
+
+    // Readiness still succeeds — a stats failure must not block the page (AC-6),
+    // so the readiness hero/category render while the stats sections degrade.
+    await mockReadiness(page);
 
     await loginForVisualTest(page);
     await page.setViewportSize(VIEWPORTS.desktop);
@@ -360,6 +443,8 @@ test.describe('Mock Exam Landing - Not Enough Questions Visual Tests', () => {
         }),
       });
     });
+
+    await mockReadiness(page);
 
     await loginForVisualTest(page);
     await page.setViewportSize(VIEWPORTS.desktop);
