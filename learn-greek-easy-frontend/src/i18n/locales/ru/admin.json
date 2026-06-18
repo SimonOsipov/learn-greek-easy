@@ -12,7 +12,7 @@
     "category": "Категория",
     "categoryPlaceholder": "Выберите категорию",
     "isActive": "Активна",
-    "isActiveDescription": "Неактивные колоды скрыты от учеников",
+    "isActiveDescription": "Деактивированные колоды скрыты от учеников",
     "isPremium": "Премиум",
     "isPremiumDescription": "Премиум-колоды требуют подписки для доступа",
     "save": "Сохранить изменения",
@@ -136,7 +136,8 @@
   },
   "toast": {
     "deckCreated": "Колода успешно создана",
-    "deckDeleted": "Колода успешно удалена"
+    "deckDeleted": "Колода успешно удалена",
+    "deckDeactivated": "Колода деактивирована"
   },
   "deckDelete": {
     "title": "Удалить колоду",
@@ -2173,6 +2174,29 @@
     "typeVocabulary": "Словарный запас",
     "statusActive": "Активно",
     "statusInactive": "Неактивно",
+    "statusDeactivated": "Деактивировано",
+    "filters": {
+      "type": {
+        "label": "Фильтр по типу",
+        "all": "Все",
+        "vocab": "Словарные",
+        "culture": "Культура"
+      },
+      "status": {
+        "label": "Фильтр по статусу",
+        "all": "Все",
+        "active": "Активные",
+        "deactivated": "Деактивированные"
+      }
+    },
+    "wordCount_one": "{{count}} слово",
+    "wordCount_few": "{{count}} слова",
+    "wordCount_many": "{{count}} слов",
+    "wordCount_other": "{{count}} слов",
+    "questionCount_one": "{{count}} вопрос",
+    "questionCount_few": "{{count}} вопроса",
+    "questionCount_many": "{{count}} вопросов",
+    "questionCount_other": "{{count}} вопросов",
     "questions": "вопросов",
     "words": "слов",
     "stats": {

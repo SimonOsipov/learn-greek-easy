@@ -12,7 +12,7 @@
     "category": "Category",
     "categoryPlaceholder": "Select category",
     "isActive": "Active",
-    "isActiveDescription": "Inactive decks are hidden from learners",
+    "isActiveDescription": "Deactivated decks are hidden from learners",
     "isPremium": "Premium",
     "isPremiumDescription": "Premium decks require a subscription to access",
     "save": "Save Changes",
@@ -130,7 +130,8 @@
   },
   "toast": {
     "deckCreated": "Deck created successfully",
-    "deckDeleted": "Deck deleted successfully"
+    "deckDeleted": "Deck deleted successfully",
+    "deckDeactivated": "Deck deactivated"
   },
   "deckDelete": {
     "title": "Delete Deck",
@@ -2161,6 +2162,25 @@
     "typeVocabulary": "Vocabulary",
     "statusActive": "Active",
     "statusInactive": "Inactive",
+    "statusDeactivated": "Deactivated",
+    "filters": {
+      "type": {
+        "label": "Filter by type",
+        "all": "All",
+        "vocab": "Vocab",
+        "culture": "Culture"
+      },
+      "status": {
+        "label": "Filter by status",
+        "all": "All",
+        "active": "Active",
+        "deactivated": "Deactivated"
+      }
+    },
+    "wordCount_one": "{{count}} word",
+    "wordCount_other": "{{count}} words",
+    "questionCount_one": "{{count}} question",
+    "questionCount_other": "{{count}} questions",
     "questions": "questions",
     "words": "words",
     "stats": {
