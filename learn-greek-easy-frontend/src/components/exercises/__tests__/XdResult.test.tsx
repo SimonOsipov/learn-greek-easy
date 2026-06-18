@@ -238,4 +238,71 @@ describe('XdResult', () => {
 
     expect(onContinue).toHaveBeenCalledTimes(1);
   });
+
+  // ----------------------------------------------------------
+  // QA adversarial F: select_picture_from_description — answer is an IMAGE
+  // The correct option is an image, not a text description.
+  // XdResult must show the image (not crash on missing .el / description_text).
+  // ----------------------------------------------------------
+  it('select_picture_from_description: result shows an img element for the correct picture option', () => {
+    const spfdItem: Parameters<typeof XdResult>[0]['item'] = {
+      exercise_id: 'ex-spfd-1',
+      source_type: 'picture' as const,
+      exercise_type: 'select_picture_from_description' as const,
+      modality: 'reading' as const,
+      audio_level: null,
+      status: 'new' as const,
+      is_new: true,
+      is_early_practice: false,
+      due_date: null,
+      easiness_factor: null,
+      interval: null,
+      situation_id: null,
+      scenario_el: null,
+      scenario_en: null,
+      scenario_ru: null,
+      description_text_el: null,
+      description_audio_url: null,
+      description_audio_duration: null,
+      word_timestamps: null,
+      items: [
+        {
+          item_index: 0,
+          payload: {
+            // SPFD: text prompt, picture options
+            prompt: { el: 'Σπίτι', en: 'House', ru: 'Дом' },
+            options: [
+              { image_url: 'https://cdn.example.com/car.webp' },
+              { image_url: 'https://cdn.example.com/house.webp' },
+            ],
+            correct_index: 1,
+          },
+        },
+      ],
+    };
+
+    renderWithProviders(
+      <XdResult
+        item={spfdItem}
+        verdict="correct"
+        selectedIndex={1}
+        language="el"
+        onContinue={vi.fn()}
+      />
+    );
+
+    // Must not crash
+    expect(screen.getByTestId('xd-result')).toBeInTheDocument();
+    // "The answer" callout must be present
+    const answerCallout = screen.getByTestId('xd-result-answer');
+    expect(answerCallout).toBeInTheDocument();
+    // The correct answer is an image — the callout must contain an <img>
+    const img = answerCallout.querySelector('img');
+    expect(img).not.toBeNull();
+    // Image src must point to the correct option's image_url
+    expect(img?.getAttribute('src')).toBe('https://cdn.example.com/house.webp');
+    // UnwiredDot still present in Why slot (no .el / description_text → no crash)
+    const whySlot = screen.getByTestId('xd-result-why');
+    expect(whySlot.querySelector('[data-testid="unwired-dot"]')).not.toBeNull();
+  });
 });

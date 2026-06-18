@@ -455,4 +455,37 @@ describe('exercisePracticeStore', () => {
       }
     });
   });
+
+  // ============================================
+  // QA adversarial: advance() called while phase='question'
+  // The store has no guard preventing this (e.g., rapid double-tap).
+  // Calling advance() in question phase must NOT corrupt session state —
+  // it should advance the index (accepted as the current behavior) without
+  // crashing, and phase must remain 'question' afterwards.
+  // ============================================
+  describe('QA adversarial edge cases', () => {
+    it('advance() in question phase advances index without crashing and phase stays question', () => {
+      const secondExercise = { ...mockExercise, exercise_id: 'ex-2' };
+      useExercisePracticeStore.setState({
+        queue: [mockExercise, secondExercise],
+        currentIndex: 0,
+        sessionId: 'session-adv',
+        sessionStartTime: Date.now(),
+        feedbackState: null,
+        phase: 'question',
+        answers: {},
+      });
+
+      // Call advance() directly in question phase (no submitAnswer first)
+      useExercisePracticeStore.getState().advance();
+
+      const state = useExercisePracticeStore.getState();
+      // Must not crash; index increments
+      expect(state.currentIndex).toBe(1);
+      // phase must stay question (feedbackState was null, advance clears to null again)
+      expect((state as unknown as Record<string, unknown>).phase).toBe('question');
+      // feedbackState still null
+      expect(state.feedbackState).toBeNull();
+    });
+  });
 });

@@ -78,6 +78,20 @@ describe('selectLiveStats', () => {
     expect(result.accuracyPct).toBe(0);
   });
 
+  // QA adversarial: zero answers → accuracyPct must be 0, not NaN (no divide-by-zero)
+  it('accuracyPct is exactly 0 (not NaN) when answers map is empty', () => {
+    const state: SessionSelectorState = {
+      queue: [],
+      currentIndex: 0,
+      answers: {},
+    };
+
+    const result = selectLiveStats(state);
+
+    expect(result.accuracyPct).toBe(0);
+    expect(Number.isNaN(result.accuracyPct)).toBe(false);
+  });
+
   it('returns 100% accuracy when all answers are correct', () => {
     const state: SessionSelectorState = {
       queue: [makeQueueItem('a'), makeQueueItem('b')],
@@ -158,5 +172,43 @@ describe('selectStepperStatus', () => {
     const result = selectStepperStatus(state);
 
     expect(result).toHaveLength(0);
+  });
+
+  // QA adversarial: all-pending fresh session (currentIndex=0, no answers)
+  it('all-pending fresh session: first item is current, rest are pending', () => {
+    const state: SessionSelectorState = {
+      queue: [makeQueueItem('a'), makeQueueItem('b'), makeQueueItem('c')],
+      currentIndex: 0,
+      answers: {},
+    };
+
+    const result = selectStepperStatus(state);
+
+    // The first item is current (index === currentIndex, not answered)
+    expect(result[0]).toBe('current');
+    // The remaining items are pending
+    expect(result[1]).toBe('pending');
+    expect(result[2]).toBe('pending');
+  });
+
+  // QA adversarial: all-answered finished session (currentIndex past end)
+  it('all-answered finished session: every item shows correct or incorrect, no pending or current', () => {
+    const state: SessionSelectorState = {
+      queue: [makeQueueItem('a'), makeQueueItem('b'), makeQueueItem('c')],
+      currentIndex: 3, // past end — session complete
+      answers: {
+        a: { selectedIndex: 0, correct: true },
+        b: { selectedIndex: 1, correct: false },
+        c: { selectedIndex: 0, correct: true },
+      },
+    };
+
+    const result = selectStepperStatus(state);
+
+    expect(result[0]).toBe('correct');
+    expect(result[1]).toBe('incorrect');
+    expect(result[2]).toBe('correct');
+    // No pending or current items
+    expect(result.every((s) => s === 'correct' || s === 'incorrect')).toBe(true);
   });
 });

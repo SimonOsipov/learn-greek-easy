@@ -348,4 +348,32 @@ describe('completion banner (PRACT2-12-06)', () => {
     // Then: no banner — the route-state guard prevents stale banner from showing
     expect(screen.queryByTestId('xd-completion-banner')).not.toBeInTheDocument();
   });
+
+  // QA adversarial: perfect session (correct === total → missed === 0)
+  // The banner must render "0" for missed and must not crash or show a negative number.
+  it('banner shows missed=0 when all exercises were correct (perfect session)', async () => {
+    // A perfect session: 3/3 correct, 0 missed
+    const perfectSummary = {
+      total: 3,
+      correct: 3,
+      accuracy_pct: 100,
+      duration_seconds: 60,
+    };
+    useExercisePracticeStore.setState({ sessionSummary: perfectSummary });
+
+    renderWithRouteState({ fromFinish: true });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('xd-completion-banner')).toBeInTheDocument();
+    });
+
+    const banner = screen.getByTestId('xd-completion-banner');
+    // Correct count = 3
+    expect(banner).toHaveTextContent('3');
+    // Missed count = total − correct = 0
+    // The banner must show "0" explicitly, not a negative or missing value
+    expect(banner).toHaveTextContent('0');
+    // Must not show negative numbers
+    expect(banner.textContent).not.toMatch(/-\d+/);
+  });
 });
