@@ -34,10 +34,12 @@ import { usePracticeKeyboard } from '@/hooks/usePracticeKeyboard';
 import { usePracticeSession } from '@/hooks/usePracticeSession';
 import { useStudyStreak } from '@/hooks/useStudyStreak';
 import { track } from '@/lib/analytics/track';
-import type { ExerciseModality } from '@/services/exerciseAPI';
+import type { ExerciseModality, ExerciseQueueItem } from '@/services/exerciseAPI';
 import { useExercisePracticeStore } from '@/stores/exercisePracticeStore';
 import { useQuestionLanguageStore } from '@/stores/questionLanguageStore';
 import { selectLiveStats, selectStepperStatus } from '@/stores/sessionSelectors';
+
+import './exercise-dashboard.css';
 
 // ============================================
 // XdSessBar — top bar for the session
@@ -91,14 +93,8 @@ function XdSessBar({ currentIndex, total, onExit, language, onLanguageChange }: 
         <span className="text-xs tabular-nums" style={{ color: 'hsl(var(--fg-2))' }}>
           {Math.min(currentIndex + 1, total)}&nbsp;/&nbsp;{total}
         </span>
-        <div
-          className="h-1.5 w-24 overflow-hidden rounded-full"
-          style={{ backgroundColor: 'hsl(var(--border))' }}
-        >
-          <div
-            className="h-full rounded-full transition-all"
-            style={{ width: `${progress}%`, backgroundColor: 'hsl(var(--primary))' }}
-          />
+        <div className="xd-sessbar-track">
+          <span style={{ width: `${progress}%` }} />
         </div>
         <QuestionLanguageSelector
           value={language as 'el' | 'en' | 'ru'}
@@ -184,7 +180,7 @@ function XdLiveStats({
           className="flex flex-col items-center rounded-lg px-2 py-2"
           style={{ backgroundColor: 'hsl(var(--bg))' }}
         >
-          <span className="text-lg font-bold tabular-nums" style={{ color: 'hsl(var(--accent))' }}>
+          <span className="xd-livestat-elapsed text-lg font-bold tabular-nums">
             {mm}:{ss}
           </span>
           <span className="text-xs" style={{ color: 'hsl(var(--fg-2))' }}>
@@ -198,11 +194,9 @@ function XdLiveStats({
           className="flex items-center gap-2 rounded-lg px-3 py-2"
           style={{ backgroundColor: 'hsl(var(--bg))' }}
         >
-          <Flame
-            className="h-4 w-4 shrink-0"
-            style={{ color: 'hsl(var(--warning))' }}
-            aria-hidden="true"
-          />
+          <div className="xd-rail-flame" aria-hidden="true">
+            <Flame />
+          </div>
           <div>
             <div className="text-sm font-semibold tabular-nums" style={{ color: 'hsl(var(--fg))' }}>
               {currentStreak} {t('exercises.session.rail.streakDays', { count: currentStreak })}
@@ -225,9 +219,27 @@ interface XdStepperProps {
   statuses: ('correct' | 'incorrect' | 'current' | 'pending')[];
   currentIndex: number;
   total: number;
+  queue: ExerciseQueueItem[];
 }
 
-function XdStepper({ statuses, currentIndex, total }: XdStepperProps) {
+/** Map exercise_type to a localized label (mirrors ExercisePreSessionPage helper) */
+function stepperTypeLabel(
+  exerciseType: ExerciseQueueItem['exercise_type'],
+  t: (key: string) => string
+): string {
+  switch (exerciseType) {
+    case 'select_correct_answer':
+      return t('exercises.dashboard.panels.recommended.typeLabel.select_correct_answer');
+    case 'select_picture_from_description':
+      return t('exercises.dashboard.panels.recommended.typeLabel.select_picture_from_description');
+    case 'select_description_from_picture':
+      return t('exercises.dashboard.panels.recommended.typeLabel.select_description_from_picture');
+    default:
+      return exerciseType;
+  }
+}
+
+function XdStepper({ statuses, currentIndex, total, queue }: XdStepperProps) {
   const { t } = useTranslation('common');
   return (
     <div className="rounded-xl p-4" style={{ backgroundColor: 'hsl(var(--card))' }}>
@@ -246,41 +258,57 @@ function XdStepper({ statuses, currentIndex, total }: XdStepperProps) {
       </div>
 
       <div className="flex flex-col gap-1.5 overflow-y-auto" style={{ maxHeight: '320px' }}>
-        {statuses.map((status, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition-colors"
-            style={{
-              backgroundColor: i === currentIndex ? 'hsl(var(--bg))' : 'transparent',
-              fontWeight: i === currentIndex ? '600' : '400',
-            }}
-          >
-            <span
-              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
+        {statuses.map((status, i) => {
+          const item = queue[i];
+          const typeLabel = item
+            ? stepperTypeLabel(item.exercise_type, t)
+            : t('exercises.session.stepper.exerciseN', { n: i + 1 });
+          const modality = item?.modality ?? null;
+          const level = item?.audio_level ?? null;
+          const subline = modality || level ? [modality, level].filter(Boolean).join(' · ') : null;
+
+          return (
+            <div
+              key={i}
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition-colors"
               style={{
-                backgroundColor:
-                  status === 'correct'
-                    ? 'hsl(var(--success))'
-                    : status === 'incorrect'
-                      ? 'hsl(var(--danger))'
-                      : status === 'current'
-                        ? 'hsl(var(--primary))'
-                        : 'hsl(var(--border))',
-                color: status === 'pending' ? 'hsl(var(--fg-2))' : 'hsl(var(--primary-foreground))',
+                backgroundColor: i === currentIndex ? 'hsl(var(--bg))' : 'transparent',
+                fontWeight: i === currentIndex ? '600' : '400',
               }}
-              aria-hidden="true"
             >
-              {status === 'correct'
-                ? '✓'
-                : status === 'incorrect'
-                  ? '✗'
-                  : String(i + 1).padStart(2, '0')}
-            </span>
-            <span style={{ color: status === 'pending' ? 'hsl(var(--fg-2))' : 'hsl(var(--fg))' }}>
-              {t('exercises.session.stepper.exerciseN', { n: i + 1 })}
-            </span>
-          </div>
-        ))}
+              <span
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
+                style={{
+                  backgroundColor:
+                    status === 'correct'
+                      ? 'hsl(var(--success))'
+                      : status === 'incorrect'
+                        ? 'hsl(var(--danger))'
+                        : status === 'current'
+                          ? 'hsl(var(--primary))'
+                          : 'hsl(var(--border))',
+                  color:
+                    status === 'pending' ? 'hsl(var(--fg-2))' : 'hsl(var(--primary-foreground))',
+                }}
+                aria-hidden="true"
+              >
+                {status === 'correct'
+                  ? '✓'
+                  : status === 'incorrect'
+                    ? '✗'
+                    : String(i + 1).padStart(2, '0')}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div
+                  style={{ color: status === 'pending' ? 'hsl(var(--fg-2))' : 'hsl(var(--fg))' }}
+                >
+                  {typeLabel}
+                </div>
+                {subline && <div className="xd-step-fam">{subline}</div>}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -716,6 +744,7 @@ export const ExercisePracticePage = () => {
               statuses={stepperStatuses}
               currentIndex={currentIndex}
               total={queue.length}
+              queue={queue}
             />
           </aside>
         </div>

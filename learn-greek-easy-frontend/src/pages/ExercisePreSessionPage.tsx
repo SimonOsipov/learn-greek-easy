@@ -129,7 +129,7 @@ function XdCompletionBanner({
       aria-label={t('exercises.dashboard.completion.title')}
     >
       <div className="xd-complete-mark" aria-hidden="true">
-        <CheckCircle2 style={{ color: 'hsl(var(--success))', width: 28, height: 28 }} />
+        <CheckCircle2 />
       </div>
       <div className="xd-complete-body">
         <h3 className="xd-complete-h">{t('exercises.dashboard.completion.title')}</h3>

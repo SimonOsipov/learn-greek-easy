@@ -551,6 +551,15 @@
   .xd-metrics {
     grid-template-columns: repeat(2, 1fr);
   }
+  .xd-rail {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .xd-rail-card {
+    flex: 1;
+    min-width: 240px;
+  }
 }
 
 @media (max-width: 680px) {
@@ -572,31 +581,50 @@
 /* ─── Completion banner ─────────────────────────────────────────────────── */
 
 .xd-complete {
+  grid-column: span 12;
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 20px 24px;
-  border-radius: 14px;
-  background: hsl(var(--success) / 0.08);
-  border: 1px solid hsl(var(--success) / 0.22);
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 22px 26px;
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 120% at 100% 0%, hsl(var(--success) / 0.16), transparent 55%),
+    hsl(var(--bg-2));
+  border: 1px solid hsl(var(--success) / 0.28);
   margin-bottom: 24px;
 }
 
 .xd-complete-mark {
+  width: 52px;
+  height: 52px;
+  border-radius: 15px;
   flex-shrink: 0;
-  margin-top: 2px;
+  background: linear-gradient(135deg, hsl(var(--success)), hsl(160 84% 32%));
+  color: hsl(0 0% 100%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px -8px hsl(var(--success) / 0.6);
+}
+
+.xd-complete-mark svg {
+  width: 26px;
+  height: 26px;
 }
 
 .xd-complete-body {
   flex: 1;
-  min-width: 0;
+  min-width: 200px;
 }
 
 .xd-complete-h {
-  font-size: 15px;
-  font-weight: 600;
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
   color: hsl(var(--fg));
-  margin: 0 0 4px;
 }
 
 .xd-complete-sub {
@@ -684,4 +712,61 @@
   .xd-complete-btn-glass {
     transition: none;
   }
+}
+
+/* ─── Session page (ExercisePracticePage) ──────────────────────────────────── */
+
+/* Sessbar progress track — 140px, primary→accent gradient (item 6) */
+.xd-sessbar-track {
+  width: 140px;
+  height: 6px;
+  border-radius: 999px;
+  background: hsl(var(--fg) / 0.08);
+  overflow: hidden;
+}
+
+.xd-sessbar-track > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)));
+  transition: width 0.4s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xd-sessbar-track > span {
+    transition: none;
+  }
+}
+
+/* Live stats — elapsed value uses warning tone (item 7) */
+.xd-livestat-elapsed {
+  color: hsl(var(--warning)) !important;
+}
+
+/* Rail streak flame tile — gradient tile + glow behind the flame (item 8) */
+.xd-rail-flame {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, hsl(var(--warning)), hsl(var(--accent)));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px -6px hsl(var(--warning) / 0.6);
+}
+
+.xd-rail-flame svg {
+  width: 18px;
+  height: 18px;
+  color: hsl(0 0% 100%);
+}
+
+/* Stepper step-body sub-line (mono "modality · level") (item 4) */
+.xd-step-fam {
+  font-size: 10px;
+  color: hsl(var(--fg-3));
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 1px;
 }
