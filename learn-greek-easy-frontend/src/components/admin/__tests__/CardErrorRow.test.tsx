@@ -159,4 +159,39 @@ describe('AdminCardErrorCard (CER-53)', () => {
     expect(onRespond).toHaveBeenCalledTimes(1);
     expect(onRespond).toHaveBeenCalledWith(row);
   });
+
+  // ADMIN2-34-04 a11y (CodeRabbit): keyboard Enter/Space on the trash button must NOT
+  // bubble to the row's keydown handler (drawer must not open on top of delete confirm).
+  it.each([['Enter'], [' ']])(
+    'keyboard "%s" on trash button does not trigger row onRespond',
+    (key) => {
+      const onRespond = vi.fn();
+      const onDelete = vi.fn();
+      const row = makeRow();
+      renderWithProviders(
+        <AdminCardErrorCard errorReport={row} onRespond={onRespond} onDelete={onDelete} />
+      );
+
+      fireEvent.keyDown(screen.getByTestId(`delete-card-error-${row.id}`), { key });
+
+      // Row handler is gated by e.target === e.currentTarget, so the bubbled keydown is a no-op
+      expect(onRespond).not.toHaveBeenCalled();
+    }
+  );
+
+  // ADMIN2-34-04 a11y (CodeRabbit): keyboard activation of the ROW itself is preserved.
+  it.each([['Enter'], [' ']])('keyboard "%s" on the row body still calls onRespond', (key) => {
+    const onRespond = vi.fn();
+    const onDelete = vi.fn();
+    const row = makeRow();
+    renderWithProviders(
+      <AdminCardErrorCard errorReport={row} onRespond={onRespond} onDelete={onDelete} />
+    );
+
+    const card = screen.getByTestId('admin-card-error-card');
+    fireEvent.keyDown(card, { key });
+
+    expect(onRespond).toHaveBeenCalledTimes(1);
+    expect(onRespond).toHaveBeenCalledWith(row);
+  });
 });

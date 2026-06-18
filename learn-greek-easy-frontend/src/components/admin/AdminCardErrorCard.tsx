@@ -157,6 +157,10 @@ export const AdminCardErrorCard: React.FC<AdminCardErrorCardProps> = ({
   };
 
   const handleRowKeyDown = (e: React.KeyboardEvent) => {
+    // Only act on keyboard activation of the row itself — ignore Enter/Space that
+    // bubbled up from a nested control (pencil/trash). This mirrors the click-side
+    // stopPropagation and neutralises any current or future inner interactive element.
+    if (e.target !== e.currentTarget) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onRespond(errorReport);
