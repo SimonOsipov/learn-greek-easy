@@ -88,6 +88,72 @@
         "incorrect": "Incorrect",
         "skipInsufficientPool": "Skipping — not enough material for this exercise yet"
       }
+    },
+    "dashboard": {
+      "kicker": "PRACTICE HUB",
+      "title": "Exercises",
+      "titleSuffix": "— your practice hub",
+      "subtitle": "Practice the exercises you've earned from your situations. Listening and reading comprehension await.",
+      "startDailyMix": "Start daily mix",
+      "startDailyMixCount_one": "{{count}} exercise ready",
+      "startDailyMixCount_other": "{{count}} exercises ready",
+      "noQueue": "All caught up — check back later.",
+      "modality": {
+        "all": "All",
+        "listening": "Listening",
+        "reading": "Reading"
+      },
+      "metrics": {
+        "accuracy": "Accuracy",
+        "exercisesDone": "Exercises done",
+        "currentStreak": "Current streak",
+        "timePracticed": "Time practiced",
+        "streakDays_one": "day",
+        "streakDays_other": "days",
+        "streakNone": "—"
+      },
+      "panels": {
+        "accuracyChart": {
+          "title": "Accuracy over time",
+          "subtitle": "12-week rolling accuracy",
+          "ariaLabel": "Accuracy over time chart — not yet connected to backend data."
+        },
+        "goal": {
+          "title": "Today's goal",
+          "subtitle": "Daily exercise target",
+          "ariaLabel": "Today's goal ring and week heatmap — not yet connected to backend data."
+        },
+        "skillFamilies": {
+          "title": "Skill families",
+          "subtitle": "Progress by modality",
+          "reading": "Reading",
+          "listening": "Listening",
+          "speaking": "Speaking",
+          "production": "Production",
+          "accuracyAriaLabel": "Family accuracy — not yet connected to backend data.",
+          "masteryAriaLabel": "Family mastery — not yet connected to backend data.",
+          "speakingAriaLabel": "Speaking family — not yet connected to backend data.",
+          "productionAriaLabel": "Production family — not yet connected to backend data."
+        },
+        "weakSpots": {
+          "title": "Weak spots to review",
+          "subtitle": "Items needing attention",
+          "ariaLabel": "Weak spots list — not yet connected to backend data."
+        },
+        "recommended": {
+          "title": "Recommended for you",
+          "subtitle": "From your practice queue",
+          "empty": "Your practice queue is empty — complete more situations to unlock exercises.",
+          "startExercise": "Start exercise",
+          "errorLoad": "Could not load your queue",
+          "errorRetry": "Retry"
+        },
+        "recentSessions": {
+          "title": "Recent sessions",
+          "subtitle": "Your practice history",
+          "ariaLabel": "Recent sessions list — not yet connected to backend data."
+        }
+      }
     }
   },
   "exercise": {

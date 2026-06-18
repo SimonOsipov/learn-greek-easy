@@ -90,6 +90,76 @@
         "incorrect": "Неправильно",
         "skipInsufficientPool": "Упражнение пропущено — недостаточно материала"
       }
+    },
+    "dashboard": {
+      "kicker": "ЦЕНТР ПРАКТИКИ",
+      "title": "Упражнения",
+      "titleSuffix": "— ваш центр практики",
+      "subtitle": "Практикуйте упражнения, полученные из ваших ситуаций. Ждут задания на аудирование и чтение.",
+      "startDailyMix": "Начать ежедневный набор",
+      "startDailyMixCount_one": "{{count}} упражнение готово",
+      "startDailyMixCount_few": "{{count}} упражнения готово",
+      "startDailyMixCount_many": "{{count}} упражнений готово",
+      "startDailyMixCount_other": "{{count}} упражнений готово",
+      "noQueue": "Всё выполнено — загляните позже.",
+      "modality": {
+        "all": "Все",
+        "listening": "Аудирование",
+        "reading": "Чтение"
+      },
+      "metrics": {
+        "accuracy": "Точность",
+        "exercisesDone": "Выполнено",
+        "currentStreak": "Текущая серия",
+        "timePracticed": "Время практики",
+        "streakDays_one": "день",
+        "streakDays_few": "дня",
+        "streakDays_many": "дней",
+        "streakDays_other": "дней",
+        "streakNone": "—"
+      },
+      "panels": {
+        "accuracyChart": {
+          "title": "Точность за период",
+          "subtitle": "Скользящая точность за 12 недель",
+          "ariaLabel": "График точности за период — данные пока не подключены."
+        },
+        "goal": {
+          "title": "Цель на сегодня",
+          "subtitle": "Дневная цель по упражнениям",
+          "ariaLabel": "Кольцо цели и тепловая карта недели — данные пока не подключены."
+        },
+        "skillFamilies": {
+          "title": "Навыки",
+          "subtitle": "Прогресс по модальностям",
+          "reading": "Чтение",
+          "listening": "Аудирование",
+          "speaking": "Говорение",
+          "production": "Письмо",
+          "accuracyAriaLabel": "Точность навыка — данные пока не подключены.",
+          "masteryAriaLabel": "Освоение навыка — данные пока не подключены.",
+          "speakingAriaLabel": "Навык говорения — данные пока не подключены.",
+          "productionAriaLabel": "Навык письма — данные пока не подключены."
+        },
+        "weakSpots": {
+          "title": "Слабые места",
+          "subtitle": "Требуют внимания",
+          "ariaLabel": "Список слабых мест — данные пока не подключены."
+        },
+        "recommended": {
+          "title": "Рекомендовано для вас",
+          "subtitle": "Из вашей очереди практики",
+          "empty": "Очередь упражнений пуста — изучите больше ситуаций.",
+          "startExercise": "Начать упражнение",
+          "errorLoad": "Не удалось загрузить очередь",
+          "errorRetry": "Попробовать снова"
+        },
+        "recentSessions": {
+          "title": "Недавние сессии",
+          "subtitle": "История практики",
+          "ariaLabel": "Список недавних сессий — данные пока не подключены."
+        }
+      }
     }
   },
   "exercise": {
