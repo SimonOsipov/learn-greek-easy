@@ -300,12 +300,26 @@ describe('CardErrorDrawer — Review tab', () => {
     expect(screen.getByTestId('admin-notes-textarea')).toBeInTheDocument();
   });
 
-  it('renders canned reply pills container', () => {
+  // ADMIN2-34-02 RED: after removal the canned-reply block must be absent.
+  // This assertion fails RIGHT NOW (block is present) and should go green
+  // once the executor deletes CannedReplyPills and removes CER-32 from the drawer.
+  it('drawer_omits_canned_reply_block — canned reply block (.admin-canned) must be absent', () => {
     renderWithProviders(
       <CardErrorDrawer open onOpenChange={vi.fn()} report={makeFakeError()} onUpdate={vi.fn()} />
     );
-    // CannedReplyPills uses .admin-canned wrapper class
-    expect(document.querySelector('.admin-canned')).not.toBeNull();
+    // After CER-32 removal, .admin-canned must not exist in the DOM.
+    expect(document.querySelector('.admin-canned')).toBeNull();
+  });
+
+  // ADMIN2-34-02 KEEP-GREEN: status grid and admin notes must survive the deletion.
+  it('drawer_keeps_status_grid_and_notes — status grid and notes textarea remain after canned-reply removal', () => {
+    renderWithProviders(
+      <CardErrorDrawer open onOpenChange={vi.fn()} report={makeFakeError()} onUpdate={vi.fn()} />
+    );
+    // Set-status grid (CER-29) must still be present.
+    expect(document.querySelector('.admin-status-grid')).not.toBeNull();
+    // Admin-notes textarea (CER-30/31) must still be present.
+    expect(screen.getByTestId('admin-notes-textarea')).toBeInTheDocument();
   });
 
   it('shows resolved banner when resolved_at is set', () => {
