@@ -27,8 +27,6 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { CultureMetricStrip } from '@/components/culture/redesign/CultureMetricStrip';
 import type { CultureMetric } from '@/components/culture/redesign/CultureMetricStrip';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import '@/features/decks/dx/dx.css';
 import { Breadcrumb, DxSvgDefs, Kicker } from '@/features/decks/dx';
@@ -414,19 +412,14 @@ export const MockExamPage: React.FC = () => {
     gcTime: 30 * 60 * 1000,
   });
 
+  // Initial-load skeleton only: render content once all three queries have
+  // SETTLED (resolved OR errored). A stats/queue/readiness FAILURE must NOT
+  // block the page — each section degrades gracefully on its own (AC-6).
   const isLoading = readinessQuery.isLoading || statsQuery.isLoading || queueQuery.isLoading;
-  const isError = readinessQuery.isError || statsQuery.isError || queueQuery.isError;
 
   const readiness = readinessQuery.data ?? null;
   const statistics = statsQuery.data ?? null;
   const queueInfo = queueQuery.data ?? null;
-
-  // Retry all three queries
-  const handleRetry = () => {
-    void readinessQuery.refetch();
-    void statsQuery.refetch();
-    void queueQuery.refetch();
-  };
 
   // Check for a recoverable session once the queries settle.
   useEffect(() => {
@@ -489,28 +482,8 @@ export const MockExamPage: React.FC = () => {
         <p className="mt-2 text-muted-foreground">{t('page.subtitle')}</p>
       </div>
 
-      {/* Error State */}
-      {isError && (
-        <Card className="border-danger/40 bg-danger/10">
-          <CardContent className="flex items-start gap-3 pt-6">
-            <AlertCircle className="h-5 w-5 flex-shrink-0 text-danger" />
-            <div className="flex-1">
-              <h3 className="font-medium text-danger">{t('states.error')}</h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRetry}
-                className="mt-3 border-danger/40 text-danger hover:bg-danger/10"
-              >
-                {t('states.retry')}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Loading State */}
-      {isLoading && !isError && (
+      {/* Loading State — initial skeleton until all three queries settle */}
+      {isLoading && (
         <>
           <Skeleton className="h-64 w-full rounded-2xl" />
           <StatsLoadingSkeleton />
@@ -519,14 +492,18 @@ export const MockExamPage: React.FC = () => {
         </>
       )}
 
-      {/* Main Content */}
-      {!isLoading && !isError && readiness && (
+      {/* Main Content — renders once the initial load has settled, regardless
+          of stats/queue/readiness errors. Readiness-derived sections below are
+          ADDITIVE: each is gated on the presence of readiness data, so a
+          readiness failure simply omits the hero/nudge/category while the
+          launcher + stats + history still render (AC-6 graceful degradation). */}
+      {!isLoading && (
         <>
-          {/* Readiness hero */}
-          <ReadinessHero readiness={readiness} />
+          {/* Readiness hero (only when readiness data is present) */}
+          {readiness && <ReadinessHero readiness={readiness} />}
 
           {/* Motivation nudge (only when set) */}
-          {readiness.motivation && (
+          {readiness?.motivation && (
             <div className="cx-nudge" role="note">
               <span className="cx-nudge-icon">
                 <Zap aria-hidden="true" />
@@ -583,8 +560,10 @@ export const MockExamPage: React.FC = () => {
           {/* Statistics Grid (still the old StatsGrid — strip curation is PRACT2-11-02) */}
           <StatsGrid stats={statistics?.stats ?? null} />
 
-          {/* Category progress panel */}
-          {readiness.categories.length > 0 && <CategoryPanel categories={readiness.categories} />}
+          {/* Category progress panel (only when readiness data is present) */}
+          {readiness?.categories && readiness.categories.length > 0 && (
+            <CategoryPanel categories={readiness.categories} />
+          )}
 
           {/* Recent History */}
           {(() => {

@@ -10,6 +10,7 @@
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@/lib/test-utils';
+import type { CultureReadinessResponse } from '@/services/cultureDeckAPI';
 import { useMockExamSessionStore } from '@/stores/mockExamSessionStore';
 import type { MockExamStatisticsResponse, MockExamQueueResponse } from '@/types/mockExam';
 
@@ -48,6 +49,18 @@ vi.mock('@/services/mockExamAPI', () => ({
     createSession: vi.fn(),
     submitAll: vi.fn(),
     abandonSession: vi.fn(),
+  },
+}));
+
+// Mock the culture readiness API. These tests target the exam launcher / stats /
+// queue behaviour (AC-6 graceful degradation), so readiness resolves a minimal
+// VALID fixture by default — the readiness query simply succeeds and contributes
+// the hero/category sections, which are orthogonal to the assertions below.
+const mockGetReadiness = vi.fn();
+
+vi.mock('@/services/cultureDeckAPI', () => ({
+  cultureDeckAPI: {
+    getReadiness: (...args: unknown[]) => mockGetReadiness(...args),
   },
 }));
 
@@ -128,10 +141,31 @@ function makeQueue(overrides?: Partial<MockExamQueueResponse>): MockExamQueueRes
   };
 }
 
+// Minimal VALID readiness payload so the readiness query resolves in the
+// generic tests (categories empty → no CategoryPanel, motivation null → no
+// nudge; orthogonal to the launcher/stats/queue assertions here).
+function makeReadiness(overrides?: Partial<CultureReadinessResponse>): CultureReadinessResponse {
+  return {
+    readiness_percentage: 0,
+    verdict: 'not_ready',
+    questions_learned: 0,
+    questions_total: 0,
+    accuracy_percentage: null,
+    total_answers: 0,
+    categories: [],
+    motivation: null,
+    ...overrides,
+  };
+}
+
 describe('MockExamPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockNavigate.mockClear();
+
+    // Readiness resolves a valid payload by default so the readiness query
+    // succeeds; individual tests that care about readiness can override.
+    mockGetReadiness.mockResolvedValue(makeReadiness());
 
     // Reset store to default state between tests
     useMockExamSessionStore.setState({
