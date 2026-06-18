@@ -26,7 +26,6 @@
 // Analytics batch 11 (CER-59):
 //   admin_card_error_opened        — on drawer open
 //   admin_card_error_status_changed — on status select change (pre-save)
-//   admin_card_error_canned_reply_used — on canned pill click
 //   admin_card_error_saved         — on successful PATCH
 //   admin_card_error_deleted       — on successful DELETE
 //
@@ -61,7 +60,6 @@ import { adminAPI } from '@/services/adminAPI';
 import { useAdminCardErrorStore } from '@/stores/adminCardErrorStore';
 import type { AdminCardErrorResponse, AdminCardErrorUpdateRequest } from '@/types/cardError';
 
-import CannedReplyPills from './CannedReplyPills';
 import { CardErrorStatusBadge } from './CardErrorStatusBadge';
 import { CardPreview } from './CardPreview';
 import { MetaTable } from './MetaTable';
@@ -100,16 +98,6 @@ const CE_STATUS_OPTIONS: StatusOption<CEStatus>[] = [
   { key: 'FIXED', label: '', dotTone: 'success' },
   { key: 'DISMISSED', label: '', dotTone: 'gray' },
 ];
-
-// ── Canned reply keys (CER-32) ────────────────────────────────────────────────
-
-const QUICK_REPLY_KEYS = [
-  'confirmedFixed',
-  'needMoreInfo',
-  'reRecordAudio',
-  'notAnError',
-  'duplicate',
-] as const;
 
 // ============================================
 // Form Schema
@@ -379,13 +367,6 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
     label: tDynamic(t, `cardErrors.reply.status.${opt.key.toLowerCase()}`),
   }));
 
-  // ── Canned reply pills (CER-32) ───────────────────────────────────────────────
-  const cannedPills = QUICK_REPLY_KEYS.map((key) => ({
-    key,
-    label: tDynamic(t, `cardErrors.reply.quick.${key}.label`),
-    body: tDynamic(t, `cardErrors.reply.quick.${key}.body`),
-  }));
-
   // ── Resolved banner (CER-33) ──────────────────────────────────────────────────
   const resolverName =
     report.resolver?.full_name?.trim() || t('cardErrors.reply.resolvedBanner.fallbackName');
@@ -575,15 +556,6 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
                       />
                     </div>
                   )}
-                />
-
-                {/* ── CER-32: Canned reply pills ── */}
-                <CannedReplyPills
-                  label={t('cardErrors.reply.quick.heading')}
-                  pills={cannedPills}
-                  onSelect={(body) => {
-                    form.setValue('admin_notes', body);
-                  }}
                 />
 
                 {/* ── CER-30 + CER-31: Admin notes with hint and updated placeholder ── */}
