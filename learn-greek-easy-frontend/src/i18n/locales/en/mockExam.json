@@ -16,15 +16,12 @@
     "notAvailable": "N/A"
   },
   "history": {
-    "title": "Recent Exam History",
     "eyebrow": "Recent mock exams",
     "titleN": "Last {{n}} attempts",
     "meta": "Pass rate: {{passRate}}% · Best: {{best}}%",
     "empty": "You haven't taken any exams yet. Start your first mock exam to begin tracking your progress!",
     "passed": "Passed",
     "failed": "Failed",
-    "score": "{{score}}/{{total}}",
-    "percentage": "{{percentage}}%",
     "timeTaken": "{{minutes}}m {{seconds}}s"
   },
   "actions": {
