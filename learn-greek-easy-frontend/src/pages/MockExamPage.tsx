@@ -613,8 +613,9 @@ export const MockExamPage: React.FC = () => {
                   {hasAttempts && statistics?.stats && (
                     <span className="cx-section-meta">
                       {t('history.meta', {
+                        totalExams: statistics.stats.total_exams,
                         passRate: Math.round(statistics.stats.pass_rate),
-                        best: Math.round(statistics.stats.best_score),
+                        average: Math.round(statistics.stats.average_score),
                       })}
                     </span>
                   )}
