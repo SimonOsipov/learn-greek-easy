@@ -5,7 +5,7 @@ import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { el } from 'date-fns/locale/el';
 import { ru } from 'date-fns/locale/ru';
-import { BookOpen, Check, Globe, MessageSquare, Pencil, User } from 'lucide-react';
+import { BookOpen, Check, Globe, Pencil, Trash2, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -111,6 +111,7 @@ function AdminNotesBlock({
 interface AdminCardErrorCardProps {
   errorReport: AdminCardErrorResponse;
   onRespond: (error: AdminCardErrorResponse) => void;
+  onDelete: (error: AdminCardErrorResponse) => void;
 }
 
 /**
@@ -128,6 +129,7 @@ interface AdminCardErrorCardProps {
 export const AdminCardErrorCard: React.FC<AdminCardErrorCardProps> = ({
   errorReport,
   onRespond,
+  onDelete,
 }) => {
   const { t, i18n } = useTranslation('admin');
 
@@ -142,8 +144,6 @@ export const AdminCardErrorCard: React.FC<AdminCardErrorCardProps> = ({
     }
   };
 
-  const hasResponse = !!errorReport.admin_notes?.trim();
-
   const CardTypeIcon = errorReport.card_type === 'WORD' ? BookOpen : Globe;
 
   // CER-16: derive data-state from status
@@ -157,16 +157,26 @@ export const AdminCardErrorCard: React.FC<AdminCardErrorCardProps> = ({
   };
 
   const handleRowKeyDown = (e: React.KeyboardEvent) => {
+    // Only act on keyboard activation of the row itself — ignore Enter/Space that
+    // bubbled up from a nested control (pencil/trash). This mirrors the click-side
+    // stopPropagation and neutralises any current or future inner interactive element.
+    if (e.target !== e.currentTarget) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onRespond(errorReport);
     }
   };
 
-  // CER-17: respond / edit response
-  const handleRespond = (e: React.MouseEvent) => {
+  // Edit pencil → open drawer (stopPropagation prevents row-body double-fire)
+  const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
     onRespond(errorReport);
+  };
+
+  // Destructive trash → request delete (section owns the ConfirmDialog)
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete(errorReport);
   };
 
   const dateLocale = getDateLocale();
@@ -219,23 +229,28 @@ export const AdminCardErrorCard: React.FC<AdminCardErrorCardProps> = ({
             </div>
           </div>
 
-          {/* CER-17: Action buttons */}
+          {/* Action buttons — edit pencil then destructive trash (Changelog parity) */}
           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
-              variant={hasResponse ? 'outline' : 'default'}
-              size="sm"
-              onClick={handleRespond}
-              data-testid="card-error-respond-button"
-              aria-label={
-                hasResponse ? t('cardErrors.row.editResponse') : t('cardErrors.row.respond')
-              }
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={handleEdit}
+              data-testid={`edit-card-error-${errorReport.id}`}
+              aria-label={t('cardErrors.row.editAria')}
             >
-              {hasResponse ? (
-                <Pencil className="mr-2 h-4 w-4" />
-              ) : (
-                <MessageSquare className="mr-2 h-4 w-4" />
-              )}
-              {hasResponse ? t('cardErrors.row.editResponse') : t('cardErrors.row.respond')}
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={handleDelete}
+              data-testid={`delete-card-error-${errorReport.id}`}
+              aria-label={t('cardErrors.drawer.foot.delete')}
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </div>

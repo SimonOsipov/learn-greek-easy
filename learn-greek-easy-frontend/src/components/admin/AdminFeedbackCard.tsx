@@ -5,7 +5,7 @@ import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { el } from 'date-fns/locale/el';
 import { ru } from 'date-fns/locale/ru';
-import { Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { AdminAvatar } from '@/components/ui/admin-avatar';
@@ -149,19 +149,34 @@ export const AdminFeedbackCard: React.FC<AdminFeedbackCardProps> = ({
       </div>
 
       {/* Right actions — absolute positioned sibling, stops propagation to avoid
-          double-firing the clickable wrapper's onRespond. */}
-      {onDelete ? (
-        <div
-          className="fb-card-actions"
-          onClick={(e) => e.stopPropagation()}
-          style={{ position: 'absolute', top: '12px', right: '12px' }}
+          double-firing the clickable wrapper's onRespond. Pencil renders
+          unconditionally (opens the drawer); trash is gated on onDelete. */}
+      <div
+        className="fb-card-actions"
+        onClick={(e) => e.stopPropagation()}
+        style={{ position: 'absolute', top: '12px', right: '12px' }}
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          data-testid={`edit-feedback-${feedback.id}`}
+          aria-label={t('feedback.editAction')}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRespond(feedback.id);
+          }}
         >
+          <Pencil className="h-4 w-4" />
+        </Button>
+        {onDelete ? (
           <Button
             type="button"
             variant="ghost"
             size="icon"
             data-testid={`delete-feedback-${feedback.id}`}
             aria-label={t('feedback.deleteAction')}
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={(e) => {
               e.stopPropagation();
               onDelete(feedback.id);
@@ -169,8 +184,8 @@ export const AdminFeedbackCard: React.FC<AdminFeedbackCardProps> = ({
           >
             <Trash2 className="h-4 w-4" />
           </Button>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </article>
   );
 };
