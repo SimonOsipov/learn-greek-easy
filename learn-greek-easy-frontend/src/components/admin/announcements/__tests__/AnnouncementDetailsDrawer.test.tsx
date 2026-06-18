@@ -231,22 +231,25 @@ describe('AnnouncementDetailsDrawer', () => {
 
     // breadcrumb and head-row are always present
     expect(wrapper!.querySelector('.drawer-breadcrumb')).not.toBeNull();
-    expect(wrapper!.querySelector('.drawer-head-row')).not.toBeNull();
-    // drawer-meta renders conditionally when announcement is loaded
-    expect(wrapper!.querySelector('.drawer-meta')).not.toBeNull();
+    const headRow = wrapper!.querySelector('.drawer-head-row');
+    expect(headRow).not.toBeNull();
+    // Delivered badge renders inline inside .drawer-head-row (not in a separate .drawer-meta)
+    expect(headRow!.textContent).toContain('Delivered');
+    expect(wrapper!.querySelector('.drawer-meta')).toBeNull();
   });
 
   // ── Footer button classlists + icons (ANDD-04) ────────────────────────────
 
-  it('renders Delete button with btn + btn-glass classes and Trash2 icon', () => {
+  it('renders Delete button with destructive variant and no icon', () => {
     const state = buildStoreState({ selectedAnnouncement: makeAnnouncement() });
     setupStore(state);
     render(<AnnouncementDetailsDrawer {...defaultProps} />);
 
     const deleteBtn = screen.getByTestId('announcement-details-delete-button');
-    expect(deleteBtn.classList.contains('btn')).toBe(true);
-    expect(deleteBtn.classList.contains('btn-glass')).toBe(true);
-    expect(deleteBtn.querySelector('svg')).not.toBeNull(); // Trash2 lucide svg
+    // Destructive variant applies bg-destructive (shadcn button.tsx)
+    expect(deleteBtn.classList.contains('bg-destructive')).toBe(true);
+    // Trash2 icon is gone — no svg child
+    expect(deleteBtn.querySelector('svg')).toBeNull();
   });
 
   it('Delete button accessible name matches the testid-located element', () => {
@@ -296,6 +299,31 @@ describe('AnnouncementDetailsDrawer', () => {
       setupStore(buildStoreState({ selectedAnnouncement: ann }));
       render(<AnnouncementDetailsDrawer {...defaultProps} />);
       expect(document.querySelector('.drawer-bcrumb')).toBeNull();
+    });
+
+    // ADMIN2-33-02 regression guard: the "33% read" pill must not reappear
+    it('read percentage pill is absent from the header (ADMIN2-33-02)', () => {
+      const ann = makeAnnouncement({ read_count: 80, total_recipients: 200 });
+      setupStore(buildStoreState({ selectedAnnouncement: ann }));
+      render(<AnnouncementDetailsDrawer {...defaultProps} />);
+
+      // The removed <Badge> rendered text like "40% read" — assert it is gone
+      expect(screen.queryByText(/% .*read/i)).toBeNull();
+      // Also verify no badge with a "% " prefix exists anywhere in the header
+      const headRow = document.querySelector('.drawer-head-row');
+      expect(headRow).not.toBeNull();
+      expect(headRow!.textContent).not.toMatch(/\d+%/);
+    });
+
+    // ADMIN2-33-02 regression guard: Delivered badge must still render inline
+    it('Delivered badge renders inside .drawer-head-row (ADMIN2-33-02)', () => {
+      const ann = makeAnnouncement();
+      setupStore(buildStoreState({ selectedAnnouncement: ann }));
+      render(<AnnouncementDetailsDrawer {...defaultProps} />);
+
+      const headRow = document.querySelector('.drawer-head-row');
+      expect(headRow).not.toBeNull();
+      expect(headRow!.textContent).toContain('Delivered');
     });
   });
 

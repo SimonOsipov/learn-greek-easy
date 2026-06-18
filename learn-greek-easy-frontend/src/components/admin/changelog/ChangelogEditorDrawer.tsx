@@ -26,7 +26,9 @@ import { Input } from '@/components/ui/input';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
+import { loadLanguageBundle } from '@/i18n/bundle-loader';
 import { tDynamic } from '@/i18n/tDynamic';
+import log from '@/lib/logger';
 import { renderInlineMarkdown } from '@/lib/markdown-inline';
 import { cn } from '@/lib/utils';
 import {
@@ -135,6 +137,29 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
     setSubmitError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry?.id, open]);
+
+  // ── Ensure RU bundle is loaded for preview localization (Fix #6) ─────────────
+  // The changelog editor always previews content in both EN and RU via { lng: lang }.
+  // init.ts only loads the RU bundle when the admin UI language is RU at startup.
+  // When the admin UI is in EN, { lng: 'ru' } falls back to EN (missing bundle).
+  // Mirror the exact addResourceBundle pattern from init.ts step 3/4.
+  useEffect(() => {
+    if (!i18n.hasResourceBundle('ru', 'changelog')) {
+      void loadLanguageBundle('ru')
+        .then((bundle) => {
+          const langBundle = bundle?.['ru'];
+          if (langBundle) {
+            Object.entries(langBundle).forEach(([ns, translations]) => {
+              i18n.addResourceBundle('ru', ns, translations, true, true);
+            });
+          }
+        })
+        .catch((err: unknown) => {
+          log.warn('[ChangelogEditorDrawer] Failed to load RU bundle for preview:', err);
+        });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── JSON validation (live, on every keystroke in JSON mode) ───────────────
   const validation = useMemo(() => validateChangelogJson(jsonText), [jsonText]);
@@ -487,8 +512,8 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
                   </div>
                   <div className="cl-preview-card">
                     <div className="cl-preview-head">
-                      <Badge tone={TAG_TONE[form.tag]}>
-                        {tDynamic(t, CHANGELOG_TAG_CONFIG[form.tag].labelKey)}
+                      <Badge tone={TAG_TONE[form.tag]} data-testid="changelog-preview-tag-badge">
+                        {tDynamic(t, CHANGELOG_TAG_CONFIG[form.tag].labelKey, { lng: lang })}
                       </Badge>
                       {form.version && (
                         <span className="cl-preview-v" data-testid="changelog-preview-version">

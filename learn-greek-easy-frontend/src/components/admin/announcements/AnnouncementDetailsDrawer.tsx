@@ -11,7 +11,7 @@
 
 import { useEffect } from 'react';
 
-import { ExternalLink, Trash2 } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -104,7 +104,6 @@ export function AnnouncementDetailsDrawer({
       )
     : 0;
   const sentDate = announcement ? formatSentDate(announcement.created_at, i18n.language) : '';
-  const footerDate = announcement ? formatSentDate(announcement.created_at, i18n.language) : '';
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -130,15 +129,10 @@ export function AnnouncementDetailsDrawer({
             </div>
             <div className="drawer-head-row">
               <h2 className="drawer-title">{announcement ? announcement.title : ''}</h2>
-            </div>
-            {announcement && (
-              <div className="drawer-meta">
+              {announcement && (
                 <Badge tone="green">{t('announcements.v2.details.delivered')}</Badge>
-                <Badge tone={readPct >= 20 ? 'blue' : 'gray'}>
-                  {readPct}% {t('announcements.v2.details.read')}
-                </Badge>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </SidePanel.Header>
 
@@ -217,32 +211,23 @@ export function AnnouncementDetailsDrawer({
 
         {/* ── Footer ───────────────────────────────────────────────────── */}
         <SidePanel.Footer>
-          {/* Left: dim helper */}
+          {/* Left: Delete (destructive) */}
           <div className="drawer-foot-left">
-            <span className="drawer-foot-helper">
-              {announcement
-                ? `${t('announcements.v2.details.announcementLabel')} #${announcement.id.slice(0, 8)} · ${t('announcements.v2.details.sent')} ${footerDate}`
-                : ''}
-            </span>
-          </div>
-
-          {/* Right: action buttons */}
-          <div className="drawer-foot-right">
-            {/* Delete — glass, danger text; parent owns ConfirmDialog */}
-            <button
+            <Button
               type="button"
-              className="btn btn-glass"
-              style={{ color: 'hsl(var(--destructive))' }}
+              variant="destructive"
               onClick={() => {
                 if (announcementId) onRequestDelete(announcementId);
               }}
               disabled={!announcement || isLoadingDetail}
               data-testid="announcement-details-delete-button"
             >
-              <Trash2 className="size-4" aria-hidden="true" />
               {t('announcements.delete.button')}
-            </button>
+            </Button>
+          </div>
 
+          {/* Right: action buttons */}
+          <div className="drawer-foot-right">
             {/* Close — primary */}
             <Button
               type="button"

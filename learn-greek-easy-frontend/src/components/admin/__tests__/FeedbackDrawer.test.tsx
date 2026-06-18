@@ -48,12 +48,9 @@ vi.mock('react-i18next', () => ({
         'feedback.v2.drawer.status.wont_fix': "Won't fix",
         'feedback.v2.drawer.status.duplicate': 'Duplicate',
         'feedback.v2.drawer.responseHintSuffix': ' — public, learner will see this verbatim',
-        'feedback.v2.drawer.saveNotice': opts?.name
-          ? `Saving will notify ${opts.name} in-app`
-          : 'Saving will notify the user in-app',
         'feedback.v2.drawer.theUser': 'the user',
-        'feedback.v2.drawer.footer.ready': 'Ready',
-        'feedback.v2.drawer.footer.noReplyYet': 'No reply yet',
+        'feedback.v2.drawer.idCopied': 'Feedback ID copied',
+        'feedback.v2.drawer.idCopyAria': 'Copy feedback ID',
         'feedback.v2.drawer.saving': 'Saving…',
         'feedback.v2.drawer.admin': 'Admin',
         'feedback.v2.drawer.notFound': 'Feedback not found.',
@@ -201,6 +198,53 @@ describe('FeedbackDrawer', () => {
       renderDrawer(feedback.id, 'reply');
 
       expect(screen.getByRole('button', { name: 'Save & notify' })).toBeInTheDocument();
+    });
+  });
+
+  // ── Header — truncated ID + copy button ───────────────────────────────────
+
+  describe('Header — truncated ID + copy button', () => {
+    it('renders the truncated ID (first 8 chars + ellipsis)', () => {
+      const feedback = makeFeedback({ id: 'fbdr-test-001-full-uuid' });
+      mockStoreWith(feedback);
+
+      renderDrawer(feedback.id, 'reply');
+
+      // First 8 chars of 'fbdr-test-001-full-uuid' = 'fbdr-tes'
+      expect(screen.getByText('fbdr-tes…')).toBeInTheDocument();
+    });
+
+    it('renders the copy-ID button with correct aria-label', () => {
+      const feedback = makeFeedback();
+      mockStoreWith(feedback);
+
+      renderDrawer(feedback.id, 'reply');
+
+      const copyBtn = screen.getByTestId('feedback-drawer-copy-id');
+      expect(copyBtn).toBeInTheDocument();
+      expect(copyBtn).toHaveAttribute('aria-label', 'Copy feedback ID');
+    });
+
+    it('clicking copy-ID writes the full id to clipboard and fires a toast', async () => {
+      const user = userEvent.setup();
+      const feedback = makeFeedback({ id: 'fbdr-test-001' });
+      mockStoreWith(feedback);
+
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText },
+        writable: true,
+        configurable: true,
+      });
+
+      renderDrawer(feedback.id, 'reply');
+
+      await user.click(screen.getByTestId('feedback-drawer-copy-id'));
+
+      expect(writeText).toHaveBeenCalledWith('fbdr-test-001');
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Feedback ID copied' })
+      );
     });
   });
 
@@ -580,6 +624,68 @@ describe('FeedbackDrawer', () => {
       await user.click(screen.getByRole('button', { name: /Delete/i }));
 
       expect(onRequestDelete).toHaveBeenCalledWith(feedback.id);
+    });
+
+    it('Delete button uses destructive variant and has no icon', () => {
+      const feedback = makeFeedback();
+      mockStoreWith(feedback);
+
+      renderDrawer(feedback.id, 'reply');
+
+      const deleteBtn = screen.getByRole('button', { name: /Delete/i });
+      // Destructive variant applies bg-destructive (shadcn button.tsx)
+      expect(deleteBtn.classList.contains('bg-destructive')).toBe(true);
+      // Trash2 icon is gone — no svg child
+      expect(deleteBtn.querySelector('svg')).toBeNull();
+    });
+  });
+
+  // ── QA adversarial: issue 7 removal + issue 11 chip placement ─────────────
+
+  describe('QA adversarial — footer status line removed, chips inline (issues 7 & 11)', () => {
+    it('footer-left does NOT render the old "Ready" / "No reply yet" status badge text', () => {
+      const feedback = makeFeedback({ status: 'new', admin_response: null });
+      mockStoreWith(feedback);
+
+      renderDrawer(feedback.id, 'reply');
+
+      // The old footer status block rendered these strings. Neither should be present.
+      // "Ready" as isolated text — the only "Ready" in the old footer came from footer.ready key.
+      // Status badges in the HEADER and status-picker still say "New", not "Ready".
+      expect(screen.queryByText('Ready')).not.toBeInTheDocument();
+      // The old saveNotice span rendered a string containing "Saving will notify"
+      expect(screen.queryByText(/Saving will notify/i)).not.toBeInTheDocument();
+    });
+
+    it('the 3 title chips (category, status, likes) are inside .drawer-head-row, not a standalone .drawer-meta', () => {
+      const feedback = makeFeedback({
+        category: 'feature_request',
+        status: 'new',
+        vote_count: 7,
+      });
+      mockStoreWith(feedback);
+
+      renderDrawer(feedback.id, 'reply');
+
+      const headRow = document.querySelector('.drawer-head-row');
+      expect(headRow).not.toBeNull();
+
+      // Category badge text should be inside .drawer-head-row
+      const categoryBadge = headRow!.querySelector('[class*="badge"]');
+      expect(categoryBadge).not.toBeNull();
+
+      // FeedbackDrawer must NOT use .drawer-meta as a chip wrapper (that would be the old layout)
+      // Other drawers still have .drawer-meta but FeedbackDrawer should use .drawer-head-row
+      const drawerMetaWrapper = document.querySelector('.drawer-meta');
+      expect(drawerMetaWrapper).toBeNull();
+      // .drawer-meta is absent — within the feedback drawer's header, the h2 must be inside .drawer-head-row.
+      const h2 = headRow!.querySelector('h2.drawer-h');
+      expect(h2).not.toBeNull();
+
+      // Likes span should also be inside .drawer-head-row
+      const likesSpan = headRow!.querySelector('span.text-xs');
+      expect(likesSpan).not.toBeNull();
+      expect(likesSpan!.textContent).toMatch(/like/i);
     });
   });
 });
