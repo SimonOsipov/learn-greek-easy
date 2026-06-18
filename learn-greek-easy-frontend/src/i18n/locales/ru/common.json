@@ -97,6 +97,20 @@
         "verdictCorrect": "Правильно",
         "verdictIncorrect": "Неправильно",
         "whyAriaLabel": "Почему — данные пока не подключены."
+      },
+      "rail": {
+        "liveStats": "Статистика",
+        "missed": "Пропущено",
+        "elapsed": "Прошло",
+        "streakDays_one": "день",
+        "streakDays_few": "дня",
+        "streakDays_many": "дней",
+        "streakDays_other": "дней",
+        "streakSubline": "Завершите, чтобы сохранить серию"
+      },
+      "stepper": {
+        "header": "Сессия",
+        "exerciseN": "Упражнение {{n}}"
       }
     },
     "dashboard": {
@@ -160,7 +174,12 @@
           "empty": "Очередь упражнений пуста — изучите больше ситуаций.",
           "startExercise": "Начать упражнение",
           "errorLoad": "Не удалось загрузить очередь",
-          "errorRetry": "Попробовать снова"
+          "errorRetry": "Попробовать снова",
+          "typeLabel": {
+            "select_correct_answer": "Выберите ответ",
+            "select_picture_from_description": "Найдите картинку",
+            "select_description_from_picture": "Найдите описание"
+          }
         },
         "recentSessions": {
           "title": "Недавние сессии",

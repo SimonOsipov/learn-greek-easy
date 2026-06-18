@@ -32,15 +32,18 @@ import './exercise-dashboard.css';
 
 type ModalityFilter = 'all' | ExerciseModality;
 
-/** Map exercise_type to a human-readable label key prefix */
-function exerciseTypeLabel(exerciseType: ExerciseQueueItem['exercise_type']): string {
+/** Map exercise_type to a localized label using the provided t() function */
+function exerciseTypeLabel(
+  exerciseType: ExerciseQueueItem['exercise_type'],
+  t: (key: string) => string
+): string {
   switch (exerciseType) {
     case 'select_correct_answer':
-      return 'Select answer';
+      return t('exercises.dashboard.panels.recommended.typeLabel.select_correct_answer');
     case 'select_picture_from_description':
-      return 'Match picture';
+      return t('exercises.dashboard.panels.recommended.typeLabel.select_picture_from_description');
     case 'select_description_from_picture':
-      return 'Match description';
+      return t('exercises.dashboard.panels.recommended.typeLabel.select_description_from_picture');
     default:
       return exerciseType;
   }
@@ -564,9 +567,9 @@ export const ExercisePreSessionPage = () => {
                     <p className="xd-rec-title">
                       {item.scenario_en ??
                         item.scenario_el ??
-                        exerciseTypeLabel(item.exercise_type)}
+                        exerciseTypeLabel(item.exercise_type, t)}
                     </p>
-                    <p className="xd-rec-type">{exerciseTypeLabel(item.exercise_type)}</p>
+                    <p className="xd-rec-type">{exerciseTypeLabel(item.exercise_type, t)}</p>
                     <div className="xd-rec-foot">
                       <span className="xd-rec-start">
                         <Play />

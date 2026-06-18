@@ -143,7 +143,7 @@ function XdLiveStats({
         style={{ color: 'hsl(var(--fg-2))' }}
       >
         <BarChart2 className="h-3.5 w-3.5" aria-hidden="true" />
-        Live stats
+        {t('exercises.session.rail.liveStats')}
       </div>
 
       <div className="mb-3 grid grid-cols-2 gap-2">
@@ -166,7 +166,7 @@ function XdLiveStats({
             {missed}
           </span>
           <span className="text-xs" style={{ color: 'hsl(var(--fg-2))' }}>
-            Missed
+            {t('exercises.session.rail.missed')}
           </span>
         </div>
         <div
@@ -188,7 +188,7 @@ function XdLiveStats({
             {mm}:{ss}
           </span>
           <span className="text-xs" style={{ color: 'hsl(var(--fg-2))' }}>
-            Elapsed
+            {t('exercises.session.rail.elapsed')}
           </span>
         </div>
       </div>
@@ -205,10 +205,10 @@ function XdLiveStats({
           />
           <div>
             <div className="text-sm font-semibold tabular-nums" style={{ color: 'hsl(var(--fg))' }}>
-              {currentStreak} {currentStreak === 1 ? 'day' : 'days'}
+              {currentStreak} {t('exercises.session.rail.streakDays', { count: currentStreak })}
             </div>
             <div className="text-xs" style={{ color: 'hsl(var(--fg-2))' }}>
-              Finish to keep your streak
+              {t('exercises.session.rail.streakSubline')}
             </div>
           </div>
         </div>
@@ -228,6 +228,7 @@ interface XdStepperProps {
 }
 
 function XdStepper({ statuses, currentIndex, total }: XdStepperProps) {
+  const { t } = useTranslation('common');
   return (
     <div className="rounded-xl p-4" style={{ backgroundColor: 'hsl(var(--card))' }}>
       <div
@@ -235,7 +236,7 @@ function XdStepper({ statuses, currentIndex, total }: XdStepperProps) {
         style={{ color: 'hsl(var(--fg-2))' }}
       >
         <Layers className="h-3.5 w-3.5" aria-hidden="true" />
-        Session ·{' '}
+        {t('exercises.session.stepper.header')} ·{' '}
         {
           Object.keys(statuses).filter(
             (_, i) => statuses[i] === 'correct' || statuses[i] === 'incorrect'
@@ -276,7 +277,7 @@ function XdStepper({ statuses, currentIndex, total }: XdStepperProps) {
                   : String(i + 1).padStart(2, '0')}
             </span>
             <span style={{ color: status === 'pending' ? 'hsl(var(--fg-2))' : 'hsl(var(--fg))' }}>
-              Exercise {i + 1}
+              {t('exercises.session.stepper.exerciseN', { n: i + 1 })}
             </span>
           </div>
         ))}

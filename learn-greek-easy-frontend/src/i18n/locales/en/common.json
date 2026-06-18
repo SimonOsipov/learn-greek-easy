@@ -95,6 +95,18 @@
         "verdictCorrect": "Correct",
         "verdictIncorrect": "Incorrect",
         "whyAriaLabel": "Why — not yet connected to backend data."
+      },
+      "rail": {
+        "liveStats": "Live stats",
+        "missed": "Missed",
+        "elapsed": "Elapsed",
+        "streakDays_one": "day",
+        "streakDays_other": "days",
+        "streakSubline": "Finish to keep your streak"
+      },
+      "stepper": {
+        "header": "Session",
+        "exerciseN": "Exercise {{n}}"
       }
     },
     "dashboard": {
@@ -154,7 +166,12 @@
           "empty": "Your practice queue is empty — complete more situations to unlock exercises.",
           "startExercise": "Start exercise",
           "errorLoad": "Could not load your queue",
-          "errorRetry": "Retry"
+          "errorRetry": "Retry",
+          "typeLabel": {
+            "select_correct_answer": "Select answer",
+            "select_picture_from_description": "Match picture",
+            "select_description_from_picture": "Match description"
+          }
         },
         "recentSessions": {
           "title": "Recent sessions",
