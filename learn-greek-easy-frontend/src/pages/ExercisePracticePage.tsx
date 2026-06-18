@@ -24,7 +24,7 @@ import { SelectDescriptionFromPictureCard } from '@/components/exercises/SelectD
 import { SelectPictureFromDescriptionCard } from '@/components/exercises/SelectPictureFromDescriptionCard';
 import { XdResult } from '@/components/exercises/XdResult';
 import { LanguageSwitcher } from '@/components/i18n';
-import { PracticeHeader, ProgressIndicator, SessionSummary } from '@/components/practice';
+import { PracticeHeader, ProgressIndicator } from '@/components/practice';
 import { QuestionLanguageSelector } from '@/components/shared';
 import { ThemeSwitcher } from '@/components/theme';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -34,7 +34,6 @@ import { usePracticeKeyboard } from '@/hooks/usePracticeKeyboard';
 import { usePracticeSession } from '@/hooks/usePracticeSession';
 import { useStudyStreak } from '@/hooks/useStudyStreak';
 import { track } from '@/lib/analytics/track';
-import { formatDuration } from '@/lib/timeFormatUtils';
 import type { ExerciseModality } from '@/services/exerciseAPI';
 import { useExercisePracticeStore } from '@/stores/exercisePracticeStore';
 import { useQuestionLanguageStore } from '@/stores/questionLanguageStore';
@@ -327,6 +326,9 @@ export const ExercisePracticePage = () => {
   const sessionComplete = sessionSummary !== null;
   const [showExitDialog, setShowExitDialog] = useState(false);
 
+  // One-shot guard: prevents double-navigation on re-renders after sessionComplete
+  const hasNavigatedRef = useRef(false);
+
   // 1s elapsed tick — lives in the page, not the store
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -414,8 +416,16 @@ export const ExercisePracticePage = () => {
     [currentExercise]
   );
 
+  // On complete: navigate to overview with fromFinish route-state (D6 + F3).
+  // Called by usePracticeSession AFTER posthog.capture fires — guarantees analytics-before-navigate.
+  const handleCompleteTracked = useCallback(() => {
+    if (hasNavigatedRef.current) return;
+    hasNavigatedRef.current = true;
+    navigate('/practice/exercises', { state: { fromFinish: true } });
+  }, [navigate]);
+
   // usePracticeSession for start/complete/abandon analytics
-  const { resetTracking } = usePracticeSession({
+  usePracticeSession({
     startEvent: 'exercise_session_started',
     completeEvent: 'exercise_session_completed',
     abandonEvent: 'exercise_session_abandoned',
@@ -450,6 +460,7 @@ export const ExercisePracticePage = () => {
       },
       [queue, sessionComplete, answers, modality]
     ),
+    onCompleteTracked: handleCompleteTracked,
   });
 
   // Keyboard: 1–4 select in question phase; Enter/Space → Continue in result phase
@@ -569,56 +580,6 @@ export const ExercisePracticePage = () => {
           <Button className="mt-6" variant="outline" onClick={backToExercises}>
             {t('exercises.session.backToExercises')}
           </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // ============================================
-  // Render: Summary (session complete)
-  // ============================================
-  if (sessionComplete && sessionSummary) {
-    return (
-      <div
-        className="flex min-h-screen flex-col"
-        style={{ backgroundColor: 'hsl(var(--practice-bg))' }}
-      >
-        <PracticeHeader onExit={backToExercises} exitTestId="exercise-practice-close-button" />
-        <div className="mx-auto w-full max-w-lg px-4 py-8">
-          <SessionSummary
-            title={t('exercises.session.sessionComplete')}
-            stats={[
-              {
-                label: t('exercises.session.correct'),
-                value: `${sessionSummary.correct}/${sessionSummary.total}`,
-              },
-              {
-                label: t('exercises.session.accuracy'),
-                value: `${sessionSummary.accuracy_pct}%`,
-              },
-              {
-                label: t('exercises.session.totalTime'),
-                value: formatDuration(sessionSummary.duration_seconds),
-              },
-            ]}
-            actions={
-              <div className="flex w-full gap-3">
-                <Button variant="outline" className="flex-1" onClick={backToExercises}>
-                  {t('exercises.session.backToExercises')}
-                </Button>
-                <Button
-                  className="flex-1"
-                  onClick={() => {
-                    resetTracking();
-                    resetSession();
-                    startSession(modality).catch(() => {});
-                  }}
-                >
-                  {t('exercises.session.practiceAgain')}
-                </Button>
-              </div>
-            }
-          />
         </div>
       </div>
     );

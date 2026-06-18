@@ -167,6 +167,21 @@
           "subtitle": "История практики",
           "ariaLabel": "Список недавних сессий — данные пока не подключены."
         }
+      },
+      "completion": {
+        "title": "Сессия завершена — отлично!",
+        "subtitle_one": "Вы набрали {{accuracy}}% за {{total}} упражнение",
+        "subtitle_few": "Вы набрали {{accuracy}}% за {{total}} упражнения",
+        "subtitle_many": "Вы набрали {{accuracy}}% за {{total}} упражнений",
+        "subtitle_other": "Вы набрали {{accuracy}}% за {{total}} упражнений",
+        "correct": "правильно",
+        "missed": "пропущено",
+        "streak_one": "Серия теперь {{count}} день",
+        "streak_few": "Серия теперь {{count}} дня",
+        "streak_many": "Серия теперь {{count}} дней",
+        "streak_other": "Серия теперь {{count}} дней",
+        "practiceAgain": "Практиковаться снова",
+        "dismiss": "Закрыть"
       }
     }
   },

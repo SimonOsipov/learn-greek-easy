@@ -5,6 +5,7 @@ import {
   AlertCircle,
   BookOpen,
   CheckCircle,
+  CheckCircle2,
   Clock,
   Flame,
   Headphones,
@@ -12,16 +13,18 @@ import {
   RefreshCw,
   Target,
   TrendingUp,
+  X,
   Zap,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 import { Kicker } from '@/components/ui/kicker';
 import { UnwiredDot } from '@/features/decks/dx/atoms/UnwiredDot';
 import { useStudyStreak } from '@/hooks/useStudyStreak';
 import { exerciseAPI } from '@/services/exerciseAPI';
 import type { ExerciseModality, ExerciseQueueItem } from '@/services/exerciseAPI';
+import { useExercisePracticeStore } from '@/stores/exercisePracticeStore';
 
 import './exercise-dashboard.css';
 
@@ -93,12 +96,82 @@ function PanelHead({ title, subtitle }: PanelHeadProps) {
   );
 }
 
+// ─── Completion Banner ───────────────────────────────────────────────────────
+
+interface XdCompletionBannerProps {
+  correct: number;
+  total: number;
+  accuracyPct: number;
+  currentStreak: number;
+  onPracticeAgain: () => void;
+  onDismiss: () => void;
+}
+
+function XdCompletionBanner({
+  correct,
+  total,
+  accuracyPct,
+  currentStreak,
+  onPracticeAgain,
+  onDismiss,
+}: XdCompletionBannerProps) {
+  const { t } = useTranslation('common');
+  const missed = total - correct;
+
+  return (
+    <div
+      data-testid="xd-completion-banner"
+      className="xd-complete"
+      role="region"
+      aria-label={t('exercises.dashboard.completion.title')}
+    >
+      <div className="xd-complete-mark" aria-hidden="true">
+        <CheckCircle2 style={{ color: 'hsl(var(--success))', width: 28, height: 28 }} />
+      </div>
+      <div className="xd-complete-body">
+        <h3 className="xd-complete-h">{t('exercises.dashboard.completion.title')}</h3>
+        <p className="xd-complete-sub">
+          {t('exercises.dashboard.completion.subtitle_other', { accuracy: accuracyPct, total })}
+          {' · '}
+          <b>{correct}</b> {t('exercises.dashboard.completion.correct')}, <b>{missed}</b>{' '}
+          {t('exercises.dashboard.completion.missed')}.{' '}
+          {currentStreak > 0 &&
+            t('exercises.dashboard.completion.streak_other', { count: currentStreak })}
+        </p>
+      </div>
+      <div className="xd-complete-actions">
+        <button className="xd-complete-btn-primary" onClick={onPracticeAgain} type="button">
+          <Play aria-hidden="true" />
+          {t('exercises.dashboard.completion.practiceAgain')}
+        </button>
+        <button
+          className="xd-complete-btn-glass"
+          onClick={onDismiss}
+          type="button"
+          aria-label={t('exercises.dashboard.completion.dismiss')}
+        >
+          <X aria-hidden="true" />
+          {t('exercises.dashboard.completion.dismiss')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export const ExercisePreSessionPage = () => {
   const { t } = useTranslation('common');
   const navigate = useNavigate();
+  const location = useLocation();
   const [modality, setModality] = useState<ModalityFilter>('all');
+
+  // Route-state guard (D6): banner shows IFF sessionSummary is set AND we arrived from finish
+  const fromFinish = (location.state as { fromFinish?: boolean } | null)?.fromFinish === true;
+  const sessionSummary = useExercisePracticeStore((s) => s.sessionSummary);
+  const clearSessionSummary = useExercisePracticeStore((s) => s.clearSessionSummary);
+
+  const showBanner = fromFinish && sessionSummary !== null;
 
   // Fetch the full queue once, unfiltered; filter client-side per D8
   const { data, isLoading, isError, refetch } = useQuery({
@@ -184,6 +257,23 @@ export const ExercisePreSessionPage = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Completion banner (conditional) ────────────────────────────── */}
+      {showBanner && sessionSummary && (
+        <XdCompletionBanner
+          correct={sessionSummary.correct}
+          total={sessionSummary.total}
+          accuracyPct={sessionSummary.accuracy_pct}
+          currentStreak={streak?.currentStreak ?? 0}
+          onPracticeAgain={() => {
+            clearSessionSummary();
+            navigate('/practice/exercises/session');
+          }}
+          onDismiss={() => {
+            clearSessionSummary();
+          }}
+        />
+      )}
 
       {/* ── Metric strip ───────────────────────────────────────────────── */}
       <div className="xd-metrics" data-testid="metric-strip">

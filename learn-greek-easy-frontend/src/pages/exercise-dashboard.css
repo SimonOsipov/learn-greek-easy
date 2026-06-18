@@ -568,3 +568,120 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ─── Completion banner ─────────────────────────────────────────────────── */
+
+.xd-complete {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 24px;
+  border-radius: 14px;
+  background: hsl(var(--success) / 0.08);
+  border: 1px solid hsl(var(--success) / 0.22);
+  margin-bottom: 24px;
+}
+
+.xd-complete-mark {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.xd-complete-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.xd-complete-h {
+  font-size: 15px;
+  font-weight: 600;
+  color: hsl(var(--fg));
+  margin: 0 0 4px;
+}
+
+.xd-complete-sub {
+  font-size: 13px;
+  color: hsl(var(--fg-2));
+  margin: 0;
+  line-height: 1.5;
+}
+
+.xd-complete-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  align-items: center;
+}
+
+.xd-complete-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  white-space: nowrap;
+}
+
+.xd-complete-btn-primary svg {
+  width: 14px;
+  height: 14px;
+}
+
+.xd-complete-btn-primary:hover {
+  opacity: 0.88;
+}
+
+.xd-complete-btn-glass {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  background: hsl(var(--bg));
+  color: hsl(var(--fg-2));
+  border: 1px solid hsl(var(--border));
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  white-space: nowrap;
+}
+
+.xd-complete-btn-glass svg {
+  width: 14px;
+  height: 14px;
+}
+
+.xd-complete-btn-glass:hover {
+  opacity: 0.75;
+}
+
+@media (max-width: 680px) {
+  .xd-complete {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .xd-complete-actions {
+    flex-direction: row;
+    width: 100%;
+  }
+  .xd-complete-btn-primary,
+  .xd-complete-btn-glass {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xd-complete-btn-primary,
+  .xd-complete-btn-glass {
+    transition: none;
+  }
+}

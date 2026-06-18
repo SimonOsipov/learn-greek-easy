@@ -161,6 +161,18 @@
           "subtitle": "Your practice history",
           "ariaLabel": "Recent sessions list — not yet connected to backend data."
         }
+      },
+      "completion": {
+        "title": "Session complete — nicely done",
+        "subtitle_one": "You scored {{accuracy}}% across {{total}} exercise",
+        "subtitle_other": "You scored {{accuracy}}% across {{total}} exercises",
+        "correct": "correct",
+        "missed": "missed",
+        "streak": "Streak now {{count}} day",
+        "streak_one": "Streak now {{count}} day",
+        "streak_other": "Streak now {{count}} days",
+        "practiceAgain": "Practice again",
+        "dismiss": "Dismiss"
       }
     }
   },
