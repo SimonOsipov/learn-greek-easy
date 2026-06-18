@@ -109,6 +109,25 @@ async function runWebVerify() {
     await page.screenshot({ path: path.join(REPORTS_DIR, '03-decks.png'), fullPage: true });
     console.log('  Screenshot: 03-decks.png');
 
+    // Step 11: Navigate to /practice/culture-exam + screenshot (best-effort,
+    // supplementary regression coverage — must NEVER fail web-verify).
+    console.log('Step 11: Navigating to /practice/culture-exam (best-effort) ...');
+    try {
+      await page.goto(`${FRONTEND_URL}/practice/culture-exam`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.locator('[data-testid="mock-exam-page"]').waitFor({ state: 'visible', timeout: 15000 });
+      await page.screenshot({ path: path.join(REPORTS_DIR, '04-mock-exam-landing.png'), fullPage: true });
+      console.log('  Screenshot: 04-mock-exam-landing.png');
+    } catch (mockExamErr) {
+      console.warn('  WARNING: mock-exam landing capture failed (non-fatal):', mockExamErr.message);
+      // Best-effort capture of whatever rendered, then continue.
+      try {
+        await page.screenshot({ path: path.join(REPORTS_DIR, '04-mock-exam-landing.png'), fullPage: true });
+        console.warn('  (Captured best-effort 04-mock-exam-landing.png anyway)');
+      } catch (mockExamShotErr) {
+        console.warn('  (Could not capture mock-exam screenshot:', mockExamShotErr.message, ')');
+      }
+    }
+
     await context.close();
   } catch (err) {
     failed = true;
