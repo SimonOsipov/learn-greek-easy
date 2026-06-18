@@ -120,8 +120,14 @@ const HistoryLoadingSkeleton: React.FC = () => (
 // Readiness sub-components (ported from CultureReadinessPage)
 // ────────────────────────────────────────────────────────────────────────────
 
-/** Large SVG donut ring. Uses cx-donut-* CSS from index.css. */
-function ReadinessDonut({ percent }: { percent: number }) {
+/**
+ * Large SVG donut ring. Uses cx-donut-* CSS from index.css.
+ *
+ * `centerLabel` is the localized readiness unit-label rendered under the
+ * percentage ("45% Ready" = "45% readiness"). It is the UNIT, not the verdict —
+ * the verdict has its own pill below the donut (cx-donut-verdict).
+ */
+function ReadinessDonut({ percent, centerLabel }: { percent: number; centerLabel: string }) {
   const r = 70;
   const c = 2 * Math.PI * r;
   const tone = readinessTone(percent);
@@ -143,7 +149,7 @@ function ReadinessDonut({ percent }: { percent: number }) {
       </svg>
       <div className="cx-donut-center">
         <b>{Math.round(percent)}%</b>
-        <span>Ready</span>
+        <span>{centerLabel}</span>
       </div>
     </div>
   );
@@ -154,6 +160,7 @@ function ReadinessHero({ readiness }: { readiness: CultureReadinessResponse }) {
   const { t } = useTranslation('mockExam');
   const tone = readinessTone(readiness.readiness_percentage);
   const lowestCat = readiness.categories[0]; // sorted ascending by readiness_percentage
+  const lowestDeckId = lowestCat?.deck_ids?.[0];
 
   return (
     <section className="dx-hero-resume">
@@ -162,7 +169,10 @@ function ReadinessHero({ readiness }: { readiness: CultureReadinessResponse }) {
       <div className="cx-readiness-hero-grid">
         {/* Col 1: donut + verdict pill */}
         <div className="cx-donut-wrap">
-          <ReadinessDonut percent={readiness.readiness_percentage} />
+          <ReadinessDonut
+            percent={readiness.readiness_percentage}
+            centerLabel={t('readiness.donutLabel', 'Ready')}
+          />
           <span className="cx-donut-verdict" data-tone={tone}>
             {verdictLabel(readiness.verdict, t)}
           </span>
@@ -194,9 +204,11 @@ function ReadinessHero({ readiness }: { readiness: CultureReadinessResponse }) {
               'The Cyprus culture & history exam asks 25 questions in 45 minutes and you need 60% to pass. History and Politics are pulling your score down the most. Start there.'
             )}
           </p>
-          {lowestCat && (
+          {/* Only render the CTA when the weakest category has a real deck id —
+              guard against a broken `/culture/decks/` link (CodeRabbit). */}
+          {lowestCat && lowestDeckId && (
             <div className="cx-hero-ctas">
-              <Link to={`/culture/decks/${lowestCat.deck_ids[0] ?? ''}`} className="cx-cta-ghost">
+              <Link to={`/culture/decks/${lowestDeckId}`} className="cx-cta-ghost">
                 {t('readiness.ctaPractice', {
                   category: capFirst(lowestCat.category),
                   defaultValue: 'Practice {{category}}',
@@ -215,6 +227,7 @@ function CategoryPanel({ categories }: { categories: CategoryReadiness[] }) {
   const { t } = useTranslation('mockExam');
   // lowest = categories[0] (API returns ascending)
   const lowest = categories[0];
+  const lowestDeckId = lowest?.deck_ids?.[0];
 
   return (
     <div className="dx-action">
@@ -259,9 +272,11 @@ function CategoryPanel({ categories }: { categories: CategoryReadiness[] }) {
         })}
       </div>
 
-      {lowest && (
+      {/* Only render the CTA when the weakest category has a real deck id —
+          guard against a broken `/culture/decks/` link (CodeRabbit). */}
+      {lowest && lowestDeckId && (
         <Link
-          to={`/culture/decks/${lowest.deck_ids[0] ?? ''}`}
+          to={`/culture/decks/${lowestDeckId}`}
           className="dx-action-cta"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}
         >
@@ -417,11 +432,17 @@ export const MockExamPage: React.FC = () => {
   const hasTrackedPageView = useRef(false);
 
   // ── Data fetch — TanStack useQuery for all three reads ────────────────────
+  // retry: false on all three — the global QueryClient default is retry: 1,
+  // which keeps `isLoading` true through a retry on failure and delays the
+  // launcher skeleton→content transition. The pre-PRACT2-11 page settled
+  // failures immediately (Promise.all + .catch(() => null)); retry: false
+  // restores that immediate graceful degradation per AC-6.
   const readinessQuery = useQuery({
     queryKey: ['cultureReadiness'],
     queryFn: () => cultureDeckAPI.getReadiness(),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    retry: false,
   });
 
   const statsQuery = useQuery({
@@ -429,6 +450,7 @@ export const MockExamPage: React.FC = () => {
     queryFn: () => mockExamAPI.getStatistics(),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    retry: false,
   });
 
   const queueQuery = useQuery({
@@ -436,6 +458,7 @@ export const MockExamPage: React.FC = () => {
     queryFn: () => mockExamAPI.getQuestionQueue(),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    retry: false,
   });
 
   // Initial-load skeleton only: render content once all three queries have

@@ -46,7 +46,8 @@
     "verdictNotReady": "Не готов",
     "verdictGettingThere": "Прогресс есть",
     "verdictReady": "Готов",
-    "verdictThoroughlyPrepared": "Отлично подготовлен"
+    "verdictThoroughlyPrepared": "Отлично подготовлен",
+    "donutLabel": "готовности"
   },
   "actions": {
     "startExam": "Начать пробный экзамен",

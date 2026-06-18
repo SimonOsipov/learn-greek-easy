@@ -46,7 +46,8 @@
     "verdictNotReady": "Not Ready",
     "verdictGettingThere": "Getting There",
     "verdictReady": "Ready",
-    "verdictThoroughlyPrepared": "Thoroughly Prepared"
+    "verdictThoroughlyPrepared": "Thoroughly Prepared",
+    "donutLabel": "Ready"
   },
   "actions": {
     "startExam": "Start Mock Exam",

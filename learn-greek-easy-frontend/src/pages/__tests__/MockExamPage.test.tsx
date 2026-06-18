@@ -125,6 +125,7 @@ vi.mock('react-i18next', async () => {
               'readiness.verdictGettingThere': 'Getting There',
               'readiness.verdictReady': 'Ready',
               'readiness.verdictThoroughlyPrepared': 'Thoroughly Prepared',
+              'readiness.donutLabel': 'Ready',
             };
             const val = map[key];
             if (typeof val === 'function') return val(opts);

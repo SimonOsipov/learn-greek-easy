@@ -15,12 +15,20 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, Navigate, useNavigationType } from 'react-router-dom';
 import { describe, it, expect } from 'vitest';
 
-// A trivial probe at the destination so we can assert the redirect resolved.
+// A probe at the destination so we can assert the redirect resolved AND that it
+// arrived via REPLACE (not PUSH). useNavigationType() reports how the current
+// location was reached — a `<Navigate replace>` yields 'REPLACE', so the legacy
+// bookmark/deep link does NOT push a history entry (AC-2 guard).
 function MockExamProbe() {
-  return <div data-testid="mock-exam-destination">Mock exam hub</div>;
+  const navType = useNavigationType();
+  return (
+    <div data-testid="mock-exam-destination" data-nav-type={navType}>
+      Mock exam hub
+    </div>
+  );
 }
 
 /**
@@ -43,11 +51,16 @@ function renderRoutesAt(initialPath: string) {
 }
 
 describe('/culture/readiness redirect (AC-2)', () => {
-  it('redirects a /culture/readiness deep link to /practice/culture-exam', () => {
+  it('redirects a /culture/readiness deep link to /practice/culture-exam via REPLACE', () => {
     renderRoutesAt('/culture/readiness');
 
     // The Navigate resolves synchronously on render, so the destination renders.
-    expect(screen.getByTestId('mock-exam-destination')).toBeInTheDocument();
+    const destination = screen.getByTestId('mock-exam-destination');
+    expect(destination).toBeInTheDocument();
+    // AC-2: the redirect must REPLACE (not push) so the bookmarked
+    // /culture/readiness URL does not add a history entry — Back from the hub
+    // must not bounce the user back through the dead route.
+    expect(destination).toHaveAttribute('data-nav-type', 'REPLACE');
   });
 
   it('renders the destination directly when navigating to /practice/culture-exam', () => {
