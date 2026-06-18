@@ -2121,7 +2121,6 @@
     "discardConfirm": "Discard",
     "discardCancel": "Keep editing",
     "activityPlaceholder": "Recent edits, last reviewed time, and learner stats will live here.",
-    "autoSavedJustNow": "Auto-saved · just now",
     "backToAllQuestions": "Back to all questions",
     "editQuestion": "Edit question",
     "statusReady": "Ready",
@@ -2147,13 +2146,10 @@
       "editQuestionLabel": "Edit question",
       "deleteQuestionLabel": "Delete question"
     },
-    "allComplete": "All cards complete",
-    "saveAndClose": "Save & close",
     "saveChanges": "Save changes",
     "typeCulture": "Culture",
     "typeVocabulary": "Vocabulary",
     "statusActive": "Active",
-    "statusInactive": "Inactive",
     "statusDeactivated": "Deactivated",
     "filters": {
       "type": {
@@ -2173,8 +2169,6 @@
     "wordCount_other": "{{count}} words",
     "questionCount_one": "{{count}} question",
     "questionCount_other": "{{count}} questions",
-    "questions": "questions",
-    "words": "words",
     "stats": {
       "totalDecks": "Total decks",
       "vocabulary": "Vocabulary",

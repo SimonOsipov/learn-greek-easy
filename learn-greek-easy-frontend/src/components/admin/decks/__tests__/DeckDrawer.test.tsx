@@ -451,9 +451,11 @@ describe('DeckDrawer', () => {
     expect(screen.queryByText('Premium')).not.toBeInTheDocument();
   });
 
-  // ── 11. Default footer on Words tab ─────────────────────────────────────────
+  // ── 11. Standard footer on Words tab ────────────────────────────────────────
+  // ADMIN2-35-04: one stable footer (Delete deck · Cancel + Save changes) across
+  // all tabs. No "All cards complete", no "Save & close".
 
-  it('shows default footer with 3 buttons on Words tab (not Settings)', async () => {
+  it('shows the standard footer (delete / cancel / save) on the Words tab', async () => {
     (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
 
     renderDrawer('/admin?tab=decks&edit=deck-vocab-1');
@@ -464,9 +466,20 @@ describe('DeckDrawer', () => {
 
     const footer = screen.getByTestId('deck-drawer-footer');
     expect(footer).toBeInTheDocument();
-    expect(screen.getByText('All cards complete')).toBeInTheDocument();
-    expect(screen.getByText('Cancel')).toBeInTheDocument();
-    expect(screen.getByText('Save & close')).toBeInTheDocument();
+
+    // The three standard footer buttons carry explicit testids.
+    expect(screen.getByTestId('deck-drawer-footer-delete')).toBeInTheDocument();
+    expect(screen.getByTestId('deck-drawer-footer-cancel')).toBeInTheDocument();
+    expect(screen.getByTestId('deck-drawer-footer-save')).toBeInTheDocument();
+
+    // Save is disabled on a non-Settings tab (Words here).
+    expect(screen.getByTestId('deck-drawer-footer-save')).toBeDisabled();
+
+    // The destroyed legacy footer copy must be gone.
+    expect(screen.queryByText('All cards complete')).not.toBeInTheDocument();
+    expect(screen.queryByText('Save & close')).not.toBeInTheDocument();
+
+    // The standard labels are present.
     expect(screen.getByText('Save changes')).toBeInTheDocument();
   });
 
@@ -487,6 +500,12 @@ describe('DeckDrawer', () => {
   // ── 13. Dirty-cancel → discard dialog; "Keep editing" preserves dirty state ──
   // Regression guard for PM Decision #9: dirty-cancel must show discard dialog;
   // "Keep editing" must dismiss dialog without resetting the form.
+  //
+  // ADMIN2-35-04: the footer Cancel is now the drawer-owned
+  // `deck-drawer-footer-cancel`, which routes through closeWithGuard → the dirty
+  // close-guard registered by DeckSettingsTab (the old `deck-settings-cancel` id
+  // is gone). The Save button is the drawer-owned `deck-drawer-footer-save`,
+  // enabled because we're on the Settings tab.
 
   it('dirty-cancel triggers discard dialog; Keep editing dismisses it and preserves dirty state', async () => {
     const user = userEvent.setup();
@@ -503,25 +522,19 @@ describe('DeckDrawer', () => {
       expect(screen.getByTestId('vocabulary-deck-edit-form')).toBeInTheDocument();
     });
 
-    // Wait for footer buttons (injected by DeckSettingsTab via setFooter context)
-    await waitFor(() => {
-      expect(screen.getByTestId('deck-settings-footer')).toBeInTheDocument();
-    });
+    // The drawer-owned footer Save is enabled on the Settings tab.
+    expect(screen.getByTestId('deck-drawer-footer-save')).not.toBeDisabled();
 
     // Dirty the form by editing the name field
     const nameInput = screen.getByTestId('deck-edit-name-en');
     await user.clear(nameInput);
     await user.type(nameInput, 'Edited Name');
 
-    // Verify form is now dirty (Save button should be enabled)
-    await waitFor(() => {
-      const saveBtn = screen.getByTestId('deck-settings-save');
-      expect(saveBtn).not.toBeDisabled();
-    });
+    expect(screen.getByTestId('deck-edit-name-en')).toHaveValue('Edited Name');
 
-    // Click Cancel — since form is dirty, discard dialog should appear
-    const cancelBtn = screen.getByTestId('deck-settings-cancel');
-    await user.click(cancelBtn);
+    // Click the drawer footer Cancel — since the form is dirty, the close guard
+    // blocks the close and the discard dialog should appear.
+    await user.click(screen.getByTestId('deck-drawer-footer-cancel'));
 
     // Discard dialog must appear
     await waitFor(() => {
@@ -539,8 +552,26 @@ describe('DeckDrawer', () => {
     // The field must still show the edited value (form was NOT reset)
     expect(screen.getByTestId('deck-edit-name-en')).toHaveValue('Edited Name');
 
-    // Save button must still be enabled (form is still dirty)
-    expect(screen.getByTestId('deck-settings-save')).not.toBeDisabled();
+    // The drawer-owned Save remains enabled (form is still dirty + on Settings tab)
+    expect(screen.getByTestId('deck-drawer-footer-save')).not.toBeDisabled();
+  });
+
+  // ── 13b. Save is enabled on a CLEAN Settings tab (FeedbackDrawer standard) ───
+  // The footer Save disables ONLY off the Settings tab — never by dirty state.
+  // Locks the new contract: enabled-when-clean on Settings (the redundant-PATCH
+  // guard lives in DeckSettingsTab.handleSave, not on the button).
+
+  it('footer Save is enabled on the Settings tab even when the form is not dirty', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
+
+    renderDrawer('/admin?edit=deck-vocab-1&subtab=settings');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('vocabulary-deck-edit-form')).toBeInTheDocument();
+    });
+
+    // No edits made — Save must still be enabled on the Settings tab.
+    expect(screen.getByTestId('deck-drawer-footer-save')).not.toBeDisabled();
   });
 
   // ── 14–17. Hoisted delete-wiring specs (ADMIN2-35-04, AC #10-13) ─────────────
@@ -629,7 +660,12 @@ describe('DeckDrawer', () => {
   });
 
   // AC #13
-  it('confirm_delete_closes_drawer_and_refreshes: after confirm, URL strips edit/item/subtab, invalidateQueries and fetchCounts are called', async () => {
+  // NOTE: the footer-delete button is hidden in the ?item= detail view (AC #1),
+  // so this spec opens the drawer WITHOUT ?item= (the other delete-wiring specs
+  // already omit it). We still prove the close strips the close-target params by
+  // seeding edit + subtab and asserting BOTH are cleared after delete — the
+  // unconditional strip (which also clears item) ran, not a no-op.
+  it('confirm_delete_closes_drawer_and_refreshes: after confirm, URL strips edit/subtab, invalidateQueries and fetchCounts are called', async () => {
     const user = userEvent.setup();
 
     (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
@@ -652,7 +688,7 @@ describe('DeckDrawer', () => {
     );
 
     render(
-      <MemoryRouter initialEntries={['/admin?edit=deck-vocab-1&item=some-item&subtab=settings']}>
+      <MemoryRouter initialEntries={['/admin?edit=deck-vocab-1&subtab=settings']}>
         <Routes>
           <Route
             path="*"
@@ -672,7 +708,7 @@ describe('DeckDrawer', () => {
       expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
     });
 
-    // Open the delete dialog via footer-left button (will fail here until executor builds it)
+    // Open the delete dialog via footer-left button
     await user.click(screen.getByTestId('deck-drawer-footer-delete'));
 
     await waitFor(() => {
@@ -681,12 +717,12 @@ describe('DeckDrawer', () => {
 
     await user.click(screen.getByTestId('deck-delete-confirm'));
 
-    // After delete resolves: URL params stripped (drawer closes)
+    // After delete resolves: both close-target params stripped (drawer closes).
     await waitFor(() => {
       expect(capturedSearch).not.toContain('edit=');
     });
-    expect(capturedSearch).not.toContain('item=');
     expect(capturedSearch).not.toContain('subtab=');
+    expect(capturedSearch).not.toContain('item=');
 
     // invalidateQueries called for ['admin', 'decks']
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['admin', 'decks'] });

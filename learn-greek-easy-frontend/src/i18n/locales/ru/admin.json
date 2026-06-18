@@ -2140,7 +2140,6 @@
     "discardConfirm": "Отменить",
     "discardCancel": "Продолжить редактирование",
     "activityPlaceholder": "Здесь появятся последние правки, время последнего повтора и статистика учеников.",
-    "autoSavedJustNow": "Сохранено · только что",
     "backToAllQuestions": "К списку вопросов",
     "editQuestion": "Редактировать вопрос",
     "statusReady": "Готово",
@@ -2159,13 +2158,10 @@
       "editQuestionLabel": "Редактировать вопрос",
       "deleteQuestionLabel": "Удалить вопрос"
     },
-    "allComplete": "Все карточки заполнены",
-    "saveAndClose": "Сохранить и закрыть",
     "saveChanges": "Сохранить изменения",
     "typeCulture": "Культура",
     "typeVocabulary": "Словарный запас",
     "statusActive": "Активно",
-    "statusInactive": "Неактивно",
     "statusDeactivated": "Деактивировано",
     "filters": {
       "type": {
@@ -2189,8 +2185,6 @@
     "questionCount_few": "{{count}} вопроса",
     "questionCount_many": "{{count}} вопросов",
     "questionCount_other": "{{count}} вопросов",
-    "questions": "вопросов",
-    "words": "слов",
     "stats": {
       "totalDecks": "Всего колод",
       "vocabulary": "Словарные",

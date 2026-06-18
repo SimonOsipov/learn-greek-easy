@@ -180,14 +180,13 @@ describe('no_inactive_terminology_leak_en', () => {
     return results;
   }
 
-  // Deferred removals from subtask 04 — do not assert clean on these yet.
-  const DEFERRED_INACTIVE_KEYS = new Set(['statusInactive']);
+  // Subtask 04 (ADMIN2-35-04) removed the last deferred "Inactive" key
+  // (decks.statusInactive). decks.* must now be fully free of "Inactive".
 
-  it('no EN admin.decks value (excluding deferred removals) contains "Inactive" (case-insensitive)', () => {
+  it('no EN admin.decks value contains "Inactive" (case-insensitive)', () => {
     const decksSection = (enAdmin as Record<string, unknown>)['decks'] as Record<string, unknown>;
-    const leaks = collectValues(decksSection).filter(
-      ({ path, value }) =>
-        !DEFERRED_INACTIVE_KEYS.has(path) && value.toLowerCase().includes('inactive')
+    const leaks = collectValues(decksSection).filter(({ value }) =>
+      value.toLowerCase().includes('inactive')
     );
     expect(
       leaks,
@@ -209,15 +208,18 @@ describe('no_inactive_terminology_leak_en', () => {
     ).toHaveLength(0);
   });
 
-  it('exactly one deferred "Inactive" key remains in decks (statusInactive — removed in subtask 04)', () => {
+  it('the deferred decks.statusInactive key is fully removed (subtask 04)', () => {
     const decksSection = (enAdmin as Record<string, unknown>)['decks'] as Record<string, unknown>;
+    // The key itself must be gone, not merely re-worded.
+    expect('statusInactive' in decksSection).toBe(false);
+
+    // And no "Inactive" value survives anywhere under decks.*.
     const allInactive = collectValues(decksSection).filter(({ value }) =>
       value.toLowerCase().includes('inactive')
     );
-    // There must be exactly the one deferred key — no more were reintroduced.
     expect(
       allInactive.map((l) => l.path),
-      `Expected only 'statusInactive' to remain; got:\n${allInactive.map((l) => `  ${l.path}: ${l.value}`).join('\n')}`
-    ).toEqual(['statusInactive']);
+      `Expected NO "Inactive" to remain under decks.*; got:\n${allInactive.map((l) => `  ${l.path}: ${l.value}`).join('\n')}`
+    ).toEqual([]);
   });
 });
