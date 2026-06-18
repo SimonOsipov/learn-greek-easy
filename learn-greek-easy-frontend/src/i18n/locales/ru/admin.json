@@ -993,9 +993,8 @@
     },
     "respond": "Ответить",
     "row": {
-      "editResponse": "Изменить ответ",
-      "inDeck": "в колоде",
-      "respond": "Ответить"
+      "editAria": "Редактировать отчёт об ошибке",
+      "inDeck": "в колоде"
     },
     "search": {
       "filteredCount": "{{filtered}} из {{total}} отчётов",

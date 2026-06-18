@@ -979,9 +979,8 @@
     },
     "respond": "Respond",
     "row": {
-      "editResponse": "Edit response",
-      "inDeck": "in deck",
-      "respond": "Respond"
+      "editAria": "Edit error report",
+      "inDeck": "in deck"
     },
     "search": {
       "filteredCount": "{{filtered}} of {{total}} reports",

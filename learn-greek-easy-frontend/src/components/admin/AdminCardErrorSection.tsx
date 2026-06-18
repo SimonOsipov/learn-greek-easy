@@ -6,6 +6,7 @@ import { AlertCircle, ChevronLeft, ChevronRight, RefreshCw, Search, X } from 'lu
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
+import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -71,10 +72,12 @@ export const AdminCardErrorSection: React.FC = () => {
     clearFilters,
     setPage,
     setSelectedError,
+    deleteError,
   } = useAdminCardErrorStore();
 
   // Dialog state
   const [isResponseDialogOpen, setIsResponseDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AdminCardErrorResponse | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 300);
   const pageSize = 10;
@@ -359,6 +362,7 @@ export const AdminCardErrorSection: React.FC = () => {
                     key={errorReport.id}
                     errorReport={errorReport}
                     onRespond={handleRespond}
+                    onDelete={(report) => setDeleteTarget(report)}
                   />
                 ))}
               </div>
@@ -414,6 +418,23 @@ export const AdminCardErrorSection: React.FC = () => {
           // The store will auto-update via updateError
           // Refetch to ensure list is in sync
           fetchErrorList();
+        }}
+      />
+
+      {/* Hard-delete confirm dialog (ADMIN2-34-04) */}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t('cardErrors.drawer.foot.deleteConfirm.title')}
+        description={t('cardErrors.drawer.foot.deleteConfirm.body')}
+        variant="destructive"
+        onConfirm={async () => {
+          if (deleteTarget) {
+            await deleteError(deleteTarget.id);
+            setDeleteTarget(null);
+          }
         }}
       />
     </div>
