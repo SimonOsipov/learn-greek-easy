@@ -263,8 +263,16 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
         setDeckToDelete(null);
         fetchDecks();
         void useAdminTabCountsStore.getState().fetchCounts();
-      } catch (_err) {
-        // Error handling minimal here; toast patterns will land in a later subtask.
+        toast({
+          title: t('toast.deckDeactivated'),
+        });
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : t('errors.saveFailed');
+        toast({
+          title: t('errors.saveFailed'),
+          description: errorMessage,
+          variant: 'destructive',
+        });
       } finally {
         setIsDeleting(false);
       }
