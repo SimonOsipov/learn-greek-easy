@@ -279,7 +279,7 @@ export const CulturePage: React.FC = () => {
                     crossCuttingDecks.length,
                 })}
               </span>
-              <Link to="/culture/readiness" className="cx-whatsnew-cta">
+              <Link to="/practice/culture-exam" className="cx-whatsnew-cta">
                 {t('hub.checkReadiness', 'Check readiness →')}
               </Link>
             </div>
