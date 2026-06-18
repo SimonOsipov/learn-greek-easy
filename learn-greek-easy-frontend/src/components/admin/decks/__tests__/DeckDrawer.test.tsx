@@ -36,6 +36,50 @@ vi.mock('../VocabDrawerBody', () => ({
   VocabDrawerBody: () => <div data-testid="vocab-drawer-body-mock" />,
 }));
 
+// Mock DeckDeleteDialog — stub renders both testids so delete-wiring specs can
+// drive them without needing the Radix portal + i18n machinery.
+const mockOnConfirm = vi.fn();
+const mockOnOpenChange = vi.fn();
+vi.mock('@/components/admin/DeckDeleteDialog', () => ({
+  DeckDeleteDialog: ({
+    open,
+    onConfirm,
+    onOpenChange,
+  }: {
+    open: boolean;
+    onConfirm: () => void;
+    onOpenChange: (v: boolean) => void;
+  }) => {
+    if (!open) return null;
+    return (
+      <div data-testid="deck-delete-dialog">
+        <button
+          data-testid="deck-delete-confirm"
+          onClick={() => {
+            onConfirm();
+            onOpenChange(false);
+          }}
+        >
+          Confirm delete
+        </button>
+      </div>
+    );
+  },
+}));
+
+// Mock useAdminTabCountsStore — expose getState().fetchCounts as a spy.
+const mockFetchCounts = vi.fn().mockResolvedValue(undefined);
+vi.mock('@/stores/adminTabCountsStore', () => ({
+  useAdminTabCountsStore: Object.assign(
+    // Hook form (unused by the 4 new specs, but DeckDrawer may call it)
+    vi.fn(() => ({ fetchCounts: mockFetchCounts })),
+    // Static form used in the actual hoist: useAdminTabCountsStore.getState().fetchCounts()
+    {
+      getState: vi.fn(() => ({ fetchCounts: mockFetchCounts })),
+    }
+  ),
+}));
+
 // Import after vi.mock so we get the mocked version.
 import { adminAPI } from '@/services/adminAPI';
 
@@ -497,5 +541,157 @@ describe('DeckDrawer', () => {
 
     // Save button must still be enabled (form is still dirty)
     expect(screen.getByTestId('deck-settings-save')).not.toBeDisabled();
+  });
+
+  // ── 14–17. Hoisted delete-wiring specs (ADMIN2-35-04, AC #10-13) ─────────────
+  // These specs are RED until the executor hoists DeckDeleteDialog + handleDeleteConfirm
+  // from DeckSettingsTab into DeckDrawer and adds `deck-drawer-footer-delete`.
+
+  // AC #10
+  it('footer_delete_opens_delete_dialog: clicking deck-drawer-footer-delete shows deck-delete-dialog', async () => {
+    const user = userEvent.setup();
+
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
+
+    renderDrawer('/admin?tab=decks&edit=deck-vocab-1');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    // The footer-left delete button does not exist yet in DeckDrawer — this click
+    // will throw "Unable to find element" once DeckDrawer is fully loaded, making
+    // the spec fail on assertion (not import crash).
+    const deleteBtn = screen.getByTestId('deck-drawer-footer-delete');
+    await user.click(deleteBtn);
+
+    expect(screen.getByTestId('deck-delete-dialog')).toBeInTheDocument();
+  });
+
+  // AC #11
+  it('confirm_delete_calls_deactivate_for_vocab: confirming on a vocab deck calls deleteVocabularyDeck and NOT deleteCultureDeck', async () => {
+    const user = userEvent.setup();
+
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
+    (adminAPI.deleteVocabularyDeck as Mock).mockResolvedValue(undefined);
+    (adminAPI.deleteCultureDeck as Mock).mockResolvedValue(undefined);
+
+    renderDrawer('/admin?tab=decks&edit=deck-vocab-1');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    // Open the delete dialog via footer-left button (will fail here until executor builds it)
+    await user.click(screen.getByTestId('deck-drawer-footer-delete'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-delete-confirm')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId('deck-delete-confirm'));
+
+    await waitFor(() => {
+      expect(adminAPI.deleteVocabularyDeck as Mock).toHaveBeenCalledWith('deck-vocab-1');
+    });
+
+    expect(adminAPI.deleteCultureDeck as Mock).not.toHaveBeenCalled();
+  });
+
+  // AC #12
+  it('confirm_delete_calls_deactivate_for_culture: confirming on a culture deck calls deleteCultureDeck and NOT deleteVocabularyDeck', async () => {
+    const user = userEvent.setup();
+
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeCultureDeck());
+    (adminAPI.deleteCultureDeck as Mock).mockResolvedValue(undefined);
+    (adminAPI.deleteVocabularyDeck as Mock).mockResolvedValue(undefined);
+
+    renderDrawer('/admin?tab=decks&edit=deck-culture-1');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    // Open the delete dialog via footer-left button (will fail here until executor builds it)
+    await user.click(screen.getByTestId('deck-drawer-footer-delete'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-delete-confirm')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId('deck-delete-confirm'));
+
+    await waitFor(() => {
+      expect(adminAPI.deleteCultureDeck as Mock).toHaveBeenCalledWith('deck-culture-1');
+    });
+
+    expect(adminAPI.deleteVocabularyDeck as Mock).not.toHaveBeenCalled();
+  });
+
+  // AC #13
+  it('confirm_delete_closes_drawer_and_refreshes: after confirm, URL strips edit/item/subtab, invalidateQueries and fetchCounts are called', async () => {
+    const user = userEvent.setup();
+
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
+    (adminAPI.deleteVocabularyDeck as Mock).mockResolvedValue(undefined);
+
+    // Need an exposed queryClient to spy on invalidateQueries.
+    const queryClient = makeQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    let capturedSearch = '';
+    const CaptureSearch = () => {
+      const { useLocation } = require('react-router-dom');
+      const location = useLocation();
+      capturedSearch = location.search;
+      return null;
+    };
+
+    const Wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/admin?edit=deck-vocab-1&item=some-item&subtab=settings']}>
+        <Routes>
+          <Route
+            path="*"
+            element={
+              <>
+                <DeckDrawer />
+                <CaptureSearch />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+      { wrapper: Wrapper }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    // Open the delete dialog via footer-left button (will fail here until executor builds it)
+    await user.click(screen.getByTestId('deck-drawer-footer-delete'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-delete-confirm')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId('deck-delete-confirm'));
+
+    // After delete resolves: URL params stripped (drawer closes)
+    await waitFor(() => {
+      expect(capturedSearch).not.toContain('edit=');
+    });
+    expect(capturedSearch).not.toContain('item=');
+    expect(capturedSearch).not.toContain('subtab=');
+
+    // invalidateQueries called for ['admin', 'decks']
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['admin', 'decks'] });
+
+    // fetchCounts invoked
+    expect(mockFetchCounts).toHaveBeenCalled();
   });
 });
