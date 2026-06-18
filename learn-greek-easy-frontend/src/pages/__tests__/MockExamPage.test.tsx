@@ -99,6 +99,32 @@ vi.mock('react-i18next', async () => {
               'states.retry': 'Try Again',
               'states.notEnoughQuestions':
                 'Not enough questions available to start an exam. At least 25 questions are required.',
+              // Readiness copy migrated culture → mockExam in PRACT2-11-03; the
+              // ported readiness sub-components now read t('readiness.*') from
+              // the mockExam namespace.
+              'readiness.heroKicker': 'What this means',
+              'readiness.heroTitle': `${opts?.learned} of ${opts?.total} questions learned`,
+              'readiness.heroAccuracy': `Overall accuracy ${opts?.pct}%`,
+              'readiness.heroDesc':
+                'The Cyprus culture & history exam asks 25 questions in 45 minutes and you need 60% to pass.',
+              'readiness.ctaPractice': `Practice ${opts?.category}`,
+              'readiness.metricAccuracy': 'Accuracy',
+              'readiness.metricAccuracyTrend': 'on attempted questions',
+              'readiness.metricLearned': 'Learned',
+              'readiness.metricLearnedTrend': `across ${opts?.n} categories`,
+              'readiness.metricStreak': 'Streak',
+              'readiness.metricBestScore': 'Best Score',
+              'readiness.days': 'days',
+              'readiness.catEyebrow': "Where you're weakest",
+              'readiness.catTitle': 'Progress by category',
+              'readiness.catMeta': 'red bars are below 30% · pass-mark 60%',
+              'readiness.catCta': `Practice ${opts?.category} — ${opts?.pct}% ready`,
+              'readiness.catNoAttempts': 'No attempts yet',
+              'readiness.catAccuracy': `Accuracy: ${opts?.pct}%`,
+              'readiness.verdictNotReady': 'Not Ready',
+              'readiness.verdictGettingThere': 'Getting There',
+              'readiness.verdictReady': 'Ready',
+              'readiness.verdictThoroughlyPrepared': 'Thoroughly Prepared',
             };
             const val = map[key];
             if (typeof val === 'function') return val(opts);

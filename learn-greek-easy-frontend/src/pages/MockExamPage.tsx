@@ -151,7 +151,7 @@ function ReadinessDonut({ percent }: { percent: number }) {
 
 /** Hero: donut + verdict pill + "what this means" explainer + learned/accuracy */
 function ReadinessHero({ readiness }: { readiness: CultureReadinessResponse }) {
-  const { t } = useTranslation('culture');
+  const { t } = useTranslation('mockExam');
   const tone = readinessTone(readiness.readiness_percentage);
   const lowestCat = readiness.categories[0]; // sorted ascending by readiness_percentage
 
@@ -212,7 +212,7 @@ function ReadinessHero({ readiness }: { readiness: CultureReadinessResponse }) {
 
 /** Category bars panel */
 function CategoryPanel({ categories }: { categories: CategoryReadiness[] }) {
-  const { t } = useTranslation('culture');
+  const { t } = useTranslation('mockExam');
   // lowest = categories[0] (API returns ascending)
   const lowest = categories[0];
 
@@ -289,9 +289,9 @@ function CategoryPanel({ categories }: { categories: CategoryReadiness[] }) {
  * from the mock-exam statistics. Both sources can be null (a readiness or stats
  * failure must not block the page, AC-6) — each metric degrades to `—`.
  *
- * NOTE: labels resolve via the `culture` namespace (the readiness sub-components
- * still do too, pre-flip). PRACT2-11-03 migrates the whole `readiness` key block
- * — including `metricBestScore` — to the `mockExam` namespace in one move.
+ * NOTE: labels resolve via the `mockExam` namespace — the whole `readiness` key
+ * block (including `metricBestScore`) was migrated culture → mockExam in
+ * PRACT2-11-03, and all readiness sub-components now read from it.
  */
 interface CuratedMetricStripProps {
   readiness: CultureReadinessResponse | null;
@@ -299,7 +299,7 @@ interface CuratedMetricStripProps {
 }
 
 const CuratedMetricStrip: React.FC<CuratedMetricStripProps> = ({ readiness, bestScore }) => {
-  const { t } = useTranslation('culture');
+  const { t } = useTranslation('mockExam');
 
   const accuracy = readiness?.accuracy_percentage ?? null;
 
@@ -403,9 +403,10 @@ const EmptyHistoryState: React.FC = () => {
  */
 export const MockExamPage: React.FC = () => {
   const { t } = useTranslation('mockExam');
-  // Note: the ported readiness sub-components (ReadinessHero, CategoryPanel) each
-  // call useTranslation('culture') / t('readiness.*') themselves. The flip to the
-  // `mockExam` namespace happens atomically (both locales) in PRACT2-11-03.
+  // Note: the ported readiness sub-components (ReadinessHero, CategoryPanel,
+  // CuratedMetricStrip) read their `t('readiness.*')` copy from the `mockExam`
+  // namespace too — the readiness key block was migrated culture → mockExam in
+  // PRACT2-11-03.
   const navigate = useNavigate();
 
   // Store state
