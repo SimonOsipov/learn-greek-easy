@@ -302,4 +302,120 @@ describe('AllDecksList — 3-Way Status Filter (ADMIN2-35-03)', () => {
       expect(serverResponse.total).toBe(2);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // ADVERSARIAL-1 — stale_old_key_tolerated
+  // If the OLD boolean key 'admin.deckList.hideDeactivated' is present but the
+  // NEW key is absent, the filter must default to 'all' and not crash.
+  // -------------------------------------------------------------------------
+  describe('stale_old_key_tolerated (migration robustness)', () => {
+    it("defaults to 'all' when only the old boolean key is present (true)", () => {
+      localStorage.setItem('admin.deckList.hideDeactivated', 'true');
+      // New key is absent — readStatusFilterFromStorage mirrors the init logic
+      expect(readStatusFilterFromStorage()).toBe('all');
+    });
+
+    it("defaults to 'all' when only the old boolean key is present (false)", () => {
+      localStorage.setItem('admin.deckList.hideDeactivated', 'false');
+      expect(readStatusFilterFromStorage()).toBe('all');
+    });
+
+    it('does not crash and returns all decks when the old key is present', () => {
+      localStorage.setItem('admin.deckList.hideDeactivated', 'true');
+      const filter = readStatusFilterFromStorage();
+      // Should not throw; result must be 'all'
+      expect(filter).toBe('all');
+      // And computeDisplayDecks must pass through everything unchanged
+      const result = computeDisplayDecks(mixedList, filter);
+      expect(result).toHaveLength(4);
+    });
+
+    it('uses the new key when both old and new keys are set, ignoring the old one', () => {
+      localStorage.setItem('admin.deckList.hideDeactivated', 'true');
+      localStorage.setItem('admin.deckList.statusFilter', 'active');
+      expect(readStatusFilterFromStorage()).toBe('active');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // ADVERSARIAL-2 — type_and_status_combined
+  // The status filter operates on the list ALREADY filtered by type (server-side).
+  // computeDisplayDecks receives the server-returned page (already type-scoped)
+  // and applies the status filter on top. Verify layering.
+  // -------------------------------------------------------------------------
+  describe('type_and_status_combined (layering)', () => {
+    // Build a more specific mixed list: 2 vocab active, 1 vocab inactive, 1 culture active
+    const vocabActive1 = createMockDeck({ id: 'va1', type: 'vocabulary', is_active: true });
+    const vocabActive2 = createMockDeck({ id: 'va2', type: 'vocabulary', is_active: true });
+    const vocabInactive = createMockDeck({ id: 'vi1', type: 'vocabulary', is_active: false });
+    const cultureActive = createMockDeck({ id: 'ca1', type: 'culture', is_active: true });
+
+    it("status 'active' on a vocab-only server response returns only active vocab decks", () => {
+      // Server has already filtered to vocabulary; client sees [va1, va2, vi1]
+      const serverVocabPage = [vocabActive1, vocabActive2, vocabInactive];
+      const result = computeDisplayDecks(serverVocabPage, 'active');
+      expect(result).toHaveLength(2);
+      expect(result.every((d) => d.is_active && d.type === 'vocabulary')).toBe(true);
+    });
+
+    it("status 'deactivated' on a vocab-only server response returns only inactive vocab decks", () => {
+      const serverVocabPage = [vocabActive1, vocabActive2, vocabInactive];
+      const result = computeDisplayDecks(serverVocabPage, 'deactivated');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('vi1');
+    });
+
+    it("status 'all' on a mixed server page returns all items (no double-filtering)", () => {
+      const serverMixed = [vocabActive1, vocabInactive, cultureActive];
+      const result = computeDisplayDecks(serverMixed, 'all');
+      expect(result).toHaveLength(3);
+    });
+
+    it('status filter does not cross-filter by type — culture deck passes active filter', () => {
+      // If server returned both vocab and culture (typeFilter='all'), status='active'
+      // must pass through ALL active decks regardless of type.
+      const serverAll = [vocabActive1, vocabInactive, cultureActive];
+      const result = computeDisplayDecks(serverAll, 'active');
+      expect(result).toHaveLength(2);
+      expect(result.map((d) => d.id)).toContain('va1');
+      expect(result.map((d) => d.id)).toContain('ca1');
+      expect(result.map((d) => d.id)).not.toContain('vi1');
+    });
+
+    it('status and type layering: empty result when no deck matches both constraints', () => {
+      // Server returned only vocab decks (typeFilter='vocabulary'); all are active.
+      // Status='deactivated' → nothing passes.
+      const serverVocabAllActive = [vocabActive1, vocabActive2];
+      const result = computeDisplayDecks(serverVocabAllActive, 'deactivated');
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // ADVERSARIAL-3 — default_selection
+  // With no stored key, 'all' is the default and computeDisplayDecks returns all.
+  // -------------------------------------------------------------------------
+  describe('default_selection', () => {
+    it("computeDisplayDecks(list,'all') returns the full list unchanged", () => {
+      // No localStorage interaction — pure function default
+      const result = computeDisplayDecks(mixedList, 'all');
+      expect(result).toBe(mixedList); // same reference: 'all' returns the array as-is
+    });
+
+    it('default filter from empty localStorage is all and produces full list', () => {
+      // localStorage is clear (beforeEach clears it)
+      const defaultFilter = readStatusFilterFromStorage();
+      expect(defaultFilter).toBe('all');
+      const result = computeDisplayDecks(mixedList, defaultFilter);
+      expect(result).toHaveLength(4);
+    });
+
+    it('default filter does not accidentally exclude newly-created decks with is_active=true', () => {
+      const freshDeck = createMockDeck({ id: 'fresh', is_active: true });
+      const list = [...mixedList, freshDeck];
+      const result = computeDisplayDecks(list, 'all');
+      expect(result).toHaveLength(5);
+      expect(result.map((d) => d.id)).toContain('fresh');
+    });
+  });
 });
