@@ -87,6 +87,14 @@
         "correctAnswer": "Correct answer",
         "incorrect": "Incorrect",
         "skipInsufficientPool": "Skipping — not enough material for this exercise yet"
+      },
+      "result": {
+        "continue": "Continue",
+        "theAnswer": "The answer",
+        "why": "Why",
+        "verdictCorrect": "Correct",
+        "verdictIncorrect": "Incorrect",
+        "whyAriaLabel": "Why — not yet connected to backend data."
       }
     },
     "dashboard": {

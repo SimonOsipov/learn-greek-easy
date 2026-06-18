@@ -89,6 +89,14 @@
         "correctAnswer": "Правильный ответ",
         "incorrect": "Неправильно",
         "skipInsufficientPool": "Упражнение пропущено — недостаточно материала"
+      },
+      "result": {
+        "continue": "Продолжить",
+        "theAnswer": "Ответ",
+        "why": "Почему",
+        "verdictCorrect": "Правильно",
+        "verdictIncorrect": "Неправильно",
+        "whyAriaLabel": "Почему — данные пока не подключены."
       }
     },
     "dashboard": {

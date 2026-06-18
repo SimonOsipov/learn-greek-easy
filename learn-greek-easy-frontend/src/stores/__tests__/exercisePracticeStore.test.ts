@@ -96,12 +96,12 @@ describe('exercisePracticeStore', () => {
       error: null,
       answers: {},
       feedbackState: null,
+      phase: 'question',
       sessionSummary: null,
       sessionId: null,
       modality: null,
       sessionStartTime: null,
       exerciseStartTime: null,
-      _feedbackTimer: null,
     });
 
     vi.mocked(useAuthStore.getState).mockReturnValue({
@@ -176,10 +176,10 @@ describe('exercisePracticeStore', () => {
   });
 
   // ============================================
-  // Test 4: Auto-advance after feedback pause
+  // Test 4: Explicit Continue (Check→Continue model)
   // ============================================
 
-  it('auto-advances after 1200ms feedback pause', () => {
+  it('stays in result phase after submitAnswer until advance() is called explicitly', () => {
     vi.mocked(exerciseAPI.submitReview).mockResolvedValue(mockReviewResult);
     // Two exercises so advancing doesn't end session
     const secondExercise = { ...mockExercise, exercise_id: 'ex-2' };
@@ -192,9 +192,12 @@ describe('exercisePracticeStore', () => {
 
     useExercisePracticeStore.getState().submitAnswer('ex-1', 0, 0);
 
+    // Result phase: feedbackState set, index unchanged
     expect(useExercisePracticeStore.getState().feedbackState).not.toBeNull();
+    expect(useExercisePracticeStore.getState().currentIndex).toBe(0);
 
-    vi.advanceTimersByTime(1200);
+    // Explicit Continue via advance()
+    useExercisePracticeStore.getState().advance();
 
     const state = useExercisePracticeStore.getState();
     expect(state.feedbackState).toBeNull();
@@ -202,10 +205,10 @@ describe('exercisePracticeStore', () => {
   });
 
   // ============================================
-  // Test 5: Session summary after last exercise
+  // Test 5: Session summary after explicit Continue on last exercise
   // ============================================
 
-  it('sets sessionSummary after last exercise is answered and timer fires', () => {
+  it('sets sessionSummary after last exercise is answered and advance() is called', () => {
     vi.mocked(exerciseAPI.submitReview).mockResolvedValue(mockReviewResult);
     useExercisePracticeStore.setState({
       queue: [mockExercise],
@@ -216,7 +219,8 @@ describe('exercisePracticeStore', () => {
 
     useExercisePracticeStore.getState().submitAnswer('ex-1', 0, 0);
 
-    vi.advanceTimersByTime(1200);
+    // Explicit Continue (Check→Continue model)
+    useExercisePracticeStore.getState().advance();
 
     const state = useExercisePracticeStore.getState();
     expect(state.sessionSummary).not.toBeNull();
@@ -239,9 +243,9 @@ describe('exercisePracticeStore', () => {
       sessionStartTime: Date.now(),
     });
 
+    // Submit answer then explicitly continue (Check→Continue model)
     useExercisePracticeStore.getState().submitAnswer('ex-1', 0, 0);
-
-    vi.advanceTimersByTime(1200);
+    useExercisePracticeStore.getState().advance();
 
     const state = useExercisePracticeStore.getState();
     expect(state.currentIndex).toBe(1);
@@ -278,6 +282,7 @@ describe('exercisePracticeStore', () => {
       currentIndex: 1,
       answers: { 'ex-1': { selectedIndex: 0, correct: true } },
       feedbackState: { exerciseId: 'ex-1', selectedIndex: 0, correctIndex: 0 },
+      phase: 'result',
       sessionId: 'session-123',
       sessionSummary: { total: 1, correct: 1, accuracy_pct: 100, duration_seconds: 5 },
     });

@@ -1,13 +1,14 @@
 // src/stores/sessionSelectors.ts
-// TODO(PRACT2-12-05): implement — these are stub placeholders so the RED tests
-// fail on assertion failures, not import/collection errors.
+// Pure selector helpers for PRACT2-12-05 live-stats + stepper status.
+// These selectors operate over a slice of ExercisePracticeState and are
+// tested independently in src/stores/__tests__/sessionSelectors.test.ts.
 
 import type { ExerciseQueueItem } from '@/services/exerciseAPI';
 
 // ---------------------------------------------------------------------------
 // Shape of the store slice that selectors consume.
-// Mirrors ExercisePracticeState from exercisePracticeStore.ts plus the new
-// `phase` field that will be added in PRACT2-12-04.
+// Mirrors ExercisePracticeState from exercisePracticeStore.ts plus the `phase`
+// field added in PRACT2-12-04.
 // ---------------------------------------------------------------------------
 export interface SessionSelectorState {
   queue: ExerciseQueueItem[];
@@ -19,42 +20,51 @@ export interface SessionSelectorState {
 // ---------------------------------------------------------------------------
 // Live-stats selector
 //
-// CONTRACT (executor must match):
-//   - Input:  SessionSelectorState
-//   - Output: { correct: number; missed: number; accuracyPct: number }
+// CONTRACT:
 //   - correct  = count of answers where .correct === true
 //   - missed   = count of answers where .correct === false
 //   - accuracyPct = round(correct / (correct + missed) * 100), 0 when no answers
 //
+// Binary split only — no partial state exists.
 // ---------------------------------------------------------------------------
-export function selectLiveStats(_state: SessionSelectorState): {
+export function selectLiveStats(state: SessionSelectorState): {
   correct: number;
   missed: number;
   accuracyPct: number;
 } {
-  // TODO(PRACT2-12-05): stub — returns wrong placeholder to make tests RED
-  return { correct: 0, missed: 0, accuracyPct: 0 };
+  const values = Object.values(state.answers);
+  const correct = values.filter((a) => a.correct).length;
+  const missed = values.length - correct;
+  const accuracyPct = values.length > 0 ? Math.round((correct / values.length) * 100) : 0;
+  return { correct, missed, accuracyPct };
 }
 
 // ---------------------------------------------------------------------------
 // Stepper status selector
 //
-// CONTRACT (executor must match):
-//   - Input:  SessionSelectorState (queue + currentIndex + answers)
-//   - Output: Array of status strings, one per queue item, in queue order
+// CONTRACT:
+//   - Returns one status per queue item, in queue order.
 //   - Status vocabulary:
-//       'correct'  — item has been answered and answers[exercise_id].correct === true
-//       'incorrect'— item has been answered and answers[exercise_id].correct === false
-//       'current'  — item is at currentIndex and not yet answered
-//       'pending'  — item is after currentIndex and not yet answered
-//   - An answered item before currentIndex may also sit at currentIndex if the
-//     session just finished (edge case; executor decides, but 'correct'/'incorrect'
-//     take priority over 'current' for answered items).
+//       'correct'   — item answered and .correct === true
+//       'incorrect' — item answered and .correct === false
+//       'current'   — item is at currentIndex and not yet answered
+//       'pending'   — item is after currentIndex and not yet answered
+//   - Answered items take priority over 'current' (an answered item at
+//     currentIndex after the session ends shows correct/incorrect).
 //
 // ---------------------------------------------------------------------------
 export function selectStepperStatus(
-  _state: SessionSelectorState
+  state: SessionSelectorState
 ): ('correct' | 'incorrect' | 'current' | 'pending')[] {
-  // TODO(PRACT2-12-05): stub — returns wrong placeholder to make tests RED
-  return [];
+  return state.queue.map((item, i) => {
+    const answer = state.answers[item.exercise_id];
+    if (answer !== undefined) {
+      // Answered items take priority — correct or incorrect
+      return answer.correct ? 'correct' : 'incorrect';
+    }
+    if (i === state.currentIndex) {
+      return 'current';
+    }
+    return 'pending';
+  });
 }

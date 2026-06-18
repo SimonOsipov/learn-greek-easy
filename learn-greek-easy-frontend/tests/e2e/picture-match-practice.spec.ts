@@ -6,7 +6,9 @@
  *   - Identify a picture-match card (Type A: select_picture_from_description
  *     or Type B: select_description_from_picture)
  *   - Click an option, assert feedback styling appears
- *   - Assert auto-advance fires (next card renders or session completes)
+ *   - Assert the result phase (XdResult) appears — verdict + "The answer" + Continue button
+ *     (PRACT2-12-05: auto-advance removed; user must click Continue or press Enter/Space)
+ *   - Click Continue, assert next card renders or session completes
  *   - Complete session, assert results / session-complete view
  *
  * NOTE: The current seed infrastructure (/api/v1/test/seed/all) creates
@@ -50,7 +52,7 @@ test.describe('SIT-26 picture-match practice', () => {
     'TODO: seed infrastructure does not yet queue picture-match exercises — see comment above'
   );
 
-  test('PMATCH-E2E-01: Type A (select_picture_from_description) — answer + advance', async ({ page }) => {
+  test('PMATCH-E2E-01: Type A (select_picture_from_description) — answer + Continue', async ({ page }) => {
     await navigateToExerciseSession(page);
 
     // Wait for a picture-from-description card to render
@@ -65,8 +67,14 @@ test.describe('SIT-26 picture-match practice', () => {
     // Feedback: all options disabled, a correct/incorrect border appears
     await expect(firstOption).toBeDisabled({ timeout: 2000 });
 
-    // Auto-advance fires after ~1200ms; next card or session summary renders
-    await page.waitForTimeout(1500);
+    // Result phase renders (PRACT2-12-05: no auto-advance; user must click Continue)
+    const resultPanel = page.getByTestId('xd-result');
+    await expect(resultPanel).toBeVisible({ timeout: 3000 });
+
+    // Click Continue to advance to next card or session summary
+    const continueBtn = page.getByRole('button', { name: /continue/i });
+    await continueBtn.click();
+
     const nextCardOrSummary =
       spfdRenderer.or(
         page.getByTestId('sdfp-renderer').or(
@@ -78,7 +86,7 @@ test.describe('SIT-26 picture-match practice', () => {
     await expect(nextCardOrSummary.first()).toBeVisible({ timeout: 5000 });
   });
 
-  test('PMATCH-E2E-02: Type B (select_description_from_picture) — answer + advance', async ({ page }) => {
+  test('PMATCH-E2E-02: Type B (select_description_from_picture) — answer + Continue', async ({ page }) => {
     await navigateToExerciseSession(page);
 
     // Wait for a description-from-picture card to render
@@ -93,8 +101,14 @@ test.describe('SIT-26 picture-match practice', () => {
     // Feedback: options disabled
     await expect(firstOption).toBeDisabled({ timeout: 2000 });
 
-    // Auto-advance
-    await page.waitForTimeout(1500);
+    // Result phase renders (PRACT2-12-05: no auto-advance; user must click Continue)
+    const resultPanel = page.getByTestId('xd-result');
+    await expect(resultPanel).toBeVisible({ timeout: 3000 });
+
+    // Click Continue to advance
+    const continueBtn = page.getByRole('button', { name: /continue/i });
+    await continueBtn.click();
+
     const nextCardOrSummary =
       sdfpRenderer.or(
         page.getByTestId('spfd-renderer').or(
@@ -139,8 +153,13 @@ test.describe('SIT-26 picture-match practice', () => {
         await page.getByTestId('sca-option-0').click();
       }
 
-      // Wait for auto-advance
-      await page.waitForTimeout(1500);
+      // Wait for result phase (PRACT2-12-05: no auto-advance — user must click Continue)
+      const resultPanel = page.getByTestId('xd-result');
+      await expect(resultPanel).toBeVisible({ timeout: 3000 });
+      const continueBtn = page.getByRole('button', { name: /continue/i });
+      await continueBtn.click();
+      // Wait for transition to next card or summary
+      await page.waitForTimeout(300);
     }
 
     // Session complete view should be visible (SessionSummary component)
