@@ -105,21 +105,13 @@
     "byOwner": "от {{owner}}",
     "deactivated": "Деактивировано"
   },
-  "deckList": {
-    "hideDeactivated": "Скрыть неактивные"
-  },
+  "deckList": {},
   "deckTypes": {
     "vocabulary": "Словарь",
     "culture": "Культура"
   },
   "search": {
     "placeholder": "Поиск колод..."
-  },
-  "filter": {
-    "type": "Фильтр по типу",
-    "allTypes": "Все типы",
-    "vocabulary": "Словарь",
-    "culture": "Культура"
   },
   "pagination": {
     "showing": "Показано {{from}}-{{to}} из {{total}}",

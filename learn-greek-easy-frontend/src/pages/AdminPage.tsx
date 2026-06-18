@@ -45,16 +45,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Kicker } from '@/components/ui/kicker';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { SegControl } from '@/components/ui/seg-control';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
 import CardErrorsView from '@/pages/admin/CardErrorsView';
@@ -172,6 +164,20 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
+// ---------------------------------------------------------------------------
+// Status filter type + pure helper — exported for unit tests (ADMIN2-35-03)
+// ---------------------------------------------------------------------------
+
+export type StatusFilter = 'all' | 'active' | 'deactivated';
+
+export function computeDisplayDecks(
+  decks: UnifiedDeckItem[],
+  statusFilter: StatusFilter
+): UnifiedDeckItem[] {
+  if (statusFilter === 'all') return decks;
+  return decks.filter((d) => (statusFilter === 'active' ? d.is_active : !d.is_active));
+}
+
 /**
  * All Decks List Component
  */
@@ -193,17 +199,18 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchInput, setSearchInput] = useState('');
-    const [hideDeactivated, setHideDeactivated] = useState<boolean>(
-      () => localStorage.getItem('admin.deckList.hideDeactivated') === 'true'
-    );
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>(() => {
+      const stored = localStorage.getItem('admin.deckList.statusFilter');
+      return stored === 'active' || stored === 'deactivated' ? stored : 'all';
+    });
     const [page, setPage] = useState(1);
     const pageSize = 10;
 
     const debouncedSearch = useDebounce(searchInput, 300);
 
-    const handleHideDeactivatedChange = (checked: boolean) => {
-      setHideDeactivated(checked);
-      localStorage.setItem('admin.deckList.hideDeactivated', checked.toString());
+    const handleStatusFilterChange = (value: StatusFilter) => {
+      setStatusFilter(value);
+      localStorage.setItem('admin.deckList.statusFilter', value);
     };
 
     // Seam for DKDR-06: writes ?edit=<id> to URL so the drawer can mount.
@@ -310,11 +317,7 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
       }
     };
 
-    const displayDecks = deckList
-      ? hideDeactivated
-        ? deckList.decks.filter((d) => d.is_active)
-        : deckList.decks
-      : [];
+    const displayDecks = computeDisplayDecks(deckList?.decks ?? [], statusFilter);
 
     return (
       <Card>
@@ -326,8 +329,8 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
         </CardHeader>
         <CardContent>
           {/* Search and Filter Controls */}
-          <div className="mb-4 flex flex-col gap-4 sm:flex-row">
-            <div className="relative flex-1">
+          <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="relative min-w-[240px] flex-1 sm:max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
@@ -338,33 +341,26 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
                 data-testid="deck-search-input"
               />
             </div>
-            <Select
+            <SegControl
+              options={[
+                { value: 'all', label: t('decks.filters.type.all') },
+                { value: 'vocabulary', label: t('decks.filters.type.vocab') },
+                { value: 'culture', label: t('decks.filters.type.culture') },
+              ]}
               value={typeFilter}
-              onValueChange={(value: 'all' | 'vocabulary' | 'culture') => onTypeFilterChange(value)}
-            >
-              <SelectTrigger className="w-full sm:w-[180px]" data-testid="type-filter-select">
-                <SelectValue placeholder={t('filter.type')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('filter.allTypes')}</SelectItem>
-                <SelectItem value="vocabulary">{t('filter.vocabulary')}</SelectItem>
-                <SelectItem value="culture">{t('filter.culture')}</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex items-center gap-2">
-              <Switch
-                id="hide-deactivated"
-                checked={hideDeactivated}
-                onCheckedChange={handleHideDeactivatedChange}
-                data-testid="hide-deactivated-toggle"
-              />
-              <Label
-                htmlFor="hide-deactivated"
-                className="cursor-pointer whitespace-nowrap text-sm"
-              >
-                {t('deckList.hideDeactivated')}
-              </Label>
-            </div>
+              onChange={(value: 'all' | 'vocabulary' | 'culture') => onTypeFilterChange(value)}
+              ariaLabel={t('decks.filters.type.label')}
+            />
+            <SegControl
+              options={[
+                { value: 'all', label: t('decks.filters.status.all') },
+                { value: 'active', label: t('decks.filters.status.active') },
+                { value: 'deactivated', label: t('decks.filters.status.deactivated') },
+              ]}
+              value={statusFilter}
+              onChange={handleStatusFilterChange}
+              ariaLabel={t('decks.filters.status.label')}
+            />
           </div>
 
           {/* Error State */}

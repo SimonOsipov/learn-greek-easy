@@ -99,21 +99,13 @@
     "byOwner": "by {{owner}}",
     "deactivated": "Deactivated"
   },
-  "deckList": {
-    "hideDeactivated": "Hide deactivated"
-  },
+  "deckList": {},
   "deckTypes": {
     "vocabulary": "Vocabulary",
     "culture": "Culture"
   },
   "search": {
     "placeholder": "Search decks, words, or codes…"
-  },
-  "filter": {
-    "type": "Filter by type",
-    "allTypes": "All Types",
-    "vocabulary": "Vocabulary",
-    "culture": "Culture"
   },
   "pagination": {
     "showing": "Showing {{from}}-{{to}} of {{total}}",
