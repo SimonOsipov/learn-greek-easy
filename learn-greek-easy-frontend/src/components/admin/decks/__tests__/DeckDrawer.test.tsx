@@ -730,4 +730,220 @@ describe('DeckDrawer', () => {
     // fetchCounts invoked
     expect(mockFetchCounts).toHaveBeenCalled();
   });
+
+  // ── ADVERSARIAL (ADMIN2-35-04 QA Mode B) ────────────────────────────────────
+  // Added in the QA verify pass: footer stability across tabs (incl. the
+  // settings↔non-settings disabled toggle within ONE render + the item= strip
+  // when it IS present), the delete failure path (no silent close / no refresh
+  // on rejection), and the dirty close-guard via the drawer-owned cancel.
+
+  // A1. Footer is the SAME stable element across tabs; Save toggles by tab only.
+  // #11 proves disabled-on-Words and 13b proves enabled-on-clean-Settings, but
+  // each in its own render. This drives a real in-session tab switch (Words →
+  // Settings → Activity) and asserts the 3 footer testids persist throughout
+  // while Save flips disabled→enabled→disabled purely by the active tab.
+  it('footer (delete/cancel/save) is stable across tab switches; Save disabled toggles by tab, not dirtiness', async () => {
+    const user = userEvent.setup();
+
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
+
+    // Start on the Words tab.
+    renderDrawer('/admin?tab=decks&edit=deck-vocab-1&subtab=words');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    // Footer + its 3 buttons present on Words; Save disabled (non-Settings).
+    expect(screen.getByTestId('deck-drawer-footer')).toBeInTheDocument();
+    expect(screen.getByTestId('deck-drawer-footer-delete')).toBeInTheDocument();
+    expect(screen.getByTestId('deck-drawer-footer-cancel')).toBeInTheDocument();
+    expect(screen.getByTestId('deck-drawer-footer-save')).toBeDisabled();
+
+    // Switch to Settings → Save enabled (form is clean, but tab gates it on).
+    await user.click(screen.getByTestId('deck-drawer-tab-settings'));
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-footer-save')).not.toBeDisabled();
+    });
+    // Same stable footer element still carries all three testids.
+    expect(screen.getByTestId('deck-drawer-footer')).toBeInTheDocument();
+    expect(screen.getByTestId('deck-drawer-footer-delete')).toBeInTheDocument();
+    expect(screen.getByTestId('deck-drawer-footer-cancel')).toBeInTheDocument();
+
+    // Switch to Activity → Save disabled again (back off Settings).
+    await user.click(screen.getByTestId('deck-drawer-tab-activity'));
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-footer-save')).toBeDisabled();
+    });
+    expect(screen.getByTestId('deck-drawer-footer-delete')).toBeInTheDocument();
+    expect(screen.getByTestId('deck-drawer-footer-cancel')).toBeInTheDocument();
+  });
+
+  // A2. Delete FAILURE path: when deleteVocabularyDeck rejects, the drawer must
+  // NOT silently close (URL params kept) and must NOT refresh the list/counts
+  // (no invalidateQueries / no fetchCounts). The dialog itself closes (finally).
+  // Guards against the strip+refresh accidentally moving above/outside the await.
+  //
+  // KNOWN DEFECT (pre-existing, hoisted verbatim from DeckSettingsTab on main):
+  // handleDeleteConfirm uses try/finally with NO catch and is invoked via
+  // `void handleDeleteConfirm()`, so a deactivate failure (a) shows the admin NO
+  // error feedback (no destructive toast — unlike sibling ChangelogDeleteDialog /
+  // NewsItemDeleteDialog) and (b) leaks an unhandled promise rejection. We capture
+  // that rejection locally here (preventDefault) so this spec stays green AND
+  // documents the leak; the missing-catch is reported as a defect, not fixed in
+  // this layout-only subtask. If the delete handler is later given a catch, this
+  // capture simply records zero rejections — update it then.
+  it('delete failure does NOT close the drawer or refresh the list (no strip / no invalidate / no fetchCounts)', async () => {
+    const user = userEvent.setup();
+
+    // The component swallows the deactivate rejection (`void handleDeleteConfirm()`
+    // with no catch — see the KNOWN DEFECT note above), so it surfaces at the Node
+    // process level. Capture it there for the duration of this test (and assert it
+    // is exactly our error) so vitest does not fail the run on a leaked rejection,
+    // while still documenting the missing-catch defect.
+    const capturedRejections: unknown[] = [];
+    const onProcessRejection = (reason: unknown) => {
+      capturedRejections.push(reason);
+    };
+    process.on('unhandledRejection', onProcessRejection);
+
+    try {
+      (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
+      (adminAPI.deleteVocabularyDeck as Mock).mockRejectedValue(new Error('deactivate failed'));
+
+      const queryClient = makeQueryClient();
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+      let capturedSearch = '';
+      const CaptureSearch = () => {
+        const { useLocation } = require('react-router-dom');
+        capturedSearch = useLocation().search;
+        return null;
+      };
+
+      const Wrapper = ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      );
+
+      render(
+        <MemoryRouter initialEntries={['/admin?edit=deck-vocab-1&subtab=settings']}>
+          <Routes>
+            <Route
+              path="*"
+              element={
+                <>
+                  <DeckDrawer />
+                  <CaptureSearch />
+                </>
+              }
+            />
+          </Routes>
+        </MemoryRouter>,
+        { wrapper: Wrapper }
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByTestId('deck-drawer-footer-delete'));
+      await waitFor(() => {
+        expect(screen.getByTestId('deck-delete-confirm')).toBeInTheDocument();
+      });
+      await user.click(screen.getByTestId('deck-delete-confirm'));
+
+      // The deactivate call was attempted…
+      await waitFor(() => {
+        expect(adminAPI.deleteVocabularyDeck as Mock).toHaveBeenCalledWith('deck-vocab-1');
+      });
+      // …and the dialog closes (finally block), but nothing downstream of the
+      // (rejected) await runs.
+      await waitFor(() => {
+        expect(screen.queryByTestId('deck-delete-dialog')).not.toBeInTheDocument();
+      });
+
+      // Drawer did NOT close: edit + subtab still in the URL.
+      expect(capturedSearch).toContain('edit=deck-vocab-1');
+      expect(capturedSearch).toContain('subtab=settings');
+
+      // No refresh side effects on failure.
+      expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: ['admin', 'decks'] });
+      expect(mockFetchCounts).not.toHaveBeenCalled();
+
+      // Document the known no-catch leak: exactly the deactivate error escaped
+      // unhandled (no try/catch + `void handleDeleteConfirm()`). This is the
+      // visible symptom of the missing error-feedback defect.
+      await waitFor(() => {
+        expect(capturedRejections).toHaveLength(1);
+      });
+      expect((capturedRejections[0] as Error)?.message).toBe('deactivate failed');
+    } finally {
+      process.off('unhandledRejection', onProcessRejection);
+    }
+  });
+
+  // (item= stripping on close is already covered by test #3, which seeds
+  // ?item=word-1 and asserts it is purged via the same stripCloseParams helper
+  // the delete path calls — so no separate delete-with-item= spec is needed, and
+  // the footer-delete button is unreachable with ?item= present anyway, AC #1.)
+
+  // A3. Dirty close-guard fires through the drawer-owned footer Cancel (PM
+  // Decision #9 regression). #13 covers Keep-editing; this asserts the guard
+  // BLOCKS the close on a dirty form (drawer stays open, edit= retained) when
+  // Cancel is clicked — independent of the discard dialog's own buttons.
+  it('drawer footer Cancel on a dirty Settings form blocks the close (guard fires) and keeps the drawer open', async () => {
+    const user = userEvent.setup();
+
+    (adminAPI.getDeck as Mock).mockResolvedValue(
+      makeVocabDeck({ name_en: 'Original Name', name_ru: 'Original RU' })
+    );
+
+    let capturedSearch = '';
+    const CaptureSearch = () => {
+      const { useLocation } = require('react-router-dom');
+      capturedSearch = useLocation().search;
+      return null;
+    };
+
+    const queryClient = makeQueryClient();
+    const Wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/admin?edit=deck-vocab-1&subtab=settings']}>
+        <Routes>
+          <Route
+            path="*"
+            element={
+              <>
+                <DeckDrawer />
+                <CaptureSearch />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+      { wrapper: Wrapper }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('vocabulary-deck-edit-form')).toBeInTheDocument();
+    });
+
+    // Dirty the form.
+    const nameInput = screen.getByTestId('deck-edit-name-en');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Edited Name');
+
+    // Cancel → close guard blocks the close, discard dialog appears.
+    await user.click(screen.getByTestId('deck-drawer-footer-cancel'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-settings-discard-dialog')).toBeInTheDocument();
+    });
+
+    // The drawer did NOT close — edit= is still in the URL (guard blocked it).
+    expect(capturedSearch).toContain('edit=deck-vocab-1');
+  });
 });
