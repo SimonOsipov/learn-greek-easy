@@ -254,7 +254,9 @@ describe('AllDecksList — 3-Way Status Filter (ADMIN2-35-03)', () => {
     it('params object with search and type still has no status-related keys', () => {
       const params: Record<string, unknown> = { page: 1, page_size: 20 };
       const search = 'greek';
-      const typeFilter = 'vocabulary';
+      // Cast to the full union so the typeFilter !== 'all' guard mirrors component
+      // logic without TS narrowing the const to a single-element literal.
+      const typeFilter = 'vocabulary' as 'all' | 'vocabulary' | 'culture';
       // This is how the component builds params — statusFilter intentionally excluded
       if (search) params.search = search;
       if (typeFilter !== 'all') params.type = typeFilter;

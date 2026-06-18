@@ -38,8 +38,6 @@ vi.mock('../VocabDrawerBody', () => ({
 
 // Mock DeckDeleteDialog — stub renders both testids so delete-wiring specs can
 // drive them without needing the Radix portal + i18n machinery.
-const mockOnConfirm = vi.fn();
-const mockOnOpenChange = vi.fn();
 vi.mock('@/components/admin/DeckDeleteDialog', () => ({
   DeckDeleteDialog: ({
     open,

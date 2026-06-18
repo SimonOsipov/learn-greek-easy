@@ -24,8 +24,6 @@
  *   5. handleDeleteConfirm fires → deleteVocabularyDeck → toast
  */
 
-import React from 'react';
-
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
