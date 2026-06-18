@@ -307,4 +307,83 @@ describe('AllDecksList — deactivate toast (ADMIN2-35-02)', () => {
       expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
     });
   });
+
+  // ── ADVERSARIAL: cancel path ──────────────────────────────────────────────
+  // Dismissing the delete confirm (clicking Cancel) must NOT fire toast and
+  // must NOT call deleteVocabularyDeck.
+  it('cancel_path: clicking Cancel fires no toast and does not call deleteVocabularyDeck', async () => {
+    const deck = makeVocabDeck();
+    (adminAPI.listDecks as Mock).mockResolvedValue(DECK_LIST_WITH_ONE(deck));
+    (adminAPI.deleteVocabularyDeck as Mock).mockResolvedValue(undefined);
+
+    renderAdminDecksTab();
+
+    const trashBtn = await screen.findByRole('button', { name: /delete deck/i });
+    fireEvent.click(trashBtn);
+
+    await screen.findByTestId('deck-delete-dialog');
+
+    // Click Cancel — should close dialog without deactivating
+    const cancelBtn = screen.getByTestId('deck-delete-cancel');
+    fireEvent.click(cancelBtn);
+
+    // Give async handlers time to run if any
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(mockToast).not.toHaveBeenCalled();
+    expect(adminAPI.deleteVocabularyDeck).not.toHaveBeenCalled();
+  });
+
+  // ── ADVERSARIAL: culture deck ─────────────────────────────────────────────
+  // A culture deck row uses deleteCultureDeck (not deleteVocabularyDeck) and
+  // still fires the success toast — guards against the type-branch being broken.
+  it('culture_deck_deactivate: confirmed delete of culture deck fires success toast via deleteCultureDeck', async () => {
+    const deck = makeVocabDeck({ id: 'deck-culture-1', type: 'culture', name: 'Culture Deck' });
+    (adminAPI.listDecks as Mock).mockResolvedValue(DECK_LIST_WITH_ONE(deck));
+    (adminAPI.deleteCultureDeck as Mock).mockResolvedValue(undefined);
+
+    renderAdminDecksTab();
+
+    const trashBtn = await screen.findByRole('button', { name: /delete deck/i });
+    fireEvent.click(trashBtn);
+
+    await screen.findByTestId('deck-delete-dialog');
+
+    fireEvent.click(screen.getByTestId('deck-delete-confirm'));
+
+    const expectedTitle = i18n.getFixedT('en', 'admin')('toast.deckDeactivated');
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: expectedTitle }));
+    });
+
+    // deleteCultureDeck — not deleteVocabularyDeck — must have been called
+    expect(adminAPI.deleteCultureDeck).toHaveBeenCalledWith('deck-culture-1');
+    expect(adminAPI.deleteVocabularyDeck).not.toHaveBeenCalled();
+  });
+
+  // ── ADVERSARIAL: destructive toast carries a description ─────────────────
+  // The catch block constructs a description from the error message so the admin
+  // can see WHY it failed — assert the description field is non-empty.
+  it('failure_toast_carries_description: destructive toast includes a non-empty description', async () => {
+    const deck = makeVocabDeck();
+    (adminAPI.listDecks as Mock).mockResolvedValue(DECK_LIST_WITH_ONE(deck));
+    (adminAPI.deleteVocabularyDeck as Mock).mockRejectedValue(new Error('Internal server error'));
+
+    renderAdminDecksTab();
+
+    const trashBtn = await screen.findByRole('button', { name: /delete deck/i });
+    fireEvent.click(trashBtn);
+
+    await screen.findByTestId('deck-delete-dialog');
+    fireEvent.click(screen.getByTestId('deck-delete-confirm'));
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variant: 'destructive',
+          description: expect.stringMatching(/.+/),
+        })
+      );
+    });
+  });
 });

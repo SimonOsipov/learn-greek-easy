@@ -188,4 +188,27 @@ describe('DeckRow', () => {
     });
     expect(screen.getByTestId('deck-row-status')).toHaveTextContent('Deactivated');
   });
+
+  // ── ADVERSARIAL: culture deck badge ──────────────────────────────────────
+  // The status badge must render for culture decks too — guards against an
+  // accidental type guard that would hide it for non-vocabulary rows.
+  it('culture_deck_shows_active_badge: culture deck with is_active:true renders deck-row-status containing "Active"', () => {
+    renderRow({
+      deck: makeDeck({ type: 'culture', is_active: true }),
+      locale: 'en',
+      onOpenDrawer: vi.fn(),
+      onDelete: vi.fn(),
+    });
+    expect(screen.getByTestId('deck-row-status')).toHaveTextContent('Active');
+  });
+
+  it('culture_deck_shows_deactivated_badge: culture deck with is_active:false renders deck-row-status containing "Deactivated"', () => {
+    renderRow({
+      deck: makeDeck({ type: 'culture', is_active: false }),
+      locale: 'en',
+      onOpenDrawer: vi.fn(),
+      onDelete: vi.fn(),
+    });
+    expect(screen.getByTestId('deck-row-status')).toHaveTextContent('Deactivated');
+  });
 });
