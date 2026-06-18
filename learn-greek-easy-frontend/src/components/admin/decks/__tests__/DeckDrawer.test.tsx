@@ -67,6 +67,12 @@ vi.mock('@/components/admin/DeckDeleteDialog', () => ({
   },
 }));
 
+// Mock use-toast so destructive toast calls are assertable.
+const mockToast = vi.fn();
+vi.mock('@/hooks/use-toast', () => ({
+  toast: (args: unknown) => mockToast(args),
+}));
+
 // Mock useAdminTabCountsStore — expose getState().fetchCounts as a spy.
 const mockFetchCounts = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/stores/adminTabCountsStore', () => ({
@@ -782,104 +788,80 @@ describe('DeckDrawer', () => {
   // A2. Delete FAILURE path: when deleteVocabularyDeck rejects, the drawer must
   // NOT silently close (URL params kept) and must NOT refresh the list/counts
   // (no invalidateQueries / no fetchCounts). The dialog itself closes (finally).
-  // Guards against the strip+refresh accidentally moving above/outside the await.
-  //
-  // KNOWN DEFECT (pre-existing, hoisted verbatim from DeckSettingsTab on main):
-  // handleDeleteConfirm uses try/finally with NO catch and is invoked via
-  // `void handleDeleteConfirm()`, so a deactivate failure (a) shows the admin NO
-  // error feedback (no destructive toast — unlike sibling ChangelogDeleteDialog /
-  // NewsItemDeleteDialog) and (b) leaks an unhandled promise rejection. We capture
-  // that rejection locally here (preventDefault) so this spec stays green AND
-  // documents the leak; the missing-catch is reported as a defect, not fixed in
-  // this layout-only subtask. If the delete handler is later given a catch, this
-  // capture simply records zero rejections — update it then.
-  it('delete failure does NOT close the drawer or refresh the list (no strip / no invalidate / no fetchCounts)', async () => {
+  // A destructive toast MUST be fired (matching the row-delete path in AdminPage).
+  // Guards against the strip+refresh accidentally moving above/outside the await,
+  // and against the catch being removed (toast assertion would fail).
+  it('delete failure fires a destructive toast, does NOT close the drawer, and does NOT refresh the list', async () => {
     const user = userEvent.setup();
 
-    // The component swallows the deactivate rejection (`void handleDeleteConfirm()`
-    // with no catch — see the KNOWN DEFECT note above), so it surfaces at the Node
-    // process level. Capture it there for the duration of this test (and assert it
-    // is exactly our error) so vitest does not fail the run on a leaked rejection,
-    // while still documenting the missing-catch defect.
-    const capturedRejections: unknown[] = [];
-    const onProcessRejection = (reason: unknown) => {
-      capturedRejections.push(reason);
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
+    (adminAPI.deleteVocabularyDeck as Mock).mockRejectedValue(new Error('deactivate failed'));
+
+    const queryClient = makeQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    let capturedSearch = '';
+    const CaptureSearch = () => {
+      const { useLocation } = require('react-router-dom');
+      capturedSearch = useLocation().search;
+      return null;
     };
-    process.on('unhandledRejection', onProcessRejection);
 
-    try {
-      (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
-      (adminAPI.deleteVocabularyDeck as Mock).mockRejectedValue(new Error('deactivate failed'));
+    const Wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
 
-      const queryClient = makeQueryClient();
-      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    render(
+      <MemoryRouter initialEntries={['/admin?edit=deck-vocab-1&subtab=settings']}>
+        <Routes>
+          <Route
+            path="*"
+            element={
+              <>
+                <DeckDrawer />
+                <CaptureSearch />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+      { wrapper: Wrapper }
+    );
 
-      let capturedSearch = '';
-      const CaptureSearch = () => {
-        const { useLocation } = require('react-router-dom');
-        capturedSearch = useLocation().search;
-        return null;
-      };
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
 
-      const Wrapper = ({ children }: { children: ReactNode }) => (
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-      );
+    await user.click(screen.getByTestId('deck-drawer-footer-delete'));
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-delete-confirm')).toBeInTheDocument();
+    });
+    await user.click(screen.getByTestId('deck-delete-confirm'));
 
-      render(
-        <MemoryRouter initialEntries={['/admin?edit=deck-vocab-1&subtab=settings']}>
-          <Routes>
-            <Route
-              path="*"
-              element={
-                <>
-                  <DeckDrawer />
-                  <CaptureSearch />
-                </>
-              }
-            />
-          </Routes>
-        </MemoryRouter>,
-        { wrapper: Wrapper }
-      );
+    // The deactivate call was attempted…
+    await waitFor(() => {
+      expect(adminAPI.deleteVocabularyDeck as Mock).toHaveBeenCalledWith('deck-vocab-1');
+    });
+    // …and the dialog closes (finally block), but nothing downstream of the
+    // (rejected) await runs.
+    await waitFor(() => {
+      expect(screen.queryByTestId('deck-delete-dialog')).not.toBeInTheDocument();
+    });
 
-      await waitFor(() => {
-        expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
-      });
+    // Drawer did NOT close: edit + subtab still in the URL.
+    expect(capturedSearch).toContain('edit=deck-vocab-1');
+    expect(capturedSearch).toContain('subtab=settings');
 
-      await user.click(screen.getByTestId('deck-drawer-footer-delete'));
-      await waitFor(() => {
-        expect(screen.getByTestId('deck-delete-confirm')).toBeInTheDocument();
-      });
-      await user.click(screen.getByTestId('deck-delete-confirm'));
+    // No refresh side effects on failure.
+    expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: ['admin', 'decks'] });
+    expect(mockFetchCounts).not.toHaveBeenCalled();
 
-      // The deactivate call was attempted…
-      await waitFor(() => {
-        expect(adminAPI.deleteVocabularyDeck as Mock).toHaveBeenCalledWith('deck-vocab-1');
-      });
-      // …and the dialog closes (finally block), but nothing downstream of the
-      // (rejected) await runs.
-      await waitFor(() => {
-        expect(screen.queryByTestId('deck-delete-dialog')).not.toBeInTheDocument();
-      });
-
-      // Drawer did NOT close: edit + subtab still in the URL.
-      expect(capturedSearch).toContain('edit=deck-vocab-1');
-      expect(capturedSearch).toContain('subtab=settings');
-
-      // No refresh side effects on failure.
-      expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: ['admin', 'decks'] });
-      expect(mockFetchCounts).not.toHaveBeenCalled();
-
-      // Document the known no-catch leak: exactly the deactivate error escaped
-      // unhandled (no try/catch + `void handleDeleteConfirm()`). This is the
-      // visible symptom of the missing error-feedback defect.
-      await waitFor(() => {
-        expect(capturedRejections).toHaveLength(1);
-      });
-      expect((capturedRejections[0] as Error)?.message).toBe('deactivate failed');
-    } finally {
-      process.off('unhandledRejection', onProcessRejection);
-    }
+    // A destructive toast IS fired — matches the row-delete catch in AdminPage
+    // (errors.saveFailed key, variant: 'destructive'). This would fail if the
+    // catch were removed, making the test a meaningful regression guard.
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
+    });
   });
 
   // (item= stripping on close is already covered by test #3, which seeds

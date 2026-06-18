@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from '@/hooks/use-toast';
 import { useDeck } from '@/hooks/useDeck';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { adminAPI } from '@/services/adminAPI';
@@ -127,11 +128,18 @@ export function DeckDrawer() {
       stripCloseParams();
       void queryClient.invalidateQueries({ queryKey: ['admin', 'decks'] });
       void useAdminTabCountsStore.getState().fetchCounts();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : t('errors.saveFailed');
+      toast({
+        title: t('errors.saveFailed'),
+        description: errorMessage,
+        variant: 'destructive',
+      });
     } finally {
       setIsDeleting(false);
       setDeleteDialogOpen(false);
     }
-  }, [deck, stripCloseParams, queryClient]);
+  }, [deck, stripCloseParams, queryClient, t]);
 
   const handleOpenChange = (next: boolean) => {
     if (!next) {
