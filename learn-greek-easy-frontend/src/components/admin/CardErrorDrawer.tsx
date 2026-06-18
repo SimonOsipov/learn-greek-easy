@@ -35,16 +35,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  BookOpen,
-  Check,
-  Copy,
-  ExternalLink,
-  Globe,
-  Loader2,
-  ShieldCheck,
-  Trash,
-} from 'lucide-react';
+import { BookOpen, Check, Copy, ExternalLink, Globe, Loader2, ShieldCheck } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
@@ -739,41 +730,27 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
         )}
       </SidePanel.Body>
 
-      {/* ── Footer ── */}
+      {/* ── Footer (ADMIN2-34: ADMIN2-33 standard) ── */}
       <SidePanel.Footer>
+        {/* Left: Delete (destructive, solid, no icon) */}
         <div className="drawer-foot-left">
-          {/* ── CER-37: Live status mirror + dim caption ── */}
-          <CardErrorStatusBadge status={liveStatus} />
-          <p className="text-xs text-muted-foreground" data-testid="foot-caption">
-            {report.resolved_at
-              ? t('cardErrors.drawer.foot.resolvedCaption', {
-                  rel: formatRelative(report.resolved_at),
-                  by: report.resolver?.full_name?.trim() ?? '',
-                })
-              : t('cardErrors.drawer.foot.notifyCaption', {
-                  name: report.reporter?.full_name?.trim() ?? '',
-                })}
-          </p>
-        </div>
-
-        <div className="drawer-foot-right">
-          {/* ── CER-38: Delete destructive action ── */}
           <Button
             type="button"
-            variant="outline"
-            size="sm"
+            variant="destructive"
             onClick={() => setDeleteConfirmOpen(true)}
             disabled={isDeleting || isUpdating}
-            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             aria-label={t('cardErrors.drawer.foot.delete')}
             data-testid="delete-button"
           >
-            <Trash className="h-4 w-4" />
+            {t('cardErrors.drawer.foot.delete')}
           </Button>
+        </div>
 
+        {/* Right: safe actions */}
+        <div className="drawer-foot-right">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             onClick={() => onOpenChange(false)}
             disabled={isUpdating}
             data-testid="cancel-button"

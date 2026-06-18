@@ -897,8 +897,6 @@
           "title": "Delete this report?"
         },
         "deleteSuccess": "Report deleted",
-        "notifyCaption": "Saving will notify {{name}} in-app",
-        "resolvedCaption": "Resolved {{rel}} · by {{by}}",
         "save": "Save response"
       },
       "tabs": {

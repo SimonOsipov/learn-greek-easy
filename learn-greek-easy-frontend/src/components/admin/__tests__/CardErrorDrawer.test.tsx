@@ -182,42 +182,17 @@ describe('CardErrorDrawer — container', () => {
 // ── Footer ────────────────────────────────────────────────────────────────────
 
 describe('CardErrorDrawer — footer', () => {
-  it('shows reporter name in caption when unresolved', () => {
-    renderWithProviders(
-      <CardErrorDrawer
-        open
-        onOpenChange={vi.fn()}
-        report={makeFakeError({ resolved_at: null, reporter: { id: 'u1', full_name: 'Maria' } })}
-        onUpdate={vi.fn()}
-      />
-    );
-    const caption = screen.getByTestId('foot-caption');
-    expect(caption.textContent).toContain('Maria');
-  });
-
-  it('shows resolver name in caption when resolved', () => {
-    renderWithProviders(
-      <CardErrorDrawer
-        open
-        onOpenChange={vi.fn()}
-        report={makeFakeError({
-          resolved_at: '2026-05-20T10:00:00Z',
-          resolver: { id: 'a1', full_name: 'Sam' },
-        })}
-        onUpdate={vi.fn()}
-      />
-    );
-    const caption = screen.getByTestId('foot-caption');
-    expect(caption.textContent).toContain('Sam');
-  });
-
-  // AC #9: Delete button has text-destructive class (design-system drift guard)
-  it('Delete button has text-destructive class', () => {
+  // ADMIN2-34 AC-5: footer Delete is a solid destructive button (no trash icon)
+  it('Delete button is solid destructive with no icon', () => {
     renderWithProviders(
       <CardErrorDrawer open onOpenChange={vi.fn()} report={makeFakeError()} onUpdate={vi.fn()} />
     );
     const deleteBtn = screen.getByTestId('delete-button');
-    expect(deleteBtn.className).toContain('text-destructive');
+    // variant="destructive" → solid red fill
+    expect(deleteBtn.className).toContain('bg-destructive');
+    // The trash icon was dropped — no <svg> child remains
+    expect(deleteBtn.querySelector('svg')).toBeNull();
+    expect(deleteBtn).toHaveTextContent('Delete report');
   });
 });
 
