@@ -263,3 +263,147 @@ class TestIllegalProposalTransitionType:
             transition(p, WordProposalState.SHIPPED)
         assert isinstance(exc_info.value, IllegalProposalTransition)
         assert isinstance(exc_info.value, Exception)
+
+
+# ---------------------------------------------------------------------------
+# Adversarial coverage (QA-added, LEXGEN-01-02 Mode B)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestTransitionReturnValueAndNoPartialMutation:
+    """transition() returns None and leaves status UNCHANGED on a failed transition."""
+
+    def test_transition_returns_none_on_success(self):
+        # transition() is a mutation-only function; callers must not rely on a
+        # return value.
+        p = _p(WordProposalState.PENDING)
+        result = transition(p, WordProposalState.GENERATING)
+        assert result is None
+
+    def test_status_unchanged_after_illegal_transition(self):
+        # If the guard raises, proposal.status must be exactly what it was before
+        # the call — no partial mutation must have occurred.
+        p = _p(WordProposalState.PENDING)
+        original_status = p.status
+        with pytest.raises(IllegalProposalTransition):
+            transition(p, WordProposalState.SHIPPED)
+        assert (
+            p.status is original_status
+        ), "proposal.status must not be modified when transition() raises"
+
+    def test_status_unchanged_after_illegal_precondition_raise(self):
+        # shipped_word_entry_id missing on needs_review→shipped: status stays
+        # at needs_review even though the edge is legal.
+        p = _p(WordProposalState.NEEDS_REVIEW, shipped_word_entry_id=None)
+        with pytest.raises(IllegalProposalTransition):
+            transition(p, WordProposalState.SHIPPED)
+        assert p.status is WordProposalState.NEEDS_REVIEW
+
+
+@pytest.mark.unit
+class TestMultiHopTransitions:
+    """A chain of legal transitions all applied in sequence must work correctly."""
+
+    def test_two_hop_pending_generating_scored(self):
+        # Verifies that after a successful transition the proposal is in the
+        # right state and a subsequent legal hop from there also succeeds.
+        p = _p(WordProposalState.PENDING)
+        transition(p, WordProposalState.GENERATING)
+        assert p.status == WordProposalState.GENERATING
+        transition(p, WordProposalState.SCORED)
+        assert p.status == WordProposalState.SCORED
+
+    def test_full_happy_path_to_shipped_via_auto_approved(self):
+        # pending → generating → scored → auto_approved → shipped
+        p = _p(WordProposalState.PENDING)
+        transition(p, WordProposalState.GENERATING)
+        transition(p, WordProposalState.SCORED)
+        transition(p, WordProposalState.AUTO_APPROVED)
+        # Set the pre-condition before shipping
+        p.shipped_word_entry_id = uuid4()
+        transition(p, WordProposalState.SHIPPED)
+        assert p.status == WordProposalState.SHIPPED
+
+    def test_full_happy_path_to_shipped_via_needs_review(self):
+        # pending → generating → scored → needs_review → shipped
+        p = _p(WordProposalState.PENDING)
+        transition(p, WordProposalState.GENERATING)
+        transition(p, WordProposalState.SCORED)
+        transition(p, WordProposalState.NEEDS_REVIEW)
+        p.shipped_word_entry_id = uuid4()
+        transition(p, WordProposalState.SHIPPED)
+        assert p.status == WordProposalState.SHIPPED
+
+    def test_regenerate_loop_needs_review_to_scored_then_auto_approved(self):
+        # §D2 "regenerate" maps to needs_review → scored; then can auto-approve.
+        p = _p(WordProposalState.NEEDS_REVIEW)
+        transition(p, WordProposalState.SCORED)
+        transition(p, WordProposalState.AUTO_APPROVED)
+        assert p.status == WordProposalState.AUTO_APPROVED
+
+
+@pytest.mark.unit
+class TestErrorMessageDebugability:
+    """IllegalProposalTransition message must be non-empty and reference state names."""
+
+    def test_error_message_references_from_state(self):
+        p = _p(WordProposalState.PENDING)
+        with pytest.raises(IllegalProposalTransition) as exc_info:
+            transition(p, WordProposalState.SHIPPED)
+        msg = str(exc_info.value)
+        assert msg, "Exception message must not be empty"
+        assert "pending" in msg.lower(), f"Expected from-state 'pending' in message, got: {msg!r}"
+
+    def test_error_message_references_to_state(self):
+        p = _p(WordProposalState.PENDING)
+        with pytest.raises(IllegalProposalTransition) as exc_info:
+            transition(p, WordProposalState.SHIPPED)
+        msg = str(exc_info.value)
+        assert "shipped" in msg.lower(), f"Expected to-state 'shipped' in message, got: {msg!r}"
+
+    def test_shipped_precondition_error_references_both_states(self):
+        p = _p(WordProposalState.NEEDS_REVIEW, shipped_word_entry_id=None)
+        with pytest.raises(IllegalProposalTransition) as exc_info:
+            transition(p, WordProposalState.SHIPPED)
+        msg = str(exc_info.value)
+        assert (
+            "needs_review" in msg.lower() or "needs-review" in msg.lower()
+        ), f"Expected from-state in precondition error message, got: {msg!r}"
+        assert (
+            "shipped" in msg.lower()
+        ), f"Expected to-state in precondition error message, got: {msg!r}"
+
+    def test_exception_exposes_from_and_to_state_attrs(self):
+        # IllegalProposalTransition stores from_state / to_state as attributes
+        # so callers can programmatically inspect the failed transition.
+        p = _p(WordProposalState.GENERATING)
+        with pytest.raises(IllegalProposalTransition) as exc_info:
+            transition(p, WordProposalState.PENDING)
+        exc = exc_info.value
+        assert hasattr(exc, "from_state"), "Expected from_state attribute on exception"
+        assert hasattr(exc, "to_state"), "Expected to_state attribute on exception"
+        assert exc.from_state == WordProposalState.GENERATING.value
+        assert exc.to_state == WordProposalState.PENDING.value
+
+
+@pytest.mark.unit
+class TestAllowedTransitionsImmutability:
+    """ALLOWED_TRANSITIONS values are frozensets — callers cannot accidentally mutate them."""
+
+    def test_all_values_are_frozensets(self):
+        for from_state, targets in ALLOWED_TRANSITIONS.items():
+            assert isinstance(targets, frozenset), (
+                f"ALLOWED_TRANSITIONS[{from_state}] should be a frozenset, "
+                f"got {type(targets).__name__}"
+            )
+
+    def test_frozenset_values_are_not_accidentally_mutable(self):
+        # Attempting to add to a frozenset raises TypeError — confirm the values
+        # are truly frozensets and not ordinary sets.
+        for targets in ALLOWED_TRANSITIONS.values():
+            try:
+                targets.add(WordProposalState.PENDING)  # type: ignore[attr-defined]
+                raise AssertionError("frozenset should not have .add()")
+            except AttributeError:
+                pass  # Expected: frozensets have no .add()
