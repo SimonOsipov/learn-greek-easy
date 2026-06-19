@@ -1180,3 +1180,155 @@ class TestLexgen0302BackfillFlatToBundles:
                 _delete_rows(conn, [row_id])
                 conn.commit()
             engine.dispose()
+
+    # -----------------------------------------------------------------------
+    # Adversarial (Mode B additions — QA-authored, not in original spec)
+    # -----------------------------------------------------------------------
+
+    def test_adversarial_mixed_flat_and_bundle_rows_in_same_run(self, backfill_db_url: str) -> None:
+        """Adversarial (a): A run with BOTH bundle-list rows AND flat-dict rows
+        in the same table converts only the flat ones and leaves the list ones
+        untouched, with correct summary counts.
+
+        Given:  2 rows:
+                  row X — already a bundle list (already-converted)
+                  row Y — canonical flat dict (still to convert)
+        When:   backfill_forms_to_bundles(connection) is called once.
+        Then:
+          - row X forms unchanged (still the original bundle list)
+          - row Y forms converted to a bundle list
+          - summary["converted"] >= 1 (at minimum row Y)
+          - summary["skipped"] >= 1 (at minimum row X)
+          - converted + skipped == total
+        This verifies the guard path (list) and the convert path (dict) are
+        independent and co-exist correctly in a single scan.
+        """
+        mod = self._migration_module()
+        assert hasattr(mod, "backfill_forms_to_bundles")
+        backfill_fn = mod.backfill_forms_to_bundles
+
+        engine = _sync_engine(backfill_db_url)
+        id_x, id_y = 900_040, 900_041
+        already_bundle = [
+            {"form": "η φωνή", "features": {"case": "nominative", "number": "singular"}}
+        ]
+        flat_forms = {
+            "nominative_singular": "ο ήλιος",
+            "genitive_singular": "του ήλιου",
+        }
+        try:
+            with engine.connect() as conn:
+                _seed_morphology_row(conn, id_x, "φωνή", "feminine", already_bundle)
+                _seed_morphology_row(conn, id_y, "ήλιος", "masculine", flat_forms)
+                conn.commit()
+
+                summary = backfill_fn(conn)
+                conn.commit()
+
+                forms_x = _get_forms(conn, id_x)
+                forms_y = _get_forms(conn, id_y)
+
+            # Row X (already bundle): unchanged
+            assert forms_x == already_bundle, (
+                f"Already-bundle row X must be left unchanged.\n"
+                f"Expected: {already_bundle}\nGot: {forms_x}"
+            )
+
+            # Row Y (flat → converted): must now be a bundle list
+            assert isinstance(
+                forms_y, list
+            ), f"Flat row Y must be converted to a list; got {type(forms_y)}: {forms_y!r}"
+            assert (
+                len(forms_y) == 2
+            ), f"Row Y should have 2 bundles (nom_sg, gen_sg); got {len(forms_y)}: {forms_y!r}"
+
+            # Summary parity
+            assert isinstance(summary, dict)
+            converted = summary.get("converted", 0)
+            skipped = summary.get("skipped", 0)
+            total = summary.get("total", -1)
+            assert (
+                converted + skipped == total
+            ), f"Parity violated: converted({converted}) + skipped({skipped}) != total({total})"
+            # At least our two rows must appear correctly in summary
+            assert converted >= 1, f"Expected converted >= 1 (row Y); got {summary}"
+            assert skipped >= 1, f"Expected skipped >= 1 (row X); got {summary}"
+        finally:
+            with engine.connect() as conn:
+                _delete_rows(conn, [id_x, id_y])
+                conn.commit()
+            engine.dispose()
+
+    def test_adversarial_downgrade_then_re_upgrade_round_trips(self, backfill_db_url: str) -> None:
+        """Adversarial (b): Full downgrade-then-re-upgrade round-trip returns
+        forms to the feature-bundle representation, confirming the converter pair
+        is perfectly symmetric and the migration can be applied, reversed, and
+        re-applied without data loss.
+
+        Given:  A row with canonical flat forms converted to bundles by
+                backfill_forms_to_bundles.
+        When:   downgrade_forms_to_flat is called (restores flat dict)
+                then backfill_forms_to_bundles is called again (re-converts).
+        Then:   forms after re-upgrade == forms after first upgrade (same bundle list).
+                The second upgrade summary shows converted >= 1 (not a no-op,
+                because the downgrade restored flat dicts that need re-conversion).
+        """
+        mod = self._migration_module()
+        assert hasattr(mod, "backfill_forms_to_bundles")
+        assert hasattr(mod, "downgrade_forms_to_flat")
+        backfill_fn = mod.backfill_forms_to_bundles
+        downgrade_fn = mod.downgrade_forms_to_flat
+
+        engine = _sync_engine(backfill_db_url)
+        row_id = 900_042
+        original_flat = {
+            "nominative_singular": "ο κόσμος",
+            "genitive_singular": "του κόσμου",
+            "accusative_singular": "τον κόσμο",
+            "nominative_plural": "οι κόσμοι",
+        }
+        try:
+            with engine.connect() as conn:
+                _seed_morphology_row(conn, row_id, "κόσμος", "masculine", original_flat)
+                conn.commit()
+
+                # Upgrade 1
+                backfill_fn(conn)
+                conn.commit()
+                forms_after_upgrade1 = _get_forms(conn, row_id)
+                assert isinstance(
+                    forms_after_upgrade1, list
+                ), f"After upgrade 1, forms must be a list; got {forms_after_upgrade1!r}"
+
+                # Downgrade (restore flat)
+                downgrade_fn(conn)
+                conn.commit()
+                forms_after_downgrade = _get_forms(conn, row_id)
+                assert isinstance(
+                    forms_after_downgrade, dict
+                ), f"After downgrade, forms must be a dict; got {forms_after_downgrade!r}"
+                assert forms_after_downgrade == original_flat, (
+                    f"Downgrade must restore original flat dict.\n"
+                    f"Expected: {original_flat}\nGot: {forms_after_downgrade}"
+                )
+
+                # Upgrade 2 (re-apply)
+                summary2 = backfill_fn(conn)
+                conn.commit()
+                forms_after_upgrade2 = _get_forms(conn, row_id)
+
+            # Round-trip: upgrade2 result == upgrade1 result
+            assert forms_after_upgrade2 == forms_after_upgrade1, (
+                f"Re-upgrade after downgrade must produce identical bundle list.\n"
+                f"Upgrade 1: {forms_after_upgrade1}\nUpgrade 2: {forms_after_upgrade2}"
+            )
+            # Re-upgrade counted this row as converted (not skipped)
+            assert isinstance(summary2, dict)
+            assert (
+                summary2.get("converted", 0) >= 1
+            ), f"Re-upgrade must convert the restored flat row; got {summary2}"
+        finally:
+            with engine.connect() as conn:
+                _delete_rows(conn, [row_id])
+                conn.commit()
+            engine.dispose()
