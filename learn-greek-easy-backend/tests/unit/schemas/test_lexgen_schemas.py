@@ -11,7 +11,14 @@ missing-ValidationError, NOT collection errors.
 import pytest
 from pydantic import ValidationError
 
-from src.schemas.lexgen import FEATURE_KEYS, FormBundle
+from src.schemas.lexgen import (
+    FEATURE_KEYS,
+    GRAMMAR_DATA_SCHEMA,
+    FieldEvidence,
+    FormBundle,
+    ProposalDraft,
+    ResolvedField,
+)
 
 # Canonical 10-key feature set per the architect's spec.
 EXPECTED_FEATURE_KEYS = frozenset(
@@ -253,3 +260,110 @@ class TestFormConstraintAdversarial:
         """``features`` is required — omitting it raises (no implicit default)."""
         with pytest.raises(ValidationError):
             FormBundle(form="σπίτι")  # type: ignore[call-arg]
+
+
+# ---------------------------------------------------------------------------
+# LEXGEN-02-02 — POS-neutral proposal-draft value types + GRAMMAR_DATA_SCHEMA.
+#
+# RED-phase acceptance-criteria tests authored test-first (Mode A). They target
+# the LEXGEN-02-02 symbols which currently ship as minimal non-functional STUBS
+# in ``src/schemas/lexgen.py``:
+#   - FieldEvidence / ResolvedField with NO confidence bound,
+#   - GRAMMAR_DATA_SCHEMA as a plain mutable dict.
+# The executor (Stage 3) makes these go green by adding the ge/le bound and an
+# immutable mapping. Imports resolve cleanly so failures are assertion /
+# missing-ValidationError / missing-TypeError, NOT collection errors.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestFieldEvidenceAndResolvedField:
+    """FieldEvidence / ResolvedField construction, defaults, and confidence bounds."""
+
+    def test_field_evidence_defaults(self):
+        """AC-1: FieldEvidence(source, field, value) defaults confidence=None, flags=[]."""
+        evidence = FieldEvidence(source="wiktionary", field="lemma", value="σπίτι")
+        assert evidence.source == "wiktionary"
+        assert evidence.field == "lemma"
+        assert evidence.value == "σπίτι"
+        assert evidence.confidence is None
+        assert evidence.flags == []
+
+    def test_resolved_field_confidence_bounds(self):
+        """AC-1: ResolvedField confidence must be in [0.0, 1.0].
+
+        ``confidence=1.5`` must raise ValidationError (above the ge/le bound);
+        ``confidence=0.8`` is in-range and must construct. This is the key RED:
+        the stub omits the ge/le bound, so 1.5 is wrongly accepted (no error).
+        """
+        with pytest.raises(ValidationError):
+            ResolvedField(
+                field="lemma",
+                value="σπίτι",
+                source="wiktionary",
+                confidence=1.5,
+            )
+        valid = ResolvedField(
+            field="lemma",
+            value="σπίτι",
+            source="wiktionary",
+            confidence=0.8,
+        )
+        assert valid.confidence == 0.8
+
+
+@pytest.mark.unit
+class TestProposalDraftPosNeutral:
+    """ProposalDraft is POS-neutral: pos is free text, no noun-only fields."""
+
+    def test_proposal_draft_pos_is_free_text(self):
+        """AC-2: pos accepts any string (no enum constraint) — verb and noun both work."""
+        verb_draft = ProposalDraft(
+            lemma="γράφω",
+            pos="verb",
+            grammar_data_schema_version="noun.v1",
+        )
+        noun_draft = ProposalDraft(
+            lemma="σπίτι",
+            pos="noun",
+            grammar_data_schema_version="noun.v1",
+        )
+        assert verb_draft.pos == "verb"
+        assert noun_draft.pos == "noun"
+
+    def test_proposal_draft_pos_neutral_no_gender_field(self):
+        """AC-2: ProposalDraft has NO noun-only fields (no gender/cases on the model)."""
+        field_names = set(ProposalDraft.model_fields.keys())
+        assert "gender" not in field_names
+        assert "cases" not in field_names
+        # Positive pin: the POS-neutral fields the contract DOES require.
+        assert {"lemma", "pos", "resolved_fields", "grammar_data_schema_version"} <= field_names
+
+
+@pytest.mark.unit
+class TestGrammarDataSchema:
+    """GRAMMAR_DATA_SCHEMA is the immutable {pos: schema-version} mapping."""
+
+    def test_grammar_data_schema_noun_v1(self):
+        """AC-3: the noun entry maps to the versioned schema id "noun.v1"."""
+        assert GRAMMAR_DATA_SCHEMA["noun"] == "noun.v1"
+
+    def test_grammar_data_schema_immutable(self):
+        """AC-3: GRAMMAR_DATA_SCHEMA is a frozen mapping — assignment raises TypeError.
+
+        Key RED: the stub is a plain mutable dict, so this assignment SUCCEEDS
+        instead of raising — the missing-TypeError is the failure signal.
+        """
+        with pytest.raises(TypeError):
+            GRAMMAR_DATA_SCHEMA["verb"] = "x"  # type: ignore[index]
+
+    def test_grammar_data_schema_overwrite_existing_rejected(self):
+        """AC-3: overwriting an EXISTING key also raises, and leaves the value intact.
+
+        Key RED: the stub dict allows ``["noun"]="x"`` and mutates the value, so
+        both the missing-TypeError AND the post-mutation value check fail.
+        """
+        with pytest.raises(TypeError):
+            GRAMMAR_DATA_SCHEMA["noun"] = "x"  # type: ignore[index]
+        # The original value survives the rejected mutation attempt.
+        assert GRAMMAR_DATA_SCHEMA["noun"] == "noun.v1"

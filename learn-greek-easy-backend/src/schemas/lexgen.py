@@ -111,3 +111,50 @@ class FormBundle(BaseModel):
                 f"Allowed keys: {sorted(FEATURE_KEYS)}."
             )
         return value
+
+
+# ---------------------------------------------------------------------------
+# LEXGEN-02-02 — POS-neutral proposal-draft value types (STUB, RED phase).
+#
+# Minimal non-functional placeholders so the test file imports cleanly and the
+# RED failures land on ASSERTION / missing-ValidationError rather than at
+# collection. The executor (Stage 3) replaces these with the real constraints:
+#   - confidence bounds (ge=0.0, le=1.0) on FieldEvidence / ResolvedField,
+#   - an immutable GRAMMAR_DATA_SCHEMA mapping (MappingProxyType).
+# Do NOT add those here.
+# ---------------------------------------------------------------------------
+
+
+class FieldEvidence(BaseModel):
+    """One piece of evidence for a field value (STUB — no confidence bound yet)."""
+
+    source: str
+    field: str
+    value: str | None
+    confidence: float | None = None
+    flags: list[str] = []
+
+
+class ResolvedField(BaseModel):
+    """A field resolved to a single value from competing evidence (STUB)."""
+
+    field: str
+    value: str | None
+    source: str
+    confidence: float | None = None
+    flags: list[str] = []
+
+
+class ProposalDraft(BaseModel):
+    """POS-neutral draft of a word proposal (STUB — POS is free text, no gender)."""
+
+    lemma: str = Field(..., min_length=1)
+    pos: str
+    resolved_fields: list[ResolvedField] = []
+    grammar_data_schema_version: str
+
+
+# STUB: a plain MUTABLE dict — the real implementation makes this an immutable
+# mapping (MappingProxyType) so writes raise TypeError. Leaving it mutable is the
+# key RED signal for the two immutability tests below.
+GRAMMAR_DATA_SCHEMA: dict[str, str] = {"noun": "noun.v1"}
