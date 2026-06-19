@@ -653,6 +653,24 @@ describe('VocabularyDeckEditForm', () => {
     });
   });
 
+  // ── ADMIN2-37-05: AC-5 — Replace button disabled when callback absent ───────
+  //
+  // When onUploadCoverImage is NOT provided, the Replace/Upload button must be
+  // disabled (or absent). Currently the button is always enabled regardless of
+  // the prop — so the assertion below will FAIL → correct RED.
+  describe('replace button gating (ADMIN2-37-05)', () => {
+    it('replace/upload button is disabled when onUploadCoverImage is not provided', () => {
+      const deck = createMockDeck();
+      renderWithI18n(
+        <VocabularyDeckEditForm deck={deck} onSave={mockOnSave} onCancel={mockOnCancel} />
+      );
+      // After the fix, the button should be disabled when the callback is absent.
+      // Currently it is enabled (not disabled) → assertion fails → RED.
+      const uploadBtn = screen.getByTestId('deck-edit-upload-image');
+      expect(uploadBtn).toBeDisabled();
+    });
+  });
+
   describe('renderFooter prop', () => {
     it('should render Cancel and Save buttons by default (renderFooter not passed)', () => {
       const deck = createMockDeck();

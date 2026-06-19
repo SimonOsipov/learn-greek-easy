@@ -23,6 +23,13 @@ vi.mock('@/services/adminAPI', () => ({
     updateCultureDeck: vi.fn(),
     deleteVocabularyDeck: vi.fn(),
     deleteCultureDeck: vi.fn(),
+    // C6 cover-image mock scaffolding (ADMIN2-37-05)
+    uploadDeckCoverImage: vi.fn().mockResolvedValue({ cover_image_url: 'https://x/new.webp' }),
+    uploadCultureDeckCoverImage: vi
+      .fn()
+      .mockResolvedValue({ cover_image_url: 'https://x/new.webp' }),
+    deleteDeckCoverImage: vi.fn().mockResolvedValue(undefined),
+    deleteCultureDeckCoverImage: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -93,7 +100,7 @@ function renderTab(deck: UnifiedDeckItem, { onSaved }: { onSaved?: () => void } 
     </I18nextProvider>
   );
 
-  return render(
+  const result = render(
     <MemoryRouter initialEntries={['/admin?edit=deck-vocab-1']}>
       <Routes>
         <Route path="*" element={<DeckSettingsTab deck={deck} onSaved={onSaved} />} />
@@ -101,6 +108,8 @@ function renderTab(deck: UnifiedDeckItem, { onSaved }: { onSaved?: () => void } 
     </MemoryRouter>,
     { wrapper: Wrapper }
   );
+
+  return { ...result, queryClient };
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -315,6 +324,135 @@ describe('DeckSettingsTab', () => {
   // deleteVocabularyDeck/deleteCultureDeck) was hoisted from this tab into
   // DeckDrawer (ADMIN2-35-04). Its coverage now lives in DeckDrawer.test.tsx
   // (the footer_delete_* / confirm_delete_* specs).
+
+  // ── ADMIN2-37-05: Cover-image wiring RED specs ────────────────────────────
+  //
+  // These tests verify that DeckSettingsTab passes onUploadCoverImage /
+  // onRemoveCoverImage callbacks to the embedded forms. Currently the callbacks
+  // are NOT wired, so all tests below will FAIL on the assertion (the API spy
+  // is never called). They turn GREEN once the fix wires the callbacks.
+
+  describe('cover-image wiring (ADMIN2-37-05)', () => {
+    // jsdom does not implement URL.createObjectURL / URL.revokeObjectURL;
+    // stub them so the form's handleImageChange doesn't throw before reaching
+    // onUploadCoverImage.
+    const origCreate = URL.createObjectURL;
+    const origRevoke = URL.revokeObjectURL;
+
+    beforeEach(() => {
+      URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+      URL.revokeObjectURL = vi.fn();
+    });
+
+    afterEach(() => {
+      URL.createObjectURL = origCreate;
+      URL.revokeObjectURL = origRevoke;
+    });
+
+    // AC-2 — vocab upload: DeckSettingsTab must pass onUploadCoverImage that
+    // calls adminAPI.uploadDeckCoverImage(deck.id, file).
+    it('vocab upload calls adminAPI.uploadDeckCoverImage with (deckId, file)', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      (adminAPI.uploadDeckCoverImage as Mock).mockResolvedValue({
+        cover_image_url: 'https://x/new.webp',
+      });
+
+      renderTab(makeVocabDeck());
+
+      const input = screen.getByTestId('deck-edit-cover-input') as HTMLInputElement;
+      const jpgFile = new File(['img'], 'cover.jpg', { type: 'image/jpeg' });
+      await user.upload(input, jpgFile);
+
+      await waitFor(() => {
+        expect(adminAPI.uploadDeckCoverImage).toHaveBeenCalledTimes(1);
+      });
+      expect(adminAPI.uploadDeckCoverImage).toHaveBeenCalledWith('deck-vocab-1', jpgFile);
+    });
+
+    // AC-2 — culture upload: DeckSettingsTab must pass onUploadCoverImage that
+    // calls adminAPI.uploadCultureDeckCoverImage(deck.id, file).
+    it('culture upload calls adminAPI.uploadCultureDeckCoverImage with (deckId, file)', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      (adminAPI.uploadCultureDeckCoverImage as Mock).mockResolvedValue({
+        cover_image_url: 'https://x/new.webp',
+      });
+
+      renderTab(makeCultureDeck());
+
+      const input = screen.getByTestId('deck-edit-cover-input') as HTMLInputElement;
+      const pngFile = new File(['img'], 'cover.png', { type: 'image/png' });
+      await user.upload(input, pngFile);
+
+      await waitFor(() => {
+        expect(adminAPI.uploadCultureDeckCoverImage).toHaveBeenCalledTimes(1);
+      });
+      expect(adminAPI.uploadCultureDeckCoverImage).toHaveBeenCalledWith('deck-culture-1', pngFile);
+    });
+
+    // AC-3 — vocab remove: DeckSettingsTab must pass onRemoveCoverImage that
+    // calls adminAPI.deleteDeckCoverImage(deck.id).
+    // The Remove button only renders when both deck.cover_image_url and
+    // onRemoveCoverImage are present. Currently onRemoveCoverImage is not wired,
+    // so getByTestId throws — the test fails for the right reason (feature missing).
+    it('vocab remove calls adminAPI.deleteDeckCoverImage with (deckId)', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      (adminAPI.deleteDeckCoverImage as Mock).mockResolvedValue(undefined);
+
+      renderTab(makeVocabDeck({ cover_image_url: 'https://x/existing.webp' }));
+
+      // Remove button only renders when onRemoveCoverImage prop is wired —
+      // currently absent, so this getByTestId will throw (test fails: feature missing).
+      const removeBtn = screen.getByTestId('deck-edit-remove-image');
+      await user.click(removeBtn);
+
+      await waitFor(() => {
+        expect(adminAPI.deleteDeckCoverImage).toHaveBeenCalledTimes(1);
+      });
+      expect(adminAPI.deleteDeckCoverImage).toHaveBeenCalledWith('deck-vocab-1');
+    });
+
+    // AC-3 — culture remove: DeckSettingsTab must pass onRemoveCoverImage that
+    // calls adminAPI.deleteCultureDeckCoverImage(deck.id).
+    it('culture remove calls adminAPI.deleteCultureDeckCoverImage with (deckId)', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      (adminAPI.deleteCultureDeckCoverImage as Mock).mockResolvedValue(undefined);
+
+      renderTab(makeCultureDeck({ cover_image_url: 'https://x/existing.webp' }));
+
+      const removeBtn = screen.getByTestId('deck-edit-remove-image');
+      await user.click(removeBtn);
+
+      await waitFor(() => {
+        expect(adminAPI.deleteCultureDeckCoverImage).toHaveBeenCalledTimes(1);
+      });
+      expect(adminAPI.deleteCultureDeckCoverImage).toHaveBeenCalledWith('deck-culture-1');
+    });
+
+    // AC-4 — cache invalidation: after a successful upload, DeckSettingsTab must
+    // invalidate ['admin','deck',deck.id] and ['admin','decks'].
+    it('invalidates admin deck and decks caches after successful upload', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      (adminAPI.uploadDeckCoverImage as Mock).mockResolvedValue({
+        cover_image_url: 'https://x/new.webp',
+      });
+
+      const { queryClient } = renderTab(makeVocabDeck());
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+      const input = screen.getByTestId('deck-edit-cover-input') as HTMLInputElement;
+      const jpgFile = new File(['img'], 'cover.jpg', { type: 'image/jpeg' });
+      await user.upload(input, jpgFile);
+
+      await waitFor(() => {
+        expect(invalidateSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ queryKey: ['admin', 'deck', 'deck-vocab-1'] })
+        );
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ queryKey: ['admin', 'decks'] })
+      );
+    });
+  });
 
   // ── 8. Culture deck: save payload preserves original category (AC #5) ──────
 
