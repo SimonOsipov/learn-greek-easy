@@ -131,11 +131,15 @@ class TestWiktionaryMorphologyAdversarial:
         recreate it in upgrade().  This is an adversarial guard against accidental
         reinstatement — e.g. if upgrade() added the old index AND the new one.
 
-        Verified by asserting the name does not appear in the upgrade() source
-        via inspect.  (The name does appear once in downgrade(), which is correct.)
+        Verified by parsing the upgrade() source into an AST and asserting that
+        NO ``create_index`` call (anywhere in the function, regardless of
+        position) references the old name. A ``drop_index`` of the old name is
+        fine; only a recreation is forbidden.
         """
+        import ast
         import importlib.util
         import inspect
+        import textwrap
         from pathlib import Path
 
         # Locate the migration file by revision ID
@@ -152,16 +156,33 @@ class TestWiktionaryMorphologyAdversarial:
         mod_spec = importlib.util.spec_from_file_location("_migration_mod", migration_path)
         migration_mod = importlib.util.module_from_spec(mod_spec)
         mod_spec.loader.exec_module(migration_mod)
-        upgrade_src = inspect.getsource(migration_mod.upgrade)
+        upgrade_src = textwrap.dedent(inspect.getsource(migration_mod.upgrade))
 
-        # The old 2-col index must NOT be created inside upgrade()
-        assert "uq_wiktionary_morphology_lemma_gender" not in upgrade_src or (
-            # It appears only in a drop_index call (not create_index)
-            "create_index"
-            not in upgrade_src.split("uq_wiktionary_morphology_lemma_gender")[0].rsplit("\n", 3)[-3]
-        ), (
-            "upgrade() must not create 'uq_wiktionary_morphology_lemma_gender' — "
-            "that index was dropped and replaced with the 3-col variant."
+        old_index = "uq_wiktionary_morphology_lemma_gender"
+
+        # Walk every call node; any create_index referencing the old name (in any
+        # arg) fails — robust to where in upgrade() the call appears.
+        create_index_with_old_name = False
+        for node in ast.walk(ast.parse(upgrade_src)):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            func_name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+            if func_name != "create_index":
+                continue
+            referenced = {
+                const.value
+                for const in ast.walk(node)
+                if isinstance(const, ast.Constant) and isinstance(const.value, str)
+            }
+            if old_index in referenced:
+                create_index_with_old_name = True
+                break
+
+        assert not create_index_with_old_name, (
+            f"upgrade() must not create {old_index!r} — that index was dropped "
+            "and replaced with the 3-col variant. A drop_index of it is allowed; "
+            "a create_index is not."
         )
 
     def test_server_default_is_quoted_noun_literal(self):

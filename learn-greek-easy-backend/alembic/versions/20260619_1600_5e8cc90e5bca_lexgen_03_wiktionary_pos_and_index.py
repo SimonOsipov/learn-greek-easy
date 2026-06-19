@@ -203,6 +203,16 @@ def upgrade() -> None:
         schema="reference",
     )
 
+    # ``forms`` is a JSONB *list* (Mapped[list]); align its server_default with
+    # the empty-list shape (was the empty-dict '{}'::jsonb from the table's
+    # original migration) so the model and DB defaults match (`alembic check`).
+    op.alter_column(
+        "wiktionary_morphology",
+        "forms",
+        server_default=sa.text("'[]'::jsonb"),
+        schema="reference",
+    )
+
     # Data phase (LEXGEN-03-02): runs AFTER the DDL so ``pos`` already exists.
     backfill_forms_to_bundles(op.get_bind())
 
@@ -216,6 +226,15 @@ def downgrade() -> None:
     """
     # Data phase reversal (LEXGEN-03-02): restore flat forms before the DDL is undone.
     downgrade_forms_to_flat(op.get_bind())
+
+    # Restore the original empty-dict server_default that predated this migration
+    # (reverses the '[]'::jsonb default set in upgrade()).
+    op.alter_column(
+        "wiktionary_morphology",
+        "forms",
+        server_default=sa.text("'{}'::jsonb"),
+        schema="reference",
+    )
 
     op.drop_index(
         "uq_wiktionary_morphology_lemma_pos_gender",

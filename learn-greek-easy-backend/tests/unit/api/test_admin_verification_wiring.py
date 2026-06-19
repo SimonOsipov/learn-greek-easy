@@ -448,7 +448,10 @@ def _make_wiktionary_entry(
     entry = MagicMock()
     entry.lemma = "σπίτι"
     entry.gender = gender
-    entry.forms = forms or list(_BUNDLE_FORMS_ADMIN)
+    # Only fall back to the default bundles when the caller passed nothing; an
+    # explicit ``forms=[]`` must survive (don't let the empty list read as falsy
+    # and mask empty-forms cases).
+    entry.forms = list(_BUNDLE_FORMS_ADMIN) if forms is None else forms
     entry.pronunciation = pronunciation
     entry.glosses_en = glosses_en
     return entry

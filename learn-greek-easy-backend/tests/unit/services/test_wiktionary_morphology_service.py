@@ -307,6 +307,18 @@ class TestGetFormBundles:
         assert result_noun is noun_entry
         assert result_verb is verb_entry
 
+        # Non-vacuous guard: prove the executed SQL actually carries the pos
+        # predicate with the threaded value. Without this, the test would still
+        # pass if get_entry dropped the pos filter entirely (each mock returns
+        # one row regardless of the WHERE clause).
+        for db_mock, expected_pos in ((db_noun, "noun"), (db_verb, "verb")):
+            stmt = db_mock.execute.await_args[0][0]
+            compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+            assert "pos" in compiled, f"executed SQL is missing a pos predicate: {compiled}"
+            assert (
+                f"'{expected_pos}'" in compiled
+            ), f"executed SQL must filter pos == {expected_pos!r}, got: {compiled}"
+
 
 @pytest.mark.unit
 class TestGetDeclensionsViaConverter:

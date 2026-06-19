@@ -3613,7 +3613,7 @@ class WiktionaryMorphology(Base):
     forms: Mapped[list] = mapped_column(
         JSONB,
         nullable=False,
-        server_default=text("'{}'::jsonb"),
+        server_default=text("'[]'::jsonb"),
         comment=(
             "JSONB list of feature-keyed form bundles (list[FormBundle] per LEXGEN-02): each "
             "bundle pairs a feature key set with its surface form. Replaces the old flat "

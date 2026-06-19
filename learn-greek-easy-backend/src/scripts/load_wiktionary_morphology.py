@@ -227,6 +227,9 @@ def _insert_rows(cursor: psycopg2.extensions.cursor, rows: list[dict]) -> tuple[
             with_glosses += 1
         # Forms arrive as a bundle list. Normalize FormBundle objects to plain
         # JSON-serializable dicts (already-dict elements pass through unchanged).
+        # Not dead: the isinstance branch is exercised by tests that call
+        # _insert_rows directly with FormBundle objects (e.g. flat_to_bundles
+        # output), while the _parse_entries flow already supplies plain dicts.
         forms_payload = [
             bundle.model_dump(mode="json") if isinstance(bundle, FormBundle) else bundle
             for bundle in row["forms"]

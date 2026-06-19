@@ -103,7 +103,9 @@ import importlib.util
 import json
 import logging
 import os
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -181,7 +183,14 @@ def _run_alembic(command: list[str], db_url: str) -> subprocess.CompletedProcess
     Returns:
         CompletedProcess — callers should check .returncode.
     """
-    poetry = "/Users/samosipov/.local/bin/poetry"
+    # Resolve poetry portably (CI / any machine), falling back to ``python -m
+    # alembic`` in the active interpreter when poetry is not on PATH.
+    poetry = shutil.which("poetry")
+    cmd = (
+        [poetry, "run", "alembic", *command]
+        if poetry
+        else [sys.executable, "-m", "alembic", *command]
+    )
     # Build a subprocess environment that targets the isolated DB.
     # Inherit the current process env (for PATH, venv activation etc.) then
     # override DATABASE_URL so env.py / settings picks up the isolated DB.
@@ -189,11 +198,14 @@ def _run_alembic(command: list[str], db_url: str) -> subprocess.CompletedProcess
     subprocess_env["DATABASE_URL"] = db_url
     subprocess_env.setdefault("PICTURE_HOUSE_STYLE_DEFAULT", "test_house_style_default")
     return subprocess.run(
-        [poetry, "run", "alembic", *command],
+        cmd,
         cwd=str(_BACKEND_DIR),
         capture_output=True,
         text=True,
         env=subprocess_env,
+        # A stuck migration must not hang the suite; let TimeoutExpired surface
+        # as a failure (a hang IS a failure).
+        timeout=300,
     )
 
 
