@@ -22,7 +22,9 @@ import pytest
 from fastapi import HTTPException
 
 from src.api.v1.admin import _run_verification_stage
+from src.core.lexgen_forms import bundles_to_flat
 from src.schemas.admin import TranslationLookupStageResult, TranslationSourceInfo
+from src.schemas.lexgen import FormBundle
 from src.schemas.nlp import (
     CrossAIVerificationResult,
     FieldComparisonResult,
@@ -612,3 +614,157 @@ class TestWiktionaryPipelineIntegration:
             )
 
         assert result.morphology_source == "llm"
+
+
+# ---------------------------------------------------------------------------
+# LEXGEN-03-04 RED: F4 crash-site regression test (AC-4)
+# ---------------------------------------------------------------------------
+
+#: Bundle-list forms as they appear in wiktionary_entry.forms after backfill.
+_BUNDLE_FORMS_ADMIN: list[dict] = [
+    {"form": "το σπίτι", "features": {"case": "nominative", "number": "singular"}},
+    {"form": "του σπιτιού", "features": {"case": "genitive", "number": "singular"}},
+    {"form": "το σπίτι", "features": {"case": "accusative", "number": "singular"}},
+    {"form": "σπίτι", "features": {"case": "vocative", "number": "singular"}},
+    {"form": "τα σπίτια", "features": {"case": "nominative", "number": "plural"}},
+    {"form": "των σπιτιών", "features": {"case": "genitive", "number": "plural"}},
+    {"form": "τα σπίτια", "features": {"case": "accusative", "number": "plural"}},
+    {"form": "σπίτια", "features": {"case": "vocative", "number": "plural"}},
+]
+_EXPECTED_FLAT_ADMIN: dict[str, str] = bundles_to_flat(
+    [FormBundle.model_validate(d) for d in _BUNDLE_FORMS_ADMIN]
+)
+
+
+def _make_wiktionary_entry_bundle_list() -> MagicMock:
+    """Create a mock WiktionaryMorphology row whose .forms is a bundle LIST
+    (the post-backfill format). This is the shape that causes the crash at
+    admin.py:3152 when dict(wiktionary_entry.forms) is called on a list."""
+    entry = MagicMock()
+    entry.lemma = "σπίτι"
+    entry.gender = "neuter"
+    entry.forms = list(_BUNDLE_FORMS_ADMIN)  # list[dict], NOT dict[str,str]
+    entry.pronunciation = "/spí.ti/"
+    entry.glosses_en = "house"
+    return entry
+
+
+@pytest.mark.unit
+class TestAdminCallSiteCrashRegression:
+    """RED test for F4: admin.py:3152 crash when wiktionary_entry.forms is a bundle list.
+
+    This is the critical regression test. The current code does:
+        wiktionary_forms=dict(wiktionary_entry.forms)
+    which raises TypeError when forms is a list[dict] (post-backfill).
+
+    After the fix, this line must produce a flat {case}_{number} dict via
+    bundles_to_flat, and WiktionaryVerificationService.verify must be called
+    with that flat dict — not crash.
+
+    Approach: We exercise the REAL _run_verification_stage function (same as
+    TestWiktionaryPipelineIntegration does), but inject a bundle-list entry.
+    We patch WiktionaryVerificationService.verify to capture its arguments
+    and assert wiktionary_forms is the expected flat dict.
+
+    In RED state: the current dict(wiktionary_entry.forms) call on a list
+    raises TypeError inside the executor lambda (line 3148-3157). The
+    exception is caught by the broad `except Exception` at line 3158, so the
+    test confirms the crash by checking wiktionary_local is None (because the
+    exception was swallowed) — but more critically, we spy on verify() and
+    assert it was called with the flat dict; in RED state verify() is NOT
+    called (TypeError fires before it), so the assertion fails.
+    """
+
+    def _base_patches_bundle_list(
+        self,
+        mock_local_svc: MagicMock,
+        mock_cross_svc: MagicMock,
+        wikt_entry: MagicMock,
+        captured_kwargs: dict,
+    ):
+        """Return context managers patching the standard services.
+
+        Unlike _base_patches in TestWiktionaryPipelineIntegration, we spy on
+        WiktionaryVerificationService.verify to capture wiktionary_forms.
+        """
+        mock_wikt_morphology_svc = AsyncMock()
+        mock_wikt_morphology_svc.get_entry.return_value = wikt_entry
+
+        def _capturing_verify(*args, **kwargs):
+            """Spy: capture wiktionary_forms passed to verify()."""
+            captured_kwargs.update(kwargs)
+            return _make_local_result(tier="auto_approve")
+
+        mock_wikt_verification_svc = MagicMock()
+        mock_wikt_verification_svc.verify.side_effect = _capturing_verify
+
+        return (
+            patch("src.api.v1.admin.get_local_verification_service", return_value=mock_local_svc),
+            patch(
+                "src.api.v1.admin.get_cross_ai_verification_service",
+                return_value=mock_cross_svc,
+            ),
+            patch(
+                "src.api.v1.admin.WiktionaryMorphologyService",
+                return_value=mock_wikt_morphology_svc,
+            ),
+            patch(
+                "src.api.v1.admin.WiktionaryVerificationService",
+                return_value=mock_wikt_verification_svc,
+            ),
+            patch("src.api.v1.admin.get_session_factory"),
+        )
+
+    @pytest.mark.asyncio
+    async def test_admin_verification_receives_flat_dict_from_bundle_list(self) -> None:
+        """AC-4 (F4): admin verification wiring must pass a flat dict to verify().
+
+        Given: wiktionary_entry.forms is a bundle LIST (post-backfill format).
+        When:  _run_verification_stage is called.
+        Then:  WiktionaryVerificationService.verify() receives
+               wiktionary_forms == bundles_to_flat(forms) — a flat {case}_{number} dict.
+               No TypeError is raised (the crash is fixed).
+
+        RED reason: The current call site does dict(wiktionary_entry.forms).
+        On a list[dict], dict(list_of_dicts) raises TypeError (because a dict
+        constructor requires an iterable of 2-element key-value pairs, not dicts).
+        The exception is caught at line 3158 (broad except), so verify() is
+        NEVER called — the captured_kwargs dict stays empty, and the assertion
+        that wiktionary_forms == _EXPECTED_FLAT_ADMIN FAILS (KeyError on empty
+        dict).  This is the right RED failure: the test catches the crash
+        indirectly by proving verify() wasn't called with the correct argument.
+        """
+        mock_local_svc = MagicMock()
+        mock_local_svc.verify.return_value = _make_local_result(tier="auto_approve")
+        mock_cross_svc = MagicMock()
+        mock_cross_svc.compare.return_value = _make_cross_result()
+        mock_lexicon_svc = AsyncMock()
+        mock_lexicon_svc.get_declensions.return_value = []
+
+        wikt_entry = _make_wiktionary_entry_bundle_list()
+        captured: dict = {}
+
+        patches = self._base_patches_bundle_list(
+            mock_local_svc, mock_cross_svc, wikt_entry, captured
+        )
+        with patches[0], patches[1], patches[2], patches[3], patches[4]:
+            result = await _run_verification_stage(
+                generated_data=_make_noun_data(),
+                normalized_lemma=_make_normalized_lemma(),
+                lexicon_svc=mock_lexicon_svc,
+                lemma="σπίτι",
+                secondary_data=_make_noun_data(),
+            )
+
+        # After the fix: verify() must have been called with the flat dict.
+        # In RED state: TypeError fires inside the executor, verify() is never
+        # called, captured is empty → KeyError on "wiktionary_forms" → FAIL.
+        assert captured["wiktionary_forms"] == _EXPECTED_FLAT_ADMIN, (
+            f"Expected WiktionaryVerificationService.verify() to be called with "
+            f"the flat {{case}}_{{number}} dict derived via bundles_to_flat, but "
+            f"got: {captured.get('wiktionary_forms', '<verify() was not called>')!r}. "
+            f"This likely means dict(wiktionary_entry.forms) raised TypeError on the "
+            f"bundle list and the exception was swallowed at line 3158."
+        )
+        # Also: wiktionary_local must be set (verify() ran without TypeError)
+        assert result.wiktionary_local is not None
