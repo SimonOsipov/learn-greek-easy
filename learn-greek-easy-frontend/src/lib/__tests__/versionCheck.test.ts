@@ -295,23 +295,17 @@ describe('versionCheck', () => {
     // ─────────────────────────────────────────────────────────────────────────
     // REGRESSION LOCK 5 (non_dev_frontend_dev_backend_skips).
     //
-    // IMPORTANT NOTE ON GUARD AT versionCheck.ts LINES 59-62:
-    //   if (FRONTEND_VERSION === 'dev' && backendVersion === 'dev') { return true; }
-    //   This is a CONJUNCTION — it requires BOTH sides to be 'dev'.
+    // ACTUAL GUARD AT versionCheck.ts:61 (C2 — comment corrected):
+    //   if (FRONTEND_VERSION === 'dev' || backendVersion === 'dev') { return true; }
+    //   This is a DISJUNCTION (OR) — it fires when EITHER side is 'dev'.
     //   With FRONTEND_VERSION='sha-A' and backendVersion='dev', this guard
-    //   does NOT fire. The code falls through to line 65 where 'sha-A' !== 'dev'
-    //   → mismatch → reload triggered.
+    //   DOES fire (backendVersion === 'dev' is true) → returns true immediately,
+    //   no reload triggered.
     //
-    // THEREFORE: this test is currently RED (reload IS called).
-    // The executor must add a guard that returns true when backendVersion==='dev'
-    // (or the new frontend-dev guard makes 59-62 dead code only for the dev/dev
-    // case, and this scenario still needs its own handling).
-    //
-    // CONCLUSION: 59-62 is NOT solely dead code after the new frontend-dev guard
-    // is added. The 'sha-A frontend / dev backend' path falls through to the
-    // mismatch branch today. The executor's plan to "remove 59-62 as dead code"
-    // would be a REGRESSION for this case UNLESS they also add a backendVersion
-    // guard. This test locks that behavior.
+    // THEREFORE: this test is already GREEN (regression lock, not red spec).
+    // It locks the existing OR-guard behavior: a real-SHA frontend paired with
+    // a 'dev' backend header (e.g., backend running locally against prod frontend)
+    // must never trigger a reload.
     // ─────────────────────────────────────────────────────────────────────────
     it('non_dev_frontend_dev_backend_skips: returns true without reload when real frontend has dev backend header', async () => {
       vi.stubEnv('VITE_COMMIT_SHA', 'sha-A');
@@ -506,6 +500,196 @@ describe('versionCheck', () => {
 
       // reload should only have been called once
       expect(mockReload).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // RED SPECS: per-pair refresh cap (ADMIN2-37-02, AC-1)
+  //
+  // These three tests are GENUINELY RED before implementation.
+  // The cap feature does not exist yet — without it, repeated mismatch calls
+  // (with cooldown bypassed via _resetRefreshCooldown_forTesting) will fire
+  // reload on every single call, so the "at most N" assertion fails.
+  //
+  // Cap constant used in tests: CAP_MAX = 3
+  // We call the function CAP_MAX + 2 = 5 times (well past the cap).
+  // The tests will PASS once the executor implements a per-pair cap that stops
+  // reloading after ≤ CAP_MAX refreshes for the same (frontend, backend) pair.
+  //
+  // Isolation: sessionStorage is cleared fully in beforeEach (via
+  // _resetRefreshCooldown_forTesting + sessionStorage.clear). The executor will
+  // store cap state in sessionStorage alongside the cooldown key — clearing it
+  // resets the cap naturally, without needing a new test-only export.
+  // ───────────────────────────────────────────────────────────────────────────
+  describe('per-pair refresh cap (RED specs — ADMIN2-37-02)', () => {
+    // The maximum number of reloads the cap allows per unique (frontend, backend) pair.
+    // Encoded here as the upper bound we assert. The executor must implement a cap
+    // that stops at some N ≤ CAP_MAX. If the executor picks N > CAP_MAX, these tests
+    // will catch it. The value 3 is a reasonable small bound per the spec intent.
+    const CAP_MAX = 3;
+    // Number of invocations — must be well past the cap so the assertion is meaningful.
+    const INVOCATIONS = CAP_MAX + 2;
+
+    /**
+     * Flush the Promise microtask queue deeply enough to resolve the cache-clearing chain.
+     * triggerVersionRefresh() does: caches.keys().then(names => Promise.all(names.map(delete))).then(() => reload())
+     * That's 2 levels of .then() on top of the initial resolved promise, so we need
+     * at least 3 microtask ticks. We flush 5 to be safe.
+     */
+    async function flushPromises() {
+      for (let i = 0; i < 5; i++) {
+        await Promise.resolve();
+      }
+    }
+
+    /**
+     * Helper: invoke checkVersionAndRefreshIfNeeded past the 60s cooldown.
+     * We use _resetRefreshCooldown_forTesting() to clear the stored timestamp,
+     * which makes isRefreshAllowed() return true — simulating elapsed time.
+     * This isolates the cap from the cooldown in each test.
+     * We flush promises after each call so mockReload is updated synchronously.
+     */
+    async function invokeCheckPastCooldown(
+      check: (r: Response) => boolean,
+      resetCooldown: () => void,
+      backendSHA: string,
+      times: number
+    ) {
+      for (let i = 0; i < times; i++) {
+        // Clear cooldown so it is not the limiter (tests the cap independently).
+        resetCooldown();
+        const response = new Response('{}', {
+          status: 200,
+          headers: { 'X-App-Version': backendSHA },
+        });
+        check(response);
+        // Flush promise microtask queue so the async cache-clearing chain resolves
+        // and window.location.reload is called before the next iteration.
+        await flushPromises();
+      }
+    }
+
+    beforeEach(() => {
+      // Clear all sessionStorage to reset both cooldown AND any cap state the
+      // executor will store. No need for a new test-only export.
+      sessionStorage.clear();
+      vi.clearAllMocks();
+      mockCachesKeys.mockResolvedValue([]);
+    });
+
+    afterEach(() => {
+      sessionStorage.clear();
+      vi.clearAllMocks();
+      vi.unstubAllEnvs();
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RED TEST 1 (caps_refreshes_on_persistent_mismatch) — AC-1
+    //
+    // Given: FRONTEND='aaa', backend always returns 'bbb' (persistent mismatch),
+    //        cooldown cleared between calls so it is NOT the limiter.
+    // When:  checkVersionAndRefreshIfNeeded is called INVOCATIONS (=5) times.
+    // Then:  reload is called AT MOST CAP_MAX (=3) times total.
+    //        After the cap is hit, log.warn is called at least once.
+    //        The final call returns false without triggering another reload.
+    //
+    // Currently RED: no cap exists → reload fires on every cooldown-cleared call
+    // → mockReload.mock.calls.length = 5 > 3 → assertion fails.
+    // ─────────────────────────────────────────────────────────────────────────
+    it('caps_refreshes_on_persistent_mismatch: reload count bounded by cap for same mismatch pair', async () => {
+      vi.stubEnv('VITE_COMMIT_SHA', 'aaa');
+      vi.resetModules();
+      const {
+        checkVersionAndRefreshIfNeeded: check,
+        _resetRefreshCooldown_forTesting: resetCooldown,
+      } = await import('../versionCheck');
+
+      await invokeCheckPastCooldown(check, resetCooldown, 'bbb', INVOCATIONS);
+
+      // Cap must bound reload calls.
+      expect(mockReload.mock.calls.length).toBeLessThanOrEqual(CAP_MAX);
+
+      // After exhausting the cap, warn must fire at least once.
+      const logMock = (await import('@/lib/logger')).default;
+      expect(logMock.warn).toHaveBeenCalled();
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RED TEST 2 (cap_resets_on_new_mismatch_pair) — AC-1
+    //
+    // Given: The cap was reached for pair ('aaa', 'bbb') — reloads exhausted.
+    // When:  A response arrives with a NEW backend SHA 'ccc' (different pair),
+    //        with cooldown cleared so it is not the limiter.
+    // Then:  Exactly ONE new reload fires for the 'aaa'→'ccc' pair.
+    //        (The cap is per-pair: a real deploy gives a new SHA → self-heal.)
+    //
+    // Currently RED: no cap exists → the total reload count grows monotonically
+    // rather than resetting to 1 for the new pair; the assertion on the delta
+    // (exactly one new reload) fails because the cap state is absent.
+    // ─────────────────────────────────────────────────────────────────────────
+    it('cap_resets_on_new_mismatch_pair: one fresh reload fires when backend SHA changes', async () => {
+      vi.stubEnv('VITE_COMMIT_SHA', 'aaa');
+      vi.resetModules();
+      const {
+        checkVersionAndRefreshIfNeeded: check,
+        _resetRefreshCooldown_forTesting: resetCooldown,
+      } = await import('../versionCheck');
+
+      // Exhaust the cap for pair ('aaa', 'bbb').
+      await invokeCheckPastCooldown(check, resetCooldown, 'bbb', INVOCATIONS);
+
+      // Without a cap, INVOCATIONS reloads would fire — assert cap bounded them.
+      // This assertion is RED pre-implementation (reloadsAfterFirstPair = INVOCATIONS = 5 > CAP_MAX = 3).
+      expect(mockReload.mock.calls.length).toBeLessThanOrEqual(CAP_MAX);
+      const reloadsAfterFirstPair = mockReload.mock.calls.length;
+
+      // Now a real deploy arrives: backend SHA changes to 'ccc'.
+      // Clear cooldown so it is not the limiter.
+      resetCooldown();
+      const newResponse = new Response('{}', {
+        status: 200,
+        headers: { 'X-App-Version': 'ccc' },
+      });
+      const result = check(newResponse);
+      await flushPromises();
+
+      // A new pair ('aaa', 'ccc') must fire exactly one new reload (cap resets for new pair).
+      expect(mockReload.mock.calls.length).toBe(reloadsAfterFirstPair + 1);
+      // The call itself must return false (mismatch detected, refresh fired).
+      expect(result).toBe(false);
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RED TEST 3 (warn_logged_exactly_once_per_capped_mismatch) — AC-1
+    //
+    // Given: FRONTEND='aaa', backend always 'bbb', cooldown cleared between calls.
+    // When:  Called INVOCATIONS (=5) times — well past the cap.
+    // Then:  log.warn is emitted EXACTLY once (the give-up warning),
+    //        and reload total ≤ CAP_MAX (the cap is a hard stop, not a rate limit).
+    //
+    // Currently RED: no cap exists → warn never fires (only log.info is called
+    // in the mismatch path) → expect(logMock.warn).toHaveBeenCalledTimes(1) fails.
+    // ─────────────────────────────────────────────────────────────────────────
+    it('warn_logged_exactly_once_per_capped_mismatch: give-up warn fires exactly once, not per-call', async () => {
+      vi.stubEnv('VITE_COMMIT_SHA', 'aaa');
+      vi.resetModules();
+      const {
+        checkVersionAndRefreshIfNeeded: check,
+        _resetRefreshCooldown_forTesting: resetCooldown,
+      } = await import('../versionCheck');
+
+      await invokeCheckPastCooldown(check, resetCooldown, 'bbb', INVOCATIONS);
+
+      const logMock = (await import('@/lib/logger')).default;
+
+      // Warn must fire exactly once — the "giving up" announcement.
+      // (The cooldown-skipped warn at line 74 of versionCheck.ts is a separate
+      // warn path; here the cooldown is never the limiter, so any warn.calls
+      // must be from the cap give-up.)
+      expect(logMock.warn).toHaveBeenCalledTimes(1);
+
+      // Reload must also be bounded (guard: cap is a hard stop).
+      expect(mockReload.mock.calls.length).toBeLessThanOrEqual(CAP_MAX);
     });
   });
 });
