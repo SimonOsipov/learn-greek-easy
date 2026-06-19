@@ -369,6 +369,23 @@ describe('DeckDrawer', () => {
     expect(screen.queryByTestId('deck-drawer-tab-activity')).not.toBeInTheDocument();
   });
 
+  it('stale ?subtab=activity URL falls back to the deck-type default tab (questions for culture)', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeCultureDeck());
+
+    renderDrawer('/admin?edit=deck-culture-1&subtab=activity');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    // The questions tab trigger must be present — culture default is 'questions'.
+    expect(screen.getByTestId('deck-drawer-tab-questions')).toBeInTheDocument();
+    // No stale activity tab trigger visible
+    expect(screen.queryByTestId('deck-drawer-tab-activity')).not.toBeInTheDocument();
+    // Vocab-only 'words' tab must not appear for a culture deck
+    expect(screen.queryByTestId('deck-drawer-tab-words')).not.toBeInTheDocument();
+  });
+
   // ── 7. Deep-link with ?item= → detail skeleton variant ─────────────────────
 
   it('shows detail-variant skeleton when ?item= is present during load', () => {
