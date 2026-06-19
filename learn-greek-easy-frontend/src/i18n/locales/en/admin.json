@@ -607,7 +607,9 @@
         "scenarioB1": "Scenario — B1 (Greek)",
         "scenarioB1Helper": "Visible to B1 learners as the article body",
         "titleA2": "Title — A2 (Greek)",
-        "scenarioA2": "Scenario — A2 (Greek)"
+        "scenarioA2": "Scenario — A2 (Greek)",
+        "b1SectionLabel": "B1 content",
+        "a2SectionLabel": "A2 content"
       },
       "image": {
         "kicker": "Source image",
@@ -616,7 +618,8 @@
         "altText": "Alt text — English",
         "photoCredit": "Photo credit",
         "invalidUrl": "Image URL is not valid",
-        "altWarning": "This article has no alt text. Consider adding it for accessibility before publishing."
+        "altWarning": "This article has no alt text. Consider adding it for accessibility before publishing.",
+        "missingAlt": "This image has no alt text — consider adding it for accessibility."
       },
       "linkedSituation": {
         "kicker": "Linked situation",
