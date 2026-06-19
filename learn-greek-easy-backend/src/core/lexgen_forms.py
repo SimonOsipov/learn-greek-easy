@@ -52,19 +52,36 @@ def bundles_to_flat(bundles: list[FormBundle]) -> dict[str, str]:
     independent of the input list order: we iterate the canonical grid and
     include a cell only when a matching bundle is present.
 
-    A bundle whose ``features`` lack ``case`` or ``number`` is a malformed
-    paradigm and raises ``UnknownFlatFormKey``.
+    STRICT (symmetric with ``flat_to_bundles``): a bundle is rejected with
+    ``UnknownFlatFormKey`` when it
+
+    - lacks ``case`` or ``number`` features (malformed paradigm),
+    - carries a non-canonical ``case`` or ``number`` VALUE — e.g.
+      ``case="dative"`` or ``number="dual"`` (``FormBundle`` validates feature
+      KEYS, not VALUES, so such a bundle is well-formed yet not a valid
+      paradigm cell), or
+    - collides with another bundle on the same ``(case, number)`` cell
+      (duplicate cells are an error, never silently overwritten).
     """
     # Index input bundles by their (case, number) cell. Validate each bundle
-    # carries both required features up front (defensive: callers only feed
-    # well-formed bundles, but a missing feature must not silently drop a cell).
+    # carries both required features, that those values are canonical, and that
+    # no two bundles claim the same cell — a missing/non-canonical feature or a
+    # duplicate cell must not silently drop or overwrite a form.
     by_cell: dict[tuple[str, str], str] = {}
     for bundle in bundles:
         case = bundle.features.get("case")
         number = bundle.features.get("number")
         if case is None or number is None:
             raise UnknownFlatFormKey(f"Bundle is missing case/number features: {bundle.features!r}")
-        by_cell[(case, number)] = bundle.form
+        if case not in _VALID_CASES or number not in _VALID_NUMBERS:
+            raise UnknownFlatFormKey(
+                f"Non-canonical bundle cell (case={case!r}, number={number!r}): "
+                f"case must be one of {_CANONICAL_CASES}, number one of {_CANONICAL_NUMBERS}."
+            )
+        cell = (case, number)
+        if cell in by_cell:
+            raise UnknownFlatFormKey(f"Duplicate (case, number) cell: {cell!r}.")
+        by_cell[cell] = bundle.form
 
     flat: dict[str, str] = {}
     for number in _CANONICAL_NUMBERS:

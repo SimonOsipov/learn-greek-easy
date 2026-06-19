@@ -459,19 +459,35 @@ def test_flat_to_bundles_empty_value_raises_validation_error_not_domain_error() 
 
 
 @pytest.mark.unit
-def test_bundles_to_flat_duplicate_cells_last_wins() -> None:
-    """PINS CURRENT BEHAVIOR (advisory): two bundles for the same {case,number}
-    cell collide silently — the LAST one in input order wins, no error.
+def test_bundles_to_flat_duplicate_cells_rejected() -> None:
+    """Two bundles for the same {case,number} cell → UnknownFlatFormKey.
 
-    There is no duplicate-cell guard; a caller that accidentally supplies two
-    forms for one cell loses the first one without warning.
+    STRICT (D-Strict): a duplicate cell is an error, never a silent last-wins
+    overwrite — symmetric with ``flat_to_bundles``'s fail-loud posture.
     """
     first = FormBundle(form="A", features={"case": "nominative", "number": "singular"})
     second = FormBundle(form="B", features={"case": "nominative", "number": "singular"})
 
-    flat = bundles_to_flat([first, second])
+    with pytest.raises(UnknownFlatFormKey):
+        bundles_to_flat([first, second])
 
-    assert flat == {"nominative_singular": "B"}  # last-wins
+
+@pytest.mark.unit
+def test_bundles_to_flat_non_canonical_value_rejected() -> None:
+    """A well-formed bundle with a non-canonical case/number VALUE → raises.
+
+    ``FormBundle`` validates feature KEYS, not VALUES, so ``case="dative"`` and
+    ``number="dual"`` build valid bundles — but they are not canonical paradigm
+    cells, so ``bundles_to_flat`` must reject them (not silently drop them in the
+    canonical-order emit loop).
+    """
+    non_canonical_case = FormBundle(form="x", features={"case": "dative", "number": "singular"})
+    with pytest.raises(UnknownFlatFormKey):
+        bundles_to_flat([non_canonical_case])
+
+    non_canonical_number = FormBundle(form="y", features={"case": "nominative", "number": "dual"})
+    with pytest.raises(UnknownFlatFormKey):
+        bundles_to_flat([non_canonical_number])
 
 
 # ---------------------------------------------------------------------------
