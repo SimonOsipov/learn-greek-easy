@@ -230,8 +230,13 @@ jobs:
               --skip-deploys; then
               break
             fi
-            echo "Set Backend version vars attempt $attempt failed; retrying in $((attempt * 5))s..."
-            sleep $((attempt * 5))
+            if [ $attempt -lt 3 ]; then
+              echo "Set Backend version vars attempt $attempt failed; retrying in $((attempt * 5))s..."
+              sleep $((attempt * 5))
+            else
+              echo "Set Backend version vars failed after 3 attempts."
+              exit 1
+            fi
           done
 
       - name: Deploy Backend (wait for health)
@@ -330,8 +335,13 @@ jobs:
               --skip-deploys; then
               break
             fi
-            echo "Set Frontend version vars attempt $attempt failed; retrying in $((attempt * 5))s..."
-            sleep $((attempt * 5))
+            if [ $attempt -lt 3 ]; then
+              echo "Set Frontend version vars attempt $attempt failed; retrying in $((attempt * 5))s..."
+              sleep $((attempt * 5))
+            else
+              echo "Set Frontend version vars failed after 3 attempts."
+              exit 1
+            fi
           done
 
       - name: Deploy Frontend (wait for health)
