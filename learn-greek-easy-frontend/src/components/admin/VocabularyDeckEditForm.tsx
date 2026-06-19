@@ -394,52 +394,45 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">{t('deckEdit.sectionAccess')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FormField
-              control={form.control}
-              name="is_active"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">{t('deckEdit.isActive')}</FormLabel>
-                    <FormDescription>{t('deckEdit.isActiveDescription')}</FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={handleActiveChange}
-                      data-testid="deck-edit-is-active"
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+        <FormField
+          control={form.control}
+          name="is_active"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">{t('deckEdit.isActive')}</FormLabel>
+                <FormDescription>{t('deckEdit.isActiveDescription')}</FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={handleActiveChange}
+                  data-testid="deck-edit-is-active"
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
 
-            <FormField
-              control={form.control}
-              name="is_premium"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">{t('deckEdit.isPremium')}</FormLabel>
-                    <FormDescription>{t('deckEdit.isPremiumDescription')}</FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      data-testid="deck-edit-is-premium"
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
+        <FormField
+          control={form.control}
+          name="is_premium"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">{t('deckEdit.isPremium')}</FormLabel>
+                <FormDescription>{t('deckEdit.isPremiumDescription')}</FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  data-testid="deck-edit-is-premium"
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
 
         {/* Background Image */}
         <Card>
