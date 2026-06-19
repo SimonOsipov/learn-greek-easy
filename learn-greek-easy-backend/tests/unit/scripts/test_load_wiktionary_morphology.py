@@ -738,3 +738,154 @@ class TestPosFilterAndBundleOutput:
         assert (
             actual_pos_value == "noun"
         ), f"Expected VALUES tuple[{pos_index}] == 'noun' (pos), got {actual_pos_value!r}"
+
+
+# ---------------------------------------------------------------------------
+# LEXGEN-03-03 adversarial tests — added by QA in Mode B
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestPosFilterAndBundleOutputAdversarial:
+    """Adversarial / edge-case coverage for the configurable POS filter + bundle output.
+
+    These tests cover scenarios not exercised by the AC-spec tests above:
+    (a) --pos verb end-to-end: all built rows carry pos=="verb" and forms are bundles.
+    (b) empty forms={} entry: row["forms"] is [] (not a flat {}), and the bundle
+        conversion does not crash on an empty flat dict.
+    (c) VALUES tuple off-by-one guard: the value at the SQL-column-name position for
+        "pos" in the VALUES tuple is exactly the configured pos string — defends
+        against a future column reorder that breaks the silent positional alignment.
+    """
+
+    def test_pos_verb_all_rows_carry_verb_pos_and_bundle_forms(self):
+        """(a) --pos verb: every row has pos=='verb' and forms is a bundle list.
+
+        Guards that no mid-chain code path branches on 'noun' specifically:
+        the filter, merge key, row dict, and bundle conversion all use the
+        configured pos parameter, not a hardcoded string.
+        """
+        lines = [
+            _make_entry("τρέχω", pos="verb", gender="m"),
+            _make_entry("γράφω", pos="verb", gender="f"),
+            _make_entry("κόσμος", pos="noun", gender="m"),  # must be excluded
+        ]
+        rows, _filtered, _merged = _call_parse_entries(lines, pos="verb")
+
+        assert (
+            len(rows) == 2
+        ), f"Expected 2 verb rows, got {len(rows)}: {[r['lemma'] for r in rows]}"
+        for row in rows:
+            assert (
+                row["pos"] == "verb"
+            ), f"Expected pos=='verb', got {row['pos']!r} for {row['lemma']}"
+            assert isinstance(row["forms"], list), (
+                f"Expected forms to be a list (bundle list) for {row['lemma']}, "
+                f"got {type(row['forms'])}"
+            )
+            for bundle in row["forms"]:
+                assert (
+                    "form" in bundle and "features" in bundle
+                ), f"Bundle missing required keys for {row['lemma']}: {bundle}"
+
+    def test_empty_forms_entry_produces_empty_bundle_list(self):
+        """(b) An entry with no declension forms yields forms==[] (not a flat {}).
+
+        flat_to_bundles({}) must return [] without raising, and the round-trip
+        through the conversion loop must store [] rather than an empty dict in
+        the row, so the INSERT Json payload is an array, never an object.
+        """
+        import io as _io
+
+        import psycopg2.extras as _psycopg2_extras
+
+        # Entry with no declension forms (empty forms list in JSONL).
+        entry: dict = {
+            "word": "κόσμος",
+            "pos": "noun",
+            "head_templates": [{"args": {"g": "m"}}],
+            "senses": [{"glosses": ["world meaning"]}],
+            "sounds": [],
+            "forms": [],  # <- no declension rows
+        }
+        from src.scripts.load_wiktionary_morphology import _insert_rows, _parse_entries
+
+        content = json.dumps(entry)
+        fake_path = MagicMock(spec=Path)
+        fake_path.open.return_value.__enter__ = lambda s: _io.StringIO(content)
+        fake_path.open.return_value.__exit__ = MagicMock(return_value=False)
+        rows, _filtered, _merged = _parse_entries(fake_path, pos="noun")
+
+        assert len(rows) == 1
+        assert (
+            rows[0]["forms"] == []
+        ), f"Expected empty bundle list [] for entry with no forms, got: {rows[0]['forms']}"
+
+        # Also verify _insert_rows wraps [] as Json([]), not Json({}).
+        captured_batches: list[list[tuple]] = []
+
+        def capture(cursor, sql, batch):
+            captured_batches.append(list(batch))
+
+        with patch(
+            "src.scripts.load_wiktionary_morphology.psycopg2.extras.execute_values",
+            side_effect=capture,
+        ):
+            _insert_rows(MagicMock(), rows)
+
+        assert captured_batches
+        forms_col = captured_batches[0][0][2]  # index 2 = forms in VALUES tuple
+        assert isinstance(forms_col, _psycopg2_extras.Json)
+        assert (
+            forms_col.adapted == []
+        ), f"Expected Json([]) for empty forms, got: {forms_col.adapted!r}"
+
+    def test_values_tuple_pos_position_matches_sql_column_list(self):
+        """(c) Off-by-one guard: the value at the SQL 'pos' column position in the
+        VALUES tuple is exactly the configured pos string.
+
+        This test is independent of _parse_entries: it drives _insert_rows directly
+        with a hand-crafted row whose pos field is a sentinel value 'test_pos', so
+        any positional shift would surface as a type / value mismatch rather than a
+        silent pass through the real 'noun' string.
+        """
+        import re as _re
+
+        from src.core.lexgen_forms import flat_to_bundles
+        from src.scripts.load_wiktionary_morphology import _insert_rows
+
+        sentinel_pos = "test_pos_sentinel"
+        flat_forms = {"nominative_singular": "τεστ", "genitive_singular": "τεστ-gen"}
+        rows = [
+            {
+                "lemma": "τεστ",
+                "pos": sentinel_pos,
+                "gender": "masculine",
+                "forms": flat_to_bundles(flat_forms, pos="noun"),  # pos arg ignored by converter
+                "pronunciation": None,
+                "glosses_en": None,
+            }
+        ]
+
+        captured_sqls: list[str] = []
+        captured_batches: list[list[tuple]] = []
+
+        def capture(cursor, sql, batch):
+            captured_sqls.append(sql)
+            captured_batches.append(list(batch))
+
+        with patch(
+            "src.scripts.load_wiktionary_morphology.psycopg2.extras.execute_values",
+            side_effect=capture,
+        ):
+            _insert_rows(MagicMock(), rows)
+
+        assert captured_sqls and captured_batches
+        col_match = _re.search(r"INSERT INTO[^(]+\(([^)]+)\)", captured_sqls[0])
+        col_names = [c.strip() for c in col_match.group(1).split(",")]
+        pos_idx = col_names.index("pos")
+        actual = captured_batches[0][0][pos_idx]
+        assert actual == sentinel_pos, (
+            f"VALUES tuple at SQL column 'pos' index {pos_idx} should be {sentinel_pos!r}, "
+            f"got {actual!r}. Full tuple: {captured_batches[0][0]}"
+        )
