@@ -611,3 +611,16 @@ class IllegalProposalTransition(Exception):
         if reason:
             msg += f" ({reason})"
         super().__init__(msg)
+
+
+class UnknownFlatFormKey(Exception):
+    """Raised when a flat morphology key cannot be parsed into case+number.
+
+    The flat-key grammar is ``"{case}_{number}"`` with case ∈ {nominative,
+    genitive, accusative, vocative} and number ∈ {singular, plural}. Any key
+    that is malformed (no separator, missing a segment) or carries an unknown
+    case/number value is rejected by ``flat_to_bundles`` with this exception.
+
+    This is a pure domain exception (not an HTTP exception) — it is the
+    caller's responsibility to map it to an appropriate HTTP response.
+    """
