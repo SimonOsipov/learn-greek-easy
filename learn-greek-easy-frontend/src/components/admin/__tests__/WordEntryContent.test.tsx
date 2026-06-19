@@ -2,8 +2,7 @@
  * Tests for WordEntryContent component (WDET02)
  */
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -18,10 +17,6 @@ import i18n from '@/i18n';
 
 vi.mock('@/features/words/hooks/useWordEntry', () => ({
   useWordEntry: vi.fn(),
-}));
-
-vi.mock('../WordEntryEditForm', () => ({
-  WordEntryEditForm: () => <div data-testid="word-entry-edit-form" />,
 }));
 
 vi.mock('@/features/words/hooks', async (importOriginal) => {
@@ -569,18 +564,31 @@ describe('WordEntryContent', () => {
   });
 
   // ============================================
-  // Group 10: Edit mode
+  // Group 10: Unlink button footer placement (AC-4)
   // ============================================
 
-  describe('Edit mode', () => {
-    it('clicking edit button switches to edit form', async () => {
-      renderComponent();
-      await waitFor(() => {
-        expect(screen.getByTestId('word-entry-content-fields')).toBeInTheDocument();
-      });
-      await userEvent.click(screen.getByTestId('word-entry-edit-btn'));
-      expect(screen.getByTestId('word-entry-edit-form')).toBeInTheDocument();
-      expect(screen.queryByTestId('word-entry-content-fields')).not.toBeInTheDocument();
+  describe('Unlink button footer placement', () => {
+    it('renders word-entry-actions-footer with unlink button when deckId provided', () => {
+      renderComponent({ wordEntryId: 'we-123', deckId: 'deck-456' });
+      const footer = screen.getByTestId('word-entry-actions-footer');
+      expect(footer).toBeInTheDocument();
+      const unlinkBtn = screen.getByTestId('word-entry-unlink-btn');
+      expect(unlinkBtn).toBeInTheDocument();
+      expect(footer).toContainElement(unlinkBtn);
+    });
+
+    it('unlink button is NOT inside section-identity', () => {
+      renderComponent({ wordEntryId: 'we-123', deckId: 'deck-456' });
+      const identitySection = document.getElementById('section-identity');
+      expect(identitySection).not.toBeNull();
+      const unlinkBtn = screen.getByTestId('word-entry-unlink-btn');
+      expect(identitySection!.contains(unlinkBtn)).toBe(false);
+    });
+
+    it('does not render word-entry-actions-footer when no deckId', () => {
+      renderComponent({ wordEntryId: 'we-123' });
+      expect(screen.queryByTestId('word-entry-actions-footer')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('word-entry-unlink-btn')).not.toBeInTheDocument();
     });
   });
 
