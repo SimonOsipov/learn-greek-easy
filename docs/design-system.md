@@ -285,7 +285,7 @@ Current consumers (all in `src/index.css`):
 | `.sit-card` | `.sit-actions` | Situations tab |
 | `.cl-entry` | `.cl-entry-actions` | Changelog tab |
 | `.an-row` | `.an-row-actions` | Announcements tab |
-| `.fb-card` | `.fb-actions` | Feedback tab |
+| `.fb-card` | `.fb-card-actions` | Feedback tab |
 | `.cer-card` | `.cer-actions` | Card Errors tab |
 | `.deck-row` | `.deck-row-actions` | Decks tab |
 
