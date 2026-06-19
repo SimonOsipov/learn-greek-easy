@@ -634,6 +634,8 @@
     },
     "toolbar": {
       "searchPlaceholder": "Search by title, body, or person…",
+      "country": "Country",
+      "level": "Level",
       "sort": {
         "newest": "Newest first",
         "oldest": "Oldest first",
