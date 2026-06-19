@@ -462,6 +462,7 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={() => fileInputRef.current?.click()}
+                  disabled={!onUploadCoverImage || isUploading}
                   data-testid="deck-edit-upload-image"
                 >
                   {currentImageUrl ? t('deckEdit.replaceImage') : t('deckEdit.uploadImage')}
