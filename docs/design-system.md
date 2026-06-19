@@ -263,6 +263,34 @@ Reach for these *before* composing new ones.
 | `.fb-*` family | Admin feedback re-skin chrome (card, vote rail, status grid, canned chips, thread bubbles, meta table). The `.fb-card` surface follows the canonical white-card skin (`--card` bg, `--fg/0.08` border, hover lift). See `src/index.css` under `@layer components`. Token-only — no raw hex. |
 | `.cl-*` family | Admin changelog card list + editor chrome (each entry is a white `.admin-card`; month head, tag-button tones, translation pills, preview card). The legacy timeline rail/dot has been removed — category colour is conveyed by the in-card `Badge`. Tag-button tones via `data-tone` on `.cl-tag-btn`: green=`--success`, amber=`--warning`, blue=`--primary`, cyan=`--accent-2`, violet=`--accent`, red=`--danger`. Token-only; no new tokens introduced. |
 
+### Admin row-action reveal convention (Mechanism A, ADMIN2-36)
+
+All admin list rows and cards reveal their action buttons on hover/focus using hand-written CSS in `src/index.css` — **not** Tailwind `group` / `group-hover` utilities. This keeps reveal logic out of the component markup and centralised in the stylesheet.
+
+**Pattern:** add a stable row class to the container element and a `<row>-actions` class to the actions wrapper. The reveal rule lives in `src/index.css`:
+
+```css
+/* actions wrapper: hidden by default */
+.<row>-actions { opacity: 0; transition: opacity 0.15s; }
+/* reveal on pointer hover or keyboard focus anywhere in the row */
+.<row>:hover .<row>-actions,
+.<row>:focus-within .<row>-actions { opacity: 1; }
+```
+
+Current consumers (all in `src/index.css`):
+
+| Row class | Actions class | Feature |
+|-----------|---------------|---------|
+| `.news-card` | `.news-actions` | News tab |
+| `.sit-card` | `.sit-actions` | Situations tab |
+| `.cl-entry` | `.cl-entry-actions` | Changelog tab |
+| `.an-row` | `.an-row-actions` | Announcements tab |
+| `.fb-card` | `.fb-card-actions` | Feedback tab |
+| `.cer-card` | `.cer-actions` | Card Errors tab |
+| `.deck-row` | `.deck-row-actions` | Decks tab |
+
+**Delete-button color:** `.icon-btn.danger` sets `color: hsl(var(--danger))` at rest so trash/delete icons are red without needing hover. The hover rule (`.icon-btn.danger:hover`) adds the `hsl(var(--danger) / 0.1)` tinted background. Edit/pencil icons keep the default `--fg-2` resting color — only delete uses `.danger`.
+
 ### Drawer header chrome
 
 `.drawer-head` is a flex row that lays out one stacked content column alongside a close button. The content column (`drawer-head-content`) composes the breadcrumb kicker, the title-row wrapper, and an optional meta-row badge strip as top-to-bottom siblings.
@@ -276,7 +304,7 @@ Reach for these *before* composing new ones.
 | `.drawer-title` | H2 typography (Inter Tight 22/700, `-0.015em`, line-height 1.25, max-width 640px). |
 | `.drawer-meta` | Optional badge row, sibling of `.drawer-head-row` inside `.drawer-head-content`. |
 
-**PR delta (ADMIN2-16 / ANDD-03):** The `.drawer-head-content` JSX wrapper is currently only applied in `AnnouncementDetailsDrawer.tsx`. The 5 other drawer consumers (`AnnouncementComposeDrawer`, `ChangelogEditorDrawer`, `DeckDrawer`, `NewsEditDrawer`, `SituationDrawer`) reference these classes but lack the wrapper; a sweep is queued as a follow-up to keep this PR's blast radius small.
+**PR delta (ADMIN2-16 / ANDD-03):** The `.drawer-head-content` JSX wrapper is applied in `AnnouncementDetailsDrawer.tsx`, `ChangelogEditorDrawer.tsx`, `DeckDrawer.tsx`, and `NewsEditDrawer.tsx`. The remaining consumers (`AnnouncementComposeDrawer`, `SituationDrawer`) reference these classes but lack the wrapper; a sweep is queued as a follow-up.
 
 ### Full-screen drawer variant (`size="full"`)
 

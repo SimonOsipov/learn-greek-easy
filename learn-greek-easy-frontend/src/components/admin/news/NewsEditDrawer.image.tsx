@@ -56,6 +56,12 @@ export const NewsEditDrawerImage: React.FC<Props> = ({ item }) => {
             data-testid="news-drawer-image-alt-input"
           />
         </Field>
+        {/* F7.7: a11y nudge — show when image is set but alt text is empty */}
+        {item.image_url && !item.alt_text && (
+          <p className="dr-field-hint" data-testid="news-drawer-image-alt-hint">
+            {t('news.drawer.image.missingAlt')}
+          </p>
+        )}
 
         {/* Photo credit */}
         <Field label={t('news.drawer.image.photoCredit')} htmlFor="news-image-credit">

@@ -165,13 +165,13 @@ describe('NewsEditDrawer — header rendering', () => {
 
   it('renders breadcrumb with flag, country label, and publication date key', () => {
     renderDrawer();
-    // Real i18n resolves country.greece → "Greece" and publishedOn → "Published 15 Jan 2025".
+    // Real i18n resolves country.greece → "Greece" and publishedOn → "Article date 15 Jan 2025".
     // We verify the breadcrumb is present and does NOT contain the raw ISO date string.
     const breadcrumb = document.querySelector('.drawer-breadcrumb');
     expect(breadcrumb).toBeInTheDocument();
     expect(breadcrumb!.textContent).toContain('🇬🇷');
     expect(breadcrumb!.textContent).toContain('Greece');
-    expect(breadcrumb!.textContent).toContain('Published');
+    expect(breadcrumb!.textContent).toContain('Article date');
     // Raw ISO format must NOT appear — date is formatted via date-fns
     expect(breadcrumb!.textContent).not.toContain('2025-01-15');
   });
@@ -415,7 +415,7 @@ describe('NewsEditDrawer — footer', () => {
     expect(screen.getByTestId('news-drawer-cancel')).toBeInTheDocument();
   });
 
-  it('renders Save & close button', () => {
+  it('renders Save changes button', () => {
     renderDrawer();
     expect(screen.getByTestId('news-drawer-save')).toBeInTheDocument();
   });

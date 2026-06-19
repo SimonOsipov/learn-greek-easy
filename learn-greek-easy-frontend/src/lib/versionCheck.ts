@@ -56,8 +56,9 @@ export function checkVersionAndRefreshIfNeeded(response: Response): boolean {
     return true;
   }
 
-  // Skip in development mode (both versions are "dev")
-  if (FRONTEND_VERSION === 'dev' && backendVersion === 'dev') {
+  // Skip the check when either side is a 'dev' build — a 'dev' version can never
+  // be meaningfully compared to a real commit SHA (would loop forever otherwise).
+  if (FRONTEND_VERSION === 'dev' || backendVersion === 'dev') {
     return true;
   }
 

@@ -227,25 +227,27 @@ export const NewsEditDrawer: React.FC = () => {
       >
         <SidePanel.CloseButton position="right" onClick={requestClose} />
         <SidePanel.Header>
-          <div className="drawer-breadcrumb">{`News · ${countryFlag} ${countryLabel} · ${t('news.drawer.publishedOn', { date: item.publication_date ? format(parseISO(item.publication_date), 'dd MMM yyyy', { locale: getDateLocale(i18n.language) }) : '' })}`}</div>
-          <h2 className="drawer-title">{titleInLang}</h2>
-          <div className="drawer-meta">
-            {item.status === 'draft' ? (
-              <Badge tone="amber" data-testid="news-drawer-status-pill">
-                <Pencil className="mr-1 h-3 w-3" />
-                {t('news.drawer.draftPill')}
-              </Badge>
-            ) : (
-              <Badge tone="green" data-testid="news-drawer-status-pill">
-                <Check className="mr-1 h-3 w-3" />
-                {t('news.drawer.publishedPill')}
-              </Badge>
-            )}
-            {item.description_el ? <Badge tone="violet">B1</Badge> : null}
-            {item.description_el_a2 ? <Badge tone="violet">A2</Badge> : null}
-            {item.linked_situation !== null && (
-              <Badge tone="blue">{t('news.drawer.linkedSituationLabel')}</Badge>
-            )}
+          <div className="drawer-head-content">
+            <div className="drawer-breadcrumb">{`News · ${countryFlag} ${countryLabel} · ${t('news.drawer.publishedOn', { date: item.publication_date ? format(parseISO(item.publication_date), 'dd MMM yyyy', { locale: getDateLocale(i18n.language) }) : '' })}`}</div>
+            <h2 className="drawer-title">{titleInLang}</h2>
+            <div className="drawer-meta">
+              {item.status === 'draft' ? (
+                <Badge tone="amber" data-testid="news-drawer-status-pill">
+                  <Pencil className="mr-1 h-3 w-3" />
+                  {t('news.drawer.draftPill')}
+                </Badge>
+              ) : (
+                <Badge tone="green" data-testid="news-drawer-status-pill">
+                  <Check className="mr-1 h-3 w-3" />
+                  {t('news.drawer.publishedPill')}
+                </Badge>
+              )}
+              {item.description_el ? <Badge tone="violet">B1</Badge> : null}
+              {item.description_el_a2 ? <Badge tone="violet">A2</Badge> : null}
+              {item.linked_situation !== null && (
+                <Badge tone="blue">{t('news.drawer.linkedSituationLabel')}</Badge>
+              )}
+            </div>
           </div>
         </SidePanel.Header>
 

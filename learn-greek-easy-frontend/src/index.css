@@ -427,6 +427,9 @@
     width: 14px;
     height: 14px;
   }
+  .icon-btn.danger {
+    color: hsl(var(--danger));
+  }
   .icon-btn.danger:hover {
     color: hsl(var(--danger));
     background: hsl(var(--danger) / 0.1);
@@ -1422,7 +1425,8 @@
     opacity: 0;
     transition: opacity 0.15s;
   }
-  .cl-entry:hover .cl-entry-actions {
+  .cl-entry:hover .cl-entry-actions,
+  .cl-entry:focus-within .cl-entry-actions {
     opacity: 1;
   }
   .cl-entry-title {
@@ -1484,6 +1488,21 @@
     color: hsl(var(--danger));
     font-size: 12px;
     margin-top: 4px;
+  }
+  /* F7.7: non-destructive a11y hint (e.g. missing alt text) */
+  .dr-field-hint {
+    font-size: 12px;
+    color: hsl(var(--warning));
+    margin-top: 4px;
+  }
+  /* F7.6: section label separating B1 from A2 inside .dr-2col */
+  .dr-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: hsl(var(--fg-3));
+    margin-bottom: 6px;
   }
   .dr-field input,
   .dr-field textarea {
@@ -1779,7 +1798,18 @@
     opacity: 0;
     transition: opacity 0.15s;
   }
-  .an-row:hover .an-row-actions {
+  .an-row:hover .an-row-actions,
+  .an-row:focus-within .an-row-actions {
+    opacity: 1;
+  }
+
+  /* ── Decks tab row reveal (Mechanism A, ADMIN2-36-04) ──────────────────── */
+  .deck-row-actions {
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .deck-row:hover .deck-row-actions,
+  .deck-row:focus-within .deck-row-actions {
     opacity: 1;
   }
 
@@ -2147,6 +2177,16 @@
     color: hsl(var(--fg-3));
     font-size: 13px;
     margin-top: 8px;
+  }
+
+  /* Actions — absolute-positioned sibling; hidden at rest, visible on hover / focus-within */
+  .fb-card-actions {
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .fb-card:hover .fb-card-actions,
+  .fb-card:focus-within .fb-card-actions {
+    opacity: 1;
   }
 
   /* Vote rail */
@@ -3183,6 +3223,11 @@
     gap: 8px;
     min-width: 0;
   }
+  /* F7.5: inner text wrapper must also have min-width:0 so .audio-sub
+     can shrink and ellipsis correctly inside the flex container. */
+  .audio-l > div {
+    min-width: 0;
+  }
   .audio-name {
     font-weight: 600;
     font-size: 14px;
@@ -3491,6 +3536,16 @@
 /* CER-16: Warning-tinted border on open rows (pending | reviewed) */
 [data-testid='admin-card-error-card'][data-state='open'] {
   border-color: hsl(var(--warning) / 0.35);
+}
+
+/* ADMIN2-36: hover/focus-reveal for Card-errors row actions (Mechanism A) */
+.cer-actions {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.cer-card:hover .cer-actions,
+.cer-card:focus-within .cer-actions {
+  opacity: 1;
 }
 
 /* Sticky-header scroll clearance — keeps scrolled-to elements below the h-16 (64px) header */

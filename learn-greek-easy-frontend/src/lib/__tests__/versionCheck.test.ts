@@ -66,6 +66,7 @@ describe('versionCheck', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
     _resetRefreshCooldown_forTesting();
     // Restore caches mock
     Object.defineProperty(window, 'caches', {
@@ -138,10 +139,18 @@ describe('versionCheck', () => {
   });
 
   describe('checkVersionAndRefreshIfNeeded', () => {
-    it('returns true when X-App-Version header is missing', () => {
+    // ─────────────────────────────────────────────────────────────────────────
+    // AC TEST 1 (dev_frontend_skips_check) — GENUINELY RED before impl.
+    // FRONTEND_VERSION is 'dev' (test-env default); backend sends a real SHA.
+    // Current code: falls through the dev&&dev guard (backend ≠ 'dev') and
+    // hits the mismatch branch → triggers reload → returns false.
+    // Expected post-impl: new "FRONTEND_VERSION === 'dev'" short-circuit
+    // returns true immediately, no reload.
+    // ─────────────────────────────────────────────────────────────────────────
+    it('dev_frontend_skips_check: returns true without reload when frontend is "dev" and backend has real SHA', () => {
       const response = new Response('{}', {
         status: 200,
-        headers: {},
+        headers: { 'X-App-Version': 'sha-abc123' },
       });
 
       const result = checkVersionAndRefreshIfNeeded(response);
@@ -150,6 +159,51 @@ describe('versionCheck', () => {
       expect(mockReload).not.toHaveBeenCalled();
     });
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // REGRESSION LOCK 6 (missing_backend_header_skips) — locks existing guard.
+    // ─────────────────────────────────────────────────────────────────────────
+    it('missing_backend_header_skips: returns true without reload when X-App-Version header is absent', async () => {
+      vi.stubEnv('VITE_COMMIT_SHA', 'sha-A');
+      vi.resetModules();
+      const { checkVersionAndRefreshIfNeeded: check } = await import('../versionCheck');
+
+      const response = new Response('{}', {
+        status: 200,
+        headers: {},
+      });
+
+      const result = check(response);
+
+      expect(result).toBe(true);
+      expect(mockReload).not.toHaveBeenCalled();
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ADVERSARIAL EDGE (empty_backend_header_skips) — locks the !backendVersion
+    // falsy guard: an empty-string X-App-Version header (e.g., env var cleared
+    // in Railway, backend emits "X-App-Version: ") is treated as "missing" and
+    // skipped rather than mismatched. headers.get() returns "" for an explicit
+    // empty header value, which is falsy, so it hits the same guard as null.
+    // ─────────────────────────────────────────────────────────────────────────
+    it('empty_backend_header_skips: returns true without reload when X-App-Version is empty string', async () => {
+      vi.stubEnv('VITE_COMMIT_SHA', 'sha-A');
+      vi.resetModules();
+      const { checkVersionAndRefreshIfNeeded: check } = await import('../versionCheck');
+
+      const response = new Response('{}', {
+        status: 200,
+        headers: { 'X-App-Version': '' },
+      });
+
+      const result = check(response);
+
+      expect(result).toBe(true);
+      expect(mockReload).not.toHaveBeenCalled();
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // KEPT UNCHANGED — both versions are "dev" (the original test-env case).
+    // ─────────────────────────────────────────────────────────────────────────
     it('returns true when both versions are "dev"', () => {
       const response = new Response('{}', {
         status: 200,
@@ -163,55 +217,115 @@ describe('versionCheck', () => {
       expect(mockReload).not.toHaveBeenCalled();
     });
 
-    it('returns true when versions match (non-dev)', () => {
-      // This test is tricky because we can't easily mock VITE_COMMIT_SHA
-      // In the test environment, frontend version is 'dev'
+    // ─────────────────────────────────────────────────────────────────────────
+    // AC TEST 3 (real_frontend_match_no_reload) — replaces the misnamed
+    // 166-178 test (which was actually a dev/dev case, not a real match).
+    // ─────────────────────────────────────────────────────────────────────────
+    it('real_frontend_match_no_reload: returns true without reload when real frontend SHA matches backend SHA', async () => {
+      vi.stubEnv('VITE_COMMIT_SHA', 'sha-A');
+      vi.resetModules();
+      const { checkVersionAndRefreshIfNeeded: check } = await import('../versionCheck');
+
       const response = new Response('{}', {
         status: 200,
-        headers: { 'X-App-Version': 'dev' },
+        headers: { 'X-App-Version': 'sha-A' },
       });
 
-      const result = checkVersionAndRefreshIfNeeded(response);
+      const result = check(response);
 
       expect(result).toBe(true);
       expect(mockReload).not.toHaveBeenCalled();
     });
 
-    it('triggers refresh on version mismatch', async () => {
-      // Mock cache clearing to resolve immediately
+    // ─────────────────────────────────────────────────────────────────────────
+    // AC TEST 2 (real_frontend_mismatch_triggers_reload) — migrated from
+    // 180-200. Now stubs FRONTEND_VERSION to 'sha-A' so the new dev-frontend
+    // short-circuit does NOT fire and the mismatch path is still exercised.
+    // ─────────────────────────────────────────────────────────────────────────
+    it('real_frontend_mismatch_triggers_reload: returns false and triggers reload when real SHAs differ', async () => {
+      vi.stubEnv('VITE_COMMIT_SHA', 'sha-A');
+      vi.resetModules();
+      const { checkVersionAndRefreshIfNeeded: check } = await import('../versionCheck');
+
       mockCachesKeys.mockResolvedValue(['cache1', 'cache2']);
       mockCachesDelete.mockResolvedValue(true);
 
-      // Backend has different version than frontend
       const response = new Response('{}', {
         status: 200,
-        headers: { 'X-App-Version': 'abc123' },
+        headers: { 'X-App-Version': 'sha-B' },
       });
 
-      const result = checkVersionAndRefreshIfNeeded(response);
+      const result = check(response);
 
-      // Should return false (mismatch detected)
       expect(result).toBe(false);
 
-      // Wait for async cache clearing
       await vi.waitFor(() => {
         expect(mockReload).toHaveBeenCalled();
       });
     });
 
-    it('does not refresh during cooldown on version mismatch', () => {
-      // Simulate a recent refresh
+    // ─────────────────────────────────────────────────────────────────────────
+    // AC TEST 4 (real_frontend_mismatch_cooldown_skips) — migrated from
+    // 202-216. Now stubs FRONTEND_VERSION to 'sha-A' so the dev short-circuit
+    // does NOT fire.
+    // ─────────────────────────────────────────────────────────────────────────
+    it('real_frontend_mismatch_cooldown_skips: returns false without reload when cooldown is active', async () => {
+      vi.stubEnv('VITE_COMMIT_SHA', 'sha-A');
+      vi.resetModules();
+      const {
+        checkVersionAndRefreshIfNeeded: check,
+        _resetRefreshCooldown_forTesting: resetCooldown,
+      } = await import('../versionCheck');
+      resetCooldown();
+
+      // Simulate a recent refresh (cooldown active)
       sessionStorage.setItem('learn-greek-easy:last-version-refresh', Date.now().toString());
 
       const response = new Response('{}', {
         status: 200,
-        headers: { 'X-App-Version': 'different-version' },
+        headers: { 'X-App-Version': 'sha-B' },
       });
 
-      const result = checkVersionAndRefreshIfNeeded(response);
+      const result = check(response);
 
-      // Should return false (mismatch) but not trigger reload
       expect(result).toBe(false);
+      expect(mockReload).not.toHaveBeenCalled();
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // REGRESSION LOCK 5 (non_dev_frontend_dev_backend_skips).
+    //
+    // IMPORTANT NOTE ON GUARD AT versionCheck.ts LINES 59-62:
+    //   if (FRONTEND_VERSION === 'dev' && backendVersion === 'dev') { return true; }
+    //   This is a CONJUNCTION — it requires BOTH sides to be 'dev'.
+    //   With FRONTEND_VERSION='sha-A' and backendVersion='dev', this guard
+    //   does NOT fire. The code falls through to line 65 where 'sha-A' !== 'dev'
+    //   → mismatch → reload triggered.
+    //
+    // THEREFORE: this test is currently RED (reload IS called).
+    // The executor must add a guard that returns true when backendVersion==='dev'
+    // (or the new frontend-dev guard makes 59-62 dead code only for the dev/dev
+    // case, and this scenario still needs its own handling).
+    //
+    // CONCLUSION: 59-62 is NOT solely dead code after the new frontend-dev guard
+    // is added. The 'sha-A frontend / dev backend' path falls through to the
+    // mismatch branch today. The executor's plan to "remove 59-62 as dead code"
+    // would be a REGRESSION for this case UNLESS they also add a backendVersion
+    // guard. This test locks that behavior.
+    // ─────────────────────────────────────────────────────────────────────────
+    it('non_dev_frontend_dev_backend_skips: returns true without reload when real frontend has dev backend header', async () => {
+      vi.stubEnv('VITE_COMMIT_SHA', 'sha-A');
+      vi.resetModules();
+      const { checkVersionAndRefreshIfNeeded: check } = await import('../versionCheck');
+
+      const response = new Response('{}', {
+        status: 200,
+        headers: { 'X-App-Version': 'dev' },
+      });
+
+      const result = check(response);
+
+      expect(result).toBe(true);
       expect(mockReload).not.toHaveBeenCalled();
     });
   });
@@ -324,6 +438,7 @@ describe('versionCheck', () => {
 
     it('handles multiple API calls with same version', () => {
       // All calls with same version should not trigger refresh
+      // (Uses test-env default 'dev' FRONTEND_VERSION with 'dev' backend — both dev guard)
       const response1 = new Response('{}', {
         status: 200,
         headers: { 'X-App-Version': 'dev' },
@@ -344,7 +459,20 @@ describe('versionCheck', () => {
       expect(mockReload).not.toHaveBeenCalled();
     });
 
-    it('cooldown prevents rapid refresh attempts', async () => {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Migrated from 347-381. Now stubs FRONTEND_VERSION='sha-A' so the
+    // new dev-frontend short-circuit does NOT fire and the cooldown path
+    // is still exercised with real SHAs.
+    // ─────────────────────────────────────────────────────────────────────────
+    it('cooldown prevents rapid refresh attempts (real SHA frontend)', async () => {
+      vi.stubEnv('VITE_COMMIT_SHA', 'sha-A');
+      vi.resetModules();
+      const {
+        checkVersionAndRefreshIfNeeded: check,
+        _resetRefreshCooldown_forTesting: resetCooldown,
+      } = await import('../versionCheck');
+      resetCooldown();
+
       // Ensure caches mock is set up correctly
       Object.defineProperty(window, 'caches', {
         value: {
@@ -360,9 +488,9 @@ describe('versionCheck', () => {
       // First mismatch triggers refresh
       const response1 = new Response('{}', {
         status: 200,
-        headers: { 'X-App-Version': 'v1.0.0' },
+        headers: { 'X-App-Version': 'sha-B' },
       });
-      checkVersionAndRefreshIfNeeded(response1);
+      check(response1);
 
       // Wait for async operations
       await vi.runAllTimersAsync();
@@ -372,9 +500,9 @@ describe('versionCheck', () => {
 
       const response2 = new Response('{}', {
         status: 200,
-        headers: { 'X-App-Version': 'v1.0.1' },
+        headers: { 'X-App-Version': 'sha-C' },
       });
-      checkVersionAndRefreshIfNeeded(response2);
+      check(response2);
 
       // reload should only have been called once
       expect(mockReload).toHaveBeenCalledTimes(1);
