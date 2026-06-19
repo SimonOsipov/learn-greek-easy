@@ -435,24 +435,20 @@ class TestParallelGeneration:
 
 def _make_wiktionary_entry(
     gender: str = "neuter",
-    forms: dict | None = None,
+    forms: list | None = None,
     pronunciation: str | None = "/spí.ti/",
     glosses_en: str | None = "house",
 ) -> MagicMock:
-    """Create a mock WiktionaryMorphology ORM object."""
+    """Create a mock WiktionaryMorphology ORM object.
+
+    Post-backfill: ``forms`` is a bundle list (``list[FormBundle]`` dicts), the
+    shape the admin call site converts via ``bundles_to_flat`` before passing it
+    to ``WiktionaryVerificationService.verify``.
+    """
     entry = MagicMock()
     entry.lemma = "σπίτι"
     entry.gender = gender
-    entry.forms = forms or {
-        "nominative_singular": "το σπίτι",
-        "genitive_singular": "του σπιτιού",
-        "accusative_singular": "το σπίτι",
-        "vocative_singular": "σπίτι",
-        "nominative_plural": "τα σπίτια",
-        "genitive_plural": "των σπιτιών",
-        "accusative_plural": "τα σπίτια",
-        "vocative_plural": "σπίτια",
-    }
+    entry.forms = forms or list(_BUNDLE_FORMS_ADMIN)
     entry.pronunciation = pronunciation
     entry.glosses_en = glosses_en
     return entry

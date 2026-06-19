@@ -46,6 +46,7 @@ from src.core.exceptions import (
     NounGenerationError,
     OpenRouterError,
 )
+from src.core.lexgen_forms import bundles_to_flat
 from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import (
@@ -150,6 +151,7 @@ from src.schemas.feedback import (
     AdminFeedbackUpdate,
     AuthorBriefResponse,
 )
+from src.schemas.lexgen import FormBundle
 from src.schemas.news_item import (
     NewsItemCreate,
     NewsItemListResponse,
@@ -3149,7 +3151,9 @@ async def _run_verification_stage(
                 None,
                 lambda: WiktionaryVerificationService().verify(
                     generated_data,
-                    wiktionary_forms=dict(wiktionary_entry.forms),
+                    wiktionary_forms=bundles_to_flat(
+                        [FormBundle.model_validate(b) for b in wiktionary_entry.forms]
+                    ),
                     wiktionary_gender=wiktionary_entry.gender,
                     wiktionary_pronunciation=wiktionary_entry.pronunciation,
                     wiktionary_glosses=wiktionary_entry.glosses_en,

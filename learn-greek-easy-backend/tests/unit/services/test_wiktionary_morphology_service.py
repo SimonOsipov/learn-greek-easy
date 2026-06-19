@@ -112,14 +112,20 @@ class TestGetDeclensions:
 
     @pytest.mark.asyncio
     async def test_returns_forms_dict_when_entry_found(self) -> None:
-        forms = {"nominative_singular": "σπίτι", "genitive_singular": "σπιτιού"}
-        entry = _make_entry(forms=forms)
+        # Post-backfill: entry.forms is a bundle list; get_declensions derives
+        # the flat {case}_{number} dict via bundles_to_flat.
+        bundle_forms = [
+            {"form": "σπίτι", "features": {"case": "nominative", "number": "singular"}},
+            {"form": "σπιτιού", "features": {"case": "genitive", "number": "singular"}},
+        ]
+        entry = _make_entry(forms=bundle_forms)
         db = _make_db(row=entry)
         service = WiktionaryMorphologyService(db)
 
         result = await service.get_declensions("σπίτι")
 
-        assert result == forms
+        assert result == bundles_to_flat([FormBundle.model_validate(d) for d in bundle_forms])
+        assert result == {"nominative_singular": "σπίτι", "genitive_singular": "σπιτιού"}
         assert isinstance(result, dict)
 
     @pytest.mark.asyncio
@@ -133,14 +139,19 @@ class TestGetDeclensions:
 
     @pytest.mark.asyncio
     async def test_gender_filter_passed_through(self) -> None:
-        forms = {"nominative_singular": "τράπεζα"}
-        entry = _make_entry(lemma="τράπεζα", gender="feminine", forms=forms)
+        # Post-backfill: entry.forms is a bundle list; get_declensions derives
+        # the flat {case}_{number} dict via bundles_to_flat.
+        bundle_forms = [
+            {"form": "τράπεζα", "features": {"case": "nominative", "number": "singular"}},
+        ]
+        entry = _make_entry(lemma="τράπεζα", gender="feminine", forms=bundle_forms)
         db = _make_db(row=entry, gender_filtered=True)
         service = WiktionaryMorphologyService(db)
 
         result = await service.get_declensions("τράπεζα", gender="feminine")
 
-        assert result == forms
+        assert result == bundles_to_flat([FormBundle.model_validate(d) for d in bundle_forms])
+        assert result == {"nominative_singular": "τράπεζα"}
 
 
 # ---------------------------------------------------------------------------
