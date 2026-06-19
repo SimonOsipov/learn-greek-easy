@@ -83,11 +83,6 @@ const CultureDeckDetailPage = lazyWithRetry(() =>
 const CulturePracticePage = lazyWithRetry(() =>
   import('@/pages/culture/CulturePracticePage').then((m) => ({ default: m.CulturePracticePage }))
 );
-const CultureReadinessPage = lazyWithRetry(() =>
-  import('@/pages/culture/CultureReadinessPage').then((m) => ({
-    default: m.CultureReadinessPage,
-  }))
-);
 
 // Mock exam pages
 const MockExamPage = lazyWithRetry(() =>
@@ -271,10 +266,11 @@ function AppContent() {
                 <Route path="/culture" element={<AppLayout />}>
                   <Route index element={<CulturePage />} />
                 </Route>
-                {/* Culture readiness page inside AppLayout */}
-                <Route path="/culture/readiness" element={<AppLayout />}>
-                  <Route index element={<CultureReadinessPage />} />
-                </Route>
+                {/* Readiness merged into the mock exam hub (PRACT2-11); redirect old deep links */}
+                <Route
+                  path="/culture/readiness"
+                  element={<Navigate to="/practice/culture-exam" replace />}
+                />
                 {/* Culture deck detail page inside AppLayout */}
                 <Route path="/culture/decks/:id" element={<AppLayout />}>
                   <Route index element={<CultureDeckDetailPage />} />

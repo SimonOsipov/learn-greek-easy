@@ -5,7 +5,7 @@
 
 import { type ReactElement, type ReactNode } from 'react';
 
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderOptions } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import { BrowserRouter } from 'react-router-dom';
@@ -35,17 +35,26 @@ export function renderWithProviders(
     window.history.pushState({}, 'Test page', initialRoute);
   }
 
+  // Fresh client per render (retries off, no window-focus refetch) so pages
+  // that call useQuery (e.g. MockExamPage) can mount. Tests that need to seed
+  // their own cache may still nest their own <QueryClientProvider> inside the
+  // rendered `ui` — the innermost provider wins, so this outer one is a
+  // harmless default for the common case.
+  const queryClient = createTestQueryClient();
+
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <I18nextProvider i18n={i18n}>
-        <LanguageProvider>
-          <ThemeProvider>
-            <BrowserRouter>
-              {children}
-              <Toaster />
-            </BrowserRouter>
-          </ThemeProvider>
-        </LanguageProvider>
+        <QueryClientProvider client={queryClient}>
+          <LanguageProvider>
+            <ThemeProvider>
+              <BrowserRouter>
+                {children}
+                <Toaster />
+              </BrowserRouter>
+            </ThemeProvider>
+          </LanguageProvider>
+        </QueryClientProvider>
       </I18nextProvider>
     );
   }

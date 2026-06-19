@@ -241,6 +241,20 @@ test.describe('Mock Exam Session', () => {
     await expect(startButton).toBeVisible();
   });
 
+  test('MOCKEXAM-E2E-04b: legacy /culture/readiness deep link redirects to the mock-exam hub (AC-2)', async ({
+    page,
+  }) => {
+    // PRACT2-11 merged the standalone readiness page into the mock-exam hub and
+    // removed CultureReadinessPage; App.tsx keeps a `<Navigate replace>` so old
+    // bookmarks don't 404. Driving the REAL route in a browser binds this check
+    // to App.tsx (the fast unit test re-declares the rule and can't catch its
+    // removal). The destination must be the mock-exam landing page.
+    await page.goto('/culture/readiness');
+
+    await expect(page).toHaveURL(/\/practice\/culture-exam$/, { timeout: 10000 });
+    await expect(page.getByTestId('mock-exam-page')).toBeVisible({ timeout: 15000 });
+  });
+
   test('MOCKEXAM-E2E-05: Keyboard navigation works correctly', async ({ page }) => {
     // Start a mock exam
     const started = await startMockExam(page);

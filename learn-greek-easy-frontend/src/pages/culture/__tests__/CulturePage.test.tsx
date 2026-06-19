@@ -331,6 +331,22 @@ describe('Mock-exam CTA', () => {
     });
   });
 
+  // F6 — the what's-new strip "Check readiness →" link was repointed
+  // culture/readiness → /practice/culture-exam in PRACT2-11-04 (readiness merged
+  // into the mock-exam hub). This is a DIFFERENT link from the "Take mock exam"
+  // CTA asserted above, so it gets its own assertion.
+  it('"Check readiness →" link points to /practice/culture-exam after data loads', async () => {
+    mockGetList.mockResolvedValue(mixedPayload);
+    mockGetReadiness.mockResolvedValue(null);
+
+    render(<CulturePage />);
+
+    await waitFor(() => {
+      const link = screen.getByRole('link', { name: /check readiness/i });
+      expect(link).toHaveAttribute('href', '/practice/culture-exam');
+    });
+  });
+
   it('CTA appears in the DOM before the deck list after data loads', async () => {
     mockGetList.mockResolvedValue(mixedPayload);
     mockGetReadiness.mockResolvedValue(null);
