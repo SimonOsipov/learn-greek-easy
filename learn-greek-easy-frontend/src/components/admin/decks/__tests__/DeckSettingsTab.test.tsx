@@ -456,6 +456,163 @@ describe('DeckSettingsTab', () => {
     });
   });
 
+  // ── ADMIN2-37-05 adversarial coverage ────────────────────────────────────────
+  //
+  // These tests cover failure paths, method-isolation, and remove-gate behaviour
+  // that the AC tests don't exercise. Added in QA Mode B (post-implementation).
+
+  describe('cover-image adversarial (ADMIN2-37-05)', () => {
+    const origCreate = URL.createObjectURL;
+    const origRevoke = URL.revokeObjectURL;
+
+    beforeEach(() => {
+      URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+      URL.revokeObjectURL = vi.fn();
+    });
+
+    afterEach(() => {
+      URL.createObjectURL = origCreate;
+      URL.revokeObjectURL = origRevoke;
+    });
+
+    // 1. Upload API failure — isUploading must clear and error must surface.
+    //    Guards the try/finally in VocabularyDeckEditForm.handleImageChange (line 183-193).
+    it('vocab upload: isUploading clears and error surfaces when API rejects', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      (adminAPI.uploadDeckCoverImage as Mock).mockRejectedValue(new Error('upload failed'));
+
+      renderTab(makeVocabDeck());
+
+      const input = screen.getByTestId('deck-edit-cover-input') as HTMLInputElement;
+      const jpgFile = new File(['img'], 'cover.jpg', { type: 'image/jpeg' });
+      await user.upload(input, jpgFile);
+
+      // After rejection: upload button should reappear (isUploading=false)
+      // and an error should be shown.
+      await waitFor(() => {
+        expect(screen.getByTestId('deck-edit-upload-image')).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId('deck-edit-image-uploading')).not.toBeInTheDocument();
+      expect(screen.getByTestId('deck-edit-image-error')).toBeInTheDocument();
+    });
+
+    // 2. Cache NOT invalidated on upload failure.
+    //    The invalidate() call in handleUploadVocabCover runs AFTER the await —
+    //    so if the API rejects, invalidate() must NOT be called.
+    it('vocab upload: cache is NOT invalidated when API rejects', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      (adminAPI.uploadDeckCoverImage as Mock).mockRejectedValue(new Error('upload failed'));
+
+      const { queryClient } = renderTab(makeVocabDeck());
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+      const input = screen.getByTestId('deck-edit-cover-input') as HTMLInputElement;
+      const jpgFile = new File(['img'], 'cover.jpg', { type: 'image/jpeg' });
+      await user.upload(input, jpgFile);
+
+      // Wait for the rejection to propagate (error element appears)
+      await waitFor(() => {
+        expect(screen.getByTestId('deck-edit-image-error')).toBeInTheDocument();
+      });
+
+      // invalidateQueries must never have been called for the cover-image keys
+      const coverCalls = invalidateSpy.mock.calls.filter(
+        (c) =>
+          JSON.stringify(c[0]).includes('deck-vocab-1') ||
+          JSON.stringify(c[0]) === JSON.stringify({ queryKey: ['admin', 'decks'] })
+      );
+      expect(coverCalls).toHaveLength(0);
+    });
+
+    // 3. Remove button hidden when deck has no cover_image_url even with callback present.
+    //    Guards VocabularyDeckEditForm line 470: {deck.cover_image_url && onRemoveCoverImage && ...}
+    it('vocab: remove button absent when deck has no cover image even if callback is wired', async () => {
+      // The removeVocabCover callback IS wired in DeckSettingsTab (it always passes it),
+      // but the button must still be hidden if deck.cover_image_url is null/undefined.
+      renderTab(makeVocabDeck({ cover_image_url: undefined }));
+
+      expect(screen.queryByTestId('deck-edit-remove-image')).not.toBeInTheDocument();
+    });
+
+    it('culture: remove button absent when deck has no cover image even if callback is wired', async () => {
+      renderTab(makeCultureDeck({ cover_image_url: undefined }));
+
+      expect(screen.queryByTestId('deck-edit-remove-image')).not.toBeInTheDocument();
+    });
+
+    // 4. Method isolation — culture deck must NOT call the vocab upload method.
+    it('culture upload: uploadDeckCoverImage (vocab) is never called for a culture deck', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      (adminAPI.uploadCultureDeckCoverImage as Mock).mockResolvedValue({
+        cover_image_url: 'https://x/new.webp',
+      });
+
+      renderTab(makeCultureDeck());
+
+      const input = screen.getByTestId('deck-edit-cover-input') as HTMLInputElement;
+      const pngFile = new File(['img'], 'cover.png', { type: 'image/png' });
+      await user.upload(input, pngFile);
+
+      await waitFor(() => {
+        expect(adminAPI.uploadCultureDeckCoverImage).toHaveBeenCalledTimes(1);
+      });
+      // The vocab method must NOT have been called
+      expect(adminAPI.uploadDeckCoverImage).not.toHaveBeenCalled();
+    });
+
+    // 4b. Method isolation — vocab deck must NOT call the culture upload method.
+    it('vocab upload: uploadCultureDeckCoverImage (culture) is never called for a vocab deck', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      (adminAPI.uploadDeckCoverImage as Mock).mockResolvedValue({
+        cover_image_url: 'https://x/new.webp',
+      });
+
+      renderTab(makeVocabDeck());
+
+      const input = screen.getByTestId('deck-edit-cover-input') as HTMLInputElement;
+      const jpgFile = new File(['img'], 'cover.jpg', { type: 'image/jpeg' });
+      await user.upload(input, jpgFile);
+
+      await waitFor(() => {
+        expect(adminAPI.uploadDeckCoverImage).toHaveBeenCalledTimes(1);
+      });
+      // The culture method must NOT have been called
+      expect(adminAPI.uploadCultureDeckCoverImage).not.toHaveBeenCalled();
+    });
+
+    // 4c. Remove method isolation — vocab deck must NOT call the culture remove method.
+    it('vocab remove: deleteCultureDeckCoverImage is never called for a vocab deck', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      (adminAPI.deleteDeckCoverImage as Mock).mockResolvedValue(undefined);
+
+      renderTab(makeVocabDeck({ cover_image_url: 'https://x/existing.webp' }));
+
+      const removeBtn = screen.getByTestId('deck-edit-remove-image');
+      await user.click(removeBtn);
+
+      await waitFor(() => {
+        expect(adminAPI.deleteDeckCoverImage).toHaveBeenCalledTimes(1);
+      });
+      expect(adminAPI.deleteCultureDeckCoverImage).not.toHaveBeenCalled();
+    });
+
+    // 4d. Remove method isolation — culture deck must NOT call the vocab remove method.
+    it('culture remove: deleteDeckCoverImage (vocab) is never called for a culture deck', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      (adminAPI.deleteCultureDeckCoverImage as Mock).mockResolvedValue(undefined);
+
+      renderTab(makeCultureDeck({ cover_image_url: 'https://x/existing.webp' }));
+
+      const removeBtn = screen.getByTestId('deck-edit-remove-image');
+      await user.click(removeBtn);
+
+      await waitFor(() => {
+        expect(adminAPI.deleteCultureDeckCoverImage).toHaveBeenCalledTimes(1);
+      });
+      expect(adminAPI.deleteDeckCoverImage).not.toHaveBeenCalled();
+    });
+  });
+
   // ── 8. Culture deck: save payload preserves original category (AC #5) ──────
 
   it('updateCultureDeck payload preserves original category when category input is hidden', async () => {
