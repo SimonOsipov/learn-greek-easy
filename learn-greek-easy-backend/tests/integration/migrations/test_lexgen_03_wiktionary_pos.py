@@ -107,19 +107,40 @@ def _run_alembic(command: list[str], db_url: str) -> subprocess.CompletedProcess
     Uses the poetry-managed interpreter so the alembic version and plugins
     (alembic-postgresql-enum etc.) match the project's locked dependencies.
 
+    NOTE: alembic/env.py reads settings.database_url_sync, which is derived from
+    the DATABASE_URL environment variable — it does NOT read the Alembic
+    ``-x db_url=`` argument (env.py has no context.get_x_argument() call).
+    Therefore we pass db_url as DATABASE_URL in the subprocess environment rather
+    than as ``-x db_url=``.  The subprocess also needs PICTURE_HOUSE_STYLE_DEFAULT
+    to satisfy the Settings validator.
+
+    The db_url passed in here is a psycopg2 (sync) URL
+    (postgresql+psycopg2://...).  env.py already strips ``+asyncpg`` to produce
+    the sync URL, so we pass an asyncpg URL to match settings' expected format,
+    or a psycopg2 URL directly — either works since settings just does a string
+    replace.  We pass the psycopg2 URL and settings.database_url_sync will return
+    it unchanged (no +asyncpg to strip).
+
     Args:
         command: Alembic sub-command tokens, e.g. ["upgrade", "head"].
-        db_url:  The synchronous database URL to pass as -x db_url=<...>.
+        db_url:  The synchronous (psycopg2) database URL to target.
 
     Returns:
         CompletedProcess — callers should check .returncode.
     """
     poetry = "/Users/samosipov/.local/bin/poetry"
+    # Build a subprocess environment that targets the isolated DB.
+    # Inherit the current process env (for PATH, venv activation etc.) then
+    # override DATABASE_URL so env.py / settings picks up the isolated DB.
+    subprocess_env = os.environ.copy()
+    subprocess_env["DATABASE_URL"] = db_url
+    subprocess_env.setdefault("PICTURE_HOUSE_STYLE_DEFAULT", "test_house_style_default")
     return subprocess.run(
-        [poetry, "run", "alembic", *command, "-x", f"db_url={db_url}"],
+        [poetry, "run", "alembic", *command],
         cwd=str(_BACKEND_DIR),
         capture_output=True,
         text=True,
+        env=subprocess_env,
     )
 
 

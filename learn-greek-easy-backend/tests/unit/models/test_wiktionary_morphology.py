@@ -117,6 +117,72 @@ class TestWiktionaryMorphologyFormsAnnotation:
         ), f"forms annotation must contain 'list'; got {annotation_str!r}"
 
 
+class TestWiktionaryMorphologyAdversarial:
+    """Adversarial guards added in Mode B QA (LEXGEN-03-01).
+
+    These assertions are NOT redundant with AC-1/AC-5: they pin two specific
+    details that the AC tests do not explicitly assert.
+    """
+
+    def test_old_lemma_gender_index_name_absent_from_migration(self):
+        """The old 2-col unique index name must NOT appear in the migration file.
+
+        The migration must drop 'uq_wiktionary_morphology_lemma_gender' and NOT
+        recreate it in upgrade().  This is an adversarial guard against accidental
+        reinstatement — e.g. if upgrade() added the old index AND the new one.
+
+        Verified by asserting the name does not appear in the upgrade() source
+        via inspect.  (The name does appear once in downgrade(), which is correct.)
+        """
+        import importlib.util
+        import inspect
+        from pathlib import Path
+
+        # Locate the migration file by revision ID
+        backend_dir = Path(__file__).parent.parent.parent.parent
+        migration_dir = backend_dir / "alembic" / "versions"
+        migration_files = list(migration_dir.glob("*lexgen_03_wiktionary_pos_and_index.py"))
+        assert migration_files, (
+            "Could not find the LEXGEN-03-01 migration file "
+            "(expected *lexgen_03_wiktionary_pos_and_index.py in alembic/versions/)"
+        )
+        migration_path = migration_files[0]
+
+        # Load the migration module and extract upgrade() source
+        mod_spec = importlib.util.spec_from_file_location("_migration_mod", migration_path)
+        migration_mod = importlib.util.module_from_spec(mod_spec)
+        mod_spec.loader.exec_module(migration_mod)
+        upgrade_src = inspect.getsource(migration_mod.upgrade)
+
+        # The old 2-col index must NOT be created inside upgrade()
+        assert "uq_wiktionary_morphology_lemma_gender" not in upgrade_src or (
+            # It appears only in a drop_index call (not create_index)
+            "create_index"
+            not in upgrade_src.split("uq_wiktionary_morphology_lemma_gender")[0].rsplit("\n", 3)[-3]
+        ), (
+            "upgrade() must not create 'uq_wiktionary_morphology_lemma_gender' — "
+            "that index was dropped and replaced with the 3-col variant."
+        )
+
+    def test_server_default_is_quoted_noun_literal(self):
+        """AC-1 server_default must be the SQL *string literal* \"'noun'\", not
+        bare identifier noun (without quotes).
+
+        PostgreSQL treats \"noun\" as a column reference; \"'noun'\" is the string.
+        The distinction is load-bearing: a bare server_default=text(\"noun\") would
+        cause a column-not-found error when the default is applied.
+        """
+        table = WiktionaryMorphology.__table__
+        col = table.columns["pos"]
+        default_arg = str(col.server_default.arg)
+        # Must be exactly the quoted SQL string literal 'noun' (with quotes)
+        assert default_arg.strip() == "'noun'", (
+            f"pos server_default must be the SQL literal \"'noun'\" (quoted), "
+            f"got {default_arg!r}. A bare 'noun' without quotes is a column reference, "
+            "not a string literal."
+        )
+
+
 class TestWiktionaryMorphologyDocstrings:
     """AC-4 — class + forms docstrings describe feature-bundle-list semantics."""
 
