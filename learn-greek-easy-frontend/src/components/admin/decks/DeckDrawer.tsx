@@ -37,11 +37,6 @@ import { VocabWordDetail } from './VocabWordDetail';
 
 type DeckTab = 'words' | 'questions' | 'settings';
 
-/** Runtime type-guard: narrows an unknown URL value to the allowed DeckTab set. */
-function isDeckTab(value: string | null | undefined): value is DeckTab {
-  return value === 'words' || value === 'questions' || value === 'settings';
-}
-
 // ── DeckDrawer Context ────────────────────────────────────────────────────────
 
 /**
@@ -165,14 +160,17 @@ export function DeckDrawer() {
 
   const isCulture = deck?.type === 'culture';
 
-  // Resolve the active tab — default depends on deck type.
-  // isDeckTab guards against stale/unknown URL values (e.g. a bookmarked
-  // ?subtab=activity) falling through to the deck-type default.
-  const resolvedTab: DeckTab = isDeckTab(subtabParam)
-    ? subtabParam
-    : isCulture
-      ? 'questions'
-      : 'words';
+  // Resolve the active tab — validate against the DECK-TYPE-appropriate set.
+  // This prevents cross-type stale URLs (e.g. ?subtab=words on a culture deck,
+  // or ?subtab=questions on a vocab deck) from landing on an empty tab body,
+  // because those TabsContent nodes are conditionally rendered per deck type.
+  const allowedTabs: DeckTab[] = isCulture ? ['questions', 'settings'] : ['words', 'settings'];
+  const resolvedTab: DeckTab =
+    subtabParam !== null && allowedTabs.includes(subtabParam as DeckTab)
+      ? (subtabParam as DeckTab)
+      : isCulture
+        ? 'questions'
+        : 'words';
 
   // Normalize `name` to flat string fields so getLocalizedDeckName can accept it.
   // UnifiedDeckItem.name may be string | MultilingualName; prefer the flat fields.

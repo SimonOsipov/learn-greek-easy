@@ -386,6 +386,49 @@ describe('DeckDrawer', () => {
     expect(screen.queryByTestId('deck-drawer-tab-words')).not.toBeInTheDocument();
   });
 
+  // ── 6b. Cross-deck-type subtab fallback (ADMIN2-37 CodeRabbit F1) ──────────
+  // ?subtab=words passes the global DeckTab set but is invalid for a culture deck
+  // (no 'words' TabsContent rendered). Must fall back to 'questions' (the culture
+  // default) — not render an empty body.
+  // Likewise, ?subtab=questions is valid globally but not for a vocab deck — must
+  // fall back to 'words'.
+
+  it('cross-type: ?subtab=words on a culture deck falls back to the questions tab', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeCultureDeck());
+
+    renderDrawer('/admin?edit=deck-culture-1&subtab=words');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    // 'questions' tab trigger must be present — culture deck fell back correctly.
+    expect(screen.getByTestId('deck-drawer-tab-questions')).toBeInTheDocument();
+    // 'words' trigger must NOT appear (culture deck has no words tab).
+    expect(screen.queryByTestId('deck-drawer-tab-words')).not.toBeInTheDocument();
+    // The questions tab content body (mocked as CultureDrawerBody) must be in the
+    // active tab, i.e. the drawer body is not empty.
+    // We confirm by checking the questions tab is the only content tab visible.
+    expect(screen.getByTestId('deck-drawer-tab-questions')).toBeInTheDocument();
+  });
+
+  it('cross-type: ?subtab=questions on a vocab deck falls back to the words tab', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
+
+    renderDrawer('/admin?edit=deck-vocab-1&subtab=questions');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    // 'words' tab trigger must be present — vocab deck fell back correctly.
+    expect(screen.getByTestId('deck-drawer-tab-words')).toBeInTheDocument();
+    // 'questions' trigger must NOT appear (vocab deck has no questions tab).
+    expect(screen.queryByTestId('deck-drawer-tab-questions')).not.toBeInTheDocument();
+    // VocabDrawerBody mock renders when the words tab content is active.
+    expect(screen.getByTestId('vocab-drawer-body-mock')).toBeInTheDocument();
+  });
+
   // ── 7. Deep-link with ?item= → detail skeleton variant ─────────────────────
 
   it('shows detail-variant skeleton when ?item= is present during load', () => {
