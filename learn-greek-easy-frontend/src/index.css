@@ -2149,6 +2149,16 @@
     margin-top: 8px;
   }
 
+  /* Actions — absolute-positioned sibling; hidden at rest, visible on hover / focus-within */
+  .fb-card-actions {
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .fb-card:hover .fb-card-actions,
+  .fb-card:focus-within .fb-card-actions {
+    opacity: 1;
+  }
+
   /* Vote rail */
   .fb-vote-rail {
     display: flex;
@@ -3491,6 +3501,16 @@
 /* CER-16: Warning-tinted border on open rows (pending | reviewed) */
 [data-testid='admin-card-error-card'][data-state='open'] {
   border-color: hsl(var(--warning) / 0.35);
+}
+
+/* ADMIN2-36: hover/focus-reveal for Card-errors row actions (Mechanism A) */
+.cer-actions {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.cer-card:hover .cer-actions,
+.cer-card:focus-within .cer-actions {
+  opacity: 1;
 }
 
 /* Sticky-header scroll clearance — keeps scrolled-to elements below the h-16 (64px) header */
