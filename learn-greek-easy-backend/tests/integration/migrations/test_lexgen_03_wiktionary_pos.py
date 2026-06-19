@@ -249,23 +249,22 @@ def _get_unique_indexes(engine: Engine, schema: str, table: str) -> dict[str, li
                 SELECT
                     i.relname               AS idx_name,
                     a.attname               AS col_name,
-                    ix.indkey_order         AS col_order
+                    k.col_order             AS col_order
                 FROM
                     pg_class t
                     JOIN pg_namespace n     ON n.oid = t.relnamespace
                     JOIN pg_index ix        ON ix.indrelid = t.oid
                     JOIN pg_class i         ON i.oid = ix.indexrelid
-                    JOIN LATERAL UNNEST(
-                        ARRAY(SELECT generate_subscripts(ix.indkey, 1))
-                    ) WITH ORDINALITY AS ix(indkey_idx, indkey_order)
+                    JOIN LATERAL UNNEST(ix.indkey)
+                        WITH ORDINALITY AS k(attnum, col_order)
                         ON TRUE
                     JOIN pg_attribute a     ON a.attrelid = t.oid
-                                           AND a.attnum = ix.indkey[ix.indkey_idx - 1]
+                                           AND a.attnum = k.attnum
                 WHERE
                     t.relname   = :table
                     AND n.nspname = :schema
                     AND ix.indisunique = TRUE
-                ORDER BY i.relname, ix.indkey_order
+                ORDER BY i.relname, k.col_order
                 """
             ),
             {"table": table, "schema": schema},
