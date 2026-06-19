@@ -387,8 +387,11 @@ class TestParseEntries:
         assert row["gender"] == "masculine"
         assert row["glosses_en"] == "world"
         assert row["pronunciation"] == "/ˈkoz.mos/"
-        assert row["forms"]["nominative_singular"] == "κόσμος"
-        assert row["forms"]["genitive_singular"] == "κόσμου"
+        # forms is now a feature-keyed bundle list (LEXGEN-03-03), not a flat dict.
+        assert row["forms"] == [
+            {"form": "κόσμος", "features": {"case": "nominative", "number": "singular"}},
+            {"form": "κόσμου", "features": {"case": "genitive", "number": "singular"}},
+        ]
         assert filtered == 0
         assert merged == 0
 
@@ -420,7 +423,7 @@ class TestLoadDataHelpers:
 
         with patch.object(sys, "argv", ["load_wiktionary_morphology", "--force"]):
             main()
-        mock_load_data.assert_called_once_with(force=True)
+        mock_load_data.assert_called_once_with(force=True, pos="noun")
 
     @patch("src.scripts.load_wiktionary_morphology.load_data")
     def test_main_default_no_force(self, mock_load_data):
@@ -428,7 +431,7 @@ class TestLoadDataHelpers:
 
         with patch.object(sys, "argv", ["load_wiktionary_morphology"]):
             main()
-        mock_load_data.assert_called_once_with(force=False)
+        mock_load_data.assert_called_once_with(force=False, pos="noun")
 
     @patch("src.scripts.load_wiktionary_morphology.psycopg2")
     @patch("src.scripts.load_wiktionary_morphology.settings")

@@ -18,6 +18,8 @@ import psycopg2.extras
 from loguru import logger
 
 from src.config import settings
+from src.core.lexgen_forms import flat_to_bundles
+from src.schemas.lexgen import FormBundle
 
 DATA_FILE = (
     Path(__file__).resolve().parent.parent.parent.parent
@@ -110,9 +112,13 @@ def _merge_into(
 
 
 def _process_noun_entry(
-    entry: dict, merged: dict, filtered_ref: list[int], total_raw_ref: list[int]
+    entry: dict,
+    merged: dict,
+    filtered_ref: list[int],
+    total_raw_ref: list[int],
+    pos: str,
 ) -> None:
-    """Process a single noun entry, updating merged dict and counters."""
+    """Process a single entry, updating merged dict and counters."""
     total_raw_ref[0] += 1
 
     if _is_inflected_form_only(entry):
@@ -128,7 +134,7 @@ def _process_noun_entry(
     if not lemma:
         filtered_ref[0] += 1
         return
-    key = (lemma, gender)
+    key = (lemma, pos, gender)
     forms = _extract_forms(entry)
     ipa = _extract_ipa(entry)
     glosses = _extract_glosses(entry)
@@ -138,6 +144,7 @@ def _process_noun_entry(
     else:
         merged[key] = {
             "lemma": lemma,
+            "pos": pos,
             "gender": gender,
             "forms": forms,
             "pronunciation": ipa,
@@ -145,9 +152,15 @@ def _process_noun_entry(
         }
 
 
-def _parse_entries(path: Path) -> tuple[list[dict], int, int]:
-    """Parse JSONL file, returning merged list of rows keyed by (lemma, gender)."""
-    merged: dict[tuple[str, str], dict] = {}
+def _parse_entries(path: Path, pos: str = "noun") -> tuple[list[dict], int, int]:
+    """Parse JSONL file, returning merged list of rows keyed by (lemma, pos, gender).
+
+    Forms are merged as flat ``{case}_{number}`` dicts across duplicate entries,
+    then converted ONCE — after all merging completes — to feature-keyed
+    ``FormBundle`` dicts via :func:`flat_to_bundles`, so each returned row's
+    ``forms`` is a JSON-serializable bundle list.
+    """
+    merged: dict[tuple[str, str, str], dict] = {}
     filtered_ref = [0]
     total_raw_ref = [0]
 
@@ -160,16 +173,22 @@ def _parse_entries(path: Path) -> tuple[list[dict], int, int]:
                 entry = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            if entry.get("pos") != "noun":
+            if entry.get("pos") != pos:
                 continue
-            _process_noun_entry(entry, merged, filtered_ref, total_raw_ref)
+            _process_noun_entry(entry, merged, filtered_ref, total_raw_ref, pos)
+
+    # Convert each row's combined flat forms to a feature-keyed bundle list
+    # exactly once, after all cross-entry merging is complete.
+    for row in merged.values():
+        bundles = flat_to_bundles(row["forms"], pos=row["pos"])
+        row["forms"] = [bundle.model_dump(mode="json") for bundle in bundles]
 
     filtered = filtered_ref[0]
     total_raw = total_raw_ref[0]
     merged_count = max(0, total_raw - filtered - len(merged))
-    logger.info(f"Parsed {total_raw:,} noun entries from JSONL")
+    logger.info(f"Parsed {total_raw:,} {pos} entries from JSONL")
     logger.info(f"  Filtered (inflected-form refs or no gender): {filtered:,}")
-    logger.info(f"  Merged (duplicate lemma+gender): {merged_count:,}")
+    logger.info(f"  Merged (duplicate lemma+pos+gender): {merged_count:,}")
     return list(merged.values()), filtered, merged_count
 
 
@@ -192,7 +211,7 @@ def _log_mismatch_report(cursor: psycopg2.extensions.cursor) -> None:
 def _insert_rows(cursor: psycopg2.extensions.cursor, rows: list[dict]) -> tuple[int, int, int]:
     """Batch-insert rows; return (with_forms, with_ipa, with_glosses) counts."""
     insert_sql = f"""
-        INSERT INTO {TABLE} (lemma, gender, forms, pronunciation, glosses_en)
+        INSERT INTO {TABLE} (lemma, gender, forms, pos, pronunciation, glosses_en)
         VALUES %s
         ON CONFLICT DO NOTHING
     """
@@ -206,11 +225,18 @@ def _insert_rows(cursor: psycopg2.extensions.cursor, rows: list[dict]) -> tuple[
             with_ipa += 1
         if row["glosses_en"]:
             with_glosses += 1
+        # Forms arrive as a bundle list. Normalize FormBundle objects to plain
+        # JSON-serializable dicts (already-dict elements pass through unchanged).
+        forms_payload = [
+            bundle.model_dump(mode="json") if isinstance(bundle, FormBundle) else bundle
+            for bundle in row["forms"]
+        ]
         batch.append(
             (
                 row["lemma"],
                 row["gender"],
-                psycopg2.extras.Json(row["forms"]),
+                psycopg2.extras.Json(forms_payload),
+                row["pos"],
                 row["pronunciation"],
                 row["glosses_en"],
             )
@@ -225,13 +251,13 @@ def _insert_rows(cursor: psycopg2.extensions.cursor, rows: list[dict]) -> tuple[
     return with_forms, with_ipa, with_glosses
 
 
-def load_data(force: bool = False) -> None:
+def load_data(force: bool = False, pos: str = "noun") -> None:
     if not DATA_FILE.exists():
         logger.error(f"Data file not found: {DATA_FILE}")
         sys.exit(1)
 
     start = time.time()
-    rows, filtered, merged = _parse_entries(DATA_FILE)
+    rows, filtered, merged = _parse_entries(DATA_FILE, pos=pos)
 
     conn = _get_connection()
     try:
@@ -266,8 +292,9 @@ def main() -> None:
         description="Load Wiktionary noun morphology from Kaikki JSONL into reference.wiktionary_morphology"
     )
     parser.add_argument("--force", action="store_true", help="Delete existing rows and reload")
+    parser.add_argument("--pos", default="noun", help="Part of speech to load (default: noun)")
     args = parser.parse_args()
-    load_data(force=args.force)
+    load_data(force=args.force, pos=args.pos)
 
 
 if __name__ == "__main__":
