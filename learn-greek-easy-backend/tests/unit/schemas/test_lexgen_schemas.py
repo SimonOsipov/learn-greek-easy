@@ -367,3 +367,314 @@ class TestGrammarDataSchema:
             GRAMMAR_DATA_SCHEMA["noun"] = "x"  # type: ignore[index]
         # The original value survives the rejected mutation attempt.
         assert GRAMMAR_DATA_SCHEMA["noun"] == "noun.v1"
+
+
+# ---------------------------------------------------------------------------
+# LEXGEN-02-02 — Mode B adversarial / edge / negative coverage (QA-authored).
+#
+# The AC tests above (TestFieldEvidenceAndResolvedField / TestProposalDraft-
+# PosNeutral / TestGrammarDataSchema) cover the happy path + one bound + one
+# mutation each. These pin the BOUNDARIES so a future loosening is a conscious,
+# test-breaking change rather than a silent regression. All behaviors below were
+# verified live against the shipped impl (commit 5aa81a31) before being pinned.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestConfidenceBoundsAdversarial:
+    """Pin the INCLUSIVE [0.0, 1.0] bound on confidence (FieldEvidence + ResolvedField)."""
+
+    @pytest.mark.parametrize("model", [FieldEvidence, ResolvedField])
+    @pytest.mark.parametrize("valid", [0.0, 1.0, 0.5])
+    def test_confidence_inclusive_bounds_accepted(self, model, valid):
+        """ge/le are INCLUSIVE: 0.0 and 1.0 are valid endpoints, not rejected.
+
+        Guards against an off-by-epsilon regression to ``gt=0.0``/``lt=1.0``
+        (exclusive), which would wrongly reject a legitimate 0.0 (no evidence)
+        or 1.0 (certain) score.
+        """
+        instance = model(source="wiktionary", field="lemma", confidence=valid)
+        assert instance.confidence == valid
+
+    @pytest.mark.parametrize("model", [FieldEvidence, ResolvedField])
+    @pytest.mark.parametrize("invalid", [-0.01, 1.01, -1.0, 2.0])
+    def test_confidence_out_of_range_rejected(self, model, invalid):
+        """Any score just outside [0.0, 1.0] raises — pins the bound is enforced."""
+        with pytest.raises(ValidationError):
+            model(source="wiktionary", field="lemma", confidence=invalid)
+
+    @pytest.mark.parametrize("model", [FieldEvidence, ResolvedField])
+    def test_confidence_none_default(self, model):
+        """confidence defaults to None (absent), not 0.0 — absence is distinguishable."""
+        instance = model(source="s", field="f")
+        assert instance.confidence is None
+
+
+@pytest.mark.unit
+class TestFlagsDefaultNotShared:
+    """flags uses default_factory=list — each instance gets an independent list."""
+
+    @pytest.mark.parametrize("model", [FieldEvidence, ResolvedField])
+    def test_flags_default_is_per_instance(self, model):
+        """Mutating one instance's flags must NOT leak into a sibling's.
+
+        Direct guard against a ``default=[]`` regression, where every instance
+        would alias one shared module-level list (the classic Python mutable-
+        default bug). The impl uses ``default_factory=list``, so this passes.
+        """
+        a = model(source="s", field="f")
+        b = model(source="s", field="f")
+        a.flags.append("guessed")
+        assert a.flags == ["guessed"]
+        assert b.flags == []
+        assert a.flags is not b.flags
+
+    @pytest.mark.parametrize("model", [FieldEvidence, ResolvedField])
+    def test_flags_default_empty_list(self, model):
+        """flags defaults to an empty list, not None."""
+        assert model(source="s", field="f").flags == []
+
+
+@pytest.mark.unit
+class TestRequiredFields:
+    """Non-defaulted fields are required — omitting them raises (no silent default)."""
+
+    def test_field_evidence_requires_source_and_field(self):
+        """FieldEvidence(source, field) are mandatory; value/confidence/flags default."""
+        with pytest.raises(ValidationError):
+            FieldEvidence(field="lemma")  # type: ignore[call-arg]  # no source
+        with pytest.raises(ValidationError):
+            FieldEvidence(source="wiktionary")  # type: ignore[call-arg]  # no field
+        # All three optionals can be omitted once the two required are present.
+        ev = FieldEvidence(source="wiktionary", field="lemma")
+        assert ev.value is None and ev.confidence is None and ev.flags == []
+
+    def test_resolved_field_requires_field_and_source(self):
+        """ResolvedField(field, source) are mandatory."""
+        with pytest.raises(ValidationError):
+            ResolvedField(source="wiktionary")  # type: ignore[call-arg]  # no field
+        with pytest.raises(ValidationError):
+            ResolvedField(field="lemma")  # type: ignore[call-arg]  # no source
+
+    def test_proposal_draft_requires_lemma_pos_and_schema_version(self):
+        """ProposalDraft requires lemma, pos, grammar_data_schema_version.
+
+        ``resolved_fields`` defaults to [] (default_factory) and may be omitted;
+        the other three have no default and must be supplied.
+        """
+        # resolved_fields omitted -> defaults to [].
+        draft = ProposalDraft(lemma="σπίτι", pos="noun", grammar_data_schema_version="noun.v1")
+        assert draft.resolved_fields == []
+        # Each of the three required fields, omitted in turn, raises.
+        with pytest.raises(ValidationError):
+            ProposalDraft(pos="noun", grammar_data_schema_version="noun.v1")  # type: ignore[call-arg]
+        with pytest.raises(ValidationError):
+            ProposalDraft(lemma="σπίτι", grammar_data_schema_version="noun.v1")  # type: ignore[call-arg]
+        with pytest.raises(ValidationError):
+            ProposalDraft(lemma="σπίτι", pos="noun")  # type: ignore[call-arg]
+
+
+@pytest.mark.unit
+class TestProposalDraftResolvedFields:
+    """resolved_fields: list[ResolvedField] — round-trip, coercion, and rejection."""
+
+    def test_resolved_fields_round_trip(self):
+        """A list of ResolvedField instances is stored verbatim and round-trips."""
+        rf1 = ResolvedField(field="lemma", value="σπίτι", source="wiktionary", confidence=0.9)
+        rf2 = ResolvedField(field="pos", value="noun", source="spacy", flags=["low-evidence"])
+        draft = ProposalDraft(
+            lemma="σπίτι",
+            pos="noun",
+            grammar_data_schema_version="noun.v1",
+            resolved_fields=[rf1, rf2],
+        )
+        assert len(draft.resolved_fields) == 2
+        assert all(isinstance(f, ResolvedField) for f in draft.resolved_fields)
+        assert draft.resolved_fields[0].field == "lemma"
+        assert draft.resolved_fields[1].flags == ["low-evidence"]
+
+    def test_resolved_fields_default_empty_list_not_shared(self):
+        """resolved_fields default_factory => independent [] per instance."""
+        a = ProposalDraft(lemma="a", pos="noun", grammar_data_schema_version="noun.v1")
+        b = ProposalDraft(lemma="b", pos="noun", grammar_data_schema_version="noun.v1")
+        a.resolved_fields.append(ResolvedField(field="lemma", value="a", source="s"))
+        assert len(a.resolved_fields) == 1
+        assert b.resolved_fields == []
+        assert a.resolved_fields is not b.resolved_fields
+
+    def test_resolved_fields_coerces_valid_dict(self):
+        """PINNED BEHAVIOR: a well-formed dict is coerced into a ResolvedField.
+
+        Pydantic v2 model-validates each list element; a dict carrying the
+        required keys (field, source) becomes a real ResolvedField instance.
+        """
+        draft = ProposalDraft(
+            lemma="σπίτι",
+            pos="noun",
+            grammar_data_schema_version="noun.v1",
+            resolved_fields=[{"field": "lemma", "value": "σπίτι", "source": "wiktionary"}],
+        )
+        assert isinstance(draft.resolved_fields[0], ResolvedField)
+        assert draft.resolved_fields[0].field == "lemma"
+        assert draft.resolved_fields[0].source == "wiktionary"
+
+    def test_resolved_fields_dict_missing_required_key_rejected(self):
+        """A dict lacking a required ResolvedField key (source) is rejected.
+
+        Coercion does NOT paper over a missing required field — the nested
+        validation still fires.
+        """
+        with pytest.raises(ValidationError):
+            ProposalDraft(
+                lemma="σπίτι",
+                pos="noun",
+                grammar_data_schema_version="noun.v1",
+                resolved_fields=[{"field": "lemma", "value": "σπίτι"}],  # no source
+            )
+
+    def test_resolved_fields_non_model_element_rejected(self):
+        """A non-dict, non-ResolvedField element (an int) is rejected.
+
+        Pins that the list is typed: ``resolved_fields=[5]`` raises rather than
+        silently storing a bare int.
+        """
+        with pytest.raises(ValidationError):
+            ProposalDraft(
+                lemma="σπίτι",
+                pos="noun",
+                grammar_data_schema_version="noun.v1",
+                resolved_fields=[5],  # type: ignore[list-item]
+            )
+
+
+@pytest.mark.unit
+class TestProposalDraftPosNeutralDeep:
+    """Deep POS-neutrality: pos is unconstrained free text; no noun-only structure."""
+
+    @pytest.mark.parametrize("pos", ["noun", "verb", "adjective", "adverb", "pronoun", "ADP", "x"])
+    def test_pos_accepts_arbitrary_part_of_speech(self, pos):
+        """pos accepts any POS string — no enum/Literal gate.
+
+        A future enum constraint (e.g. ``Literal["noun", "verb"]``) would break
+        this, surfacing the POS-neutrality contract regression at review time.
+        """
+        draft = ProposalDraft(lemma="x", pos=pos, grammar_data_schema_version="noun.v1")
+        assert draft.pos == pos
+
+    def test_pos_is_plain_str_annotation(self):
+        """The pos field annotation is exactly ``str`` (not an enum/Literal).
+
+        Direct structural pin of POS-neutrality independent of value-level tests:
+        if someone narrows the annotation, this fails immediately.
+        """
+        assert ProposalDraft.model_fields["pos"].annotation is str
+
+    def test_no_noun_only_structural_fields(self):
+        """No noun-only field (gender/cases/number/declension) exists on the model.
+
+        Broader than the AC's gender-only check: a whole family of noun-shaped
+        fields is forbidden, so POS-neutrality cannot erode field-by-field.
+        """
+        field_names = set(ProposalDraft.model_fields.keys())
+        for noun_only in ("gender", "cases", "case", "number", "declension", "article"):
+            assert noun_only not in field_names
+        assert field_names == {
+            "lemma",
+            "pos",
+            "resolved_fields",
+            "grammar_data_schema_version",
+        }
+
+    def test_extra_noun_only_kwarg_is_ignored_not_stored(self):
+        """PINNED BEHAVIOR: an extra ``gender=`` kwarg is silently IGNORED.
+
+        Pydantic's default ``extra="ignore"`` means a noun-only kwarg neither
+        raises nor lands as data — it cannot leak in as a hidden field. (See QA
+        FINDINGS: it is ignored, not *forbidden*; a future ``extra="forbid"``
+        would make this raise instead — pinned so that is a conscious change.)
+        """
+        draft = ProposalDraft(
+            lemma="σπίτι",
+            pos="noun",
+            grammar_data_schema_version="noun.v1",
+            gender="neuter",  # type: ignore[call-arg]
+        )
+        assert not hasattr(draft, "gender")
+        assert draft.model_extra is None
+
+    def test_empty_pos_currently_allowed(self):
+        """CONTRACT PIN + FINDING: ``pos=""`` is accepted today (no min_length on pos).
+
+        ``pos: str`` carries no ``min_length``, so the empty string constructs —
+        even though an empty part-of-speech is semantically meaningless. This
+        mirrors the ``WordProposal.pos`` free-text precedent (LEXGEN-01) and is
+        pinned deliberately: a future decision to require ``min_length=1`` on pos
+        is then a conscious, test-breaking change. See QA FINDINGS.
+        """
+        draft = ProposalDraft(lemma="σπίτι", pos="", grammar_data_schema_version="noun.v1")
+        assert draft.pos == ""
+
+
+@pytest.mark.unit
+class TestProposalDraftLemmaConstraint:
+    """lemma carries min_length=1 (mirrors FormBundle.form)."""
+
+    def test_empty_lemma_rejected(self):
+        """AC-2 boundary: ``lemma=""`` raises (min_length=1)."""
+        with pytest.raises(ValidationError):
+            ProposalDraft(lemma="", pos="noun", grammar_data_schema_version="noun.v1")
+
+    def test_single_char_lemma_accepted(self):
+        """Boundary: exactly one character satisfies min_length=1."""
+        draft = ProposalDraft(lemma="ο", pos="noun", grammar_data_schema_version="noun.v1")
+        assert draft.lemma == "ο"
+
+
+@pytest.mark.unit
+class TestGrammarDataSchemaImmutabilityAdversarial:
+    """Every mutation verb on GRAMMAR_DATA_SCHEMA is rejected; contents stay intact."""
+
+    def test_delitem_rejected(self):
+        """``del GRAMMAR_DATA_SCHEMA["noun"]`` raises and the entry survives."""
+        with pytest.raises(TypeError):
+            del GRAMMAR_DATA_SCHEMA["noun"]  # type: ignore[misc]
+        assert GRAMMAR_DATA_SCHEMA["noun"] == "noun.v1"
+
+    def test_pop_unavailable(self):
+        """A read-only MappingProxyType exposes no ``pop`` — calling it raises.
+
+        MappingProxyType has no ``pop``/``clear``/``update`` methods at all, so
+        attribute access raises AttributeError (a stricter guarantee than a
+        mutable dict whose pop would mutate).
+        """
+        with pytest.raises(AttributeError):
+            GRAMMAR_DATA_SCHEMA.pop("noun")  # type: ignore[attr-defined]
+        assert GRAMMAR_DATA_SCHEMA["noun"] == "noun.v1"
+
+    def test_update_unavailable(self):
+        """``.update({...})`` is not exposed by the proxy — raises AttributeError."""
+        with pytest.raises(AttributeError):
+            GRAMMAR_DATA_SCHEMA.update({"verb": "verb.v1"})  # type: ignore[attr-defined]
+        assert "verb" not in GRAMMAR_DATA_SCHEMA
+
+    def test_clear_unavailable(self):
+        """``.clear()`` is not exposed by the proxy — raises AttributeError."""
+        with pytest.raises(AttributeError):
+            GRAMMAR_DATA_SCHEMA.clear()  # type: ignore[attr-defined]
+        assert len(GRAMMAR_DATA_SCHEMA) == 1
+
+    def test_setdefault_unavailable(self):
+        """``.setdefault`` is not exposed by the proxy — raises AttributeError."""
+        with pytest.raises(AttributeError):
+            GRAMMAR_DATA_SCHEMA.setdefault("verb", "verb.v1")  # type: ignore[attr-defined]
+        assert "verb" not in GRAMMAR_DATA_SCHEMA
+
+    def test_contents_intact_after_all_failed_mutations(self):
+        """After every rejected mutation above, the mapping is exactly {noun: noun.v1}."""
+        assert len(GRAMMAR_DATA_SCHEMA) == 1
+        assert dict(GRAMMAR_DATA_SCHEMA) == {"noun": "noun.v1"}
+
+    def test_missing_key_raises_keyerror(self):
+        """A read of an absent pos (e.g. "verb") raises KeyError — no verb schema yet."""
+        with pytest.raises(KeyError):
+            _ = GRAMMAR_DATA_SCHEMA["verb"]
