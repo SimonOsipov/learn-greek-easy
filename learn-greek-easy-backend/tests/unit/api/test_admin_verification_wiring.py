@@ -764,3 +764,105 @@ class TestAdminCallSiteCrashRegression:
         )
         # Also: wiktionary_local must be set (verify() ran without TypeError)
         assert result.wiktionary_local is not None
+
+
+# ---------------------------------------------------------------------------
+# Adversarial / edge coverage added by QA (Mode B, LEXGEN-03-04)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestAdminCallSiteCrashAdversarial:
+    """Adversarial edge cases for the F4 admin call site fix."""
+
+    @pytest.mark.asyncio
+    async def test_dict_corruption_shape_is_absent_from_wiktionary_forms(self) -> None:
+        """Confirm the corrupted {'form': 'features'} shape NEVER reaches verify().
+
+        The old dict(list_of_dicts) on a list like
+            [{"form": "σπίτι", "features": {...}}, ...]
+        raises TypeError. This test confirms the fixed path produces proper
+        {case_number: form_string} keys — ruling out any scenario where the old
+        code somehow snuck through without crashing but yielded garbage.
+        """
+        mock_local_svc = MagicMock()
+        mock_local_svc.verify.return_value = _make_local_result(tier="auto_approve")
+        mock_cross_svc = MagicMock()
+        mock_cross_svc.compare.return_value = _make_cross_result()
+        mock_lexicon_svc = AsyncMock()
+        mock_lexicon_svc.get_declensions.return_value = []
+
+        wikt_entry = _make_wiktionary_entry_bundle_list()
+        captured: dict = {}
+
+        patches = TestAdminCallSiteCrashRegression()._base_patches_bundle_list(
+            mock_local_svc, mock_cross_svc, wikt_entry, captured
+        )
+        with patches[0], patches[1], patches[2], patches[3], patches[4]:
+            await _run_verification_stage(
+                generated_data=_make_noun_data(),
+                normalized_lemma=_make_normalized_lemma(),
+                lexicon_svc=mock_lexicon_svc,
+                lemma="σπίτι",
+                secondary_data=_make_noun_data(),
+            )
+
+        wikt_forms = captured.get("wiktionary_forms", {})
+        # The corruption artifact "form" / "features" as dict keys must be absent
+        assert (
+            "form" not in wikt_forms
+        ), "wiktionary_forms contained 'form' key — old dict(list_of_dicts) corruption path"
+        assert (
+            "features" not in wikt_forms
+        ), "wiktionary_forms contained 'features' key — old dict(list_of_dicts) corruption path"
+        # All keys must follow the case_number pattern
+        for key in wikt_forms:
+            assert "_" in key, f"Unexpected non-flat key in wiktionary_forms: {key!r}"
+
+    @pytest.mark.asyncio
+    async def test_wiktionary_none_entry_skips_verify_cleanly(self) -> None:
+        """When wiktionary_entry is None the verify() call is skipped entirely.
+
+        The guard `if wiktionary_entry is not None` must be intact after the fix.
+        This ensures the None-path didn't break when the bundles_to_flat call
+        was inserted around it.
+        """
+        mock_local_svc = MagicMock()
+        mock_local_svc.verify.return_value = _make_local_result(tier="auto_approve")
+        mock_cross_svc = MagicMock()
+        mock_cross_svc.compare.return_value = _make_cross_result()
+        mock_lexicon_svc = AsyncMock()
+        mock_lexicon_svc.get_declensions.return_value = []
+
+        mock_wikt_morphology_svc = AsyncMock()
+        mock_wikt_morphology_svc.get_entry.return_value = None  # no entry
+        mock_wikt_verification_svc = MagicMock()
+
+        with (
+            patch("src.api.v1.admin.get_local_verification_service", return_value=mock_local_svc),
+            patch(
+                "src.api.v1.admin.get_cross_ai_verification_service",
+                return_value=mock_cross_svc,
+            ),
+            patch(
+                "src.api.v1.admin.WiktionaryMorphologyService",
+                return_value=mock_wikt_morphology_svc,
+            ),
+            patch(
+                "src.api.v1.admin.WiktionaryVerificationService",
+                return_value=mock_wikt_verification_svc,
+            ),
+            patch("src.api.v1.admin.get_session_factory"),
+        ):
+            result = await _run_verification_stage(
+                generated_data=_make_noun_data(),
+                normalized_lemma=_make_normalized_lemma(),
+                lexicon_svc=mock_lexicon_svc,
+                lemma="σπίτι",
+                secondary_data=_make_noun_data(),
+            )
+
+        # verify() must NOT have been called (no wiktionary entry)
+        mock_wikt_verification_svc.verify.assert_not_called()
+        # wiktionary_local stays None
+        assert result.wiktionary_local is None

@@ -354,3 +354,99 @@ class TestGetEntryCommentAccuracy:
             "Expected get_entry disambiguation comment to name '(lemma, pos, gender)' "
             f"but got source:\n{source}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Adversarial / edge coverage added by QA (Mode B, LEXGEN-03-04)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestGetFormBundlesAdversarial:
+    """Edge and adversarial cases for get_form_bundles (AC-1, AC-3)."""
+
+    @pytest.mark.asyncio
+    async def test_get_form_bundles_with_gender_narrows_correctly(self) -> None:
+        """gender kwarg is forwarded: gender-filtered path uses scalar_one_or_none.
+
+        Regression guard: if someone accidentally drops the gender kwarg forwarding
+        in get_form_bundles → get_entry, the gender-filtered mock path won't match
+        and the mock returns None instead of the entry.
+        """
+        bundle_forms = [
+            {"form": "η τράπεζα", "features": {"case": "nominative", "number": "singular"}},
+        ]
+        entry = MagicMock()
+        entry.lemma = "τράπεζα"
+        entry.gender = "feminine"
+        entry.forms = bundle_forms
+
+        db = _make_db(row=entry, gender_filtered=True)
+        service = WiktionaryMorphologyService(db)
+
+        result = await service.get_form_bundles("τράπεζα", pos="noun", gender="feminine")
+
+        assert result is not None
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert isinstance(result[0], FormBundle)
+
+    @pytest.mark.asyncio
+    async def test_get_form_bundles_verb_pos_returns_none_for_noun_only_entry(self) -> None:
+        """pos filter is load-bearing: requesting pos='verb' when only 'noun' exists returns None.
+
+        If the pos filter were dropped, a noun-only row would be returned for a
+        verb lookup — a silent semantic error. This test catches that regression.
+        """
+        # The mock returns no rows for pos='verb' (scalar path returns None)
+        db = _make_db(row=None, gender_filtered=False)
+        service = WiktionaryMorphologyService(db)
+
+        result = await service.get_form_bundles("σπίτι", pos="verb")
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_single_bundle_entry_flat_dict_is_not_corrupted(self) -> None:
+        """A single-cell bundle list produces a 1-key flat dict, not dict corruption.
+
+        The old dict(entry.forms) on a list of dicts would raise TypeError.
+        The new bundles_to_flat path must produce a proper {case_number: form} dict
+        even when only one bundle is present.
+        """
+        single_bundle = [
+            {"form": "σπίτι", "features": {"case": "nominative", "number": "singular"}},
+        ]
+        entry = _make_bundle_entry()
+        entry.forms = single_bundle
+
+        db = _make_db(row=entry)
+        service = WiktionaryMorphologyService(db)
+
+        result = await service.get_declensions("σπίτι")
+
+        assert result is not None
+        assert isinstance(result, dict)
+        # Must be string-keyed flat dict, NOT integer-keyed (corruption)
+        assert all(isinstance(k, str) for k in result.keys())
+        assert "nominative_singular" in result
+        assert result["nominative_singular"] == "σπίτι"
+        # The old dict(entry.forms) corruption would yield {'form': 'features'} —
+        # verify that exact corruption is absent
+        assert "form" not in result
+        assert "features" not in result
+
+    @pytest.mark.asyncio
+    async def test_get_entry_pos_verb_returns_verb_row_in_homograph_case(self) -> None:
+        """get_entry(lemma, pos='verb') returns the verb row (not None, not the noun row).
+
+        Complements test_get_entry_pos_filter_disambiguates_multi_pos which only checks
+        the noun side. Both POS directions must work.
+        """
+        verb_entry = _make_bundle_entry(lemma="κλείνω", gender=None, pos="verb")
+        db = _make_db(row=verb_entry)  # mock returns verb entry for this db
+
+        svc = WiktionaryMorphologyService(db)
+        result = await svc.get_entry("κλείνω", pos="verb")
+
+        assert result is verb_entry
