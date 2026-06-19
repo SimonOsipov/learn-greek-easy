@@ -1,13 +1,13 @@
 """Unit tests for WordProposal state machine + transition guard (LEXGEN-01-02).
 
 22 spec-derived tests covering:
-- All 10 legal transition edges (specs 1–10)
+- All 10 legal transition edges (specs 1-10)
 - Exact edge-set assertion (spec 11)
-- Illegal transition examples (specs 12–14)
-- Terminal-state guards: rejected, shipped (specs 15–16)
+- Illegal transition examples (specs 12-14)
+- Terminal-state guards: rejected, shipped (specs 15-16)
 - auto_approved only-to-shipped guard (spec 17)
 - Self-transition prohibition (spec 18)
-- shipped_word_entry_id pre-condition (specs 19–20)
+- shipped_word_entry_id pre-condition (specs 19-20)
 - trust_score irrelevance (spec 21)
 - IllegalProposalTransition is a typed Exception (spec 22)
 
@@ -39,7 +39,7 @@ def _p(status: WordProposalState, **kw) -> WordProposal:
 
 
 # ---------------------------------------------------------------------------
-# Spec 1–10: LEGAL transitions — transition() must succeed and mutate status
+# Spec 1-10: LEGAL transitions — transition() must succeed and mutate status
 # ---------------------------------------------------------------------------
 
 
@@ -137,7 +137,7 @@ class TestAllowedTransitionsEdgeSet:
 
 
 # ---------------------------------------------------------------------------
-# Specs 12–14: Specific illegal transitions must raise
+# Specs 12-14: Specific illegal transitions must raise
 # ---------------------------------------------------------------------------
 
 
@@ -162,7 +162,7 @@ class TestIllegalTransitionExamples:
 
 
 # ---------------------------------------------------------------------------
-# Specs 15–17: Terminal states and constrained states
+# Specs 15-17: Terminal states and constrained states
 # ---------------------------------------------------------------------------
 
 
@@ -207,7 +207,7 @@ class TestSelfTransitionProhibition:
 
 
 # ---------------------------------------------------------------------------
-# Specs 19–20: shipped_word_entry_id pre-condition guard
+# Specs 19-20: shipped_word_entry_id pre-condition guard
 # ---------------------------------------------------------------------------
 
 
