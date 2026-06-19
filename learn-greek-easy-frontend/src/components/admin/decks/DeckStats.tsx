@@ -17,7 +17,6 @@ export interface DeckStatsProps {
   totalCultureQuestions: number;
   /** Pre-rounded integer from the caller; rendered as-is. */
   avgCardsPerDeck: number;
-  onCardClick?: (filter: 'all' | 'vocabulary' | 'culture') => void;
 }
 
 export function DeckStats({
@@ -28,7 +27,6 @@ export function DeckStats({
   cultureCount,
   totalCultureQuestions,
   avgCardsPerDeck,
-  onCardClick,
 }: DeckStatsProps) {
   const { t } = useTranslation('admin');
   return (
@@ -39,7 +37,6 @@ export function DeckStats({
         n={totalDecks}
         icon={<Layers className="h-4 w-4" />}
         tone="blue"
-        onClick={() => onCardClick?.('all')}
       />
       <StatCard
         title={t('decks.stats.vocabulary')}
@@ -47,7 +44,6 @@ export function DeckStats({
         n={vocabularyCount}
         icon={<BookOpen className="h-4 w-4" />}
         tone="violet"
-        onClick={() => onCardClick?.('vocabulary')}
       />
       <StatCard
         title={t('decks.stats.culture')}
@@ -55,7 +51,6 @@ export function DeckStats({
         n={cultureCount}
         icon={<Compass className="h-4 w-4" />}
         tone="cyan"
-        onClick={() => onCardClick?.('culture')}
       />
       <StatCard
         title={t('decks.stats.avgCardsPerDeck')}
@@ -63,7 +58,6 @@ export function DeckStats({
         n={avgCardsPerDeck}
         icon={<TrendingUp className="h-4 w-4" />}
         tone="green"
-        onClick={() => onCardClick?.('all')}
       />
     </div>
   );
