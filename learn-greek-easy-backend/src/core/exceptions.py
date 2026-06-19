@@ -590,3 +590,24 @@ class NounGenerationError(Exception):
         self.detail = detail
         self.raw_content = raw_content
         super().__init__(detail)
+
+
+# ============================================================================
+# LEXGEN Exceptions
+# ============================================================================
+
+
+class IllegalProposalTransition(Exception):
+    """Raised when a WordProposal state transition is not permitted.
+
+    This is a pure domain exception (not an HTTP exception) — it is the
+    caller's responsibility to map it to an appropriate HTTP response.
+    """
+
+    def __init__(self, from_state: str, to_state: str, reason: str = "") -> None:
+        self.from_state = from_state
+        self.to_state = to_state
+        msg = f"Illegal transition: {from_state!r} → {to_state!r}"
+        if reason:
+            msg += f" ({reason})"
+        super().__init__(msg)
