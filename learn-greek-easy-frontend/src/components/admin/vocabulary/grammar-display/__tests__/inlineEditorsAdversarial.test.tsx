@@ -198,7 +198,7 @@ describe('AC-3: audio-regen guard for brand-new examples (id = empty string)', (
           id: 'ex-known',
           greek: 'Γνωστό.',
           english: 'Known.',
-          russian: null,
+          russian: undefined,
           audio_key: null,
           audio_url: null,
           audio_status: 'ready' as const,

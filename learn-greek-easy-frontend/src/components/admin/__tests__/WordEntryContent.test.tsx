@@ -96,7 +96,11 @@ beforeEach(() => {
   });
 });
 
-function renderComponent(props = { wordEntryId: 'we-123' }) {
+function renderComponent(
+  props: { wordEntryId: string; deckId?: string; onUnlinked?: () => void } = {
+    wordEntryId: 'we-123',
+  }
+) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
