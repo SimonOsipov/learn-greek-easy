@@ -261,7 +261,7 @@ export function CultureDrawerBody({ deck }: CultureDrawerBodyProps) {
                       setQuestionToDelete(question);
                     }}
                   >
-                    <Trash2 className="size-4 text-muted-foreground" />
+                    <Trash2 className="size-4 text-destructive" />
                   </button>
                 </div>
               </div>

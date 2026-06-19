@@ -280,7 +280,7 @@ export function VocabDrawerBody({ deck }: VocabDrawerBodyProps) {
                       setCardToDelete(card);
                     }}
                   >
-                    <Trash2 className="size-4 text-muted-foreground" />
+                    <Trash2 className="size-4 text-destructive" />
                   </button>
                 </div>
               </div>
