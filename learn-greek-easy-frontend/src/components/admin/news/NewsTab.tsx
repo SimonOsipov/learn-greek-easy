@@ -85,8 +85,6 @@ export const NewsTab: React.FC<NewsTabProps> = ({ createOpen, onCreateOpenChange
           n={total}
           icon={<Newspaper />}
           tone="blue"
-          bars={[4, 6, 3, 8, 5, 7, 9, 12, 6]}
-          barsTestId="stat-bars-total"
         />
         {/* Card #2 — Audio coverage */}
         <StatCard
@@ -95,8 +93,6 @@ export const NewsTab: React.FC<NewsTabProps> = ({ createOpen, onCreateOpenChange
           n={audioCount}
           icon={<Play />}
           tone="violet"
-          bars={[10, 12, 11, 12, 13, 12, 12, 13, 12]}
-          barsTestId="stat-bars-audio"
         />
         {/* Card #3 — B1 coverage */}
         <StatCard
@@ -109,11 +105,9 @@ export const NewsTab: React.FC<NewsTabProps> = ({ createOpen, onCreateOpenChange
           }
           icon={<RefreshCcw />}
           tone="amber"
-          bars={[8, 9, 10, 11, 10, 11, 12, 12, 11]}
-          barsTestId="stat-bars-b1"
         />
         {/* Card #4 — Country (Cyprus only for now)
-            TODO(NADM-multi-country): replace literal "CY" and flat bars with
+            TODO(NADM-multi-country): replace literal "CY" with
             per-country data once multi-country support lands. */}
         <StatCard
           title={t('news.stats.countries')}
@@ -121,8 +115,6 @@ export const NewsTab: React.FC<NewsTabProps> = ({ createOpen, onCreateOpenChange
           n="CY"
           icon={<Globe />}
           tone="cyan"
-          bars={[3, 3, 3, 3, 3, 3, 3, 3, 3]}
-          barsTestId="stat-bars-country"
         />
       </div>
 

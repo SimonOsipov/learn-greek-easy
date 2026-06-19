@@ -223,7 +223,7 @@ export function NewsToolbar() {
         options={COUNTRY_OPTIONS}
         value={countryFilter as CountryValue}
         onChange={handleCountryChange}
-        label="Country"
+        ariaLabel={t('news.toolbar.country')}
       />
 
       {/* Level filter */}
@@ -231,7 +231,7 @@ export function NewsToolbar() {
         options={LEVEL_OPTIONS}
         value={levelFilter}
         onChange={handleLevelChange}
-        label="Level"
+        ariaLabel={t('news.toolbar.level')}
       />
 
       {/* Sort select */}

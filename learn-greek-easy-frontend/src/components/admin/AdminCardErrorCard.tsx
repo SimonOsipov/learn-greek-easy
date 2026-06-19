@@ -189,7 +189,7 @@ export const AdminCardErrorCard: React.FC<AdminCardErrorCardProps> = ({
       tabIndex={0}
       onClick={handleRowClick}
       onKeyDown={handleRowKeyDown}
-      className="cursor-pointer hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="cer-card cursor-pointer hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <CardHeader className="pb-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -230,7 +230,7 @@ export const AdminCardErrorCard: React.FC<AdminCardErrorCardProps> = ({
           </div>
 
           {/* Action buttons — edit pencil then destructive trash (Changelog parity) */}
-          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <div className="cer-actions flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
               type="button"
               variant="ghost"

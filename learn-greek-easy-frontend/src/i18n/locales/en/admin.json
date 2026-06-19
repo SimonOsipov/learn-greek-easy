@@ -557,7 +557,7 @@
         "linkedSituation": "Linked situation"
       },
       "untitled": "(untitled)",
-      "save": "Save & close",
+      "save": "Save changes",
       "saving": "Saving…",
       "cancel": "Cancel",
       "regenerateTranslations": "Regenerate translations",
@@ -565,7 +565,7 @@
       "published": "Published",
       "publishedPill": "Published",
       "draftPill": "Draft — not visible",
-      "publishedOn": "Published {{date}}",
+      "publishedOn": "Article date {{date}}",
       "publishCta": "Mark as Published",
       "publishChangesCta": "Publish changes",
       "saveFirst": "Save changes first",
@@ -607,7 +607,9 @@
         "scenarioB1": "Scenario — B1 (Greek)",
         "scenarioB1Helper": "Visible to B1 learners as the article body",
         "titleA2": "Title — A2 (Greek)",
-        "scenarioA2": "Scenario — A2 (Greek)"
+        "scenarioA2": "Scenario — A2 (Greek)",
+        "b1SectionLabel": "B1 content",
+        "a2SectionLabel": "A2 content"
       },
       "image": {
         "kicker": "Source image",
@@ -616,7 +618,8 @@
         "altText": "Alt text — English",
         "photoCredit": "Photo credit",
         "invalidUrl": "Image URL is not valid",
-        "altWarning": "This article has no alt text. Consider adding it for accessibility before publishing."
+        "altWarning": "This article has no alt text. Consider adding it for accessibility before publishing.",
+        "missingAlt": "This image has no alt text — consider adding it for accessibility."
       },
       "linkedSituation": {
         "kicker": "Linked situation",
@@ -634,6 +637,8 @@
     },
     "toolbar": {
       "searchPlaceholder": "Search by title, body, or person…",
+      "country": "Country",
+      "level": "Level",
       "sort": {
         "newest": "Newest first",
         "oldest": "Oldest first",

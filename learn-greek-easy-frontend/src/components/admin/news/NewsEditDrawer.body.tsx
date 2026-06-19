@@ -66,24 +66,32 @@ export const NewsEditDrawerBody: React.FC<Props> = () => {
 
       {/* 2-col row: Scenario B1 (left) + A2 pair (right) */}
       <div className="dr-2col">
-        {/* Left: Scenario — B1 (Greek) — replaces the old Title B1 duplicate */}
-        <Field
-          label={t('news.drawer.body.scenarioB1')}
-          hint={t('news.drawer.body.scenarioB1Helper')}
-          htmlFor="news-body-scenario-el"
-        >
-          <Textarea
-            id="news-body-scenario-el"
-            rows={5}
-            lang="el"
-            className="serif"
-            {...register('title_el')}
-            data-testid="news-drawer-body-scenario-el"
-          />
-        </Field>
-
-        {/* Right: A2 pair — Title A2 + Scenario A2 */}
+        {/* Left: B1 section */}
         <div className="dr-field">
+          <p className="dr-section-label" data-testid="news-drawer-body-b1-label">
+            {t('news.drawer.body.b1SectionLabel')}
+          </p>
+          <Field
+            label={t('news.drawer.body.scenarioB1')}
+            hint={t('news.drawer.body.scenarioB1Helper')}
+            htmlFor="news-body-scenario-el"
+          >
+            <Textarea
+              id="news-body-scenario-el"
+              rows={5}
+              lang="el"
+              className="serif"
+              {...register('title_el')}
+              data-testid="news-drawer-body-scenario-el"
+            />
+          </Field>
+        </div>
+
+        {/* Right: A2 section */}
+        <div className="dr-field">
+          <p className="dr-section-label" data-testid="news-drawer-body-a2-label">
+            {t('news.drawer.body.a2SectionLabel')}
+          </p>
           <Field label={t('news.drawer.body.titleA2')} htmlFor="news-body-title-el-a2">
             <Textarea
               id="news-body-title-el-a2"

@@ -299,6 +299,15 @@ jobs:
             --environment production \
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
 
+      - name: Set version variables on Frontend service
+        env:
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+        run: |
+          railway variables \
+            --set "RAILWAY_GIT_COMMIT_SHA=${{ github.sha }}" \
+            --service Frontend \
+            --skip-deploys
+
       - name: Deploy Frontend (wait for health)
         id: deploy
         env:

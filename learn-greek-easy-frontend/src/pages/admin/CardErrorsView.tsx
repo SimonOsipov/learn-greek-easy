@@ -8,32 +8,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { adminAPI } from '@/services/adminAPI';
 import type { AdminCardErrorResponse } from '@/types/cardError';
 
-// ─── sparkline helpers ───────────────────────────────────────────────────────
-
-const BUCKET_COUNT = 9;
 const WINDOW_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-
-/**
- * Bucket reports whose `created_at` falls in the last 30 days into 9 equal
- * time slices.  Returns an array of exactly BUCKET_COUNT non-NaN integers.
- */
-function bucketByCreatedAt(
-  reports: AdminCardErrorResponse[],
-  predicate: (r: AdminCardErrorResponse) => boolean,
-  now: number
-): number[] {
-  const buckets = new Array<number>(BUCKET_COUNT).fill(0);
-  const windowStart = now - WINDOW_MS;
-  const bucketMs = WINDOW_MS / BUCKET_COUNT;
-  for (const r of reports) {
-    if (!predicate(r)) continue;
-    const t = new Date(r.created_at).getTime();
-    if (Number.isNaN(t) || t < windowStart || t > now) continue;
-    const idx = Math.min(BUCKET_COUNT - 1, Math.floor((t - windowStart) / bucketMs));
-    buckets[idx]++;
-  }
-  return buckets;
-}
 
 // ─── median helper ────────────────────────────────────────────────────────────
 
@@ -103,17 +78,6 @@ export default function CardErrorsView() {
       .filter((ms) => !Number.isNaN(ms) && ms >= 0);
     const medianMs = median(fixedDurationsMs);
 
-    // Sparklines
-    const sparkTotal = bucketByCreatedAt(allReports, () => true, now);
-    const sparkAwaiting = bucketByCreatedAt(allReports, (r) => r.status === 'PENDING', now);
-    const sparkFixed = bucketByCreatedAt(allReports, (r) => r.status === 'FIXED', now);
-    // Median tile sparkline: daily trend of all fixed durations bucketed by resolved_at
-    const sparkMedian = bucketByCreatedAt(
-      allReports,
-      (r) => r.status === 'FIXED' && Boolean(r.resolved_at),
-      now
-    );
-
     // ── subline vars (CER-08) ────────────────────────────────────────────────
 
     // Tile #1: distinct deck count
@@ -161,10 +125,6 @@ export default function CardErrorsView() {
       awaitingReview,
       fixedAllTime,
       medianDisplay: formatMedianTimeToFix(medianMs),
-      sparkTotal,
-      sparkAwaiting,
-      sparkFixed,
-      sparkMedian,
       sublines: {
         totalReports: { N: distinctDecks },
         awaitingReview: { age: oldestAge, K: cultureCount, W: wordCount },
@@ -205,7 +165,6 @@ export default function CardErrorsView() {
           sub={sublineTotal}
           tone="cyan"
           icon={<AlertTriangle />}
-          bars={stats.sparkTotal}
           footerLabel={t('cardErrors.stats.footerWindow')}
         />
         <StatCard
@@ -214,7 +173,6 @@ export default function CardErrorsView() {
           sub={sublineAwaiting}
           tone="amber"
           icon={<Clock />}
-          bars={stats.sparkAwaiting}
           footerLabel={t('cardErrors.stats.footerWindow')}
         />
         <StatCard
@@ -223,7 +181,6 @@ export default function CardErrorsView() {
           sub={sublineFixed}
           tone="green"
           icon={<CheckCircle />}
-          bars={stats.sparkFixed}
           footerLabel={t('cardErrors.stats.footerWindow')}
         />
         <StatCard
@@ -232,7 +189,6 @@ export default function CardErrorsView() {
           sub={sublineMedian}
           tone="violet"
           icon={<Gauge />}
-          bars={stats.sparkMedian}
           footerLabel={t('cardErrors.stats.footerWindow')}
         />
       </section>
