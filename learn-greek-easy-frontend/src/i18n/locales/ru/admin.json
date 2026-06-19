@@ -592,7 +592,7 @@
         "linkedSituation": "Связанная ситуация"
       },
       "untitled": "(без названия)",
-      "save": "Сохранить и закрыть",
+      "save": "Сохранить изменения",
       "saving": "Сохранение…",
       "cancel": "Отмена",
       "regenerateTranslations": "Перегенерировать переводы",
@@ -600,7 +600,7 @@
       "published": "Опубликовано",
       "publishedPill": "Опубликовано",
       "draftPill": "Черновик — не виден",
-      "publishedOn": "Опубликовано {{date}}",
+      "publishedOn": "Дата статьи {{date}}",
       "publishCta": "Опубликовать",
       "publishChangesCta": "Опубликовать изменения",
       "saveFirst": "Сначала сохраните изменения",

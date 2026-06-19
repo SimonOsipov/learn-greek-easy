@@ -304,7 +304,7 @@ Current consumers (all in `src/index.css`):
 | `.drawer-title` | H2 typography (Inter Tight 22/700, `-0.015em`, line-height 1.25, max-width 640px). |
 | `.drawer-meta` | Optional badge row, sibling of `.drawer-head-row` inside `.drawer-head-content`. |
 
-**PR delta (ADMIN2-16 / ANDD-03):** The `.drawer-head-content` JSX wrapper is currently only applied in `AnnouncementDetailsDrawer.tsx`. The 5 other drawer consumers (`AnnouncementComposeDrawer`, `ChangelogEditorDrawer`, `DeckDrawer`, `NewsEditDrawer`, `SituationDrawer`) reference these classes but lack the wrapper; a sweep is queued as a follow-up to keep this PR's blast radius small.
+**PR delta (ADMIN2-16 / ANDD-03):** The `.drawer-head-content` JSX wrapper is applied in `AnnouncementDetailsDrawer.tsx`, `ChangelogEditorDrawer.tsx`, `DeckDrawer.tsx`, and `NewsEditDrawer.tsx`. The remaining consumers (`AnnouncementComposeDrawer`, `SituationDrawer`) reference these classes but lack the wrapper; a sweep is queued as a follow-up.
 
 ### Full-screen drawer variant (`size="full"`)
 

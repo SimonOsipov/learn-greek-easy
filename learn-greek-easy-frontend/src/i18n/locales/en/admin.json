@@ -557,7 +557,7 @@
         "linkedSituation": "Linked situation"
       },
       "untitled": "(untitled)",
-      "save": "Save & close",
+      "save": "Save changes",
       "saving": "Saving…",
       "cancel": "Cancel",
       "regenerateTranslations": "Regenerate translations",
@@ -565,7 +565,7 @@
       "published": "Published",
       "publishedPill": "Published",
       "draftPill": "Draft — not visible",
-      "publishedOn": "Published {{date}}",
+      "publishedOn": "Article date {{date}}",
       "publishCta": "Mark as Published",
       "publishChangesCta": "Publish changes",
       "saveFirst": "Save changes first",
