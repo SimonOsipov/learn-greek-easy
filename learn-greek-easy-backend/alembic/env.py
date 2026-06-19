@@ -79,6 +79,7 @@ from src.db.models import (  # noqa: F401
     WebhookEvent,
     WebhookProcessingStatus,
     WordEntry,
+    WordProposal,
     XPTransaction,
 )
 

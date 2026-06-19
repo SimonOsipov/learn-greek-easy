@@ -123,6 +123,35 @@ class Visibility(str, enum.Enum):
     PRIVATE = "private"
 
 
+class WordProposalState(str, enum.Enum):
+    """Lifecycle states for a LEXGEN word proposal.
+
+    LOWERCASE values map to the DB enum type ``word_proposal_status``
+    (dialog_status convention, not the legacy uppercase partofspeech pattern).
+    """
+
+    PENDING = "pending"
+    GENERATING = "generating"
+    SCORED = "scored"
+    AUTO_APPROVED = "auto_approved"
+    NEEDS_REVIEW = "needs_review"
+    REJECTED = "rejected"
+    SHIPPED = "shipped"
+
+
+class WordProposalOrigin(str, enum.Enum):
+    """Origin channel for a LEXGEN word proposal.
+
+    LOWERCASE values map to the DB enum type ``word_proposal_origin``.
+    v1 only writes ``admin``; ``user_request``/``batch`` exist from day one
+    (Decision Record §D3).
+    """
+
+    ADMIN = "admin"
+    USER_REQUEST = "user_request"
+    BATCH = "batch"
+
+
 class AchievementCategory(str, enum.Enum):
     """Category of achievement."""
 
@@ -850,6 +879,143 @@ class WordEntry(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         return f"<WordEntry(id={self.id}, lemma={self.lemma}, pos={self.part_of_speech})>"
+
+
+class WordProposal(Base, TimestampMixin):
+    """LEXGEN word-generation proposal — the lifecycle record for a candidate
+    word entry before it ships into ``word_entries``.
+
+    POS-neutral by design (Decision Record §1, seam #5): the table is
+    ``word_proposal`` (not ``noun_proposal``), ``pos`` is free-text ``Text``,
+    and there is NO ``gender`` column — gender (when applicable) lives inside
+    the ``generated_fields`` JSONB, so the schema imposes no fixed field set.
+
+    Schema + migration only (LEXGEN-01-01). The state machine + transition
+    guard live in ``src/core`` (LEXGEN-01-02).
+    """
+
+    __tablename__ = "word_proposal"
+    __table_args__ = (
+        Index("ix_word_proposal_status", "status"),
+        Index("ix_word_proposal_origin_status", "origin", "status"),
+        Index("ix_word_proposal_lemma_input", "lemma_input"),
+    )
+
+    # Primary key (D1)
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Input + classification
+    lemma_input: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Raw lemma the proposal was created for",
+    )
+    pos: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Part of speech as free-text (POS-neutral — no enum, no hardcoded 'noun')",
+    )
+
+    # Origin channel (D3) — DB-level lowercase Postgres enum
+    origin: Mapped[WordProposalOrigin] = mapped_column(
+        SAEnum(
+            WordProposalOrigin,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="word_proposal_origin",
+            create_type=False,
+        ),
+        nullable=False,
+        comment="Origin channel: admin | user_request | batch (v1 writes admin only)",
+    )
+
+    # Requester (D6) — nullable FK, SET NULL so deleting a user keeps the proposal
+    requested_by: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="User who requested this proposal (NULL for admin/system or deleted user)",
+    )
+
+    # Lifecycle state — DB-level lowercase Postgres enum, defaults to pending
+    status: Mapped[WordProposalState] = mapped_column(
+        SAEnum(
+            WordProposalState,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="word_proposal_status",
+            create_type=False,
+        ),
+        nullable=False,
+        server_default=text("'pending'"),
+        comment="Lifecycle state (state machine + guard live in src/core, LEXGEN-01-02)",
+    )
+
+    # Generation payloads (D4) — JSONB dialect type, nullable until populated
+    evidence_packet: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Evidence gathered before generation",
+    )
+    generated_fields: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="LLM-generated fields (gender, when applicable, lives HERE — POS-neutral)",
+    )
+    reconciliation_log: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Log of reconciliation between generated fields and evidence",
+    )
+    judge_scores: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Per-field judge scores",
+    )
+
+    # Flagged fields (D2) — JSONB array of field names needing reviewer attention
+    flagged_fields: Mapped[list | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Fields flagged for reviewer attention",
+    )
+
+    # INERT in v1 — Decision Record §3: no numeric trust score pre-calibration,
+    # log only. Stays NULL; no code in v1 writes or reads this column.
+    trust_score: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+        comment="INERT in v1 (Decision Record §3): no numeric trust score pre-calibration",
+    )
+
+    # Shipped target (D6) — nullable FK to the word_entries row this became
+    shipped_word_entry_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("word_entries.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="WordEntry created when this proposal shipped (NULL until shipped / if deleted)",
+    )
+
+    # Reviewer / retry bookkeeping
+    rejection_reason: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Reviewer-supplied reason when the proposal is rejected",
+    )
+    retry_attempts: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        server_default=text("'0'"),
+        nullable=False,
+        comment="Number of generation retry attempts",
+    )
+
+    # created_at / updated_at via TimestampMixin
+
+    def __repr__(self) -> str:
+        return (
+            f"<WordProposal(id={self.id}, lemma_input={self.lemma_input}, "
+            f"status={self.status})>"
+        )
 
 
 class DeckWordEntry(Base, TimestampMixin):
