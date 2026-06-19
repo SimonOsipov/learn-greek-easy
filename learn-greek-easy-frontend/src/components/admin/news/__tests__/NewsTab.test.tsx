@@ -147,12 +147,10 @@ describe('NewsTab — basic rendering', () => {
     expect(screen.getByText('Countries')).toBeInTheDocument();
   });
 
-  it('card #1 (total) renders sparkline bars with 9 bars', () => {
+  it('card #1 (total) renders no sparkline bars (F3: height parity)', () => {
+    // barsTestId removed → element must be absent
     renderWithRouter();
-    const barsEl = screen.getByTestId('stat-bars-total');
-    expect(barsEl).toBeInTheDocument();
-    // 9 bars: [4,6,3,8,5,7,9,12,6]
-    expect(barsEl.querySelectorAll('span')).toHaveLength(9);
+    expect(screen.queryByTestId('stat-bars-total')).not.toBeInTheDocument();
   });
 
   it('card #1 (total) shows sub from i18n key news.stats.recentThisWeek', () => {
@@ -161,12 +159,10 @@ describe('NewsTab — basic rendering', () => {
     expect(screen.getByText('+0 this week')).toBeInTheDocument();
   });
 
-  it('card #2 (audio) renders sparkline bars with 9 bars', () => {
+  it('card #2 (audio) renders no sparkline bars (F3: height parity)', () => {
+    // barsTestId removed → element must be absent
     renderWithRouter();
-    const barsEl = screen.getByTestId('stat-bars-audio');
-    expect(barsEl).toBeInTheDocument();
-    // 9 bars: [10,12,11,12,13,12,12,13,12]
-    expect(barsEl.querySelectorAll('span')).toHaveLength(9);
+    expect(screen.queryByTestId('stat-bars-audio')).not.toBeInTheDocument();
   });
 
   it('card #2 (audio) shows sub from i18n key news.stats.audioCoverage', () => {
@@ -175,12 +171,10 @@ describe('NewsTab — basic rendering', () => {
     expect(screen.getByText('0/0 with audio')).toBeInTheDocument();
   });
 
-  it('card #4 (country) renders sparkline bars with 9 bars', () => {
+  it('card #4 (country) renders no sparkline bars (F3: height parity)', () => {
+    // barsTestId removed → element must be absent
     renderWithRouter();
-    const barsEl = screen.getByTestId('stat-bars-country');
-    expect(barsEl).toBeInTheDocument();
-    // 9 bars: [3,3,3,3,3,3,3,3,3]
-    expect(barsEl.querySelectorAll('span')).toHaveLength(9);
+    expect(screen.queryByTestId('stat-bars-country')).not.toBeInTheDocument();
   });
 
   it('card #4 (country) shows literal "CY" as the KPI value', () => {
@@ -212,11 +206,10 @@ describe('NewsTab — basic rendering', () => {
     expect(b1Bold).toBeTruthy();
   });
 
-  it('card #3 (B1) renders sparkline with 9 bars', () => {
+  it('card #3 (B1) renders no sparkline bars (F3: height parity)', () => {
+    // barsTestId removed → element must be absent
     renderWithRouter();
-    const barsEl = screen.getByTestId('stat-bars-b1');
-    expect(barsEl).toBeInTheDocument();
-    expect(barsEl.querySelectorAll('span')).toHaveLength(9);
+    expect(screen.queryByTestId('stat-bars-b1')).not.toBeInTheDocument();
   });
 
   it('renders NewsToolbar (via search input sentinel)', () => {
@@ -257,10 +250,10 @@ describe('NewsTab — B1 coverage card (#3)', () => {
     expect(b1Bold).toBeTruthy();
   });
 
-  it('renders sparkline with 9 bars for card #3', () => {
+  it('renders no sparkline bars for card #3 (F3: height parity)', () => {
+    // barsTestId removed → element must be absent
     renderWithRouter();
-    const sparkline = screen.getByTestId('stat-bars-b1');
-    expect(sparkline.querySelectorAll('span')).toHaveLength(9);
+    expect(screen.queryByTestId('stat-bars-b1')).not.toBeInTheDocument();
   });
 });
 

@@ -61,13 +61,11 @@ describe('DeckStats', () => {
     expect(getByText('+0 vs last month')).toBeTruthy();
   });
 
-  it('renders 9 sparkline bars in each stat card', () => {
+  it('renders no sparkline bars (F3: height parity)', () => {
+    // bars prop omitted → .stat-bars element must not render
     const { container } = render(<DeckStats {...DEFAULT_PROPS} />);
     const sparklines = container.querySelectorAll('.stat-bars');
-    expect(sparklines).toHaveLength(4);
-    sparklines.forEach((sparkline) => {
-      expect(sparkline.querySelectorAll('span')).toHaveLength(9);
-    });
+    expect(sparklines).toHaveLength(0);
   });
 
   it('fires onCardClick("all") when Total decks card is clicked', async () => {

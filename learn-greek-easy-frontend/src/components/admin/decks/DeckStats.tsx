@@ -39,8 +39,6 @@ export function DeckStats({
         n={totalDecks}
         icon={<Layers className="h-4 w-4" />}
         tone="blue"
-        bars={[4, 6, 8, 5, 7, 9, 6, 8, 10]}
-        barsTestId="sparkline-total-decks"
         onClick={() => onCardClick?.('all')}
       />
       <StatCard
@@ -49,8 +47,6 @@ export function DeckStats({
         n={vocabularyCount}
         icon={<BookOpen className="h-4 w-4" />}
         tone="violet"
-        bars={[3, 5, 7, 4, 6, 8, 5, 7, 9]}
-        barsTestId="sparkline-vocabulary"
         onClick={() => onCardClick?.('vocabulary')}
       />
       <StatCard
@@ -59,8 +55,6 @@ export function DeckStats({
         n={cultureCount}
         icon={<Compass className="h-4 w-4" />}
         tone="cyan"
-        bars={[2, 4, 3, 5, 4, 6, 5, 7, 6]}
-        barsTestId="sparkline-culture"
         onClick={() => onCardClick?.('culture')}
       />
       <StatCard
@@ -69,8 +63,6 @@ export function DeckStats({
         n={avgCardsPerDeck}
         icon={<TrendingUp className="h-4 w-4" />}
         tone="green"
-        bars={[5, 6, 5, 7, 6, 8, 7, 8, 9]}
-        barsTestId="sparkline-avg-cards"
         onClick={() => onCardClick?.('all')}
       />
     </div>
