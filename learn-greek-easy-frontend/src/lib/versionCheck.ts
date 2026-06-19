@@ -81,31 +81,47 @@ export function checkVersionAndRefreshIfNeeded(response: Response): boolean {
 
     // Check per-pair refresh cap — hard stop for persistent skew.
     // Must be checked before cooldown so the cap fires even when cooldown is reset.
-    const capKey = `${CAP_COUNT_KEY_PREFIX}${FRONTEND_VERSION}:${backendVersion}`;
-    const warnedKey = `${CAP_WARNED_KEY_PREFIX}${FRONTEND_VERSION}:${backendVersion}`;
-    const currentCount = parseInt(sessionStorage.getItem(capKey) ?? '0', 10);
+    //
+    // sessionStorage access is wrapped in try/catch: in private-browsing mode
+    // (or when storage quota is exceeded) sessionStorage can throw SecurityError.
+    // On storage failure we degrade safely — skip the refresh (can't track state)
+    // to avoid an unguarded reload loop.
+    try {
+      const capKey = `${CAP_COUNT_KEY_PREFIX}${FRONTEND_VERSION}:${backendVersion}`;
+      const warnedKey = `${CAP_WARNED_KEY_PREFIX}${FRONTEND_VERSION}:${backendVersion}`;
+      const currentCount = parseInt(sessionStorage.getItem(capKey) ?? '0', 10);
 
-    if (currentCount >= CAP_MAX) {
-      // Already hit the cap for this pair. Warn once, then give up.
-      if (!sessionStorage.getItem(warnedKey)) {
-        log.warn('Version mismatch persists after max refreshes — giving up to avoid reload loop', {
-          frontendVersion: FRONTEND_VERSION,
-          backendVersion,
-          refreshCount: currentCount,
-        });
-        sessionStorage.setItem(warnedKey, '1');
+      if (currentCount >= CAP_MAX) {
+        // Already hit the cap for this pair. Warn once, then give up.
+        if (!sessionStorage.getItem(warnedKey)) {
+          log.warn(
+            'Version mismatch persists after max refreshes — giving up to avoid reload loop',
+            {
+              frontendVersion: FRONTEND_VERSION,
+              backendVersion,
+              refreshCount: currentCount,
+            }
+          );
+          sessionStorage.setItem(warnedKey, '1');
+        }
+        return false;
       }
+
+      // Check cooldown to prevent refresh loops
+      if (!isRefreshAllowed()) {
+        log.warn('Version mismatch but refresh cooldown active, skipping refresh');
+        return false;
+      }
+
+      // Increment per-pair count before triggering refresh
+      sessionStorage.setItem(capKey, (currentCount + 1).toString());
+    } catch {
+      // sessionStorage unavailable (private-mode, quota exceeded).
+      // Skip the refresh — we cannot track cooldown or cap state, so reloading
+      // would risk an unguarded loop.
+      log.warn('Version check storage unavailable, skipping refresh to avoid reload loop');
       return false;
     }
-
-    // Check cooldown to prevent refresh loops
-    if (!isRefreshAllowed()) {
-      log.warn('Version mismatch but refresh cooldown active, skipping refresh');
-      return false;
-    }
-
-    // Increment per-pair count before triggering refresh
-    sessionStorage.setItem(capKey, (currentCount + 1).toString());
 
     // Trigger refresh
     triggerVersionRefresh();

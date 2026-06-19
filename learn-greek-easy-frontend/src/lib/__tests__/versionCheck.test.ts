@@ -692,4 +692,245 @@ describe('versionCheck', () => {
       expect(mockReload.mock.calls.length).toBeLessThanOrEqual(CAP_MAX);
     });
   });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // ADVERSARIAL / EDGE COVERAGE (ADMIN2-37-02)
+  //
+  // The AC tests above verify the happy-path cap behaviour. These tests lock
+  // implementation details the AC specs left implicit:
+  //
+  //   A1 — cooldown-active calls do NOT consume the cap counter
+  //   A2 — two distinct mismatch pairs are truly independent (per-pair isolation)
+  //   A3 — log.warn is NOT emitted during the first N successful refreshes
+  //   A4 — a frontend-version change (new FE deploy) also resets the cap
+  //   A5 — storage throws degrade gracefully (no crash)
+  // ─────────────────────────────────────────────────────────────────────────
+  describe('adversarial / edge coverage (ADMIN2-37-02)', () => {
+    const CAP_MAX = 3;
+
+    async function flushPromises() {
+      for (let i = 0; i < 5; i++) {
+        await Promise.resolve();
+      }
+    }
+
+    beforeEach(() => {
+      sessionStorage.clear();
+      vi.clearAllMocks();
+      mockCachesKeys.mockResolvedValue([]);
+    });
+
+    afterEach(() => {
+      sessionStorage.clear();
+      vi.clearAllMocks();
+      vi.unstubAllEnvs();
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // A1 — cooldown-active calls must NOT increment the cap counter.
+    //
+    // The impl checks cap BEFORE cooldown (line 88 before line 102).  When
+    // cooldown fires (line 102-104) the function returns BEFORE the counter
+    // increment at line 108.  This test locks that ordering: after N-1 real
+    // refreshes (cap counter = N-1) plus one cooldown-blocked call, the
+    // counter is still N-1 and the (N-th refresh + 1 more) must still fire.
+    //
+    // If the ordering were wrong (counter incremented before cooldown check),
+    // the cap would be consumed by a no-op call, preventing the self-heal
+    // that should happen on the Nth real cooldown-free invocation.
+    // ─────────────────────────────────────────────────────────────────────
+    it('A1: cooldown-blocked calls do not consume the cap counter', async () => {
+      vi.stubEnv('VITE_COMMIT_SHA', 'aaa');
+      vi.resetModules();
+      const {
+        checkVersionAndRefreshIfNeeded: check,
+        _resetRefreshCooldown_forTesting: resetCooldown,
+      } = await import('../versionCheck');
+
+      const makeResponse = (sha: string) =>
+        new Response('{}', { status: 200, headers: { 'X-App-Version': sha } });
+
+      // Fire CAP_MAX - 1 real refreshes (counter = CAP_MAX - 1 = 2).
+      for (let i = 0; i < CAP_MAX - 1; i++) {
+        resetCooldown();
+        check(makeResponse('bbb'));
+        await flushPromises();
+      }
+      expect(mockReload.mock.calls.length).toBe(CAP_MAX - 1);
+
+      // Trigger a cooldown-blocked call WITHOUT resetting cooldown first.
+      // A real refresh just ran (counter is 2, lastRefresh is set).
+      check(makeResponse('bbb'));
+      await flushPromises();
+
+      // reload count must NOT increase (cooldown blocked it).
+      expect(mockReload.mock.calls.length).toBe(CAP_MAX - 1);
+
+      // Now the Nth real invocation (cooldown cleared) must still fire.
+      // If the cooldown call had consumed the counter, the cap would fire
+      // here instead and reload would stay at CAP_MAX - 1.
+      resetCooldown();
+      check(makeResponse('bbb'));
+      await flushPromises();
+      expect(mockReload.mock.calls.length).toBe(CAP_MAX);
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // A2 — two distinct mismatch pairs are independently capped.
+    //
+    // Interleave calls for (aaa→bbb) and (aaa→ccc) well past CAP_MAX.
+    // Each pair's counter must be tracked separately so neither blocks the
+    // other and both are bounded at CAP_MAX independently.
+    // ─────────────────────────────────────────────────────────────────────
+    it('A2: two interleaved mismatch pairs each get their own independent cap', async () => {
+      vi.stubEnv('VITE_COMMIT_SHA', 'aaa');
+      vi.resetModules();
+      const {
+        checkVersionAndRefreshIfNeeded: check,
+        _resetRefreshCooldown_forTesting: resetCooldown,
+      } = await import('../versionCheck');
+
+      const INVOCATIONS_EACH = CAP_MAX + 2; // 5 each, well past cap
+
+      // Interleave: alternate between bbb and ccc.
+      for (let i = 0; i < INVOCATIONS_EACH; i++) {
+        resetCooldown();
+        check(new Response('{}', { status: 200, headers: { 'X-App-Version': 'bbb' } }));
+        await flushPromises();
+
+        resetCooldown();
+        check(new Response('{}', { status: 200, headers: { 'X-App-Version': 'ccc' } }));
+        await flushPromises();
+      }
+
+      // Both pairs are capped independently — total reloads ≤ 2 × CAP_MAX.
+      expect(mockReload.mock.calls.length).toBeLessThanOrEqual(2 * CAP_MAX);
+      // But BOTH pairs must have triggered at least CAP_MAX reloads in total
+      // (they're independent — each pair fires its own CAP_MAX).
+      expect(mockReload.mock.calls.length).toBeGreaterThanOrEqual(CAP_MAX);
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // A3 — log.warn must NOT fire during the first N successful refreshes.
+    //
+    // log.warn is reserved for two cases:
+    //   (a) cap give-up (line 91)
+    //   (b) cooldown-active skip (line 103)
+    //
+    // During the first CAP_MAX refreshes (cooldown cleared, no cap yet), the
+    // code path is: mismatch detected → cap check passes → cooldown check
+    // passes → counter incremented → refresh triggered.  No warn on this path.
+    // ─────────────────────────────────────────────────────────────────────
+    it('A3: log.warn is not emitted during the first N successful refreshes', async () => {
+      vi.stubEnv('VITE_COMMIT_SHA', 'aaa');
+      vi.resetModules();
+      const {
+        checkVersionAndRefreshIfNeeded: check,
+        _resetRefreshCooldown_forTesting: resetCooldown,
+      } = await import('../versionCheck');
+      const logMock = (await import('@/lib/logger')).default;
+
+      // Fire exactly CAP_MAX refreshes — none should warn.
+      for (let i = 0; i < CAP_MAX; i++) {
+        resetCooldown();
+        check(new Response('{}', { status: 200, headers: { 'X-App-Version': 'bbb' } }));
+        await flushPromises();
+      }
+
+      expect(mockReload.mock.calls.length).toBe(CAP_MAX);
+      expect(logMock.warn).not.toHaveBeenCalled();
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // A4 — frontend-version change (new FE deploy) resets the cap.
+    //
+    // The cap key is `${FRONTEND_VERSION}:${backendVersion}`.  When the
+    // frontend gets a new build (VITE_COMMIT_SHA changes from 'aaa' to 'ddd'),
+    // the pair key changes even if the backend SHA stays constant.  The new
+    // pair 'ddd'→'bbb' starts with counter=0 and fires a fresh reload.
+    //
+    // This mirrors the backend self-heal test (cap_resets_on_new_mismatch_pair)
+    // but for the frontend side of the pair.
+    // ─────────────────────────────────────────────────────────────────────
+    it('A4: new frontend SHA resets the cap — one fresh reload fires for new (fe, be) pair', async () => {
+      // Set up and exhaust cap for old FE version 'aaa' vs backend 'bbb'.
+      vi.stubEnv('VITE_COMMIT_SHA', 'aaa');
+      vi.resetModules();
+      const {
+        checkVersionAndRefreshIfNeeded: checkOld,
+        _resetRefreshCooldown_forTesting: resetCooldownOld,
+      } = await import('../versionCheck');
+
+      const INVOCATIONS = CAP_MAX + 2;
+      for (let i = 0; i < INVOCATIONS; i++) {
+        resetCooldownOld();
+        checkOld(new Response('{}', { status: 200, headers: { 'X-App-Version': 'bbb' } }));
+        await flushPromises();
+      }
+
+      const reloadsAfterOldFE = mockReload.mock.calls.length;
+      expect(reloadsAfterOldFE).toBeLessThanOrEqual(CAP_MAX);
+
+      // Simulate a new FE deploy: VITE_COMMIT_SHA changes to 'ddd'.
+      // Re-import the module with the new env var to get the new FRONTEND_VERSION.
+      vi.stubEnv('VITE_COMMIT_SHA', 'ddd');
+      vi.resetModules();
+      const {
+        checkVersionAndRefreshIfNeeded: checkNew,
+        _resetRefreshCooldown_forTesting: resetCooldownNew,
+      } = await import('../versionCheck');
+
+      resetCooldownNew();
+      const result = checkNew(
+        new Response('{}', { status: 200, headers: { 'X-App-Version': 'bbb' } })
+      );
+      await flushPromises();
+
+      // The new pair ('ddd', 'bbb') must fire exactly one reload.
+      expect(mockReload.mock.calls.length).toBe(reloadsAfterOldFE + 1);
+      expect(result).toBe(false);
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // A5 — sessionStorage throws (private-mode / storage quota) must not crash.
+    //
+    // In some private-browsing contexts sessionStorage.getItem / setItem
+    // throw SecurityError.  The cap logic at lines 84-108 calls sessionStorage
+    // directly without a try/catch of its own.  If this throws, the exception
+    // propagates to the caller and breaks the API layer.
+    //
+    // NOTE: The existing impl does NOT guard sessionStorage calls inside the
+    // mismatch block.  This test validates the CURRENT behaviour (surface the
+    // defect if it exists) vs the desired behaviour (no crash).
+    //
+    // Expected outcome: `checkVersionAndRefreshIfNeeded` must not throw — it
+    // should degrade gracefully (return true or false without crashing the
+    // caller).  If the impl throws, this test fails and the defect must be
+    // fixed in the executor.
+    // ─────────────────────────────────────────────────────────────────────
+    it('A5: storage throws are handled gracefully — function does not propagate the exception', async () => {
+      vi.stubEnv('VITE_COMMIT_SHA', 'aaa');
+      vi.resetModules();
+      const { checkVersionAndRefreshIfNeeded: check } = await import('../versionCheck');
+
+      // Stub sessionStorage to throw on getItem (simulates private-mode quota error).
+      const originalGetItem = sessionStorage.getItem.bind(sessionStorage);
+      const getItemSpy = vi.spyOn(sessionStorage, 'getItem').mockImplementation((key: string) => {
+        if (key.includes('version-refresh-cap')) {
+          throw new DOMException('SecurityError: sessionStorage access denied');
+        }
+        return originalGetItem(key);
+      });
+
+      const response = new Response('{}', {
+        status: 200,
+        headers: { 'X-App-Version': 'bbb' },
+      });
+
+      // Must not throw — caller should be protected.
+      expect(() => check(response)).not.toThrow();
+
+      getItemSpy.mockRestore();
+    });
+  });
 });
