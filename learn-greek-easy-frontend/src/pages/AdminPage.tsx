@@ -813,7 +813,7 @@ const AdminPage: React.FC = () => {
   // Ref for refreshing the deck list
   const allDecksListRef = useRef<AllDecksListHandle>(null);
 
-  // Deck type filter — lifted here so DeckStats click-to-filter can drive AllDecksList.
+  // Deck type filter — driven by the toolbar pills in AllDecksList.
   const [typeFilter, setTypeFilter] = useState<'all' | 'vocabulary' | 'culture'>('all');
 
   const locale = i18n.language;
@@ -1052,7 +1052,6 @@ const AdminPage: React.FC = () => {
             avgCardsPerDeck={
               stats && stats.total_decks > 0 ? Math.round(stats.total_cards / stats.total_decks) : 0
             }
-            onCardClick={setTypeFilter}
           />
 
           {/* All Decks List with Search and Pagination */}

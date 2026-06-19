@@ -139,6 +139,33 @@ export function DeckSettingsTab({ deck, onSaved }: DeckSettingsTabProps) {
     };
   }, [isDirty, registerCloseGuard]);
 
+  // ── Cover-image handlers ─────────────────────────────────────────────────
+
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ['admin', 'deck', deck.id] });
+    void queryClient.invalidateQueries({ queryKey: ['admin', 'decks'] });
+  };
+
+  const handleUploadVocabCover = async (file: File) => {
+    await adminAPI.uploadDeckCoverImage(deck.id, file);
+    invalidate();
+  };
+
+  const handleRemoveVocabCover = async () => {
+    await adminAPI.deleteDeckCoverImage(deck.id);
+    invalidate();
+  };
+
+  const handleUploadCultureCover = async (file: File) => {
+    await adminAPI.uploadCultureDeckCoverImage(deck.id, file);
+    invalidate();
+  };
+
+  const handleRemoveCultureCover = async () => {
+    await adminAPI.deleteCultureDeckCoverImage(deck.id);
+    invalidate();
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -155,6 +182,8 @@ export function DeckSettingsTab({ deck, onSaved }: DeckSettingsTabProps) {
             formResetRef.current = api.reset;
           }}
           formId={FORM_ID}
+          onUploadCoverImage={handleUploadVocabCover}
+          onRemoveCoverImage={handleRemoveVocabCover}
         />
       ) : (
         <CultureDeckEditForm
@@ -168,6 +197,8 @@ export function DeckSettingsTab({ deck, onSaved }: DeckSettingsTabProps) {
             formResetRef.current = api.reset;
           }}
           formId={FORM_ID}
+          onUploadCoverImage={handleUploadCultureCover}
+          onRemoveCoverImage={handleRemoveCultureCover}
         />
       )}
 

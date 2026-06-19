@@ -221,11 +221,23 @@ jobs:
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
-          railway variables \
-            --set "RAILWAY_GIT_COMMIT_SHA=${{ github.sha }}" \
-            --set "RAILWAY_GIT_BRANCH=${{ github.ref_name }}" \
-            --service Backend \
-            --skip-deploys
+          for attempt in 1 2 3; do
+            echo "Set Backend version vars attempt $attempt..."
+            if railway variables \
+              --set "RAILWAY_GIT_COMMIT_SHA=${{ github.sha }}" \
+              --set "RAILWAY_GIT_BRANCH=${{ github.ref_name }}" \
+              --service Backend \
+              --skip-deploys; then
+              break
+            fi
+            if [ $attempt -lt 3 ]; then
+              echo "Set Backend version vars attempt $attempt failed; retrying in $((attempt * 5))s..."
+              sleep $((attempt * 5))
+            else
+              echo "Set Backend version vars failed after 3 attempts."
+              exit 1
+            fi
+          done
 
       - name: Deploy Backend (wait for health)
         id: deploy
@@ -236,8 +248,20 @@ jobs:
           echo "Starting production Backend deployment..."
           echo "This will wait for the deployment to complete and pass health checks."
 
-          # Deploy with --ci flag to wait for health check
-          railway up --ci --service Backend
+          # Deploy with --ci flag to wait for health check; retry on transient control-plane errors
+          for attempt in 1 2 3; do
+            echo "Backend deploy attempt $attempt..."
+            if railway up --ci --service Backend; then
+              break
+            fi
+            if [ $attempt -lt 3 ]; then
+              echo "Backend deploy attempt $attempt failed; retrying in $((attempt * 5))s..."
+              sleep $((attempt * 5))
+            else
+              echo "Backend deploy failed after 3 attempts."
+              exit 1
+            fi
+          done
 
           echo "Backend deployment completed successfully!"
           echo "deployment_id=$(date +%s)" >> $GITHUB_OUTPUT
@@ -303,10 +327,22 @@ jobs:
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
-          railway variables \
-            --set "RAILWAY_GIT_COMMIT_SHA=${{ github.sha }}" \
-            --service Frontend \
-            --skip-deploys
+          for attempt in 1 2 3; do
+            echo "Set Frontend version vars attempt $attempt..."
+            if railway variables \
+              --set "RAILWAY_GIT_COMMIT_SHA=${{ github.sha }}" \
+              --service Frontend \
+              --skip-deploys; then
+              break
+            fi
+            if [ $attempt -lt 3 ]; then
+              echo "Set Frontend version vars attempt $attempt failed; retrying in $((attempt * 5))s..."
+              sleep $((attempt * 5))
+            else
+              echo "Set Frontend version vars failed after 3 attempts."
+              exit 1
+            fi
+          done
 
       - name: Deploy Frontend (wait for health)
         id: deploy
@@ -317,8 +353,20 @@ jobs:
           echo "Starting production Frontend deployment..."
           echo "This will wait for the deployment to complete and pass health checks."
 
-          # Deploy with --ci flag to wait for health check
-          railway up --ci --service Frontend
+          # Deploy with --ci flag to wait for health check; retry on transient control-plane errors
+          for attempt in 1 2 3; do
+            echo "Frontend deploy attempt $attempt..."
+            if railway up --ci --service Frontend; then
+              break
+            fi
+            if [ $attempt -lt 3 ]; then
+              echo "Frontend deploy attempt $attempt failed; retrying in $((attempt * 5))s..."
+              sleep $((attempt * 5))
+            else
+              echo "Frontend deploy failed after 3 attempts."
+              exit 1
+            fi
+          done
 
           echo "Frontend deployment completed successfully!"
           echo "deployment_id=$(date +%s)" >> $GITHUB_OUTPUT
@@ -429,3 +477,18 @@ jobs:
           echo "**URLs**:" >> $GITHUB_STEP_SUMMARY
           echo "- Frontend: ${{ env.PROD_FRONTEND_URL }}" >> $GITHUB_STEP_SUMMARY
           echo "- Backend API: ${{ env.PROD_FRONTEND_URL }}/api/v1 (via frontend proxy)" >> $GITHUB_STEP_SUMMARY
+
+          # Detect backend-succeeded / frontend-failed (version-skew state) and alert loudly.
+          # This catches the ADMIN2-37 incident class: a transient control-plane timeout kills
+          # the frontend deploy while backend already advanced — leaving prod on mismatched SHAs.
+          if [ "${{ needs.deploy-backend.result }}" = "success" ] && [ "${{ needs.deploy-frontend.result }}" = "failure" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "## ⚠️ PARTIAL DEPLOYMENT — backend advanced, frontend did NOT" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Prod is now in a **version-skew state** (backend ahead of frontend)." >> $GITHUB_STEP_SUMMARY
+            echo "Re-run the frontend deploy job or roll back immediately to restore parity." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Action required:** re-run failed jobs on this workflow run, or push a trivial commit to trigger a clean deploy." >> $GITHUB_STEP_SUMMARY
+            echo "::error::PARTIAL DEPLOYMENT: backend advanced to ${{ github.sha }} but frontend deploy FAILED. Prod is in version-skew. Re-run frontend deploy immediately."
+            exit 1
+          fi

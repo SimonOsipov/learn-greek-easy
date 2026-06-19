@@ -2,7 +2,7 @@
 //
 // Controlled drawer for a single deck. Open/closed state is driven by the
 // `?edit=<deckId>` URL search param (same pattern as NewsEditDrawer).
-// Tab state is driven by `?subtab=<words|questions|settings|activity>`.
+// Tab state is driven by `?subtab=<words|questions|settings>`.
 // Item detail state is driven by `?item=<itemId>`.
 //
 // Mounted unconditionally — DKDR-06 will mount it on AdminPage.
@@ -35,7 +35,7 @@ import { VocabWordDetail } from './VocabWordDetail';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type DeckTab = 'words' | 'questions' | 'settings' | 'activity';
+type DeckTab = 'words' | 'questions' | 'settings';
 
 // ── DeckDrawer Context ────────────────────────────────────────────────────────
 
@@ -69,7 +69,7 @@ export function DeckDrawer() {
 
   const editId = searchParams.get('edit');
   const itemId = searchParams.get('item');
-  const subtabParam = searchParams.get('subtab') as DeckTab | null;
+  const subtabParam = searchParams.get('subtab');
 
   const open = !!editId;
 
@@ -160,8 +160,17 @@ export function DeckDrawer() {
 
   const isCulture = deck?.type === 'culture';
 
-  // Resolve the active tab — default depends on deck type.
-  const resolvedTab: DeckTab = subtabParam ?? (isCulture ? 'questions' : 'words');
+  // Resolve the active tab — validate against the DECK-TYPE-appropriate set.
+  // This prevents cross-type stale URLs (e.g. ?subtab=words on a culture deck,
+  // or ?subtab=questions on a vocab deck) from landing on an empty tab body,
+  // because those TabsContent nodes are conditionally rendered per deck type.
+  const allowedTabs: DeckTab[] = isCulture ? ['questions', 'settings'] : ['words', 'settings'];
+  const resolvedTab: DeckTab =
+    subtabParam !== null && allowedTabs.includes(subtabParam as DeckTab)
+      ? (subtabParam as DeckTab)
+      : isCulture
+        ? 'questions'
+        : 'words';
 
   // Normalize `name` to flat string fields so getLocalizedDeckName can accept it.
   // UnifiedDeckItem.name may be string | MultilingualName; prefer the flat fields.
@@ -305,9 +314,6 @@ export function DeckDrawer() {
                   <TabsTrigger value="settings" data-testid="deck-drawer-tab-settings">
                     {t('decks.drawer.tabs.settings')}
                   </TabsTrigger>
-                  <TabsTrigger value="activity" data-testid="deck-drawer-tab-activity">
-                    {t('decks.drawer.tabs.activity')}
-                  </TabsTrigger>
                 </TabsList>
               </SidePanel.Tabs>
             )}
@@ -339,13 +345,6 @@ export function DeckDrawer() {
               {/* Settings tab */}
               <TabsContent value="settings">
                 <DeckSettingsTab deck={deck} />
-              </TabsContent>
-
-              {/* Activity tab — fully implemented */}
-              <TabsContent value="activity">
-                <div className="placeholder-box" data-testid="deck-drawer-activity">
-                  {t('decks.activityPlaceholder')}
-                </div>
               </TabsContent>
             </SidePanel.Body>
 

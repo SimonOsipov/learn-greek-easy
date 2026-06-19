@@ -2078,8 +2078,7 @@
       "tabs": {
         "words": "Words",
         "questions": "Questions",
-        "settings": "Settings",
-        "activity": "Activity"
+        "settings": "Settings"
       }
     },
     "statusPremium": "Premium",
@@ -2100,7 +2099,6 @@
     "discardBody": "You have unsaved changes. Closing will discard them.",
     "discardConfirm": "Discard",
     "discardCancel": "Keep editing",
-    "activityPlaceholder": "Recent edits, last reviewed time, and learner stats will live here.",
     "backToAllQuestions": "Back to all questions",
     "editQuestion": "Edit question",
     "statusReady": "Ready",
