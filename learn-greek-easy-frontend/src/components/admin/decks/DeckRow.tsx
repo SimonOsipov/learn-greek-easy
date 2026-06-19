@@ -81,7 +81,7 @@ export function DeckRow({ deck, locale, onOpenDrawer, onDelete }: DeckRowProps) 
       tabIndex={0}
       onClick={handleRowClick}
       onKeyDown={handleKeyDown}
-      className="group cursor-pointer"
+      className="deck-row cursor-pointer"
     >
       {/* Col 1: DeckMark + name + optional CEFR badge */}
       <TableCell>
@@ -149,7 +149,7 @@ export function DeckRow({ deck, locale, onOpenDrawer, onDelete }: DeckRowProps) 
       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
         <div
           data-testid="deck-row-actions"
-          className="flex items-center justify-end gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
+          className="deck-row-actions flex items-center justify-end gap-1"
         >
           <Button
             variant="ghost"

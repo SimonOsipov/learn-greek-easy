@@ -156,11 +156,12 @@ describe('DeckRow', () => {
 
   // ── hover-reveal actions class ───────────────────────────────────────────
 
-  it('actions container has opacity-0 and group-hover:opacity-100 classes', () => {
+  it('actions container uses Mechanism-A reveal class (deck-row-actions) and has no Tailwind group-hover utilities', () => {
     renderRow({ deck: makeDeck(), locale: 'en', onOpenDrawer: vi.fn(), onDelete: vi.fn() });
     const actions = screen.getByTestId('deck-row-actions');
-    expect(actions.className).toContain('opacity-0');
-    expect(actions.className).toContain('group-hover:opacity-100');
+    expect(actions.className).toContain('deck-row-actions');
+    expect(actions.className).not.toContain('group-hover:opacity-100');
+    expect(actions.className).not.toContain('opacity-0');
   });
 
   // ── status badge (ADMIN2-35-02) ──────────────────────────────────────────
