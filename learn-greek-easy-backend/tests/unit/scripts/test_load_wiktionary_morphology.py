@@ -438,3 +438,300 @@ class TestLoadDataHelpers:
         mock_settings.database_url_sync = "postgresql://user:pass@localhost/db"
         _get_connection()
         mock_psycopg2.connect.assert_called_once_with("postgresql://user:pass@localhost/db")
+
+
+# ---------------------------------------------------------------------------
+# LEXGEN-03-03 RED tests — configurable POS filter + bundle output in importer
+# ---------------------------------------------------------------------------
+
+
+def _make_entry(word: str, pos: str = "noun", gender: str = "m") -> str:
+    """Build a minimal Kaikki JSONL entry string."""
+    entry: dict = {
+        "word": word,
+        "pos": pos,
+        "head_templates": [{"args": {"g": gender}}],
+        "senses": [{"glosses": [f"{word} meaning"]}],
+        "sounds": [{"ipa": f"/{word}/"}],
+        "forms": [
+            {"source": "declension", "tags": ["nominative", "singular"], "form": word},
+            {"source": "declension", "tags": ["genitive", "singular"], "form": f"{word}-gen"},
+        ],
+    }
+    return json.dumps(entry)
+
+
+def _call_parse_entries(lines: list[str], pos: str = "noun") -> tuple[list[dict], int, int]:
+    """Helper: call _parse_entries with a fake path and the given pos filter."""
+    from src.scripts.load_wiktionary_morphology import _parse_entries
+
+    content = "\n".join(lines)
+    fake_path = MagicMock(spec=Path)
+    fake_path.open.return_value.__enter__ = lambda s: io.StringIO(content)
+    fake_path.open.return_value.__exit__ = MagicMock(return_value=False)
+    # RED: _parse_entries does not yet accept a `pos` kwarg — raises TypeError.
+    return _parse_entries(fake_path, pos=pos)
+
+
+@pytest.mark.unit
+class TestPosFilterAndBundleOutput:
+    """LEXGEN-03-03 RED tests for configurable POS filter + bundle output.
+
+    Every test in this class MUST fail before the implementation lands and
+    MUST pass after. Failures must be assertion errors or TypeErrors (wrong
+    function signature), NOT collection errors.
+    """
+
+    # ------------------------------------------------------------------
+    # AC-1  POS filter is configurable (default = noun)
+    # ------------------------------------------------------------------
+
+    def test_default_pos_is_noun_and_filters_nouns(self):
+        """AC-1: with no pos kwarg (default "noun"), only noun entries are selected.
+
+        RED because _parse_entries does not yet accept a `pos` parameter and
+        will raise TypeError.
+        """
+        lines = [
+            _make_entry("κόσμος", pos="noun"),
+            _make_entry("τρέχω", pos="verb"),
+            _make_entry("καλός", pos="adjective"),
+        ]
+        rows, _filtered, _merged = _call_parse_entries(lines)  # pos defaults to "noun"
+        assert len(rows) == 1
+        assert rows[0]["lemma"] == "κόσμος"
+
+    def test_pos_flag_selects_configured_pos(self):
+        """AC-1: passing pos="verb" selects only verb entries, not nouns.
+
+        RED because _parse_entries does not yet accept a `pos` parameter and
+        will raise TypeError.
+        """
+        lines = [
+            _make_entry("κόσμος", pos="noun"),
+            _make_entry("τρέχω", pos="verb"),
+            _make_entry("γράφω", pos="verb"),
+        ]
+        rows, _filtered, _merged = _call_parse_entries(lines, pos="verb")
+        assert len(rows) == 2
+        lemmas = {r["lemma"] for r in rows}
+        assert lemmas == {"τρέχω", "γράφω"}
+
+    # ------------------------------------------------------------------
+    # AC-2  inserted forms are a bundle list, not a flat dict
+    # ------------------------------------------------------------------
+
+    def test_inserted_forms_are_bundle_list(self):
+        """AC-2: the forms value handed to _insert_rows is a bundle list, not a flat dict.
+
+        After implementation, each row["forms"] must be a list of dicts with
+        "form" and "features" keys (FormBundle-shaped), produced by flat_to_bundles.
+
+        RED because _parse_entries does not yet accept `pos` (TypeError), and
+        even if it did, forms are still flat dicts today.
+        """
+        import psycopg2.extras
+
+        lines = [_make_entry("κόσμος", pos="noun")]
+        rows, _filtered, _merged = _call_parse_entries(lines, pos="noun")
+
+        assert len(rows) == 1
+        forms = rows[0]["forms"]
+        # Must be a list, not a dict.
+        assert isinstance(forms, list), f"Expected list of bundles, got {type(forms)}"
+        # Every element must be a FormBundle-shaped dict.
+        for bundle in forms:
+            assert "form" in bundle, f"Bundle missing 'form' key: {bundle}"
+            assert "features" in bundle, f"Bundle missing 'features' key: {bundle}"
+            features = bundle["features"]
+            assert "case" in features, f"Bundle features missing 'case': {features}"
+            assert "number" in features, f"Bundle features missing 'number': {features}"
+
+        # Also verify via _insert_rows: the Json payload carries a list.
+        from src.scripts.load_wiktionary_morphology import _insert_rows
+
+        mock_cursor = MagicMock()
+        captured_batches: list[list[tuple]] = []
+
+        def capture_execute_values(cursor, sql, batch):
+            captured_batches.append(list(batch))
+
+        with patch(
+            "src.scripts.load_wiktionary_morphology.psycopg2.extras.execute_values",
+            side_effect=capture_execute_values,
+        ):
+            _insert_rows(mock_cursor, rows)
+
+        assert captured_batches, "No batches were flushed to execute_values"
+        # The forms column (index 2 of the VALUES tuple) is a Json wrapper.
+        first_tuple = captured_batches[0][0]
+        json_wrapper = first_tuple[2]
+        assert isinstance(json_wrapper, psycopg2.extras.Json)
+        # The Json payload must be a list (bundle list), not a dict.
+        payload = json_wrapper.adapted
+        assert isinstance(
+            payload, list
+        ), f"Expected bundle list in Json payload, got {type(payload)}: {payload}"
+
+    # ------------------------------------------------------------------
+    # AC-3  pos column written explicitly (default = "noun")
+    # ------------------------------------------------------------------
+
+    def test_pos_column_written_noun_by_default(self):
+        """AC-3: each parsed row carries pos == "noun" when running with default flag.
+
+        RED because _parse_entries does not yet accept `pos` (TypeError), and
+        even if it did, rows do not yet carry a "pos" key.
+        """
+        lines = [_make_entry("κόσμος", pos="noun")]
+        rows, _filtered, _merged = _call_parse_entries(lines, pos="noun")
+
+        assert len(rows) == 1
+        assert "pos" in rows[0], f"Row is missing 'pos' key: {rows[0]}"
+        assert rows[0]["pos"] == "noun"
+
+    # ------------------------------------------------------------------
+    # AC-4  merge key is (lemma, pos, gender) — different pos → two rows
+    # ------------------------------------------------------------------
+
+    def test_merge_keys_on_lemma_pos_gender(self):
+        """AC-4: two entries with the same (lemma, gender) but different pos
+        produce two distinct rows — no merge/collision.
+
+        Today the merge key is (lemma, gender), so same-lemma+gender entries
+        with pos="noun" and pos="verb" would (wrongly) collapse into one row.
+
+        RED because _parse_entries does not yet accept `pos` (TypeError). After
+        implementation, passing pos="noun" selects only nouns, so we need to
+        construct the scenario differently: we provide two entries both matching
+        the configured pos, with the same (lemma, gender), different pos values
+        stored in the merged dict — or test _process_noun_entry directly with
+        pos wired into the merge key.
+
+        Strategy: call _parse_entries twice with the real implementation;
+        to trigger the merge-key test without relying on a cross-POS call,
+        we test the merge dict key directly via _parse_entries with pos="noun"
+        for two syntactically-identical noun entries and verify they DO merge
+        (same (lemma, noun, gender)), then verify that two entries with the same
+        (lemma, gender) but one configured as noun and one as verb do NOT merge.
+
+        Since a single _parse_entries call can only filter ONE pos, we test the
+        boundary condition via the row count: two noun entries sharing
+        (lemma, gender) → 1 row (merged). This validates the (lemma, pos, gender)
+        key because the pos dimension is fixed within one call; the invariant is
+        that a future multi-pos import cannot collide.
+
+        For the two-distinct-rows assertion: we verify that the merged dict key
+        is a 3-tuple (lemma, pos, gender) by inspecting that the row carries
+        "pos", which proves the key now includes pos. Two rows each with their
+        own pos value is only testable after the implementation supports a
+        hypothetical shared-pos call — so we assert the row["pos"] is set (AC-3
+        already covers this), and separately assert that same (lemma, gender)
+        with DIFFERENT entries for the configured pos still correctly merges
+        (key collision = merge), confirming the key includes pos as a fixed
+        component.
+
+        Concrete RED assertion: rows from two entries with the same (lemma, gender)
+        but different pos WOULD share a key today. We can only invoke the filter
+        for one pos at a time; so we expose the bug by directly using
+        _process_noun_entry with two different explicit pos values fed into the
+        same merged dict and checking the number of keys.
+        """
+        from src.scripts.load_wiktionary_morphology import _process_noun_entry
+
+        # Two entries: same lemma+gender, one "noun" one "verb".
+        # With the new key = (lemma, pos, gender), they should NOT collide.
+        merged: dict = {}
+        filtered_ref = [0]
+        total_raw_ref = [0]
+
+        noun_entry = json.loads(_make_entry("κόσμος", pos="noun", gender="m"))
+        verb_entry = json.loads(_make_entry("κόσμος", pos="verb", gender="m"))
+
+        # After implementation, _process_noun_entry must accept a `pos` kwarg
+        # so the merge key and row dict include it.
+        # RED: today the function signature is (entry, merged, filtered_ref, total_raw_ref)
+        # with no `pos` param → TypeError when called with pos=...
+        _process_noun_entry(noun_entry, merged, filtered_ref, total_raw_ref, pos="noun")
+        _process_noun_entry(verb_entry, merged, filtered_ref, total_raw_ref, pos="verb")
+
+        assert len(merged) == 2, (
+            f"Expected 2 distinct merge keys for noun vs verb with same (lemma, gender), "
+            f"got {len(merged)}: {list(merged.keys())}"
+        )
+
+    # ------------------------------------------------------------------
+    # AC-5  INSERT SQL contains pos column + VALUES carries pos string
+    # ------------------------------------------------------------------
+
+    def test_insert_sql_includes_pos_column_and_value(self):
+        """AC-5: _insert_rows builds INSERT SQL with 'pos' in the column list
+        and each VALUES tuple carries the configured pos string (not relying on
+        the DB server_default).
+
+        RED because _insert_rows does not yet accept rows with a "pos" key,
+        and the INSERT SQL does not yet include "pos".
+
+        After implementation:
+        - The INSERT SQL must contain 'pos' in the column list.
+        - Each VALUES tuple must include the pos string at a consistent position,
+          and that position must match the column order in the SQL.
+        """
+        # Build a minimal row as the implementation will produce it post-change.
+        # We supply "pos" explicitly; the INSERT must echo it back.
+        from src.core.lexgen_forms import flat_to_bundles
+        from src.scripts.load_wiktionary_morphology import _insert_rows
+
+        flat_forms = {
+            "nominative_singular": "κόσμος",
+            "genitive_singular": "κόσμου",
+        }
+        rows = [
+            {
+                "lemma": "κόσμος",
+                "pos": "noun",
+                "gender": "masculine",
+                "forms": flat_to_bundles(flat_forms, pos="noun"),
+                "pronunciation": "/ˈkoz.mos/",
+                "glosses_en": "world",
+            }
+        ]
+
+        mock_cursor = MagicMock()
+        captured_sqls: list[str] = []
+        captured_batches: list[list[tuple]] = []
+
+        def capture_execute_values(cursor, sql, batch):
+            captured_sqls.append(sql)
+            captured_batches.append(list(batch))
+
+        with patch(
+            "src.scripts.load_wiktionary_morphology.psycopg2.extras.execute_values",
+            side_effect=capture_execute_values,
+        ):
+            _insert_rows(mock_cursor, rows)
+
+        assert captured_sqls, "execute_values was never called"
+        insert_sql = captured_sqls[0]
+
+        # AC-5a: 'pos' must appear in the INSERT column list.
+        assert "pos" in insert_sql, f"'pos' not found in INSERT SQL. Got:\n{insert_sql}"
+
+        # AC-5b: each VALUES tuple must carry pos == "noun" (not left to server_default).
+        assert captured_batches, "No batches captured"
+        first_tuple = captured_batches[0][0]
+
+        # Determine pos position from the SQL column order.
+        # Extract the column list from the INSERT statement (between the parens after TABLE).
+        import re as _re
+
+        col_match = _re.search(r"INSERT INTO[^(]+\(([^)]+)\)", insert_sql)
+        assert col_match, f"Could not parse column list from INSERT SQL:\n{insert_sql}"
+        col_names = [c.strip() for c in col_match.group(1).split(",")]
+        assert "pos" in col_names, f"'pos' not in parsed column list: {col_names}"
+        pos_index = col_names.index("pos")
+
+        actual_pos_value = first_tuple[pos_index]
+        assert (
+            actual_pos_value == "noun"
+        ), f"Expected VALUES tuple[{pos_index}] == 'noun' (pos), got {actual_pos_value!r}"
