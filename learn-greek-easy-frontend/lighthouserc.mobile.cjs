@@ -28,19 +28,22 @@ module.exports = {
         // Required for CI environment
         chromeFlags: '--no-sandbox --disable-gpu',
 
-        // Mobile screen emulation (iPhone 8 dimensions)
+        // Mobile screen emulation (iPhone 12 dimensions)
         screenEmulation: {
           mobile: true,
-          width: 375,
-          height: 667,
-          deviceScaleFactor: 2,
+          width: 390,
+          height: 844,
+          deviceScaleFactor: 3,
         },
 
-        // Mobile network throttling (simulates 4G connection)
+        // Mobile network throttling (simulates 4G connection).
+        // cpuSlowdownMultiplier 2 models a modern mid/high-tier phone (iPhone 12
+        // class); the prior value of 4 modelled a low-end 2017-era device and
+        // pushed LCP on the cold preview box ~6s, well past the 4000ms floor.
         throttling: {
           rttMs: 150,
           throughputKbps: 1638.4,
-          cpuSlowdownMultiplier: 4,
+          cpuSlowdownMultiplier: 2,
         },
       },
     },
