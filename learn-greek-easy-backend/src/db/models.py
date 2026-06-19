@@ -3574,10 +3574,15 @@ class Translation(Base):
 
 
 class WiktionaryMorphology(Base):
-    """Wiktionary noun morphological data (declension forms, gender, IPA, glosses).
+    """Wiktionary morphological data (feature-keyed forms, part-of-speech, gender, IPA, glosses).
 
     Stored in the 'reference' PostgreSQL schema alongside greek_lexicon and translations.
-    Contains ~14,360 Greek nouns with declension forms extracted from Kaikki JSONL.
+    Generalised in LEXGEN-03 to be POS-neutral: a free-text ``pos`` column and a
+    ``forms`` payload shaped as a list of feature-keyed bundles (``list[FormBundle]``
+    per LEXGEN-02), rather than the old noun-only flat-key dict. Nouns remain the only
+    populated POS in v1; verbs become a one-flag re-import, not a schema rewrite.
+    Uniqueness is keyed on ``(lemma, pos, gender)`` so the same lemma can carry
+    multiple parts of speech.
     """
 
     __tablename__ = "wiktionary_morphology"
@@ -3599,11 +3604,21 @@ class WiktionaryMorphology(Base):
         nullable=False,
         comment="Grammatical gender (masculine, feminine, neuter)",
     )
-    forms: Mapped[dict] = mapped_column(
+    pos: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        server_default=text("'noun'"),
+        comment="Part of speech as free-text (POS-neutral — no enum; existing rows backfill to 'noun')",
+    )
+    forms: Mapped[list] = mapped_column(
         JSONB,
         nullable=False,
-        server_default=text("'{}'::jsonb"),
-        comment="Flat JSONB of declension forms: {nominative_singular: ..., genitive_singular: ..., ...}",
+        server_default=text("'[]'::jsonb"),
+        comment=(
+            "JSONB list of feature-keyed form bundles (list[FormBundle] per LEXGEN-02): each "
+            "bundle pairs a feature key set with its surface form. Replaces the old flat "
+            "declension-key dict; the data transform lands in LEXGEN-03-02."
+        ),
     )
     pronunciation: Mapped[str | None] = mapped_column(
         Text,
