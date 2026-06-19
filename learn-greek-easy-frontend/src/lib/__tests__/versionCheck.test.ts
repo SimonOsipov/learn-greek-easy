@@ -179,6 +179,29 @@ describe('versionCheck', () => {
     });
 
     // ─────────────────────────────────────────────────────────────────────────
+    // ADVERSARIAL EDGE (empty_backend_header_skips) — locks the !backendVersion
+    // falsy guard: an empty-string X-App-Version header (e.g., env var cleared
+    // in Railway, backend emits "X-App-Version: ") is treated as "missing" and
+    // skipped rather than mismatched. headers.get() returns "" for an explicit
+    // empty header value, which is falsy, so it hits the same guard as null.
+    // ─────────────────────────────────────────────────────────────────────────
+    it('empty_backend_header_skips: returns true without reload when X-App-Version is empty string', async () => {
+      vi.stubEnv('VITE_COMMIT_SHA', 'sha-A');
+      vi.resetModules();
+      const { checkVersionAndRefreshIfNeeded: check } = await import('../versionCheck');
+
+      const response = new Response('{}', {
+        status: 200,
+        headers: { 'X-App-Version': '' },
+      });
+
+      const result = check(response);
+
+      expect(result).toBe(true);
+      expect(mockReload).not.toHaveBeenCalled();
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
     // KEPT UNCHANGED — both versions are "dev" (the original test-env case).
     // ─────────────────────────────────────────────────────────────────────────
     it('returns true when both versions are "dev"', () => {
