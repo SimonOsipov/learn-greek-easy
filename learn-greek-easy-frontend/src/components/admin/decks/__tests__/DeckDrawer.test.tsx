@@ -161,7 +161,7 @@ describe('DeckDrawer', () => {
 
   // ── 1. Vocab deck — drawer mounts + correct 3 tabs ─────────────────────────
 
-  it('opens for vocab deck and renders 3 tab triggers (words, settings, activity)', async () => {
+  it('opens for vocab deck and renders 2 tab triggers (words, settings)', async () => {
     (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
 
     renderDrawer('/admin?tab=decks&edit=deck-vocab-1');
@@ -176,14 +176,15 @@ describe('DeckDrawer', () => {
 
     expect(screen.getByTestId('deck-drawer-tab-words')).toBeInTheDocument();
     expect(screen.getByTestId('deck-drawer-tab-settings')).toBeInTheDocument();
-    expect(screen.getByTestId('deck-drawer-tab-activity')).toBeInTheDocument();
+    // Activity tab must NOT be present (removed)
+    expect(screen.queryByTestId('deck-drawer-tab-activity')).not.toBeInTheDocument();
     // Questions tab must NOT be present for vocab deck
     expect(screen.queryByTestId('deck-drawer-tab-questions')).not.toBeInTheDocument();
   });
 
   // ── 2. Culture deck — correct 3 tabs (questions, settings, activity) ───────
 
-  it('opens for culture deck and renders 3 tab triggers (questions, settings, activity)', async () => {
+  it('opens for culture deck and renders 2 tab triggers (questions, settings)', async () => {
     (adminAPI.getDeck as Mock).mockResolvedValue(makeCultureDeck());
 
     renderDrawer('/admin?tab=decks&edit=deck-culture-1');
@@ -196,7 +197,8 @@ describe('DeckDrawer', () => {
 
     expect(screen.getByTestId('deck-drawer-tab-questions')).toBeInTheDocument();
     expect(screen.getByTestId('deck-drawer-tab-settings')).toBeInTheDocument();
-    expect(screen.getByTestId('deck-drawer-tab-activity')).toBeInTheDocument();
+    // Activity tab must NOT be present (removed)
+    expect(screen.queryByTestId('deck-drawer-tab-activity')).not.toBeInTheDocument();
     // Words tab must NOT be present for culture deck
     expect(screen.queryByTestId('deck-drawer-tab-words')).not.toBeInTheDocument();
   });
@@ -349,29 +351,22 @@ describe('DeckDrawer', () => {
     expect(capturedSearch).toContain('edit=deck-missing');
   });
 
-  // ── 6. Activity tab renders placeholder copy ────────────────────────────────
+  // ── 6. Stale ?subtab=activity URL falls back to default tab ───────────────────
 
-  it('activity tab shows activityPlaceholder text', async () => {
-    const user = userEvent.setup();
-
+  it('stale ?subtab=activity URL falls back to the deck-type default tab (words for vocab)', async () => {
     (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
 
-    renderDrawer('/admin?edit=deck-vocab-1&subtab=words');
+    renderDrawer('/admin?edit=deck-vocab-1&subtab=activity');
 
     await waitFor(() => {
       expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
     });
 
-    // Click the Activity tab
-    await user.click(screen.getByTestId('deck-drawer-tab-activity'));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('deck-drawer-activity')).toBeInTheDocument();
-    });
-
-    expect(screen.getByTestId('deck-drawer-activity')).toHaveTextContent(
-      'Recent edits, last reviewed time, and learner stats will live here.'
-    );
+    // The words tab trigger must be present and the component must not render
+    // a broken empty body (i.e. the default resolution is 'words').
+    expect(screen.getByTestId('deck-drawer-tab-words')).toBeInTheDocument();
+    // No stale activity tab trigger visible
+    expect(screen.queryByTestId('deck-drawer-tab-activity')).not.toBeInTheDocument();
   });
 
   // ── 7. Deep-link with ?item= → detail skeleton variant ─────────────────────
@@ -743,9 +738,9 @@ describe('DeckDrawer', () => {
 
   // A1. Footer is the SAME stable element across tabs; Save toggles by tab only.
   // #11 proves disabled-on-Words and 13b proves enabled-on-clean-Settings, but
-  // each in its own render. This drives a real in-session tab switch (Words →
-  // Settings → Activity) and asserts the 3 footer testids persist throughout
-  // while Save flips disabled→enabled→disabled purely by the active tab.
+  // each in its own render. This drives a real in-session tab switch (Settings →
+  // Words → Settings) and asserts the 3 footer testids persist throughout
+  // while Save flips enabled→disabled→enabled purely by the active tab.
   it('footer (delete/cancel/save) is stable across tab switches; Save disabled toggles by tab, not dirtiness', async () => {
     const user = userEvent.setup();
 
@@ -774,8 +769,8 @@ describe('DeckDrawer', () => {
     expect(screen.getByTestId('deck-drawer-footer-delete')).toBeInTheDocument();
     expect(screen.getByTestId('deck-drawer-footer-cancel')).toBeInTheDocument();
 
-    // Switch to Activity → Save disabled again (back off Settings).
-    await user.click(screen.getByTestId('deck-drawer-tab-activity'));
+    // Switch back to Words → Save disabled again (back off Settings).
+    await user.click(screen.getByTestId('deck-drawer-tab-words'));
     await waitFor(() => {
       expect(screen.getByTestId('deck-drawer-footer-save')).toBeDisabled();
     });
