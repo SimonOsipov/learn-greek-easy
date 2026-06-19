@@ -90,7 +90,7 @@ function ExampleCard({ example, index }: { example: WordEntryExampleSentence; in
         <p className="mt-0.5 pl-3.5 text-sm">{example.greek}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-x-6">
+      <div className="space-y-1.5">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <CompletionDot filled={hasEnglish} />

@@ -283,32 +283,28 @@ export function TranslationsEditSection({
             </Form>
           ) : (
             <dl className="space-y-3" id="section-en">
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+              <FieldRow
+                label={t('wordEntryContent.translationEn')}
+                value={wordEntry.translation_en || <NotSet />}
+                testId="word-entry-content-translation-en"
+              />
+              <div id="section-ru">
                 <FieldRow
-                  label={t('wordEntryContent.translationEn')}
-                  value={wordEntry.translation_en || <NotSet />}
-                  testId="word-entry-content-translation-en"
-                />
-                <div id="section-ru">
-                  <FieldRow
-                    label={t('wordEntryContent.translationRu')}
-                    value={wordEntry.translation_ru || <NotSet />}
-                    testId="word-entry-content-translation-ru"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                <FieldRow
-                  label={t('wordEntryContent.translationEnPlural')}
-                  value={wordEntry.translation_en_plural || <NotSet />}
-                  testId="word-entry-content-translation-en-plural"
-                />
-                <FieldRow
-                  label={t('wordEntryContent.translationRuPlural')}
-                  value={wordEntry.translation_ru_plural || <NotSet />}
-                  testId="word-entry-content-translation-ru-plural"
+                  label={t('wordEntryContent.translationRu')}
+                  value={wordEntry.translation_ru || <NotSet />}
+                  testId="word-entry-content-translation-ru"
                 />
               </div>
+              <FieldRow
+                label={t('wordEntryContent.translationEnPlural')}
+                value={wordEntry.translation_en_plural || <NotSet />}
+                testId="word-entry-content-translation-en-plural"
+              />
+              <FieldRow
+                label={t('wordEntryContent.translationRuPlural')}
+                value={wordEntry.translation_ru_plural || <NotSet />}
+                testId="word-entry-content-translation-ru-plural"
+              />
             </dl>
           )}
         </CardContent>
