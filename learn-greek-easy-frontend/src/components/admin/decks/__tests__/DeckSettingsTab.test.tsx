@@ -286,11 +286,13 @@ describe('DeckSettingsTab', () => {
     expect(screen.getByText('Deck Identity')).toBeInTheDocument();
   });
 
-  it('renders Access section heading inside the embedded vocab form ("Access Control")', () => {
+  it('renders the Active/Premium toggles in the embedded vocab form (no grouping heading after D6 flip)', () => {
     renderTab(makeVocabDeck());
 
-    // VocabularyDeckEditForm renders "Access Control" via deckEdit.sectionAccess
-    expect(screen.getByText('Access Control')).toBeInTheDocument();
+    // After D6 flip the "Access Control" Card/CardHeader was removed to match CultureDeckEditForm.
+    // The two access-control switches still render — assert by testid.
+    expect(screen.getByTestId('deck-edit-is-active')).toBeInTheDocument();
+    expect(screen.getByTestId('deck-edit-is-premium')).toBeInTheDocument();
   });
 
   // ── 7. CEFR row hidden for culture decks ─────────────────────────────────
