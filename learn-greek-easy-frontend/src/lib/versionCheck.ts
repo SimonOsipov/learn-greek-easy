@@ -9,8 +9,9 @@
  *
  * Features:
  * - Compares VITE_COMMIT_SHA with X-App-Version header
- * - Skips check in development mode (both are "dev")
+ * - Skips check in development mode (either side is "dev")
  * - 60-second cooldown prevents refresh loops
+ * - Per-pair refresh cap (CAP_MAX) stops reload loops on persistent skew
  * - Clears service worker caches before refresh
  */
 
@@ -18,6 +19,15 @@ import log from '@/lib/logger';
 
 /** Storage key for tracking last refresh timestamp */
 const LAST_REFRESH_KEY = 'learn-greek-easy:last-version-refresh';
+
+/** Storage key prefix for per-pair refresh count */
+const CAP_COUNT_KEY_PREFIX = 'learn-greek-easy:version-refresh-cap:';
+
+/** Storage key prefix for per-pair "already warned" flag */
+const CAP_WARNED_KEY_PREFIX = 'learn-greek-easy:version-refresh-cap-warned:';
+
+/** Maximum refreshes allowed for a single (frontend, backend) SHA pair */
+const CAP_MAX = 3;
 
 /** Minimum seconds between version-triggered refreshes */
 const REFRESH_COOLDOWN_SECONDS = 60;
@@ -69,9 +79,47 @@ export function checkVersionAndRefreshIfNeeded(response: Response): boolean {
       backendVersion,
     });
 
-    // Check cooldown to prevent refresh loops
-    if (!isRefreshAllowed()) {
-      log.warn('Version mismatch but refresh cooldown active, skipping refresh');
+    // Check per-pair refresh cap — hard stop for persistent skew.
+    // Must be checked before cooldown so the cap fires even when cooldown is reset.
+    //
+    // sessionStorage access is wrapped in try/catch: in private-browsing mode
+    // (or when storage quota is exceeded) sessionStorage can throw SecurityError.
+    // On storage failure we degrade safely — skip the refresh (can't track state)
+    // to avoid an unguarded reload loop.
+    try {
+      const capKey = `${CAP_COUNT_KEY_PREFIX}${FRONTEND_VERSION}:${backendVersion}`;
+      const warnedKey = `${CAP_WARNED_KEY_PREFIX}${FRONTEND_VERSION}:${backendVersion}`;
+      const currentCount = parseInt(sessionStorage.getItem(capKey) ?? '0', 10);
+
+      if (currentCount >= CAP_MAX) {
+        // Already hit the cap for this pair. Warn once, then give up.
+        if (!sessionStorage.getItem(warnedKey)) {
+          log.warn(
+            'Version mismatch persists after max refreshes — giving up to avoid reload loop',
+            {
+              frontendVersion: FRONTEND_VERSION,
+              backendVersion,
+              refreshCount: currentCount,
+            }
+          );
+          sessionStorage.setItem(warnedKey, '1');
+        }
+        return false;
+      }
+
+      // Check cooldown to prevent refresh loops
+      if (!isRefreshAllowed()) {
+        log.warn('Version mismatch but refresh cooldown active, skipping refresh');
+        return false;
+      }
+
+      // Increment per-pair count before triggering refresh
+      sessionStorage.setItem(capKey, (currentCount + 1).toString());
+    } catch {
+      // sessionStorage unavailable (private-mode, quota exceeded).
+      // Skip the refresh — we cannot track cooldown or cap state, so reloading
+      // would risk an unguarded loop.
+      log.warn('Version check storage unavailable, skipping refresh to avoid reload loop');
       return false;
     }
 
