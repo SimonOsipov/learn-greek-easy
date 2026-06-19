@@ -889,3 +889,91 @@ class TestPosFilterAndBundleOutputAdversarial:
             f"VALUES tuple at SQL column 'pos' index {pos_idx} should be {sentinel_pos!r}, "
             f"got {actual!r}. Full tuple: {captured_batches[0][0]}"
         )
+
+
+# ---------------------------------------------------------------------------
+# LEXGEN-03-05 AC-3 (unit): no-verb invariant over a mixed-POS JSONL fixture
+# ---------------------------------------------------------------------------
+#
+# AC-4 is ALREADY COVERED by
+#   TestPosFilterAndBundleOutputAdversarial::test_pos_verb_all_rows_carry_verb_pos_and_bundle_forms
+# (line 761).  That test: mixed-POS fixture with pos="verb" flag ->
+#   - All returned rows have pos=='verb'.
+#   - Zero noun rows (noun entry in fixture excluded).
+#   - All forms are bundle lists.
+# This directly proves --pos is the sole POS selector.  No duplicate.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestLexgen0305NoVerbInvariant:
+    """LEXGEN-03-05 AC-3: the no-verb invariant.
+
+    A default importer run on a mixed-POS JSONL fixture (nouns, verbs,
+    adjectives) produces ONLY noun rows -- there is no verb or adjective row
+    in the output, and every row's pos is 'noun'.
+
+    This is the story-level invariant from the Invariants block:
+      'No verbs imported in v1 -- Decision Record: do not import verbs now.'
+    It differs from the existing TestParseEntries::test_verb_entry_filtered which
+    only tests a SINGLE verb entry in isolation.  This test uses a multi-entry
+    mixed fixture to assert the FULL no-verb guarantee (no cross-contamination).
+    """
+
+    def test_default_run_only_produces_noun_rows(self) -> None:
+        """AC-3 (LEXGEN-03-05): after a default importer run on a mixed-POS JSONL
+        fixture, every returned row has pos == 'noun' and there is no verb row.
+
+        Given: a JSONL fixture with 3 nouns, 2 verbs, and 1 adjective.
+        When:  _parse_entries(path) is called with no pos argument (default 'noun').
+        Then:
+          - Every row in the output has pos == 'noun'.
+          - No row has pos == 'verb' or any other POS.
+          - The verb and adjective entries are excluded (not bleed through).
+          - Row count == 3 (the 3 noun entries).
+        """
+        mixed_lines = [
+            # 3 noun entries (should pass through)
+            _make_entry("κόσμος", pos="noun", gender="m"),
+            _make_entry("θάλασσα", pos="noun", gender="f"),
+            _make_entry("παιδί", pos="noun", gender="n"),
+            # 2 verb entries (must be excluded)
+            _make_entry("τρέχω", pos="verb", gender="m"),
+            _make_entry("γράφω", pos="verb", gender="f"),
+            # 1 adjective entry (must be excluded)
+            _make_entry("καλός", pos="adjective", gender="m"),
+        ]
+        rows, _filtered, _merged = _call_parse_entries(mixed_lines)  # default pos='noun'
+
+        # All returned rows must have pos == 'noun'
+        assert len(rows) == 3, (
+            f"Expected 3 noun rows from a mixed-POS fixture with default pos='noun', "
+            f"got {len(rows)}: {[r.get('lemma') for r in rows]}"
+        )
+        for row in rows:
+            assert row["pos"] == "noun", (
+                f"AC-3 no-verb invariant violated: row {row.get('lemma')!r} has "
+                f"pos={row['pos']!r} (expected 'noun').  A non-noun entry leaked "
+                f"through the default importer filter: INTEGRATION GAP."
+            )
+
+        # No verb row anywhere in the output (belt-and-suspenders check)
+        verb_rows = [r for r in rows if r.get("pos") == "verb"]
+        assert not verb_rows, (
+            f"AC-3: verb rows found in default importer output: "
+            f"{[r.get('lemma') for r in verb_rows]}.  "
+            f"Verbs must not be imported in v1: INTEGRATION GAP."
+        )
+
+        # No non-noun row of any POS
+        non_noun = [r for r in rows if r.get("pos") != "noun"]
+        assert not non_noun, (
+            f"AC-3: non-noun rows found in default output: "
+            f"{[(r.get('lemma'), r.get('pos')) for r in non_noun]}"
+        )
+
+        # Verify noun lemmas are all present (no accidental drop)
+        noun_lemmas = {r["lemma"] for r in rows}
+        assert noun_lemmas == {"κόσμος", "θάλασσα", "παιδί"}, (
+            f"Expected noun lemmas {{'κόσμος', 'θάλασσα', 'παιδί'}}, " f"got {noun_lemmas}"
+        )

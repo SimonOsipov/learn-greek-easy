@@ -1332,3 +1332,449 @@ class TestLexgen0302BackfillFlatToBundles:
                 _delete_rows(conn, [row_id])
                 conn.commit()
             engine.dispose()
+
+
+# ---------------------------------------------------------------------------
+# LEXGEN-03-05: AC-1 and AC-2 integration tests (Mode B — post-implementation)
+# ---------------------------------------------------------------------------
+#
+# AC-1  test_noun_round_trips_import_to_read
+#   THE genuinely new end-to-end chain: nothing in the preceding tests crosses
+#   importer + real DB + service together.  Prior tests exercise each component
+#   independently:
+#     - 03-02 tests: backfill helpers + data shape in isolated DB
+#     - 03-03 unit tests: _parse_entries produces bundle rows (no DB)
+#     - 03-04 unit tests: WiktionaryMorphologyService against mock DB
+#   This test is the ONLY one that runs all three in a single straight line:
+#     _parse_entries (JSONL -> bundle rows) ->
+#     _insert_rows (psycopg2, real DB) ->
+#     WiktionaryMorphologyService.get_declensions / get_form_bundles (async, real DB)
+#
+# AC-2  test_full_upgrade_downgrade_restores_forms (consolidated)
+#   Existing coverage:
+#     - test_upgrade_then_downgrade_round_trips_schema: DDL round-trip on EMPTY table.
+#     - test_downgrade_restores_flat_keys: helper-level data restore (no subprocess).
+#   Gap: no test seeds multi-row data BEFORE the upgrade subprocess, drives the
+#   full alembic upgrade (including backfill) then downgrade subprocess, and
+#   asserts byte-equal flat forms at the Alembic level.  This test fills that gap.
+#
+# AC-3  test_default_run_only_produces_noun_rows: see test_load_wiktionary_morphology.py
+#
+# AC-4  ALREADY COVERED by test_pos_verb_all_rows_carry_verb_pos_and_bundle_forms
+#   in tests/unit/scripts/test_load_wiktionary_morphology.py (line 761).
+#   That test: mixed-POS fixture with pos="verb" -> all rows have pos=='verb',
+#   zero noun rows, all forms are bundle lists.  No duplicate needed.
+# ---------------------------------------------------------------------------
+
+
+class TestLexgen0305RoundTripAndInvariants:
+    """LEXGEN-03-05 Mode B: end-to-end chain (AC-1) + full alembic upgrade/
+    downgrade with seeded data (AC-2 consolidation).
+
+    Tests require a real PostgreSQL DB on localhost:5433.  The AC-1 test
+    reuses the backfill_db_url session fixture (pre-upgraded shared DB).
+    The AC-2 test creates its own isolated DB (alembic subprocess round-trip).
+    Both skip automatically when the DB is unreachable.
+    """
+
+    # -----------------------------------------------------------------------
+    # AC-1: importer -> real DB -> service  (the only full cross-chain test)
+    # -----------------------------------------------------------------------
+
+    def test_noun_round_trips_import_to_read(self, backfill_db_url: str) -> None:
+        """AC-1 (LEXGEN-03-05): flat forms -> _parse_entries (bundles) ->
+        _insert_rows (real DB) -> WiktionaryMorphologyService.get_declensions
+        (flat) -> output flat keys == original flat keys.
+
+        Chain exercised:
+          1. Build a JSONL fixture with a canonical 4-cell noun paradigm.
+          2. _parse_entries converts flat -> bundle list rows (LEXGEN-03-03 path).
+          3. _insert_rows inserts via psycopg2 against the upgraded backfill_db_url DB.
+          4. WiktionaryMorphologyService.get_declensions reads the stored bundles
+             and returns the flat dict via bundles_to_flat (LEXGEN-03-04 path).
+          5. Assert output flat == original flat (LEXGEN-02 round-trip invariant).
+          6. Assert get_form_bundles returns the expected bundle list.
+
+        This is the ONLY test that crosses all three layers -- importer, DB,
+        service -- in a single straight-line execution.  A RED here is a real
+        integration gap in the assembled LEXGEN-03 feature.
+        """
+        import asyncio
+        import io
+        from unittest.mock import MagicMock
+
+        import psycopg2
+        from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+        from sqlalchemy.pool import NullPool
+
+        from src.core.lexgen_forms import flat_to_bundles
+        from src.schemas.lexgen import FormBundle
+        from src.scripts.load_wiktionary_morphology import _insert_rows, _parse_entries
+        from src.services.wiktionary_morphology_service import WiktionaryMorphologyService
+
+        # ---- 1. JSONL fixture: canonical 4-cell noun paradigm ----
+        # lemma is unique enough to avoid conflicts with other test rows
+        fixture_lemma = "κόσμος_qa05"  # "κόσμος_qa05"
+        original_flat = {
+            "nominative_singular": "ο κόσμος_qa05",
+            "genitive_singular": "του κόσμου_qa05",
+            "accusative_singular": "τον κόσμο_qa05",
+            "nominative_plural": "οι κόσμοι_qa05",
+        }
+        jsonl_entry = json.dumps(
+            {
+                "word": fixture_lemma,
+                "pos": "noun",
+                "head_templates": [{"args": {"g": "m"}}],
+                "senses": [{"glosses": ["test world (QA-05)"]}],
+                "sounds": [{"ipa": "/test.qa05/"}],
+                "forms": [
+                    {
+                        "source": "declension",
+                        "tags": ["nominative", "singular"],
+                        "form": original_flat["nominative_singular"],
+                    },
+                    {
+                        "source": "declension",
+                        "tags": ["genitive", "singular"],
+                        "form": original_flat["genitive_singular"],
+                    },
+                    {
+                        "source": "declension",
+                        "tags": ["accusative", "singular"],
+                        "form": original_flat["accusative_singular"],
+                    },
+                    {
+                        "source": "declension",
+                        "tags": ["nominative", "plural"],
+                        "form": original_flat["nominative_plural"],
+                    },
+                ],
+            }
+        )
+
+        # ---- 2. _parse_entries: flat -> bundle-list rows ----
+        fake_path = MagicMock()
+        fake_path.open.return_value.__enter__ = lambda s: io.StringIO(jsonl_entry)
+        fake_path.open.return_value.__exit__ = MagicMock(return_value=False)
+        rows, _filtered, _merged = _parse_entries(fake_path, pos="noun")
+
+        assert len(rows) == 1, f"Expected 1 parsed row, got {len(rows)}"
+        row = rows[0]
+        assert row["lemma"] == fixture_lemma
+        assert row["pos"] == "noun"
+        assert row["gender"] == "masculine"
+        assert isinstance(row["forms"], list), (
+            f"After _parse_entries, row['forms'] must be a bundle list; "
+            f"got {type(row['forms'])}"
+        )
+        # Verify the bundle list matches flat_to_bundles(original_flat)
+        expected_bundles = flat_to_bundles(original_flat, pos="noun")
+        expected_bundle_dicts = [b.model_dump(mode="json") for b in expected_bundles]
+        assert row["forms"] == expected_bundle_dicts, (
+            f"Importer-produced bundle list does not match flat_to_bundles output.\n"
+            f"Expected: {expected_bundle_dicts}\nGot:      {row['forms']}"
+        )
+
+        # ---- 3. _insert_rows: psycopg2 against the upgraded backfill_db_url DB ----
+        conn_str = backfill_db_url.replace("postgresql+psycopg2://", "postgresql://")
+        pg_conn = psycopg2.connect(conn_str)
+        inserted_id = None
+        try:
+            with pg_conn.cursor() as cur:
+                # Remove any pre-existing row (idempotent test setup)
+                cur.execute(
+                    "DELETE FROM reference.wiktionary_morphology WHERE lemma = %s",
+                    (fixture_lemma,),
+                )
+                pg_conn.commit()
+
+                _insert_rows(cur, rows)
+                pg_conn.commit()
+
+                # Record inserted id for cleanup
+                cur.execute(
+                    "SELECT id FROM reference.wiktionary_morphology WHERE lemma = %s",
+                    (fixture_lemma,),
+                )
+                id_row = cur.fetchone()
+                if id_row:
+                    inserted_id = id_row[0]
+        except Exception:
+            pg_conn.rollback()
+            pg_conn.close()
+            raise
+
+        # ---- 4. Service: WiktionaryMorphologyService reads bundles -> flat ----
+        # Build a short-lived async engine pointing at the same DB (asyncpg URL)
+        async_url = backfill_db_url.replace("postgresql+psycopg2://", "postgresql+asyncpg://")
+
+        async def _call_service():
+            engine = create_async_engine(async_url, poolclass=NullPool)
+            try:
+                Session = async_sessionmaker(engine, expire_on_commit=False)
+                async with Session() as session:
+                    svc = WiktionaryMorphologyService(session)
+                    flat_result = await svc.get_declensions(
+                        fixture_lemma, pos="noun", gender="masculine"
+                    )
+                    bundle_result = await svc.get_form_bundles(
+                        fixture_lemma, pos="noun", gender="masculine"
+                    )
+                return flat_result, bundle_result
+            finally:
+                await engine.dispose()
+
+        flat_result, bundle_result = asyncio.run(_call_service())
+
+        # ---- Cleanup: remove inserted row ----
+        try:
+            with pg_conn.cursor() as cur:
+                if inserted_id is not None:
+                    cur.execute(
+                        "DELETE FROM reference.wiktionary_morphology WHERE id = %s",
+                        (inserted_id,),
+                    )
+                else:
+                    cur.execute(
+                        "DELETE FROM reference.wiktionary_morphology WHERE lemma = %s",
+                        (fixture_lemma,),
+                    )
+            pg_conn.commit()
+        finally:
+            pg_conn.close()
+
+        # ---- 5. Assert flat output == original flat (AC-1 invariant) ----
+        assert flat_result is not None, (
+            f"WiktionaryMorphologyService.get_declensions returned None for "
+            f"lemma={fixture_lemma!r}, pos='noun', gender='masculine'.  "
+            f"The inserted row was not found by the service: INTEGRATION GAP.  "
+            f"Check that _insert_rows wrote to the correct table and that the "
+            f"service query filters match the inserted data."
+        )
+        assert flat_result == original_flat, (
+            f"AC-1 round-trip mismatch (LEXGEN-03-05).\n"
+            f"Original flat:  {original_flat}\n"
+            f"Service output: {flat_result}\n"
+            f"The importer->DB->service chain does not round-trip flat keys "
+            f"correctly: INTEGRATION GAP."
+        )
+
+        # ---- 6. Assert get_form_bundles returns the expected bundle list ----
+        assert bundle_result is not None, (
+            f"WiktionaryMorphologyService.get_form_bundles returned None for "
+            f"lemma={fixture_lemma!r}: INTEGRATION GAP."
+        )
+        assert isinstance(bundle_result, list)
+        assert len(bundle_result) == len(expected_bundles), (
+            f"Bundle count mismatch: expected {len(expected_bundles)}, "
+            f"got {len(bundle_result)}.  Bundles: {bundle_result}"
+        )
+        for stored, expected in zip(bundle_result, expected_bundles):
+            assert isinstance(stored, FormBundle)
+            assert stored.form == expected.form, (
+                f"Bundle form mismatch: expected {expected.form!r}, " f"got {stored.form!r}"
+            )
+            assert stored.features == expected.features, (
+                f"Bundle features mismatch: expected {expected.features}, " f"got {stored.features}"
+            )
+
+    # -----------------------------------------------------------------------
+    # AC-2: full alembic subprocess upgrade->downgrade with seeded data
+    # -----------------------------------------------------------------------
+
+    def test_full_upgrade_downgrade_restores_forms(self) -> None:  # noqa: C901
+        """AC-2 (LEXGEN-03-05): seed multi-row flat data BEFORE the LEXGEN-03
+        upgrade subprocess.  Drive alembic upgrade (runs DDL + backfill).
+        Assert stored forms are bundle lists.  Drive alembic downgrade.
+        Assert forms are byte-equal to the original flat dicts.
+
+        WHY this consolidation test is not a duplicate:
+          - test_upgrade_then_downgrade_round_trips_schema: DDL-only, EMPTY table.
+          - test_downgrade_restores_flat_keys: uses helper functions directly,
+            not the alembic subprocess.  The subprocess also runs upgrade hooks
+            (ndel_01, esq_01, exr63) and the LEXGEN-03 backfill as a unit.
+          This test is the ONLY end-to-end proof that the backfill DATA migration
+          is reversible when driven via the standard alembic CLI path.
+
+        Invariant: the full migration pair (DDL + data) is lossless for canonical
+        flat dicts; upgrade->downgrade restores byte-equal forms.
+        """
+        db_name = "test_lexgen03_ac2_multi"
+        try:
+            db_url = _setup_migration_db(db_name)
+        except Exception as exc:
+            pytest.skip(
+                f"Cannot create isolated migration DB '{db_name}': {exc}. "
+                "Requires a reachable PostgreSQL on localhost:5433 "
+                "(pgvector/pgvector:pg17). This test is CI-gated."
+            )
+
+        # Seed a 3-row dataset BEFORE the LEXGEN-03 upgrade so the backfill
+        # runs against real pre-migration flat rows.  We upgrade to the revision
+        # just before LEXGEN-03, seed data, then upgrade the LEXGEN-03 revision.
+        pre_lexgen03_rev = "1536eb298412"  # LEXGEN-01 (direct predecessor)
+        lexgen03_rev = "5e8cc90e5bca"  # LEXGEN-03
+
+        # Canonical flat forms for 3 test nouns (varying paradigm sizes)
+        seed_rows = [
+            {
+                "id": 990_001,
+                "lemma": "θάλασσα_ac2",  # θάλασσα_ac2
+                "gender": "feminine",
+                "flat": {
+                    "nominative_singular": "η θάλασσα",
+                    "genitive_singular": "της θάλασσας",
+                    "nominative_plural": "οι θάλασσες",
+                    "genitive_plural": "των θαλασσών",
+                },
+            },
+            {
+                "id": 990_002,
+                "lemma": "ουρανός_ac2",  # ουρανός_ac2
+                "gender": "masculine",
+                "flat": {
+                    "nominative_singular": "ο ουρανός",
+                    "genitive_singular": "του ουρανού",
+                    "accusative_singular": "τον ουρανό",
+                    "vocative_singular": "ουρανέ",
+                    "nominative_plural": "οι ουρανοί",
+                    "genitive_plural": "των ουρανών",
+                    "accusative_plural": "τους ουρανούς",
+                    "vocative_plural": "ουρανοί",
+                },
+            },
+            {
+                "id": 990_003,
+                "lemma": "παιδί_ac2",  # παιδί_ac2
+                "gender": "neuter",
+                "flat": {},  # empty flat -> must become []
+            },
+        ]
+
+        try:
+            # ---- Step 1: upgrade to LEXGEN-01 predecessor (table exists, no pos) ----
+            result_pre = _run_alembic(["upgrade", pre_lexgen03_rev], db_url)
+            assert result_pre.returncode == 0, (
+                f"alembic upgrade {pre_lexgen03_rev} failed:\n"
+                f"STDOUT:\n{result_pre.stdout}\nSTDERR:\n{result_pre.stderr}"
+            )
+
+            engine = _sync_engine(db_url)
+            try:
+                # ---- Step 2: seed multi-row flat data before LEXGEN-03 ----
+                with engine.connect() as conn:
+                    for r in seed_rows:
+                        conn.execute(
+                            text(
+                                """
+                                INSERT INTO reference.wiktionary_morphology
+                                    (id, lemma, gender, forms)
+                                VALUES (:id, :lemma, :gender, CAST(:forms AS jsonb))
+                                ON CONFLICT DO NOTHING
+                                """
+                            ),
+                            {
+                                "id": r["id"],
+                                "lemma": r["lemma"],
+                                "gender": r["gender"],
+                                "forms": json.dumps(r["flat"]),
+                            },
+                        )
+                    conn.commit()
+
+                    # Confirm pre-upgrade state: forms must be flat dicts
+                    for r in seed_rows:
+                        forms = conn.execute(
+                            text(
+                                "SELECT forms FROM reference.wiktionary_morphology "
+                                "WHERE id = :id"
+                            ),
+                            {"id": r["id"]},
+                        ).scalar()
+                        assert isinstance(forms, dict), (
+                            f"Pre-upgrade: row id={r['id']} forms must be a flat "
+                            f"dict; got {type(forms)}: {forms!r}"
+                        )
+
+                # ---- Step 3: upgrade LEXGEN-03 (DDL + backfill) ----
+                result_up = _run_alembic(["upgrade", lexgen03_rev], db_url)
+                assert result_up.returncode == 0, (
+                    f"alembic upgrade {lexgen03_rev} (LEXGEN-03) failed:\n"
+                    f"STDOUT:\n{result_up.stdout}\nSTDERR:\n{result_up.stderr}"
+                )
+
+                # ---- Step 4: assert forms are now bundle lists ----
+                with engine.connect() as conn:
+                    for r in seed_rows:
+                        forms = conn.execute(
+                            text(
+                                "SELECT forms FROM reference.wiktionary_morphology "
+                                "WHERE id = :id"
+                            ),
+                            {"id": r["id"]},
+                        ).scalar()
+                        assert isinstance(forms, list), (
+                            f"Post-upgrade: row id={r['id']} (lemma={r['lemma']!r}) "
+                            f"forms must be a bundle list; got {type(forms)}: {forms!r}"
+                        )
+                        if not r["flat"]:
+                            assert forms == [], (
+                                f"Empty flat row (id={r['id']}) must produce [] "
+                                f"after upgrade; got {forms!r}"
+                            )
+                        else:
+                            for item in forms:
+                                assert (
+                                    "form" in item and "features" in item
+                                ), f"Bundle item missing keys: {item!r}"
+
+                # ---- Step 5: downgrade LEXGEN-03 (data reversal + DDL reversal) ----
+                result_down = _run_alembic(["downgrade", "-1"], db_url)
+                assert result_down.returncode == 0, (
+                    f"alembic downgrade -1 (LEXGEN-03) failed:\n"
+                    f"STDOUT:\n{result_down.stdout}\nSTDERR:\n{result_down.stderr}"
+                )
+
+                # ---- Step 6: assert forms are byte-equal to original flat ----
+                with engine.connect() as conn:
+                    for r in seed_rows:
+                        forms = conn.execute(
+                            text(
+                                "SELECT forms FROM reference.wiktionary_morphology "
+                                "WHERE id = :id"
+                            ),
+                            {"id": r["id"]},
+                        ).scalar()
+                        assert isinstance(forms, dict), (
+                            f"Post-downgrade: row id={r['id']} "
+                            f"(lemma={r['lemma']!r}) forms must be a flat dict; "
+                            f"got {type(forms)}: {forms!r}"
+                        )
+                        assert forms == r["flat"], (
+                            f"AC-2 byte-equal check FAILED for row id={r['id']} "
+                            f"(lemma={r['lemma']!r}).\n"
+                            f"Original flat:    {r['flat']}\n"
+                            f"After downgrade:  {forms}\n"
+                            f"The migration pair (upgrade->downgrade) is NOT lossless "
+                            f"for this dataset: INTEGRATION GAP."
+                        )
+
+                # ---- Step 7: schema check: pos column gone, old index restored ----
+                assert not _column_exists(
+                    engine, "reference", "wiktionary_morphology", "pos"
+                ), "pos column must be gone after downgrade -1"
+                indexes = _get_unique_indexes(
+                    engine, schema="reference", table="wiktionary_morphology"
+                )
+                assert (
+                    "uq_wiktionary_morphology_lemma_gender" in indexes
+                ), "Old 2-col unique index must be restored after downgrade -1"
+                assert (
+                    "uq_wiktionary_morphology_lemma_pos_gender" not in indexes
+                ), "3-col unique index must NOT exist after downgrade -1"
+
+            finally:
+                engine.dispose()
+        finally:
+            _teardown_migration_db(db_name)
