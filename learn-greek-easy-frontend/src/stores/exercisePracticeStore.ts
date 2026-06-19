@@ -30,15 +30,16 @@ interface ExercisePracticeState {
     correctIndex: number;
   } | null;
 
+  // Explicit result phase — lock-step with feedbackState
+  // feedbackState !== null  ⟺  phase === 'result'
+  phase: 'question' | 'result';
+
   // Session metadata
   sessionSummary: ExerciseSessionSummary | null;
   sessionId: string | null;
   modality: ExerciseModality | null;
   sessionStartTime: number | null;
   exerciseStartTime: number | null;
-
-  // Internal timer
-  _feedbackTimer: ReturnType<typeof setTimeout> | null;
 
   // Actions
   startSession: (modality?: ExerciseModality) => Promise<void>;
@@ -57,12 +58,12 @@ const initialState = {
   error: null,
   answers: {} as Record<string, { selectedIndex: number; correct: boolean }>,
   feedbackState: null,
+  phase: 'question' as 'question' | 'result',
   sessionSummary: null,
   sessionId: null,
   modality: null as ExerciseModality | null,
   sessionStartTime: null,
   exerciseStartTime: null,
-  _feedbackTimer: null,
 };
 
 export const useExercisePracticeStore = create<ExercisePracticeState>()(
@@ -71,10 +72,6 @@ export const useExercisePracticeStore = create<ExercisePracticeState>()(
       ...initialState,
 
       startSession: async (modality?: ExerciseModality) => {
-        const existingTimer = get()._feedbackTimer;
-        if (existingTimer) {
-          clearTimeout(existingTimer);
-        }
         set({ isLoading: true, error: null });
         try {
           const { user } = useAuthStore.getState();
@@ -90,12 +87,12 @@ export const useExercisePracticeStore = create<ExercisePracticeState>()(
             error: null,
             answers: {},
             feedbackState: null,
+            phase: 'question',
             sessionSummary: null,
             sessionId: generateSessionId(),
             modality: modality ?? null,
             sessionStartTime: now,
             exerciseStartTime: now,
-            _feedbackTimer: null,
           });
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Failed to load exercises';
@@ -106,18 +103,16 @@ export const useExercisePracticeStore = create<ExercisePracticeState>()(
 
       submitAnswer: (exerciseId: string, selectedIndex: number, correctIndex: number) => {
         const state = get();
-        // Clear any existing timer (defensive: prevent double-advance)
-        if (state._feedbackTimer) {
-          clearTimeout(state._feedbackTimer);
-        }
         const correct = selectedIndex === correctIndex;
         const updatedAnswers = {
           ...state.answers,
           [exerciseId]: { selectedIndex, correct },
         };
+        // Set feedbackState and phase in lock-step (feedbackState !== null ⟺ phase === 'result')
         set({
           answers: updatedAnswers,
           feedbackState: { exerciseId, selectedIndex, correctIndex },
+          phase: 'result',
         });
         // Fire-and-forget review submission
         exerciseAPI
@@ -129,20 +124,12 @@ export const useExercisePracticeStore = create<ExercisePracticeState>()(
           .catch(() => {
             // Fire-and-forget: silently ignore. Session continues.
           });
-        // Schedule auto-advance after 1.2s feedback pause
-        const timer = setTimeout(() => {
-          get().advance();
-        }, 1200);
-        set({ _feedbackTimer: timer });
       },
 
       advance: () => {
         const state = get();
-        // Clear timer to prevent double-advance
-        if (state._feedbackTimer) {
-          clearTimeout(state._feedbackTimer);
-        }
-        set({ feedbackState: null, exerciseStartTime: Date.now(), _feedbackTimer: null });
+        // Clear feedbackState and phase in lock-step
+        set({ feedbackState: null, phase: 'question', exerciseStartTime: Date.now() });
         const nextIndex = state.currentIndex + 1;
         if (nextIndex >= state.queue.length) {
           // Session complete — compute summary
@@ -162,18 +149,10 @@ export const useExercisePracticeStore = create<ExercisePracticeState>()(
       },
 
       endSession: () => {
-        const { _feedbackTimer } = get();
-        if (_feedbackTimer) {
-          clearTimeout(_feedbackTimer);
-        }
         set({ ...initialState });
       },
 
       resetSession: () => {
-        const { _feedbackTimer } = get();
-        if (_feedbackTimer) {
-          clearTimeout(_feedbackTimer);
-        }
         set({ ...initialState });
       },
 

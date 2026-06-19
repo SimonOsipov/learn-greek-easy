@@ -87,6 +87,109 @@
         "correctAnswer": "Correct answer",
         "incorrect": "Incorrect",
         "skipInsufficientPool": "Skipping — not enough material for this exercise yet"
+      },
+      "result": {
+        "continue": "Continue",
+        "theAnswer": "The answer",
+        "why": "Why",
+        "verdictCorrect": "Correct",
+        "verdictIncorrect": "Incorrect",
+        "whyAriaLabel": "Why — not yet connected to backend data."
+      },
+      "rail": {
+        "liveStats": "Live stats",
+        "missed": "Missed",
+        "elapsed": "Elapsed",
+        "streakDays_one": "day",
+        "streakDays_other": "days",
+        "streakSubline": "Finish to keep your streak"
+      },
+      "stepper": {
+        "header": "Session",
+        "exerciseN": "Exercise {{n}}"
+      }
+    },
+    "dashboard": {
+      "kicker": "PRACTICE HUB",
+      "title": "Exercises",
+      "titleSuffix": "— your practice hub",
+      "subtitle": "Practice the exercises you've earned from your situations. Listening and reading comprehension await.",
+      "startDailyMix": "Start daily mix",
+      "startDailyMixCount_one": "{{count}} exercise ready",
+      "startDailyMixCount_other": "{{count}} exercises ready",
+      "noQueue": "All caught up — check back later.",
+      "modality": {
+        "all": "All",
+        "listening": "Listening",
+        "reading": "Reading"
+      },
+      "metrics": {
+        "accuracy": "Accuracy",
+        "exercisesDone": "Exercises done",
+        "currentStreak": "Current streak",
+        "timePracticed": "Time practiced",
+        "streakDays_one": "day",
+        "streakDays_other": "days",
+        "streakNone": "—"
+      },
+      "panels": {
+        "accuracyChart": {
+          "title": "Accuracy over time",
+          "subtitle": "12-week rolling accuracy",
+          "ariaLabel": "Accuracy over time chart — not yet connected to backend data."
+        },
+        "goal": {
+          "title": "Today's goal",
+          "subtitle": "Daily exercise target",
+          "ariaLabel": "Today's goal ring and week heatmap — not yet connected to backend data."
+        },
+        "skillFamilies": {
+          "title": "Skill families",
+          "subtitle": "Progress by modality",
+          "reading": "Reading",
+          "listening": "Listening",
+          "speaking": "Speaking",
+          "production": "Production",
+          "accuracyAriaLabel": "Family accuracy — not yet connected to backend data.",
+          "masteryAriaLabel": "Family mastery — not yet connected to backend data.",
+          "speakingAriaLabel": "Speaking family — not yet connected to backend data.",
+          "productionAriaLabel": "Production family — not yet connected to backend data."
+        },
+        "weakSpots": {
+          "title": "Weak spots to review",
+          "subtitle": "Items needing attention",
+          "ariaLabel": "Weak spots list — not yet connected to backend data."
+        },
+        "recommended": {
+          "title": "Recommended for you",
+          "subtitle": "From your practice queue",
+          "empty": "Your practice queue is empty — complete more situations to unlock exercises.",
+          "startExercise": "Start exercise",
+          "errorLoad": "Could not load your queue",
+          "errorRetry": "Retry",
+          "typeLabel": {
+            "select_correct_answer": "Select answer",
+            "select_picture_from_description": "Match picture",
+            "select_description_from_picture": "Match description"
+          }
+        },
+        "recentSessions": {
+          "title": "Recent sessions",
+          "subtitle": "Your practice history",
+          "ariaLabel": "Recent sessions list — not yet connected to backend data."
+        }
+      },
+      "completion": {
+        "title": "Session complete — nicely done",
+        "subtitle_one": "You scored {{accuracy}}% across {{total}} exercise",
+        "subtitle_other": "You scored {{accuracy}}% across {{total}} exercises",
+        "correct": "correct",
+        "missed": "missed",
+        "streak": "Streak now {{count}} day",
+        "streak_one": "Streak now {{count}} day",
+        "streak_other": "Streak now {{count}} days",
+        "practiceAgain": "Practice again",
+        "dismiss": "Dismiss"
       }
     }
   },

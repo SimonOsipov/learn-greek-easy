@@ -50,6 +50,15 @@ vi.mock('@/hooks/usePracticeSession', () => ({
   usePracticeSession: vi.fn(() => ({ resetTracking: vi.fn() })),
 }));
 
+// useStudyStreak — stub (PRACT2-12-05 added this import; the page test doesn't need real data)
+vi.mock('@/hooks/useStudyStreak', () => ({
+  useStudyStreak: vi.fn(() => ({
+    streak: { currentStreak: 0, longestStreak: 0 },
+    loading: false,
+    error: null,
+  })),
+}));
+
 // usePracticeKeyboard — capture the passed keymap so tests can invoke handlers directly
 let capturedKeymap: Record<string, () => void> = {};
 vi.mock('@/hooks/usePracticeKeyboard', () => ({
@@ -95,9 +104,11 @@ const defaultStoreState = {
   isLoading: false,
   error: null,
   feedbackState: null as { exerciseId: string; selectedIndex: number; correctIndex: number } | null,
+  phase: 'question' as 'question' | 'result',
   sessionSummary: null,
   answers: {} as Record<string, { selectedIndex: number; correct: boolean }>,
   exerciseStartTime: null as number | null,
+  sessionStartTime: null as number | null,
   startSession: mockStartSession,
   submitAnswer: mockSubmitAnswer,
   advance: mockAdvance,

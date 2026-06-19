@@ -306,12 +306,15 @@ describe('NewsSection Component', () => {
         expect(screen.getByTestId('news-section')).toBeInTheDocument();
       });
 
-      // All 4 article images should be rendered — grab them in DOM order
+      // All 4 article images should be rendered — wait for the post-fetch
+      // re-render (the section testid appears in the loading commit too), then
+      // grab them in DOM order.
+      await waitFor(() => {
+        expect(document.querySelectorAll('img[aria-hidden="true"]')).toHaveLength(4);
+      });
       const allImgs = Array.from(
         document.querySelectorAll('img[aria-hidden="true"]')
       ) as HTMLImageElement[];
-
-      expect(allImgs).toHaveLength(4);
 
       // First 3 must be eager (PERF-04-02 AC)
       expect(allImgs[0].getAttribute('loading')).toBe('eager');
@@ -343,11 +346,13 @@ describe('NewsSection Component', () => {
         expect(screen.getByTestId('news-section')).toBeInTheDocument();
       });
 
+      // Wait for the post-fetch re-render before reading the images.
+      await waitFor(() => {
+        expect(document.querySelectorAll('img[aria-hidden="true"]')).toHaveLength(2);
+      });
       const allImgs = Array.from(
         document.querySelectorAll('img[aria-hidden="true"]')
       ) as HTMLImageElement[];
-
-      expect(allImgs).toHaveLength(2);
 
       // item-null: index=0 but image_variants==null → must NOT be eager
       expect(allImgs[0].getAttribute('loading')).toBe('lazy');
