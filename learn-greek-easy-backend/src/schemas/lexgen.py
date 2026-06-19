@@ -67,6 +67,9 @@ not silently mismatch on it. Verb feature *values* (tense/aspect/mood/voice/etc.
 are likewise documented out of scope here; only the noun value map is authored.
 """
 
+from types import MappingProxyType
+from typing import Mapping
+
 from pydantic import BaseModel, Field, field_validator
 
 # The controlled vocabulary of morphological feature keys, aligned 1:1 to the
@@ -114,47 +117,65 @@ class FormBundle(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# LEXGEN-02-02 — POS-neutral proposal-draft value types (STUB, RED phase).
+# LEXGEN-02-02 — POS-neutral proposal-draft value types + GRAMMAR_DATA_SCHEMA.
 #
-# Minimal non-functional placeholders so the test file imports cleanly and the
-# RED failures land on ASSERTION / missing-ValidationError rather than at
-# collection. The executor (Stage 3) replaces these with the real constraints:
-#   - confidence bounds (ge=0.0, le=1.0) on FieldEvidence / ResolvedField,
-#   - an immutable GRAMMAR_DATA_SCHEMA mapping (MappingProxyType).
-# Do NOT add those here.
+# In-flight pipeline shapes for the reconciler. These are pure value types: no
+# persistence, no resolver behaviour, no converters (those land in 02-03). Like
+# the FormBundle above, they are POS-neutral — ``gender`` is NEVER a structural
+# field here, only ever a ``FormBundle.features`` key (seam #5).
 # ---------------------------------------------------------------------------
 
 
 class FieldEvidence(BaseModel):
-    """One piece of evidence for a field value (STUB — no confidence bound yet)."""
+    """One source's evidence for a single field value.
+
+    ``confidence`` and ``flags`` are INERT logged data (Decision Record §3): no
+    model in this pipeline reads them to branch a decision — they are carried
+    for observability/audit only. ``confidence`` is bounded to ``[0.0, 1.0]``
+    so a malformed score is rejected at the boundary, matching the precedent in
+    ``src/schemas/nlp.py`` (``NormalizedLemma.confidence``).
+    """
 
     source: str
     field: str
-    value: str | None
-    confidence: float | None = None
-    flags: list[str] = []
+    value: str | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    flags: list[str] = Field(default_factory=list)
 
 
 class ResolvedField(BaseModel):
-    """A field resolved to a single value from competing evidence (STUB)."""
+    """The reconciler's chosen value for one field, plus its provenance.
+
+    ``confidence``/``flags`` are inert logged data (Decision Record §3), as on
+    ``FieldEvidence``. ``confidence`` is bounded to ``[0.0, 1.0]``.
+    """
 
     field: str
-    value: str | None
+    value: str | None = None
     source: str
-    confidence: float | None = None
-    flags: list[str] = []
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    flags: list[str] = Field(default_factory=list)
 
 
 class ProposalDraft(BaseModel):
-    """POS-neutral draft of a word proposal (STUB — POS is free text, no gender)."""
+    """In-flight bundle of reconciled fields for a single word proposal.
+
+    POS-neutral by construction: ``pos`` is FREE TEXT (no enum/Literal), mirroring
+    ``WordProposal.pos`` from LEXGEN-01, so verbs/adjectives/etc. need no schema
+    change. There is no ``gender`` (or any other noun-only) structural field —
+    ``gender`` only ever appears as a ``FormBundle.features`` key (seam #5).
+    """
 
     lemma: str = Field(..., min_length=1)
     pos: str
-    resolved_fields: list[ResolvedField] = []
+    resolved_fields: list[ResolvedField] = Field(default_factory=list)
     grammar_data_schema_version: str
 
 
-# STUB: a plain MUTABLE dict — the real implementation makes this an immutable
-# mapping (MappingProxyType) so writes raise TypeError. Leaving it mutable is the
-# key RED signal for the two immutability tests below.
-GRAMMAR_DATA_SCHEMA: dict[str, str] = {"noun": "noun.v1"}
+# Immutable {pos: grammar-data-schema-version} mapping. Wrapped in
+# MappingProxyType so an accidental runtime write (e.g. ``GRAMMAR_DATA_SCHEMA[
+# "noun"] = ...``) raises ``TypeError`` instead of silently mutating shared
+# global state. Adding a part of speech later is purely additive — e.g. append
+# ``"verb": "verb.v1"`` — with ZERO change to the existing ``"noun"`` entry. No
+# verb schema is authored here (that is a later story).
+GRAMMAR_DATA_SCHEMA: Mapping[str, str] = MappingProxyType({"noun": "noun.v1"})
