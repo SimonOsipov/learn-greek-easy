@@ -146,3 +146,175 @@ describe('theme-store: bootstrap component (RNTL)', () => {
     expect(colorSchemeSet).toHaveBeenCalledTimes(1);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THEME-02 adversarial coverage (Mode-B QA). These do NOT re-author the 7 AC
+// specs; they target the gaps those specs leave:
+//   - transition SEQUENCES (system→dark→system re-tracks OS; rapid explicit flips)
+//   - the INVERSE of spec #4: the bootstrap write-back must be GATED on
+//     preference==='system' and must NOT clobber an explicit pref on an OS flip
+//   - resolvedScheme is ALWAYS a concrete 'light'|'dark' — never 'system' /
+//     undefined, including when the OS reports `undefined` under 'system'
+//   - the setter fires colorScheme.set exactly ONCE (no bootstrap double-fire)
+//   - ThemeBootstrap renders null with no setState-during-render warning
+//
+// Note on the harness: the manual mock's `colorScheme.set('light'|'dark')`
+// MUTATES the OS-resolved snapshot. So after `setPreference('light')` the mock's
+// `get()` would report 'light' too — which is why the explicit-pref-wins property
+// is verified here through the BOOTSTRAP path (flip the OS *after* the pref is
+// fixed, with NO intervening set()), where the gate is genuinely exercised,
+// rather than relying on a post-set get() the mock can't isolate (spec #5 gap).
+// ─────────────────────────────────────────────────────────────────────────────
+describe('THEME-02 adversarial', () => {
+  it('system → dark → system: after returning to system, resolvedScheme re-tracks the OS', () => {
+    // Start under system, OS=dark.
+    resetStore('system', 'dark');
+    __setMockScheme('dark');
+
+    const { rerender } = render(<ThemeBootstrap />);
+    expect(useThemeStore.getState().resolvedScheme).toBe('dark');
+
+    // Explicit dark (no OS dependence).
+    act(() => {
+      useThemeStore.getState().setPreference('dark');
+    });
+    expect(useThemeStore.getState().preference).toBe('dark');
+    expect(useThemeStore.getState().resolvedScheme).toBe('dark');
+
+    // Back to system; OS is now light. The bootstrap must re-track the OS — i.e.
+    // resolvedScheme must NOT stay pinned to the last explicit value.
+    act(() => {
+      __setMockScheme('light');
+      useThemeStore.getState().setPreference('system');
+    });
+    rerender(<ThemeBootstrap />);
+
+    expect(useThemeStore.getState().preference).toBe('system');
+    expect(useThemeStore.getState().resolvedScheme).toBe('light');
+  });
+
+  it('rapid explicit flips dark → light → dark: set() called each time; state stays consistent', () => {
+    resetStore('dark', 'dark');
+    colorSchemeSet.mockClear();
+
+    act(() => {
+      useThemeStore.getState().setPreference('dark');
+    });
+    act(() => {
+      useThemeStore.getState().setPreference('light');
+    });
+    act(() => {
+      useThemeStore.getState().setPreference('dark');
+    });
+
+    // colorScheme.set driven on every flip, with the right arg each time.
+    expect(colorSchemeSet.mock.calls.map((c) => c[0])).toEqual(['dark', 'light', 'dark']);
+    // Final state is internally consistent (explicit pref ⇒ resolvedScheme === pref).
+    expect(useThemeStore.getState().preference).toBe('dark');
+    expect(useThemeStore.getState().resolvedScheme).toBe('dark');
+  });
+
+  it('explicit pref ignores OS: under preference="dark", an OS flip to light leaves resolvedScheme="dark" (inverse of #4)', () => {
+    // The bootstrap write-back must be gated on preference==='system'. With an
+    // explicit 'dark' pref, flipping the OS to light must NOT clobber it.
+    resetStore('dark', 'dark');
+    __setMockScheme('dark');
+
+    const { rerender } = render(<ThemeBootstrap />);
+    expect(useThemeStore.getState().resolvedScheme).toBe('dark');
+
+    // OS flips to light while the explicit 'dark' pref is in effect.
+    act(() => {
+      __setMockScheme('light');
+    });
+    rerender(<ThemeBootstrap />);
+
+    // Explicit pref wins: resolvedScheme stays 'dark' (the gate held).
+    expect(useThemeStore.getState().preference).toBe('dark');
+    expect(useThemeStore.getState().resolvedScheme).toBe('dark');
+  });
+
+  it('explicit pref ignores OS: under preference="light", an OS flip to dark leaves resolvedScheme="light"', () => {
+    resetStore('light', 'light');
+    __setMockScheme('light');
+
+    const { rerender } = render(<ThemeBootstrap />);
+    expect(useThemeStore.getState().resolvedScheme).toBe('light');
+
+    act(() => {
+      __setMockScheme('dark');
+    });
+    rerender(<ThemeBootstrap />);
+
+    expect(useThemeStore.getState().preference).toBe('light');
+    expect(useThemeStore.getState().resolvedScheme).toBe('light');
+  });
+
+  it('setter fires colorScheme.set exactly once (no bootstrap double-fire on a normal setPreference)', () => {
+    // Mount the bootstrap (its mount-once effect fires set() once), then clear
+    // and drive the setter: only the setter should call set(), exactly once —
+    // the mount-once effect must not re-fire on the resulting re-render.
+    resetStore('dark', 'dark');
+    render(<ThemeBootstrap />);
+    colorSchemeSet.mockClear();
+
+    act(() => {
+      useThemeStore.getState().setPreference('light');
+    });
+
+    expect(colorSchemeSet).toHaveBeenCalledTimes(1);
+    expect(colorSchemeSet).toHaveBeenCalledWith('light');
+  });
+
+  it('resolvedScheme stays a concrete value when the OS reports undefined under "system" (no undefined write)', () => {
+    // Establish a known concrete resolvedScheme first (OS=dark, system).
+    resetStore('system', 'dark');
+    __setMockScheme('dark');
+    const { rerender } = render(<ThemeBootstrap />);
+    expect(useThemeStore.getState().resolvedScheme).toBe('dark');
+
+    // OS now reports undefined (NativeWind wrapper can yield undefined). The
+    // bootstrap must guard truthiness and NOT write undefined into the store.
+    act(() => {
+      __setMockScheme(undefined);
+    });
+    rerender(<ThemeBootstrap />);
+
+    const resolved = useThemeStore.getState().resolvedScheme;
+    expect(resolved).toBeDefined();
+    expect(['light', 'dark']).toContain(resolved);
+    // Specifically: retains the prior concrete value, not undefined / 'system'.
+    expect(resolved).toBe('dark');
+  });
+
+  it('resolvedScheme is never "system" / undefined across every preference value', () => {
+    for (const pref of ['light', 'dark', 'system'] as const) {
+      resetStore('system', 'dark');
+      __setMockScheme('dark');
+      act(() => {
+        useThemeStore.getState().setPreference(pref);
+      });
+      const resolved = useThemeStore.getState().resolvedScheme;
+      expect(['light', 'dark']).toContain(resolved);
+    }
+  });
+
+  it('ThemeBootstrap renders null and logs no "state update during render" console.error', () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      resetStore('system', 'dark');
+      __setMockScheme('dark');
+      const { toJSON } = render(<ThemeBootstrap />);
+      // Renders nothing.
+      expect(toJSON()).toBeNull();
+      // No React "Cannot update a component while rendering a different
+      // component" / setState-during-render warning.
+      const offending = errorSpy.mock.calls
+        .map((c) => String(c[0]))
+        .filter((m) => /update .*while rendering|state update during render/i.test(m));
+      expect(offending).toEqual([]);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+});
