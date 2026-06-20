@@ -176,6 +176,25 @@ describe('pageHeadPropsFor — news branch', () => {
     expect(r.breadcrumb![1].label).toBe('News');
     expect(r.actions).toBeDefined();
   });
+
+  // ADMIN2-39-04 (F6) guard: the "Import RSS" stub was deleted. Render the
+  // news header actions and assert the live "New article" button survives
+  // while NO RSS control re-appears — catches an accidental re-introduction.
+  it('renders New article action but no Import RSS control', () => {
+    const r = pageHeadPropsFor('news', mockT, undefined, {
+      newsTotal: 10,
+      newsAudio: 5,
+      situationsTotal: 0,
+      situationsDraft: 0,
+      situationsReady: 0,
+      deckTotal: 0,
+      cardTotal: 0,
+    });
+    render(<>{r.actions}</>);
+    expect(screen.getByTestId('news-new-button')).toBeInTheDocument();
+    expect(screen.getByText('New article')).toBeInTheDocument();
+    expect(screen.queryByText(/Import RSS/i)).not.toBeInTheDocument();
+  });
 });
 
 describe('pageHeadPropsFor — situations branch', () => {
