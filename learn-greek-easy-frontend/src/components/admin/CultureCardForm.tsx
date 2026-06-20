@@ -7,6 +7,10 @@
  * - 2-4 answer fields with correct answer radio selection
  * - Delete buttons for removing answers (min 2 required)
  * - Dirty state tracking via onDirtyChange callback
+ * - In-Card Save / Cancel (single save path — ADMIN2-38-05 / AC-4c / D5).
+ *   The form NEVER calls adminAPI directly; submission goes through the injected
+ *   onSubmit prop (=handleCreate in the Add dialog, =handleSave in the detail).
+ *   Fields use the shadcn Form primitive (FormField/FormControl/FormMessage).
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -14,11 +18,21 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { X } from 'lucide-react';
 import { useForm, useWatch } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import type {
@@ -46,72 +60,95 @@ const MIN_ANSWERS = 2;
 const MAX_ANSWERS = 4;
 
 // ============================================
-// Form Schema
+// Form Schema Factory (receives t for localized messages)
 // ============================================
 
-const multilingualSchema = z.object({
-  ru: z.string().min(1, 'Russian text is required'),
-  el: z.string().min(1, 'Greek text is required'),
-  en: z.string().min(1, 'English text is required'),
-});
+function makeFormSchema(t: (key: string, opts?: Record<string, string>) => string) {
+  const multilingualSchema = z.object({
+    ru: z.string().min(1, t('decks.culture.form.zodRuRequired')),
+    el: z.string().min(1, t('decks.culture.form.zodElRequired')),
+    en: z.string().min(1, t('decks.culture.form.zodEnRequired')),
+  });
 
-const optionalMultilingualSchema = z
-  .object({
-    ru: z.string(),
-    el: z.string(),
-    en: z.string(),
-  })
-  .nullable();
+  const optionalMultilingualSchema = z
+    .object({
+      ru: z.string(),
+      el: z.string(),
+      en: z.string(),
+    })
+    .nullable();
 
-const formSchema = z
-  .object({
-    question: multilingualSchema,
-    option_a: multilingualSchema,
-    option_b: multilingualSchema,
-    option_c: optionalMultilingualSchema,
-    option_d: optionalMultilingualSchema,
-    correct_option: z.number().min(1).max(4),
-    answer_count: z.number().min(MIN_ANSWERS).max(MAX_ANSWERS),
-  })
-  .superRefine((data, ctx) => {
-    // Validate that all active answers are filled
-    const activeAnswers = ANSWER_KEYS.slice(0, data.answer_count);
-
-    for (const key of activeAnswers) {
-      const optionKey = `option_${key.toLowerCase()}` as keyof typeof data;
-      const option = data[optionKey] as MultilingualName | null;
-
-      if (!option) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Answer ${key} is required`,
-          path: [optionKey],
-        });
-        continue;
-      }
-
+  return z
+    .object({
+      question: multilingualSchema,
+      option_a: multilingualSchema,
+      option_b: multilingualSchema,
+      option_c: optionalMultilingualSchema,
+      option_d: optionalMultilingualSchema,
+      correct_option: z.number().min(1).max(4),
+      answer_count: z.number().min(MIN_ANSWERS).max(MAX_ANSWERS),
+    })
+    .superRefine((data, ctx) => {
+      // Validate that the question is non-blank (trim-aware) for each language
       for (const lang of LANGUAGES) {
-        if (!option[lang]?.trim()) {
+        if (!data.question[lang]?.trim()) {
+          const msgKey =
+            lang === 'ru'
+              ? 'decks.culture.form.zodRuRequired'
+              : lang === 'el'
+                ? 'decks.culture.form.zodElRequired'
+                : 'decks.culture.form.zodEnRequired';
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: `${LANGUAGE_LABELS[lang]} text is required for answer ${key}`,
-            path: [optionKey, lang],
+            message: t(msgKey),
+            path: ['question', lang],
           });
         }
       }
-    }
 
-    // Validate correct_option is within range
-    if (data.correct_option > data.answer_count) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Correct answer must be within available options',
-        path: ['correct_option'],
-      });
-    }
-  });
+      // Validate that all active answers are filled
+      const activeAnswers = ANSWER_KEYS.slice(0, data.answer_count);
 
-type FormData = z.infer<typeof formSchema>;
+      for (const key of activeAnswers) {
+        const optionKey = `option_${key.toLowerCase()}` as keyof typeof data;
+        const option = data[optionKey] as MultilingualName | null;
+
+        if (!option) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t('decks.culture.form.zodAnswerRequired', { key }),
+            path: [optionKey],
+          });
+          continue;
+        }
+
+        for (const lang of LANGUAGES) {
+          if (!option[lang]?.trim()) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: t('decks.culture.form.zodAnswerLangRequired', {
+                lang: LANGUAGE_LABELS[lang],
+                key,
+              }),
+              path: [optionKey, lang],
+            });
+          }
+        }
+      }
+
+      // Validate correct_option is within range
+      if (data.correct_option > data.answer_count) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: t('decks.culture.form.zodCorrectRange'),
+          path: ['correct_option'],
+        });
+      }
+    });
+}
+
+type FormSchema = ReturnType<typeof makeFormSchema>;
+type FormData = z.infer<FormSchema>;
 
 // ============================================
 // Props Interface
@@ -120,6 +157,11 @@ type FormData = z.infer<typeof formSchema>;
 export interface CultureCardFormProps {
   initialData?: AdminCultureQuestion;
   onSubmit: (data: CultureQuestionCreatePayload) => Promise<void>;
+  /**
+   * When provided, an in-Card Cancel button is rendered (edit/detail mode).
+   * The create/Add-dialog variant omits it (the Dialog owns its own close).
+   */
+  onCancel?: () => void;
   onDirtyChange?: (isDirty: boolean) => void;
   deckId?: string;
   isSubmitting?: boolean;
@@ -178,13 +220,24 @@ function getInitialFormData(initialData?: AdminCultureQuestion): FormData {
 export function CultureCardForm({
   initialData,
   onSubmit,
+  onCancel,
   onDirtyChange,
   deckId,
   isSubmitting = false,
 }: CultureCardFormProps) {
+  const { t } = useTranslation('admin');
   const [activeTab, setActiveTab] = useState<Language>('ru');
 
   const defaultValues = useMemo(() => getInitialFormData(initialData), [initialData]);
+
+  // Build localized schema — rebuilds when t changes (i.e. language switch)
+  const formSchema = useMemo(() => makeFormSchema(t), [t]);
+
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues,
+    mode: 'onChange',
+  });
 
   const {
     register,
@@ -193,11 +246,7 @@ export function CultureCardForm({
     control,
     formState: { errors, isDirty },
     reset,
-  } = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues,
-    mode: 'onChange',
-  });
+  } = form;
 
   // Watch form values for validation indicators
   const watchedValues = useWatch({ control });
@@ -319,158 +368,198 @@ export function CultureCardForm({
   };
 
   return (
-    <form
-      id="culture-card-form"
-      onSubmit={handleSubmit(handleFormSubmit)}
-      className="space-y-6"
-      data-testid="culture-card-form"
-    >
-      {/* Language Tabs */}
-      <div className="flex gap-1 rounded-lg bg-muted p-1">
-        {LANGUAGES.map((lang) => (
-          <button
-            key={lang}
-            type="button"
-            onClick={() => setActiveTab(lang)}
-            data-testid={`lang-tab-${lang}`}
-            className={cn(
-              'relative flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors',
-              activeTab === lang ? 'bg-background shadow' : 'hover:bg-background/50'
-            )}
-          >
-            {LANGUAGE_LABELS[lang]}
-            {isTabIncomplete(lang) && (
-              <span
-                className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
-                data-testid={`lang-tab-${lang}-incomplete`}
+    <Form {...form}>
+      <form
+        id="culture-card-form"
+        onSubmit={handleSubmit(handleFormSubmit)}
+        className="space-y-6"
+        data-testid="culture-card-form"
+      >
+        {/* Language Tabs */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Language)}>
+          <TabsList className="w-full">
+            {LANGUAGES.map((lang) => (
+              <TabsTrigger
+                key={lang}
+                value={lang}
+                className="relative flex-1"
+                data-testid={`lang-tab-${lang}`}
+              >
+                {LANGUAGE_LABELS[lang]}
+                {isTabIncomplete(lang) && (
+                  <span
+                    className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-warning"
+                    data-testid={`lang-tab-${lang}-incomplete`}
+                  />
+                )}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          {/* Tab Content */}
+          {LANGUAGES.map((lang) => (
+            <TabsContent key={lang} value={lang} className="space-y-6">
+              {/* Question Field */}
+              <FormField
+                control={control}
+                name={`question.${lang}`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {t('decks.culture.form.questionLabel', { lang: LANGUAGE_LABELS[lang] })}
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder={t('decks.culture.form.questionPlaceholder', {
+                          lang: LANGUAGE_LABELS[lang],
+                        })}
+                        rows={3}
+                        data-testid={`question-input-${lang}`}
+                        className={cn(errors.question?.[lang] && 'border-destructive')}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            )}
-          </button>
-        ))}
-      </div>
 
-      {/* Tab Content */}
-      {LANGUAGES.map((lang) => (
-        <div key={lang} className={cn('space-y-6', activeTab !== lang && 'hidden')}>
-          {/* Question Field */}
-          <div className="space-y-2">
-            <Label htmlFor={`question-${lang}`}>Question ({LANGUAGE_LABELS[lang]})</Label>
-            <Textarea
-              id={`question-${lang}`}
-              {...register(`question.${lang}`)}
-              placeholder={`Enter question in ${LANGUAGE_LABELS[lang]}`}
-              rows={3}
-              data-testid={`question-input-${lang}`}
-              className={cn(errors.question?.[lang] && 'border-destructive')}
-            />
-            {errors.question?.[lang] && (
-              <p className="text-sm text-destructive">Question is required</p>
-            )}
-          </div>
+              {/* Answer Fields */}
+              <div className="space-y-4">
+                <Label>
+                  {t('decks.culture.form.answersLabel', { lang: LANGUAGE_LABELS[lang] })}
+                </Label>
 
-          {/* Answer Fields */}
-          <div className="space-y-4">
-            <Label>Answers ({LANGUAGE_LABELS[lang]})</Label>
+                {ANSWER_KEYS.slice(0, answerCount).map((key, index) => {
+                  const optionNum = index + 1;
+                  const canDelete = answerCount > MIN_ANSWERS;
 
-            {ANSWER_KEYS.slice(0, answerCount).map((key, index) => {
-              const optionNum = index + 1;
-              const canDelete = answerCount > MIN_ANSWERS;
+                  return (
+                    <div key={key} className="flex items-start gap-3">
+                      {/* Radio for correct answer */}
+                      <div className="flex items-center pt-2">
+                        <input
+                          type="radio"
+                          name={`correct-answer-${lang}`}
+                          value={optionNum}
+                          checked={correctOption === optionNum}
+                          onChange={() => {
+                            setValue('correct_option', optionNum as 1 | 2 | 3 | 4, {
+                              shouldDirty: true,
+                            });
+                          }}
+                          className="h-4 w-4 cursor-pointer accent-primary"
+                          data-testid={`correct-radio-${key}-${lang}`}
+                          aria-label={t('decks.culture.form.markCorrect', { key })}
+                        />
+                      </div>
 
-              return (
-                <div key={key} className="flex items-start gap-3">
-                  {/* Radio for correct answer */}
-                  <div className="flex items-center pt-2">
-                    <input
-                      type="radio"
-                      name={`correct-answer-${lang}`}
-                      value={optionNum}
-                      checked={correctOption === optionNum}
-                      onChange={() => {
-                        setValue('correct_option', optionNum as 1 | 2 | 3 | 4, {
-                          shouldDirty: true,
-                        });
-                      }}
-                      className="h-4 w-4 cursor-pointer accent-primary"
-                      data-testid={`correct-radio-${key}-${lang}`}
-                      aria-label={`Mark answer ${key} as correct`}
-                    />
-                  </div>
+                      {/* Answer label */}
+                      <span className="w-6 pt-2 text-sm font-medium text-muted-foreground">
+                        {key}.
+                      </span>
 
-                  {/* Answer label */}
-                  <span className="w-6 pt-2 text-sm font-medium text-muted-foreground">{key}.</span>
+                      {/* Answer input */}
+                      <div className="flex-1">
+                        <Input
+                          {...register(`option_${key.toLowerCase()}.${lang}` as keyof FormData)}
+                          placeholder={t('decks.culture.form.answerPlaceholder', { key })}
+                          data-testid={`answer-input-${key}-${lang}`}
+                          className={cn(hasOptionError(key, lang) && 'border-destructive')}
+                          value={getOptionValue(key, lang)}
+                          onChange={(e) => {
+                            type OptionKey = 'option_a' | 'option_b' | 'option_c' | 'option_d';
+                            const optKey = `option_${key.toLowerCase()}` as OptionKey;
+                            const currentOption = watchedValues[optKey] as MultilingualName | null;
+                            setValue(
+                              optKey,
+                              {
+                                ...(currentOption || createEmptyMultilingual()),
+                                [lang]: e.target.value,
+                              },
+                              { shouldDirty: true, shouldValidate: true }
+                            );
+                          }}
+                        />
+                      </div>
 
-                  {/* Answer input */}
-                  <div className="flex-1">
-                    <Input
-                      {...register(`option_${key.toLowerCase()}.${lang}` as keyof FormData)}
-                      placeholder={`Answer ${key}`}
-                      data-testid={`answer-input-${key}-${lang}`}
-                      className={cn(hasOptionError(key, lang) && 'border-destructive')}
-                      value={getOptionValue(key, lang)}
-                      onChange={(e) => {
-                        type OptionKey = 'option_a' | 'option_b' | 'option_c' | 'option_d';
-                        const optKey = `option_${key.toLowerCase()}` as OptionKey;
-                        const currentOption = watchedValues[optKey] as MultilingualName | null;
-                        setValue(
-                          optKey,
-                          {
-                            ...(currentOption || createEmptyMultilingual()),
-                            [lang]: e.target.value,
-                          },
-                          { shouldDirty: true, shouldValidate: true }
-                        );
-                      }}
-                    />
-                  </div>
+                      {/* Delete button */}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteAnswer(index)}
+                        disabled={!canDelete}
+                        className={cn(
+                          'h-6 w-6 shrink-0',
+                          !canDelete && 'cursor-not-allowed opacity-50'
+                        )}
+                        data-testid={`delete-answer-${key}`}
+                        aria-label={t('decks.culture.form.deleteAnswer', { key })}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  );
+                })}
 
-                  {/* Delete button */}
+                {/* Add Answer Button */}
+                {answerCount < MAX_ANSWERS && (
                   <Button
                     type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteAnswer(index)}
-                    disabled={!canDelete}
-                    className={cn(
-                      'h-10 w-10 shrink-0',
-                      !canDelete && 'cursor-not-allowed opacity-50'
-                    )}
-                    data-testid={`delete-answer-${key}`}
-                    aria-label={`Delete answer ${key}`}
+                    variant="outline"
+                    onClick={handleAddAnswer}
+                    className="w-full"
+                    data-testid="add-answer-btn"
                   >
-                    <X className="h-4 w-4" />
+                    {t('decks.culture.form.addAnswer', { key: ANSWER_KEYS[answerCount] })}
                   </Button>
-                </div>
-              );
-            })}
+                )}
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
 
-            {/* Add Answer Button */}
-            {answerCount < MAX_ANSWERS && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleAddAnswer}
-                className="w-full"
-                data-testid="add-answer-btn"
-              >
-                Add Answer {ANSWER_KEYS[answerCount]}
-              </Button>
-            )}
+        {/* Correct answer validation error — rendered once, outside the per-language loop.
+            Carries data-slot="form-message" so it shares the same validation-error surface
+            as the FormMessage fields (AC-4e: no bare text-destructive <p> remains). The
+            friendly copy is preserved verbatim (covers both the min(1) and out-of-range
+            superRefine cases the bound zod message would split). */}
+        {errors.correct_option && (
+          <p
+            data-slot="form-message"
+            className="text-sm font-medium text-destructive"
+            data-testid="culture-form-correct-error"
+          >
+            {t('decks.culture.form.selectCorrect')}
+          </p>
+        )}
 
-            {/* Correct answer validation error */}
-            {errors.correct_option && (
-              <p className="text-sm text-destructive">Please select a correct answer</p>
-            )}
-          </div>
+        {/* ── In-Card footer: single Save path (+ optional Cancel) ── */}
+        <div className="flex justify-end gap-2 pt-1">
+          {onCancel && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onCancel}
+              disabled={isSubmitting}
+              data-testid="culture-question-card-cancel"
+            >
+              {t('deckEdit.cancel')}
+            </Button>
+          )}
+          <Button
+            type="submit"
+            size="sm"
+            disabled={isSubmitting}
+            data-testid="culture-question-card-save"
+          >
+            {t('decks.culture.form.saveQuestion')}
+          </Button>
         </div>
-      ))}
-
-      {/* Submit Button - only shown if not controlled externally */}
-      {!isSubmitting && deckId && (
-        <Button type="submit" className="w-full" data-testid="submit-btn">
-          Save Question
-        </Button>
-      )}
-    </form>
+      </form>
+    </Form>
   );
 }
 

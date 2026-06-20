@@ -18,7 +18,7 @@ import type { AdminVocabularyCard, AdminCultureQuestion } from '@/services/admin
  * Produced by {@link getWordCompletion} and {@link getCultureCompletion}.
  */
 export interface DeckPill {
-  /** Stable identifier, e.g. `'en' | 'ru' | 'audio-a2' | 'news'` */
+  /** Stable identifier, e.g. `'en' | 'ru' | 'audio' | 'news'` */
   name: string;
   /** Display label, e.g. `'EN 2/2'`, `'Audio ✓'`, `'B1 Audio'` */
   label: string;
@@ -87,29 +87,23 @@ export function getWordCompletion(card: AdminVocabularyCard): DeckPill[] {
 // ============================================================
 
 /**
- * Returns up to 7 completion pills for a culture question.
+ * Returns completion pills for a culture question.
  *
- * - **Exam question** (`news_item_id === null`): emits `lang-el`, `lang-en`,
- *   `lang-ru`, `opts`, `audio`, `news` (no `audio-a2`).
- * - **News question** (`news_item_id !== null`): emits `lang-el`, `lang-en`,
- *   `lang-ru`, `opts`, `audio-b1`, `audio-a2`, `news`.
- *
- * Defensive contract: any `audio-a2` chip is forced to `visible: false` when
- * `question.news_item_id === null`, regardless of upstream drift.
+ * Emits `lang-el`, `lang-en`, `lang-ru`, `opts`, `audio`, `news` for all
+ * question types. A single unconditional `audio` pill is keyed on
+ * `audio_s3_key` (D2/D7 — no split B1/A2 pills).
  */
 export function getCultureCompletion(question: AdminCultureQuestion): DeckPill[] {
   const chips: CultureChipData[] = computeCultureChips(question);
-  return chips.map((chip): DeckPill => {
-    const isHiddenAudioA2 = chip.name === 'audio-a2' && question.news_item_id === null;
-
-    return {
+  return chips.map(
+    (chip): DeckPill => ({
       name: chip.name,
       label: chip.label,
       // Culture chips don't carry a numeric ratio
       value: undefined,
       done: deriveDone(chip.label, chip.color),
-      visible: isHiddenAudioA2 ? false : chip.visible,
+      visible: chip.visible,
       tooltip: chip.tooltip || undefined,
-    };
-  });
+    })
+  );
 }

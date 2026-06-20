@@ -2134,7 +2134,30 @@
     },
     "culture": {
       "editQuestionLabel": "Редактировать вопрос",
-      "deleteQuestionLabel": "Удалить вопрос"
+      "deleteQuestionLabel": "Удалить вопрос",
+      "read": {
+        "sectionTitle": "Вопрос и ответы",
+        "questionLabel": "Вопрос",
+        "answersLabel": "Ответы",
+        "correctMarker": "Верный"
+      },
+      "form": {
+        "questionLabel": "Вопрос ({{lang}})",
+        "questionPlaceholder": "Введите вопрос на {{lang}}",
+        "answersLabel": "Ответы ({{lang}})",
+        "answerPlaceholder": "Ответ {{key}}",
+        "addAnswer": "Добавить ответ {{key}}",
+        "selectCorrect": "Пожалуйста, выберите правильный ответ",
+        "saveQuestion": "Сохранить вопрос",
+        "markCorrect": "Отметить ответ {{key}} как правильный",
+        "deleteAnswer": "Удалить ответ {{key}}",
+        "zodRuRequired": "Текст на русском обязателен",
+        "zodElRequired": "Текст на греческом обязателен",
+        "zodEnRequired": "Текст на английском обязателен",
+        "zodAnswerRequired": "Ответ {{key}} обязателен",
+        "zodAnswerLangRequired": "Текст на {{lang}} обязателен для ответа {{key}}",
+        "zodCorrectRange": "Правильный ответ должен быть среди доступных вариантов"
+      }
     },
     "saveChanges": "Сохранить изменения",
     "typeCulture": "Культура",

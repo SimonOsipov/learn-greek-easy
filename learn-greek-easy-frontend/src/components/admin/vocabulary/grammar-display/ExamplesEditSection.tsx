@@ -233,7 +233,7 @@ export function ExamplesEditSection({
     <>
       <Card id="section-examples">
         <CardHeader className="px-4 pb-2 pt-4">
-          <div className="flex items-center justify-between text-sm font-semibold">
+          <div className="group flex items-center justify-between text-sm font-semibold">
             <div className="flex items-center">
               {t('wordEntryContent.sectionExamples')}
               <span className="ml-2 rounded-sm border border-muted-foreground/30 bg-muted/50 px-1.5 py-0.5 text-xs text-muted-foreground">
@@ -241,15 +241,20 @@ export function ExamplesEditSection({
               </span>
             </div>
             {!isEditing && examplesCount > 0 && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={enterEditMode}
-                data-testid="examples-edit-btn"
+              <div
+                data-testid="examples-pencil-actions"
+                className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
               >
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
+                <Button
+                  variant="chrome-ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={enterEditMode}
+                  data-testid="examples-edit-btn"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             )}
           </div>
         </CardHeader>

@@ -136,21 +136,26 @@ export function GrammarEditSection({ wordEntry, onEditingChange }: GrammarEditSe
     <>
       <Card id="section-grammar">
         <CardHeader className="px-4 pb-2 pt-4">
-          <div className="flex items-center justify-between text-sm font-semibold">
+          <div className="group flex items-center justify-between text-sm font-semibold">
             <div className="flex items-center">
               {t('wordEntryContent.sectionGrammar')}
               {grammarTotal > 0 && <SectionBadge filled={grammarFilled} total={grammarTotal} />}
             </div>
             {!isEditing && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={enterEditMode}
-                data-testid="grammar-edit-btn"
+              <div
+                data-testid="grammar-pencil-actions"
+                className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
               >
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
+                <Button
+                  variant="chrome-ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={enterEditMode}
+                  data-testid="grammar-edit-btn"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             )}
           </div>
         </CardHeader>

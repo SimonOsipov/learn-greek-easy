@@ -25,12 +25,16 @@ vi.mock('@/services/adminAPI', () => ({
 
 /**
  * Mock CultureCardForm captures the props we care about and exposes
- * test-ids for verification.
+ * test-ids for verification. ADMIN2-38-05: the migrated form owns its own
+ * in-Card Save (culture-question-card-save) and Cancel (culture-question-card-cancel)
+ * inside its <form>; this stub mirrors that contract so the wrapper's assertions
+ * bind to the same testid surface the real component exposes.
  */
 vi.mock('@/components/admin/CultureCardForm', () => ({
   CultureCardForm: ({
     initialData,
     onSubmit,
+    onCancel,
     deckId,
     isSubmitting,
     // ensure no `mode` or `onSave` props are passed (if they were, TS would catch it,
@@ -38,6 +42,7 @@ vi.mock('@/components/admin/CultureCardForm', () => ({
   }: {
     initialData?: AdminCultureQuestion;
     onSubmit: (data: unknown) => Promise<void>;
+    onCancel?: () => void;
     deckId?: string;
     isSubmitting?: boolean;
   }) => (
@@ -47,8 +52,13 @@ vi.mock('@/components/admin/CultureCardForm', () => ({
         <span data-testid="culture-card-form-has-initial-data">has-initial-data</span>
       )}
       <span data-testid="culture-card-form-submitting">{String(isSubmitting ?? false)}</span>
+      {onCancel && (
+        <button data-testid="culture-question-card-cancel" onClick={() => onCancel()}>
+          Cancel
+        </button>
+      )}
       <button
-        data-testid="culture-card-form-submit"
+        data-testid="culture-question-card-save"
         onClick={() =>
           onSubmit({
             deck_id: deckId,
@@ -61,7 +71,7 @@ vi.mock('@/components/admin/CultureCardForm', () => ({
           })
         }
       >
-        Submit
+        Save
       </button>
     </div>
   ),
@@ -199,14 +209,20 @@ describe('CultureQuestionDetail', () => {
 
   // ── AC #1: CultureCardForm props — initialData, onSubmit, deckId (no mode/onSave) ──
 
-  it('AC #1: renders CultureCardForm with initialData, onSubmit and deckId; no mode or onSave', async () => {
+  it('AC #1: renders CultureCardForm with initialData, onSubmit and deckId after entering edit mode', async () => {
+    const user = userEvent.setup();
     (adminAPI.listCultureQuestions as Mock).mockResolvedValue(
       makeListResponse([makeFullQuestion()])
     );
 
     renderDetail();
 
-    // While loading, skeleton is shown; eventually form appears
+    // ADMIN2-38-05: detail starts in read mode; the form is revealed by the Pencil.
+    await waitFor(() => {
+      expect(screen.getByTestId('culture-question-edit-btn')).toBeInTheDocument();
+    });
+    await user.click(screen.getByTestId('culture-question-edit-btn'));
+
     await waitFor(() => {
       expect(screen.getByTestId('culture-card-form')).toBeInTheDocument();
     });
@@ -248,7 +264,8 @@ describe('CultureQuestionDetail', () => {
 
   // ── AC #3: Save allowed even when isTranslationComplete === false ─────────────
 
-  it('AC #3: Save button is enabled regardless of translation completeness', async () => {
+  it('AC #3: in-Card Save button is enabled regardless of translation completeness', async () => {
+    const user = userEvent.setup();
     // Incomplete translations: only English, missing el/ru
     (adminAPI.listCultureQuestions as Mock).mockResolvedValue(
       makeListResponse([
@@ -260,11 +277,18 @@ describe('CultureQuestionDetail', () => {
 
     renderDetail();
 
+    // ADMIN2-38-05: the only save is the in-Card culture-question-card-save (revealed
+    // by the Pencil). It is enabled regardless of completeness (no gating on save).
     await waitFor(() => {
-      expect(screen.getByTestId('culture-question-detail-save')).toBeInTheDocument();
+      expect(screen.getByTestId('culture-question-edit-btn')).toBeInTheDocument();
+    });
+    await user.click(screen.getByTestId('culture-question-edit-btn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('culture-question-card-save')).toBeInTheDocument();
     });
 
-    const saveBtn = screen.getByTestId('culture-question-detail-save');
+    const saveBtn = screen.getByTestId('culture-question-card-save');
     expect(saveBtn).not.toBeDisabled();
   });
 
@@ -278,7 +302,7 @@ describe('CultureQuestionDetail', () => {
     renderDetail();
 
     await waitFor(() => {
-      expect(screen.getByTestId('culture-card-form')).toBeInTheDocument();
+      expect(screen.getByTestId('culture-question-read-view')).toBeInTheDocument();
     });
 
     expect(screen.queryByTestId('culture-question-detail-source')).not.toBeInTheDocument();
@@ -334,15 +358,16 @@ describe('CultureQuestionDetail', () => {
     expect(screen.getByTestId('deck-drawer-skeleton')).toHaveAttribute('data-variant', 'detail');
   });
 
-  it('AC #5: eventually renders the form after fetch resolves', async () => {
+  it('AC #5: eventually renders the read view after fetch resolves', async () => {
     (adminAPI.listCultureQuestions as Mock).mockResolvedValue(
       makeListResponse([makeFullQuestion()])
     );
 
     renderDetail();
 
+    // ADMIN2-38-05: the detail lands in the read view (the form is edit-only).
     await waitFor(() => {
-      expect(screen.getByTestId('culture-card-form')).toBeInTheDocument();
+      expect(screen.getByTestId('culture-question-read-view')).toBeInTheDocument();
     });
 
     // No skeleton after load
@@ -425,7 +450,7 @@ describe('CultureQuestionDetail', () => {
 
   // ── AC #8: Save calls adminAPI.updateCultureQuestion; Regenerate chip is disabled ──
 
-  it('AC #8: Save calls adminAPI.updateCultureQuestion with correct questionId', async () => {
+  it('AC #8: in-Card Save calls adminAPI.updateCultureQuestion with correct questionId', async () => {
     const user = userEvent.setup();
 
     (adminAPI.listCultureQuestions as Mock).mockResolvedValue(
@@ -435,12 +460,17 @@ describe('CultureQuestionDetail', () => {
 
     renderDetail();
 
+    // ADMIN2-38-05: enter edit mode, then submit via the single in-Card save.
     await waitFor(() => {
-      expect(screen.getByTestId('culture-card-form')).toBeInTheDocument();
+      expect(screen.getByTestId('culture-question-edit-btn')).toBeInTheDocument();
+    });
+    await user.click(screen.getByTestId('culture-question-edit-btn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('culture-question-card-save')).toBeInTheDocument();
     });
 
-    // Trigger submit via the mock form's submit button
-    await user.click(screen.getByTestId('culture-card-form-submit'));
+    await user.click(screen.getByTestId('culture-question-card-save'));
 
     await waitFor(() => {
       expect(adminAPI.updateCultureQuestion).toHaveBeenCalledWith(
@@ -454,7 +484,9 @@ describe('CultureQuestionDetail', () => {
     });
   });
 
-  it('AC #8: Regenerate-translations button is disabled', async () => {
+  // ADMIN2-38-05/F4.8: the disabled "Regenerate translations" control was removed
+  // along with the external footer. None of the old footer test-ids must exist.
+  it('AC #8: external footer test-ids (Regenerate / footer / save / cancel) are removed', async () => {
     (adminAPI.listCultureQuestions as Mock).mockResolvedValue(
       makeListResponse([makeFullQuestion()])
     );
@@ -462,10 +494,13 @@ describe('CultureQuestionDetail', () => {
     renderDetail();
 
     await waitFor(() => {
-      expect(screen.getByTestId('culture-question-detail-regenerate')).toBeInTheDocument();
+      expect(screen.getByTestId('culture-question-read-view')).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId('culture-question-detail-regenerate')).toBeDisabled();
+    expect(screen.queryByTestId('culture-question-detail-regenerate')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('culture-question-detail-footer')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('culture-question-detail-save')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('culture-question-detail-cancel')).not.toBeInTheDocument();
   });
 
   // ── Not-found state ───────────────────────────────────────────────────────────
@@ -495,9 +530,9 @@ describe('CultureQuestionDetail', () => {
 
     renderDetail(makeCultureDeck(), QUESTION_ID, { queryClient });
 
-    // Should render immediately — no API call needed
+    // Should render immediately — no API call needed (read view from cache)
     await waitFor(() => {
-      expect(screen.getByTestId('culture-card-form')).toBeInTheDocument();
+      expect(screen.getByTestId('culture-question-read-view')).toBeInTheDocument();
     });
 
     expect(adminAPI.listCultureQuestions).not.toHaveBeenCalled();

@@ -160,14 +160,21 @@ describe('CultureCardForm', () => {
       expect(screen.getAllByTestId('delete-answer-B').length).toBeGreaterThan(0);
     });
 
-    it('should render submit button when deckId is provided', () => {
+    it('should render the in-Card save button when deckId is provided', () => {
+      // ADMIN2-38-05: the single save path is the in-Card culture-question-card-save
+      // button (replaces the old always-visible submit-btn).
       renderForm({ deckId: 'test-deck' });
-      expect(screen.getByTestId('submit-btn')).toBeInTheDocument();
+      expect(screen.getByTestId('culture-question-card-save')).toBeInTheDocument();
     });
 
-    it('should not render submit button when isSubmitting is true', () => {
+    it('should keep the save button rendered but disabled while submitting', () => {
+      // ADMIN2-38-05/D5: the in-Card save no longer disappears while saving — it
+      // stays mounted and disabled (mirrors IdentityEditSection), so there is a
+      // single, stable save path.
       renderForm({ isSubmitting: true });
-      expect(screen.queryByTestId('submit-btn')).not.toBeInTheDocument();
+      const saveBtn = screen.getByTestId('culture-question-card-save');
+      expect(saveBtn).toBeInTheDocument();
+      expect(saveBtn).toBeDisabled();
     });
   });
 
@@ -698,7 +705,7 @@ describe('CultureCardForm', () => {
       await user.type(screen.getByTestId('answer-input-B-en'), 'B');
 
       // Submit
-      await user.click(screen.getByTestId('submit-btn'));
+      await user.click(screen.getByTestId('culture-question-card-save'));
 
       await waitFor(() => {
         expect(onSubmit).toHaveBeenCalledTimes(1);
@@ -758,7 +765,7 @@ describe('CultureCardForm', () => {
       await user.type(screen.getByTestId('answer-input-C-en'), 'C');
 
       // Submit
-      await user.click(screen.getByTestId('submit-btn'));
+      await user.click(screen.getByTestId('culture-question-card-save'));
 
       await waitFor(() => {
         expect(onSubmit).toHaveBeenCalledTimes(1);
@@ -798,7 +805,7 @@ describe('CultureCardForm', () => {
       await user.click(screen.getByTestId('correct-radio-B-en'));
 
       // Submit
-      await user.click(screen.getByTestId('submit-btn'));
+      await user.click(screen.getByTestId('culture-question-card-save'));
 
       await waitFor(() => {
         expect(onSubmit).toHaveBeenCalledTimes(1);
@@ -821,7 +828,7 @@ describe('CultureCardForm', () => {
       await user.type(screen.getByTestId('question-input-ru'), 'Updated question');
 
       // Submit
-      await user.click(screen.getByTestId('submit-btn'));
+      await user.click(screen.getByTestId('culture-question-card-save'));
 
       await waitFor(() => {
         expect(onSubmit).toHaveBeenCalledTimes(1);

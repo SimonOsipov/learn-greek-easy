@@ -84,33 +84,14 @@ export function computeCultureChips(question: AdminCultureQuestion): CultureChip
     visible: true,
   });
 
-  // Audio chips
-  if (question.news_item_id !== null) {
-    // News question: B1 + A2
-    chips.push({
-      name: 'audio-b1',
-      label: 'B1 Audio',
-      color: question.audio_s3_key ? 'green' : 'gray',
-      tooltip: question.audio_s3_key ? 'B1 audio present' : 'B1 audio missing',
-      visible: true,
-    });
-    chips.push({
-      name: 'audio-a2',
-      label: 'A2 Audio',
-      color: question.news_item_audio_a2_s3_key ? 'green' : 'gray',
-      tooltip: question.news_item_audio_a2_s3_key ? 'A2 audio present' : 'A2 audio missing',
-      visible: true,
-    });
-  } else {
-    // Exam question: single audio
-    chips.push({
-      name: 'audio',
-      label: 'Audio',
-      color: question.audio_s3_key ? 'green' : 'gray',
-      tooltip: question.audio_s3_key ? 'Audio present' : 'Audio missing',
-      visible: true,
-    });
-  }
+  // Audio chip — unconditional single pill for all question types (D2/D7)
+  chips.push({
+    name: 'audio',
+    label: 'Audio',
+    color: question.audio_s3_key ? 'green' : 'gray',
+    tooltip: question.audio_s3_key ? 'Audio present' : 'Audio missing',
+    visible: true,
+  });
 
   // News badge
   chips.push({
