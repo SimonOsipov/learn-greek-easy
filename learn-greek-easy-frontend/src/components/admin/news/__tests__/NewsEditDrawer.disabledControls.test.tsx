@@ -221,9 +221,47 @@ describe('Disabled-control marker audit — Regenerate translations (NewsEditDra
 
     renderDrawer();
 
-    // "Regenerate translations" button is rendered in the tab bar area.
+    // ADMIN2-39 F9.1: "Regenerate translations" now lives in the footer action row
+    // (relocated out of the tab row); the contract is unchanged wherever it renders.
     const btn = screen.getByRole('button', { name: /Regenerate translations/i });
     assertDisabledControlContract(btn, 'Regenerate translations');
+  });
+
+  // ADMIN2-39 F9.1 (QA edge): AC-1 — the relocation outcome itself.
+  // The existing contract test above passes regardless of WHERE the button lives, so
+  // it cannot catch a regression that puts Regenerate-translations back in the tab row.
+  // This guard pins the button OUT of the tab row (.drawer-tabs) and INTO the footer
+  // (.drawer-foot), with the disabled-control contract still intact.
+  it('Regenerate translations: lives in the footer, NOT in the tab row (F9.1)', () => {
+    const item = makeItem();
+    storeState.drawerItemId = item.id;
+    storeState.newsItems = [item];
+
+    renderDrawer();
+
+    const btn = screen.getByRole('button', { name: /Regenerate translations/i });
+
+    // SidePanel renders inside a Dialog portal mounted on document.body, so query the
+    // document rather than the render container.
+    const tabRow = document.querySelector('.drawer-tabs');
+    const footer = document.querySelector('.drawer-foot');
+    expect(tabRow, 'tab row (.drawer-tabs) must exist').not.toBeNull();
+    expect(footer, 'footer (.drawer-foot) must exist').not.toBeNull();
+
+    // Outcome of F9.1: button moved out of the tab row, into the footer.
+    expect(tabRow!.contains(btn), 'Regenerate translations must NOT be inside the tab row').toBe(
+      false
+    );
+    expect(footer!.contains(btn), 'Regenerate translations must be inside the footer').toBe(true);
+
+    // The tab row contains tabs only — no disabled stub controls.
+    expect(
+      tabRow!.querySelector('button[aria-disabled="true"]'),
+      'tab row must contain tabs only (no disabled stub controls)'
+    ).toBeNull();
+
+    // Relocated button still satisfies the full disabled-control contract.
+    assertDisabledControlContract(btn, 'Regenerate translations (footer)');
   });
 });
 
@@ -274,6 +312,30 @@ describe('Disabled-control marker audit — Audio Upload ×2 (NewsEditDrawer.aud
     const uploadBtn = uploadBtns[1];
     expect(uploadBtn, 'A2 Upload: button not found').toBeDefined();
     assertDisabledControlContract(uploadBtn, 'Audio Upload (A2)');
+  });
+
+  // ADMIN2-39 F9.2 (QA edge): the icon-only upload Button must carry a non-empty,
+  // resolved accessible name (the a11y gap the sweep closed via news.drawer.audio.uploadLabel).
+  // Asserts the {{level}} interpolation actually resolved (no leftover key / empty label).
+  it('Upload audio: icon-only button exposes a resolved, level-specific accessible name', () => {
+    render(<AudioWrapper item={makeItem()} />);
+
+    const rows = document.querySelectorAll('.audio-row');
+    const levels = ['B1', 'A2'];
+    rows.forEach((row, i) => {
+      const uploadBtn = row.querySelector<HTMLButtonElement>(
+        'button[aria-disabled="true"][aria-label]'
+      );
+      expect(uploadBtn, `${levels[i]} Upload: aria-labelled button not found`).not.toBeNull();
+      const label = uploadBtn!.getAttribute('aria-label') ?? '';
+      expect(
+        label.trim().length,
+        `${levels[i]} Upload: aria-label must be non-empty`
+      ).toBeGreaterThan(0);
+      // i18n key must have resolved (not the raw dotted key) and include the level token value.
+      expect(label).not.toContain('uploadLabel');
+      expect(label).toContain(levels[i]);
+    });
   });
 });
 
