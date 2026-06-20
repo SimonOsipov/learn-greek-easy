@@ -861,6 +861,17 @@ async def upload_deck_cover_image(
     # Failures are swallowed inside maybe_generate_derivatives — upload succeeds regardless.
     background_tasks.add_task(maybe_generate_derivatives, s3_key, data, file.content_type)
 
+    # Bust the public deck-list cache. GET /api/v1/decks is Redis-cached for
+    # cache_deck_list_ttl (default 300s); without this, a newly uploaded cover only
+    # appears on the site after that window expires (the admin drawer reads the
+    # fresh response below, but the public list keeps serving the stale cache).
+    if settings.feature_background_tasks:
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="deck",
+            entity_id=deck_id,
+        )
+
     # Delete old key only after commit — if commit fails, the row still
     # references the old object and we must not orphan it.
     if old_key and not s3.delete_object(old_key):
@@ -883,6 +894,7 @@ async def upload_deck_cover_image(
 )
 async def delete_deck_cover_image(
     deck_id: UUID,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> DeckAdminResponse:
@@ -903,6 +915,15 @@ async def delete_deck_cover_image(
     deck.cover_image_s3_key = None
     await db.commit()
     await db.refresh(deck)
+
+    # Bust the public deck-list cache so the removal propagates to the site
+    # immediately rather than only after the cache_deck_list_ttl window expires.
+    if settings.feature_background_tasks:
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="deck",
+            entity_id=deck_id,
+        )
 
     card_count = await deck_repo.count_cards(deck_id)
     return DeckAdminResponse.model_validate(deck, from_attributes=True).model_copy(
