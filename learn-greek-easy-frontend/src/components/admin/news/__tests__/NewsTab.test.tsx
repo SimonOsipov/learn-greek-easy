@@ -340,4 +340,20 @@ describe('NewsTab — F8 Countries live counter', () => {
     // "Cyprus only" string must not appear anywhere on the page.
     expect(screen.queryByText('Cyprus only')).not.toBeInTheDocument();
   });
+
+  // ── ADMIN2-39-05 QA edge coverage (Mode B) ──────────────────────────────
+  // Proves the counter is genuinely live-wired even at zero: with countryCounts
+  // all zeros, the KPI renders "WR 0 · CY 0 · GR 0" (real zeros, not blank and
+  // not the old hardcoded "CY"). beforeEach resets countryCounts to {0,0,0}.
+  it('Countries card renders "WR 0 · CY 0 · GR 0" when all counts are zero (live wiring at zero)', () => {
+    renderWithRouter();
+
+    const card = getCountriesCard();
+    const kpi = card.querySelector('.stat-n');
+    const text = (kpi?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    // All three live zeros present in WR · CY · GR order — not blank, not "CY".
+    expect(text).toBe('WR 0 · CY 0 · GR 0');
+    expect(text).not.toBe('CY');
+    expect(text).not.toBe('');
+  });
 });

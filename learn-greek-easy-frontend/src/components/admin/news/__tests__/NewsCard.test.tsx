@@ -483,5 +483,61 @@ describe('NewsCard', () => {
       expect(container.querySelector('.news-audio')).not.toBeInTheDocument();
       expect(container.textContent).not.toContain('0:00');
     });
+
+    // ── ADMIN2-39-05 QA edge coverage (Mode B) ──────────────────────────────
+    // The RED specs assert the .news-audio COUNT + the duration strings, but not
+    // that the single rendered indicator carries the CORRECT level label. These
+    // prove per-level labeling: a B1-only item labels its one indicator "B1"
+    // (never "A2"), and an A2-only item labels its one indicator "A2".
+
+    it('B1-only item (90/null) renders ONE B1-labeled indicator "1:30" and no A2', () => {
+      const { container } = renderWithRouter(
+        <NewsCard
+          item={makeItem({ audio_duration_seconds: 90, audio_a2_duration_seconds: null })}
+          onRequestDelete={mockOnRequestDelete}
+        />
+      );
+      const audios = container.querySelectorAll('.news-audio');
+      expect(audios).toHaveLength(1);
+      const text = audios[0].textContent ?? '';
+      // The single indicator is the B1 track: "B1 1:30", never labeled "A2".
+      expect(text).toContain('B1');
+      expect(text).toContain('1:30');
+      expect(text).not.toContain('A2');
+    });
+
+    it('A2-only item (null/45) renders ONE A2-labeled indicator "0:45" and no B1', () => {
+      const { container } = renderWithRouter(
+        <NewsCard
+          item={makeItem({ audio_duration_seconds: null, audio_a2_duration_seconds: 45 })}
+          onRequestDelete={mockOnRequestDelete}
+        />
+      );
+      const audios = container.querySelectorAll('.news-audio');
+      expect(audios).toHaveLength(1);
+      const text = audios[0].textContent ?? '';
+      // The single indicator is the A2 track: "A2 0:45", never labeled "B1".
+      expect(text).toContain('A2');
+      expect(text).toContain('0:45');
+      expect(text).not.toContain('B1');
+    });
+
+    it('both present: B1 indicator carries 1:30 and A2 indicator carries 0:45 (no cross-labeling)', () => {
+      const { container } = renderWithRouter(
+        <NewsCard
+          item={makeItem({ audio_duration_seconds: 90, audio_a2_duration_seconds: 45 })}
+          onRequestDelete={mockOnRequestDelete}
+        />
+      );
+      const audios = Array.from(container.querySelectorAll('.news-audio'));
+      expect(audios).toHaveLength(2);
+      const b1 = audios.find((el) => (el.textContent ?? '').includes('B1'));
+      const a2 = audios.find((el) => (el.textContent ?? '').includes('A2'));
+      // Each level's duration lives on its own labeled indicator, not swapped.
+      expect(b1?.textContent).toContain('1:30');
+      expect(b1?.textContent).not.toContain('0:45');
+      expect(a2?.textContent).toContain('0:45');
+      expect(a2?.textContent).not.toContain('1:30');
+    });
   });
 });
