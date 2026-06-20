@@ -4,12 +4,13 @@
 
 import type { ReactNode } from 'react';
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
+import i18n from '@/i18n';
 import type { AdminCultureQuestion, UnifiedDeckItem } from '@/services/adminAPI';
 
 import { CultureQuestionDetail } from '../CultureQuestionDetail';
@@ -103,7 +104,11 @@ const makeCultureDeck = (overrides: Partial<UnifiedDeckItem> = {}): UnifiedDeckI
   ...overrides,
 });
 
-/** A fully-translated question with 2 options → status should be Draft (opts=2, not 4) */
+/**
+ * A fully-translated question with 2 options. Defaults to is_pending_review:false.
+ * Post-F3 the status badge is driven SOLELY by is_pending_review (not by option
+ * completeness), so this fixture's badge = "Visible to learners" unless overridden.
+ */
 const makeFullQuestion = (overrides: Partial<AdminCultureQuestion> = {}): AdminCultureQuestion => ({
   id: QUESTION_ID,
   question_text: {
@@ -127,7 +132,11 @@ const makeFullQuestion = (overrides: Partial<AdminCultureQuestion> = {}): AdminC
   ...overrides,
 });
 
-/** A question with all 4 options filled AND all translations → status should be Ready */
+/**
+ * A fully-complete question: all 4 options filled AND all translations present.
+ * Used to prove the badge IGNORES completeness post-F3 — it still reflects only
+ * is_pending_review.
+ */
 const makeReadyQuestion = (overrides: Partial<AdminCultureQuestion> = {}): AdminCultureQuestion =>
   makeFullQuestion({
     option_c: { en: 'Corinth', el: 'Κόρινθος', ru: 'Коринф' },
@@ -376,9 +385,12 @@ describe('CultureQuestionDetail', () => {
 
   // ── AC #6: Header — back link, H3 "Edit question", status Badge ──────────────
 
-  it('AC #6: header shows back link, title, and Draft badge for incomplete question', async () => {
+  it('AC #6: header shows back link, title, and green "Visible to learners" badge when not pending review', async () => {
+    // F3 (ADMIN2-39-02): the badge is now a pure function of is_pending_review.
+    // is_pending_review:false → green "Visible to learners" — regardless of the
+    // fact that only 2 options are filled (completeness no longer drives the badge).
     (adminAPI.listCultureQuestions as Mock).mockResolvedValue(
-      makeListResponse([makeFullQuestion()]) // 2 opts → Draft
+      makeListResponse([makeFullQuestion({ is_pending_review: false })])
     );
 
     renderDetail();
@@ -391,8 +403,12 @@ describe('CultureQuestionDetail', () => {
 
     const statusBadge = screen.getByTestId('culture-question-detail-status');
     expect(statusBadge).toBeInTheDocument();
-    // 2 options filled → "opts" chip is gray, not green → Draft
-    expect(statusBadge).toHaveTextContent('Draft');
+    await waitFor(() => {
+      expect(screen.getByTestId('culture-question-detail-status')).toHaveTextContent(
+        'Visible to learners'
+      );
+    });
+    expect(screen.getByTestId('culture-question-detail-status')).toHaveClass('b-green');
   });
 
   it('AC #6: back link clears ?item from URL when clicked', async () => {
@@ -414,20 +430,105 @@ describe('CultureQuestionDetail', () => {
     });
   });
 
-  it('AC #6: status Badge shows Ready when all translations + 4 options are filled', async () => {
+  it('AC #6: status Badge shows green "Visible to learners" for a fully-complete question that is not pending review', async () => {
+    // F3 (ADMIN2-39-02): a fully-complete question (all translations + 4 options)
+    // that is NOT pending review must read "Visible to learners" / b-green. The old
+    // contract asserted "Ready" off the completeness heuristic; that heuristic is gone.
     (adminAPI.listCultureQuestions as Mock).mockResolvedValue(
-      makeListResponse([makeReadyQuestion()])
+      makeListResponse([makeReadyQuestion({ is_pending_review: false })])
     );
 
     renderDetail();
 
-    // The status badge is present during the loading state too (defaults to Draft
-    // when question is undefined). Wait for the *content* to flip to Ready after
-    // the mocked query resolves — under slow CI runners the prior pattern
-    // (waitFor existence + sync content assertion) raced the React Query update.
+    // Wait for the *content* to settle after the mocked query resolves — under slow
+    // CI runners the prior pattern (waitFor existence + sync content assertion) raced
+    // the React Query update.
     await waitFor(() => {
-      expect(screen.getByTestId('culture-question-detail-status')).toHaveTextContent('Ready');
+      expect(screen.getByTestId('culture-question-detail-status')).toHaveTextContent(
+        'Visible to learners'
+      );
     });
+    expect(screen.getByTestId('culture-question-detail-status')).toHaveClass('b-green');
+  });
+
+  // ── ADMIN2-39-02 / F3: status badge is a pure function of is_pending_review ────
+  //
+  // The badge must reflect the real backend visibility flag (is_pending_review),
+  // NOT the frontend completeness heuristic. All assertions anchor on the existing
+  // data-testid="culture-question-detail-status" (AC #3).
+
+  it('F3 (AC-2): shows green "Visible to learners" when not pending review', async () => {
+    // is_pending_review:false even though only 2 options are filled → green/visible.
+    (adminAPI.listCultureQuestions as Mock).mockResolvedValue(
+      makeListResponse([makeFullQuestion({ is_pending_review: false })])
+    );
+
+    renderDetail();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('culture-question-detail-status')).toHaveTextContent(
+        'Visible to learners'
+      );
+    });
+    expect(screen.getByTestId('culture-question-detail-status')).toHaveClass('b-green');
+  });
+
+  it('F3 (AC-2): shows amber "Pending review" when pending review', async () => {
+    // Fully complete (4 options + all translations) but pending review → amber/pending.
+    (adminAPI.listCultureQuestions as Mock).mockResolvedValue(
+      makeListResponse([makeReadyQuestion({ is_pending_review: true })])
+    );
+
+    renderDetail();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('culture-question-detail-status')).toHaveTextContent(
+        'Pending review'
+      );
+    });
+    expect(screen.getByTestId('culture-question-detail-status')).toHaveClass('b-amber');
+  });
+
+  it('F3 (AC-1): badge ignores completeness (complete + pending → "Pending review")', async () => {
+    // A fully-complete question that is pending review must still read "Pending review",
+    // proving completeness no longer drives the badge.
+    (adminAPI.listCultureQuestions as Mock).mockResolvedValue(
+      makeListResponse([makeReadyQuestion({ is_pending_review: true })])
+    );
+
+    renderDetail();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('culture-question-detail-status')).toHaveTextContent(
+        'Pending review'
+      );
+    });
+    const badge = screen.getByTestId('culture-question-detail-status');
+    // Completeness must NOT win: it is neither "Visible to learners" nor the old "Ready".
+    expect(badge).not.toHaveTextContent('Visible to learners');
+    expect(badge).not.toHaveTextContent('Ready');
+    expect(badge).toHaveClass('b-amber');
+  });
+
+  it('F3 (AC-2): ru locale parity — not pending review renders ru "Виден ученикам"', async () => {
+    // The new decks.statusVisible key must exist in ru with parity; under ru the
+    // badge must show the localized string, not a raw key / en fallback.
+    (adminAPI.listCultureQuestions as Mock).mockResolvedValue(
+      makeListResponse([makeFullQuestion({ is_pending_review: false })])
+    );
+
+    await act(async () => {
+      await i18n.changeLanguage('ru');
+    });
+
+    renderDetail();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('culture-question-detail-status')).toHaveTextContent(
+        'Виден ученикам'
+      );
+    });
+    // The global afterEach in test-setup.ts resets the language back to 'en'.
   });
 
   // ── AC #7: Drawer Tabs + footer-primary hidden while detail is pushed ─────────
