@@ -472,10 +472,10 @@ describe('WordEntryCards', () => {
         refetch: vi.fn(),
       });
       renderComponent();
-      // Human-readable fallback label (title-cased)
+      // Human-readable fallback label (title-cased) is shown for non-default variants
       expect(screen.getByText('Meaning El To En T1')).toBeInTheDocument();
-      // Raw key shown as secondary text
-      expect(screen.getByText('meaning_el_to_en_t1')).toBeInTheDocument();
+      // Raw monospace variant key is no longer rendered (ADMIN2-39 D-F1a: collapsed chrome)
+      expect(screen.queryByText('meaning_el_to_en_t1')).not.toBeInTheDocument();
     });
 
     it('card records have no interactive elements (no buttons)', () => {
