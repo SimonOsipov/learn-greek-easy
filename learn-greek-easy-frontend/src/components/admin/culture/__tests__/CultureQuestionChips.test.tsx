@@ -49,15 +49,15 @@ describe('CultureQuestionChips', () => {
     expect(screen.getByTestId('culture-chip-audio-q-1')).toBeInTheDocument();
   });
 
-  it('renders B1 and A2 audio chips for news question', () => {
+  it('renders single audio chip for news question (no audio-b1/audio-a2)', () => {
     const q = makeQuestion({
       news_item_id: 'news-1',
       audio_s3_key: 'b2.mp3',
       news_item_audio_a2_s3_key: 'a2.mp3',
     });
     renderChips(q);
-    expect(screen.getByTestId('culture-chip-audio-b1-q-1')).toBeInTheDocument();
-    expect(screen.getByTestId('culture-chip-audio-a2-q-1')).toBeInTheDocument();
-    expect(screen.queryByTestId('culture-chip-audio-q-1')).not.toBeInTheDocument();
+    expect(screen.getByTestId('culture-chip-audio-q-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('culture-chip-audio-b1-q-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('culture-chip-audio-a2-q-1')).not.toBeInTheDocument();
   });
 });

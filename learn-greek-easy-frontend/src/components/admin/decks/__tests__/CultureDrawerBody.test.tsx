@@ -82,7 +82,7 @@ import { adminAPI } from '@/services/adminAPI';
 const DECK_ID = 'deck-culture-1';
 
 /**
- * A "news question" — has news_item_id, so audio-a2 pill should be visible.
+ * A "news question" — has news_item_id; emits a single "audio" pill (D2/D7).
  */
 const makeNewsQuestion = (overrides: Partial<AdminCultureQuestion> = {}): AdminCultureQuestion => ({
   id: 'q-news-1',
@@ -108,7 +108,7 @@ const makeNewsQuestion = (overrides: Partial<AdminCultureQuestion> = {}): AdminC
 });
 
 /**
- * An "exam question" — no news_item_id, so audio-a2 pill should be hidden.
+ * An "exam question" — no news_item_id; emits a single "audio" pill (D2/D7).
  */
 const makeExamQuestion = (overrides: Partial<AdminCultureQuestion> = {}): AdminCultureQuestion => ({
   id: 'q-exam-1',
@@ -251,10 +251,9 @@ describe('CultureDrawerBody', () => {
     });
   });
 
-  // ── 3. 6-pill order: EL → EN → RU → Opts → audio (B2|single) → A2 Audio ──
-  //    News question has all pills visible; exam question hides audio-a2.
+  // ── 3. Single "audio" pill for both news and exam questions (D2/D7) ──
 
-  it('news question shows audio-a2 pill; exam question hides it', async () => {
+  it('both news and exam questions show single "audio" pill; no audio-a2/audio-b1', async () => {
     const news = makeNewsQuestion({ id: 'q-news-pill' });
     const exam = makeExamQuestion({ id: 'q-exam-pill' });
 
@@ -273,11 +272,14 @@ describe('CultureDrawerBody', () => {
     expect(newsRow).toBeTruthy();
     expect(examRow).toBeTruthy();
 
-    // News question: audio-a2 pill should be visible
-    expect(within(newsRow!).queryByTestId('completion-pill-audio-a2')).toBeInTheDocument();
+    // Both question types: single audio pill, no audio-a2/audio-b1
+    expect(within(newsRow!).queryByTestId('completion-pill-audio')).toBeInTheDocument();
+    expect(within(newsRow!).queryByTestId('completion-pill-audio-a2')).not.toBeInTheDocument();
+    expect(within(newsRow!).queryByTestId('completion-pill-audio-b1')).not.toBeInTheDocument();
 
-    // Exam question: audio-a2 pill should NOT be present
+    expect(within(examRow!).queryByTestId('completion-pill-audio')).toBeInTheDocument();
     expect(within(examRow!).queryByTestId('completion-pill-audio-a2')).not.toBeInTheDocument();
+    expect(within(examRow!).queryByTestId('completion-pill-audio-b1')).not.toBeInTheDocument();
   });
 
   // ── 4. News badge appears only when original_article_url is set ───────────
