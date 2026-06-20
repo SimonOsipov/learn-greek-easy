@@ -49,8 +49,13 @@ export function DxCover({ deck, variant = 'card', className, children }: DxCover
     [cssVarName]: gradient,
   };
 
-  // Pick the best-fit WebP derivative (~400px wide), falling back to the original URL.
-  const coverSrc = pickBestSrc(deck.coverImageVariants, 400, deck.coverImageUrl);
+  // Pick the best-fit WebP derivative for the card's rendered width, scaled by the
+  // device pixel ratio. Cards render up to ~700px wide, so the old fixed 400px target
+  // was upscaled ~3.5x on a 2x display (and was already soft at 1x), looking blurry.
+  // Targeting 800 * DPR makes retina screens get the 1600px derivative and 1x screens
+  // the 800px one. Falls back to the original URL when no variants exist.
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+  const coverSrc = pickBestSrc(deck.coverImageVariants, Math.round(800 * dpr), deck.coverImageUrl);
 
   // `has-cover` lets the scrim darken the left text column more on photo covers.
   const cls = ['dx-cover-host', coverSrc && 'has-cover', className].filter(Boolean).join(' ');

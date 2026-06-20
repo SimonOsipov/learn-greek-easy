@@ -305,6 +305,62 @@ class TestUploadDeckCoverImage:
         data = response.json()
         assert data["cover_image_url"] is None
 
+    @pytest.mark.asyncio
+    async def test_upload_cover_image_invalidates_deck_list_cache(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+        mock_s3: MagicMock,
+        monkeypatch,
+        mocker,
+    ) -> None:
+        """Upload schedules invalidate_cache_task to bust the public /decks list cache.
+
+        Regression: the cover appeared in the admin drawer but not on the public
+        /decks page until the Redis deck-list cache (cache_deck_list_ttl, default
+        300s) expired, because the upload endpoint never invalidated decks:list:*.
+        """
+        monkeypatch.setattr("src.api.v1.admin.settings.feature_background_tasks", True)
+        mock_invalidate = mocker.patch("src.api.v1.admin.invalidate_cache_task")
+        deck = await DeckFactory.create(session=db_session)
+
+        response = await client.post(
+            f"/api/v1/admin/decks/{deck.id}/cover-image",
+            files={"file": ("cover.jpg", b"fake-jpeg-bytes", "image/jpeg")},
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        assert mock_invalidate.call_count == 1
+        kwargs = mock_invalidate.call_args_list[0].kwargs
+        assert kwargs["cache_type"] == "deck"
+        assert kwargs["entity_id"] == deck.id
+
+    @pytest.mark.asyncio
+    async def test_upload_cover_image_no_invalidation_when_feature_disabled(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+        mock_s3: MagicMock,
+        monkeypatch,
+        mocker,
+    ) -> None:
+        """No cache invalidation is scheduled when feature_background_tasks is False."""
+        monkeypatch.setattr("src.api.v1.admin.settings.feature_background_tasks", False)
+        mock_invalidate = mocker.patch("src.api.v1.admin.invalidate_cache_task")
+        deck = await DeckFactory.create(session=db_session)
+
+        response = await client.post(
+            f"/api/v1/admin/decks/{deck.id}/cover-image",
+            files={"file": ("cover.jpg", b"fake-jpeg-bytes", "image/jpeg")},
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        mock_invalidate.assert_not_called()
+
 
 # ============================================================================
 # DELETE /api/v1/admin/decks/{deck_id}/cover-image Tests
@@ -419,3 +475,56 @@ class TestDeleteDeckCoverImage:
         assert response.status_code == 500
         await db_session.refresh(deck)
         assert deck.cover_image_s3_key == "deck-images/test-id.jpg"
+
+    @pytest.mark.asyncio
+    async def test_delete_cover_image_invalidates_deck_list_cache(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+        mock_s3: MagicMock,
+        monkeypatch,
+        mocker,
+    ) -> None:
+        """Delete schedules invalidate_cache_task so the removal propagates to /decks."""
+        monkeypatch.setattr("src.api.v1.admin.settings.feature_background_tasks", True)
+        mock_invalidate = mocker.patch("src.api.v1.admin.invalidate_cache_task")
+        deck = await DeckFactory.create(
+            session=db_session, cover_image_s3_key="deck-images/test-id.jpg"
+        )
+
+        response = await client.delete(
+            f"/api/v1/admin/decks/{deck.id}/cover-image",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        assert mock_invalidate.call_count == 1
+        kwargs = mock_invalidate.call_args_list[0].kwargs
+        assert kwargs["cache_type"] == "deck"
+        assert kwargs["entity_id"] == deck.id
+
+    @pytest.mark.asyncio
+    async def test_delete_cover_image_no_invalidation_when_feature_disabled(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+        mock_s3: MagicMock,
+        monkeypatch,
+        mocker,
+    ) -> None:
+        """No cache invalidation is scheduled when feature_background_tasks is False."""
+        monkeypatch.setattr("src.api.v1.admin.settings.feature_background_tasks", False)
+        mock_invalidate = mocker.patch("src.api.v1.admin.invalidate_cache_task")
+        deck = await DeckFactory.create(
+            session=db_session, cover_image_s3_key="deck-images/test-id.jpg"
+        )
+
+        response = await client.delete(
+            f"/api/v1/admin/decks/{deck.id}/cover-image",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        mock_invalidate.assert_not_called()
