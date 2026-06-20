@@ -474,11 +474,16 @@ class TestLexgen05FrequencyRankConstraintEnforcement:
                 "(pgvector/pgvector:pg17). This test is CI-gated."
             )
 
-        result = _run_alembic(["upgrade", "head"], db_url)
-        assert result.returncode == 0, (
-            f"alembic upgrade head failed:\nSTDOUT:\n{result.stdout}\n" f"STDERR:\n{result.stderr}"
-        )
-        engine = _sync_engine(db_url)
+        try:
+            result = _run_alembic(["upgrade", "head"], db_url)
+            assert result.returncode == 0, (
+                f"alembic upgrade head failed:\nSTDOUT:\n{result.stdout}\n"
+                f"STDERR:\n{result.stderr}"
+            )
+            engine = _sync_engine(db_url)
+        except Exception:
+            _teardown_migration_db(db_name)
+            raise
         return engine, db_url
 
     def test_unique_lemma_violation_raises_integrity_error(self):

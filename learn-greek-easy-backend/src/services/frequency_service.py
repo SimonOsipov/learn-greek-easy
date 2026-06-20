@@ -27,7 +27,7 @@ def band_for_rank(rank: int | None) -> str | None:
 
     Bands:
     - "common": rank <= COMMON_MAX_RANK (top 2 000 lemmas)
-    - "mid":    rank <= MID_MAX_RANK    (ranks 2 001–8 000)
+    - "mid":    rank <= MID_MAX_RANK    (ranks 2 001-8 000)
     - "rare":   rank > MID_MAX_RANK     (rank 8 001+)
     """
     if rank is None:
