@@ -47,6 +47,7 @@ export const NewsTab: React.FC<NewsTabProps> = ({ createOpen, onCreateOpenChange
     audioCount,
     b1AudioCount,
     b1PendingRegenCount,
+    countryCounts,
     fetchNewsItems,
     openDrawer,
     closeDrawer,
@@ -106,13 +107,16 @@ export const NewsTab: React.FC<NewsTabProps> = ({ createOpen, onCreateOpenChange
           icon={<RefreshCcw />}
           tone="amber"
         />
-        {/* Card #4 — Country (Cyprus only for now)
-            TODO(NADM-multi-country): replace literal "CY" with
-            per-country data once multi-country support lands. */}
+        {/* Card #4 — Country (live per-country counts, order WR · CY · GR).
+            WR/CY/GR are country codes, rendered literally (not translatable copy). */}
         <StatCard
           title={t('news.stats.countries')}
           sub={t('news.stats.countrySub')}
-          n="CY"
+          n={
+            <span className="whitespace-nowrap">
+              WR {countryCounts.world} · CY {countryCounts.cyprus} · GR {countryCounts.greece}
+            </span>
+          }
           icon={<Globe />}
           tone="cyan"
         />

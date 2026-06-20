@@ -459,7 +459,7 @@
       "b1Coverage": "Охват B1",
       "countries": "Страны",
       "audioCoverage": "{{count}}/{{total}} с аудио",
-      "countrySub": "Только Кипр",
+      "countrySub": "По странам",
       "allTime": "За всё время",
       "recentThisWeek": "+{{count}} за неделю"
     },

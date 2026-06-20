@@ -184,15 +184,13 @@ describe('NewsTab — basic rendering', () => {
     expect(screen.queryByTestId('stat-bars-country')).not.toBeInTheDocument();
   });
 
-  it('card #4 (country) shows literal "CY" as the KPI value', () => {
+  // ADMIN2-39-05 F8: the Countries card no longer renders a hardcoded "CY"
+  // KPI nor a "Cyprus only" sub — see the "F8 Countries live counter"
+  // describe block below for the live WR·CY·GR + reworded-sub coverage.
+  it('card #4 (country) shows reworded sub from i18n key news.stats.countrySub', () => {
     renderWithRouter();
-    expect(screen.getByText('CY')).toBeInTheDocument();
-  });
-
-  it('card #4 (country) shows sub from i18n key news.stats.countrySub', () => {
-    renderWithRouter();
-    // Resolves to "Cyprus only"
-    expect(screen.getByText('Cyprus only')).toBeInTheDocument();
+    // Reworded from "Cyprus only" → "By country" (C8 / D-C8-countrysub).
+    expect(screen.getByText('By country')).toBeInTheDocument();
   });
 
   it('card #3 (B1) renders real b1_audio_count value (not "—")', () => {

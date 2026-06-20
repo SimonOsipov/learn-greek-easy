@@ -444,7 +444,7 @@
       "b1Coverage": "B1 coverage",
       "countries": "Countries",
       "audioCoverage": "{{count}}/{{total}} with audio",
-      "countrySub": "Cyprus only",
+      "countrySub": "By country",
       "allTime": "All time",
       "recentThisWeek": "+{{count}} this week"
     },

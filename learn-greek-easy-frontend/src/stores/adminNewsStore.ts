@@ -37,6 +37,9 @@ interface AdminNewsState {
   b1AudioCount: number;
   b1PendingRegenCount: number;
 
+  // Per-country article counts surfaced by the list response (F8).
+  countryCounts: { cyprus: number; greece: number; world: number };
+
   // Loading states
   isLoading: boolean;
   isCreating: boolean;
@@ -87,6 +90,7 @@ export const useAdminNewsStore = create<AdminNewsState>()(
       audioCount: 0,
       b1AudioCount: 0,
       b1PendingRegenCount: 0,
+      countryCounts: { cyprus: 0, greece: 0, world: 0 },
       isLoading: false,
       isCreating: false,
       isUpdating: false,
@@ -119,6 +123,8 @@ export const useAdminNewsStore = create<AdminNewsState>()(
             audioCount: response.audio_count,
             b1AudioCount: response.b1_audio_count,
             b1PendingRegenCount: response.b1_pending_regen_count,
+            // F8: guard absence (older cached shapes / partial failures) without throwing.
+            countryCounts: response.country_counts ?? { cyprus: 0, greece: 0, world: 0 },
             isLoading: false,
             selectedItem: state.selectedItem
               ? (response.items.find((item) => item.id === state.selectedItem?.id) ?? null)

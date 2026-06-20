@@ -198,15 +198,21 @@ describe('NewsCard', () => {
     expect(screen.getByText('A2')).toBeInTheDocument();
   });
 
-  it('renders audio chip with combined duration when audio is present', () => {
-    renderWithRouter(
+  // ADMIN2-39-05 F7: durations are now rendered per level, never summed.
+  // (Superseded the old "combined duration 3:00" assertion — see the
+  // "F7 — per-level audio durations" describe block below for full coverage.)
+  it('renders per-level audio chips when audio is present (not the sum)', () => {
+    const { container } = renderWithRouter(
       <NewsCard
         item={makeItem({ audio_duration_seconds: 120, audio_a2_duration_seconds: 60 })}
         onRequestDelete={mockOnRequestDelete}
       />
     );
-    // 180 seconds = 3:00
-    expect(screen.getByText('3:00')).toBeInTheDocument();
+    // B1 120s = "2:00", A2 60s = "1:00" — two separate indicators.
+    expect(screen.getByText(/2:00/)).toBeInTheDocument();
+    expect(screen.getByText(/1:00/)).toBeInTheDocument();
+    // The sum (180s = "3:00") must NOT be rendered.
+    expect(container.textContent).not.toContain('3:00');
   });
 
   it('omits audio chip when both audio durations are null', () => {
