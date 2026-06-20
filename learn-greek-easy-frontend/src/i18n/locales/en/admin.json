@@ -2122,7 +2122,24 @@
     },
     "culture": {
       "editQuestionLabel": "Edit question",
-      "deleteQuestionLabel": "Delete question"
+      "deleteQuestionLabel": "Delete question",
+      "form": {
+        "questionLabel": "Question ({{lang}})",
+        "questionPlaceholder": "Enter question in {{lang}}",
+        "questionRequired": "Question is required",
+        "answersLabel": "Answers ({{lang}})",
+        "answerPlaceholder": "Answer {{key}}",
+        "addAnswer": "Add Answer {{key}}",
+        "selectCorrect": "Please select a correct answer",
+        "saveQuestion": "Save Question",
+        "markCorrect": "Mark answer {{key}} as correct",
+        "zodRuRequired": "Russian text is required",
+        "zodElRequired": "Greek text is required",
+        "zodEnRequired": "English text is required",
+        "zodAnswerRequired": "Answer {{key}} is required",
+        "zodAnswerLangRequired": "{{lang}} text is required for answer {{key}}",
+        "zodCorrectRange": "Correct answer must be within available options"
+      }
     },
     "saveChanges": "Save changes",
     "typeCulture": "Culture",
