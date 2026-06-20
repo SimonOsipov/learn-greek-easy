@@ -34,6 +34,7 @@ import { SessionSummary } from '@/components/review/session-summary';
 import { AllCaughtUp } from '@/components/review/all-caught-up';
 import { SkeletonCard } from '@/components/review/skeleton-card';
 import { reviewPalette } from '@/lib/review/presentation';
+import { useThemeStore } from '@/stores/theme-store';
 
 // ── Screen state machine ──
 type ReviewPhase =
@@ -63,8 +64,17 @@ export default function ReviewScreen() {
   const queueQuery = useStudyQueue(deckId);
   const submitMutation = useSubmitReview();
 
-  // ── Review-screen-local theme (independent of app theme) ──
-  const [isDark, setIsDark] = useState(true); // dark is product default
+  // ── Theme: derive from the GLOBAL theme store (THEME-05 / D3) ──
+  // The review screen no longer keeps an independent per-session dark default;
+  // it follows the single app-wide preference. The in-header sun/moon control
+  // (onThemeToggle, below) now flips AND persists the global preference
+  // (F6/option-a) rather than a discarded local toggle.
+  const isDark = useThemeStore((s) => s.resolvedScheme === 'dark');
+  const setPreference = useThemeStore((s) => s.setPreference);
+  const handleThemeToggle = useCallback(
+    () => setPreference(isDark ? 'light' : 'dark'),
+    [isDark, setPreference],
+  );
   const [locale, setLocale] = useState<'en' | 'ru'>('en');
 
   // ── Session state ──
@@ -254,7 +264,7 @@ export default function ReviewScreen() {
           locale={locale}
           onLocaleChange={setLocale}
           isDark={isDark}
-          onThemeToggle={() => setIsDark((d) => !d)}
+          onThemeToggle={handleThemeToggle}
           onClose={handleAbandon}
         />
         <View className="flex-1 px-4 pt-4">
@@ -324,7 +334,7 @@ export default function ReviewScreen() {
           locale={locale}
           onLocaleChange={setLocale}
           isDark={isDark}
-          onThemeToggle={() => setIsDark((d) => !d)}
+          onThemeToggle={handleThemeToggle}
           onClose={() => router.back()}
         />
         <AllCaughtUp isDark={isDark} onBackToDeck={() => router.back()} />
@@ -366,7 +376,7 @@ export default function ReviewScreen() {
         locale={locale}
         onLocaleChange={setLocale}
         isDark={isDark}
-        onThemeToggle={() => setIsDark((d) => !d)}
+        onThemeToggle={handleThemeToggle}
         onClose={handleAbandon}
       />
 
