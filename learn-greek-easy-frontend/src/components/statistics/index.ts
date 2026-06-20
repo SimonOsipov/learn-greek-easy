@@ -8,13 +8,3 @@ export { LevelProgressCard } from './LevelProgressCard';
 export type { LevelProgressCardProps } from './LevelProgressCard';
 
 export { AchievementsGrid } from './AchievementsGrid';
-
-export { CultureReadinessCard } from './CultureReadinessCard';
-
-export { CategoryBreakdown } from './CategoryBreakdown';
-export type { CategoryBreakdownProps } from './CategoryBreakdown';
-
-export { WeakAreaCTA } from './WeakAreaCTA';
-export type { WeakAreaCTAProps } from './WeakAreaCTA';
-
-export { MotivationalMessageCard } from './MotivationalMessageCard';
