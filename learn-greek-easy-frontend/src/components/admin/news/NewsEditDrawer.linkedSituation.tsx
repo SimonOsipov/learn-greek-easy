@@ -164,9 +164,9 @@ export const NewsEditDrawerLinkedSituation: React.FC<Props> = ({
                 type="button"
                 variant="secondary"
                 size="sm"
-                disabled
                 aria-disabled="true"
-                className="relative"
+                className="relative cursor-not-allowed opacity-60"
+                onClick={(e) => e.preventDefault()}
               >
                 <X size={14} aria-hidden="true" />
                 {t('news.drawer.linkedSituation.unlink')}
@@ -186,9 +186,9 @@ export const NewsEditDrawerLinkedSituation: React.FC<Props> = ({
                 type="button"
                 variant="secondary"
                 size="sm"
-                disabled
                 aria-disabled="true"
-                className="relative"
+                className="relative cursor-not-allowed opacity-60"
+                onClick={(e) => e.preventDefault()}
               >
                 <Wand2 size={14} aria-hidden="true" />
                 {t('news.drawer.linkedSituation.regenerate')}

@@ -198,9 +198,9 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
                   type="button"
                   variant="secondary"
                   size="sm"
-                  disabled
                   aria-disabled="true"
-                  className="relative"
+                  className="relative cursor-not-allowed opacity-60"
+                  onClick={(e) => e.preventDefault()}
                 >
                   <RefreshCw size={14} />
                   {t('news.drawer.audio.regenerate')}
@@ -220,12 +220,12 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  disabled
                   aria-disabled="true"
                   aria-label={t('news.drawer.audio.uploadLabel', {
                     level: level.toUpperCase(),
                   })}
-                  className="relative"
+                  className="relative cursor-not-allowed opacity-60"
+                  onClick={(e) => e.preventDefault()}
                 >
                   <Upload size={16} />
                   <span

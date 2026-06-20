@@ -493,18 +493,20 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
     expect(btn).toHaveAttribute('aria-disabled', 'true');
   });
 
-  it('Unlink button is the Button primitive with native disabled', () => {
+  it('Unlink button is the Button primitive but NOT natively disabled (stays hoverable)', () => {
     const item = makeItem();
     render(
       <MemoryRouter>
         <NewsEditDrawerLinkedSituation item={item} />
       </MemoryRouter>
     );
-    // ADMIN2-39 F9: the .btn-glass stub was converted to the Button primitive on the
-    // canonical native-disabled mechanic (aria-disabled retained for the strict
-    // disabled-control contract).
+    // ADMIN2-39 (post-F9): the coming-soon stub is the Button primitive but uses
+    // aria-disabled WITHOUT native `disabled` — native disabled adds
+    // `disabled:pointer-events-none`, which blocks the hover-to-reveal comingSoon tooltip
+    // (the admin-news E2E hovers this stub). Matches the E2E-validated announcements pattern.
     const btn = screen.getByRole('button', { name: /Unlink/i });
-    expect((btn as HTMLButtonElement).disabled).toBe(true);
+    expect(btn).toHaveAttribute('aria-disabled', 'true');
+    expect((btn as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('Unlink button contains X icon (lucide-react)', () => {
@@ -530,17 +532,18 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
     expect(btn).toHaveAttribute('aria-disabled', 'true');
   });
 
-  it('Regenerate button is the Button primitive with native disabled', () => {
+  it('Regenerate button is the Button primitive but NOT natively disabled (stays hoverable)', () => {
     const item = makeItem();
     render(
       <MemoryRouter>
         <NewsEditDrawerLinkedSituation item={item} />
       </MemoryRouter>
     );
-    // ADMIN2-39 F9: .btn-glass stub converted to the Button primitive on the canonical
-    // native-disabled mechanic (aria-disabled retained for the strict disabled contract).
+    // ADMIN2-39 (post-F9): aria-disabled WITHOUT native `disabled` so the comingSoon
+    // tooltip still reveals on hover (admin-news E2E #6 hovers this exact stub).
     const btn = screen.getByRole('button', { name: /Regenerate from this article/i });
-    expect((btn as HTMLButtonElement).disabled).toBe(true);
+    expect(btn).toHaveAttribute('aria-disabled', 'true');
+    expect((btn as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('Regenerate button contains Wand2 icon (lucide-react)', () => {

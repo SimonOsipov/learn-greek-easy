@@ -301,9 +301,9 @@ export const NewsEditDrawer: React.FC = () => {
                       type="button"
                       variant="outline"
                       size="sm"
-                      disabled
                       aria-disabled="true"
-                      className="relative"
+                      className="relative cursor-not-allowed opacity-60"
+                      onClick={(e) => e.preventDefault()}
                     >
                       <Wand2 className="size-3" />
                       {t('news.drawer.regenerateTranslations')}
