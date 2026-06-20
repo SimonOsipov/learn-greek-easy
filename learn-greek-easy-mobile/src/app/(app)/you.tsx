@@ -38,6 +38,8 @@ import { useXpStats } from '@/hooks/use-xp-stats';
 import { useProgressDashboard } from '@/hooks/use-progress-dashboard';
 import { useWeekTrends } from '@/hooks/use-week-trends';
 import { useAuthStore } from '@/stores/auth-store';
+import { useThemeStore } from '@/stores/theme-store';
+import type { ThemePreference } from '@/stores/theme-store';
 import { useToast } from '@/components/ui/toast';
 import { track } from '@/lib/analytics';
 import { buildHeatmap } from '@/lib/dashboard/derive';
@@ -76,6 +78,12 @@ function todayHeatmapIndex(): number {
 export default function YouScreen() {
   const { showComingSoonToast } = useToast();
   const signOut = useAuthStore((state) => state.signOut);
+
+  // ── Theme preference (THEME-04) — single source of truth for the Theme row's
+  // sublabel + segmented control. `setPreference` re-themes the whole app live
+  // and persists (THEME-03). ──
+  const themePreference = useThemeStore((s) => s.preference);
+  const setThemePreference = useThemeStore((s) => s.setPreference);
 
   const profileQuery = useUserProfile();
   const xpQuery = useXpStats();
@@ -121,6 +129,15 @@ export default function YouScreen() {
       showComingSoonToast();
     },
     [showComingSoonToast],
+  );
+
+  // ── Theme change handler (THEME-04) ──
+  const handleThemeChange = useCallback(
+    (preference: ThemePreference) => {
+      track('profile_row_tapped', { row: 'theme', coming_soon: false });
+      setThemePreference(preference);
+    },
+    [setThemePreference],
   );
 
   // ── Gear icon handler ──
@@ -226,7 +243,11 @@ export default function YouScreen() {
 
   const dailyGoal = profile.settings?.daily_goal ?? 20;
   const dailyGoalSublabel = `${dailyGoal} cards`;
-  const themeSublabel = profile.settings?.theme ?? 'System';
+  // F4 — sublabel reads the store's 3-state preference (shows "System" when
+  // System is chosen), NOT the 2-value backend field, so sublabel + control
+  // share one source of truth.
+  const themeSublabel =
+    themePreference.charAt(0).toUpperCase() + themePreference.slice(1);
 
   return (
     <SafeAreaView testID="you-screen" className="flex-1 bg-bg" edges={['top']}>
@@ -301,6 +322,8 @@ export default function YouScreen() {
             testID="you-settings-list"
             dailyGoalSublabel={dailyGoalSublabel}
             themeSublabel={themeSublabel}
+            themePreference={themePreference}
+            onThemeChange={handleThemeChange}
             onRowPress={handleSettingsRow}
           />
         </View>
