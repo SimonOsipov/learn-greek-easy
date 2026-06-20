@@ -58,10 +58,6 @@ vi.mock('@/components/statistics', () => ({
   },
   LevelProgressCard: () => null,
   AchievementsGrid: () => null,
-  CultureReadinessCard: () => null,
-  MotivationalMessageCard: () => null,
-  CategoryBreakdown: () => null,
-  WeakAreaCTA: () => null,
   getStreakMessageKey: () => 'streak.ok',
 }));
 
