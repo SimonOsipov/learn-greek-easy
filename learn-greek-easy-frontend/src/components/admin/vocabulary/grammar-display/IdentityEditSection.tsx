@@ -152,21 +152,26 @@ export function IdentityEditSection({
     <>
       <Card id="section-identity">
         <CardHeader className="px-4 pb-2 pt-4">
-          <div className="flex items-center justify-between">
+          <div className="group flex items-center justify-between">
             <div className="flex items-center text-sm font-semibold">
               {t('wordEntryContent.sectionIdentity')}
               <SectionBadge filled={compl.filled} total={compl.total} />
             </div>
             {!isEditing && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={enterEditMode}
-                data-testid="identity-edit-btn"
+              <div
+                data-testid="identity-pencil-actions"
+                className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
               >
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
+                <Button
+                  variant="chrome-ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={enterEditMode}
+                  data-testid="identity-edit-btn"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             )}
           </div>
         </CardHeader>
