@@ -398,4 +398,84 @@ describe('NewsCard', () => {
     const article = editBtn.closest('article');
     expect(article).toHaveAttribute('tabindex', '0');
   });
+
+  // ── ADMIN2-39-05 F7: two separate per-level audio durations (no summing) ──
+  // The current implementation renders ONE `.news-audio` span showing the SUM
+  // (B1 + A2). The target renders TWO separate indicators (one per level),
+  // each suppressed when its track is absent OR has a 0-second duration.
+  describe('F7 — per-level audio durations (no summing, suppress 0-second)', () => {
+    it('renders B1 and A2 durations separately', () => {
+      const { container } = renderWithRouter(
+        <NewsCard
+          item={makeItem({ audio_duration_seconds: 90, audio_a2_duration_seconds: 45 })}
+          onRequestDelete={mockOnRequestDelete}
+        />
+      );
+      // Two separate indicators — B1 90s = "1:30", A2 45s = "0:45".
+      expect(screen.getByText(/1:30/)).toBeInTheDocument();
+      expect(screen.getByText(/0:45/)).toBeInTheDocument();
+      // The SUM (135s = "2:15") must NOT be rendered anywhere.
+      expect(container.textContent).not.toContain('2:15');
+      // Two audio indicators present (one per level), not a single summed span.
+      expect(container.querySelectorAll('.news-audio')).toHaveLength(2);
+    });
+
+    it('omits a missing track', () => {
+      const { container } = renderWithRouter(
+        <NewsCard
+          item={makeItem({ audio_duration_seconds: 90, audio_a2_duration_seconds: null })}
+          onRequestDelete={mockOnRequestDelete}
+        />
+      );
+      // B1 present (90s = "1:30"); A2 absent → exactly one indicator.
+      expect(screen.getByText(/1:30/)).toBeInTheDocument();
+      expect(container.querySelectorAll('.news-audio')).toHaveLength(1);
+    });
+
+    it('suppresses a 0-second track (boundary)', () => {
+      const { container } = renderWithRouter(
+        <NewsCard
+          item={makeItem({ audio_duration_seconds: 90, audio_a2_duration_seconds: 0 })}
+          onRequestDelete={mockOnRequestDelete}
+        />
+      );
+      // B1 present (90s = "1:30"); A2 is 0s → suppressed, never rendered as "0:00".
+      expect(screen.getByText(/1:30/)).toBeInTheDocument();
+      expect(container.textContent).not.toContain('0:00');
+      expect(container.querySelectorAll('.news-audio')).toHaveLength(1);
+    });
+
+    it('no audio row when both tracks are null', () => {
+      const { container } = renderWithRouter(
+        <NewsCard
+          item={makeItem({ audio_duration_seconds: null, audio_a2_duration_seconds: null })}
+          onRequestDelete={mockOnRequestDelete}
+        />
+      );
+      expect(container.querySelector('.news-audio')).not.toBeInTheDocument();
+      expect(container.textContent).not.toContain('0:00');
+    });
+
+    it('no audio row when both tracks are 0 seconds', () => {
+      const { container } = renderWithRouter(
+        <NewsCard
+          item={makeItem({ audio_duration_seconds: 0, audio_a2_duration_seconds: 0 })}
+          onRequestDelete={mockOnRequestDelete}
+        />
+      );
+      expect(container.querySelector('.news-audio')).not.toBeInTheDocument();
+      expect(container.textContent).not.toContain('0:00');
+    });
+
+    it('no audio row when B1 is 0 seconds and A2 is null (0/null boundary)', () => {
+      const { container } = renderWithRouter(
+        <NewsCard
+          item={makeItem({ audio_duration_seconds: 0, audio_a2_duration_seconds: null })}
+          onRequestDelete={mockOnRequestDelete}
+        />
+      );
+      expect(container.querySelector('.news-audio')).not.toBeInTheDocument();
+      expect(container.textContent).not.toContain('0:00');
+    });
+  });
 });
