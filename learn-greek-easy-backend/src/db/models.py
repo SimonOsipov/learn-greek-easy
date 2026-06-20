@@ -28,7 +28,13 @@ from typing import List
 from uuid import UUID
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import JSON, Boolean, CheckConstraint, Date, DateTime
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
+)
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy import (
     Float,
