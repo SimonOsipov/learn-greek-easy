@@ -531,6 +531,62 @@ describe('CultureQuestionDetail', () => {
     // The global afterEach in test-setup.ts resets the language back to 'en'.
   });
 
+  // ── ADMIN2-39-02 QA edge coverage (Mode B adversarial) ────────────────────────
+  //
+  // The Stage-2.5 specs only proved the ru parity of statusVisible ("Виден
+  // ученикам"). They never exercised the amber/pending key in ru, and never
+  // proved completeness-independence from the *visible* (green) side. These two
+  // tests close both gaps.
+
+  it('F3 (AC-2) QA-edge: ru locale parity — pending review renders ru "На проверке"', async () => {
+    // Parity of the SECOND new key (statusPendingReview) under ru: amber/pending
+    // must render the localized ru string, not a raw key or en fallback.
+    (adminAPI.listCultureQuestions as Mock).mockResolvedValue(
+      makeListResponse([makeReadyQuestion({ is_pending_review: true })])
+    );
+
+    await act(async () => {
+      await i18n.changeLanguage('ru');
+    });
+
+    renderDetail();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('culture-question-detail-status')).toHaveTextContent('На проверке');
+    });
+    expect(screen.getByTestId('culture-question-detail-status')).toHaveClass('b-amber');
+    // The global afterEach in test-setup.ts resets the language back to 'en'.
+  });
+
+  it('F3 (AC-1) QA-edge: an INCOMPLETE question that is not pending review still reads green "Visible to learners"', async () => {
+    // Re-proves AC-1 from the opposite (green) direction: a question missing both
+    // translations (only en) AND options (only 2) but with is_pending_review:false
+    // must STILL be green/visible — completeness does not drag it to amber.
+    (adminAPI.listCultureQuestions as Mock).mockResolvedValue(
+      makeListResponse([
+        makeFullQuestion({
+          is_pending_review: false,
+          question_text: { en: 'Only English' }, // el + ru missing
+          option_c: null, // only 2 options filled
+          option_d: null,
+        }),
+      ])
+    );
+
+    renderDetail();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('culture-question-detail-status')).toHaveTextContent(
+        'Visible to learners'
+      );
+    });
+    const badge = screen.getByTestId('culture-question-detail-status');
+    expect(badge).toHaveClass('b-green');
+    // Incompleteness must NOT flip it to the amber/pending copy.
+    expect(badge).not.toHaveTextContent('Pending review');
+    expect(badge).not.toHaveClass('b-amber');
+  });
+
   // ── AC #7: Drawer Tabs + footer-primary hidden while detail is pushed ─────────
   //
   // This behaviour is enforced by DeckDrawer (the `!itemId` guard), not by
