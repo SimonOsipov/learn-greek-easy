@@ -360,9 +360,11 @@ class TestLexgen05FrequencyRankMigrationRoundTrip:
 
         try:
             # ---- UPGRADE ----
-            result = _run_alembic(["upgrade", "head"], db_url)
+            # Pin to 6b8e5cdc102f (LEXGEN-05 head) so a successor migration doesn't
+            # break this round-trip's downgrade -1 assertion.
+            result = _run_alembic(["upgrade", "6b8e5cdc102f"], db_url)
             assert result.returncode == 0, (
-                f"alembic upgrade head failed:\nSTDOUT:\n{result.stdout}\n"
+                f"alembic upgrade 6b8e5cdc102f failed:\nSTDOUT:\n{result.stdout}\n"
                 f"STDERR:\n{result.stderr}"
             )
 
@@ -371,7 +373,7 @@ class TestLexgen05FrequencyRankMigrationRoundTrip:
                 # AC-5a: table exists after upgrade
                 assert _table_exists(
                     engine, "reference", "frequency_rank"
-                ), "reference.frequency_rank must exist after alembic upgrade head"
+                ), "reference.frequency_rank must exist after alembic upgrade 6b8e5cdc102f"
 
                 # AC-5b: UNIQUE index on (lemma) alone
                 unique_indexes = _get_unique_indexes(engine, "reference", "frequency_rank")

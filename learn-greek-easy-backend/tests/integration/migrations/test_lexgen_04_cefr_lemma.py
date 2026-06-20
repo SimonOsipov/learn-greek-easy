@@ -364,9 +364,11 @@ class TestLexgen04CefrLemmaMigrationRoundTrip:
 
         try:
             # ---- UPGRADE ----
-            result = _run_alembic(["upgrade", "head"], db_url)
+            # Pin to 844af57c6ca2 (LEXGEN-04 head) so a successor migration doesn't
+            # break this round-trip's downgrade -1 assertion.
+            result = _run_alembic(["upgrade", "844af57c6ca2"], db_url)
             assert result.returncode == 0, (
-                f"alembic upgrade head failed:\nSTDOUT:\n{result.stdout}\n"
+                f"alembic upgrade 844af57c6ca2 failed:\nSTDOUT:\n{result.stdout}\n"
                 f"STDERR:\n{result.stderr}"
             )
 
@@ -375,10 +377,10 @@ class TestLexgen04CefrLemmaMigrationRoundTrip:
                 # AC-9a: both tables exist after upgrade
                 assert _table_exists(
                     engine, "reference", "cefr_lemma"
-                ), "reference.cefr_lemma must exist after alembic upgrade head"
+                ), "reference.cefr_lemma must exist after alembic upgrade 844af57c6ca2"
                 assert _table_exists(
                     engine, "reference", "cefr_lemma_review"
-                ), "reference.cefr_lemma_review must exist after alembic upgrade head"
+                ), "reference.cefr_lemma_review must exist after alembic upgrade 844af57c6ca2"
 
                 # AC-9b: UNIQUE index on (lemma) alone
                 unique_indexes = _get_unique_indexes(engine, "reference", "cefr_lemma")
