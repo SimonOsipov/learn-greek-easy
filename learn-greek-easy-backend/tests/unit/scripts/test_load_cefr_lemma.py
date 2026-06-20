@@ -602,15 +602,19 @@ def test_summary_counts_by_source(tmp_path, caplog):
     total_out = len(main_inserts) + len(review_inserts)
     # We had 3 raw rows; after dedup of σπίτι: 2 unique lemmas (σπίτι, αγαπώ)
     # σπίτι → inserted (1), αγαπώ → review (1) → total_out == 2
-    assert total_out >= 1, (
-        f"At least 1 output row (insert+review) expected; "
+    assert total_out == 2, (
+        f"Expected exactly 2 outputs after dedup (σπίτι→insert, αγαπώ→review); "
         f"main={len(main_inserts)}, review={len(review_inserts)}"
     )
+    # σπίτι (attested) must be the single inserted row
+    assert any(
+        "σπίτι" in str(r) for r in main_inserts
+    ), f"σπίτι must be inserted; main_inserts={main_inserts!r}"
 
     # αγαπώ (unattested) must appear in review
     review_lemmas = [str(r) for r in review_inserts]
-    assert (
-        any("αγαπώ" in lm for lm in review_lemmas) or len(review_inserts) >= 1
+    assert any(
+        "αγαπώ" in lm for lm in review_lemmas
     ), f"αγαπώ must appear in review; review_inserts={review_inserts!r}"
 
 
