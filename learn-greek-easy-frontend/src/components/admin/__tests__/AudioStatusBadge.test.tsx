@@ -61,4 +61,47 @@ describe('AudioStatusBadge', () => {
     renderBadge('generating', 'generating-badge');
     expect(screen.getByTestId('generating-badge')).toHaveClass('motion-safe:animate-pulse');
   });
+
+  // ── ADMIN2-39-01 QA edge coverage: tone→class mapping (AC#3 pixel-identity / AC#4) ──
+  // The component now routes through <Badge tone>. These assert the SAME `.badge b-*`
+  // classes the old hardcoded STATUS_CLASS map produced, so a future mis-mapping
+  // (e.g. ready→red) is caught instead of silently passing the testid-only tests above.
+  it('ready badge renders .badge b-green (was badge b-green)', () => {
+    renderBadge('ready', 'ready-badge');
+    const badge = screen.getByTestId('ready-badge');
+    expect(badge).toHaveClass('badge');
+    expect(badge).toHaveClass('b-green');
+    expect(badge).not.toHaveClass('b-red');
+    expect(badge).not.toHaveClass('b-amber');
+  });
+
+  it('missing badge renders .badge b-red (was badge b-red)', () => {
+    renderBadge('missing', 'missing-badge');
+    const badge = screen.getByTestId('missing-badge');
+    expect(badge).toHaveClass('badge');
+    expect(badge).toHaveClass('b-red');
+    expect(badge).not.toHaveClass('b-green');
+  });
+
+  it('failed badge renders .badge b-red (was badge b-red)', () => {
+    renderBadge('failed', 'failed-badge');
+    const badge = screen.getByTestId('failed-badge');
+    expect(badge).toHaveClass('badge');
+    expect(badge).toHaveClass('b-red');
+    expect(badge).not.toHaveClass('b-green');
+  });
+
+  it('generating badge renders .badge b-amber (was badge b-amber motion-safe:animate-pulse)', () => {
+    renderBadge('generating', 'generating-badge');
+    const badge = screen.getByTestId('generating-badge');
+    expect(badge).toHaveClass('badge');
+    expect(badge).toHaveClass('b-amber');
+    expect(badge).not.toHaveClass('b-green');
+    expect(badge).not.toHaveClass('b-red');
+  });
+
+  it('non-generating badges do NOT carry the pulse class', () => {
+    renderBadge('ready', 'ready-badge');
+    expect(screen.getByTestId('ready-badge')).not.toHaveClass('motion-safe:animate-pulse');
+  });
 });
