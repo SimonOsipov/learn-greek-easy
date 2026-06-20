@@ -73,22 +73,55 @@ describe('computeCultureChips', () => {
     expect(opts?.label).toBe('Opts 2');
   });
 
-  it('returns B1+A2 audio chips for news question', () => {
+  // D2/D7: single unconditional "Audio" pill — ADMIN2-38-02 (RED)
+  it('exam question with audio_s3_key → exactly one audio chip, green; no audio-b1/audio-a2', () => {
+    const q = makeQuestion({ news_item_id: null, audio_s3_key: 'audio.mp3' });
+    const chips = computeCultureChips(q);
+    const audioChips = chips.filter((c) => c.name === 'audio');
+    expect(audioChips).toHaveLength(1);
+    expect(audioChips[0].color).toBe('green');
+    expect(audioChips[0].label).toBe('Audio');
+    expect(audioChips[0].tooltip).toBe('Audio present');
+    expect(chips.find((c) => c.name === 'audio-b1')).toBeUndefined();
+    expect(chips.find((c) => c.name === 'audio-a2')).toBeUndefined();
+  });
+
+  it('news question with audio_s3_key → exactly one audio chip, green; no audio-b1/audio-a2', () => {
     const q = makeQuestion({
       news_item_id: 'news-123',
-      audio_s3_key: 'audio/b2.mp3',
+      audio_s3_key: 'audio/b1.mp3',
+      news_item_audio_a2_s3_key: null,
+    });
+    const chips = computeCultureChips(q);
+    const audioChips = chips.filter((c) => c.name === 'audio');
+    expect(audioChips).toHaveLength(1);
+    expect(audioChips[0].color).toBe('green');
+    expect(chips.find((c) => c.name === 'audio-b1')).toBeUndefined();
+    expect(chips.find((c) => c.name === 'audio-a2')).toBeUndefined();
+  });
+
+  // C8: both keys set → still only ONE audio chip (news_item_audio_a2_s3_key is ignored)
+  it('(C8) news question with both audio_s3_key and news_item_audio_a2_s3_key → still exactly one audio chip; no audio-b1/audio-a2', () => {
+    const q = makeQuestion({
+      news_item_id: 'news-123',
+      audio_s3_key: 'audio/b1.mp3',
       news_item_audio_a2_s3_key: 'audio/a2.mp3',
     });
     const chips = computeCultureChips(q);
-    expect(chips.find((c) => c.name === 'audio-b1')?.color).toBe('green');
-    expect(chips.find((c) => c.name === 'audio-a2')?.color).toBe('green');
-    expect(chips.find((c) => c.name === 'audio')).toBeUndefined();
+    const audioChips = chips.filter((c) => c.name === 'audio');
+    expect(audioChips).toHaveLength(1);
+    expect(audioChips[0].color).toBe('green');
+    expect(chips.find((c) => c.name === 'audio-b1')).toBeUndefined();
+    expect(chips.find((c) => c.name === 'audio-a2')).toBeUndefined();
   });
 
-  it('returns single audio chip for exam question', () => {
-    const q = makeQuestion({ news_item_id: null, audio_s3_key: 'audio.mp3' });
+  it('question with audio_s3_key:null → single audio chip, gray, tooltip "Audio missing"', () => {
+    const q = makeQuestion({ audio_s3_key: null });
     const chips = computeCultureChips(q);
-    expect(chips.find((c) => c.name === 'audio')?.color).toBe('green');
+    const audioChips = chips.filter((c) => c.name === 'audio');
+    expect(audioChips).toHaveLength(1);
+    expect(audioChips[0].color).toBe('gray');
+    expect(audioChips[0].tooltip).toBe('Audio missing');
     expect(chips.find((c) => c.name === 'audio-b1')).toBeUndefined();
     expect(chips.find((c) => c.name === 'audio-a2')).toBeUndefined();
   });

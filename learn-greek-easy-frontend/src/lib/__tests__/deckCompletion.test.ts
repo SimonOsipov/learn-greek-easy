@@ -122,49 +122,53 @@ describe('getWordCompletion', () => {
 // ============================================================
 
 describe('getCultureCompletion', () => {
-  // Test 6 — Exam question: no audio-a2
-  it('(6) exam question: no visible audio-a2 chip; single "audio" chip present', () => {
-    const pills = getCultureCompletion(makeQuestion({ news_item_id: null }));
-    const audioA2 = pills.find((p) => p.name === 'audio-a2');
-    // audio-a2 must not exist OR must be invisible if defensively included
-    if (audioA2) {
-      expect(audioA2.visible).toBe(false);
-    }
+  // D2/D7: single unconditional "Audio" pill — ADMIN2-38-02 (RED)
+  // Test 6 — Exam question: single audio pill, no audio-a2/audio-b1
+  it('(6) exam question: single "audio" pill, visible:true, done:true when audio_s3_key set; no audio-a2/audio-b1', () => {
+    const pills = getCultureCompletion(
+      makeQuestion({ news_item_id: null, audio_s3_key: 'exam.mp3' })
+    );
     const audio = pills.find((p) => p.name === 'audio');
     expect(audio).toBeDefined();
     expect(audio!.label).toBe('Audio');
+    expect(audio!.visible).toBe(true);
+    expect(audio!.done).toBe(true);
+    expect(pills.find((p) => p.name === 'audio-b1')).toBeUndefined();
+    expect(pills.find((p) => p.name === 'audio-a2')).toBeUndefined();
   });
 
-  // Test 7 — News question: audio-b1 + audio-a2 both visible
-  it('(7) news question: audio-b1 "B1 Audio" and audio-a2 (visible:true) present', () => {
+  // Test 7 — News question: single audio pill (NOT B1+A2), done keyed on audio_s3_key
+  it('(7) news question: single "audio" pill (not audio-b1/audio-a2), done:true when audio_s3_key set', () => {
     const pills = getCultureCompletion(
       makeQuestion({
         news_item_id: '42',
-        audio_s3_key: 'b2.mp3',
+        audio_s3_key: 'b1.mp3',
         news_item_audio_a2_s3_key: 'a2.mp3',
       })
     );
-    const b1 = pills.find((p) => p.name === 'audio-b1');
-    expect(b1).toBeDefined();
-    expect(b1!.label).toBe('B1 Audio');
-
-    const a2 = pills.find((p) => p.name === 'audio-a2');
-    expect(a2).toBeDefined();
-    expect(a2!.visible).toBe(true);
+    const audio = pills.find((p) => p.name === 'audio');
+    expect(audio).toBeDefined();
+    expect(audio!.label).toBe('Audio');
+    expect(audio!.visible).toBe(true);
+    expect(audio!.done).toBe(true);
+    expect(pills.find((p) => p.name === 'audio-b1')).toBeUndefined();
+    expect(pills.find((p) => p.name === 'audio-a2')).toBeUndefined();
   });
 
-  // Test 8 — done derived from green color (no N/M ratio in label)
-  it('(8) done:true when chip has no N/M ratio but color is green (e.g. audio-b1 with s3 key)', () => {
+  // Test 8 (C8) — A2 key present but ignored; done keyed strictly on audio_s3_key
+  it('(8) (C8) news_item_audio_a2_s3_key is ignored: done:false when audio_s3_key:null even if A2 key present', () => {
     const pills = getCultureCompletion(
       makeQuestion({
         news_item_id: '99',
-        audio_s3_key: 'exists.mp3',
+        audio_s3_key: null,
+        news_item_audio_a2_s3_key: 'a2.mp3',
       })
     );
-    const b1 = pills.find((p) => p.name === 'audio-b1');
-    expect(b1).toBeDefined();
-    // upstream sets color:'green' when audio_s3_key is truthy
-    expect(b1!.done).toBe(true);
+    const audio = pills.find((p) => p.name === 'audio');
+    expect(audio).toBeDefined();
+    expect(audio!.done).toBe(false);
+    expect(pills.find((p) => p.name === 'audio-b1')).toBeUndefined();
+    expect(pills.find((p) => p.name === 'audio-a2')).toBeUndefined();
   });
 
   // Test 9 — News badge visible when original_article_url is set
