@@ -20,6 +20,9 @@ fail at collection, which is the correct test-first signal.
 These tests need NO database — they introspect the SQLAlchemy model in-process.
 """
 
+import importlib.util
+from pathlib import Path
+
 from sqlalchemy import Boolean, DateTime, Integer, Text
 
 from src.db.models import CefrLemma, CefrLemmaReview
@@ -225,3 +228,43 @@ class TestCefrLemmaReviewColumnsContract:
 
         # --- created_at ---
         assert "created_at" in table.columns, "CefrLemmaReview must have a 'created_at' column"
+
+
+class TestCefrLemmaAdversarial:
+    """Adversarial guards that would catch future regressions not covered by the AC tests."""
+
+    def test_migration_down_revision_is_lexgen03(self):
+        """Guard: migration down_revision must be '5e8cc90e5bca' (LEXGEN-03 head).
+
+        Loading the migration file directly and asserting down_revision == the
+        LEXGEN-03 revision catches any future accidental head shift that would
+        silently break the migration chain without an error at upgrade time.
+        """
+        migration_path = (
+            Path(__file__).parent.parent.parent.parent
+            / "alembic"
+            / "versions"
+            / "20260620_0800_844af57c6ca2_lexgen_04_cefr_lemma.py"
+        )
+        assert migration_path.exists(), f"Migration file not found at {migration_path}"
+        spec = importlib.util.spec_from_file_location("lexgen_04_migration", migration_path)
+        migration = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(migration)
+        assert migration.down_revision == "5e8cc90e5bca", (
+            f"Migration down_revision must be '5e8cc90e5bca' (LEXGEN-03), "
+            f"got {migration.down_revision!r}"
+        )
+
+    def test_closed_class_server_default_is_false_not_true(self):
+        """Guard: closed_class server_default must be exactly 'false', never NULL or 'true'.
+
+        A server_default of 'true' would silently mark every new lemma as a
+        closed-class function word, corrupting the gate's set-membership logic.
+        """
+        cc_col = CefrLemma.__table__.columns["closed_class"]
+        assert cc_col.server_default is not None, "closed_class must have a server_default"
+        default_text = str(cc_col.server_default.arg).lower()
+        assert default_text == "false", (
+            f"closed_class server_default must be exactly 'false', got {default_text!r}. "
+            "A 'true' default would mark every lemma as a closed-class function word."
+        )
