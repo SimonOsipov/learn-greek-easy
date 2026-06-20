@@ -97,6 +97,7 @@ jest.mock('lucide-react-native', () => {
 // ---------------------------------------------------------------------------
 
 import ReviewScreen from '@/app/decks/[deckId]/review';
+import { useThemeStore } from '@/stores/theme-store';
 import type { V2StudyQueueCard } from '@/types/review';
 
 // ---------------------------------------------------------------------------
@@ -526,5 +527,72 @@ describe('ReviewScreen', () => {
     render(<ReviewScreen />);
     // Card 1 of 2 shown
     expect(screen.getByTestId('review-card-counter')).toHaveTextContent('Card 1 of 2');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// THEME-06 — review screen derives isDark from the GLOBAL theme store.
+//
+// THEME-05 rewired the review screen so `isDark` comes from
+// `useThemeStore(s => s.resolvedScheme === 'dark')` (no independent per-session
+// default). This focused assertion proves that wiring: driving the store's
+// resolvedScheme flips the rendered screen background between the light and dark
+// review-palette values (reviewPalette().screenBg). No large new review suite —
+// just the store→isDark→palette contract.
+// ---------------------------------------------------------------------------
+
+/** Pull the resolved backgroundColor off a node's (possibly array) style prop. */
+function backgroundColorOf(node: { props: { style?: unknown } }): string | undefined {
+  const flat = Array.isArray(node.props.style)
+    ? Object.assign({}, ...node.props.style.flat(Infinity).filter(Boolean))
+    : (node.props.style as Record<string, unknown> | undefined);
+  return flat?.backgroundColor as string | undefined;
+}
+
+describe('ReviewScreen — isDark from the global theme store (THEME-06)', () => {
+  // reviewPalette().screenBg, sourced from src/lib/review/presentation.ts.
+  const LIGHT_SCREEN_BG = 'rgb(234,239,245)'; // --practice-bg light
+  const DARK_SCREEN_BG = 'rgb(15,23,42)'; //    --practice-bg dark
+
+  const initialResolved = useThemeStore.getState().resolvedScheme;
+  let cleanupRender: { unmount: () => void } | undefined;
+
+  afterEach(() => {
+    // Unmount the subscribed screen FIRST, then restore the store, so the
+    // resolvedScheme reset never triggers an un-acted re-render and never leaks
+    // across tests.
+    cleanupRender?.unmount();
+    cleanupRender = undefined;
+    act(() => {
+      useThemeStore.setState({ resolvedScheme: initialResolved });
+    });
+  });
+
+  function renderActiveReview() {
+    mockUseStudyQueue.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: makeQueue([CARD_1]),
+      error: null,
+      refetch: jest.fn(),
+    });
+    cleanupRender = render(<ReviewScreen />);
+    return cleanupRender;
+  }
+
+  it('uses the LIGHT review palette when resolvedScheme is "light"', () => {
+    act(() => {
+      useThemeStore.setState({ resolvedScheme: 'light' });
+    });
+    renderActiveReview();
+    expect(backgroundColorOf(screen.getByTestId('review-screen'))).toBe(LIGHT_SCREEN_BG);
+  });
+
+  it('uses the DARK review palette when resolvedScheme is "dark"', () => {
+    act(() => {
+      useThemeStore.setState({ resolvedScheme: 'dark' });
+    });
+    renderActiveReview();
+    expect(backgroundColorOf(screen.getByTestId('review-screen'))).toBe(DARK_SCREEN_BG);
   });
 });
