@@ -70,7 +70,7 @@ repos:
         files: ^learn-greek-easy-backend/
 
   - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
+    rev: 6.1.0
     hooks:
       - id: isort
         args: [--settings-path=learn-greek-easy-backend/pyproject.toml]
