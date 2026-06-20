@@ -245,3 +245,94 @@ def test_export_output_under_gitignored_data():
         f"Default output path constant must resolve under 'data/cefr_lemma' "
         f"(gitignored); got {constant_str!r}"
     )
+
+
+# ===========================================================================
+# Adversarial coverage — QA-added (Mode B)
+# ===========================================================================
+
+
+@pytest.mark.unit
+def test_a1_b2_same_lemma_kept_at_a1_not_dropped():
+    """Critical boundary: {A1, B2} same lemma → kept at A1; b2_dropped_count stays 0.
+
+    This is the key interaction between lowest-wins and B2-drop:
+    B2-drop applies only when B2 is the LOWEST level. When A1 co-exists with B2,
+    the lowest is A1 → the lemma is KEPT (not dropped), and b2_dropped_count must be 0.
+
+    Given: resolve_deck_levels([("γάτα", "A1"), ("γάτα", "B2")])
+    Then:  export_rows == [{"lemma": "γάτα", "level": "A1", "source": "deck_export"}]
+           b2_dropped_count == 0
+    """
+    from src.scripts.export_deck_lemmas import resolve_deck_levels  # noqa: PLC0415
+
+    # A1 seen first, then B2
+    export_rows, b2_count = resolve_deck_levels([("γάτα", "A1"), ("γάτα", "B2")])
+    assert len(export_rows) == 1, (
+        f"Lemma in {{A1, B2}} decks must produce ONE export row (lowest=A1); "
+        f"got {len(export_rows)} rows: {export_rows!r}"
+    )
+    assert (
+        export_rows[0]["level"] == "A1"
+    ), f"A1 must beat B2 (lowest-wins); got level={export_rows[0]['level']!r}"
+    assert (
+        b2_count == 0
+    ), f"b2_dropped_count must be 0: lowest level is A1, not B2; got {b2_count!r}"
+
+    # Also check with B2 seen first (order must not affect outcome)
+    export_rows2, b2_count2 = resolve_deck_levels([("γάτα", "B2"), ("γάτα", "A1")])
+    assert len(export_rows2) == 1
+    assert (
+        export_rows2[0]["level"] == "A1"
+    ), f"B2-first then A1: lowest must still be A1; got {export_rows2[0]['level']!r}"
+    assert (
+        b2_count2 == 0
+    ), f"b2_dropped_count must be 0 regardless of input order; got {b2_count2!r}"
+
+
+@pytest.mark.unit
+def test_three_decks_lowest_of_three_wins():
+    """A lemma in three decks {B1, A2, B1} → exported at A2 (the actual lowest).
+
+    Given: resolve_deck_levels([("λέξη", "B1"), ("λέξη", "A2"), ("λέξη", "B1")])
+    Then:  ONE export row, level="A2"
+           b2_dropped_count == 0
+    """
+    from src.scripts.export_deck_lemmas import resolve_deck_levels  # noqa: PLC0415
+
+    export_rows, b2_count = resolve_deck_levels([("λέξη", "B1"), ("λέξη", "A2"), ("λέξη", "B1")])
+    assert len(export_rows) == 1, (
+        f"Three deck-memberships for one lemma must collapse to ONE row; "
+        f"got {len(export_rows)}: {export_rows!r}"
+    )
+    assert (
+        export_rows[0]["level"] == "A2"
+    ), f"Lowest of {{B1, A2, B1}} must be A2; got {export_rows[0]['level']!r}"
+    assert b2_count == 0, f"No B2-only lemma in input; got b2_count={b2_count!r}"
+
+
+@pytest.mark.unit
+def test_empty_input_returns_empty_rows_and_zero_count():
+    """resolve_deck_levels([]) must return ([], 0) — empty input is safe.
+
+    Given: resolve_deck_levels([])
+    Then:  export_rows == [], b2_dropped_count == 0
+    """
+    from src.scripts.export_deck_lemmas import resolve_deck_levels  # noqa: PLC0415
+
+    export_rows, b2_count = resolve_deck_levels([])
+    assert export_rows == [], f"Empty input must return empty export_rows; got {export_rows!r}"
+    assert b2_count == 0, f"Empty input must return b2_dropped_count=0; got {b2_count!r}"
+
+
+@pytest.mark.unit
+def test_unrecognised_level_raises_value_error():
+    """An unrecognised deck level must raise ValueError — never silently bucketed.
+
+    Given: resolve_deck_levels([("αβγ", "C1")])
+    Then:  ValueError is raised (C1 is not in A1/A2/B1/B2)
+    """
+    from src.scripts.export_deck_lemmas import resolve_deck_levels  # noqa: PLC0415
+
+    with pytest.raises(ValueError, match="C1"):
+        resolve_deck_levels([("αβγ", "C1")])
