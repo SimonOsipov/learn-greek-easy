@@ -218,3 +218,68 @@ def test_whitelist_committed_not_in_data_dir():
     assert "/data/" not in module_path, (
         f"cefr_closed_class must NOT live under the gitignored data/ dir; " f"found: {module_path}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Adversarial: no empty/whitespace lemmas and all rows come from CLOSED_CLASS_LEMMAS
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_no_empty_lemmas_and_all_in_whitelist():
+    """Every entry in CLOSED_CLASS_LEMMAS is a non-empty, non-whitespace string.
+
+    Additionally, every lemma produced by build_closed_class_rows() must be a
+    member of CLOSED_CLASS_LEMMAS — guards against the builder constructing rows
+    for lemmas that were not in the curated list (e.g. a future refactor that
+    reads from a different source).
+    """
+    from src.scripts.cefr_closed_class import (  # noqa: PLC0415
+        CLOSED_CLASS_LEMMAS,
+        build_closed_class_rows,
+    )
+
+    whitelist_set = set(CLOSED_CLASS_LEMMAS)
+
+    # Every whitelist entry must be non-empty and non-whitespace.
+    for lemma in CLOSED_CLASS_LEMMAS:
+        assert (
+            lemma and lemma.strip()
+        ), f"CLOSED_CLASS_LEMMAS contains empty or whitespace-only entry: {lemma!r}"
+
+    # Every row lemma must be drawn from the whitelist.
+    rows = build_closed_class_rows()
+    for row in rows:
+        lemma = row["lemma"] if isinstance(row, dict) else row.lemma
+        assert (
+            lemma in whitelist_set
+        ), f"build_closed_class_rows() produced lemma {lemma!r} not in CLOSED_CLASS_LEMMAS"
+
+
+# ---------------------------------------------------------------------------
+# Adversarial: build_closed_class_rows() is idempotent and returns a fresh list
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_build_closed_class_rows_is_pure_and_idempotent():
+    """build_closed_class_rows() returns a fresh list object on each call.
+
+    Two successive calls must:
+    - Return objects with equal contents (idempotent / deterministic).
+    - Be distinct list objects (not a shared mutable module-level singleton that
+      a caller could corrupt by mutating the returned list).
+    """
+    from src.scripts.cefr_closed_class import build_closed_class_rows  # noqa: PLC0415
+
+    rows_a = build_closed_class_rows()
+    rows_b = build_closed_class_rows()
+
+    # Same content.
+    assert rows_a == rows_b, "build_closed_class_rows() returned different content on two calls"
+
+    # Different list objects — not a shared reference.
+    assert rows_a is not rows_b, (
+        "build_closed_class_rows() returned the same list object on two calls; "
+        "callers who mutate the result would corrupt subsequent calls"
+    )
