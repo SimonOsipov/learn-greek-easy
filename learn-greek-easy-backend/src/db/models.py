@@ -28,7 +28,13 @@ from typing import List
 from uuid import UUID
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import JSON, Boolean, CheckConstraint, Date, DateTime
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
+)
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy import (
     Float,
@@ -3641,4 +3647,122 @@ class WiktionaryMorphology(Base):
         return (
             f"<WiktionaryMorphology(id={self.id}, lemma={self.lemma!r}, "
             f"gender={self.gender!r})>"
+        )
+
+
+class CefrLemma(Base):
+    """CEFR introduction-level reference for Greek lemmas (LEXGEN-04).
+
+    Stored in the 'reference' PostgreSQL schema alongside greek_lexicon and
+    wiktionary_morphology. Lemma-keyed and form-independent (Decision Record §D1):
+    the gate does set membership on lemmas, never on surface forms.
+
+    Each lemma resolves to exactly one canonical introduction level (D-PRECEDENCE).
+    The DB backstop is a UNIQUE index on ``(lemma)`` ALONE — NOT ``(lemma, level)``:
+    a ``(lemma, level)`` unique key would wrongly permit ``(σπίτι, A1)`` and
+    ``(σπίτι, B1)`` to coexist, giving the gate two contradictory introduction
+    levels for one lemma (F1 / D-UNIQUE-LEMMA). The ``level`` index stays separate
+    and non-unique so the gate can load 'all lemmas <= target level' efficiently.
+
+    Populated only at runtime by the loader (no license-restricted data is
+    committed to the repo, AC-INV-4).
+    """
+
+    __tablename__ = "cefr_lemma"
+    __table_args__ = (
+        Index("uq_cefr_lemma_lemma", "lemma", unique=True),
+        Index("ix_cefr_lemma_level", "level"),
+        {"schema": "reference"},
+    )
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Auto-incrementing primary key",
+    )
+    lemma: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Normalized Greek lemma (dictionary form) — the set-membership key",
+    )
+    level: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="CEFR introduction level: A1 | A2 | B1 (extensible; v1 stores these three)",
+    )
+    source: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment=("Provenance per row (keg_glossary | deck_export | frequency_bin | closed_class)"),
+    )
+    closed_class: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default=text("false"),
+        comment="True for closed-class function words seeded from the whitelist",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        comment="Row creation timestamp",
+    )
+
+    def __repr__(self) -> str:
+        return f"<CefrLemma(id={self.id}, lemma={self.lemma!r}, level={self.level!r})>"
+
+
+class CefrLemmaReview(Base):
+    """Quarantine for CEFR lemma candidates that failed normalization or attestation.
+
+    Stored in the 'reference' PostgreSQL schema. Rows that fail normalization or
+    attestation land here instead of cefr_lemma, so the gate's source table
+    (cefr_lemma) stays clean (AC-10).
+    """
+
+    __tablename__ = "cefr_lemma_review"
+    __table_args__ = {"schema": "reference"}
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Auto-incrementing primary key",
+    )
+    raw_lemma: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="The pre-normalization candidate lemma as supplied by the source",
+    )
+    normalized_lemma: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Normalized form (present if normalization succeeded but attestation failed)",
+    )
+    level: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="CEFR level the candidate would have been introduced at",
+    )
+    source: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Provenance of the candidate (same vocabulary as cefr_lemma.source)",
+    )
+    reason: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Why the candidate was quarantined (e.g. normalization_failed | not_attested)",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        comment="Row creation timestamp",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<CefrLemmaReview(id={self.id}, raw_lemma={self.raw_lemma!r}, reason={self.reason!r})>"
         )

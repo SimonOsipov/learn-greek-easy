@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -194,7 +194,9 @@ class CheckoutService:
             raise CheckoutNotPaidException()
 
         # Validate user ownership
-        metadata = session.metadata or {}
+        # stripe>=15 types session.metadata as UntypedStripeObject[str] | dict[str, str];
+        # it is dict-like at runtime, so cast to the concrete dict type for the .get() lookups below.
+        metadata = cast("dict[str, str]", session.metadata or {})
         if metadata.get("user_id") != str(user.id):
             capture_event(
                 distinct_id=str(user.id),

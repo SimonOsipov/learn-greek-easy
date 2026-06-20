@@ -1,0 +1,9 @@
+# SYNTHETIC — not real ΚΕΓ data
+# This file mimics the ΚΛΙΚ glossary line format for unit testing only.
+# Do NOT replace with actual ΚΕΓ / ΚΛΙΚ glossary content.
+σπίτι, το = house
+βιβλίο, το = book
+τρώω, - = I eat
+=== page 3 ===
+, =
+μητέρα, η = mother
