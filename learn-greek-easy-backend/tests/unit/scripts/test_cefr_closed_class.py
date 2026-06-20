@@ -188,7 +188,7 @@ def test_closed_class_bypasses_attestation():
     if sentinels:
         with patch.multiple("src.scripts.cefr_closed_class", **sentinels):
             build_closed_class_rows()
-        for name, mock in sentinels.items():
+        for mock in sentinels.values():
             mock.assert_not_called()
     # If none of those names exist on the module, the builder is trivially
     # attestation-free — no patching needed, the zero-arg call above already proves it.

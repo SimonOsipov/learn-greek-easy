@@ -62,6 +62,11 @@ from pathlib import Path
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import OperationalError
+
+# DB-unreachable errors that justify a skip (PG not running on :5433 in CI). A real
+# setup defect raises a different type and must fail loudly, not be masked as a skip.
+_DB_UNREACHABLE_ERRORS = (OperationalError, ConnectionError)
 
 # ---------------------------------------------------------------------------
 # Markers — all tests in this file require a real PG on :5433
@@ -298,9 +303,11 @@ class TestLexgen04CefrLemmaMigrationRoundTrip:
         GREEN after: executor creates the LEXGEN-04-01 migration.
         """
         db_name = "test_lexgen04_cefr_lemma"
+        setup_ok = False
         try:
             db_url = _setup_migration_db(db_name)
-        except Exception as exc:
+            setup_ok = True
+        except _DB_UNREACHABLE_ERRORS as exc:
             pytest.skip(
                 f"Cannot create isolated migration DB '{db_name}': {exc}. "
                 "Requires a reachable PostgreSQL on localhost:5433 "
@@ -385,4 +392,7 @@ class TestLexgen04CefrLemmaMigrationRoundTrip:
                 engine.dispose()
 
         finally:
-            _teardown_migration_db(db_name)
+            # Only tear down a DB that setup actually created — a skipped/failed setup
+            # leaves nothing to drop, and running teardown then can itself error.
+            if setup_ok:
+                _teardown_migration_db(db_name)

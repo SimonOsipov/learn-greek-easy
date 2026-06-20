@@ -206,7 +206,9 @@ def test_loader_lowercases_and_nfc_normalizes_before_normalize(tmp_path):
     mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
 
     with patch("src.scripts.load_cefr_lemma._get_connection", return_value=mock_conn):
-        with patch("src.scripts.load_cefr_lemma.psycopg2.extras.execute_values"):
+        # execute_values is called with fetch=True (returns the RETURNING rows); an
+        # empty list is a faithful stub — this test asserts on the normalize call only.
+        with patch("src.scripts.load_cefr_lemma.psycopg2.extras.execute_values", return_value=[]):
             load_data(source=str(source_file), normalize=mock_normalize)
 
     assert len(captured_calls) >= 1, "normalize was never called"
@@ -240,9 +242,12 @@ def test_uses_injected_normalize_lemma_not_raw(tmp_path):
     mock_cursor = MagicMock()
     mock_cursor.fetchall.return_value = [("σπίτι",)]  # attestation hit
 
-    # Capture execute_values calls to verify the lemma used in insert
+    # Capture execute_values calls to verify the lemma used in insert. The main-table
+    # insert is called with fetch=True; returning the batch faithfully models every
+    # row being inserted (RETURNING yields them) so the loader's count is correct.
     def capture_execute_values(cursor, sql, batch, **kwargs):
         inserted_rows.extend(batch)
+        return batch
 
     mock_conn = MagicMock()
     mock_conn.__enter__ = MagicMock(return_value=mock_conn)
@@ -304,6 +309,8 @@ def test_attested_lemma_inserted(tmp_path):
             review_inserts.extend(batch)
         elif "cefr_lemma" in sql_lower:
             main_inserts.extend(batch)
+        # Main insert uses fetch=True; returning the batch models all rows inserted.
+        return batch
 
     mock_conn = MagicMock()
     mock_conn.__enter__ = MagicMock(return_value=mock_conn)
@@ -359,6 +366,8 @@ def test_unattested_lemma_to_review_not_attested(tmp_path):
             review_inserts.extend(batch)
         elif "cefr_lemma" in sql_lower:
             main_inserts.extend(batch)
+        # Main insert uses fetch=True; returning the batch models all rows inserted.
+        return batch
 
     mock_conn = MagicMock()
     mock_conn.__enter__ = MagicMock(return_value=mock_conn)
@@ -428,6 +437,8 @@ def test_normalization_failure_to_review_by_confidence(tmp_path):
             review_inserts.extend(batch)
         elif "cefr_lemma" in sql_lower:
             main_inserts.extend(batch)
+        # Main insert uses fetch=True; returning the batch models all rows inserted.
+        return batch
 
     mock_conn = MagicMock()
     mock_conn.__enter__ = MagicMock(return_value=mock_conn)
@@ -571,6 +582,8 @@ def test_summary_counts_by_source(tmp_path, caplog):
             review_inserts.extend(batch)
         elif "cefr_lemma" in sql_lower:
             main_inserts.extend(batch)
+        # Main insert uses fetch=True; returning the batch models all rows inserted.
+        return batch
 
     mock_conn = MagicMock()
     mock_conn.__enter__ = MagicMock(return_value=mock_conn)
@@ -639,6 +652,8 @@ def test_force_deletes_both_tables_before_reload(tmp_path):
         sql_stripped = sql.strip().upper()
         if "INSERT" in sql_stripped:
             call_log.append("INSERT")
+        # Main insert uses fetch=True; returning the batch models all rows inserted.
+        return batch
 
     mock_cursor.execute.side_effect = track_execute
     mock_conn = MagicMock()
@@ -733,6 +748,7 @@ def test_normalize_returns_different_lemma_attestation_uses_normalized(tmp_path)
     def capture_execute_values(cursor, sql, batch, **kwargs):
         if "cefr_lemma" in sql.lower() and "review" not in sql.lower():
             inserted_rows.extend(batch)
+        return batch
 
     mock_conn = MagicMock()
     mock_conn.__enter__ = MagicMock(return_value=mock_conn)
@@ -795,3 +811,91 @@ def test_closed_class_beats_keg_glossary_regardless_of_level():
     assert (
         result[0]["source"] == "closed_class"
     ), f"Winning source must be 'closed_class'; got {result[0]!r}"
+
+
+# ===========================================================================
+# Trust boundary (CodeRabbit FIX 2): a --source row claiming source="closed_class"
+# but WITHOUT the explicit closed_class=True flag must NOT get the A1 bypass — it
+# must flow through normalize + attest like any untrusted open-class candidate.
+# ===========================================================================
+
+
+@pytest.mark.unit
+def test_source_string_closed_class_does_not_grant_bypass_in_merge():
+    """merge_by_precedence keys the bypass on the flag, never the source string.
+
+    A row whose ``source == "closed_class"`` but which carries NO ``closed_class=True``
+    flag (i.e. a forged ``--source`` CSV row) must be treated as a normal open-class
+    candidate: it must NOT be forced to A1 and must NOT be marked closed_class.
+    """
+    from src.scripts.load_cefr_lemma import merge_by_precedence  # noqa: PLC0415
+
+    rows = [{"lemma": "ψεύτικο", "level": "B2", "source": "closed_class"}]
+    result = merge_by_precedence(rows)
+
+    assert len(result) == 1, f"Expected 1 merged row; got {result!r}"
+    assert result[0]["level"] == "B2", (
+        "A forged source='closed_class' row (no closed_class flag) must keep its own "
+        f"level, NOT be forced to A1; got {result[0]!r}"
+    )
+    assert not result[0].get("closed_class"), (
+        "A forged source='closed_class' row must NOT be flagged closed_class — only the "
+        f"explicit closed_class=True flag grants that; got {result[0]!r}"
+    )
+
+
+@pytest.mark.unit
+def test_source_row_claiming_closed_class_still_normalizes_and_attests(tmp_path):
+    """A --source CSV row with source='closed_class' flows through normalize + attest.
+
+    End-to-end trust-boundary guard: such a row must (a) trigger the injected
+    normalize callable (proving it did NOT bypass the pipeline) and (b) land in
+    cefr_lemma only because attestation succeeded — never via a forced A1 bypass.
+    """
+    from src.scripts.load_cefr_lemma import load_data  # noqa: PLC0415
+
+    source_file = tmp_path / "candidates.csv"
+    # An external row trying to impersonate the curated closed-class layer.
+    source_file.write_text("lemma,level,source\nψεύτικο,B2,closed_class\n", encoding="utf-8")
+
+    normalize_calls: list[str] = []
+
+    def mock_normalize(word: str) -> NormalizedLemma:
+        normalize_calls.append(word)
+        return _make_normalized(word, "ψεύτικο", confidence=1.0)
+
+    main_inserts: list = []
+    mock_cursor = MagicMock()
+    mock_cursor.fetchall.return_value = [("ψεύτικο",)]  # attestation hit
+
+    def capture_execute_values(cursor, sql, batch, **kwargs):
+        if "cefr_lemma" in sql.lower() and "review" not in sql.lower():
+            main_inserts.extend(batch)
+        return batch
+
+    mock_conn = MagicMock()
+    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+    mock_conn.__exit__ = MagicMock(return_value=False)
+    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+    with patch("src.scripts.load_cefr_lemma._get_connection", return_value=mock_conn):
+        with patch(
+            "src.scripts.load_cefr_lemma.psycopg2.extras.execute_values",
+            side_effect=capture_execute_values,
+        ):
+            load_data(source=str(source_file), normalize=mock_normalize)
+
+    # The pipeline ran: normalize was invoked (a true bypass would skip it entirely).
+    assert len(normalize_calls) == 1, (
+        "A forged source='closed_class' --source row must still be normalized "
+        f"(bypass forbidden); normalize_calls={normalize_calls!r}"
+    )
+    # It was inserted (attested), and NOT flagged closed_class (no A1 bypass).
+    assert len(main_inserts) == 1, f"Expected 1 main insert; got {main_inserts!r}"
+    # Row tuple = (lemma, level, source, closed_class); closed_class must be False.
+    inserted_row = main_inserts[0]
+    assert inserted_row[3] is False, (
+        "A forged source='closed_class' --source row must be inserted with "
+        f"closed_class=False (no bypass); got row={inserted_row!r}"
+    )

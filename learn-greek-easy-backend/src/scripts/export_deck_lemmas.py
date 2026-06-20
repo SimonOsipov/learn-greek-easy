@@ -183,7 +183,9 @@ def export_deck_lemmas(
 
 def _log_summary(summary: dict) -> None:
     """Emit the loguru export summary (AC-16). The B2 drop is LOGGED, never silent."""
-    logger.info(f"Deck-export finished → {summary['out_path']}")
+    # Log the basename only, never the full path — an operator-supplied --out path can
+    # embed a home-dir username (PII). The filename alone is the useful signal.
+    logger.info(f"Deck-export finished → {Path(summary['out_path']).name}")
     logger.info(f"  Deck-memberships read:    {summary['rows_read']:,}")
     logger.info(f"  Exported (A1–B1):         {summary['exported']:,}")
     for level in ("A1", "A2", "B1"):

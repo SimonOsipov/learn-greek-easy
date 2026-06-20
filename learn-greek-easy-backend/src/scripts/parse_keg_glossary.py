@@ -184,9 +184,15 @@ def parse_glossary_pdf(path: Path) -> tuple[list[dict[str, str]], list[dict[str,
 
 
 def _iter_pdf_paths(source: Path) -> list[Path]:
-    """Resolve ``--source`` (a directory or a single PDF) to a sorted PDF list."""
+    """Resolve ``--source`` (a directory or a single PDF) to a sorted PDF list.
+
+    The directory scan is case-insensitive on the extension: ``*.pdf`` and ``*.PDF``
+    (and mixed-case like ``.Pdf``) are all matched. ``Path.glob`` is case-sensitive on
+    case-sensitive filesystems, so a single ``*.pdf`` glob would silently skip
+    uppercase-suffixed PDFs — instead we filter by ``suffix.lower() == ".pdf"``.
+    """
     if source.is_dir():
-        return sorted(source.glob("*.pdf"))
+        return sorted(p for p in source.iterdir() if p.is_file() and p.suffix.lower() == ".pdf")
     return [source]
 
 
@@ -260,8 +266,10 @@ def main(argv: list[str] | None = None) -> None:
     _write_rows_csv(out_path, all_rows)
     _write_flagged_csv(flagged_path, all_flagged)
 
-    logger.info(f"KEG glossary parse finished: {len(all_rows):,} rows → {out_path}")
-    logger.info(f"  Flagged (malformed) lines: {len(all_flagged):,} → {flagged_path}")
+    # Log basenames only, never full paths — an operator-supplied --out path can embed
+    # a home-dir username (PII). The filename alone is the useful signal.
+    logger.info(f"KEG glossary parse finished: {len(all_rows):,} rows → {out_path.name}")
+    logger.info(f"  Flagged (malformed) lines: {len(all_flagged):,} → {flagged_path.name}")
 
 
 if __name__ == "__main__":

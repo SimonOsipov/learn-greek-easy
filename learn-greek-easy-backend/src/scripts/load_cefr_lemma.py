@@ -43,6 +43,12 @@ Closed-class function words (``cefr_closed_class.build_closed_class_rows()``) ar
 folded in as an extra source layer ONLY when ``include_closed_class=True`` — which
 ``main()`` always passes for the real backfill.  They bypass normalization and
 attestation (AC-15): they are forced in at ``A1`` with ``closed_class=True``.
+
+Trust boundary: the normalize/attest bypass is granted STRICTLY by the explicit
+``closed_class=True`` flag, which ONLY the curated in-code whitelist above ever sets.
+``--source`` rows are never trusted to set it (``_parse_source_file`` does not), so an
+external CSV row whose ``source`` column reads ``"closed_class"`` is still routed
+through the normalize → attest pipeline and can never forge the A1 bypass.
 """
 
 from __future__ import annotations
@@ -179,9 +185,17 @@ def merge_by_precedence(rows: list[dict]) -> list[dict]:
     Precedence (highest → lowest): ``keg_glossary > deck_export > frequency_bin``.
     Any unknown source ranks below all known ones (it only wins if it is the sole
     candidate for a lemma). Closed-class is a hard override: if ANY candidate for a
-    lemma has ``source == "closed_class"`` or ``closed_class is True``, the merged
-    row is forced to ``level="A1"``, ``closed_class=True``, ``source="closed_class"``
-    regardless of the other candidates.
+    lemma has ``closed_class is True``, the merged row is forced to ``level="A1"``,
+    ``closed_class=True``, ``source="closed_class"`` regardless of the other candidates.
+
+    Trust boundary: the closed-class bypass is keyed STRICTLY on the explicit
+    ``closed_class is True`` flag, NOT on the ``source`` string. Only the curated
+    in-code whitelist (``cefr_closed_class.build_closed_class_rows()``) ever sets that
+    flag; ``--source`` rows are parsed by :func:`_parse_source_file`, which never sets
+    ``closed_class``. So an external ``--source`` row whose ``source`` column happens
+    to read ``"closed_class"`` is treated as an untrusted open-class candidate (ranked
+    last, since "closed_class" is not in :data:`SOURCE_PRECEDENCE`) and still flows
+    through the normalize → attest pipeline — it can never forge the A1 bypass.
 
     Pure function — no DB, no normalization, no attestation — so it is unit-testable
     in isolation. Returns one dict per unique lemma, input order preserved.
@@ -198,7 +212,9 @@ def merge_by_precedence(rows: list[dict]) -> list[dict]:
 
     for row in rows:
         lemma = row["lemma"]
-        is_closed = bool(row.get("closed_class")) or row.get("source") == "closed_class"
+        # Bypass is keyed on the explicit flag ONLY — never the source string — so an
+        # untrusted --source row cannot claim closed-class status (trust boundary).
+        is_closed = row.get("closed_class") is True
         if lemma not in best:
             order.append(lemma)
             best[lemma] = {
@@ -262,13 +278,22 @@ def _attest(lemmas: set[str], cursor: psycopg2.extensions.cursor) -> set[str]:
 
 
 def _insert_main_rows(cursor: psycopg2.extensions.cursor, rows: list[dict]) -> int:
-    """Batch-insert survivor rows into ``reference.cefr_lemma``. Returns count."""
+    """Batch-insert survivor rows into ``reference.cefr_lemma``. Returns count.
+
+    The count is the number of rows ACTUALLY inserted, not attempted: under
+    ``ON CONFLICT (lemma) DO NOTHING`` a duplicate lemma is silently skipped and must
+    not be counted. ``cursor.rowcount`` is unreliable here — ``execute_values`` pages
+    the VALUES list internally, so ``rowcount`` reflects only the last page — so the
+    SQL is given a ``RETURNING lemma`` and ``fetch=True``, which collects the returned
+    (= genuinely inserted) rows across all pages; their length is the true count.
+    """
     if not rows:
         return 0
     insert_sql = f"""
         INSERT INTO {CEFR_TABLE} (lemma, level, source, closed_class)
         VALUES %s
         ON CONFLICT (lemma) DO NOTHING
+        RETURNING lemma
     """
     batch: list[tuple] = []
     inserted = 0
@@ -277,12 +302,12 @@ def _insert_main_rows(cursor: psycopg2.extensions.cursor, rows: list[dict]) -> i
             (row["lemma"], row["level"], row["source"], bool(row.get("closed_class", False)))
         )
         if len(batch) >= BATCH_SIZE:
-            psycopg2.extras.execute_values(cursor, insert_sql, batch)
-            inserted += len(batch)
+            returned = psycopg2.extras.execute_values(cursor, insert_sql, batch, fetch=True)
+            inserted += len(returned)
             batch = []
     if batch:
-        psycopg2.extras.execute_values(cursor, insert_sql, batch)
-        inserted += len(batch)
+        returned = psycopg2.extras.execute_values(cursor, insert_sql, batch, fetch=True)
+        inserted += len(returned)
     return inserted
 
 

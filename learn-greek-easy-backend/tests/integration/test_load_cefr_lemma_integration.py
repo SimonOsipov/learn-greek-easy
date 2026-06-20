@@ -40,16 +40,20 @@ def test_integration_real_spacy_normalize_smoke():
         reason="spaCy not installed or model unavailable — skipping integration smoke test",
     )
 
+    # Narrow skip-triggering excepts to the expected ENVIRONMENT failures only
+    # (missing spaCy import / missing Greek model). A real code defect raises a
+    # different exception type and must fail loudly, not be masked as a skip.
     try:
         from src.services.lemma_normalization_service import (  # noqa: PLC0415
             get_lemma_normalization_service,
         )
-    except Exception as exc:
+    except ImportError as exc:
         pytest.skip(f"Could not import lemma_normalization_service: {exc}")
 
     try:
         svc = get_lemma_normalization_service()
-    except Exception as exc:
+    except OSError as exc:
+        # spaCy raises OSError when el_core_news_md is not installed.
         pytest.skip(f"Could not instantiate LemmaNormalizationService (model missing?): {exc}")
 
     # Simulate what the loader does: lower() + NFC before calling normalize
