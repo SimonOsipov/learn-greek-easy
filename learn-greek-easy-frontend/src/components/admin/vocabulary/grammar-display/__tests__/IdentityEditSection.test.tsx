@@ -346,4 +346,51 @@ describe('IdentityEditSection', () => {
       expect(onGenerateClick).toHaveBeenCalledOnce();
     });
   });
+
+  // ============================================
+  // Group 6: Hover-reveal + chrome-ghost (AC-1, ADMIN2-38-03)
+  // ============================================
+
+  describe('hover-reveal and chrome-ghost (AC-1)', () => {
+    it('pencil is wrapped in an actions container with opacity-0 at rest', () => {
+      renderWithI18n(<IdentityEditSection wordEntry={createMockWordEntry()} {...defaultProps} />);
+      // After implementation: the pencil button is wrapped in a div with data-testid="identity-pencil-actions"
+      // and classes opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100.
+      // Currently: no such wrapper exists — getByTestId throws → RED.
+      const container = screen.getByTestId('identity-pencil-actions');
+      expect(container.className).toContain('opacity-0');
+      expect(container.className).toContain('transition-opacity');
+      expect(container.className).toContain('group-hover:opacity-100');
+      expect(container.className).toContain('group-focus-within:opacity-100');
+    });
+
+    it('header row ancestor carries the group class', () => {
+      renderWithI18n(<IdentityEditSection wordEntry={createMockWordEntry()} {...defaultProps} />);
+      // After implementation: the flex items-center justify-between row div gets the `group` class.
+      // We verify via the actions container's parent.
+      const container = screen.getByTestId('identity-pencil-actions');
+      const headerRow = container.parentElement;
+      expect(headerRow?.className).toContain('group');
+    });
+
+    it('pencil Button uses chrome-ghost variant (hover:bg-muted, not hover:bg-accent)', () => {
+      renderWithI18n(<IdentityEditSection wordEntry={createMockWordEntry()} {...defaultProps} />);
+      // After implementation: the Button has variant="chrome-ghost" which CVA resolves to
+      // "text-foreground hover:bg-muted hover:text-foreground" (button.tsx:19).
+      // Currently: variant="ghost" gives hover:bg-accent → assertion fails RED.
+      const container = screen.getByTestId('identity-pencil-actions');
+      const button = container.querySelector('button');
+      expect(button?.className).toContain('hover:bg-muted');
+      expect(button?.className).not.toContain('hover:bg-accent');
+    });
+
+    it('pencil still enters edit mode on click (regression guard)', async () => {
+      const user = userEvent.setup();
+      renderWithI18n(<IdentityEditSection wordEntry={createMockWordEntry()} {...defaultProps} />);
+      // After implementation: clicking the pencil (now inside the actions container) still triggers edit.
+      // Test queries via testid of the button itself — robust even after wrapping.
+      await user.click(screen.getByTestId('identity-edit-btn'));
+      expect(screen.getByTestId('identity-edit-form')).toBeInTheDocument();
+    });
+  });
 });
