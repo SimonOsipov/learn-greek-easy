@@ -124,7 +124,13 @@ export const useAdminNewsStore = create<AdminNewsState>()(
             b1AudioCount: response.b1_audio_count,
             b1PendingRegenCount: response.b1_pending_regen_count,
             // F8: guard absence (older cached shapes / partial failures) without throwing.
-            countryCounts: response.country_counts ?? { cyprus: 0, greece: 0, world: 0 },
+            // Normalize each field so a partial object (e.g. { cyprus: 3 }) can't
+            // leave greece/world undefined.
+            countryCounts: {
+              cyprus: response.country_counts?.cyprus ?? 0,
+              greece: response.country_counts?.greece ?? 0,
+              world: response.country_counts?.world ?? 0,
+            },
             isLoading: false,
             selectedItem: state.selectedItem
               ? (response.items.find((item) => item.id === state.selectedItem?.id) ?? null)

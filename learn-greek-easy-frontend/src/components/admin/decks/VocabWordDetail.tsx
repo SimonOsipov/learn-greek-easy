@@ -52,7 +52,9 @@ export function VocabWordDetail({ deck, itemId }: VocabWordDetailProps) {
 
   // ── URL-driven sub-tab state ───────────────────────────────────────────────
 
-  const subtab = searchParams.get('subtab') ?? 'entry';
+  // Normalize to a valid union so an invalid/garbage value (e.g. ?subtab=foo)
+  // never leaves both tabs unselected — default to 'entry'.
+  const subtab = searchParams.get('subtab') === 'cards' ? 'cards' : 'entry';
 
   const handleSubtabChange = useCallback(
     (value: string) => {
@@ -242,7 +244,12 @@ export function VocabWordDetail({ deck, itemId }: VocabWordDetailProps) {
         className="mt-2"
         data-testid="word-entry-tab-content-entry"
       >
-        <WordEntryContent wordEntryId={itemId} deckId={deck.id} onUnlinked={popToList} />
+        <WordEntryContent
+          wordEntryId={itemId}
+          deckId={deck.id}
+          onUnlinked={popToList}
+          enabled={subtab === 'entry'}
+        />
       </div>
 
       <div
@@ -253,7 +260,7 @@ export function VocabWordDetail({ deck, itemId }: VocabWordDetailProps) {
         className="mt-2"
         data-testid="word-entry-tab-content-cards"
       >
-        <WordEntryCards entryId={itemId} />
+        <WordEntryCards entryId={itemId} enabled={subtab === 'cards'} />
       </div>
     </div>
   );

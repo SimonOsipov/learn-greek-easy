@@ -28,6 +28,9 @@ import { NotSet } from './NotSet';
 
 interface WordEntryCardsProps {
   entryId: string;
+  /** Whether the underlying queries should run (default true). Lets callers gate
+   * the fetch when this panel is mounted-but-hidden behind a tab. */
+  enabled?: boolean;
 }
 
 const CARD_TYPE_DISPLAY_ORDER: CardRecordType[] = [
@@ -221,12 +224,13 @@ function AvailableCardTypes({
   );
 }
 
-export function WordEntryCards({ entryId }: WordEntryCardsProps) {
+export function WordEntryCards({ entryId, enabled = true }: WordEntryCardsProps) {
   const { t } = useTranslation('admin');
   const { cards, isLoading, isError, refetch } = useWordEntryCards({
     wordEntryId: entryId,
+    enabled,
   });
-  const { wordEntry } = useWordEntry({ wordId: entryId });
+  const { wordEntry } = useWordEntry({ wordId: entryId, enabled });
   const generateCards = useGenerateCards();
 
   if (isLoading) {

@@ -562,7 +562,10 @@ describe('WordEntryCards', () => {
   describe('hook integration', () => {
     it('passes entryId to useWordEntryCards hook', () => {
       renderComponent('my-entry-id');
-      expect(useWordEntryCards).toHaveBeenCalledWith({ wordEntryId: 'my-entry-id' });
+      expect(useWordEntryCards).toHaveBeenCalledWith({
+        wordEntryId: 'my-entry-id',
+        enabled: true,
+      });
     });
   });
 
@@ -1198,7 +1201,7 @@ describe('Audio Status Badges', () => {
     it('calls useWordEntry with the entryId passed to the component', () => {
       setupAudioMocks({ cards: [] });
       renderComponent('entry-1');
-      expect(useWordEntry).toHaveBeenCalledWith({ wordId: 'entry-1' });
+      expect(useWordEntry).toHaveBeenCalledWith({ wordId: 'entry-1', enabled: true });
     });
   });
 });
