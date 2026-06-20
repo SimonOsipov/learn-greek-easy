@@ -280,3 +280,74 @@ def test_no_real_keg_data_committed():
             f"Module attribute {attr!r}={val_str!r} points into a committed directory. "
             "Default I/O paths for real ΚΕΓ data must be under gitignored data/cefr_lemma/."
         )
+
+
+# ---------------------------------------------------------------------------
+# ADVERSARIAL: extra-commas, whitespace+case, unknown filename
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_extra_commas_lemma_is_before_first_comma():
+    """A line with multiple commas: lemma is the part before the FIRST comma only.
+
+    Given:
+        "σπίτι, το, επιπλέον = house, home"
+    When:
+        parse_glossary_lines([line], level="A1")
+    Then:
+        rows[0]["lemma"] == "σπίτι"   (not "σπίτι, το" or the full line)
+        flagged is empty
+    """
+    from src.scripts.parse_keg_glossary import parse_glossary_lines  # noqa: PLC0415
+
+    line = "σπίτι, το, επιπλέον = house, home"
+    rows, flagged = parse_glossary_lines([line], level="A1")
+
+    assert len(rows) == 1, f"Expected 1 row, got {len(rows)}: rows={rows} flagged={flagged}"
+    assert rows[0]["lemma"] == "σπίτι", (
+        f"Lemma must be text before the FIRST comma only; "
+        f"got {rows[0]['lemma']!r} for line {line!r}"
+    )
+    assert len(flagged) == 0, f"No flagged entries expected; got {flagged}"
+
+
+@pytest.mark.unit
+def test_leading_trailing_whitespace_and_uppercase_lemma_normalised():
+    """A line with leading/trailing whitespace and uppercase lemma is lowercased+stripped.
+
+    Given:
+        "  ΣΠΊΤΙ , το = House  "
+    When:
+        parse_glossary_lines([line], level="B1")
+    Then:
+        rows[0]["lemma"] == "σπίτι"   (lowercased, stripped)
+        flagged is empty
+    """
+    from src.scripts.parse_keg_glossary import parse_glossary_lines  # noqa: PLC0415
+
+    line = "  ΣΠΊΤΙ , το = House  "
+    rows, flagged = parse_glossary_lines([line], level="B1")
+
+    assert len(rows) == 1, f"Expected 1 row, got {len(rows)}: rows={rows} flagged={flagged}"
+    assert rows[0]["lemma"] == "σπίτι", (
+        f"Lemma must be lowercased and stripped; " f"got {rows[0]['lemma']!r} for line {line!r}"
+    )
+    assert len(flagged) == 0, f"No flagged entries expected; got {flagged}"
+
+
+@pytest.mark.unit
+def test_level_from_filename_raises_on_unknown():
+    """level_from_filename raises ValueError for an unrecognised filename prefix.
+
+    Given:
+        filename = "UNKNOWN_glossary.pdf"
+    When:
+        level_from_filename("UNKNOWN_glossary.pdf")
+    Then:
+        ValueError is raised — the parser never silently defaults a level.
+    """
+    from src.scripts.parse_keg_glossary import level_from_filename  # noqa: PLC0415
+
+    with pytest.raises(ValueError, match="KLIK_A1"):
+        level_from_filename("UNKNOWN_glossary.pdf")
