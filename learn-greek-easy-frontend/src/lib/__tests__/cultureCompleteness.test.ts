@@ -126,6 +126,16 @@ describe('computeCultureChips', () => {
     expect(chips.find((c) => c.name === 'audio-a2')).toBeUndefined();
   });
 
+  // Adversarial: empty-string audio_s3_key is falsy → gray (ADMIN2-38-02)
+  it('(adversarial) audio_s3_key empty-string → single audio chip, gray, "Audio missing"', () => {
+    const q = makeQuestion({ audio_s3_key: '' });
+    const chips = computeCultureChips(q);
+    const audioChips = chips.filter((c) => c.name === 'audio');
+    expect(audioChips).toHaveLength(1);
+    expect(audioChips[0].color).toBe('gray');
+    expect(audioChips[0].tooltip).toBe('Audio missing');
+  });
+
   it('news badge visible when original_article_url set', () => {
     const q = makeQuestion({ original_article_url: 'https://kathimerini.com.cy/article' });
     const chips = computeCultureChips(q);

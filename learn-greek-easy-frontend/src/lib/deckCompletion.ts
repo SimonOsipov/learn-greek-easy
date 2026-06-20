@@ -18,7 +18,7 @@ import type { AdminVocabularyCard, AdminCultureQuestion } from '@/services/admin
  * Produced by {@link getWordCompletion} and {@link getCultureCompletion}.
  */
 export interface DeckPill {
-  /** Stable identifier, e.g. `'en' | 'ru' | 'audio-a2' | 'news'` */
+  /** Stable identifier, e.g. `'en' | 'ru' | 'audio' | 'news'` */
   name: string;
   /** Display label, e.g. `'EN 2/2'`, `'Audio ✓'`, `'B1 Audio'` */
   label: string;
