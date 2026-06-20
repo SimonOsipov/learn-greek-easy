@@ -104,7 +104,8 @@ describe('CultureCardForm — adversarial i18n (ADMIN2-38-04)', () => {
    */
   it('EN: Save Question button renders in English', () => {
     renderForm('en');
-    expect(screen.getByTestId('submit-btn')).toHaveTextContent('Save Question');
+    // ADMIN2-38-05: save lives in the in-Card culture-question-card-save button.
+    expect(screen.getByTestId('culture-question-card-save')).toHaveTextContent('Save Question');
   });
 
   /**
@@ -117,8 +118,9 @@ describe('CultureCardForm — adversarial i18n (ADMIN2-38-04)', () => {
   });
 
   /**
-   * Zod RU message: question field empty → "Вопрос обязателен" (not English).
-   * Verifies the t()-aware schema factory wires the right message per locale.
+   * Zod RU message: question field empty → "Текст на русском обязателен" (not English).
+   * ADMIN2-38-05/AC-4e: FormMessage now surfaces the localized zod message attached
+   * to the empty field (zodRuRequired) per locale.
    */
   it('RU: question-required zod error renders in Russian', async () => {
     await act(async () => {
@@ -144,13 +146,13 @@ describe('CultureCardForm — adversarial i18n (ADMIN2-38-04)', () => {
     await user.type(screen.getByTestId('answer-input-A-ru'), 'А');
     await user.type(screen.getByTestId('answer-input-B-ru'), 'Б');
 
-    await user.click(screen.getByTestId('submit-btn'));
+    await user.click(screen.getByTestId('culture-question-card-save'));
 
     await waitFor(() => {
-      expect(screen.getByText('Вопрос обязателен')).toBeInTheDocument();
+      expect(screen.getByText('Текст на русском обязателен')).toBeInTheDocument();
     });
     // Confirm the English version is NOT shown
-    expect(screen.queryByText('Question is required')).not.toBeInTheDocument();
+    expect(screen.queryByText('Russian text is required')).not.toBeInTheDocument();
   });
 
   /**
@@ -191,7 +193,7 @@ describe('CultureCardForm — adversarial i18n (ADMIN2-38-04)', () => {
     // Delete answer C → correct_option (3) > answer_count (2) → error
     await user.click(screen.getAllByTestId('delete-answer-C')[0]);
 
-    await user.click(screen.getByTestId('submit-btn'));
+    await user.click(screen.getByTestId('culture-question-card-save'));
 
     await waitFor(() => {
       const errorEls = screen.getAllByText('Пожалуйста, выберите правильный ответ');
@@ -224,6 +226,8 @@ describe('CultureCardForm — adversarial i18n (ADMIN2-38-04)', () => {
   /**
    * Zod EN message: question field empty under EN → English error, not RU.
    * Confirms that schema factory rebuilds per locale — not cached as RU-only.
+   * ADMIN2-38-05/AC-4e: the empty RU question surfaces its zod message
+   * (zodRuRequired) through FormMessage — "Russian text is required" under EN.
    */
   it('EN: question-required zod error renders in English (not RU)', async () => {
     const user = userEvent.setup();
@@ -245,11 +249,11 @@ describe('CultureCardForm — adversarial i18n (ADMIN2-38-04)', () => {
     await user.type(screen.getByTestId('answer-input-A-ru'), 'А');
     await user.type(screen.getByTestId('answer-input-B-ru'), 'Б');
 
-    await user.click(screen.getByTestId('submit-btn'));
+    await user.click(screen.getByTestId('culture-question-card-save'));
 
     await waitFor(() => {
-      expect(screen.getByText('Question is required')).toBeInTheDocument();
+      expect(screen.getByText('Russian text is required')).toBeInTheDocument();
     });
-    expect(screen.queryByText('Вопрос обязателен')).not.toBeInTheDocument();
+    expect(screen.queryByText('Текст на русском обязателен')).not.toBeInTheDocument();
   });
 });

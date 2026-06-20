@@ -138,7 +138,8 @@ describe('CultureCardForm — localization (ADMIN2-38-04)', () => {
    */
   it('renders the Save Question button in RU', () => {
     renderFormRu();
-    expect(screen.getByTestId('submit-btn')).toHaveTextContent('Сохранить вопрос');
+    // ADMIN2-38-05: the save lives in the in-Card culture-question-card-save button.
+    expect(screen.getByTestId('culture-question-card-save')).toHaveTextContent('Сохранить вопрос');
   });
 
   /**
@@ -157,10 +158,12 @@ describe('CultureCardForm — localization (ADMIN2-38-04)', () => {
 
   /**
    * Question-required validation message
-   * ru key: decks.culture.form.questionRequired → "Вопрос обязателен"
+   * ru key: decks.culture.form.zodRuRequired → "Текст на русском обязателен"
    *
-   * Currently renders "Question is required" (hardcoded English).
-   * RED: submit with empty question → expect "Вопрос обязателен".
+   * ADMIN2-38-05/AC-4e: the question field now routes its error through the
+   * shadcn FormMessage, which renders the localized zod message attached to the
+   * field (zodRuRequired for the empty RU question), replacing the old generic
+   * "Вопрос обязателен" copy.
    */
   it('renders the question-required validation error in RU', async () => {
     const user = userEvent.setup();
@@ -184,10 +187,10 @@ describe('CultureCardForm — localization (ADMIN2-38-04)', () => {
     await user.type(screen.getByTestId('answer-input-B-ru'), 'Б');
 
     // Submit — triggers validation
-    await user.click(screen.getByTestId('submit-btn'));
+    await user.click(screen.getByTestId('culture-question-card-save'));
 
     await waitFor(() => {
-      expect(screen.getByText('Вопрос обязателен')).toBeInTheDocument();
+      expect(screen.getByText('Текст на русском обязателен')).toBeInTheDocument();
     });
   });
 
@@ -231,7 +234,7 @@ describe('CultureCardForm — localization (ADMIN2-38-04)', () => {
     // Delete answer C — correct_option (3) > answer_count (2) → triggers error
     await user.click(screen.getAllByTestId('delete-answer-C')[0]);
 
-    await user.click(screen.getByTestId('submit-btn'));
+    await user.click(screen.getByTestId('culture-question-card-save'));
 
     await waitFor(() => {
       expect(screen.getByText('Пожалуйста, выберите правильный ответ')).toBeInTheDocument();

@@ -1,24 +1,31 @@
 // src/components/admin/decks/CultureQuestionDetail.tsx
 //
 // Pushed question editor inside the DeckDrawer "Questions" tab.
-// Implements DKDR-13 (ADMIN2-09).
+// Implements DKDR-13 (ADMIN2-09), migrated to the vocab *EditSection pattern
+// (ADMIN2-38-05 / AC-4 b–f): ONE atomic "Question & Answers" Card that starts in
+// a read view and flips to a Form-primitive edit form via a header Pencil. The
+// only save path is the in-Card Save (CultureCardForm's submit → adminAPI
+// .updateCultureQuestion); the old hand-rolled drawer footer + disabled
+// Regenerate + duplicate save are gone (the drawer's SidePanel.Footer is
+// structurally hidden while ?item= is present — DeckDrawer.tsx:353).
 //
 // Layout:
-//   ← Back to all questions | Edit question (H3) | Status Badge
-//   CultureCardForm (edit mode via initialData + onSubmit)
-//   Footer: [Regenerate translations (disabled)] [Cancel] [Save]
+//   ← Back to all questions
+//   <question text> (text-2xl identity heading)  ·  Status Badge (tone)
 //   News cross-link block (only when original_article_url is set)
+//   Card "Question & Answers": read view ↔ Pencil → CultureCardForm edit form
 
 import { useEffect, useState, useCallback } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Pencil } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { CultureCardForm } from '@/components/admin/CultureCardForm';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { computeCultureChips, isTranslationComplete } from '@/lib/cultureCompleteness';
 import {
   adminAPI,
@@ -26,6 +33,7 @@ import {
   type AdminCultureQuestionsResponse,
   type CultureQuestionCreatePayload,
   type CultureQuestionUpdatePayload,
+  type MultilingualName,
   type UnifiedDeckItem,
 } from '@/services/adminAPI';
 
@@ -37,6 +45,10 @@ export interface CultureQuestionDetailProps {
   deck: UnifiedDeckItem;
   itemId: string;
 }
+
+type Language = 'ru' | 'el' | 'en';
+const LANGUAGES: Language[] = ['en', 'el', 'ru'];
+const LANGUAGE_LABELS: Record<Language, string> = { ru: 'RU', el: 'EL', en: 'EN' };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -52,6 +64,31 @@ function extractDomainInline(url: string): string {
   }
 }
 
+/**
+ * Resolve display text for a multilingual question_text record.
+ * Fallback chain: en → el → ru → '—' (mirrors CultureDrawerBody.resolveQuestionText).
+ */
+function resolveQuestionText(question_text: Record<string, string>): string {
+  return question_text['en'] ?? question_text['el'] ?? question_text['ru'] ?? '—';
+}
+
+/**
+ * MultilingualName ({ru,el,en}) → Record<string,string>. Structurally identical;
+ * the named interface just lacks an index signature, so we widen it explicitly.
+ */
+function toRecord(m: MultilingualName | null | undefined): Record<string, string> | null {
+  if (!m) return null;
+  return { ...m };
+}
+
+/** Active option records, in order, skipping unset C/D. */
+function activeOptions(question: AdminCultureQuestion): Record<string, string>[] {
+  const opts: Record<string, string>[] = [question.option_a, question.option_b];
+  if (question.option_c) opts.push(question.option_c);
+  if (question.option_d) opts.push(question.option_d);
+  return opts;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function CultureQuestionDetail({ deck, itemId }: CultureQuestionDetailProps) {
@@ -62,6 +99,7 @@ export function CultureQuestionDetail({ deck, itemId }: CultureQuestionDetailPro
   const [question, setQuestion] = useState<AdminCultureQuestion | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   // ── Data lookup ────────────────────────────────────────────────────────────
   //
@@ -106,13 +144,18 @@ export function CultureQuestionDetail({ deck, itemId }: CultureQuestionDetailPro
     });
   }, [setSearchParams]);
 
+  // ── Read ↔ edit toggle ───────────────────────────────────────────────────────
+
+  const enterEditMode = useCallback(() => setIsEditing(true), []);
+  const exitEditMode = useCallback(() => setIsEditing(false), []);
+
   // ── Save handler ───────────────────────────────────────────────────────────
   //
   // CultureCardForm.onSubmit expects CultureQuestionCreatePayload (create shape).
   // Both create and update payloads share the same field names — correct_option,
   // question_text, option_a/b/c/d — so we map directly.
   // We omit deck_id (update payload doesn't support changing it) and image_key
-  // (the form doesn't return it).
+  // (the form doesn't return it). On success we exit edit mode (back to read).
 
   const handleSave = useCallback(
     async (data: CultureQuestionCreatePayload) => {
@@ -127,12 +170,30 @@ export function CultureQuestionDetail({ deck, itemId }: CultureQuestionDetailPro
           correct_option: data.correct_option,
         };
         await adminAPI.updateCultureQuestion(itemId, updatePayload);
+        // Reflect the edit locally so the read view shows the new values.
+        // The create-payload fields are MultilingualName (structurally compatible
+        // with the question's Record<string,string> shape, just lacking the index
+        // signature) — coerce when merging.
+        setQuestion((prev) =>
+          prev
+            ? {
+                ...prev,
+                question_text: toRecord(data.question_text) ?? prev.question_text,
+                option_a: toRecord(data.option_a) ?? prev.option_a,
+                option_b: toRecord(data.option_b) ?? prev.option_b,
+                option_c: toRecord(data.option_c),
+                option_d: toRecord(data.option_d),
+                correct_option: data.correct_option,
+              }
+            : prev
+        );
         await queryClient.invalidateQueries({ queryKey: ['deck-culture', deck.id] });
+        exitEditMode();
       } finally {
         setIsSaving(false);
       }
     },
-    [itemId, deck.id, queryClient]
+    [itemId, deck.id, queryClient, exitEditMode]
   );
 
   // ── Derived state ──────────────────────────────────────────────────────────
@@ -145,40 +206,39 @@ export function CultureQuestionDetail({ deck, itemId }: CultureQuestionDetailPro
       })()
     : false;
 
+  const headingText = question ? resolveQuestionText(question.question_text) : '';
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col gap-4" data-testid="culture-question-detail">
-      {/* ── Header ── */}
-      <div className="flex flex-wrap items-center gap-3">
+      {/* ── Header (vocab sibling scale) ── */}
+      <div className="flex flex-col gap-2">
         <button
           type="button"
           onClick={popToList}
           data-testid="culture-question-detail-back"
-          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="size-4" aria-hidden="true" />
           {t('decks.backToAllQuestions')}
         </button>
 
-        <h3 className="text-lg font-medium" data-testid="culture-question-detail-title">
-          {t('decks.editQuestion')}
-        </h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <h3
+            className="text-2xl font-medium leading-tight"
+            data-testid="culture-question-detail-title"
+          >
+            {headingText}
+          </h3>
 
-        <Badge
-          variant="outline"
-          data-testid="culture-question-detail-status"
-          className={
-            ready
-              ? 'border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400'
-              : 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400'
-          }
-        >
-          {ready ? t('decks.statusReady') : t('decks.statusDraft')}
-        </Badge>
+          <Badge tone={ready ? 'green' : 'amber'} data-testid="culture-question-detail-status">
+            {ready ? t('decks.statusReady') : t('decks.statusDraft')}
+          </Badge>
+        </div>
       </div>
 
-      {/* ── Form body ── */}
+      {/* ── Body ── */}
       {isLoading && <DeckDrawerSkeleton variant="detail" />}
 
       {!isLoading && !question && (
@@ -221,46 +281,93 @@ export function CultureQuestionDetail({ deck, itemId }: CultureQuestionDetailPro
             </div>
           )}
 
-          <CultureCardForm
-            initialData={question}
-            onSubmit={handleSave}
-            deckId={deck.id}
-            isSubmitting={isSaving}
-          />
+          {/* ── "Question & Answers" Card (read ↔ edit) ── */}
+          <Card data-testid="culture-question-edit-card">
+            <CardHeader className="px-4 pb-2 pt-4">
+              <div className="group flex items-center justify-between">
+                <div className="text-sm font-semibold">{t('decks.culture.read.sectionTitle')}</div>
+                {!isEditing && (
+                  <Button
+                    variant="chrome-ghost"
+                    size="icon"
+                    className="h-6 w-6 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+                    onClick={enterEditMode}
+                    data-testid="culture-question-edit-btn"
+                    aria-label={t('decks.culture.editQuestionLabel')}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              {isEditing ? (
+                <div data-testid="culture-question-edit-form">
+                  <CultureCardForm
+                    initialData={question}
+                    onSubmit={handleSave}
+                    onCancel={exitEditMode}
+                    deckId={deck.id}
+                    isSubmitting={isSaving}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-4" data-testid="culture-question-read-view">
+                  {/* Question text, per language */}
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      {t('decks.culture.read.questionLabel')}
+                    </p>
+                    <dl className="space-y-1">
+                      {LANGUAGES.map((lang) => (
+                        <div key={lang} className="flex gap-2 text-sm">
+                          <dt className="w-6 shrink-0 font-medium text-muted-foreground">
+                            {LANGUAGE_LABELS[lang]}
+                          </dt>
+                          <dd className="font-medium">
+                            {question.question_text[lang]?.trim() || '—'}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
 
-          {/* ── Detail footer (drawer footer-primary is hidden while ?item= present) ── */}
-          <div
-            className="mt-4 flex items-center justify-end gap-2 border-t pt-4"
-            data-testid="culture-question-detail-footer"
-          >
-            <button
-              type="button"
-              disabled
-              aria-label={t('decks.regenerateTranslations')}
-              data-testid="culture-question-detail-regenerate"
-              className="cursor-not-allowed text-sm text-muted-foreground opacity-50"
-            >
-              {t('decks.regenerateTranslations')}
-            </button>
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={popToList}
-              data-testid="culture-question-detail-cancel"
-            >
-              {t('deckEdit.cancel')}
-            </Button>
-
-            <Button
-              type="submit"
-              form="culture-card-form"
-              disabled={isSaving}
-              data-testid="culture-question-detail-save"
-            >
-              {t('deckEdit.save')}
-            </Button>
-          </div>
+                  {/* Answers with correct-answer marker (EN, fallback chain) */}
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      {t('decks.culture.read.answersLabel')}
+                    </p>
+                    <ol className="space-y-1">
+                      {activeOptions(question).map((opt, index) => {
+                        const isCorrect = question.correct_option === index + 1;
+                        const label = ['A', 'B', 'C', 'D'][index];
+                        const text = opt['en'] ?? opt['el'] ?? opt['ru'] ?? '—';
+                        return (
+                          <li
+                            key={label}
+                            data-testid={`culture-question-read-answer-${label}`}
+                            className="flex items-center gap-2 text-sm"
+                          >
+                            <span className="w-6 shrink-0 font-medium text-muted-foreground">
+                              {label}.
+                            </span>
+                            <span className={isCorrect ? 'font-medium text-foreground' : ''}>
+                              {text}
+                            </span>
+                            {isCorrect && (
+                              <Badge tone="green" data-testid="culture-question-read-correct">
+                                {t('decks.culture.read.correctMarker')}
+                              </Badge>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
     </div>

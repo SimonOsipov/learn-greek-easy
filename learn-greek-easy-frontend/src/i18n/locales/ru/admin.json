@@ -2135,10 +2135,15 @@
     "culture": {
       "editQuestionLabel": "Редактировать вопрос",
       "deleteQuestionLabel": "Удалить вопрос",
+      "read": {
+        "sectionTitle": "Вопрос и ответы",
+        "questionLabel": "Вопрос",
+        "answersLabel": "Ответы",
+        "correctMarker": "Верный"
+      },
       "form": {
         "questionLabel": "Вопрос ({{lang}})",
         "questionPlaceholder": "Введите вопрос на {{lang}}",
-        "questionRequired": "Вопрос обязателен",
         "answersLabel": "Ответы ({{lang}})",
         "answerPlaceholder": "Ответ {{key}}",
         "addAnswer": "Добавить ответ {{key}}",

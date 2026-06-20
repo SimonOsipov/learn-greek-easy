@@ -48,15 +48,22 @@ vi.mock('@/services/adminAPI', () => ({
 // The migration restructures CultureCardForm rendering (it is now wrapped in a
 // Card with read↔edit toggle). We mock CultureCardForm at a minimal level here
 // so CultureQuestionDetail tests can focus on the wrapper structure.
+// The migrated CultureCardForm owns its own in-Card Save / Cancel (testids
+// culture-question-card-save / culture-question-card-cancel) inside its <form>;
+// the wrapper supplies the Card / read-view / Pencil / edit-form chrome. This
+// stub mirrors that real contract so the wrapper's assertions bind to the same
+// testid surface the real component exposes.
 vi.mock('@/components/admin/CultureCardForm', () => ({
   CultureCardForm: ({
     initialData,
     onSubmit,
+    onCancel,
     deckId,
     isSubmitting,
   }: {
     initialData?: AdminCultureQuestion;
     onSubmit: (data: unknown) => Promise<void>;
+    onCancel?: () => void;
     deckId?: string;
     isSubmitting?: boolean;
   }) => (
@@ -66,8 +73,13 @@ vi.mock('@/components/admin/CultureCardForm', () => ({
         <span data-testid="culture-card-form-has-initial-data">has-initial-data</span>
       )}
       <span data-testid="culture-card-form-submitting">{String(isSubmitting ?? false)}</span>
+      {onCancel && (
+        <button data-testid="culture-question-card-cancel" onClick={() => onCancel()}>
+          Cancel
+        </button>
+      )}
       <button
-        data-testid="culture-card-form-submit"
+        data-testid="culture-question-card-save"
         onClick={() =>
           onSubmit({
             deck_id: deckId,
@@ -80,7 +92,7 @@ vi.mock('@/components/admin/CultureCardForm', () => ({
           })
         }
       >
-        Submit
+        Save
       </button>
     </div>
   ),

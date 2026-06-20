@@ -2123,10 +2123,15 @@
     "culture": {
       "editQuestionLabel": "Edit question",
       "deleteQuestionLabel": "Delete question",
+      "read": {
+        "sectionTitle": "Question & Answers",
+        "questionLabel": "Question",
+        "answersLabel": "Answers",
+        "correctMarker": "Correct"
+      },
       "form": {
         "questionLabel": "Question ({{lang}})",
         "questionPlaceholder": "Enter question in {{lang}}",
-        "questionRequired": "Question is required",
         "answersLabel": "Answers ({{lang}})",
         "answerPlaceholder": "Answer {{key}}",
         "addAnswer": "Add Answer {{key}}",
