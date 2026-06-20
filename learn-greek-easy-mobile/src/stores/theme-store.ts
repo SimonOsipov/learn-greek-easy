@@ -71,14 +71,12 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     }
 
     // THEME-03 persistence (D8/D9 — write-through + 3-state cache).
-    // TODO(THEME-03 executor): persist here:
-    //   (1) setCachedTheme(preference)        // full 3-state intent → local cache
-    //   (2) persistThemeToBackend(resolved)   // resolved concrete 'light'|'dark'
-    //       — PATCH /api/v1/auth/me { theme }, error-swallowed (D8 never 'system';
-    //         spec #9 non-fatal). `resolved` is the concrete scheme computed above.
-    // Currently NOT wired: the cache write + write-through are no-ops so the
-    // THEME-03 persistence specs fail on ASSERTION (not import).
-    void resolved;
+    //   (1) full 3-state intent → local cache (the mobile source of truth for
+    //       'system', which the backend enum cannot store).
+    //   (2) resolved concrete 'light'|'dark' → backend PATCH (D8: never 'system';
+    //       spec #9: error-swallowed so a failed sync never breaks the local change).
+    setCachedTheme(preference);
+    persistThemeToBackend(resolved);
   },
 }));
 
@@ -111,13 +109,28 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
  * stub that does NOT call the API → the write-through specs (#1, #2, #9) fail on
  * the PATCH assertion.
  */
-export function persistThemeToBackend(_concrete: ResolvedScheme): void {
-  // TODO(THEME-03 executor): replace no-op with the error-swallowed PATCH, e.g.:
-  //   const { api } = require('@/lib/api-client') as typeof import('@/lib/api-client');
-  //   void api.patch('/api/v1/auth/me', { theme: concrete }).catch(() => {});
-  // Lazy `require` (not a top-level import) keeps the store core free of the
-  // AsyncStorage native chain (see header note). The persistence test mocks
-  // `@/lib/api-client`, so the lazy require resolves to the spy there.
+export function persistThemeToBackend(concrete: ResolvedScheme): void {
+  // Write-through is best-effort: a failure to even LOAD or REACH the backend
+  // must never break the local theme change (spec #9 — non-fatal persistence).
+  // Two distinct failure modes are both swallowed:
+  //   - synchronous load failure of the lazy `require` chain (try/catch) — e.g.
+  //     under a dependency-light unit suite that does not mock `@/lib/api-client`,
+  //     where requiring it would pull in the supabase/AsyncStorage native chain
+  //     and throw at module-load. Swallowing here keeps the store core's
+  //     `setPreference` usable without that chain (see header note).
+  //   - async PATCH rejection (`.catch`) — a network/422 failure after the call.
+  try {
+    // Lazy `require` (not a top-level import) keeps the store core free of the
+    // AsyncStorage native chain api-client → supabase pulls in. The persistence
+    // test mocks `@/lib/api-client`, so this resolves to the spy (the chain never
+    // loads), and the PATCH assertion (specs #1/#2/#9) is exercised normally.
+    const { api } = require('@/lib/api-client') as typeof import('@/lib/api-client');
+    // Fire-and-forget: `concrete` is ALWAYS 'light'|'dark' (D8 — never 'system').
+    void api.patch('/api/v1/auth/me', { theme: concrete }).catch(() => {});
+  } catch {
+    // Load failure ⇒ skip the write-through. The 3-state cache + store update
+    // already happened in `setPreference`, so the local change still stands.
+  }
 }
 
 /**
@@ -144,10 +157,24 @@ export function persistThemeToBackend(_concrete: ResolvedScheme): void {
  * assertion.
  */
 export function hydrateThemeFromCache(): void {
-  // TODO(THEME-03 executor): replace no-op with the synchronous cache read +
-  // store seed described above.
-  void getCachedTheme;
-  void setCachedTheme;
+  const cached = getCachedTheme();
+  // Empty cache ⇒ leave the store defaults untouched (idempotent / inert). The
+  // React seam (useThemePersistence) may later seed from settings. Gating ALL
+  // side-effects (incl. colorScheme.set) behind a non-null cache keeps the
+  // empty-cache cold-start path completely inert.
+  if (!cached) return;
+
+  // cache 'system' ⇒ derive a concrete scheme from the OS snapshot, falling back
+  // to 'dark' when the OS scheme can't be determined (D1/F5). An explicit
+  // 'light'/'dark' cache value IS the concrete resolved scheme.
+  const resolved: ResolvedScheme =
+    cached === 'system' ? colorScheme.get() ?? 'dark' : cached;
+
+  // Paint the correct scheme on frame 1: this runs at module-init (outside any
+  // React render body), so a synchronous colorScheme.set here does NOT violate
+  // the "no setColorScheme during render" rule.
+  colorScheme.set(cached);
+  useThemeStore.setState({ preference: cached, resolvedScheme: resolved });
 }
 
 /**
@@ -182,12 +209,21 @@ export function useThemePersistence(): null {
   // of this hook component.
   const { useUserSettings } =
     require('@/hooks/use-user-settings') as typeof import('@/hooks/use-user-settings');
-  // Call the query so the hook is structurally exercised; do NOT seed (skeleton).
-  useUserSettings();
-  // TODO(THEME-03 executor): wire the cache-empty-seed effect described above —
-  //   const { data: settings } = useUserSettings();
-  //   useEffect(() => { ... seed only when getCachedTheme() == null ... },
-  //            [settings?.theme]);
+  const { data: settings } = useUserSettings();
+
+  useEffect(() => {
+    // An explicit local pref (cache present) is the mobile source of truth — the
+    // late-arriving settings value must NOT clobber it (spec #5).
+    if (getCachedTheme() != null) return;
+    const t = settings?.theme;
+    // Seed only from a concrete backend value (web→mobile parity, spec #6).
+    // `null`/`undefined` ⇒ leave the first-launch default 'system' standing
+    // (spec #7); the seam never re-commits 'system'.
+    if (t === 'light' || t === 'dark') {
+      useThemeStore.getState().setPreference(t);
+    }
+  }, [settings?.theme]);
+
   return null;
 }
 
@@ -222,4 +258,25 @@ export function ThemeBootstrap(): null {
   }, [preference, osScheme]);
 
   return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THEME-03 (MOB-17) — Anti-flash boot (F8 / AC-2).
+//
+// Hydrate from the synchronous cache at the EARLIEST possible point: module
+// top-level, which runs on first import — outside React render, before the tree
+// paints — so a signed-in relaunch paints the persisted theme on frame 1 with no
+// light→dark flash. When the cache is empty (e.g. the THEME-02 suite, which
+// auto-mocks expo-secure-store with an empty store), this is fully inert: the
+// early-return in hydrateThemeFromCache touches neither colorScheme nor the
+// store, so the THEME-02 initial state (preference 'system', resolvedScheme
+// 'dark') and its exactly-once colorScheme.set assertions are unaffected.
+// hydrateThemeFromCache is idempotent, so a later explicit call is safe. Guarded
+// so a SecureStore read failure at import (e.g. a locked keychain) degrades to
+// the unhydrated default rather than crashing the whole bundle load.
+// ─────────────────────────────────────────────────────────────────────────────
+try {
+  hydrateThemeFromCache();
+} catch {
+  // Cold-start hydration is best-effort: fall back to the store defaults.
 }

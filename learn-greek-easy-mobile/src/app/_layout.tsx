@@ -29,7 +29,7 @@ import { useUserSettings } from '@/hooks/use-user-settings';
 import { getPostHog, registerSuperProperties } from '@/lib/analytics/posthog';
 import { queryClient } from '@/lib/query-client';
 import { initSentry } from '@/lib/sentry';
-import { ThemeBootstrap } from '@/stores/theme-store';
+import { ThemeBootstrap, useThemePersistence } from '@/stores/theme-store';
 
 initSentry();
 
@@ -47,6 +47,10 @@ export const unstable_settings = { anchor: '(app)' };
 function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
   const { session, isLoading } = useAuth();
   const settingsQuery = useUserSettings(); // enabled: !!session
+
+  // THEME-03: seed the theme preference from backend settings when the local
+  // cache is empty (web→mobile parity); an explicit local pref is never clobbered.
+  useThemePersistence();
 
   // For a signed-out session, settingsQuery is disabled:
   //   isPending=true (no data ever fetched) BUT isLoading=false

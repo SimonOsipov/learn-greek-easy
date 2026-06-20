@@ -39,11 +39,8 @@ function isThemePreference(v: string | null): v is ThemePreference {
  * treated as a cache miss). Currently a stub returning `null`.
  */
 export function getCachedTheme(): ThemePreference | null {
-  // TODO(THEME-03 executor): replace stub with the synchronous SecureStore read.
-  // Keep `isThemePreference` validation so a bad persisted value is a cache miss.
-  void isThemePreference; // referenced so the validator survives lint until wired
-  void SecureStore;
-  return null;
+  const value = SecureStore.getItem(THEME_CACHE_KEY);
+  return isThemePreference(value) ? value : null;
 }
 
 /**
@@ -52,6 +49,6 @@ export function getCachedTheme(): ThemePreference | null {
  * TODO(THEME-03 executor): implement via
  * `SecureStore.setItem(THEME_CACHE_KEY, preference)`. Currently a no-op.
  */
-export function setCachedTheme(_preference: ThemePreference): void {
-  // TODO(THEME-03 executor): replace no-op with the synchronous SecureStore write.
+export function setCachedTheme(preference: ThemePreference): void {
+  SecureStore.setItem(THEME_CACHE_KEY, preference);
 }
