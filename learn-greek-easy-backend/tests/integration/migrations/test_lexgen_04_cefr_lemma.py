@@ -77,6 +77,32 @@ pytestmark = [
     pytest.mark.db,
 ]
 
+
+# ---------------------------------------------------------------------------
+# Override the integration conftest's autouse async fixture
+# ---------------------------------------------------------------------------
+# tests/integration/conftest.py defines `bind_factory_session` as autouse, and it
+# requires the async `db_session` (-> db_engine -> session_db_engine). That chain
+# runs for EVERY test under tests/integration/, including this FULLY SYNCHRONOUS
+# migration test (psycopg2 + Alembic subprocess), which needs no async DB session.
+# In the full xdist suite that pulls async DB IO into a non-greenlet context and
+# raises sqlalchemy.exc.MissingGreenlet during fixture setup. Shadow it here with a
+# no-op so this module's sync test is fully independent of the async session.
+
+
+@pytest.fixture(autouse=True)
+def bind_factory_session():  # noqa: PT004 — override conftest's async autouse fixture
+    """No-op override of the integration conftest's async autouse fixture.
+
+    This migration test is fully synchronous (psycopg2 + Alembic subprocess) and
+    needs no async DB session; overriding the conftest's autouse async bind avoids
+    a MissingGreenlet in the full xdist suite. Overriding `bind_factory_session`
+    alone severs the entire async chain (db_session -> db_engine -> session_db_engine)
+    for this module — no other autouse fixture in the integration conftest requires it.
+    """
+    yield
+
+
 # ---------------------------------------------------------------------------
 # Constants / paths
 # ---------------------------------------------------------------------------
@@ -84,11 +110,33 @@ pytestmark = [
 # Path to the backend directory (where alembic.ini lives)
 _BACKEND_DIR = Path(__file__).parent.parent.parent.parent  # learn-greek-easy-backend/
 
+
+def _coerce_to_psycopg2(url: str) -> str:
+    """Force a SQLAlchemy URL onto the synchronous psycopg2 driver.
+
+    Alembic and this round-trip test run fully synchronously, but CI sets
+    ``TEST_DATABASE_URL`` to an ``asyncpg`` URL (for the async session engine the
+    rest of the suite uses). Feeding a ``postgresql+asyncpg://`` URL into a
+    synchronous ``create_engine`` raises ``MissingGreenlet`` on connect, because
+    asyncpg attempts IO outside a greenlet. We rewrite the driver to psycopg2 so
+    this test always talks to the same DB over a real sync driver, regardless of
+    how ``TEST_DATABASE_URL`` is shaped.
+    """
+    if url.startswith("postgresql+asyncpg://"):
+        return "postgresql+psycopg2://" + url[len("postgresql+asyncpg://") :]
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg2://" + url[len("postgresql://") :]
+    return url
+
+
 # Database URL base — derive an isolated DB name per test to avoid
-# collision with the shared test DB.
-_BASE_DB_URL = os.environ.get(
-    "TEST_DATABASE_URL",
-    "postgresql+psycopg2://postgres:postgres@localhost:5433/test_learn_greek",
+# collision with the shared test DB. Coerced to psycopg2 because Alembic + this
+# round-trip run synchronously even when CI provides an asyncpg TEST_DATABASE_URL.
+_BASE_DB_URL = _coerce_to_psycopg2(
+    os.environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+psycopg2://postgres:postgres@localhost:5433/test_learn_greek",
+    )
 )
 
 # Admin connection URL (connects to the `postgres` maintenance database)
