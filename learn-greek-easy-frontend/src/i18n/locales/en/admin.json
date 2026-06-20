@@ -449,7 +449,6 @@
       "recentThisWeek": "+{{count}} this week"
     },
     "actions": {
-      "importRss": "Import RSS",
       "new": "+ New article"
     },
     "create": {

@@ -32,7 +32,6 @@ const STRINGS: Record<string, string> = {
   'news.kicker': 'Admin · News',
   'news.breadcrumb.dashboard': 'Admin',
   'news.breadcrumb.current': 'News',
-  'news.actions.importRss': 'Import RSS',
   'news.actions.new': 'New article',
   comingSoon: 'Coming soon',
   // situations
