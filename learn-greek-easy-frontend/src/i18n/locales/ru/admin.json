@@ -625,7 +625,8 @@
         "notGeneratedYet": "Ещё не создано",
         "regenerate": "Перегенерировать",
         "playLabel": "Воспроизвести нарратив {{level}}",
-        "pauseLabel": "Пауза нарратива {{level}}"
+        "pauseLabel": "Пауза нарратива {{level}}",
+        "uploadLabel": "Загрузить аудио {{level}}"
       },
       "translations": {
         "titleEn": "Заголовок — English",

@@ -258,6 +258,7 @@ Reach for these *before* composing new ones.
 | `.practice-card` | Flashcard / culture card with radial gradient backdrop |
 | `.metric-card` / `.metric-label` / `.metric-value` / `.metric-sublabel` | Dashboard metric tile anatomy |
 | `.hairline` | `border-color: hsl(var(--line))` |
+| `.dr-divider-dashed` | Dashed hairline `border-top: 1px dashed hsl(var(--fg) / 0.1)` separating a drawer footer action row from the content above (ADMIN2-39 / F9.5). Token-only; replaces an inline-style border in `NewsEditDrawer.linkedSituation.tsx`. |
 | `.text-fg2` / `.text-fg3` | Foreground variants |
 | `.admin-card` | **Canonical admin list-item surface.** White `hsl(var(--card))` card on the page canvas with a hairline `hsl(var(--fg) / 0.08)` border, `--radius-lg`, and a hover lift (`translateY(-2px)` + `--shadow-2`). The single source of truth for every admin list/row/card skin — compose it with a component-specific layout class (grid/padding). Used by `.cl-entry` (changelog) and applied via className; mirrored by `.sit-card`, `.news-card`, `.fb-card`, `.an-row`. |
 | `.fb-*` family | Admin feedback re-skin chrome (card, vote rail, status grid, canned chips, thread bubbles, meta table). The `.fb-card` surface follows the canonical white-card skin (`--card` bg, `--fg/0.08` border, hover lift). See `src/index.css` under `@layer components`. Token-only — no raw hex. |

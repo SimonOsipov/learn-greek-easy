@@ -154,41 +154,50 @@ export const NewsEditDrawerLinkedSituation: React.FC<Props> = ({
 
       {/* Footer actions */}
       <div
-        className="flex gap-2 pt-2"
-        style={{ borderTop: '1px dashed hsl(var(--fg) / 0.1)' }}
+        className="dr-divider-dashed flex gap-2 pt-2"
         data-testid="news-drawer-linked-situation-footer"
       >
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
-              className="btn-glass btn-sm relative cursor-not-allowed opacity-60"
-              aria-disabled="true"
-              onClick={(e) => e.preventDefault()}
-            >
-              <X size={14} aria-hidden="true" />
-              {t('news.drawer.linkedSituation.unlink')}
-              <span
-                className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
-                aria-hidden="true"
-              />
-            </button>
+            <span>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled
+                aria-disabled="true"
+                className="relative"
+              >
+                <X size={14} aria-hidden="true" />
+                {t('news.drawer.linkedSituation.unlink')}
+                <span
+                  className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
+                  aria-hidden="true"
+                />
+              </Button>
+            </span>
           </TooltipTrigger>
           <TooltipContent>{t('comingSoon')}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
-              className="btn-glass btn-sm relative cursor-not-allowed opacity-60"
-              aria-disabled="true"
-              onClick={(e) => e.preventDefault()}
-            >
-              <Wand2 size={14} aria-hidden="true" />
-              {t('news.drawer.linkedSituation.regenerate')}
-              <span
-                className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
-                aria-hidden="true"
-              />
-            </button>
+            <span>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled
+                aria-disabled="true"
+                className="relative"
+              >
+                <Wand2 size={14} aria-hidden="true" />
+                {t('news.drawer.linkedSituation.regenerate')}
+                <span
+                  className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
+                  aria-hidden="true"
+                />
+              </Button>
+            </span>
           </TooltipTrigger>
           <TooltipContent>{t('comingSoon')}</TooltipContent>
         </Tooltip>

@@ -467,7 +467,7 @@ describe('NewsEditDrawerLinkedSituation — NADM-23 handoff fidelity', () => {
 });
 
 describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
-  it('footer has dashed border-top inline style', () => {
+  it('footer has dashed-divider class (.dr-divider-dashed)', () => {
     const item = makeItem();
     render(
       <MemoryRouter>
@@ -476,7 +476,10 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
     );
     const footer = screen.getByTestId('news-drawer-linked-situation-footer');
     expect(footer).toBeInTheDocument();
-    expect(footer).toHaveStyle({ borderTop: '1px dashed hsl(var(--fg) / 0.1)' });
+    // ADMIN2-39 F9.5: inline-style dashed border replaced by the .dr-divider-dashed
+    // utility class (border-top: 1px dashed hsl(var(--fg) / 0.1)). jsdom can't compute
+    // class-applied CSS, so assert the class membership instead of the resolved style.
+    expect(footer.classList.contains('dr-divider-dashed')).toBe(true);
   });
 
   it('Unlink button is true-disabled (aria-disabled)', () => {
@@ -490,15 +493,18 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
     expect(btn).toHaveAttribute('aria-disabled', 'true');
   });
 
-  it('Unlink button has btn-glass class', () => {
+  it('Unlink button is the Button primitive with native disabled', () => {
     const item = makeItem();
     render(
       <MemoryRouter>
         <NewsEditDrawerLinkedSituation item={item} />
       </MemoryRouter>
     );
+    // ADMIN2-39 F9: the .btn-glass stub was converted to the Button primitive on the
+    // canonical native-disabled mechanic (aria-disabled retained for the strict
+    // disabled-control contract).
     const btn = screen.getByRole('button', { name: /Unlink/i });
-    expect(btn.classList.contains('btn-glass')).toBe(true);
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('Unlink button contains X icon (lucide-react)', () => {
@@ -524,15 +530,17 @@ describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
     expect(btn).toHaveAttribute('aria-disabled', 'true');
   });
 
-  it('Regenerate button has btn-glass class', () => {
+  it('Regenerate button is the Button primitive with native disabled', () => {
     const item = makeItem();
     render(
       <MemoryRouter>
         <NewsEditDrawerLinkedSituation item={item} />
       </MemoryRouter>
     );
+    // ADMIN2-39 F9: .btn-glass stub converted to the Button primitive on the canonical
+    // native-disabled mechanic (aria-disabled retained for the strict disabled contract).
     const btn = screen.getByRole('button', { name: /Regenerate from this article/i });
-    expect(btn.classList.contains('btn-glass')).toBe(true);
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('Regenerate button contains Wand2 icon (lucide-react)', () => {

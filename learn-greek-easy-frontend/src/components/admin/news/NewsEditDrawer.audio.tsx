@@ -9,6 +9,7 @@ import { Pause, Play, RefreshCw, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { tDynamic } from '@/i18n/tDynamic';
 import { type NewsItemResponse } from '@/services/adminAPI';
@@ -192,36 +193,47 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
         <div className="audio-actions">
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-disabled="true"
-                className="btn-glass relative cursor-not-allowed opacity-60"
-                onClick={(e) => e.preventDefault()}
-              >
-                <RefreshCw size={14} />
-                {t('news.drawer.audio.regenerate')}
-                <span
-                  className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
-                  aria-hidden="true"
-                />
-              </button>
+              <span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled
+                  aria-disabled="true"
+                  className="relative"
+                >
+                  <RefreshCw size={14} />
+                  {t('news.drawer.audio.regenerate')}
+                  <span
+                    className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
+                    aria-hidden="true"
+                  />
+                </Button>
+              </span>
             </TooltipTrigger>
             <TooltipContent>{t('comingSoon')}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-disabled="true"
-                className="icon-btn relative cursor-not-allowed opacity-60"
-                onClick={(e) => e.preventDefault()}
-              >
-                <Upload size={16} />
-                <span
-                  className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
-                  aria-hidden="true"
-                />
-              </button>
+              <span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  disabled
+                  aria-disabled="true"
+                  aria-label={t('news.drawer.audio.uploadLabel', {
+                    level: level.toUpperCase(),
+                  })}
+                  className="relative"
+                >
+                  <Upload size={16} />
+                  <span
+                    className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
+                    aria-hidden="true"
+                  />
+                </Button>
+              </span>
             </TooltipTrigger>
             <TooltipContent>{t('comingSoon')}</TooltipContent>
           </Tooltip>

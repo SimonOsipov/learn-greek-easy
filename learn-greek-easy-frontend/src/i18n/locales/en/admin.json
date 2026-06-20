@@ -590,7 +590,8 @@
         "notGeneratedYet": "Not generated yet",
         "regenerate": "Regenerate",
         "playLabel": "Play {{level}} narration",
-        "pauseLabel": "Pause {{level}} narration"
+        "pauseLabel": "Pause {{level}} narration",
+        "uploadLabel": "Upload {{level}} audio"
       },
       "translations": {
         "titleEn": "Title — English",
