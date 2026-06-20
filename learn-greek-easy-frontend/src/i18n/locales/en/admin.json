@@ -2103,6 +2103,8 @@
     "editQuestion": "Edit question",
     "statusReady": "Ready",
     "statusDraft": "Draft",
+    "statusVisible": "Visible to learners",
+    "statusPendingReview": "Pending review",
     "regenerateTranslations": "Regenerate translations",
     "sourcePrefix": "Source",
     "openInNews": "Open in News",

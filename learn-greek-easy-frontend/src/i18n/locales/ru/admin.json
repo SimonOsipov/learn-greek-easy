@@ -2122,6 +2122,8 @@
     "editQuestion": "Редактировать вопрос",
     "statusReady": "Готово",
     "statusDraft": "Черновик",
+    "statusVisible": "Виден ученикам",
+    "statusPendingReview": "На проверке",
     "regenerateTranslations": "Перегенерировать переводы",
     "sourcePrefix": "Источник",
     "openInNews": "Открыть в Новостях",

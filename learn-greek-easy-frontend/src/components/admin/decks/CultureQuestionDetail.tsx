@@ -26,7 +26,6 @@ import { CultureCardForm } from '@/components/admin/CultureCardForm';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { computeCultureChips, isTranslationComplete } from '@/lib/cultureCompleteness';
 import {
   adminAPI,
   type AdminCultureQuestion,
@@ -207,14 +206,12 @@ export function CultureQuestionDetail({ deck, itemId }: CultureQuestionDetailPro
   );
 
   // ── Derived state ──────────────────────────────────────────────────────────
+  //
+  // F3 (ADMIN2-39-02): the status badge reflects the real backend visibility flag
+  // (is_pending_review), NOT a frontend completeness heuristic. Learners see a
+  // question only when is_pending_review === false (culture_question_service.py:458,474).
 
-  const ready = question
-    ? (() => {
-        const chips = computeCultureChips(question);
-        const allOptionsFilled = chips.find((c) => c.name === 'opts')?.color === 'green';
-        return isTranslationComplete(question) && allOptionsFilled;
-      })()
-    : false;
+  const isPendingReview = question?.is_pending_review ?? false;
 
   const headingText = question ? resolveQuestionText(question.question_text) : '';
 
@@ -242,8 +239,11 @@ export function CultureQuestionDetail({ deck, itemId }: CultureQuestionDetailPro
             {headingText}
           </h3>
 
-          <Badge tone={ready ? 'green' : 'amber'} data-testid="culture-question-detail-status">
-            {ready ? t('decks.statusReady') : t('decks.statusDraft')}
+          <Badge
+            tone={isPendingReview ? 'amber' : 'green'}
+            data-testid="culture-question-detail-status"
+          >
+            {isPendingReview ? t('decks.statusPendingReview') : t('decks.statusVisible')}
           </Badge>
         </div>
       </div>
