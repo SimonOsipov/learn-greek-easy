@@ -28,6 +28,10 @@ function renderForm(
   locale: 'en' | 'ru',
   props: Partial<React.ComponentProps<typeof CultureCardForm>> = {}
 ) {
+  // Ensure the i18n instance is on the correct locale before rendering.
+  // The caller may have already called changeLanguage, but this makes
+  // the param meaningful and guarantees locale consistency.
+  void i18n.changeLanguage(locale);
   return render(
     <I18nextProvider i18n={i18n}>
       <CultureCardForm

@@ -18,44 +18,11 @@ import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 
 import { CultureCardForm, type CultureCardFormProps } from '../CultureCardForm';
-import type { AdminCultureQuestion } from '@/services/adminAPI';
 import i18n from '@/i18n';
 
 // ============================================
 // Test Utilities (mirrors CultureCardForm.test.tsx)
 // ============================================
-
-const createMockQuestion = (overrides: Partial<AdminCultureQuestion> = {}): AdminCultureQuestion =>
-  ({
-    id: 'test-question-primitives-1',
-    question_text: {
-      ru: 'Тестовый вопрос',
-      el: 'Ερώτηση δοκιμής',
-      en: 'Test question',
-    },
-    option_a: {
-      ru: 'Ответ А',
-      el: 'Απάντηση Α',
-      en: 'Answer A',
-    },
-    option_b: {
-      ru: 'Ответ Б',
-      el: 'Απάντηση Β',
-      en: 'Answer B',
-    },
-    option_c: null,
-    option_d: null,
-    correct_option: 1,
-    source_article_url: null,
-    is_pending_review: false,
-    created_at: '2026-01-01T00:00:00Z',
-    audio_s3_key: null,
-    news_item_id: null,
-    original_article_url: null,
-    order_index: 0,
-    news_item_audio_a2_s3_key: null,
-    ...overrides,
-  }) as AdminCultureQuestion;
 
 const renderForm = (props: Partial<CultureCardFormProps> = {}) => {
   const defaultProps: CultureCardFormProps = {
