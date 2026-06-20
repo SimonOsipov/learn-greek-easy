@@ -65,11 +65,21 @@ function extractDomainInline(url: string): string {
 }
 
 /**
+ * Returns the first non-empty (non-blank) value from the given candidates,
+ * trimmed, or '—' if all are empty/null/undefined.
+ * Using this instead of `??` prevents empty-string translations from blocking
+ * fallback to the next language.
+ */
+function firstNonEmpty(...values: Array<string | null | undefined>): string {
+  return values.find((v) => v?.trim())?.trim() ?? '—';
+}
+
+/**
  * Resolve display text for a multilingual question_text record.
  * Fallback chain: en → el → ru → '—' (mirrors CultureDrawerBody.resolveQuestionText).
  */
 function resolveQuestionText(question_text: Record<string, string>): string {
-  return question_text['en'] ?? question_text['el'] ?? question_text['ru'] ?? '—';
+  return firstNonEmpty(question_text['en'], question_text['el'], question_text['ru']);
 }
 
 /**
@@ -341,7 +351,7 @@ export function CultureQuestionDetail({ deck, itemId }: CultureQuestionDetailPro
                       {activeOptions(question).map((opt, index) => {
                         const isCorrect = question.correct_option === index + 1;
                         const label = ['A', 'B', 'C', 'D'][index];
-                        const text = opt['en'] ?? opt['el'] ?? opt['ru'] ?? '—';
+                        const text = firstNonEmpty(opt['en'], opt['el'], opt['ru']);
                         return (
                           <li
                             key={label}

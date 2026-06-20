@@ -89,6 +89,23 @@ function makeFormSchema(t: (key: string, opts?: Record<string, string>) => strin
       answer_count: z.number().min(MIN_ANSWERS).max(MAX_ANSWERS),
     })
     .superRefine((data, ctx) => {
+      // Validate that the question is non-blank (trim-aware) for each language
+      for (const lang of LANGUAGES) {
+        if (!data.question[lang]?.trim()) {
+          const msgKey =
+            lang === 'ru'
+              ? 'decks.culture.form.zodRuRequired'
+              : lang === 'el'
+                ? 'decks.culture.form.zodElRequired'
+                : 'decks.culture.form.zodEnRequired';
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t(msgKey),
+            path: ['question', lang],
+          });
+        }
+      }
+
       // Validate that all active answers are filled
       const activeAnswers = ANSWER_KEYS.slice(0, data.answer_count);
 

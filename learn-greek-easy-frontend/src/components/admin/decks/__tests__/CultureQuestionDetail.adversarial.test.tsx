@@ -259,4 +259,55 @@ describe('CultureQuestionDetail — ADMIN2-38-05 adversarial', () => {
     expect(readView).toHaveTextContent('Только русский вопрос');
     expect(readView).toHaveTextContent('—');
   });
+
+  // ── 4. Fix 2 (CodeRabbit Minor): empty-string translations skip the fallback ─
+
+  it('heading resolves to next language when the preferred language (EN) is an empty string', async () => {
+    // Before the fix, `?? ` treats "" as present and resolves to "".
+    // After the fix, firstNonEmpty skips "" and falls through to the EL value.
+    (adminAPI.listCultureQuestions as Mock).mockResolvedValue(
+      makeListResponse([
+        makeQuestion({
+          question_text: {
+            en: '', // preferred is explicitly empty — should fall back, not blank the heading
+            el: 'Ποιο είναι το εθνικό άθλημα;',
+            ru: 'Какой национальный спорт?',
+          },
+        }),
+      ])
+    );
+
+    renderDetail();
+
+    await waitFor(() =>
+      expect(screen.getByTestId('culture-question-detail-title')).toBeInTheDocument()
+    );
+
+    // The heading must show the EL value (next in the chain), not blank.
+    expect(screen.getByTestId('culture-question-detail-title')).toHaveTextContent(
+      'Ποιο είναι το εθνικό άθλημα;'
+    );
+  });
+
+  it('answer text resolves to next language when the preferred language (EN) is an empty string', async () => {
+    // Same ?? vs firstNonEmpty issue on the option text at line ~354.
+    (adminAPI.listCultureQuestions as Mock).mockResolvedValue(
+      makeListResponse([
+        makeQuestion({
+          option_a: { en: '', el: 'Ποδόσφαιρο', ru: 'Футбол' },
+          option_b: { en: '', el: 'Μπάσκετ', ru: 'Баскетбол' },
+        }),
+      ])
+    );
+
+    renderDetail();
+
+    await waitFor(() =>
+      expect(screen.getByTestId('culture-question-read-view')).toBeInTheDocument()
+    );
+
+    // Options A and B must show the EL fallback, not blank.
+    expect(screen.getByTestId('culture-question-read-answer-A')).toHaveTextContent('Ποδόσφαιρο');
+    expect(screen.getByTestId('culture-question-read-answer-B')).toHaveTextContent('Μπάσκετ');
+  });
 });

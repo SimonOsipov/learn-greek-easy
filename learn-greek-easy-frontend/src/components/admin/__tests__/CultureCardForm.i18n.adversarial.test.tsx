@@ -260,4 +260,45 @@ describe('CultureCardForm — adversarial i18n (ADMIN2-38-04)', () => {
     });
     expect(screen.queryByText('Текст на русском обязателен')).not.toBeInTheDocument();
   });
+
+  /**
+   * Fix 1 (CodeRabbit Major): whitespace-only question text must be REJECTED.
+   * The .min(1) base rule accepts "   " because it has length > 0; the
+   * superRefine trim-check must fire and surface the localized required message.
+   *
+   * Renders under EN locale, fills the RU question with spaces only,
+   * fills everything else validly, submits → expects the English required error.
+   */
+  it('EN: whitespace-only RU question is rejected with the localized required message', async () => {
+    const user = userEvent.setup();
+    renderForm('en');
+
+    // Fill EL tab fully
+    await user.click(screen.getByTestId('lang-tab-el'));
+    await user.type(screen.getByTestId('question-input-el'), 'Ερώτηση');
+    await user.type(screen.getByTestId('answer-input-A-el'), 'Α');
+    await user.type(screen.getByTestId('answer-input-B-el'), 'Β');
+
+    // Fill EN tab fully
+    await user.click(screen.getByTestId('lang-tab-en'));
+    await user.type(screen.getByTestId('question-input-en'), 'Question');
+    await user.type(screen.getByTestId('answer-input-A-en'), 'A');
+    await user.type(screen.getByTestId('answer-input-B-en'), 'B');
+
+    // RU tab: type only spaces into the question (whitespace-only), fill answers
+    await user.click(screen.getByTestId('lang-tab-ru'));
+    await user.type(screen.getByTestId('question-input-ru'), '   ');
+    await user.type(screen.getByTestId('answer-input-A-ru'), 'А');
+    await user.type(screen.getByTestId('answer-input-B-ru'), 'Б');
+
+    await user.click(screen.getByTestId('culture-question-card-save'));
+
+    // Expect the localized required error for the RU question (EN locale → EN message)
+    await waitFor(() => {
+      expect(screen.getByText('Russian text is required')).toBeInTheDocument();
+    });
+    // onSubmit must NOT have been called
+    // (the form was still on screen after submit attempt = validation blocked it)
+    expect(screen.queryByText('Save Question')).toBeInTheDocument();
+  });
 });
