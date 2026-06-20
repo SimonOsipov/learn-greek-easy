@@ -392,5 +392,16 @@ describe('IdentityEditSection', () => {
       await user.click(screen.getByTestId('identity-edit-btn'));
       expect(screen.getByTestId('identity-edit-form')).toBeInTheDocument();
     });
+
+    it('pencil-actions wrapper is removed from DOM while isEditing (adversarial: !isEditing guard)', async () => {
+      const user = userEvent.setup();
+      renderWithI18n(<IdentityEditSection wordEntry={createMockWordEntry()} {...defaultProps} />);
+      // In read mode the wrapper is present.
+      expect(screen.getByTestId('identity-pencil-actions')).toBeInTheDocument();
+      // Enter edit mode.
+      await user.click(screen.getByTestId('identity-edit-btn'));
+      // The !isEditing guard must remove the entire wrapper from the DOM — not just hide it.
+      expect(screen.queryByTestId('identity-pencil-actions')).not.toBeInTheDocument();
+    });
   });
 });

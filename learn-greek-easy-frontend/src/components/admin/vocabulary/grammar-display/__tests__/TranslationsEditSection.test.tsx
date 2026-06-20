@@ -374,5 +374,16 @@ describe('TranslationsEditSection', () => {
       await user.click(screen.getByTestId('translations-edit-btn'));
       expect(screen.getByTestId('translations-edit-form')).toBeInTheDocument();
     });
+
+    it('pencil-actions wrapper is removed from DOM while isEditing (adversarial: !isEditing guard)', async () => {
+      const user = userEvent.setup();
+      renderWithI18n(<TranslationsEditSection wordEntry={createMockWordEntry()} />);
+      // In read mode the wrapper is present.
+      expect(screen.getByTestId('translations-pencil-actions')).toBeInTheDocument();
+      // Enter edit mode.
+      await user.click(screen.getByTestId('translations-edit-btn'));
+      // The !isEditing guard must remove the entire wrapper from the DOM — not just hide it.
+      expect(screen.queryByTestId('translations-pencil-actions')).not.toBeInTheDocument();
+    });
   });
 });
