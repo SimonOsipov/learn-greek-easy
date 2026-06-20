@@ -233,11 +233,16 @@ describe('CultureQuestionDetail — ADMIN2-38-05 adversarial', () => {
 
   // ── 3. Read view with a missing optional language ─────────────────────────
 
-  it('read view renders the "—" fallback for a blank language slot without crashing', async () => {
+  it('read view renders the "—" fallback for a blank language slot and switches one language at a time', async () => {
+    // ADMIN2-39-03 F4: the read view now shows ONE language at a time (default EL)
+    // via the EL·EN·RU switcher, instead of stacking all three. With a blank EL
+    // question the default (EL) view shows the '—' fallback; switching to EN / RU
+    // surfaces each value in turn (and proves no crash on the blank slot).
+    const user = userEvent.setup();
     (adminAPI.listCultureQuestions as Mock).mockResolvedValue(
       makeListResponse([
         makeQuestion({
-          // EL question text blank → read view EL row must show the em-dash fallback.
+          // EL question text blank → default (EL) view must show the em-dash fallback.
           question_text: {
             en: 'EN only question',
             el: '',
@@ -252,12 +257,19 @@ describe('CultureQuestionDetail — ADMIN2-38-05 adversarial', () => {
     await waitFor(() =>
       expect(screen.getByTestId('culture-question-read-view')).toBeInTheDocument()
     );
-    const readView = screen.getByTestId('culture-question-read-view');
 
-    // EN + RU present, EL renders the '—' fallback (does not crash, does not blank).
-    expect(readView).toHaveTextContent('EN only question');
-    expect(readView).toHaveTextContent('Только русский вопрос');
-    expect(readView).toHaveTextContent('—');
+    // Default language is EL → blank slot renders the '—' fallback (does not crash).
+    expect(screen.getByTestId('culture-question-read-text')).toHaveTextContent('—');
+
+    // Switch to EN → only the EN value is shown.
+    await user.click(screen.getByTestId('culture-read-lang-en'));
+    expect(screen.getByTestId('culture-question-read-text')).toHaveTextContent('EN only question');
+
+    // Switch to RU → only the RU value is shown.
+    await user.click(screen.getByTestId('culture-read-lang-ru'));
+    expect(screen.getByTestId('culture-question-read-text')).toHaveTextContent(
+      'Только русский вопрос'
+    );
   });
 
   // ── 4. Fix 2 (CodeRabbit Minor): empty-string translations skip the fallback ─
