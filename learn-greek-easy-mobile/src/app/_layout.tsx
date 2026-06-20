@@ -29,6 +29,7 @@ import { useUserSettings } from '@/hooks/use-user-settings';
 import { getPostHog, registerSuperProperties } from '@/lib/analytics/posthog';
 import { queryClient } from '@/lib/query-client';
 import { initSentry } from '@/lib/sentry';
+import { ThemeBootstrap } from '@/stores/theme-store';
 
 initSentry();
 
@@ -57,6 +58,10 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
 
   return (
     <>
+      {/* Theme driver: applies the stored preference on mount and mirrors OS
+          flips into the store. Mounted here (inside QueryClientProvider) rather
+          than RootLayout; non-visual, runs for the whole app. */}
+      <ThemeBootstrap />
       <AnimatedSplashOverlay isReady={ready} />
       {ready && (
         <Stack screenOptions={{ headerShown: false }}>
