@@ -206,7 +206,8 @@ def test_loader_lowercases_and_nfc_normalizes_before_normalize(tmp_path):
     mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
 
     with patch("src.scripts.load_cefr_lemma._get_connection", return_value=mock_conn):
-        load_data(source=str(source_file), normalize=mock_normalize)
+        with patch("src.scripts.load_cefr_lemma.psycopg2.extras.execute_values"):
+            load_data(source=str(source_file), normalize=mock_normalize)
 
     assert len(captured_calls) >= 1, "normalize was never called"
     assert captured_calls[0] == expected_value_passed, (
@@ -672,3 +673,125 @@ def test_force_deletes_both_tables_before_reload(tmp_path):
         assert (
             delete_review_idx < first_insert_idx
         ), f"DELETE:cefr_lemma_review must precede first INSERT; call_log={call_log!r}"
+
+
+# ===========================================================================
+# Adversarial: merge_by_precedence — frequency_bin sole source survives
+# ===========================================================================
+
+
+@pytest.mark.unit
+def test_merge_frequency_bin_sole_source_survives():
+    """A lemma arriving ONLY from frequency_bin must survive merge at its own level.
+
+    Regression guard: merge_by_precedence must not silently drop a lemma that
+    has no keg_glossary or deck_export entry — it is the sole candidate and
+    should be returned as-is.
+    """
+    from src.scripts.load_cefr_lemma import merge_by_precedence  # noqa: PLC0415
+
+    rows = [{"lemma": "αυτοκίνητο", "level": "B2", "source": "frequency_bin"}]
+    result = merge_by_precedence(rows)
+
+    assert len(result) == 1, (
+        "merge_by_precedence must not drop a lemma with sole frequency_bin source; "
+        f"got {result!r}"
+    )
+    assert result[0]["lemma"] == "αυτοκίνητο"
+    assert result[0]["level"] == "B2"
+    assert result[0]["source"] == "frequency_bin"
+    assert not result[0].get("closed_class"), "Non-closed-class row must have closed_class falsy"
+
+
+# ===========================================================================
+# Adversarial: normalize returns confidence>0 but a different lemma
+# ===========================================================================
+
+
+@pytest.mark.unit
+def test_normalize_returns_different_lemma_attestation_uses_normalized(tmp_path):
+    """When normalize returns a lemma different from the NFC-lowercased input,
+    attestation and insert use the normalized lemma — not the pre-normalization form.
+
+    Scenario: raw='σπίτια' (inflected plural) → loader passes NFC(lower()) = 'σπίτια'
+    to normalize → normalize returns lemma='σπίτι' (confidence=0.9).
+    The attestation query and the inserted row must use 'σπίτι', not 'σπίτια'.
+    """
+    from src.scripts.load_cefr_lemma import load_data  # noqa: PLC0415
+
+    source_file = tmp_path / "candidates.csv"
+    source_file.write_text("lemma,level,source\nσπίτια,A2,keg_glossary\n", encoding="utf-8")
+
+    # normalize returns the canonical lemma, not the inflected input
+    normalize_mock = MagicMock(return_value=_make_normalized("σπίτια", "σπίτι", confidence=0.9))
+
+    inserted_rows: list[tuple] = []
+    mock_cursor = MagicMock()
+    # attestation: return the NORMALIZED lemma — proves the correct value was queried
+    mock_cursor.fetchall.return_value = [("σπίτι",)]
+
+    def capture_execute_values(cursor, sql, batch, **kwargs):
+        if "cefr_lemma" in sql.lower() and "review" not in sql.lower():
+            inserted_rows.extend(batch)
+
+    mock_conn = MagicMock()
+    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+    mock_conn.__exit__ = MagicMock(return_value=False)
+    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+    with patch("src.scripts.load_cefr_lemma._get_connection", return_value=mock_conn):
+        with patch(
+            "src.scripts.load_cefr_lemma.psycopg2.extras.execute_values",
+            side_effect=capture_execute_values,
+        ):
+            load_data(source=str(source_file), normalize=normalize_mock)
+
+    assert len(inserted_rows) >= 1, (
+        "Attested normalized lemma 'σπίτι' must appear in cefr_lemma; "
+        f"got inserted_rows={inserted_rows!r}"
+    )
+    assert any("σπίτι" in str(row) for row in inserted_rows), (
+        "Inserted row must contain normalized lemma 'σπίτι'; "
+        f"got inserted_rows={inserted_rows!r}"
+    )
+    assert not any("σπίτια" in str(row) for row in inserted_rows), (
+        "Pre-normalization inflected form 'σπίτια' must not appear in cefr_lemma insert; "
+        f"got inserted_rows={inserted_rows!r}"
+    )
+
+
+# ===========================================================================
+# Adversarial: closed_class beats keg_glossary even at higher level
+# ===========================================================================
+
+
+@pytest.mark.unit
+def test_closed_class_beats_keg_glossary_regardless_of_level():
+    """closed_class override beats keg_glossary even when keg_glossary arrives FIRST at B1.
+
+    This is the order-sensitivity check: even if keg_glossary B1 is the first row
+    seen by merge_by_precedence, a subsequent closed_class row must override it to A1.
+    """
+    from src.scripts.load_cefr_lemma import merge_by_precedence  # noqa: PLC0415
+
+    rows = [
+        # keg_glossary arrives first — it is the highest-precedence open-class source
+        {"lemma": "το", "level": "B1", "source": "keg_glossary"},
+        # closed_class arrives second — must override the keg_glossary pick
+        {"lemma": "το", "level": "A1", "source": "closed_class", "closed_class": True},
+    ]
+
+    result = merge_by_precedence(rows)
+
+    assert len(result) == 1, f"Expected 1 merged row; got {result!r}"
+    assert result[0]["level"] == "A1", (
+        "closed_class must force level=A1 even when keg_glossary B1 arrived first; "
+        f"got {result[0]!r}"
+    )
+    assert (
+        result[0].get("closed_class") is True
+    ), f"Merged row must have closed_class=True; got {result[0]!r}"
+    assert (
+        result[0]["source"] == "closed_class"
+    ), f"Winning source must be 'closed_class'; got {result[0]!r}"
