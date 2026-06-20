@@ -69,7 +69,7 @@
   --badge-recommended: 34 100% 52%; /* #ff950a — brand Cyprus gold */
 }
 
-.dark {
+.dark:root {
   /* ── Practice palette (dark overrides, MOB-09) ── */
   --practice-bg: 222 47% 11%;
   --practice-card: 215 28% 17%;
