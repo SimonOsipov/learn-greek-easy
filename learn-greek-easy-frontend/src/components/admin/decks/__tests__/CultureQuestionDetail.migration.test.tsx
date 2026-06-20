@@ -343,15 +343,19 @@ describe('CultureQuestionDetail — ADMIN2-38-05 migration contract (RED)', () =
 
   // ── AC-4d: Badge uses tone token, NOT raw color classes ───────────────────
 
-  it('AC-4d: Draft status badge uses Badge tone="amber" (renders .b-amber class, no bg-amber-500/10)', async () => {
+  it('AC-4d: pending-review status badge uses Badge tone="amber" (renders .b-amber class, no bg-amber-500/10)', async () => {
+    // F3 (ADMIN2-39-02): the badge is now driven SOLELY by is_pending_review, not
+    // by option/translation completeness. is_pending_review:true → amber "Pending review".
     (adminAPI.listCultureQuestions as Mock).mockResolvedValue(
-      makeListResponse([makeDraftQuestion()])
+      makeListResponse([makeDraftQuestion({ is_pending_review: true })])
     );
 
     renderDetail();
 
     await waitFor(() => {
-      expect(screen.getByTestId('culture-question-detail-status')).toBeInTheDocument();
+      expect(screen.getByTestId('culture-question-detail-status')).toHaveTextContent(
+        'Pending review'
+      );
     });
 
     const badge = screen.getByTestId('culture-question-detail-status');
@@ -365,15 +369,18 @@ describe('CultureQuestionDetail — ADMIN2-38-05 migration contract (RED)', () =
     expect(badge.className).not.toMatch(/bg-amber-500/);
   });
 
-  it('AC-4d: Ready status badge uses Badge tone="green" (renders .b-green class, no bg-green-500/10)', async () => {
+  it('AC-4d: visible status badge uses Badge tone="green" (renders .b-green class, no bg-green-500/10)', async () => {
+    // F3 (ADMIN2-39-02): is_pending_review:false → green "Visible to learners".
     (adminAPI.listCultureQuestions as Mock).mockResolvedValue(
-      makeListResponse([makeReadyQuestion()])
+      makeListResponse([makeReadyQuestion({ is_pending_review: false })])
     );
 
     renderDetail();
 
     await waitFor(() => {
-      expect(screen.getByTestId('culture-question-detail-status')).toHaveTextContent('Ready');
+      expect(screen.getByTestId('culture-question-detail-status')).toHaveTextContent(
+        'Visible to learners'
+      );
     });
 
     const badge = screen.getByTestId('culture-question-detail-status');
