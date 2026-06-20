@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import type {
@@ -358,149 +359,149 @@ export function CultureCardForm({
         data-testid="culture-card-form"
       >
         {/* Language Tabs */}
-        <div className="flex gap-1 rounded-lg bg-muted p-1">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Language)}>
+          <TabsList className="w-full">
+            {LANGUAGES.map((lang) => (
+              <TabsTrigger
+                key={lang}
+                value={lang}
+                className="relative flex-1"
+                data-testid={`lang-tab-${lang}`}
+              >
+                {LANGUAGE_LABELS[lang]}
+                {isTabIncomplete(lang) && (
+                  <span
+                    className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-warning"
+                    data-testid={`lang-tab-${lang}-incomplete`}
+                  />
+                )}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          {/* Tab Content */}
           {LANGUAGES.map((lang) => (
-            <button
-              key={lang}
-              type="button"
-              onClick={() => setActiveTab(lang)}
-              data-testid={`lang-tab-${lang}`}
-              className={cn(
-                'relative flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors',
-                activeTab === lang ? 'bg-background shadow' : 'hover:bg-background/50'
-              )}
-            >
-              {LANGUAGE_LABELS[lang]}
-              {isTabIncomplete(lang) && (
-                <span
-                  className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
-                  data-testid={`lang-tab-${lang}-incomplete`}
-                />
-              )}
-            </button>
+            <TabsContent key={lang} value={lang} className="space-y-6">
+              {/* Question Field */}
+              <FormField
+                control={control}
+                name={`question.${lang}`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {t('decks.culture.form.questionLabel', { lang: LANGUAGE_LABELS[lang] })}
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder={t('decks.culture.form.questionPlaceholder', {
+                          lang: LANGUAGE_LABELS[lang],
+                        })}
+                        rows={3}
+                        data-testid={`question-input-${lang}`}
+                        className={cn(errors.question?.[lang] && 'border-destructive')}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Answer Fields */}
+              <div className="space-y-4">
+                <Label>
+                  {t('decks.culture.form.answersLabel', { lang: LANGUAGE_LABELS[lang] })}
+                </Label>
+
+                {ANSWER_KEYS.slice(0, answerCount).map((key, index) => {
+                  const optionNum = index + 1;
+                  const canDelete = answerCount > MIN_ANSWERS;
+
+                  return (
+                    <div key={key} className="flex items-start gap-3">
+                      {/* Radio for correct answer */}
+                      <div className="flex items-center pt-2">
+                        <input
+                          type="radio"
+                          name={`correct-answer-${lang}`}
+                          value={optionNum}
+                          checked={correctOption === optionNum}
+                          onChange={() => {
+                            setValue('correct_option', optionNum as 1 | 2 | 3 | 4, {
+                              shouldDirty: true,
+                            });
+                          }}
+                          className="h-4 w-4 cursor-pointer accent-primary"
+                          data-testid={`correct-radio-${key}-${lang}`}
+                          aria-label={t('decks.culture.form.markCorrect', { key })}
+                        />
+                      </div>
+
+                      {/* Answer label */}
+                      <span className="w-6 pt-2 text-sm font-medium text-muted-foreground">
+                        {key}.
+                      </span>
+
+                      {/* Answer input */}
+                      <div className="flex-1">
+                        <Input
+                          {...register(`option_${key.toLowerCase()}.${lang}` as keyof FormData)}
+                          placeholder={t('decks.culture.form.answerPlaceholder', { key })}
+                          data-testid={`answer-input-${key}-${lang}`}
+                          className={cn(hasOptionError(key, lang) && 'border-destructive')}
+                          value={getOptionValue(key, lang)}
+                          onChange={(e) => {
+                            type OptionKey = 'option_a' | 'option_b' | 'option_c' | 'option_d';
+                            const optKey = `option_${key.toLowerCase()}` as OptionKey;
+                            const currentOption = watchedValues[optKey] as MultilingualName | null;
+                            setValue(
+                              optKey,
+                              {
+                                ...(currentOption || createEmptyMultilingual()),
+                                [lang]: e.target.value,
+                              },
+                              { shouldDirty: true, shouldValidate: true }
+                            );
+                          }}
+                        />
+                      </div>
+
+                      {/* Delete button */}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteAnswer(index)}
+                        disabled={!canDelete}
+                        className={cn(
+                          'h-6 w-6 shrink-0',
+                          !canDelete && 'cursor-not-allowed opacity-50'
+                        )}
+                        data-testid={`delete-answer-${key}`}
+                        aria-label={t('decks.culture.form.deleteAnswer', { key })}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  );
+                })}
+
+                {/* Add Answer Button */}
+                {answerCount < MAX_ANSWERS && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleAddAnswer}
+                    className="w-full"
+                    data-testid="add-answer-btn"
+                  >
+                    {t('decks.culture.form.addAnswer', { key: ANSWER_KEYS[answerCount] })}
+                  </Button>
+                )}
+              </div>
+            </TabsContent>
           ))}
-        </div>
-
-        {/* Tab Content */}
-        {LANGUAGES.map((lang) => (
-          <div key={lang} className={cn('space-y-6', activeTab !== lang && 'hidden')}>
-            {/* Question Field */}
-            <FormField
-              control={control}
-              name={`question.${lang}`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    {t('decks.culture.form.questionLabel', { lang: LANGUAGE_LABELS[lang] })}
-                  </FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      placeholder={t('decks.culture.form.questionPlaceholder', {
-                        lang: LANGUAGE_LABELS[lang],
-                      })}
-                      rows={3}
-                      data-testid={`question-input-${lang}`}
-                      className={cn(errors.question?.[lang] && 'border-destructive')}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Answer Fields */}
-            <div className="space-y-4">
-              <Label>{t('decks.culture.form.answersLabel', { lang: LANGUAGE_LABELS[lang] })}</Label>
-
-              {ANSWER_KEYS.slice(0, answerCount).map((key, index) => {
-                const optionNum = index + 1;
-                const canDelete = answerCount > MIN_ANSWERS;
-
-                return (
-                  <div key={key} className="flex items-start gap-3">
-                    {/* Radio for correct answer */}
-                    <div className="flex items-center pt-2">
-                      <input
-                        type="radio"
-                        name={`correct-answer-${lang}`}
-                        value={optionNum}
-                        checked={correctOption === optionNum}
-                        onChange={() => {
-                          setValue('correct_option', optionNum as 1 | 2 | 3 | 4, {
-                            shouldDirty: true,
-                          });
-                        }}
-                        className="h-4 w-4 cursor-pointer accent-primary"
-                        data-testid={`correct-radio-${key}-${lang}`}
-                        aria-label={t('decks.culture.form.markCorrect', { key })}
-                      />
-                    </div>
-
-                    {/* Answer label */}
-                    <span className="w-6 pt-2 text-sm font-medium text-muted-foreground">
-                      {key}.
-                    </span>
-
-                    {/* Answer input */}
-                    <div className="flex-1">
-                      <Input
-                        {...register(`option_${key.toLowerCase()}.${lang}` as keyof FormData)}
-                        placeholder={t('decks.culture.form.answerPlaceholder', { key })}
-                        data-testid={`answer-input-${key}-${lang}`}
-                        className={cn(hasOptionError(key, lang) && 'border-destructive')}
-                        value={getOptionValue(key, lang)}
-                        onChange={(e) => {
-                          type OptionKey = 'option_a' | 'option_b' | 'option_c' | 'option_d';
-                          const optKey = `option_${key.toLowerCase()}` as OptionKey;
-                          const currentOption = watchedValues[optKey] as MultilingualName | null;
-                          setValue(
-                            optKey,
-                            {
-                              ...(currentOption || createEmptyMultilingual()),
-                              [lang]: e.target.value,
-                            },
-                            { shouldDirty: true, shouldValidate: true }
-                          );
-                        }}
-                      />
-                    </div>
-
-                    {/* Delete button */}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteAnswer(index)}
-                      disabled={!canDelete}
-                      className={cn(
-                        'h-10 w-10 shrink-0',
-                        !canDelete && 'cursor-not-allowed opacity-50'
-                      )}
-                      data-testid={`delete-answer-${key}`}
-                      aria-label={t('decks.culture.form.deleteAnswer', { key })}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                );
-              })}
-
-              {/* Add Answer Button */}
-              {answerCount < MAX_ANSWERS && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleAddAnswer}
-                  className="w-full"
-                  data-testid="add-answer-btn"
-                >
-                  {t('decks.culture.form.addAnswer', { key: ANSWER_KEYS[answerCount] })}
-                </Button>
-              )}
-            </div>
-          </div>
-        ))}
+        </Tabs>
 
         {/* Correct answer validation error — rendered once, outside the per-language loop.
             Carries data-slot="form-message" so it shares the same validation-error surface
