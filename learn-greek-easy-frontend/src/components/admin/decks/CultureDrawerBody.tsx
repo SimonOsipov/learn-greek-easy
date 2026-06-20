@@ -210,7 +210,7 @@ export function CultureDrawerBody({ deck }: CultureDrawerBodyProps) {
                 />
 
                 {/* Content */}
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 pr-16">
                   {/* Question text in English */}
                   <div className="flex flex-wrap items-center gap-2">
                     <span lang="en" className="text-base font-medium leading-tight">
