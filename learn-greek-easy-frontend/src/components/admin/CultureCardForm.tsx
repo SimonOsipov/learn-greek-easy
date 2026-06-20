@@ -450,7 +450,7 @@ export function CultureCardForm({
                       !canDelete && 'cursor-not-allowed opacity-50'
                     )}
                     data-testid={`delete-answer-${key}`}
-                    aria-label={`Delete answer ${key}`}
+                    aria-label={t('decks.culture.form.deleteAnswer', { key })}
                   >
                     <X className="h-4 w-4" />
                   </Button>

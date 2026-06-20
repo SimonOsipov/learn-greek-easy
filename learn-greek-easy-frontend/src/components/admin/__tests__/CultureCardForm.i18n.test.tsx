@@ -269,4 +269,25 @@ describe('CultureCardForm — localization (ADMIN2-38-04)', () => {
 
     expect(screen.getByText('Вопрос (EN)')).toBeInTheDocument();
   });
+
+  /**
+   * Delete-answer button aria-label (AC-4a fix — ADMIN2-38-04)
+   * ru key: decks.culture.form.deleteAnswer → "Удалить ответ {{key}}"
+   *
+   * Previously hardcoded: aria-label={`Delete answer ${key}`}
+   * Now routed through t() — renders "Удалить ответ A" in RU locale.
+   *
+   * The form renders all 3 lang tabs simultaneously (hidden via CSS).
+   * data-testid="delete-answer-A" appears once per tab = 3 total.
+   * We assert that ALL of them carry the RU aria-label (not hardcoded EN).
+   */
+  it('renders the delete-answer aria-label in RU', () => {
+    renderFormRu();
+    // All three tab instances of delete-answer-A must carry the RU label.
+    const deleteButtons = screen.getAllByTestId('delete-answer-A');
+    expect(deleteButtons.length).toBeGreaterThan(0);
+    for (const btn of deleteButtons) {
+      expect(btn).toHaveAttribute('aria-label', 'Удалить ответ A');
+    }
+  });
 });

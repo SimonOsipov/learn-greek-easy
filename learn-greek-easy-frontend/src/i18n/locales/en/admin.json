@@ -2133,6 +2133,7 @@
         "selectCorrect": "Please select a correct answer",
         "saveQuestion": "Save Question",
         "markCorrect": "Mark answer {{key}} as correct",
+        "deleteAnswer": "Delete answer {{key}}",
         "zodRuRequired": "Russian text is required",
         "zodElRequired": "Greek text is required",
         "zodEnRequired": "English text is required",
