@@ -696,7 +696,7 @@ jobs:
 
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report-${{ matrix.browser }}-shard-${{ matrix.shard }}
           path: learn-greek-easy-frontend/playwright-report/
@@ -704,7 +704,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-results-${{ matrix.browser }}-shard-${{ matrix.shard }}
           path: learn-greek-easy-frontend/test-results/
@@ -837,7 +837,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: backend-coverage-report
           path: |
@@ -992,7 +992,7 @@ jobs:
             --tb=short
 
       - name: Upload E2E test results
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: e2e-test-results

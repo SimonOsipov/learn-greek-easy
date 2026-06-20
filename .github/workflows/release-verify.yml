@@ -350,7 +350,7 @@ jobs:
           # API smoke tests are informational - don't fail the job
 
       - name: Upload Health Check Results
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: health-check-results
@@ -733,7 +733,7 @@ jobs:
 
       - name: Upload Maestro debug artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: mobile-e2e-maestro
           path: |
@@ -780,7 +780,7 @@ jobs:
         run: node scripts/release-web-verify.cjs
       - name: Upload web verify screenshots
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: web-verify-screenshots
           path: learn-greek-easy-frontend/web-verify-reports/
@@ -890,7 +890,7 @@ jobs:
           echo "dashboard_p95=${DASHBOARD_P95}" >> $GITHUB_OUTPUT
 
       - name: Upload K6 Reports
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: k6-performance-reports
@@ -1010,7 +1010,7 @@ jobs:
           fi
 
       - name: Upload Accessibility Report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: accessibility-report
@@ -1242,7 +1242,7 @@ jobs:
 
       - name: Upload Lighthouse Reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: lighthouse-reports
           path: learn-greek-easy-frontend/lighthouse-reports/
@@ -1258,7 +1258,7 @@ jobs:
 
       - name: Upload Lighthouse Summary
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: lighthouse-summary
           path: |
