@@ -5,13 +5,14 @@
 // one-at-a-time enforcement, cleanup on unmount.
 // NADM-19: chrome tests — audio-play class, RefreshCw icon, Upload icon, primary colors.
 // ADMIN2-32: audio tab is now B1 + A2 (two rows); the phantom disabled B1 row was removed.
+// ADMIN2-40 F10 (RED specs, task-1084): SSE wiring for Audio Regenerate button.
 
 import React from 'react';
 
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { NewsItemResponse } from '@/services/adminAPI';
+import type { LinkedSituationSummary, NewsItemResponse } from '@/services/adminAPI';
 
 import { NewsEditDrawerAudio } from '../NewsEditDrawer.audio';
 
@@ -33,39 +34,116 @@ vi.mock('@/components/ui/tooltip', () => ({
   ),
 }));
 
+// ── ADMIN2-40 F10: useSSE mock (mirrors GenerateNounDialog.sse.test.tsx pattern) ──
+//
+// Capture onEvent / onError callbacks so tests can fire SSE events directly.
+// Also track all useSSE calls to assert url + options args.
+
+let capturedOnEvent: ((event: { type: string; data: unknown }) => void) | undefined;
+let capturedOnError: ((err: Error) => void) | undefined;
+let lastUseSSECallArgs: { url: string | null; options: Record<string, unknown> } | undefined;
+
+vi.mock('@/hooks/useSSE', () => ({
+  useSSE: vi.fn(
+    (
+      url: string | null,
+      options: {
+        onEvent?: (e: unknown) => void;
+        onError?: (e: unknown) => void;
+        enabled?: boolean;
+        method?: string;
+        maxRetries?: number;
+      }
+    ) => {
+      lastUseSSECallArgs = { url, options: options as Record<string, unknown> };
+      if (options.enabled) {
+        capturedOnEvent = options.onEvent as typeof capturedOnEvent;
+        capturedOnError = options.onError as typeof capturedOnError;
+      }
+      return { state: 'disconnected', close: vi.fn() };
+    }
+  ),
+}));
+
+// ── ADMIN2-40 F10: adminNewsStore mock ────────────────────────────────────────
+//
+// Mock fetchNewsItems so tests can spy on it without a real Zustand store.
+
+const mockFetchNewsItems = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('@/stores/adminNewsStore', () => ({
+  useAdminNewsStore: Object.assign(
+    vi.fn(() => ({
+      fetchNewsItems: mockFetchNewsItems,
+    })),
+    {
+      getState: vi.fn(() => ({ fetchNewsItems: mockFetchNewsItems })),
+    }
+  ),
+}));
+
 // ── Fixtures ──────────────────────────────────────────────────────────────────
+
+/** Full LinkedSituationSummary shape as defined in adminAPI.ts:571-583 */
+function makeLinkedSituation(id = 'sit-1'): LinkedSituationSummary {
+  return {
+    id,
+    title_en: 'Test Situation',
+    title_el: 'Δοκιμαστική Κατάσταση',
+    status: 'published',
+    levels: ['b1'],
+    country: 'greece',
+    role_count: 2,
+    role_names: ['A', 'B'],
+    turn_count: 4,
+    exercise_count: 1,
+    audio_seconds: 30,
+  };
+}
 
 function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
   return {
-    id: 1,
+    id: '1',
     title_en: 'Test article',
     title_el: 'Δοκιμαστικό άρθρο',
     title_ru: 'Тестовая статья',
     title_el_a2: null,
     description_el: 'Some B1 body text',
     description_el_a2: null,
+    description_en: 'Some B1 body text EN',
+    description_ru: 'Some B1 body text RU',
     country: 'greece',
     publication_date: '2024-01-01',
-    source_url: 'https://example.com',
+    original_article_url: 'https://example.com',
     image_url: null,
-    is_published: true,
+    image_variants: null,
+    alt_text: null,
+    photo_credit: null,
+    status: 'published',
+    has_a2_content: false,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
-    scene_en: null,
-    scene_el: null,
-    scene_ru: null,
-    style_en: null,
-    exercise: null,
-    linked_situation_id: null,
+    linked_situation: null,
     audio_url: 'https://example.com/b1.mp3',
     audio_generated_at: '2024-03-15T10:00:00Z',
     audio_duration_seconds: 120,
+    audio_file_size_bytes: null,
     audio_a2_url: 'https://example.com/a2.mp3',
     audio_a2_duration_seconds: 90,
     audio_a2_generated_at: '2024-03-15T11:00:00Z',
     audio_a2_file_size_bytes: null,
     ...overrides,
   } as NewsItemResponse;
+}
+
+/** Item with a linked situation — Regenerate should be enabled after F10 */
+function makeLinkedItem(situationId = 'sit-1'): NewsItemResponse {
+  return makeItem({ linked_situation: makeLinkedSituation(situationId) });
+}
+
+/** Item with no linked situation — Regenerate should remain disabled after F10 */
+function makeUnlinkedItem(): NewsItemResponse {
+  return makeItem({ linked_situation: null });
 }
 
 // ── HTMLMediaElement mock helpers ─────────────────────────────────────────────
@@ -217,9 +295,176 @@ describe('NewsEditDrawerAudio — play / pause control', () => {
   });
 });
 
-describe('NewsEditDrawerAudio — Regenerate stub buttons (Upload removed in F9)', () => {
-  it('every row has a Regenerate button with aria-disabled="true"', () => {
-    render(<NewsEditDrawerAudio item={makeItem()} />);
+// ── ADMIN2-40 F10 RED specs: Regenerate SSE wiring ───────────────────────────
+//
+// The following describe blocks replace the old "Regenerate stub buttons" suite.
+// OLD stub assertions (aria-disabled+comingSoon for ANY item) are INVALID after F10:
+//   - LINKED item → buttons should be ENABLED (no aria-disabled, no comingSoon dot).
+//   - UNLINKED item → buttons stay aria-disabled with regenerateNoSituation tooltip.
+//
+// Tests #1–#5 are RED now (stub: button still aria-disabled, no useSSE call).
+// Test #6 is RED now (regenerateNoSituation key missing; may partially pass on aria-disabled).
+
+describe('ADMIN2-40 F10 (RED) — Regenerate enabled when situation linked (#1)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedOnEvent = undefined;
+    capturedOnError = undefined;
+    lastUseSSECallArgs = undefined;
+  });
+
+  it('linked item: both Regenerate buttons are NOT aria-disabled', () => {
+    render(<NewsEditDrawerAudio item={makeLinkedItem()} />);
+    const regenBtns = screen.getAllByText('Regenerate');
+    expect(regenBtns).toHaveLength(2);
+    regenBtns.forEach((btn) => {
+      // After F10 wiring: linked item → no aria-disabled on the button
+      expect(btn.closest('button')).not.toHaveAttribute('aria-disabled', 'true');
+    });
+  });
+
+  it('linked item: no "Coming soon" tooltip on Regenerate buttons', () => {
+    render(<NewsEditDrawerAudio item={makeLinkedItem()} />);
+    // The comingSoon i18n key resolves to "Coming soon" — should NOT appear for linked items
+    expect(screen.queryByText('Coming soon')).not.toBeInTheDocument();
+  });
+
+  it('linked item: no red bg-destructive dot on Regenerate buttons', () => {
+    render(<NewsEditDrawerAudio item={makeLinkedItem()} />);
+    // The stub renders <span class="... bg-destructive" aria-hidden="true" /> — should be absent
+    const regenBtns = screen.getAllByText('Regenerate');
+    regenBtns.forEach((textNode) => {
+      const btn = textNode.closest('button');
+      expect(btn?.querySelector('.bg-destructive')).toBeNull();
+    });
+  });
+});
+
+describe('ADMIN2-40 F10 (RED) — clicking B1 Regenerate opens POST SSE to b1 stream (#2)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedOnEvent = undefined;
+    capturedOnError = undefined;
+    lastUseSSECallArgs = undefined;
+  });
+
+  it('click B1 Regenerate → useSSE called with b1 stream URL and method:POST, enabled:true', () => {
+    render(<NewsEditDrawerAudio item={makeLinkedItem('sit-1')} />);
+
+    const regenBtns = screen.getAllByText('Regenerate');
+    // B1 row is first
+    fireEvent.click(regenBtns[0].closest('button')!);
+
+    // After click, useSSE should have been called with the b1 stream URL + POST + enabled
+    // URL formula from getDescriptionAudioStreamUrl (adminAPI.ts:1882)
+    const expectedUrl = `/api/v1/admin/situations/sit-1/description-audio/stream?level=b1`;
+    expect(lastUseSSECallArgs).toBeDefined();
+    expect(lastUseSSECallArgs?.url).toBe(expectedUrl);
+    expect(lastUseSSECallArgs?.options.method).toBe('POST');
+    expect(lastUseSSECallArgs?.options.enabled).toBe(true);
+  });
+});
+
+describe('ADMIN2-40 F10 (RED) — complete event refreshes item and clears in-flight (#3)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedOnEvent = undefined;
+    capturedOnError = undefined;
+    lastUseSSECallArgs = undefined;
+  });
+
+  it('description_audio:complete fires fetchNewsItems and clears active regen level', async () => {
+    render(<NewsEditDrawerAudio item={makeLinkedItem('sit-1')} />);
+
+    // Trigger the B1 regen to open the SSE stream and capture onEvent
+    const regenBtns = screen.getAllByText('Regenerate');
+    fireEvent.click(regenBtns[0].closest('button')!);
+
+    // capturedOnEvent should be set now (enabled=true after click)
+    expect(capturedOnEvent).toBeDefined();
+
+    // Fire the complete event
+    act(() => {
+      capturedOnEvent?.({
+        type: 'description_audio:complete',
+        data: { level: 'b1', audio_url: 'new.mp3', duration_seconds: 68 },
+      });
+    });
+
+    // fetchNewsItems must have been called to refresh the item
+    expect(mockFetchNewsItems).toHaveBeenCalledTimes(1);
+
+    // After complete, the active regen level clears → useSSE enabled goes back to false
+    // (button returns to idle state — not showing a spinner)
+    expect(lastUseSSECallArgs?.options.enabled).toBe(false);
+  });
+});
+
+describe('ADMIN2-40 F10 (RED) — error event surfaces error and clears in-flight (#4)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedOnEvent = undefined;
+    capturedOnError = undefined;
+    lastUseSSECallArgs = undefined;
+  });
+
+  it('description_audio:error event surfaces error UI and clears active regen level', async () => {
+    render(<NewsEditDrawerAudio item={makeLinkedItem('sit-1')} />);
+
+    const regenBtns = screen.getAllByText('Regenerate');
+    fireEvent.click(regenBtns[0].closest('button')!);
+
+    expect(capturedOnEvent).toBeDefined();
+
+    act(() => {
+      capturedOnEvent?.({
+        type: 'description_audio:error',
+        data: { stage: 'tts', error: 'TTS failed' },
+      });
+    });
+
+    // An error should be surfaced somewhere in the UI (toast, inline message, etc.)
+    // After F10 the component must show an error — exact selector depends on impl,
+    // but at minimum the regen should no longer be stuck in-flight.
+    expect(lastUseSSECallArgs?.options.enabled).toBe(false);
+  });
+});
+
+describe('ADMIN2-40 F10 (RED) — switching level repoints single SSE stream (#5)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedOnEvent = undefined;
+    capturedOnError = undefined;
+    lastUseSSECallArgs = undefined;
+  });
+
+  it('clicking B1 then A2 repoints the single useSSE URL to a2 stream', () => {
+    render(<NewsEditDrawerAudio item={makeLinkedItem('sit-1')} />);
+
+    const regenBtns = screen.getAllByText('Regenerate');
+    // B1 first
+    fireEvent.click(regenBtns[0].closest('button')!);
+    const b1Url = lastUseSSECallArgs?.url;
+    expect(b1Url).toContain('level=b1');
+
+    // A2 second — should repoint the same stream hook to a2 URL
+    fireEvent.click(regenBtns[1].closest('button')!);
+    const a2Url = lastUseSSECallArgs?.url;
+    expect(a2Url).toContain('level=a2');
+    expect(lastUseSSECallArgs?.options.enabled).toBe(true);
+  });
+});
+
+describe('ADMIN2-40 F10 (RED) — unlinked item disables Regenerate with guard tooltip (#6)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedOnEvent = undefined;
+    capturedOnError = undefined;
+    lastUseSSECallArgs = undefined;
+  });
+
+  it('unlinked item: Regenerate buttons have aria-disabled="true"', () => {
+    render(<NewsEditDrawerAudio item={makeUnlinkedItem()} />);
     const regenBtns = screen.getAllByText('Regenerate');
     expect(regenBtns).toHaveLength(2);
     regenBtns.forEach((btn) => {
@@ -227,13 +472,27 @@ describe('NewsEditDrawerAudio — Regenerate stub buttons (Upload removed in F9)
     });
   });
 
-  it('every Regenerate button has a "Coming soon" tooltip', () => {
-    render(<NewsEditDrawerAudio item={makeItem()} />);
-    const comingSoon = screen.getAllByText('Coming soon');
-    // One "Coming soon" tooltip per Regenerate stub per row × 2 rows.
-    expect(comingSoon.length).toBeGreaterThanOrEqual(2);
+  it('unlinked item: Regenerate shows regenerateNoSituation tooltip (not comingSoon)', () => {
+    render(<NewsEditDrawerAudio item={makeUnlinkedItem()} />);
+    // After F10: unlinked path shows the new i18n key news.drawer.audio.regenerateNoSituation
+    // (not "Coming soon"). The key doesn't exist yet so this will be RED.
+    const tooltips = screen.getAllByTestId('tooltip-content');
+    const hasGuardTooltip = tooltips.some((t) => t.textContent?.includes('No linked situation'));
+    expect(hasGuardTooltip).toBe(true);
   });
 
+  it('unlinked item: clicking Regenerate does NOT open SSE (enabled stays false)', () => {
+    render(<NewsEditDrawerAudio item={makeUnlinkedItem()} />);
+    const regenBtns = screen.getAllByText('Regenerate');
+    // Click the disabled button (onClick should be a no-op)
+    fireEvent.click(regenBtns[0].closest('button')!);
+    // useSSE must NOT have been called with enabled:true
+    const wasEnabled = lastUseSSECallArgs?.options.enabled === true;
+    expect(wasEnabled).toBe(false);
+  });
+});
+
+describe('NewsEditDrawerAudio — Upload icon buttons removed (F9)', () => {
   it('Upload icon buttons are removed (F9)', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
     const rows = document.querySelectorAll('.audio-row');
