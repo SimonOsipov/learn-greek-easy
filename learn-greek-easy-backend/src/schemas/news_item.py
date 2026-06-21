@@ -48,6 +48,12 @@ class LinkedSituationSummary(BaseModel):
     exercise_count: int
     audio_seconds: float
 
+    # F4 picture fields (ADMIN2-41-02) — populated by _to_response from row[3].
+    # Defaults to None/False so the field is always present in the response.
+    picture_image_url: str | None = None
+    picture_image_variants: dict[int, str] | None = None
+    has_picture: bool = False
+
 
 class ExerciseDraft(SelectCorrectAnswerPayload):
     """News-ingest exercise payload.
