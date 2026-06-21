@@ -179,3 +179,83 @@ class ProposalDraft(BaseModel):
 # ``"verb": "verb.v1"`` — with ZERO change to the existing ``"noun"`` entry. No
 # verb schema is authored here (that is a later story).
 GRAMMAR_DATA_SCHEMA: Mapping[str, str] = MappingProxyType({"noun": "noun.v1"})
+
+
+# ---------------------------------------------------------------------------
+# LEXGEN-06-01 — EvidencePacket schema (Stage 1 evidence assembly).
+#
+# An auditable provenance snapshot of all sources consulted for a given lemma
+# before the never-invent gate runs. Each source carries a ``present: bool``
+# discriminator (intentional deviation from the nullable-None convention) so
+# that "consulted but absent" is explicit in the packet dump.
+#
+# RulesSource is a D-RULESSTUB: present/absent only — no resolver fields ship
+# until the rule-based resolver is implemented in a later LEXGEN story.
+# ---------------------------------------------------------------------------
+
+
+class WiktionarySource(BaseModel):
+    """Evidence collected from the Wiktionary importer for one lemma.
+
+    ``forms`` reuses the LEXGEN-02 ``FormBundle`` type; an empty list means
+    the entry existed but carried no inflected forms.
+    """
+
+    present: bool
+    forms: list[FormBundle] = Field(default_factory=list)
+
+
+class GreekLexiconSource(BaseModel):
+    """Evidence collected from the GreekLexicon database for one lemma."""
+
+    present: bool
+    forms: list[FormBundle] = Field(default_factory=list)
+
+
+class FrequencySource(BaseModel):
+    """Frequency-rank evidence from the reference.frequency_rank table.
+
+    Absent shape (AC-6): ``{"present": false, "rank": null, "band": null}``.
+    The ``rank`` and ``band`` fields are always present in the dump (never
+    omitted) so the consumer never has to check for key existence — only for
+    ``None`` vs a concrete value.
+    """
+
+    present: bool
+    rank: int | None = None
+    band: str | None = None
+
+
+class RulesSource(BaseModel):
+    """Rule-based resolver evidence stub (D-RULESSTUB).
+
+    Absent shape (AC-3): ``{"present": false}`` — exactly one key, no resolver
+    fields. This stub will grow when the rule-based resolver lands in a later
+    LEXGEN story; until then no resolver fields are exposed.
+    """
+
+    present: bool
+
+
+class EvidencePacketSources(BaseModel):
+    """Container for all four per-source evidence sub-models."""
+
+    wiktionary: WiktionarySource
+    greek_lexicon: GreekLexiconSource
+    frequency: FrequencySource
+    rules: RulesSource
+
+
+class EvidencePacket(BaseModel):
+    """Auditable provenance snapshot produced by Stage 1 evidence assembly.
+
+    Carries the raw and normalised lemma, the part-of-speech (free text,
+    POS-neutral), and the per-source evidence collected before the
+    never-invent gate runs. ``model_dump(mode="json")`` yields a
+    ``json.dumps``-serializable dict.
+    """
+
+    lemma_input: str
+    normalized_lemma: str
+    pos: str
+    sources: EvidencePacketSources
