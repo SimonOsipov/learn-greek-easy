@@ -30,11 +30,13 @@ LEXGEN-09 is the generator).
 from __future__ import annotations
 
 import unicodedata
+from uuid import UUID
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import GreekLexicon
+from src.core.word_proposal_state import transition
+from src.db.models import GreekLexicon, WordProposal, WordProposalOrigin, WordProposalState
 from src.schemas.lexgen import (
     FEATURE_KEYS,
     EvidencePacket,
@@ -127,6 +129,60 @@ class EvidenceAssemblyService:
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
+
+    async def assemble(
+        self,
+        lemma_input: str,
+        pos: str,
+        origin: WordProposalOrigin,
+        requested_by: UUID | None,
+    ) -> WordProposal:
+        """Create a WordProposal, assemble evidence, and drive the state machine.
+
+        State transitions (origin-agnostic):
+            • lemma present in any source  → pending → generating  (GENERATING)
+            • lemma absent from all sources → pending → generating → rejected  (REJECTED)
+
+        The evidence_packet is always snapshotted before any reject transition.
+        The transition() guard is used for every status change (never raw .status=).
+
+        Args:
+            lemma_input: Raw lemma string.
+            pos: Part-of-speech string (e.g. "noun").
+            origin: WordProposalOrigin (ADMIN / USER_REQUEST / BATCH).
+            requested_by: User FK or None (ADMIN/BATCH originating user).
+
+        Returns:
+            The persisted WordProposal (status=GENERATING or REJECTED).
+        """
+        proposal = WordProposal(
+            status=WordProposalState.PENDING,
+            lemma_input=lemma_input,
+            pos=pos,
+            origin=origin,
+            requested_by=requested_by,
+        )
+        self.db.add(proposal)
+        await self.db.flush()
+
+        # Assemble evidence from all three read-only sources.
+        packet = await self.assemble_evidence(lemma_input, pos)
+
+        # Snapshot ALWAYS (before any reject transition).
+        proposal.evidence_packet = packet.model_dump(mode="json")
+
+        if self._lemma_exists(packet):
+            # Lemma attested in at least one source → advance to GENERATING.
+            transition(proposal, WordProposalState.GENERATING)
+            await self.db.flush()
+            return proposal
+
+        # Never-invent: lemma absent from all references → GENERATING then REJECTED.
+        transition(proposal, WordProposalState.GENERATING)
+        transition(proposal, WordProposalState.REJECTED)
+        proposal.rejection_reason = "never_invent: lemma absent from all references"
+        await self.db.flush()
+        return proposal
 
     async def assemble_evidence(self, lemma_input: str, pos: str) -> EvidencePacket:
         """Assemble evidence from all three read-only sources for a (lemma_input, pos) pair.
