@@ -157,11 +157,11 @@ Android emulator through one toolset, so the same agent captures and critiques e
 | `mobile_take_screenshot` / `mobile_save_screenshot` | capture each screen (save `ios-*` / `android-*`) |
 
 It is **local only** and needs **no API keys**. Config lives in the gitignored root `.mcp.json`
-(the repo is public); a redacted `.mcp.json.example` at the repo root records the entry. After
-adding it, **reload the session** so the `mcp__mobile-mcp__*` tools load:
+(the repo is public, so it is **not** committed). Add the `mobile-mcp` server entry below, then
+**reload the session** so the `mcp__mobile-mcp__*` tools load:
 
 ```jsonc
-// .mcp.json  (gitignored) — mirrored, redacted, in .mcp.json.example
+// .mcp.json  (gitignored)
 "mobile-mcp": { "type": "stdio", "command": "npx", "args": ["-y", "@mobilenext/mobile-mcp@latest"], "env": {} }
 ```
 
