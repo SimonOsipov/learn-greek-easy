@@ -141,6 +141,58 @@ degraded to a "sanctioned fallback" (flat `View` instead of `BlurView`, a droppe
 weak scrim) is a real fidelity miss to flag, not an acceptable shortcut. Subjective pixel fidelity
 is **human-confirmed** — surface app-vs-export to the maintainer rather than self-certify.
 
+### Capture mechanism — the `mobile-mcp` cross-platform MCP
+
+Per-screen screenshots for the fidelity critique are captured with the
+[`@mobilenext/mobile-mcp`](https://github.com/mobile-next/mobile-mcp) MCP server (Apache-2.0),
+**not** `xcrun simctl io booted screenshot`. The MCP drives **both** an iOS simulator and an
+Android emulator through one toolset, so the same agent captures and critiques each platform:
+
+| Tool | Use |
+|------|-----|
+| `mobile_list_available_devices` | list booted iOS sims + Android emulators (merged); pick a device id |
+| `mobile_launch_app` | launch `eu.greeklish.app.dev` (iOS bundle id / Android package) |
+| `mobile_list_elements_on_screen` | read the accessibility/view tree to locate elements |
+| `mobile_click_on_screen_at_coordinates` / `mobile_type_keys` / `mobile_swipe_on_screen` | navigate |
+| `mobile_take_screenshot` / `mobile_save_screenshot` | capture each screen (save `ios-*` / `android-*`) |
+
+It is **local only** and needs **no API keys**. Config lives in the gitignored root `.mcp.json`
+(the repo is public); a redacted `.mcp.json.example` at the repo root records the entry. After
+adding it, **reload the session** so the `mcp__mobile-mcp__*` tools load:
+
+```jsonc
+// .mcp.json  (gitignored) — mirrored, redacted, in .mcp.json.example
+"mobile-mcp": { "type": "stdio", "command": "npx", "args": ["-y", "@mobilenext/mobile-mcp@latest"], "env": {} }
+```
+
+### Per-platform prerequisites
+
+- **iOS (ready on this machine):** Xcode + a simulator runtime (`xcodebuild -downloadPlatform iOS`),
+  a booted simulator, and **WebDriverAgent** running on it — the MCP drives iOS simulators through
+  WDA. Newer `mobile-mcp` bundles `mobilecli`, which can start WDA automatically; if it cannot, build
+  it once from [appium/WebDriverAgent](https://github.com/appium/WebDriverAgent).
+- **Android (not installed by default — multi-GB):** the Android SDK + platform-tools (`adb` on
+  PATH) + the emulator + a system image + an AVD. None of this ships with Xcode. Start the emulator
+  and confirm `adb devices` lists it before running the MCP. Typical one-time setup:
+  ```bash
+  brew install --cask android-commandlinetools   # or Android Studio
+  sdkmanager "platform-tools" "emulator" "system-images;android-35;google_apis;arm64-v8a"
+  avdmanager create avd -n greeklish -k "system-images;android-35;google_apis;arm64-v8a"
+  emulator -avd greeklish & adb wait-for-device
+  ```
+
+### Local vs CI boundary
+
+- **MCP = local visual-fidelity capture.** Element-aware, cross-platform, human-confirmed; **never
+  runs in CI** (CI cannot host an MCP).
+- **Maestro (shell) = repeatable E2E + CI gate.** The `.maestro/*.yaml` flows are the behaviour
+  gate and run in the `mobile-e2e` CI job, so Maestro stays the source of truth for "the flow
+  works." See [testing.md](../learn-greek-easy-mobile/docs/testing.md).
+
+The **oracle is unchanged**: diff against the authoritative design export, never against
+self-generated captures; fidelity is human-confirmed. Only the capture *mechanism* changed
+(simctl → MCP).
+
 ## Verification
 
 1. **TypeScript** — from `learn-greek-easy-mobile/`:

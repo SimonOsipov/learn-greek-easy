@@ -32,6 +32,7 @@ cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && /User
 | Railway | Deployment (no destructive actions - use dashboard for deletes) |
 | Sentry | Error tracking + **Logs** (use `search_events` with natural language to query backend/frontend logs — preferred over Railway for log investigation) |
 | Auth0 | Applications, APIs, actions, logs, forms (no user management) |
+| mobile-mcp | Cross-platform (iOS sim + Android emulator) device driver — **local** mobile visual-fidelity capture (launch dev-client, read a11y tree, screenshot). Not in CI. See [docs/mobile-app.md](docs/mobile-app.md) § Visual QA |
 
 ## Critical Rules
 

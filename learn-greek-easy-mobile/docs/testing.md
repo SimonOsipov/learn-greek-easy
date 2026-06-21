@@ -12,6 +12,7 @@ tests (Jest + React Native Testing Library) and the Maestro E2E smoke flow.
 | Unit | Jest (`jest-expo` preset) | `npm test` |
 | Component | React Native Testing Library | `npm test` |
 | E2E smoke | Maestro | `maestro test .maestro/smoke.yaml` |
+| Visual fidelity | `mobile-mcp` (iOS + Android) | **local only** — see [docs/mobile-app.md](../../docs/mobile-app.md) § Visual QA |
 
 ---
 
@@ -101,6 +102,21 @@ and the app always starts signed-out in a clean-state run.
 The smoke flow is **small and critical-path only**: launch → login screen. It mirrors the
 web Playwright suite's philosophy of gating on the entry path rather than covering every
 user journey. Visual regression (Sherlo/Storybook) is deferred by product decision.
+
+---
+
+## Maestro vs the visual-fidelity MCP (local vs CI)
+
+These are **two different gates** — don't conflate them:
+
+- **Maestro = behaviour / E2E gate, CI-aligned.** The `.maestro/*.yaml` flows assert the
+  onboarding journey works and run in the `mobile-e2e` CI job. CI cannot host an MCP, so Maestro
+  is the source of truth for "the flow works." Keep these flows intact.
+- **`mobile-mcp` = local visual-fidelity capture.** A cross-platform (iOS + Android) MCP server
+  launches the dev-client, reads the accessibility tree, and screenshots each screen for the
+  design-fidelity critique (diff against the authoritative design export, human-confirmed). It is
+  **local only**, never in CI, and needs no API keys. Full setup + per-platform prerequisites:
+  [docs/mobile-app.md](../../docs/mobile-app.md) § Visual QA.
 
 ---
 
