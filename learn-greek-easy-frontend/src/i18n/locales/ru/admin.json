@@ -456,10 +456,7 @@
     "stats": {
       "total": "Всего новостей",
       "withAudio": "С аудио",
-      "b1Coverage": "Охват B1",
-      "countries": "Страны",
       "audioCoverage": "{{count}}/{{total}} с аудио",
-      "countrySub": "По странам",
       "allTime": "За всё время",
       "recentThisWeek": "+{{count}} за неделю"
     },

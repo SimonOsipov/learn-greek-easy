@@ -441,10 +441,7 @@
     "stats": {
       "total": "Total News",
       "withAudio": "With Audio",
-      "b1Coverage": "B1 coverage",
-      "countries": "Countries",
       "audioCoverage": "{{count}}/{{total}} with audio",
-      "countrySub": "By country",
       "allTime": "All time",
       "recentThisWeek": "+{{count}} this week"
     },
