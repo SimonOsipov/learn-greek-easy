@@ -182,6 +182,49 @@ GRAMMAR_DATA_SCHEMA: Mapping[str, str] = MappingProxyType({"noun": "noun.v1"})
 
 
 # ---------------------------------------------------------------------------
+# LEXGEN-08-01 — Resolver value types (per-POS morphology resolver scaffolding).
+#
+# POS-neutral carriers for the field-level authority-chain walk (the resolver
+# itself lives in ``src/core/lexgen_resolver.py``). They live HERE, next to the
+# LEXGEN-02 ``FieldEvidence``/``ResolvedField`` family they extend (F5/D12/D17),
+# rather than in ``core/``, so the schema module stays the single home for the
+# pipeline value types and ``lexgen_resolver`` can import them from one place.
+# ---------------------------------------------------------------------------
+
+
+class ResolutionContext(BaseModel):
+    """Per-resolution carrier passed to every rung during the chain walk.
+
+    Carries the normalized ``lemma`` plus a MUTABLE ``resolved`` map of
+    already-resolved field values (``field -> chosen value``), so a later
+    field's rung can read an earlier field's resolved value (e.g. the
+    ``declension_group`` rung reads ``resolved["gender"]`` — D3). The resolver
+    populates ``resolved`` field by field, in dependency order; rungs only READ
+    ``ctx``, the resolver is the only writer.
+    """
+
+    lemma: str
+    resolved: dict[str, str | None] = Field(default_factory=dict)
+
+
+class ResolvedParadigm(BaseModel):
+    """The resolver's output for one lemma: the chosen value per field, plus audit.
+
+    ``fields`` is one ``ResolvedField`` per resolved field; ``cross_checks`` maps
+    each field to the lower-rank evidence that was considered (for the
+    reconciler's audit log); ``flagged_fields`` is the convenience subset of
+    fields carrying any flag. POS-neutral: ``pos`` is free text, mirroring
+    ``ProposalDraft``/``WordProposal``.
+    """
+
+    lemma: str
+    pos: str
+    fields: list[ResolvedField] = Field(default_factory=list)
+    cross_checks: dict[str, list[FieldEvidence]] = Field(default_factory=dict)
+    flagged_fields: list[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
 # LEXGEN-06-01 — EvidencePacket schema (Stage 1 evidence assembly).
 #
 # An auditable provenance snapshot of all sources consulted for a given lemma
