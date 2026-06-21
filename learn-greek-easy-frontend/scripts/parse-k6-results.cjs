@@ -40,7 +40,7 @@ const GITHUB_SERVER_URL = process.env.GITHUB_SERVER_URL || 'https://github.com';
 const GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY || '';
 const GITHUB_RUN_ID = process.env.GITHUB_RUN_ID || '';
 
-// Metric configuration for each scenario
+// These `threshold` values MUST stay in sync with the `thresholds` block in k6/scenarios/auth.js
 const AUTH_METRICS = {
   auth_total_time: { label: 'Total Auth Flow', threshold: 8000 },
   auth_navigate_time: { label: 'Navigate to Login', threshold: 3000 },
@@ -50,6 +50,7 @@ const AUTH_METRICS = {
   auth_redirect_time: { label: 'Redirect to Dashboard', threshold: 2000 },
 };
 
+// These `threshold` values MUST stay in sync with the `thresholds` block in k6/scenarios/dashboard.js
 const DASHBOARD_METRICS = {
   dashboard_flow_total_time: { label: 'Total Dashboard Flow', threshold: 15000 },
   dashboard_load_time: { label: 'Dashboard Load', threshold: 2000 },
@@ -517,4 +518,6 @@ function generateErrorMarkdown(errorMessage) {
 // Run
 // ============================================================================
 
-main();
+if (require.main === module) { main(); }
+
+module.exports = { extractPercentiles, formatMs, formatMetricValue, getMetricStatus, generateMetricsSection, getMetricLabel, AUTH_METRICS, DASHBOARD_METRICS };
