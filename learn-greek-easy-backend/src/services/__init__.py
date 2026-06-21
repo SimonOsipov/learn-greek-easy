@@ -20,6 +20,7 @@ from src.services.culture_deck_service import CultureDeckService
 from src.services.culture_question_service import CultureQuestionService
 from src.services.duplicate_detection_service import DuplicateDetectionService
 from src.services.email_service import EmailService, get_email_service
+from src.services.evidence_assembly_service import EvidenceAssemblyService
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.frequency_service import FrequencyService, band_for_rank
 from src.services.lemma_normalization_service import (
@@ -57,6 +58,7 @@ from src.services.xp_service import XPService
 
 __all__ = [
     "AchievementService",
+    "EvidenceAssemblyService",
     "AnnouncementService",
     "CardErrorAdminService",
     "CardErrorService",

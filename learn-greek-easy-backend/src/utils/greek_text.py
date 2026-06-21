@@ -135,6 +135,20 @@ def normalize_greek_accents(text: str) -> str:
 # ============================================================================
 
 
+def _final_sigma_unfold(token: str) -> str:
+    """Replace a word-final medial sigma (σ) with the correct final sigma (ς).
+
+    Some corpora (including wordfreq) emit surface tokens where the last
+    character is σ rather than ς. This one-character substitution fixes that
+    before the token is passed to the spaCy lemmatiser.
+
+    Only the LAST character is touched; interior σ characters are left as-is.
+    """
+    if token and token[-1] == "σ":
+        return token[:-1] + "ς"
+    return token
+
+
 def _strip_article(form: str) -> str:
     """Strip Greek definite article from a noun form.
 
