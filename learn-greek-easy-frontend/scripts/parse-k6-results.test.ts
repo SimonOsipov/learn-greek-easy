@@ -1020,3 +1020,220 @@ describe('PERF-12-04 protocol render', () => {
     expect(output).toContain('API Review (SM-2)');
   });
 });
+
+// ============================================================================
+// PERF-12-04 adversarial / edge coverage (Mode B)
+// ============================================================================
+// Added by QA in Mode B. Concrete F5 proof + edge cases for the protocol path.
+// ============================================================================
+
+describe('PERF-12-04 adversarial edge coverage (Mode B)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete require.cache[MODULE_PATH];
+  });
+
+  function makeAuthData() {
+    return {
+      iterations: 5,
+      errorRate: 0,
+      checksRate: 100,
+      metrics: { auth_total_time: { values: { 'p(95)': 1000, med: 500 } } },
+      violations: [],
+    };
+  }
+
+  function makeDashboardData() {
+    return {
+      iterations: 5,
+      errorRate: 0,
+      checksRate: 100,
+      metrics: { dashboard_flow_total_time: { values: { 'p(95)': 3000, med: 1500 } } },
+      violations: [],
+    };
+  }
+
+  // --------------------------------------------------------------------------
+  // F5 concrete proof: violation metric raw name → human label in violations table
+  // --------------------------------------------------------------------------
+  it('adv_protocol_violation_renders_label_not_raw_name — F5 proof: api_review_time shows "API Review (SM-2)" not raw name', () => {
+    const { mod } = loadModule();
+    const generateMarkdown = mod.generateMarkdown as (
+      auth: unknown,
+      dash: unknown,
+      baselines: unknown,
+      protocol?: unknown
+    ) => string;
+
+    // Build protocolData with a violation whose metric is the raw k6 name.
+    // The violations table must render the PROTOCOL_METRICS label, not the raw name.
+    const protocolWithViolation = {
+      iterations: 10,
+      errorRate: 0,
+      checksRate: 100,
+      metrics: {
+        api_total_time: { values: { 'p(95)': 4000, med: 100 } },
+        api_review_time: {
+          values: { 'p(95)': 2500, med: 1200 },
+          thresholds: { 'p(95)<2000': { ok: false } },
+        },
+      },
+      violations: [
+        {
+          metric: 'api_review_time',
+          threshold: 'p(95)<2000',
+          value: 'p95: 2.50s',
+        },
+      ],
+    };
+
+    const output = generateMarkdown(makeAuthData(), makeDashboardData(), null, protocolWithViolation);
+
+    // The violations table must use the human label, not the raw k6 metric name
+    expect(output).toContain('API Review (SM-2)');
+    expect(output).not.toContain('| API Latency | api_review_time |');
+  });
+
+  // --------------------------------------------------------------------------
+  // Protocol summary row shows 'Skipped' when protocolData is null
+  // --------------------------------------------------------------------------
+  it('adv_protocol_summary_skipped_no_undefined — null protocol → Skipped row, no undefined/NaN in output', () => {
+    const { mod } = loadModule();
+    const generateMarkdown = mod.generateMarkdown as (
+      auth: unknown,
+      dash: unknown,
+      baselines: unknown,
+      protocol?: unknown
+    ) => string;
+
+    let output = '';
+    expect(() => {
+      output = generateMarkdown(makeAuthData(), makeDashboardData(), { metrics: {} }, null);
+    }).not.toThrow();
+
+    // The API Latency row must appear and show Skipped
+    const apiLatencyRow = output.split('\n').find((l) => l.includes('API Latency'));
+    expect(apiLatencyRow).toBeDefined();
+    expect(apiLatencyRow).toContain('Skipped');
+
+    // No corruption markers
+    expect(output).not.toContain('undefined');
+    expect(output).not.toContain('NaN');
+  });
+
+  // --------------------------------------------------------------------------
+  // Protocol section Δ column shows real delta when baselines contain api_total_time
+  // --------------------------------------------------------------------------
+  it('adv_protocol_section_delta_from_baseline — api_total_time baseline in baselines map produces real delta', () => {
+    const { mod } = loadModule();
+    const generateMarkdown = mod.generateMarkdown as (
+      auth: unknown,
+      dash: unknown,
+      baselines: unknown,
+      protocol?: unknown
+    ) => string;
+
+    const protocolData = {
+      iterations: 10,
+      errorRate: 0,
+      checksRate: 100,
+      metrics: {
+        api_total_time: { values: { 'p(95)': 3500, med: 1800 } },
+      },
+      violations: [],
+    };
+
+    // baselines contains api_total_time: p95=3000
+    // delta: 3500 - 3000 = +500ms (+16.7%)
+    const baselines = { metrics: { api_total_time: { p95: 3000 } } };
+
+    const output = generateMarkdown(makeAuthData(), makeDashboardData(), baselines, protocolData);
+
+    // The protocol section must include a real delta (not 'new')
+    const sectionIdx = output.indexOf('API Latency / SM-2 Loop Metrics');
+    expect(sectionIdx).toBeGreaterThan(-1);
+    const sectionText = output.slice(sectionIdx);
+
+    // +500ms and positive percentage must appear
+    expect(sectionText).toContain('+500ms');
+    expect(sectionText).toContain('+16.7%');
+  });
+
+  // --------------------------------------------------------------------------
+  // Both auth+dashboard present but protocol absent: must NOT throw
+  // (the guard is: throw only if BOTH auth+dashboard are null)
+  // --------------------------------------------------------------------------
+  it('adv_protocol_absent_no_throw — auth+dashboard present, protocol missing does not throw', () => {
+    const { mod } = loadModule();
+    const generateMarkdown = mod.generateMarkdown as (
+      auth: unknown,
+      dash: unknown,
+      baselines: unknown,
+      protocol?: unknown
+    ) => string;
+
+    // Protocol is absent (not passed), auth and dashboard are present.
+    // The "No k6 report files found" error only triggers when auth AND dashboard are null.
+    let output = '';
+    expect(() => {
+      output = generateMarkdown(makeAuthData(), makeDashboardData(), null);
+    }).not.toThrow();
+
+    // API Latency row exists but is Skipped
+    const apiLatencyRow = output.split('\n').find((l) => l.includes('API Latency'));
+    expect(apiLatencyRow).toBeDefined();
+    expect(apiLatencyRow).toContain('Skipped');
+  });
+
+  // --------------------------------------------------------------------------
+  // Table alignment: protocol section header/separator/data-row pipe count matches
+  // --------------------------------------------------------------------------
+  it('adv_protocol_table_alignment — header, separator, and all data rows have 9 pipes in protocol section', () => {
+    const { mod } = loadModule();
+    const generateMarkdown = mod.generateMarkdown as (
+      auth: unknown,
+      dash: unknown,
+      baselines: unknown,
+      protocol?: unknown
+    ) => string;
+
+    const protocolData = {
+      iterations: 5,
+      errorRate: 0,
+      checksRate: 100,
+      metrics: {
+        api_me_time: { values: { 'p(95)': 500, med: 250 } },
+        api_dashboard_time: { values: { 'p(95)': 800, med: 400 } },
+        api_study_queue_time: { values: { 'p(95)': 600, med: 300 } },
+        api_review_time: { values: { 'p(95)': 1000, med: 500 } },
+        api_total_time: { values: { 'p(95)': 3000, med: 1500 } },
+      },
+      violations: [],
+    };
+
+    const output = generateMarkdown(makeAuthData(), makeDashboardData(), null, protocolData);
+
+    // Extract just the protocol section
+    const sectionIdx = output.indexOf('API Latency / SM-2 Loop Metrics');
+    expect(sectionIdx).toBeGreaterThan(-1);
+
+    // Find the next section heading after the protocol section (or end of string)
+    const afterSection = output.slice(sectionIdx);
+    const nextSectionIdx = afterSection.search(/\n###\s(?!API Latency)/);
+    const protocolSection = nextSectionIdx > -1 ? afterSection.slice(0, nextSectionIdx) : afterSection;
+
+    const tableRows = protocolSection.split('\n').filter((l) => l.trim().startsWith('|'));
+    expect(tableRows.length).toBeGreaterThan(0);
+
+    // Header row: 8 columns = 9 pipes
+    // | Metric | p50 | p90 | p95 | p99 | Δ vs main | Threshold | Status |
+    const headerPipeCount = (tableRows[0].match(/\|/g) ?? []).length;
+    expect(headerPipeCount).toBe(9);
+
+    // Every row must match the header pipe count
+    for (const row of tableRows) {
+      const pipeCount = (row.match(/\|/g) ?? []).length;
+      expect(pipeCount).toBe(headerPipeCount);
+    }
+  });
+});
