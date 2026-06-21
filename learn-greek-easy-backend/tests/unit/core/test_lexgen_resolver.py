@@ -1,13 +1,24 @@
-"""RED tests for the per-POS morphology resolver scaffolding (LEXGEN-08-01).
+"""Tests for the per-POS morphology resolver scaffolding (LEXGEN-08-01).
 
-Authored test-first (RALPH Stage 2.5 / QA Mode A).  The module
+Originally authored test-first (RALPH Stage 2.5 / QA Mode A).  The module
 ``src/core/lexgen_resolver.py`` does NOT exist yet, so every test in this
 file is RED for the right reason (ModuleNotFoundError / ImportError), NOT a
 collection or syntax error.  Two new schema types (``ResolutionContext`` and
 ``ResolvedParadigm``) are also absent from ``src/schemas/lexgen.py`` until the
 executor implements this subtask.
 
-14 Test Specs covering:
+After Mode B (QA verification), adversarial and witness-value coverage was added:
+- Co-rank-1 tuple order within NOUN_CHAINS (rules > wiktionary > lexicon)
+- lemma_exists co-rank-1 triple (wiktionary / lexicon / frequency all rank 1)
+- Witness-value pinning for pos / lemma_exists / declension_forms rungs (OQ-A)
+- ResolvedParadigm round-trip via model_dump / model_validate
+- resolver_for with empty-string and None-ish pos
+- Lexicon gender rung with forms missing the gender feature key
+- DR §3 — no numeric confidence in any rung output
+
+14 Test Specs (Mode A) + 14 adversarial tests (Mode B) = 28 tests total.
+
+14 Mode A test specs covering:
   Schema types
   - test_resolution_context_carries_lemma_and_mutable_resolved
   - test_resolved_paradigm_and_context_live_in_schemas_module
@@ -495,3 +506,346 @@ class TestNounResolverSkeletonExists:
         packet = _make_packet()
         with pytest.raises(NotImplementedError):
             resolver.resolve("θάλασσα", packet)
+
+
+# ---------------------------------------------------------------------------
+# Mode B — adversarial / edge / witness-value coverage (QA LEXGEN-08-01)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestNounChainsCoRankOrder:
+    """Co-rank-1 ordering within NOUN_CHAINS must be rules > wiktionary > lexicon (D2)."""
+
+    def test_gender_chain_corank1_order_rules_then_wiktionary(self) -> None:
+        """NOUN_CHAINS[('noun','gender')]: first rung is the rules rung, second is wiktionary.
+
+        This is load-bearing for 08-02: the walk tries rungs in order, so the
+        tuple position IS the priority. Mutating the order would silently change
+        which source wins at co-rank-1.
+        """
+        rungs = NOUN_CHAINS[("noun", "gender")]
+        # Drive each rung with a packet where rules DO resolve (θάλασσα → feminine)
+        # and wikt gender is also present.
+        packet = _make_packet(
+            normalized_lemma="θάλασσα",
+            rules_present=True,
+            wikt_present=True,
+            wikt_gender="masculine",  # deliberate mismatch to distinguish sources
+        )
+        ctx = _make_ctx("θάλασσα")
+
+        # First rung must be the rules rung (source="rules")
+        first_ev = rungs[0](packet, ctx)
+        assert first_ev is not None, "First rung (rules) must return evidence for 'θάλασσα'"
+        assert (
+            first_ev.source == "rules"
+        ), f"Expected first rung source='rules' (co-rank-1 priority), got '{first_ev.source}'"
+
+        # Second rung must be wiktionary (source="wiktionary")
+        second_ev = rungs[1](packet, ctx)
+        assert second_ev is not None, "Second rung (wiktionary) must return evidence when present"
+        assert (
+            second_ev.source == "wiktionary"
+        ), f"Expected second rung source='wiktionary', got '{second_ev.source}'"
+
+    def test_gender_chain_lexicon_is_third(self) -> None:
+        """Lexicon gender rung is THIRD in the gender chain (rank 2, after rules+wiktionary at rank 1)."""
+        rungs = NOUN_CHAINS[("noun", "gender")]
+        assert len(rungs) == 3, f"gender chain must have 3 rungs, got {len(rungs)}"
+        # Third rung must produce source="lexicon" when forms carry gender
+        forms = [FormBundle(form="θαλάσση", features={"case": "genitive", "gender": "feminine"})]
+        packet = _make_packet(lexicon_present=True, lexicon_forms=forms)
+        ctx = _make_ctx("θάλασσα")
+        third_ev = rungs[2](packet, ctx)
+        assert third_ev is not None
+        assert third_ev.source == "lexicon"
+
+    def test_lemma_exists_all_three_rungs_are_rank1(self) -> None:
+        """NOUN_CHAINS[('noun','lemma_exists')] must have exactly 3 rungs (wiktionary/lexicon/frequency at co-rank-1, D2).
+
+        The co-rank-1 triple means any present source wins independently; no source is
+        preferred over another. Pinning the count prevents silent removal.
+        """
+        rungs = NOUN_CHAINS[("noun", "lemma_exists")]
+        assert len(rungs) == 3, f"lemma_exists chain must have 3 co-rank-1 rungs, got {len(rungs)}"
+        # Confirm each rung returns a distinct source when all sources are present
+        packet = _make_packet(
+            wikt_present=True, lexicon_present=True, freq_present=True, freq_rank=5
+        )
+        ctx = _make_ctx("θάλασσα")
+        sources = [r(packet, ctx).source for r in rungs if r(packet, ctx) is not None]
+        assert set(sources) == {
+            "wiktionary",
+            "lexicon",
+            "frequency",
+        }, f"All three lemma_exists sources must be reachable, got: {sources}"
+
+
+@pytest.mark.unit
+class TestWitnessValues:
+    """Pin the witness values for pos / lemma_exists / declension_forms rungs (OQ-A).
+
+    These rungs return non-None values so 08-02's chain-walk can recognise them
+    as 'resolved' (None = skipped). Pinning the exact strings prevents 08-02/08-03
+    from silently regressing them.
+    """
+
+    def test_pos_rung_value_is_packet_pos(self) -> None:
+        """pos rungs return packet.pos as the value — not a constant, not 'present', not None."""
+        packet = _make_packet(pos="noun", wikt_present=True)
+        ctx = _make_ctx("θάλασσα")
+
+        rungs = NOUN_CHAINS[("noun", "pos")]
+        wikt_pos_rung = rungs[0]  # wiktionary pos rung is first
+        ev = wikt_pos_rung(packet, ctx)
+
+        assert ev is not None
+        assert ev.value == "noun", f"pos rung must return packet.pos ('noun'), got {ev.value!r}"
+        assert ev.source == "wiktionary"
+        assert ev.field == "pos"
+
+    def test_lemma_exists_rung_value_is_string_true(self) -> None:
+        """lemma_exists rungs return the string 'true' (not bool True, not '1', not 'present')."""
+        packet = _make_packet(wikt_present=True)
+        ctx = _make_ctx("θάλασσα")
+
+        rungs = NOUN_CHAINS[("noun", "lemma_exists")]
+        wikt_lemma_rung = rungs[0]
+        ev = wikt_lemma_rung(packet, ctx)
+
+        assert ev is not None
+        assert (
+            ev.value == "true"
+        ), f"lemma_exists rung must return value='true' (str), got {ev.value!r}"
+        assert ev.source == "wiktionary"
+        assert ev.field == "lemma_exists"
+
+    def test_lexicon_lemma_exists_rung_value_is_string_true(self) -> None:
+        """Lexicon lemma_exists rung also returns 'true' (same contract as wiktionary rung)."""
+        packet = _make_packet(lexicon_present=True)
+        ctx = _make_ctx("θάλασσα")
+
+        rungs = NOUN_CHAINS[("noun", "lemma_exists")]
+        lexicon_lemma_rung = rungs[1]
+        ev = lexicon_lemma_rung(packet, ctx)
+
+        assert ev is not None
+        assert ev.value == "true"
+        assert ev.source == "lexicon"
+
+    def test_frequency_lemma_exists_rung_value_is_string_true(self) -> None:
+        """Frequency lemma_exists rung returns 'true' when source is present."""
+        packet = _make_packet(freq_present=True, freq_rank=100)
+        ctx = _make_ctx("θάλασσα")
+
+        rungs = NOUN_CHAINS[("noun", "lemma_exists")]
+        freq_lemma_rung = rungs[2]
+        ev = freq_lemma_rung(packet, ctx)
+
+        assert ev is not None
+        assert ev.value == "true"
+        assert ev.source == "frequency"
+
+    def test_declension_forms_lexicon_rung_value_is_count_string(self) -> None:
+        """Lexicon declension_forms rung value is str(len(forms)) — the count of forms present.
+
+        This is the executor's witness choice (OQ-A): the count string is the
+        value 08-02 sees as 'resolved'. Pinned here so 08-02/08-03 cannot
+        silently change it to None or a different sentinel.
+        """
+        forms = [
+            FormBundle(form="θάλασσα", features={"case": "nominative", "number": "singular"}),
+            FormBundle(form="θαλάσσης", features={"case": "genitive", "number": "singular"}),
+            FormBundle(form="θάλασσα", features={"case": "accusative", "number": "singular"}),
+        ]
+        packet = _make_packet(lexicon_present=True, lexicon_forms=forms)
+        ctx = _make_ctx("θάλασσα")
+
+        rungs = NOUN_CHAINS[("noun", "declension_forms")]
+        lexicon_forms_rung = rungs[0]  # lexicon is rank 1
+        ev = lexicon_forms_rung(packet, ctx)
+
+        assert ev is not None
+        assert ev.source == "lexicon"
+        assert ev.field == "declension_forms"
+        assert (
+            ev.value == "3"
+        ), f"declension_forms lexicon rung value must be str(len(forms))='3', got {ev.value!r}"
+
+    def test_declension_forms_wiktionary_rung_value_is_count_string(self) -> None:
+        """Wiktionary declension_forms rung value is str(len(forms)) — same witness convention."""
+        forms = [
+            FormBundle(form="βιβλίο", features={"case": "nominative", "number": "singular"}),
+            FormBundle(form="βιβλίου", features={"case": "genitive", "number": "singular"}),
+        ]
+        packet = _make_packet(wikt_present=True, wikt_forms=forms)
+        ctx = _make_ctx("βιβλίο")
+
+        rungs = NOUN_CHAINS[("noun", "declension_forms")]
+        wikt_forms_rung = rungs[1]  # wiktionary is rank 2
+        ev = wikt_forms_rung(packet, ctx)
+
+        assert ev is not None
+        assert ev.source == "wiktionary"
+        assert ev.field == "declension_forms"
+        assert ev.value == "2"
+
+
+@pytest.mark.unit
+class TestResolvedParadigmRoundTrip:
+    """ResolvedParadigm must survive model_dump / model_validate round-trips."""
+
+    def test_resolved_paradigm_model_dump_and_validate(self) -> None:
+        """ResolvedParadigm.model_dump() + model_validate() round-trips without data loss."""
+        from src.schemas.lexgen import ResolvedField
+
+        paradigm = ResolvedParadigm(
+            lemma="θάλασσα",
+            pos="noun",
+            fields=[
+                ResolvedField(field="gender", value="feminine", source="rules"),
+            ],
+            cross_checks={
+                "gender": [FieldEvidence(source="wiktionary", field="gender", value="feminine")]
+            },
+            flagged_fields=[],
+        )
+        dumped = paradigm.model_dump()
+        restored = ResolvedParadigm.model_validate(dumped)
+
+        assert restored.lemma == paradigm.lemma
+        assert restored.pos == paradigm.pos
+        assert len(restored.fields) == 1
+        assert restored.fields[0].field == "gender"
+        assert restored.fields[0].value == "feminine"
+        assert restored.fields[0].source == "rules"
+        assert len(restored.cross_checks["gender"]) == 1
+        assert restored.cross_checks["gender"][0].source == "wiktionary"
+
+    def test_resolved_paradigm_empty_fields_is_valid(self) -> None:
+        """ResolvedParadigm with no resolved fields must be a valid state (e.g. all sources absent)."""
+        paradigm = ResolvedParadigm(lemma="ξ", pos="noun")
+        assert paradigm.fields == []
+        assert paradigm.cross_checks == {}
+        assert paradigm.flagged_fields == []
+
+
+@pytest.mark.unit
+class TestResolverForEdgeCases:
+    """resolver_for must degrade gracefully on unusual pos values."""
+
+    def test_resolver_for_empty_string_returns_none(self) -> None:
+        """resolver_for('') must return None — empty string is not a registered POS."""
+        assert resolver_for("") is None
+
+    def test_resolver_for_uppercase_noun_returns_none(self) -> None:
+        """resolver_for('NOUN') returns None — the registry key is lowercase 'noun'."""
+        assert resolver_for("NOUN") is None
+
+    def test_resolver_for_whitespace_returns_none(self) -> None:
+        """resolver_for(' noun ') returns None — whitespace is not normalised."""
+        assert resolver_for(" noun ") is None
+
+
+@pytest.mark.unit
+class TestLexiconGenderRungMissingFeatureKey:
+    """Lexicon gender rung must treat bundles with no 'gender' feature key as non-contributing."""
+
+    def test_forms_without_gender_feature_key_return_none(self) -> None:
+        """Forms with case+number but no 'gender' key contribute nothing to gender extraction.
+
+        The rung must return None (not crash, not fabricate a value).
+        """
+        forms = [
+            FormBundle(form="θάλασσα", features={"case": "nominative", "number": "singular"}),
+            FormBundle(form="θαλάσσης", features={"case": "genitive", "number": "singular"}),
+        ]
+        packet = _make_packet(lexicon_present=True, lexicon_forms=forms)
+        ctx = _make_ctx("θάλασσα")
+
+        rungs = NOUN_CHAINS[("noun", "gender")]
+        # Check the lexicon rung specifically
+        for rung in rungs:
+            ev = rung(packet, ctx)
+            if ev is not None and ev.source == "lexicon":
+                pytest.fail(
+                    f"Lexicon gender rung must return None when no 'gender' feature key "
+                    f"is present in any form, but returned {ev}"
+                )
+
+    def test_mixed_forms_some_with_gender_some_without(self) -> None:
+        """Only bundles that have a 'gender' key contribute to the set; absent-key bundles are ignored."""
+        forms = [
+            FormBundle(form="θαλάσσης", features={"case": "genitive", "number": "singular"}),
+            # no gender key above
+            FormBundle(
+                form="θάλασσα",
+                features={"case": "nominative", "number": "singular", "gender": "feminine"},
+            ),
+        ]
+        packet = _make_packet(lexicon_present=True, lexicon_forms=forms)
+        ctx = _make_ctx("θάλασσα")
+
+        rungs = NOUN_CHAINS[("noun", "gender")]
+        lexicon_result = None
+        for rung in rungs:
+            ev = rung(packet, ctx)
+            if ev is not None and ev.source == "lexicon":
+                lexicon_result = ev
+                break
+
+        assert (
+            lexicon_result is not None
+        ), "Lexicon gender rung must return evidence when at least one form has gender"
+        assert lexicon_result.value == "feminine"
+
+
+@pytest.mark.unit
+class TestDR3NoConfidence:
+    """DR §3: no rung may set a numeric confidence — confidence must always be None (inert/logged-only)."""
+
+    def _all_rung_results(self) -> list[FieldEvidence]:
+        """Drive every rung with a maximally-populated packet and collect all non-None results."""
+        forms = [
+            FormBundle(
+                form="θάλασσα",
+                features={"case": "nominative", "number": "singular", "gender": "feminine"},
+            )
+        ]
+        packet = _make_packet(
+            normalized_lemma="θάλασσα",
+            pos="noun",
+            wikt_present=True,
+            wikt_gender="feminine",
+            wikt_pronunciation="θaˈlasa",
+            wikt_forms=forms,
+            lexicon_present=True,
+            lexicon_forms=forms,
+            freq_present=True,
+            freq_rank=7,
+            rules_present=True,
+        )
+        ctx = _make_ctx("θάλασσα", resolved={"gender": "feminine"})
+
+        results = []
+        for rungs in NOUN_CHAINS.values():
+            for rung in rungs:
+                ev = rung(packet, ctx)
+                if ev is not None:
+                    results.append(ev)
+        return results
+
+    def test_no_rung_sets_numeric_confidence(self) -> None:
+        """Every rung leaves FieldEvidence.confidence at None (DR §3 — inert logged-only data).
+
+        A rung that sets a numeric confidence would let a downstream consumer
+        silently branch on it, violating the 'logged-only' decision record.
+        """
+        results = self._all_rung_results()
+        assert results, "Must have collected at least one FieldEvidence from the rungs"
+        for ev in results:
+            assert ev.confidence is None, (
+                f"Rung for source='{ev.source}' field='{ev.field}' "
+                f"set confidence={ev.confidence!r}; DR §3 requires None"
+            )
