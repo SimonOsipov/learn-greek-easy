@@ -5063,7 +5063,7 @@ async def list_situations(
             selectinload(Situation.description),
             selectinload(Situation.picture),
         )
-        .order_by(Situation.created_at.desc())
+        .order_by(Situation.created_at.desc(), Situation.id.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
