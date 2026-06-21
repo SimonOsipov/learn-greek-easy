@@ -90,16 +90,17 @@ vi.mock('@/stores/adminSituationStore', () => ({
   useAdminSituationStore: (...args: unknown[]) =>
     mockUseAdminSituationStore(...(args as [(s: typeof storeState) => unknown])),
   selectStatsTotals: (s: typeof storeState) => {
-    let ready = 0;
-    let draft = 0;
+    // Mirror the real fixed selector: total/ready/draft from statusCounts (catalog-wide);
+    // exercisesGenerated, totalLast30d, oldestDraftDate remain page-local (D12).
+    const ready = s.statusCounts.ready ?? 0;
+    const draft = s.statusCounts.draft ?? 0;
+    const total = ready + draft;
     let exercisesGenerated = 0;
     let totalLast30d = 0;
     let oldestDraftDate: string | null = null;
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     for (const sit of s.situations) {
-      if (sit.status === 'ready') ready += 1;
-      else if (sit.status === 'draft') {
-        draft += 1;
+      if (sit.status === 'draft') {
         if (oldestDraftDate === null || sit.created_at < oldestDraftDate) {
           oldestDraftDate = sit.created_at;
         }
@@ -108,14 +109,7 @@ vi.mock('@/stores/adminSituationStore', () => ({
         sit.dialog_exercises_count + sit.description_exercises_count + sit.picture_exercises_count;
       if (new Date(sit.created_at) >= thirtyDaysAgo) totalLast30d += 1;
     }
-    return {
-      total: s.situations.length,
-      ready,
-      draft,
-      exercisesGenerated,
-      totalLast30d,
-      oldestDraftDate,
-    };
+    return { total, ready, draft, exercisesGenerated, totalLast30d, oldestDraftDate };
   },
   selectFilteredSituations: (s: typeof storeState) => s.situations,
 }));
@@ -234,29 +228,33 @@ describe('SituationsTab — shell composition', () => {
 
 describe('SituationsTab — 4 StatCards rendered', () => {
   it('renders 4 stat-card elements with correct tones', () => {
-    seedStore([
-      {
-        id: '1',
-        status: 'ready',
-        dialog_exercises_count: 10,
-        description_exercises_count: 20,
-        picture_exercises_count: 12,
-      },
-      {
-        id: '2',
-        status: 'draft',
-        dialog_exercises_count: 0,
-        description_exercises_count: 0,
-        picture_exercises_count: 0,
-      },
-      {
-        id: '3',
-        status: 'draft',
-        dialog_exercises_count: 0,
-        description_exercises_count: 0,
-        picture_exercises_count: 0,
-      },
-    ]);
+    // statusCounts must have draft>0 so the Drafts card renders amber (catalog-sourced).
+    seedStore(
+      [
+        {
+          id: '1',
+          status: 'ready',
+          dialog_exercises_count: 10,
+          description_exercises_count: 20,
+          picture_exercises_count: 12,
+        },
+        {
+          id: '2',
+          status: 'draft',
+          dialog_exercises_count: 0,
+          description_exercises_count: 0,
+          picture_exercises_count: 0,
+        },
+        {
+          id: '3',
+          status: 'draft',
+          dialog_exercises_count: 0,
+          description_exercises_count: 0,
+          picture_exercises_count: 0,
+        },
+      ],
+      { ready: 1, draft: 2 }
+    );
 
     renderWithRouter();
 
@@ -335,24 +333,28 @@ describe('SituationsTab — Drafts tone flip', () => {
   });
 
   it('draft>0 → amber tone and subOldest text (with date from created_at)', () => {
-    seedStore([
-      {
-        id: '1',
-        status: 'draft',
-        created_at: '2024-03-15T00:00:00Z',
-        dialog_exercises_count: 0,
-        description_exercises_count: 0,
-        picture_exercises_count: 0,
-      },
-      {
-        id: '2',
-        status: 'draft',
-        created_at: '2024-06-01T00:00:00Z',
-        dialog_exercises_count: 0,
-        description_exercises_count: 0,
-        picture_exercises_count: 0,
-      },
-    ]);
+    // statusCounts.draft>0 so the Drafts card renders amber (catalog-sourced).
+    seedStore(
+      [
+        {
+          id: '1',
+          status: 'draft',
+          created_at: '2024-03-15T00:00:00Z',
+          dialog_exercises_count: 0,
+          description_exercises_count: 0,
+          picture_exercises_count: 0,
+        },
+        {
+          id: '2',
+          status: 'draft',
+          created_at: '2024-06-01T00:00:00Z',
+          dialog_exercises_count: 0,
+          description_exercises_count: 0,
+          picture_exercises_count: 0,
+        },
+      ],
+      { ready: 0, draft: 2 }
+    );
 
     renderWithRouter();
 
@@ -376,7 +378,8 @@ describe('SituationsTab — Ready-to-ship percent', () => {
       description_exercises_count: 0,
       picture_exercises_count: 0,
     }));
-    seedStore(situations);
+    // statusCounts must reflect 4 ready + 6 draft so the catalog-sourced selector returns ready=4.
+    seedStore(situations, { ready: 4, draft: 6 });
 
     renderWithRouter();
 

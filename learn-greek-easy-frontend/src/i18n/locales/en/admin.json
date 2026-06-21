@@ -1624,7 +1624,8 @@
       },
       "exercisesGenerated": {
         "title": "Exercises generated",
-        "sub": "across all situations"
+        "sub": "across all situations",
+        "subPage": "on the current page"
       },
       "footerCatalog": "Catalog total"
     },
