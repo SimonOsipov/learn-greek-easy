@@ -94,10 +94,14 @@ class TestTamperResistance:
         parts = token.split(".")
         assert len(parts) == 3, "Expected standard 3-segment JWT"
 
-        # Flip last char of signature to corrupt it
+        # Flip the FIRST char of the signature to corrupt it.
+        # NB: a 32-byte HMAC base64url-encodes to 43 chars whose *last* char
+        # carries only 4 significant data bits (the low 2 are zero-padding),
+        # and "A"/"B" share the same top 4 bits — so mutating the last char is
+        # a no-op after decode ~6% of the time (when it is one of A/B/C/D).
+        # The first char's 6 bits are all significant, so any swap changes byte 0.
         sig = parts[2]
-        # Replace last character with something different
-        corrupted_sig = sig[:-1] + ("A" if sig[-1] != "A" else "B")
+        corrupted_sig = ("A" if sig[0] != "A" else "B") + sig[1:]
         corrupted_token = ".".join([parts[0], parts[1], corrupted_sig])
 
         secret = _settings_secret()
