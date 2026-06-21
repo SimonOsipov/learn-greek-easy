@@ -62,9 +62,10 @@ class TestWordProposalModel:
         assert WordProposal.__table__.schema is None
 
     def test_has_all_columns(self):
-        # 17 columns total = 15 own + created_at/updated_at from TimestampMixin.
-        # (The task plan said "18" but its enumerated list names 15 own columns;
-        # the "18" is a plan miscount — every named column is present.)
+        # 18 columns total = 16 own + created_at/updated_at from TimestampMixin.
+        # LEXGEN-09-01 adds generated_content (nullable JSONB) bringing own from 15→16.
+        # RED before LEXGEN-09-01 executor run: generated_content column is absent
+        # → columns == 17-item set → assertion fails (set mismatch + len != 18).
         columns = set(WordProposal.__table__.columns.keys())
         expected = {
             "id",
@@ -84,9 +85,10 @@ class TestWordProposalModel:
             "retry_attempts",
             "created_at",
             "updated_at",
+            "generated_content",  # LEXGEN-09-01: nullable JSONB for lexical content
         }
         assert columns == expected
-        assert len(columns) == 17  # 15 own columns + created_at/updated_at mixin
+        assert len(columns) == 18  # 16 own columns + created_at/updated_at mixin
 
     # =========================================================================
     # POS-neutrality (schema half)
