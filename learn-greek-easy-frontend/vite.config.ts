@@ -180,8 +180,12 @@ export default defineConfig(({ mode }) => {
         output: {
           // Manual chunks for better caching and code splitting
           manualChunks: {
-            // React core - always needed
-            'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+            // React core - always needed.
+            // react-is is pinned here (not left to land in the lazy `charts`
+            // chunk) so the deferred Sentry init — which pulls react-is via
+            // hoist-non-react-statics — does not drag recharts (~105KB gz) onto
+            // every page via a static cross-chunk edge. See PERF / App Review.
+            'react-vendor': ['react', 'react-dom', 'react-router-dom', 'react-is'],
 
             // UI components from Radix UI - split by usage patterns
             'ui-core': [
