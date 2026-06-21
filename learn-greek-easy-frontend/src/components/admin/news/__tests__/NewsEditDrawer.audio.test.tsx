@@ -99,6 +99,9 @@ function makeLinkedSituation(id = 'sit-1'): LinkedSituationSummary {
     turn_count: 4,
     exercise_count: 1,
     audio_seconds: 30,
+    picture_image_url: null,
+    picture_image_variants: null,
+    has_picture: false,
   };
 }
 

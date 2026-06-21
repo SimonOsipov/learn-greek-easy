@@ -320,6 +320,9 @@ describe('NewsEditDrawer — linked situation pill', () => {
         turn_count: 8,
         exercise_count: 2,
         audio_seconds: 30,
+        picture_image_url: null,
+        picture_image_variants: null,
+        has_picture: false,
       },
     });
     storeState.drawerItemId = item.id;

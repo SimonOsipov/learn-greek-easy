@@ -11,6 +11,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { NewsItemResponse } from '@/services/adminAPI';
+import type { LinkedSituationSummary } from '../NewsEditDrawer.linkedSituation';
 
 // ── Module mocks ───────────────────────────────────────────────────────────────
 
@@ -111,7 +112,7 @@ function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
   };
 }
 
-const FIXTURE_SITUATION = {
+const FIXTURE_SITUATION: LinkedSituationSummary = {
   id: 'sit-abc',
   titleEn: 'At the Pharmacy',
   titleEl: 'Στο φαρμακείο',
@@ -723,6 +724,9 @@ describe('NewsEditDrawer — linked situation populated card path', () => {
         turn_count: 12,
         exercise_count: 3,
         audio_seconds: 45.3,
+        picture_image_url: null,
+        picture_image_variants: null,
+        has_picture: false,
       },
     });
     storeState.drawerItemId = item.id;

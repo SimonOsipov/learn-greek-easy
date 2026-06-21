@@ -148,15 +148,12 @@ let NewsEditDrawerLinkedSituation: React.FC<{
   linkedSituation?: null;
   onRequestQuickJump?: (id: string) => void;
 }>;
-let NewsEditDrawer: React.FC;
 
 async function loadModules() {
   const audioMod = await import('../NewsEditDrawer.audio');
   NewsEditDrawerAudio = audioMod.NewsEditDrawerAudio;
   const lsMod = await import('../NewsEditDrawer.linkedSituation');
   NewsEditDrawerLinkedSituation = lsMod.NewsEditDrawerLinkedSituation;
-  const drawerMod = await import('../NewsEditDrawer');
-  NewsEditDrawer = drawerMod.NewsEditDrawer;
 }
 
 beforeEach(async () => {
@@ -205,16 +202,6 @@ function AudioWrapper({ item }: { item: NewsItemResponse }) {
   return (
     <MemoryRouter>
       <NewsEditDrawerAudio item={item} />
-    </MemoryRouter>
-  );
-}
-
-// ── Full drawer render ────────────────────────────────────────────────────────
-
-function renderDrawer() {
-  return render(
-    <MemoryRouter initialEntries={['/admin']}>
-      <NewsEditDrawer />
     </MemoryRouter>
   );
 }
