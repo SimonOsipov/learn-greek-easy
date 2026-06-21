@@ -44,7 +44,7 @@ export const apiDashboardTime = new Trend('api_dashboard_time', true);
 export const apiStudyQueueTime = new Trend('api_study_queue_time', true);
 
 /**
- * Time for POST /api/v1/study/review (submit review answer).
+ * Time for POST /api/v1/reviews/v2 (submit review answer).
  * @type {Trend}
  */
 export const apiReviewTime = new Trend('api_review_time', true);

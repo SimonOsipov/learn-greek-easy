@@ -83,12 +83,12 @@ export const options = {
     },
   },
   thresholds: {
-    auth_navigate_time: ['p(95)<3000'],
+    auth_navigate_time: ['p(95)<2500'],
     auth_fill_email_time: ['p(95)<500'],
     auth_fill_password_time: ['p(95)<500'],
     auth_submit_time: ['p(95)<2000'],
     auth_redirect_time: ['p(95)<2000'],
-    auth_total_time: ['p(95)<8000'],
+    auth_total_time: ['p(95)<5000'],
     checks: ['rate>0.95'],
   },
 };

@@ -107,7 +107,7 @@ describe('parse-k6-results.cjs — testability refactor (PERF-12-01)', () => {
   // --------------------------------------------------------------------------
   // Test 2: module must export all 8 named symbols
   // --------------------------------------------------------------------------
-  it('test_exports_pure_helpers — module must export all 8 symbols', () => {
+  it('test_exports_pure_helpers — module must export all core symbols', () => {
     const { mod } = loadModule();
 
     const expectedExports = [
@@ -533,7 +533,7 @@ describe('parse-k6-results.cjs — adversarial / edge coverage (PERF-12-01)', ()
   // --------------------------------------------------------------------------
   // module.exports does NOT leak main (exactly 8 symbols)
   // --------------------------------------------------------------------------
-  it('edge_exports_no_main_leak — module.exports has exactly 11 keys, main is absent', () => {
+  it('edge_exports_no_main_leak — module.exports has exactly 13 keys, main is absent', () => {
     const { mod } = loadModule();
 
     const exportedKeys = Object.keys(mod);
@@ -544,15 +544,17 @@ describe('parse-k6-results.cjs — adversarial / edge coverage (PERF-12-01)', ()
       'getMetricStatus',
       'generateMetricsSection',
       'getMetricLabel',
+      'generateMarkdown',
       'AUTH_METRICS',
       'DASHBOARD_METRICS',
+      'PROTOCOL_METRICS',
       'readBaselines',
       'computeDelta',
       'formatDelta',
     ];
 
-    // Exactly the 11 pure helpers (8 original + 3 baseline-diff additions) — no side-effectful 'main'
-    expect(exportedKeys).toHaveLength(11);
+    // Exactly the 13 pure helpers (8 original + 3 baseline-diff + 2 protocol additions) — no side-effectful 'main'
+    expect(exportedKeys).toHaveLength(13);
     expect(exportedKeys.sort()).toEqual(expectedExports.sort());
     expect(mod).not.toHaveProperty('main');
   });
@@ -825,5 +827,196 @@ describe('parse-k6-results.cjs — adversarial / edge coverage (PERF-12-02)', ()
     const negExactly2 = computeDelta(980, 1000);
     expect(negExactly2.pct).toBe(-2);
     expect(negExactly2.direction).toBe('down');
+  });
+});
+
+// ============================================================================
+// PERF-12-04 protocol render
+// ============================================================================
+// Tests for the new protocol/API-latency section in generateMarkdown and
+// the PROTOCOL_METRICS map + getMetricLabel F5 extension.
+// ============================================================================
+
+describe('PERF-12-04 protocol render', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete require.cache[MODULE_PATH];
+  });
+
+  // Build minimal authData / dashboardData objects matching what parseReport() returns.
+  // We only need metrics + iterations + errorRate + violations for generateMarkdown.
+  function makeAuthData() {
+    return {
+      iterations: 5,
+      errorRate: 0,
+      checksRate: 100,
+      metrics: {
+        auth_total_time: { values: { 'p(95)': 1000, med: 500 } },
+      },
+      violations: [],
+    };
+  }
+
+  function makeDashboardData() {
+    return {
+      iterations: 5,
+      errorRate: 0,
+      checksRate: 100,
+      metrics: {
+        dashboard_flow_total_time: { values: { 'p(95)': 3000, med: 1500 } },
+      },
+      violations: [],
+    };
+  }
+
+  function makeProtocolData() {
+    return {
+      iterations: 10,
+      errorRate: 0,
+      checksRate: 100,
+      metrics: {
+        api_total_time: { values: { 'p(95)': 4000, med: 100 } },
+        api_review_time: { values: { 'p(95)': 1800, med: 900 } },
+      },
+      violations: [],
+    };
+  }
+
+  // (i) generateMarkdown with protocolData contains 'API Latency / SM-2 Loop Metrics'
+  it('protocol_section_heading — output contains the protocol metrics section heading', () => {
+    const { mod } = loadModule();
+    const generateMarkdown = mod.generateMarkdown as (
+      auth: unknown,
+      dash: unknown,
+      baselines: unknown,
+      protocol?: unknown
+    ) => string;
+
+    const output = generateMarkdown(makeAuthData(), makeDashboardData(), null, makeProtocolData());
+    expect(output).toContain('API Latency / SM-2 Loop Metrics');
+  });
+
+  // (ii) generateMarkdown with protocolData contains an 'API Latency' summary row
+  it('protocol_summary_row — summary table contains API Latency row', () => {
+    const { mod } = loadModule();
+    const generateMarkdown = mod.generateMarkdown as (
+      auth: unknown,
+      dash: unknown,
+      baselines: unknown,
+      protocol?: unknown
+    ) => string;
+
+    const output = generateMarkdown(makeAuthData(), makeDashboardData(), null, makeProtocolData());
+    expect(output).toContain('API Latency');
+    // The row must NOT be 'Skipped' when protocolData is provided
+    const apiLatencyRow = output.split('\n').find((l) => l.includes('API Latency'));
+    expect(apiLatencyRow).toBeDefined();
+    expect(apiLatencyRow).not.toContain('Skipped');
+  });
+
+  // (iii) the protocol section contains the 'Δ vs main' column
+  it('protocol_section_delta_column — protocol metrics section has Δ vs main column', () => {
+    const { mod } = loadModule();
+    const generateMarkdown = mod.generateMarkdown as (
+      auth: unknown,
+      dash: unknown,
+      baselines: unknown,
+      protocol?: unknown
+    ) => string;
+
+    const output = generateMarkdown(makeAuthData(), makeDashboardData(), null, makeProtocolData());
+    // Find the API Latency section
+    const sectionIdx = output.indexOf('API Latency / SM-2 Loop Metrics');
+    expect(sectionIdx).toBeGreaterThan(-1);
+    const sectionText = output.slice(sectionIdx);
+    expect(sectionText).toMatch(/Δ\s*vs\s*main/i);
+  });
+
+  // (iv) with protocolData=null the output contains the Skipped API-latency row and does NOT throw
+  it('protocol_null_renders_skipped — null protocolData → Skipped row, no throw', () => {
+    const { mod } = loadModule();
+    const generateMarkdown = mod.generateMarkdown as (
+      auth: unknown,
+      dash: unknown,
+      baselines: unknown,
+      protocol?: unknown
+    ) => string;
+
+    let output = '';
+    expect(() => {
+      output = generateMarkdown(makeAuthData(), makeDashboardData(), null, null);
+    }).not.toThrow();
+
+    // Skipped sentinel must appear in the API Latency row
+    const apiLatencyRow = output.split('\n').find((l) => l.includes('API Latency'));
+    expect(apiLatencyRow).toBeDefined();
+    expect(apiLatencyRow).toContain('Skipped');
+
+    // Protocol section heading must NOT appear
+    expect(output).not.toContain('API Latency / SM-2 Loop Metrics');
+  });
+
+  // (iv-b) with protocolData omitted entirely also does not throw
+  it('protocol_omitted_does_not_throw — omitting 4th arg → Skipped row, no throw', () => {
+    const { mod } = loadModule();
+    const generateMarkdown = mod.generateMarkdown as (
+      auth: unknown,
+      dash: unknown,
+      baselines: unknown
+    ) => string;
+
+    let output = '';
+    expect(() => {
+      output = generateMarkdown(makeAuthData(), makeDashboardData(), null);
+    }).not.toThrow();
+
+    const apiLatencyRow = output.split('\n').find((l) => l.includes('API Latency'));
+    expect(apiLatencyRow).toBeDefined();
+    expect(apiLatencyRow).toContain('Skipped');
+  });
+
+  // (v) getMetricLabel('api_review_time') returns 'API Review (SM-2)'
+  it('protocol_getMetricLabel_api_review — F5: api_review_time resolves to correct label', () => {
+    const { mod } = loadModule();
+    const getMetricLabel = mod.getMetricLabel as (name: string) => string;
+
+    expect(getMetricLabel('api_review_time')).toBe('API Review (SM-2)');
+  });
+
+  // Bonus: PROTOCOL_METRICS is exported and has the right shape
+  it('protocol_metrics_exported — PROTOCOL_METRICS is exported and has 5 entries', () => {
+    const { mod } = loadModule();
+    const PROTOCOL_METRICS = mod.PROTOCOL_METRICS as Record<string, { label: string; threshold: number }>;
+
+    expect(PROTOCOL_METRICS).toBeDefined();
+    expect(Object.keys(PROTOCOL_METRICS)).toHaveLength(5);
+    expect(PROTOCOL_METRICS.api_me_time.threshold).toBe(1500);
+    expect(PROTOCOL_METRICS.api_total_time.threshold).toBe(6000);
+  });
+
+  // Bonus: protocol violations are included in the aggregated violations table
+  it('protocol_violations_in_table — protocol violations appear in violations section with API Latency scenario label', () => {
+    const { mod } = loadModule();
+    const generateMarkdown = mod.generateMarkdown as (
+      auth: unknown,
+      dash: unknown,
+      baselines: unknown,
+      protocol?: unknown
+    ) => string;
+
+    const protocolWithViolation = {
+      ...makeProtocolData(),
+      violations: [
+        {
+          metric: 'api_review_time',
+          threshold: 'p(95)<2000',
+          value: 'p95: 2.50s',
+        },
+      ],
+    };
+
+    const output = generateMarkdown(makeAuthData(), makeDashboardData(), null, protocolWithViolation);
+    expect(output).toContain('API Latency');
+    expect(output).toContain('API Review (SM-2)');
   });
 });

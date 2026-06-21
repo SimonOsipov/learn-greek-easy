@@ -42,8 +42,8 @@ const GITHUB_RUN_ID = process.env.GITHUB_RUN_ID || '';
 
 // These `threshold` values MUST stay in sync with the `thresholds` block in k6/scenarios/auth.js
 const AUTH_METRICS = {
-  auth_total_time: { label: 'Total Auth Flow', threshold: 8000 },
-  auth_navigate_time: { label: 'Navigate to Login', threshold: 3000 },
+  auth_total_time: { label: 'Total Auth Flow', threshold: 5000 },
+  auth_navigate_time: { label: 'Navigate to Login', threshold: 2500 },
   auth_fill_email_time: { label: 'Fill Email', threshold: 500 },
   auth_fill_password_time: { label: 'Fill Password', threshold: 500 },
   auth_submit_time: { label: 'Submit Form', threshold: 2000 },
@@ -52,13 +52,22 @@ const AUTH_METRICS = {
 
 // These `threshold` values MUST stay in sync with the `thresholds` block in k6/scenarios/dashboard.js
 const DASHBOARD_METRICS = {
-  dashboard_flow_total_time: { label: 'Total Dashboard Flow', threshold: 15000 },
+  dashboard_flow_total_time: { label: 'Total Dashboard Flow', threshold: 10000 },
   dashboard_load_time: { label: 'Dashboard Load', threshold: 2000 },
-  dashboard_stats_api_time: { label: 'Stats API', threshold: 3000 },
+  dashboard_stats_api_time: { label: 'Stats API', threshold: 2500 },
   deck_navigation_time: { label: 'Deck Navigation', threshold: 1000 },
   deck_load_time: { label: 'Deck Load', threshold: 2000 },
   session_start_time: { label: 'Session Start', threshold: 2000 },
   card_interaction_time: { label: 'Card Interaction', threshold: 1500 },
+};
+
+// These `threshold` values MUST stay in sync with the `thresholds` block in k6/scenarios/api-latency.js
+const PROTOCOL_METRICS = {
+  api_me_time: { label: 'API /me', threshold: 1500 },
+  api_dashboard_time: { label: 'API Dashboard', threshold: 2500 },
+  api_study_queue_time: { label: 'API Study Queue', threshold: 2000 },
+  api_review_time: { label: 'API Review (SM-2)', threshold: 2000 },
+  api_total_time: { label: 'API Loop Total', threshold: 6000 },
 };
 
 // ============================================================================
@@ -81,6 +90,7 @@ function main() {
     // Find and parse reports
     const authReport = findLatestReport('auth-preview-');
     const dashboardReport = findLatestReport('dashboard-preview-');
+    const protocolReport = findLatestReport('api-latency-preview-');
 
     if (!authReport && !dashboardReport) {
       throw new Error('No k6 report files found (expected auth-preview-*.json or dashboard-preview-*.json)');
@@ -89,17 +99,19 @@ function main() {
     // Parse reports
     const authData = authReport ? parseReport(authReport) : null;
     const dashboardData = dashboardReport ? parseReport(dashboardReport) : null;
+    const protocolData = protocolReport ? parseReport(protocolReport) : null;
 
     console.log('');
     if (authData) console.log(`Auth report parsed: ${authReport}`);
     if (dashboardData) console.log(`Dashboard report parsed: ${dashboardReport}`);
+    if (protocolData) console.log(`Protocol report parsed: ${protocolReport}`);
 
     // Load baselines (returns {metrics:{}} if file is absent/malformed — never throws)
     const baselineFilePath = process.env.K6_BASELINE_FILE || path.resolve(__dirname, '../../k6/baselines.json');
     const baselines = readBaselines(baselineFilePath);
 
     // Generate markdown
-    const markdown = generateMarkdown(authData, dashboardData, baselines);
+    const markdown = generateMarkdown(authData, dashboardData, baselines, protocolData);
 
     // Write output
     fs.writeFileSync(OUTPUT_FILE, markdown);
@@ -284,9 +296,10 @@ function formatMs(ms) {
  * @param {Object|null} authData - Parsed auth scenario data
  * @param {Object|null} dashboardData - Parsed dashboard scenario data
  * @param {{ metrics: Record<string, { p95: number }> }|null} baselines - Optional baselines from readBaselines()
+ * @param {Object|null} [protocolData] - Parsed API latency scenario data (optional)
  * @returns {string} Markdown content
  */
-function generateMarkdown(authData, dashboardData, baselines) {
+function generateMarkdown(authData, dashboardData, baselines, protocolData) {
   let md = `## K6 Performance Report\n\n`;
 
   // Determine overall status
@@ -324,6 +337,15 @@ function generateMarkdown(authData, dashboardData, baselines) {
     md += `| Dashboard Flow | \u23ED\uFE0F Skipped | - | - | - |\n`;
   }
 
+  if (protocolData) {
+    const protocolP95 = extractPercentiles(protocolData.metrics.api_total_time);
+    const protocolStatus = getScenarioStatus(protocolData);
+    const statusIcon = getStatusIcon(protocolStatus);
+    md += `| API Latency | ${statusIcon} | ${protocolData.iterations} | ${protocolData.errorRate.toFixed(1)}% | ${formatMs(protocolP95.p95)} |\n`;
+  } else {
+    md += `| API Latency | \u23ED\uFE0F Skipped | - | - | - |\n`;
+  }
+
   md += `\n`;
 
   // Auth Flow metrics section
@@ -336,10 +358,16 @@ function generateMarkdown(authData, dashboardData, baselines) {
     md += generateMetricsSection('Dashboard Flow Metrics', dashboardData.metrics, DASHBOARD_METRICS, baselines && baselines.metrics);
   }
 
+  // API Latency / SM-2 Loop metrics section
+  if (protocolData) {
+    md += generateMetricsSection('API Latency / SM-2 Loop Metrics', protocolData.metrics, PROTOCOL_METRICS, baselines && baselines.metrics);
+  }
+
   // Threshold violations section
   const allViolations = [
     ...(authData?.violations || []).map((v) => ({ ...v, scenario: 'Auth' })),
     ...(dashboardData?.violations || []).map((v) => ({ ...v, scenario: 'Dashboard' })),
+    ...(protocolData?.violations || []).map((v) => ({ ...v, scenario: 'API Latency' })),
   ];
 
   if (allViolations.length > 0) {
@@ -477,7 +505,7 @@ function getStatusIcon(status) {
  * @returns {string} Human-readable label
  */
 function getMetricLabel(metricName) {
-  const allMetrics = { ...AUTH_METRICS, ...DASHBOARD_METRICS };
+  const allMetrics = { ...AUTH_METRICS, ...DASHBOARD_METRICS, ...PROTOCOL_METRICS };
   return allMetrics[metricName]?.label || metricName;
 }
 
@@ -596,4 +624,4 @@ function formatDelta(delta) {
 
 if (require.main === module) { main(); }
 
-module.exports = { extractPercentiles, formatMs, formatMetricValue, getMetricStatus, generateMetricsSection, getMetricLabel, AUTH_METRICS, DASHBOARD_METRICS, readBaselines, computeDelta, formatDelta };
+module.exports = { extractPercentiles, formatMs, formatMetricValue, getMetricStatus, generateMetricsSection, getMetricLabel, generateMarkdown, AUTH_METRICS, DASHBOARD_METRICS, PROTOCOL_METRICS, readBaselines, computeDelta, formatDelta };
