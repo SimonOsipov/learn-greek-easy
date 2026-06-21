@@ -1,5 +1,7 @@
 """Integration tests for Situation CRUD admin endpoints."""
 
+import math
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
@@ -745,3 +747,189 @@ class TestUploadSituationPicture:
             files={"file": ("test.png", fake_png, "image/png")},
         )
         assert response.status_code == 404
+
+
+class TestListSituationsPaginationStability:
+    """RED tests for F7: pagination duplicate rows due to missing tiebreaker.
+
+    The bug: list_situations orders only by created_at.desc() — no unique
+    tiebreaker column (admin.py:5066).  When many rows share the same
+    created_at (batch-ingested from news), Postgres' sort among the ties is
+    non-deterministic per page, causing rows to appear on multiple pages
+    (duplicates) and other rows to be skipped entirely.
+
+    The fix (to be written by the executor): add Situation.id.desc() as a
+    secondary sort key so that the combined (created_at DESC, id DESC) order is
+    deterministic across pages.
+
+    How these tests are deterministically RED pre-fix:
+    ──────────────────────────────────────────────────
+    All three tests assert that items with tied created_at are returned in
+    descending UUID order (id DESC).  The current query has NO secondary sort,
+    so Postgres returns tied rows in heap/insertion order — ascending UUID
+    order on this DB, which is the opposite of what the tests demand.
+    A test that asserts id DESC ordering will FAIL as long as the secondary
+    sort key is absent.  After the fix (id DESC tiebreaker added) every
+    assertion holds.
+    """
+
+    # A single fixed timestamp shared by all "tied" situations in these tests.
+    TIED_TS = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+    @pytest.mark.asyncio
+    async def test_situations_pagination_no_duplicate_ids(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Given situations sharing an identical created_at (page_size=3, 6 rows):
+        - the items within each page must be ordered by id DESC (tiebreaker),
+        - no duplicate IDs appear across pages,
+        - the union of all page IDs equals the full created set.
+
+        Pre-fix: the page items are NOT in id DESC order → AssertionError.
+        Post-fix: id.desc() tiebreaker is present → items arrive id-descending
+        → assertion passes.
+        """
+        page_size = 3
+        unique_prefix = f"TIED-PAG-{uuid4().hex[:8]}"
+        created_ids: list[str] = []
+        for i in range(6):
+            s = await SituationFactory.create(
+                created_at=self.TIED_TS,
+                scenario_en=f"{unique_prefix} scenario {i}",
+                scenario_el=f"Σενάριο {unique_prefix} {i}",
+                scenario_ru=f"Сценарий {unique_prefix} {i}",
+            )
+            created_ids.append(str(s.id))
+
+        # The expected order after the fix: id DESC (largest UUID first).
+        expected_order = sorted(created_ids, reverse=True)
+
+        all_returned_ids: list[str] = []
+        total_pages = math.ceil(len(created_ids) / page_size)
+        for page in range(1, total_pages + 1):
+            resp = await client.get(
+                f"{BASE_URL}?search={unique_prefix}&page={page}&page_size={page_size}",
+                headers=superuser_auth_headers,
+            )
+            assert resp.status_code == 200
+            all_returned_ids.extend(item["id"] for item in resp.json()["items"])
+
+        # Duplicate check (secondary guard; primary is order below).
+        duplicates = [id_ for id_ in all_returned_ids if all_returned_ids.count(id_) > 1]
+        assert duplicates == [], (
+            f"Duplicate situation IDs found across pages: {set(duplicates)}. "
+            "The list_situations query lacks a deterministic secondary sort key."
+        )
+
+        # Primary RED assertion: items must be in (created_at DESC, id DESC) order.
+        # Pre-fix the sort has no id tiebreaker so this assertion fails.
+        assert all_returned_ids == expected_order, (
+            f"Situations with tied created_at are not in id DESC order.\n"
+            f"  Got:      {all_returned_ids}\n"
+            f"  Expected: {expected_order}\n"
+            "Add Situation.id.desc() as a secondary sort key in list_situations."
+        )
+
+    @pytest.mark.asyncio
+    async def test_situations_pagination_covers_full_catalog(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Given 6 situations sharing one created_at (page_size=2), the UNION of
+        all pages must be exactly the set of created IDs, and each page's items
+        must be in id DESC order within their offset window.
+
+        Pre-fix: no id tiebreaker → per-page order is heap order (id ASC here)
+        → the per-page id-DESC assertion fails.
+        Post-fix: tiebreaker present → per-page items arrive id-descending → pass.
+        """
+        page_size = 2
+        unique_prefix = f"FULL-CAT-{uuid4().hex[:8]}"
+        created_ids: list[str] = []
+        for i in range(6):
+            s = await SituationFactory.create(
+                created_at=self.TIED_TS,
+                scenario_en=f"{unique_prefix} item {i}",
+                scenario_el=f"Στοιχείο {unique_prefix} {i}",
+                scenario_ru=f"Элемент {unique_prefix} {i}",
+            )
+            created_ids.append(str(s.id))
+
+        # Expected global order under (created_at DESC, id DESC).
+        expected_global_order = sorted(created_ids, reverse=True)
+
+        first_resp = await client.get(
+            f"{BASE_URL}?search={unique_prefix}&page=1&page_size={page_size}",
+            headers=superuser_auth_headers,
+        )
+        assert first_resp.status_code == 200
+        total = first_resp.json()["total"]
+        total_pages = math.ceil(total / page_size)
+
+        all_returned_ids: list[str] = [item["id"] for item in first_resp.json()["items"]]
+        for page in range(2, total_pages + 1):
+            resp = await client.get(
+                f"{BASE_URL}?search={unique_prefix}&page={page}&page_size={page_size}",
+                headers=superuser_auth_headers,
+            )
+            assert resp.status_code == 200
+            all_returned_ids.extend(item["id"] for item in resp.json()["items"])
+
+        # Coverage check: no rows skipped.
+        assert set(all_returned_ids) == set(created_ids), (
+            f"Pages do not cover the full catalog.\n"
+            f"  Missing IDs:    {set(created_ids) - set(all_returned_ids)}\n"
+            f"  Unexpected IDs: {set(all_returned_ids) - set(created_ids)}\n"
+            "The list_situations query lacks a deterministic secondary sort key."
+        )
+
+        # Primary RED assertion: the concatenated multi-page result must be in
+        # (created_at DESC, id DESC) order.
+        assert all_returned_ids == expected_global_order, (
+            f"Multi-page result is not in (created_at DESC, id DESC) order.\n"
+            f"  Got:      {all_returned_ids}\n"
+            f"  Expected: {expected_global_order}\n"
+            "Add Situation.id.desc() as a secondary sort key in list_situations."
+        )
+
+    @pytest.mark.asyncio
+    async def test_situations_order_stable_for_tied_created_at(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Given 8 situations sharing the same created_at (page_size=2), the
+        items on page 1 must be the two situations with the largest IDs (id DESC).
+
+        Pre-fix: no id tiebreaker → Postgres returns the two rows in heap/insertion
+        order (id ASC on this DB) → the two IDs on page 1 are the *smallest* UUIDs,
+        not the *largest* → assertion fails.
+        Post-fix: id DESC tiebreaker → page 1 has the two largest UUIDs → passes.
+        """
+        page_size = 2
+        unique_prefix = f"STBL-ORD-{uuid4().hex[:8]}"
+        created_ids: list[str] = []
+        for i in range(8):
+            s = await SituationFactory.create(
+                created_at=self.TIED_TS,
+                scenario_en=f"{unique_prefix} row {i}",
+                scenario_el=f"Σειρά {unique_prefix} {i}",
+                scenario_ru=f"Строка {unique_prefix} {i}",
+            )
+            created_ids.append(str(s.id))
+
+        # Under (created_at DESC, id DESC) page 1 must be the two largest UUIDs.
+        top_two_expected = sorted(created_ids, reverse=True)[:page_size]
+
+        resp = await client.get(
+            f"{BASE_URL}?search={unique_prefix}&page=1&page_size={page_size}",
+            headers=superuser_auth_headers,
+        )
+        assert resp.status_code == 200
+        page1_ids = [item["id"] for item in resp.json()["items"]]
+
+        assert page1_ids == top_two_expected, (
+            f"Page 1 does not contain the top-{page_size} situations by id DESC.\n"
+            f"  Got:      {page1_ids}\n"
+            f"  Expected: {top_two_expected}\n"
+            f"  All IDs (sorted desc): {sorted(created_ids, reverse=True)}\n"
+            "Without Situation.id.desc() tiebreaker, tied-created_at rows appear "
+            "in non-deterministic (heap/insertion) order instead of id DESC."
+        )
