@@ -266,4 +266,36 @@ describe('write-k6-baseline.cjs — PERF-12-06', () => {
     expect(result).not.toBeNull();
     expect(result!.metrics).toEqual({});
   });
+
+  // --------------------------------------------------------------------------
+  // 9. Cross-scenario partial-safety: only auth fixture present → dashboard/
+  //    api-latency metrics are absent (not null / NaN) from output.
+  //    Regression guard: if buildBaseline accidentally wrote null for absent
+  //    scenarios, metrics like dashboard_load_time would appear with value null.
+  // --------------------------------------------------------------------------
+  it('buildBaseline_cross_scenario_partial_safe — absent scenarios produce no keys in output', () => {
+    // Only an auth-preview-* file exists; no dashboard or api-latency files.
+    const tmpDir = makeTempReportsDir([
+      { prefix: 'auth-preview-', metricName: 'auth_total_time', p95: 600 },
+    ]);
+    try {
+      const { mod } = loadModule();
+      const buildBaseline = mod.buildBaseline as (dir: string) => {
+        metrics: Record<string, { p95: number }>;
+      };
+
+      const result = buildBaseline(tmpDir);
+
+      // Auth metric should be present
+      expect(result.metrics).toHaveProperty('auth_total_time');
+      // Dashboard metrics must be absent — not null, not NaN, not present at all
+      expect(result.metrics).not.toHaveProperty('dashboard_load_time');
+      expect(result.metrics).not.toHaveProperty('dashboard_flow_total_time');
+      // Protocol metrics must be absent
+      expect(result.metrics).not.toHaveProperty('api_me_time');
+      expect(result.metrics).not.toHaveProperty('api_total_time');
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
 });
