@@ -986,6 +986,17 @@ class WordProposal(Base, TimestampMixin):
         comment="Fields flagged for reviewer attention",
     )
 
+    # RAG generator output (LEXGEN-09): gloss_en, gloss_ru, example_greek,
+    # example_translation. Separate from generated_fields (reconciler-owned,
+    # overwritten) — see LEXGEN-09 D2.
+    generated_content: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="RAG generator output (LEXGEN-09): gloss_en, gloss_ru, example_greek, "
+        "example_translation. Separate from generated_fields (reconciler-owned, "
+        "overwritten) — see LEXGEN-09 D2.",
+    )
+
     # INERT in v1 — Decision Record §3: no numeric trust score pre-calibration,
     # log only. Stays NULL; no code in v1 writes or reads this column.
     trust_score: Mapped[float | None] = mapped_column(
