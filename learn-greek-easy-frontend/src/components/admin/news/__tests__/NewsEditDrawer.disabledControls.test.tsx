@@ -221,57 +221,9 @@ function renderDrawer() {
 
 // ── ADMIN2-36-07 (C4): Disabled-control marker regression tests ────────────────
 
-describe('Disabled-control marker audit — Regenerate translations (NewsEditDrawer header)', () => {
-  it('Regenerate translations: has red-dot marker + tooltip trigger + is disabled', () => {
-    const item = makeItem();
-    storeState.drawerItemId = item.id;
-    storeState.newsItems = [item];
-
-    renderDrawer();
-
-    // ADMIN2-39 F9.1: "Regenerate translations" now lives in the footer action row
-    // (relocated out of the tab row); the contract is unchanged wherever it renders.
-    const btn = screen.getByRole('button', { name: /Regenerate translations/i });
-    assertDisabledControlContract(btn, 'Regenerate translations');
-  });
-
-  // ADMIN2-39 F9.1 (QA edge): AC-1 — the relocation outcome itself.
-  // The existing contract test above passes regardless of WHERE the button lives, so
-  // it cannot catch a regression that puts Regenerate-translations back in the tab row.
-  // This guard pins the button OUT of the tab row (.drawer-tabs) and INTO the footer
-  // (.drawer-foot), with the disabled-control contract still intact.
-  it('Regenerate translations: lives in the footer, NOT in the tab row (F9.1)', () => {
-    const item = makeItem();
-    storeState.drawerItemId = item.id;
-    storeState.newsItems = [item];
-
-    renderDrawer();
-
-    const btn = screen.getByRole('button', { name: /Regenerate translations/i });
-
-    // SidePanel renders inside a Dialog portal mounted on document.body, so query the
-    // document rather than the render container.
-    const tabRow = document.querySelector('.drawer-tabs');
-    const footer = document.querySelector('.drawer-foot');
-    expect(tabRow, 'tab row (.drawer-tabs) must exist').not.toBeNull();
-    expect(footer, 'footer (.drawer-foot) must exist').not.toBeNull();
-
-    // Outcome of F9.1: button moved out of the tab row, into the footer.
-    expect(tabRow!.contains(btn), 'Regenerate translations must NOT be inside the tab row').toBe(
-      false
-    );
-    expect(footer!.contains(btn), 'Regenerate translations must be inside the footer').toBe(true);
-
-    // The tab row contains tabs only — no disabled stub controls.
-    expect(
-      tabRow!.querySelector('button[aria-disabled="true"]'),
-      'tab row must contain tabs only (no disabled stub controls)'
-    ).toBeNull();
-
-    // Relocated button still satisfies the full disabled-control contract.
-    assertDisabledControlContract(btn, 'Regenerate translations (footer)');
-  });
-});
+// ADMIN2-41 F1: "Regenerate translations" footer button REMOVED.
+// The entire describe block for that control has been deleted — the button no longer
+// renders, so there is nothing to assert its disabled-control contract on.
 
 // ADMIN2-40 F10: "Audio Regenerate ×2" block REMOVED.
 // After F10 the Regenerate button is wired for linked items (no longer a stub) and uses a

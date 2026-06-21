@@ -556,8 +556,6 @@
       "save": "Save changes",
       "saving": "Saving…",
       "cancel": "Cancel",
-      "regenerateTranslations": "Regenerate translations",
-      "updatedRelative": "Updated {{relative}}",
       "published": "Published",
       "publishedPill": "Published",
       "draftPill": "Draft — not visible",
@@ -609,13 +607,7 @@
       },
       "image": {
         "kicker": "Source image",
-        "helper": "Enter a URL to replace the current image. The original source URL is not stored after upload.",
-        "sourceUrl": "Source image URL",
-        "altText": "Alt text — English",
-        "photoCredit": "Photo credit",
-        "invalidUrl": "Image URL is not valid",
-        "altWarning": "This article has no alt text. Consider adding it for accessibility before publishing.",
-        "missingAlt": "This image has no alt text — consider adding it for accessibility."
+        "altWarning": "This article has no alt text. Consider adding it for accessibility before publishing."
       },
       "linkedSituation": {
         "kicker": "Linked situation",

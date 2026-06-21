@@ -1,18 +1,15 @@
 // src/components/admin/news/__tests__/NewsEditDrawer.image.test.tsx
 //
-// NEWS-07d: NewsEditDrawerImage — unit tests.
-// Covers: preview (img / fallback), overlay Kicker + helper text,
-//         source URL input pre-filled from item.image_url,
-//         alt text + photo credit are enabled and bound,
-//         handleSave paths: empty input omits field, invalid URL blocks save,
-//         valid URL is included in payload,
-//         alt_text + photo_credit included in payload when dirty.
+// NEWS-07d (updated ADMIN2-41 F3): NewsEditDrawerImage — display-only unit tests.
+// The image tab now renders only the preview block (img / fallback + overlay Kicker).
+// All editable fields (source URL, alt text, photo credit) and the helper paragraph
+// were removed in ADMIN2-41 F3.  This file asserts:
+//   - the 3 field inputs and the helper/alt-hint are GONE,
+//   - the image preview still renders correctly.
 
 import React from 'react';
 
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { FormProvider, useForm } from 'react-hook-form';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -57,24 +54,6 @@ vi.mock('@/stores/adminNewsStore', () => ({
     mockUseAdminNewsStore(...(args as [(s: typeof storeState) => unknown])),
 }));
 
-// Field primitive — render label (with htmlFor when provided) + children.
-vi.mock('@/components/ui/field', () => ({
-  Field: ({
-    label,
-    children,
-    htmlFor,
-  }: {
-    label: React.ReactNode;
-    children: React.ReactNode;
-    htmlFor?: string;
-  }) => (
-    <div>
-      {htmlFor ? <label htmlFor={htmlFor}>{label}</label> : <div>{label}</div>}
-      {children}
-    </div>
-  ),
-}));
-
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
@@ -115,41 +94,10 @@ function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
 // ── Lazy-loaded modules (mocks register before import) ────────────────────────
 
 let NewsEditDrawerImage: React.FC<{ item: NewsItemResponse }>;
-let NewsEditDrawer: React.FC;
 
 async function loadModules() {
   const imgMod = await import('../NewsEditDrawer.image');
   NewsEditDrawerImage = imgMod.NewsEditDrawerImage;
-  const drawerMod = await import('../NewsEditDrawer');
-  NewsEditDrawer = drawerMod.NewsEditDrawer;
-}
-
-// ── Wrapper for isolated component tests ──────────────────────────────────────
-
-function Wrapper({ item }: { item: NewsItemResponse }) {
-  const methods = useForm({
-    defaultValues: {
-      // NBUG-06: toDefaults() seeds source_image_url as '' (not item.image_url)
-      source_image_url: '',
-      alt_text: item.alt_text ?? '',
-      photo_credit: item.photo_credit ?? '',
-    },
-  });
-  return (
-    <FormProvider {...methods}>
-      <NewsEditDrawerImage item={item} />
-    </FormProvider>
-  );
-}
-
-// ── Full drawer render helper ─────────────────────────────────────────────────
-
-function renderDrawer() {
-  return render(
-    <MemoryRouter initialEntries={['/admin']}>
-      <NewsEditDrawer />
-    </MemoryRouter>
-  );
 }
 
 // ── Setup ──────────────────────────────────────────────────────────────────────
@@ -167,217 +115,123 @@ beforeEach(async () => {
 
 describe('NewsEditDrawerImage — preview block', () => {
   it('renders img element when item.image_url is truthy', () => {
-    render(<Wrapper item={makeItem({ image_url: 'https://cdn.example.com/photo.jpg' })} />);
+    render(
+      <NewsEditDrawerImage item={makeItem({ image_url: 'https://cdn.example.com/photo.jpg' })} />
+    );
     const img = document.querySelector('.dr-image-box img') as HTMLImageElement;
     expect(img).toBeInTheDocument();
     expect(img).toHaveAttribute('src', 'https://cdn.example.com/photo.jpg');
   });
 
   it('renders .dr-image-fallback div when image_url is null', () => {
-    render(<Wrapper item={makeItem({ image_url: null })} />);
+    render(<NewsEditDrawerImage item={makeItem({ image_url: null })} />);
     expect(screen.queryByRole('img')).toBeNull();
     expect(document.querySelector('.dr-image-fallback')).toBeInTheDocument();
   });
 
   it('renders Kicker with i18n key news.drawer.image.kicker', () => {
-    render(<Wrapper item={makeItem()} />);
+    render(<NewsEditDrawerImage item={makeItem()} />);
     // Resolves to "Source image"
     expect(screen.getByText('Source image')).toBeInTheDocument();
-  });
-
-  it('renders helper text exactly', () => {
-    render(<Wrapper item={makeItem()} />);
-    // Resolves to the full helper string
-    expect(
-      screen.getByText(
-        'Enter a URL to replace the current image. The original source URL is not stored after upload.'
-      )
-    ).toBeInTheDocument();
   });
 });
 
 describe('NewsEditDrawerImage — layout', () => {
   it('root element has dr-image-tab class (2-col grid)', () => {
-    render(<Wrapper item={makeItem()} />);
+    render(<NewsEditDrawerImage item={makeItem()} />);
     const root = screen.getByTestId('news-drawer-tab-image-content');
     expect(root.classList.contains('dr-image-tab')).toBe(true);
   });
 });
 
-describe('NewsEditDrawerImage — source URL input', () => {
-  it('source_image_url opens empty regardless of item.image_url (NBUG-06)', () => {
-    const item = makeItem({ image_url: 'https://cdn.example.com/photo.jpg' });
-    // NBUG-06: toDefaults() seeds source_image_url as '' — the field opens empty, not pre-filled
-    render(<Wrapper item={item} />);
-    const input = screen.getByTestId('news-drawer-image-url-input') as HTMLInputElement;
-    expect(input.value).toBe('');
+describe('NewsEditDrawerImage — F3 removal: fields gone', () => {
+  it('source URL input is NOT rendered (F3 removal)', () => {
+    render(<NewsEditDrawerImage item={makeItem()} />);
+    expect(screen.queryByTestId('news-drawer-image-url-input')).not.toBeInTheDocument();
   });
 
-  it('opens empty when item.image_url is null', () => {
-    render(<Wrapper item={makeItem({ image_url: null })} />);
-    const input = screen.getByTestId('news-drawer-image-url-input') as HTMLInputElement;
-    expect(input.value).toBe('');
+  it('alt text input is NOT rendered (F3 removal)', () => {
+    render(<NewsEditDrawerImage item={makeItem()} />);
+    expect(screen.queryByTestId('news-drawer-image-alt-input')).not.toBeInTheDocument();
   });
 
-  it('is a url-type input', () => {
-    render(<Wrapper item={makeItem()} />);
-    const input = screen.getByTestId('news-drawer-image-url-input') as HTMLInputElement;
-    expect(input.type).toBe('url');
+  it('photo credit input is NOT rendered (F3 removal)', () => {
+    render(<NewsEditDrawerImage item={makeItem()} />);
+    expect(screen.queryByTestId('news-drawer-image-credit-input')).not.toBeInTheDocument();
   });
 
-  it('every input is reachable via getByLabelText (a11y contract)', () => {
-    render(<Wrapper item={makeItem()} />);
-    expect(screen.getByLabelText('Source image URL')).toBeInTheDocument();
-    expect(screen.getByLabelText('Alt text — English')).toBeInTheDocument();
-    expect(screen.getByLabelText('Photo credit')).toBeInTheDocument();
-  });
-});
-
-describe('NewsEditDrawerImage — enabled fields (NADM-21)', () => {
-  it('alt text input is enabled (no disabled attribute)', () => {
-    render(<Wrapper item={makeItem()} />);
-    const altInput = screen.getByTestId('news-drawer-image-alt-input');
-    expect(altInput).not.toBeDisabled();
-    expect(altInput).not.toHaveAttribute('aria-disabled', 'true');
+  it('helper text paragraph is NOT rendered (F3 removal)', () => {
+    render(<NewsEditDrawerImage item={makeItem()} />);
+    expect(
+      screen.queryByText(
+        'Enter a URL to replace the current image. The original source URL is not stored after upload.'
+      )
+    ).not.toBeInTheDocument();
   });
 
-  it('photo credit input is enabled (no disabled attribute)', () => {
-    render(<Wrapper item={makeItem()} />);
-    const creditInput = screen.getByTestId('news-drawer-image-credit-input');
-    expect(creditInput).not.toBeDisabled();
-    expect(creditInput).not.toHaveAttribute('aria-disabled', 'true');
+  it('alt-hint paragraph is NOT rendered (F3 removal)', () => {
+    // Previously shown when image_url is set but alt_text is empty
+    render(
+      <NewsEditDrawerImage
+        item={makeItem({ image_url: 'https://cdn.example.com/photo.jpg', alt_text: null })}
+      />
+    );
+    expect(screen.queryByTestId('news-drawer-image-alt-hint')).not.toBeInTheDocument();
   });
 });
 
 describe('NewsEditDrawerImage — 2-col grid layout', () => {
   it('root element has dr-image-tab class', () => {
-    render(<Wrapper item={makeItem()} />);
+    render(<NewsEditDrawerImage item={makeItem()} />);
     const root = screen.getByTestId('news-drawer-tab-image-content');
     expect(root).toHaveClass('dr-image-tab');
   });
 
   it('dr-image-box is present', () => {
-    render(<Wrapper item={makeItem({ image_url: 'https://cdn.example.com/photo.jpg' })} />);
+    render(
+      <NewsEditDrawerImage item={makeItem({ image_url: 'https://cdn.example.com/photo.jpg' })} />
+    );
     const box = document.querySelector('.dr-image-box');
     expect(box).toBeInTheDocument();
   });
 });
 
-// ── Full drawer save-path tests ───────────────────────────────────────────────
+describe('NewsEditDrawerImage — full drawer: image tab shows preview only', () => {
+  // Minimal smoke test via the full drawer — navigate to Image tab and confirm
+  // no field inputs appear (the tab is display-only after F3).
 
-describe('NewsEditDrawerImage — handleSave paths (via full drawer)', () => {
-  async function navigateToImageTab(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(screen.getByTestId('news-drawer-tab-image'));
-    expect(screen.getByTestId('news-drawer-tab-image-content')).toBeInTheDocument();
+  let NewsEditDrawer: React.FC;
+
+  beforeEach(async () => {
+    const drawerMod = await import('../NewsEditDrawer');
+    NewsEditDrawer = drawerMod.NewsEditDrawer;
+  });
+
+  function renderDrawer() {
+    return render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <NewsEditDrawer />
+      </MemoryRouter>
+    );
   }
 
-  it('empty source_image_url — Save omits source_image_url from payload and closes', async () => {
+  it('image tab renders no editable inputs after F3', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
     const user = userEvent.setup();
-    const item = makeItem();
+    const item = makeItem({ image_url: 'https://cdn.example.com/photo.jpg' });
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
 
     renderDrawer();
-    await navigateToImageTab(user);
+    await user.click(screen.getByTestId('news-drawer-tab-image'));
+    expect(screen.getByTestId('news-drawer-tab-image-content')).toBeInTheDocument();
 
-    // Input is empty (default) — click Save
-    await user.click(screen.getByTestId('news-drawer-save'));
+    // All 3 field inputs removed
+    expect(screen.queryByTestId('news-drawer-image-url-input')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('news-drawer-image-alt-input')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('news-drawer-image-credit-input')).not.toBeInTheDocument();
 
-    await waitFor(() => {
-      // No dirty fields, no source_image_url → no API call, drawer closes
-      expect(mockUpdateNewsItem).not.toHaveBeenCalled();
-      expect(mockCloseDrawer).toHaveBeenCalled();
-    });
-  });
-
-  it('invalid URL — toast destructive shown, API NOT called', async () => {
-    const user = userEvent.setup();
-    const item = makeItem();
-    storeState.drawerItemId = item.id;
-    storeState.newsItems = [item];
-
-    renderDrawer();
-    await navigateToImageTab(user);
-
-    const urlInput = screen.getByTestId('news-drawer-image-url-input');
-    await user.clear(urlInput);
-    await user.type(urlInput, 'not-a-valid-url');
-
-    await user.click(screen.getByTestId('news-drawer-save'));
-
-    await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
-      expect(mockUpdateNewsItem).not.toHaveBeenCalled();
-    });
-  });
-
-  it('valid URL — API called with payload.source_image_url set', async () => {
-    const user = userEvent.setup();
-    const item = makeItem();
-    storeState.drawerItemId = item.id;
-    storeState.newsItems = [item];
-
-    renderDrawer();
-    await navigateToImageTab(user);
-
-    const validUrl = 'https://example.com/new-image.jpg';
-    const urlInput = screen.getByTestId('news-drawer-image-url-input');
-    await user.clear(urlInput);
-    await user.type(urlInput, validUrl);
-
-    await user.click(screen.getByTestId('news-drawer-save'));
-
-    await waitFor(() => {
-      expect(mockUpdateNewsItem).toHaveBeenCalledWith(
-        item.id,
-        expect.objectContaining({ source_image_url: validUrl })
-      );
-    });
-  });
-
-  it('alt_text typed — API called with alt_text in payload', async () => {
-    const user = userEvent.setup();
-    const item = makeItem();
-    storeState.drawerItemId = item.id;
-    storeState.newsItems = [item];
-
-    renderDrawer();
-    await navigateToImageTab(user);
-
-    const altInput = screen.getByTestId('news-drawer-image-alt-input');
-    await user.clear(altInput);
-    await user.type(altInput, 'A photograph of Athens');
-
-    await user.click(screen.getByTestId('news-drawer-save'));
-
-    await waitFor(() => {
-      expect(mockUpdateNewsItem).toHaveBeenCalledWith(
-        item.id,
-        expect.objectContaining({ alt_text: 'A photograph of Athens' })
-      );
-    });
-  });
-
-  it('photo_credit typed — API called with photo_credit in payload', async () => {
-    const user = userEvent.setup();
-    const item = makeItem();
-    storeState.drawerItemId = item.id;
-    storeState.newsItems = [item];
-
-    renderDrawer();
-    await navigateToImageTab(user);
-
-    const creditInput = screen.getByTestId('news-drawer-image-credit-input');
-    await user.clear(creditInput);
-    await user.type(creditInput, 'Reuters / Jane Doe');
-
-    await user.click(screen.getByTestId('news-drawer-save'));
-
-    await waitFor(() => {
-      expect(mockUpdateNewsItem).toHaveBeenCalledWith(
-        item.id,
-        expect.objectContaining({ photo_credit: 'Reuters / Jane Doe' })
-      );
-    });
+    // Preview still visible
+    expect(document.querySelector('.dr-image-box img')).toBeInTheDocument();
   });
 });
