@@ -2,8 +2,9 @@
 //
 // NEWS-07c: Audio tab — 2 rows (B1 / A2) + static decorative waveform + one-at-a-time play.
 // Does NOT reuse WaveformPlayer — this is a lightweight static-bar atom with no Web Audio analysis.
+// ADMIN2-40 F10: Regenerate button wired to the situation description-audio SSE pipeline.
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Pause, Play, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -11,8 +12,10 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useSSE } from '@/hooks/useSSE';
 import { tDynamic } from '@/i18n/tDynamic';
-import { type NewsItemResponse } from '@/services/adminAPI';
+import { getDescriptionAudioStreamUrl, type NewsItemResponse } from '@/services/adminAPI';
+import { useAdminNewsStore } from '@/stores/adminNewsStore';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -71,6 +74,11 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
     a2: { currentTime: 0, duration: item.audio_a2_duration_seconds ?? 0 },
   });
 
+  // F10: which level is actively regenerating via SSE.
+  const [regenLevel, setRegenLevel] = useState<AudioLevel | null>(null);
+  // F10: inline error message (cleared when a new regen starts).
+  const [regenError, setRegenError] = useState<string | null>(null);
+
   // Audio element refs — only B1 and A2 have real audio elements.
   const b1Ref = useRef<HTMLAudioElement>(null);
   const a2Ref = useRef<HTMLAudioElement>(null);
@@ -83,6 +91,55 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
       a2Ref.current?.pause();
     };
   }, []);
+
+  // ── F10: SSE wiring ─────────────────────────────────────────────────────────
+
+  const situationId = item.linked_situation?.id ?? null;
+
+  // Derive the stream URL from the active regen level and the linked situation.
+  // An empty string disables the stream when either is absent.
+  const streamUrl =
+    regenLevel !== null && situationId !== null
+      ? getDescriptionAudioStreamUrl(situationId, regenLevel)
+      : '';
+
+  const handleSSEEvent = useCallback((event: { type: string; data: unknown }) => {
+    const data = event.data as Record<string, unknown>;
+    switch (event.type) {
+      case 'description_audio:complete':
+        // Refresh the item to pick up new audio URLs + duration.
+        useAdminNewsStore.getState().fetchNewsItems();
+        setRegenLevel(null);
+        break;
+      case 'description_audio:error':
+        setRegenError(
+          typeof data['error'] === 'string' ? data['error'] : 'Audio regeneration failed'
+        );
+        setRegenLevel(null);
+        break;
+      // Intermediate stages (start / tts / alignment / upload / persist) — no UI update needed
+      // beyond the spinner that's already visible while regenLevel !== null.
+      default:
+        break;
+    }
+  }, []);
+
+  const handleSSEError = useCallback((err: Error | unknown) => {
+    const msg =
+      err instanceof Error
+        ? err.message
+        : ((err as { message?: string }).message ?? 'Stream connection failed');
+    setRegenError(msg);
+    setRegenLevel(null);
+  }, []);
+
+  useSSE(streamUrl, {
+    method: 'POST',
+    enabled: regenLevel !== null && situationId !== null,
+    onEvent: handleSSEEvent,
+    onError: handleSSEError,
+    maxRetries: 0,
+  });
 
   // ── Playback control ────────────────────────────────────────────────────────
 
@@ -165,6 +222,52 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
     return '';
   }
 
+  function renderRegenButton(level: AudioLevel) {
+    const isInFlight = regenLevel === level;
+
+    if (situationId === null) {
+      // UNLINKED: keep aria-disabled with guard tooltip (no red dot — this is a real input guard,
+      // not a "coming soon" stub).
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                aria-disabled="true"
+                className="cursor-not-allowed opacity-60"
+                onClick={(e) => e.preventDefault()}
+              >
+                <RefreshCw size={14} />
+                {t('news.drawer.audio.regenerate')}
+              </Button>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>{t('news.drawer.audio.regenerateNoSituation')}</TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    // LINKED: fully wired Regenerate button.
+    return (
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        disabled={isInFlight}
+        onClick={() => {
+          setRegenError(null);
+          setRegenLevel(level);
+        }}
+      >
+        <RefreshCw size={14} className={isInFlight ? 'animate-spin' : ''} />
+        {t('news.drawer.audio.regenerate')}
+      </Button>
+    );
+  }
+
   function renderRow(level: AudioLevel, tone: 'violet', badgeLabel: string, nameKey: string) {
     const rs = rowState[level];
     return (
@@ -188,30 +291,7 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
         </div>
 
         {/* Actions */}
-        <div className="audio-actions">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  aria-disabled="true"
-                  className="relative cursor-not-allowed opacity-60"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  <RefreshCw size={14} />
-                  {t('news.drawer.audio.regenerate')}
-                  <span
-                    className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
-                    aria-hidden="true"
-                  />
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>{t('comingSoon')}</TooltipContent>
-          </Tooltip>
-        </div>
+        <div className="audio-actions">{renderRegenButton(level)}</div>
       </div>
     );
   }
@@ -219,6 +299,13 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
   return (
     <TooltipProvider>
       <div data-testid="news-drawer-tab-audio-content">
+        {/* F10: inline error banner — shown when SSE transport or pipeline errors out */}
+        {regenError && (
+          <p className="mb-2 text-sm text-destructive" role="alert">
+            {regenError}
+          </p>
+        )}
+
         {/* Hidden audio elements — only B1 and A2 */}
         {item.audio_url && (
           <audio

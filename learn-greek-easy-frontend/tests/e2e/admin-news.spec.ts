@@ -97,10 +97,9 @@ test.describe('Admin News — drawer happy paths (NEWS-10)', () => {
     await expect(b1Row.locator('.audio-wave')).toHaveCount(60);
     // B1 Play button is a real, enabled play control (NOT a phantom aria-disabled stub).
     await expect(b1Row.locator('.audio-play')).not.toHaveAttribute('aria-disabled', 'true');
-    // Regenerate stub only (Upload removed in F9) — assert the one stub is present in the B1 row.
-    // NOTE: subtask 07 (F10) will wire the Regenerate button for situation-LINKED items,
-    // so this count may need to change again in subtask 07 if the seeded item is linked.
-    await expect(b1Row.locator('.audio-actions button[aria-disabled="true"]')).toHaveCount(1);
+    // Regenerate is now wired for linked items (F10) — seeded news items have a linked situation,
+    // so their Regenerate buttons are enabled. No aria-disabled stubs remain in the B1 row.
+    await expect(b1Row.locator('.audio-actions button[aria-disabled="true"]')).toHaveCount(0);
   });
 
   test('6. Linked situation tab: action button is aria-disabled with comingSoon tooltip (no toast)', async ({

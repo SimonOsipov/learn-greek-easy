@@ -586,7 +586,8 @@
         "notGeneratedYet": "Not generated yet",
         "regenerate": "Regenerate",
         "playLabel": "Play {{level}} narration",
-        "pauseLabel": "Pause {{level}} narration"
+        "pauseLabel": "Pause {{level}} narration",
+        "regenerateNoSituation": "No linked situation"
       },
       "translations": {
         "titleEn": "Title — English",

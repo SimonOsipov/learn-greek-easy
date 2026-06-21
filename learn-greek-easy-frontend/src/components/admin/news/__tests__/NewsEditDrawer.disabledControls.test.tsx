@@ -8,7 +8,8 @@
 //
 // Named controls:
 //   - Regenerate translations (NewsEditDrawer.tsx header area)
-//   - Audio Regenerate ×2 — B1 + A2 (NewsEditDrawer.audio.tsx)
+//   - Audio Regenerate ×2 — REMOVED in ADMIN2-40 F10 (wired for linked items; redundant with
+//     audio.test.tsx #6 which guards the unlinked path; red-dot removed — guard, not stub)
 //   - Audio Upload ×2 — B1 + A2 (NewsEditDrawer.audio.tsx)
 //   - Linked-situation Generate (NewsEditDrawer.linkedSituation.tsx empty state)
 //   - Unlink (NewsEditDrawer.linkedSituation.tsx footer)
@@ -45,6 +46,13 @@ vi.mock('@/services/adminAPI', () => ({
   adminAPI: {
     updateNewsItem: (...args: unknown[]) => mockUpdateNewsItem(...args),
   },
+  getDescriptionAudioStreamUrl: (_situationId: string, level: string) =>
+    `/api/v1/admin/situations/sit-1/description-audio/stream?level=${level}`,
+}));
+
+// ADMIN2-40 F10: useSSE mock — NewsEditDrawer.audio now imports it.
+vi.mock('@/hooks/useSSE', () => ({
+  useSSE: vi.fn(() => ({ state: 'disconnected', close: vi.fn() })),
 }));
 
 // Store mock
@@ -265,29 +273,11 @@ describe('Disabled-control marker audit — Regenerate translations (NewsEditDra
   });
 });
 
-describe('Disabled-control marker audit — Audio Regenerate ×2 (NewsEditDrawer.audio)', () => {
-  it('B1 Regenerate audio: has red-dot marker + tooltip trigger + is disabled', () => {
-    render(<AudioWrapper item={makeItem()} />);
-
-    const rows = document.querySelectorAll('.audio-row');
-    expect(rows.length).toBeGreaterThanOrEqual(2);
-
-    const b1Row = rows[0];
-    const regenBtn = b1Row.querySelector('button[aria-disabled="true"]');
-    expect(regenBtn, 'B1 Regenerate: button not found').not.toBeNull();
-    assertDisabledControlContract(regenBtn!, 'Audio Regenerate (B1)');
-  });
-
-  it('A2 Regenerate audio: has red-dot marker + tooltip trigger + is disabled', () => {
-    render(<AudioWrapper item={makeItem()} />);
-
-    const rows = document.querySelectorAll('.audio-row');
-    const a2Row = rows[1];
-    const regenBtn = a2Row.querySelector('button[aria-disabled="true"]');
-    expect(regenBtn, 'A2 Regenerate: button not found').not.toBeNull();
-    assertDisabledControlContract(regenBtn!, 'Audio Regenerate (A2)');
-  });
-});
+// ADMIN2-40 F10: "Audio Regenerate ×2" block REMOVED.
+// After F10 the Regenerate button is wired for linked items (no longer a stub) and uses a
+// plain input-guard (aria-disabled + regenerateNoSituation tooltip, no red dot) for unlinked
+// items. The unlinked guard is covered by NewsEditDrawer.audio.test.tsx test #6.
+// The red-dot contract only applied to "coming soon" stubs and no longer fits this control.
 
 describe('Disabled-control marker audit — Audio Upload removed (F9)', () => {
   it('B1 row has no Upload button (F9 removal)', () => {
