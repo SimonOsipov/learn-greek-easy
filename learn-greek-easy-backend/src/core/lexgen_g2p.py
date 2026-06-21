@@ -13,6 +13,25 @@ Public surface:
 
 from dataclasses import dataclass
 
+from src.utils.greek_text import normalize_ipa
+
+# ---------------------------------------------------------------------------
+# Phoneme inventory
+# ---------------------------------------------------------------------------
+
+# The union of both IPA conventions in use in this codebase:
+#   - Standard IPA symbols for Greek phonemes (θ, ð, ɣ, ʝ, ʎ, ŋ, ç, ɲ)
+#   - LLM simplified-Latin substitutions (c←ç, y←ʝ, h←ɣ via gh, g U+0067←ɡ)
+# Both g (U+0067, LLM) and ɡ (U+0261, IPA script g) are legal.
+# x (U+0078, LATIN SMALL LETTER X) is the velar fricative.
+# Multi-char digraphs (ts, dz, gh) are NOT added — their individual chars
+# are already members.
+GREEK_PHONEME_INVENTORY: frozenset[str] = frozenset(
+    "a e i o u p b t d k f v s z m n l r g x θ ð ɣ ʝ ʎ ŋ ç ɲ c y h".split()
+) | {
+    "ɡ"
+}  # U+0261 (script g) in addition to g U+0067
+
 
 @dataclass(frozen=True)
 class G2PResult:
@@ -61,4 +80,19 @@ def validate_ipa(lemma: str, candidate_ipa: str) -> G2PResult:
         A frozen ``G2PResult`` with ``ok=True`` and ``reason=None`` on
         success, or ``ok=False`` and a non-empty ``reason`` on failure.
     """
-    raise NotImplementedError
+    norm = normalize_ipa(candidate_ipa)
+
+    # F2: empty-input guard — must fire BEFORE membership scan to prevent
+    # vacuous truth of all(... for ch in "").
+    if not norm:
+        return G2PResult(ok=False, reason="empty pronunciation")
+
+    # Membership scan — first illegal character wins; we report its symbol.
+    for ch in norm:
+        if ch not in GREEK_PHONEME_INVENTORY:
+            return G2PResult(
+                ok=False,
+                reason=f"illegal IPA symbol: {ch!r}",
+            )
+
+    return G2PResult(ok=True, reason=None)
