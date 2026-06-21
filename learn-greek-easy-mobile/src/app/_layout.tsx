@@ -29,6 +29,7 @@ import { useUserSettings } from '@/hooks/use-user-settings';
 import { getPostHog, registerSuperProperties } from '@/lib/analytics/posthog';
 import { queryClient } from '@/lib/query-client';
 import { initSentry } from '@/lib/sentry';
+import { ThemeBootstrap, useThemePersistence } from '@/stores/theme-store';
 
 initSentry();
 
@@ -47,6 +48,10 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
   const { session, isLoading } = useAuth();
   const settingsQuery = useUserSettings(); // enabled: !!session
 
+  // THEME-03: seed the theme preference from backend settings when the local
+  // cache is empty (web→mobile parity); an explicit local pref is never clobbered.
+  useThemePersistence();
+
   // For a signed-out session, settingsQuery is disabled:
   //   isPending=true (no data ever fetched) BUT isLoading=false
   //   (isLoading = isPending && isFetching; disabled queries never fetch).
@@ -57,6 +62,10 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
 
   return (
     <>
+      {/* Theme driver: applies the stored preference on mount and mirrors OS
+          flips into the store. Mounted here (inside QueryClientProvider) rather
+          than RootLayout; non-visual, runs for the whole app. */}
+      <ThemeBootstrap />
       <AnimatedSplashOverlay isReady={ready} />
       {ready && (
         <Stack screenOptions={{ headerShown: false }}>

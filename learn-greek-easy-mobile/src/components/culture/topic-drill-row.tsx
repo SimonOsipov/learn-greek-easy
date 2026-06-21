@@ -14,14 +14,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronRight } from 'lucide-react-native';
 
 import type { SubtopicItem } from '@/lib/culture/presentation';
+import { useIconColor } from '@/hooks/use-icon-color';
 
 // primary hsl(221 83% 53%) = rgb(36,99,235)
 // accent  hsl(221 83% 65%) = rgb(90,131,244)
 const MONOGRAM_FROM = 'rgb(36,99,235)';
 const MONOGRAM_TO   = 'rgb(90,131,244)';
-
-// fg-3 hsl(222 14% 56%) = rgb(127,136,159) — canonical ICON_FG3 (conventions.md §3)
-const ICON_FG3 = 'rgb(127,136,159)';
 
 interface TopicDrillRowProps {
   subtopic: SubtopicItem;
@@ -30,6 +28,8 @@ interface TopicDrillRowProps {
 
 export function TopicDrillRow({ subtopic, onPress }: TopicDrillRowProps) {
   const { id, title, el, n, mark } = subtopic;
+  // THEME-06: chevron (--fg-3) resolves per-theme from the global store.
+  const iconFg3 = useIconColor('fg-3');
 
   return (
     <Pressable
@@ -89,8 +89,9 @@ export function TopicDrillRow({ subtopic, onPress }: TopicDrillRowProps) {
         </Text>
       </View>
 
-      {/* Chevron — explicit color prop per conventions.md §3 (no className on lucide icons) */}
-      <ChevronRight size={18} color={ICON_FG3} strokeWidth={2} />
+      {/* Chevron — explicit color prop per conventions.md §3 (no className on lucide icons).
+          THEME-06: iconFg3 resolves per-theme from the store. */}
+      <ChevronRight size={18} color={iconFg3} strokeWidth={2} />
     </Pressable>
   );
 }

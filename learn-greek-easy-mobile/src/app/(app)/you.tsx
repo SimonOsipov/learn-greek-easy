@@ -29,15 +29,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Settings } from 'lucide-react-native';
 
-// fg hsl(222 32% 12%) = rgb(22,30,52) — used for Settings icon (primary content color)
-// Using text-fg token value: rgb(22,30,52) as documented in global.css
-const ICON_FG = 'rgb(22,30,52)'; // --fg hsl(222 32% 12%)
-
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useXpStats } from '@/hooks/use-xp-stats';
 import { useProgressDashboard } from '@/hooks/use-progress-dashboard';
 import { useWeekTrends } from '@/hooks/use-week-trends';
 import { useAuthStore } from '@/stores/auth-store';
+import { useThemeStore } from '@/stores/theme-store';
+import type { ThemePreference } from '@/stores/theme-store';
+import { useIconColor } from '@/hooks/use-icon-color';
 import { useToast } from '@/components/ui/toast';
 import { track } from '@/lib/analytics';
 import { buildHeatmap } from '@/lib/dashboard/derive';
@@ -76,6 +75,15 @@ function todayHeatmapIndex(): number {
 export default function YouScreen() {
   const { showComingSoonToast } = useToast();
   const signOut = useAuthStore((state) => state.signOut);
+
+  // ── Theme preference (THEME-04) — single source of truth for the Theme row's
+  // sublabel + segmented control. `setPreference` re-themes the whole app live
+  // and persists (THEME-03). ──
+  const themePreference = useThemeStore((s) => s.preference);
+  const setThemePreference = useThemeStore((s) => s.setPreference);
+  // THEME-06: gear icon color follows the live theme (bare `color=` prop can't use
+  // a className token), resolved from the same store the segmented control writes.
+  const iconFg = useIconColor('fg');
 
   const profileQuery = useUserProfile();
   const xpQuery = useXpStats();
@@ -121,6 +129,15 @@ export default function YouScreen() {
       showComingSoonToast();
     },
     [showComingSoonToast],
+  );
+
+  // ── Theme change handler (THEME-04) ──
+  const handleThemeChange = useCallback(
+    (preference: ThemePreference) => {
+      track('profile_row_tapped', { row: 'theme', coming_soon: false });
+      setThemePreference(preference);
+    },
+    [setThemePreference],
   );
 
   // ── Gear icon handler ──
@@ -226,7 +243,11 @@ export default function YouScreen() {
 
   const dailyGoal = profile.settings?.daily_goal ?? 20;
   const dailyGoalSublabel = `${dailyGoal} cards`;
-  const themeSublabel = profile.settings?.theme ?? 'System';
+  // F4 — sublabel reads the store's 3-state preference (shows "System" when
+  // System is chosen), NOT the 2-value backend field, so sublabel + control
+  // share one source of truth.
+  const themeSublabel =
+    themePreference.charAt(0).toUpperCase() + themePreference.slice(1);
 
   return (
     <SafeAreaView testID="you-screen" className="flex-1 bg-bg" edges={['top']}>
@@ -256,8 +277,9 @@ export default function YouScreen() {
             onPress={handleGearPress}
             className="w-8 h-8 items-center justify-center rounded-full active:opacity-70"
           >
-            {/* Explicit color prop per conventions.md §3 — no wrapper-View for icon color */}
-            <Settings size={20} color={ICON_FG} strokeWidth={2} />
+            {/* Explicit color prop per conventions.md §3 — no wrapper-View for icon color.
+                THEME-06: iconFg resolves per-theme from the store. */}
+            <Settings size={20} color={iconFg} strokeWidth={2} />
           </Pressable>
         </View>
 
@@ -301,6 +323,8 @@ export default function YouScreen() {
             testID="you-settings-list"
             dailyGoalSublabel={dailyGoalSublabel}
             themeSublabel={themeSublabel}
+            themePreference={themePreference}
+            onThemeChange={handleThemeChange}
             onRowPress={handleSettingsRow}
           />
         </View>

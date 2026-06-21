@@ -106,6 +106,11 @@ jest.mock('@/lib/analytics', () => ({ track: jest.fn() }));
 // ---------------------------------------------------------------------------
 import YouScreen from '@/app/(app)/you';
 import { track } from '@/lib/analytics';
+// THEME-06: the Theme row drives the REAL global theme store (not a coming-soon
+// stub). We assert against the real store + the globalThis-backed nativewind mock
+// (colorScheme.set) rather than a spy, so the test proves the live wiring.
+import { useThemeStore } from '@/stores/theme-store';
+import { colorScheme } from 'nativewind';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -240,6 +245,9 @@ beforeEach(() => {
   jest.clearAllMocks();
   // Reset track mock (imported after jest.mock() factory, so it IS the mock function)
   (track as jest.Mock).mockReset();
+  // THEME-06: reset the real theme store to its first-launch default so each
+  // Theme-row test starts from a known preference ('system').
+  useThemeStore.setState({ preference: 'system', resolvedScheme: 'dark' });
 });
 
 // ---------------------------------------------------------------------------
@@ -370,5 +378,59 @@ describe('YouScreen', () => {
     render(<YouScreen />);
     // The row contains both label "Daily goal" and sublabel "20 cards"
     expect(screen.getByTestId('settings-row-daily-goal')).toHaveTextContent(/20 cards/);
+  });
+
+  // ───────────────────────────────────────────────────────────────────────
+  // THEME-06 / F3 — Theme row is INTERACTIVE (not a coming-soon stub).
+  //
+  // There is no pre-existing `settings-row-theme` assertion (the existing
+  // coming-soon test targets `settings-row-daily-goal`, left UNTOUCHED above).
+  // These ADD coverage: pressing a Theme pill changes the preference and does
+  // NOT fire showComingSoonToast.
+  // ───────────────────────────────────────────────────────────────────────
+
+  it('pressing a Theme pill changes the preference and does NOT show the coming-soon toast (F3)', () => {
+    setQueries();
+    render(<YouScreen />);
+
+    // Default preference is 'system'; pick 'light'.
+    fireEvent.press(screen.getByTestId('theme-pill-light'));
+
+    // The live theme control updated the global store…
+    expect(useThemeStore.getState().preference).toBe('light');
+    // …drove NativeWind's colorScheme.set('light')…
+    expect(colorScheme.set).toHaveBeenCalledWith('light');
+    // …tracked the row tap as NOT coming-soon…
+    expect(track).toHaveBeenCalledWith('profile_row_tapped', {
+      row: 'theme',
+      coming_soon: false,
+    });
+    // …and crucially did NOT fire the coming-soon toast (the Theme row is live).
+    expect(mockShowComingSoonToast).not.toHaveBeenCalled();
+  });
+
+  it('the Theme segmented control reflects the current preference and updates it on press', () => {
+    // Seed an explicit preference so the control should reflect "dark" as selected.
+    useThemeStore.setState({ preference: 'dark', resolvedScheme: 'dark' });
+    setQueries();
+    render(<YouScreen />);
+
+    // The selected pill is marked selected; the others are not (control reflects
+    // the current preference).
+    expect(screen.getByTestId('theme-pill-dark').props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+    expect(screen.getByTestId('theme-pill-light').props.accessibilityState).toMatchObject({
+      selected: false,
+    });
+    expect(screen.getByTestId('theme-pill-system').props.accessibilityState).toMatchObject({
+      selected: false,
+    });
+
+    // Pressing another option updates the preference (setPreference fires) and
+    // drives colorScheme.set.
+    fireEvent.press(screen.getByTestId('theme-pill-system'));
+    expect(useThemeStore.getState().preference).toBe('system');
+    expect(colorScheme.set).toHaveBeenCalledWith('system');
   });
 });

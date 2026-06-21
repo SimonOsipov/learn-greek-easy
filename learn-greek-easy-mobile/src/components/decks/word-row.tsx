@@ -17,9 +17,7 @@ import { ChevronRight } from 'lucide-react-native';
 
 import { ARTICLE_COLOR, articleForGender } from '@/lib/decks/presentation';
 import type { WordEntryResponse, WordStatus } from '@/types/deck';
-
-// --fg-3 222 14% 56% (light) — chevron glyph; lucide takes a color value, not className
-const ICON_FG3 = 'rgb(127,136,159)';
+import { useIconColor } from '@/hooks/use-icon-color';
 
 export interface WordRowProps {
   word: WordEntryResponse;
@@ -31,6 +29,8 @@ export interface WordRowProps {
 
 export function WordRow({ word, status, showDivider, onPress }: WordRowProps) {
   const articleInfo = articleForGender(word.grammar_data?.gender);
+  // THEME-06: chevron (--fg-3) resolves per-theme from the global store.
+  const iconFg3 = useIconColor('fg-3');
 
   return (
     <Pressable
@@ -98,7 +98,7 @@ export function WordRow({ word, status, showDivider, onPress }: WordRowProps) {
       >
         {status}
       </Text>
-      <ChevronRight size={16} color={ICON_FG3} strokeWidth={2.2} />
+      <ChevronRight size={16} color={iconFg3} strokeWidth={2.2} />
     </Pressable>
   );
 }

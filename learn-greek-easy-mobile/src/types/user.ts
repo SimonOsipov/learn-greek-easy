@@ -38,7 +38,12 @@ export interface UserProfile {
 export interface UserSettingsUpdate {
   daily_goal?: number;
   email_notifications?: boolean;
-  theme?: string;
+  // D11 (THEME-03): narrowed from `string` → 'light' | 'dark'. The backend
+  // `UserSettings.theme` column is a hard 2-value enum (pattern ^(light|dark)$);
+  // a PATCH of 'system' 422s. This makes the D8 "never PATCH 'system'" rule a
+  // compile-time guarantee. (The READ type `UserSettings.theme` stays
+  // `string | null`, mirroring the backend response shape.)
+  theme?: 'light' | 'dark';
   preferred_language?: string;
   tour_completed_at?: string;
   proficiency_level?: string;

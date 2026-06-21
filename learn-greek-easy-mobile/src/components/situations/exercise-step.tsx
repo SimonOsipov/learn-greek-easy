@@ -26,6 +26,7 @@ import type {
   TrueFalsePayload,
   FillGapsPayload,
 } from '@/types/situation';
+import { useIconColor } from '@/hooks/use-icon-color';
 
 // MOB-13: explicit rgba — no /NN modifier on var-backed tokens
 const CORRECT_COLOR  = 'rgb(37,177,130)';        // hsl(160 65% 42%)
@@ -39,10 +40,14 @@ const VIOLET_COLOR   = 'rgb(177,82,224)';          // hsl(280 70% 55%)
 const VIOLET_14      = 'rgba(177,82,224,0.14)';
 const WHITE          = 'rgba(255,255,255,0.96)';
 // #6/#26: explicit rgb for props that RN/SVG cannot resolve from hsl(var(...))
+// THEME-06 NOTE: PRIMARY_COLOR/LINE_COLOR/BG2_COLOR are App tokens that ALSO flip
+// per theme (--primary/--line/--bg-2). They are LEFT pinned here — out of scope
+// for THEME-06, which converts only the App --fg-3 bare-icon/text defect class
+// (FG3_COLOR, below). The surface/border/primary pins across the situations
+// components are a separate legacy-drift track.
 const PRIMARY_COLOR  = 'rgb(36,99,235)';          // --primary hsl(221 83% 53%)
 const LINE_COLOR     = 'rgb(215,219,228)';         // --line hsl(221 20% 87%)
 const BG2_COLOR      = 'rgb(240,243,248)';         // --bg-2 hsl(221 30% 96%)
-const FG3_COLOR      = 'rgb(127,136,159)';         // --fg-3 hsl(222 14% 56%)
 
 // ---------------------------------------------------------------------------
 // Option model helpers
@@ -147,6 +152,8 @@ export interface ExerciseStepProps {
 export function ExerciseStep({ exercise, isLast, onComplete }: ExerciseStepProps) {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [checked, setChecked] = useState(false);
+  // THEME-06: disabled "Check" label (--fg-3) resolves per-theme from the global store.
+  const fg3Color = useIconColor('fg-3');
 
   const options = extractOptions(exercise);
   const question = extractQuestion(exercise);
@@ -394,7 +401,7 @@ export function ExerciseStep({ exercise, isLast, onComplete }: ExerciseStepProps
             <Text
               className="text-[15px] font-bold"
               style={{
-                color: selectedIdx !== null ? WHITE : FG3_COLOR,
+                color: selectedIdx !== null ? WHITE : fg3Color,
                 fontFamily: 'InterTight_700Bold',
               }}
             >

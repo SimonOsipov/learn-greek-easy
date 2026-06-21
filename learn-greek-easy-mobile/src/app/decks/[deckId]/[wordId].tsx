@@ -27,6 +27,7 @@ import { ChevronLeft, Volume2, Flag } from 'lucide-react-native';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 
 import { useWordEntry, useWordCards, useWordMasteryItem } from '@/hooks/use-word-detail';
+import { useIconColor } from '@/hooks/use-icon-color';
 import { useToast } from '@/components/ui/toast';
 import { MissingDataDot } from '@/components/ui/missing-data-dot';
 import { track } from '@/lib/analytics';
@@ -50,9 +51,6 @@ const NOTE_BG    = 'rgba(253,224,171,0.5)';  // hsl(45 80% 90% / 50%)
 const NOTE_BORDER = 'rgba(202,158,69,0.4)';  // hsl(45 60% 70% / 40%)
 const NOTE_LABEL  = 'rgb(133,94,18)';         // hsl(38 70% 38%)
 const NOTE_TEXT   = 'rgb(57,38,8)';           // hsl(40 30% 28%)
-
-// fg-3 for icons (light theme -- used in lucide color prop)
-const ICON_FG3 = 'rgb(127,136,159)';
 
 // ---------------------------------------------------------------------------
 // Mini flip card
@@ -217,6 +215,8 @@ export default function WordDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { showComingSoonToast } = useToast();
+  // THEME-06: back/flag icons (--fg-3) resolve per-theme from the global store.
+  const iconFg3 = useIconColor('fg-3');
 
   const wordQuery = useWordEntry(wordId);
   const cardsQuery = useWordCards(wordId);
@@ -375,7 +375,7 @@ export default function WordDetailScreen() {
             onPress={() => router.back()}
             className="flex-row items-center gap-1 py-2 pr-2 active:opacity-70"
           >
-            <ChevronLeft size={16} color={ICON_FG3} strokeWidth={2.2} />
+            <ChevronLeft size={16} color={iconFg3} strokeWidth={2.2} />
             <Text className="text-fg2 text-[13px] font-semibold">Back</Text>
           </Pressable>
           <Pressable
@@ -389,7 +389,7 @@ export default function WordDetailScreen() {
             className="w-9 h-9 rounded-full bg-card border border-line items-center justify-center active:opacity-70"
             style={{ opacity: 0.8 }}
           >
-            <Flag size={14} color={ICON_FG3} strokeWidth={2} />
+            <Flag size={14} color={iconFg3} strokeWidth={2} />
           </Pressable>
         </View>
 
