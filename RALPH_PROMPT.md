@@ -59,6 +59,7 @@ All subtasks of a single user story share one feature branch and one draft PR, a
 | **Playwright** | Visual verification, E2E, bug research | `mcp__playwright__*` - Use for QA verification |
 | **Sentry** | Error tracking, issue investigation | `mcp__sentry__*` - Check for production errors |
 | **Railway** | Deployment status (read-only) | `mcp__railway-mcp-server__*` - NO destructive actions |
+| **mobile-mcp** | Cross-platform (iOS + Android) sim/emulator driver — local mobile visual-fidelity capture | `mcp__mobile-mcp__*` - launch dev-client, read a11y tree, screenshot; LOCAL only (the CI gate is Maestro) |
 
 ## Documentation (docs/)
 Reference before making changes to related areas:
@@ -176,7 +177,7 @@ For each subtask, in dependency order, execute the 4 stages below. Delegate to s
 #### Mobile stories (`learn-greek-easy-mobile`) — special handling
 - **Iterate with Metro + Fast Refresh, NEVER Release-rebuild-per-change.** Build the Debug dev-client ONCE in the worktree (`npx expo run:ios` — one cold native compile, since Xcode DerivedData is worktree-path-keyed), then keep Metro running. Every JS / NativeWind / `tailwind.config` edit then hot-reloads on the simulator in ~1s. A `--configuration Release` rebuild per change (~10 min each) is the single biggest mobile-RALPH time-sink — `Release` is only for final *unattended* visual capture.
 - **NativeWind opacity gotcha:** never put a `token/NN` opacity modifier on a custom var-backed token — it renders DARK on native (the RN opacity-modifier path is broken; see MOB-13 / project memory). Use an explicit full-color token instead.
-- **No web preview deploy** — the mobile Phase 3.5 gate runs on the iOS simulator and diffs against the design export, not a preview URL. It **reuses the same `.maestro/onboarding.yaml` + `.maestro/smoke.yaml` flows + `reset-onboarding` endpoint as the CI `mobile-e2e` job** — no new harness (see the Mobile variant in Phase 3.5).
+- **No web preview deploy** — the mobile Phase 3.5 gate runs locally on an iOS simulator (and, when the Android SDK/emulator is set up, an Android emulator) and diffs against the design export, not a preview URL. Two complementary local checks: the **`.maestro/*.yaml` flows** (the same `onboarding.yaml` + `smoke.yaml` + `reset-onboarding` endpoint as the CI `mobile-e2e` job — the repeatable E2E gate, **unchanged**) and the **cross-platform `mobile-mcp` visual-fidelity capture** (launch + navigate + screenshot each screen on iOS + Android — the capture mechanism, replacing `xcrun simctl … screenshot`). See the Mobile variant in Phase 3.5.
 
 #### Fallback: If Subagent Spawning Fails
 Read the corresponding agent technical prompt file BEFORE executing the stage yourself:
@@ -306,32 +307,40 @@ This is a **release handshake**, not agent-driven browsing: RALPH triggers the l
 
 #### Phase 3.5 — Mobile variant (`learn-greek-easy-mobile` UI stories)
 
-Mobile has no web preview deploy, so the gate runs on the **iOS simulator** and diffs against the **authoritative design export** — not a URL, and **not** against your own app captures. **No new harness — it reuses the exact same flow files as the CI `mobile-e2e` job** (`.github/workflows/preview.yml`): `.maestro/onboarding.yaml` + `.maestro/smoke.yaml`.
+Mobile has no web preview deploy, so the gate runs **locally** on an iOS simulator — and, when the Android SDK/emulator is set up, an Android emulator — and diffs against the **authoritative design export**, not a URL, and **not** against your own app captures. It has **two complementary local checks with different jobs** — keep both:
 
-> **Why this stays LOCAL (not a release handshake like web):** mobile has no web preview deploy, and a `--configuration Release` rebuild is ~10 min — so the mobile gate runs Maestro on the orchestrator's own iOS simulator against the dev backend, rather than waiting on `release-verify.yml`. (The CI `mobile-e2e` job inside release-verify still runs in parallel; consume its `mobile-e2e-maestro` artifact opportunistically, but the authoritative mobile gate is this local sim run.)
+- **E2E gate — Maestro (unchanged, CI-aligned):** the `.maestro/onboarding.yaml` + `.maestro/smoke.yaml` flows — the *exact same files* the CI `mobile-e2e` job runs (`.github/workflows/preview.yml`) — drive the onboarding journey and assert it works end-to-end. This is the repeatable behaviour gate; **do not remove or weaken it.** CI cannot run an MCP, so Maestro stays the source of truth for "the flow works."
+- **Visual-fidelity capture — `mobile-mcp` (cross-platform, replaces simctl):** the `@mobilenext/mobile-mcp` server launches the dev-client and captures each screen on **iOS *and* Android** for the design-fidelity critique. This replaces the old iOS-only `xcrun simctl io booted screenshot` capture and is element-aware (it reads the accessibility tree to navigate). It is **local only** — never in CI. No API keys. Per-platform prerequisites: `docs/mobile-app.md` § Visual QA.
+
+> **Why this stays LOCAL (not a release handshake like web):** mobile has no web preview deploy, and a `--configuration Release` rebuild is ~10 min — so the mobile gate runs on the orchestrator's own simulator/emulator against the dev backend, rather than waiting on `release-verify.yml`. (The CI `mobile-e2e` job inside release-verify still runs in parallel; consume its `mobile-e2e-maestro` artifact opportunistically, but the authoritative mobile gate is this local run.)
 >
 > **Race-safety prerequisite (bound to RGATE-05):** this local run is race-safe ONLY because RGATE-05's per-PR seed namespacing is in place — the reset curls and the Maestro `--env` below all target `e2e_beginner+pr<N>@test.com`, and a `seed/all` with that `pr_number` must have provisioned the user first. Do NOT run parallel mobile RALPH stories against shared dev without this namespacing, or they will clobber each other's onboarding state.
 
-1. **Boot RALPH's OWN simulator** (the orchestrator's sim is session-isolated from the user's — boot a fresh one via `xcrun simctl boot` + `bootstatus -b`). Build the cached Debug dev-client ONCE (`npx expo run:ios`, or reuse the one already running from execution) and keep **Metro on `127.0.0.1:8081`** — the flows launch with `--initialUrl http://127.0.0.1:8081`. Point the app at the **dev backend**: `API_URL=https://frontend-dev-8db9.up.railway.app` (same dev frontend the CI job and PR preview use).
-2. **Reset before AND after** via the MOB15-01 endpoint so the run is repeatable and residue-free — exactly as CI does:
+1. **Boot the simulator/emulator and build the dev-client.** Boot RALPH's OWN iOS simulator (the orchestrator's sim is session-isolated from the user's — boot a fresh one via `xcrun simctl boot` + `bootstatus -b`); when verifying Android too, start an emulator (`emulator -avd <name>` then `adb wait-for-device`). Build the cached Debug dev-client ONCE per platform (`npx expo run:ios` / `npx expo run:android`, or reuse the one already running from execution) and keep **Metro on `127.0.0.1:8081`** — the flows launch with `--initialUrl http://127.0.0.1:8081`. Point the app at the **dev backend**: `API_URL=https://frontend-dev-8db9.up.railway.app` (same dev frontend the CI job and PR preview use).
+2. **Reset before AND after** via the MOB15-01 endpoint so the run is repeatable and residue-free — exactly as CI does (re-run this reset between the E2E gate and the visual capture so each pass starts signed-out):
    ```bash
    curl -s -X POST "https://frontend-dev-8db9.up.railway.app/api/v1/test/seed/reset-onboarding" \
      -H "Content-Type: application/json" -d "{\"pr_number\": \"$PR_NUMBER\"}"   # pre-run: must return success=true
-   # … run flows …
+   # … run E2E gate + visual capture …
    curl -s -X POST "https://frontend-dev-8db9.up.railway.app/api/v1/test/seed/reset-onboarding" \
      -H "Content-Type: application/json" -d "{\"pr_number\": \"$PR_NUMBER\"}"   # post-run: tour_completed_at must be null
    ```
    The reset curl and Maestro `--env` must resolve to the same `e2e_beginner+pr<N>@test.com`, and a `seed/all` with that `pr_number` must have provisioned the user first.
-3. **Run the reused flows** to drive every onboarding screen and capture per-screen screenshots (the flows already `takeScreenshot` each step: `01-login` … `10-app-home`):
+3. **Run the E2E gate (Maestro).** Drive the onboarding journey and assert it passes — the behaviour gate, same flows as CI:
    ```bash
    export JAVA_HOME=/opt/homebrew/opt/openjdk
    (cd "$WORKTREE_PATH/learn-greek-easy-mobile" && maestro test --env E2E_EMAIL="e2e_beginner+pr${PR_NUMBER}@test.com" .maestro/onboarding.yaml && maestro test .maestro/smoke.yaml)
    ```
-4. **Feed the per-screen screenshots to `product-qa-spec`** (strict / adversarial) for a design critique. **Compare against the authoritative design export** — `design_handoff_*/screenshots/*` (or the handoff mock rendered at phone size). Comparing the app to *self-generated* screenshots is circular and will false-pass — that is how MOB-09 shipped a degraded login. The critic must flag EVERY deviation: element order, missing elements (a dropped social provider), flat-vs-frosted glass, scrim strength, spacing, copy. A hi-fi handoff silently degraded to a "sanctioned fallback" (flat `View` instead of `BlurView`, dropped button) is a **fail**, never an acceptable shortcut.
+4. **Capture the per-screen visual-fidelity screenshots via `mobile-mcp` — on EACH platform.** Reset onboarding again (step 2) so capture starts signed-out, then drive the app with the MCP (not Maestro's `takeScreenshot`), which is what makes this step cross-platform and element-aware:
+   - `mobile_list_available_devices` → confirm the iOS simulator (and Android emulator, when set up) appear; note each device id.
+   - `mobile_launch_app` with `eu.greeklish.app.dev` (iOS bundle id / Android package) on the target device.
+   - For each screen of the journey: `mobile_list_elements_on_screen` (read the accessibility/view tree) → `mobile_click_on_screen_at_coordinates` / `mobile_type_keys` / `mobile_swipe_on_screen` (navigate) → `mobile_take_screenshot` (save as `ios-01-login` … and `android-01-login` …).
+   - **Prerequisites:** iOS needs Xcode + a simulator runtime + WebDriverAgent running on the booted sim; Android needs the Android SDK + platform-tools + an emulator + a system image + an AVD (`adb` on PATH) — see `docs/mobile-app.md` § Visual QA for the one-time setup. **If Android is not set up locally, capture iOS only and explicitly flag Android fidelity as unverified** — do not silently skip a platform.
+5. **Feed the per-screen screenshots to `product-qa-spec`** (strict / adversarial) for a design critique. **Compare against the authoritative design export** — `design_handoff_*/screenshots/*` (or the handoff mock rendered at phone size). Comparing the app to *self-generated* screenshots is circular and will false-pass — that is how MOB-09 shipped a degraded login. The critic must flag EVERY deviation, **per platform**: element order, missing elements (a dropped social provider), flat-vs-frosted glass, scrim strength, spacing, copy. A hi-fi handoff silently degraded to a "sanctioned fallback" (flat `View` instead of `BlurView`, dropped button) is a **fail**, never an acceptable shortcut.
    - **Fallback when no design export exists for the screen:** critique against `docs/design-system.md` rules + the MOB-14 design reference (`docs/mobile-app.md` § Visual QA), and **flag to the user that fidelity is human-confirmed** for any pixel call not citable against a rule.
-5. **Iterate via Metro Fast Refresh (~1s), NEVER Release-rebuild-per-change (~10 min).** Only rebuild natively when *native* code changes. Release builds are for final unattended capture only.
-6. **Fidelity is human-confirmed** — do not self-certify a pixel match. Surface app-vs-design-export to the user for the subjective call; only deviations citable against the design export or a `docs/design-system.md` rule bounce the executor.
-7. Log to the story's QA Debate Log as in the web flow.
+6. **Iterate via Metro Fast Refresh (~1s), NEVER Release-rebuild-per-change (~10 min).** Only rebuild natively when *native* code changes. Release builds are for final unattended capture only.
+7. **Fidelity is human-confirmed** — do not self-certify a pixel match. Surface app-vs-design-export to the user for the subjective call; only deviations citable against the design export or a `docs/design-system.md` rule bounce the executor.
+8. Log to the story's QA Debate Log as in the web flow, recording the per-AC verdict and the MCP screenshot filenames **per platform** (`ios-*`, `android-*`).
 
 ### Phase 4: Worktree Cleanup
 
