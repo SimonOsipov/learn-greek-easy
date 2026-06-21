@@ -444,12 +444,11 @@
       "b1Coverage": "B1 coverage",
       "countries": "Countries",
       "audioCoverage": "{{count}}/{{total}} with audio",
-      "countrySub": "Cyprus only",
+      "countrySub": "By country",
       "allTime": "All time",
       "recentThisWeek": "+{{count}} this week"
     },
     "actions": {
-      "importRss": "Import RSS",
       "new": "+ New article"
     },
     "create": {
@@ -591,7 +590,8 @@
         "notGeneratedYet": "Not generated yet",
         "regenerate": "Regenerate",
         "playLabel": "Play {{level}} narration",
-        "pauseLabel": "Pause {{level}} narration"
+        "pauseLabel": "Pause {{level}} narration",
+        "uploadLabel": "Upload {{level}} audio"
       },
       "translations": {
         "titleEn": "Title — English",
@@ -2103,6 +2103,8 @@
     "editQuestion": "Edit question",
     "statusReady": "Ready",
     "statusDraft": "Draft",
+    "statusVisible": "Visible to learners",
+    "statusPendingReview": "Pending review",
     "regenerateTranslations": "Regenerate translations",
     "sourcePrefix": "Source",
     "openInNews": "Open in News",

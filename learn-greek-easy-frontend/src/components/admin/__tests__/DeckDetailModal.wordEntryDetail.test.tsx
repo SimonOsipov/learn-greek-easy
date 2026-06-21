@@ -255,7 +255,7 @@ describe('DeckDetailModal word entry detail navigation', () => {
       renderModal();
       await waitFor(() => screen.getByTestId('word-entry-row-entry-1'));
       await user.click(screen.getByTestId('word-entry-row-entry-1'));
-      expect(screen.getByTestId('word-entry-tab-entry')).toHaveAttribute('data-state', 'active');
+      expect(screen.getByTestId('word-entry-tab-entry')).toHaveAttribute('aria-selected', 'true');
     });
 
     it('shows Word Entry and Cards tab triggers', async () => {

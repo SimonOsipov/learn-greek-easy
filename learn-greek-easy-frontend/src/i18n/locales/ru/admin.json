@@ -451,7 +451,6 @@
       "current": "Новости"
     },
     "actions": {
-      "importRss": "Импорт RSS",
       "new": "+ Новая статья"
     },
     "stats": {
@@ -460,7 +459,7 @@
       "b1Coverage": "Охват B1",
       "countries": "Страны",
       "audioCoverage": "{{count}}/{{total}} с аудио",
-      "countrySub": "Только Кипр",
+      "countrySub": "По странам",
       "allTime": "За всё время",
       "recentThisWeek": "+{{count}} за неделю"
     },
@@ -626,7 +625,8 @@
         "notGeneratedYet": "Ещё не создано",
         "regenerate": "Перегенерировать",
         "playLabel": "Воспроизвести нарратив {{level}}",
-        "pauseLabel": "Пауза нарратива {{level}}"
+        "pauseLabel": "Пауза нарратива {{level}}",
+        "uploadLabel": "Загрузить аудио {{level}}"
       },
       "translations": {
         "titleEn": "Заголовок — English",
@@ -2122,6 +2122,8 @@
     "editQuestion": "Редактировать вопрос",
     "statusReady": "Готово",
     "statusDraft": "Черновик",
+    "statusVisible": "Виден ученикам",
+    "statusPendingReview": "На проверке",
     "regenerateTranslations": "Перегенерировать переводы",
     "sourcePrefix": "Источник",
     "openInNews": "Открыть в Новостях",

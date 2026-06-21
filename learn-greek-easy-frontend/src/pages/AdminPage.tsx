@@ -17,7 +17,6 @@ import {
   Newspaper,
   Plus,
   RefreshCw,
-  Rss,
   Search,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -571,20 +570,6 @@ export function pageHeadPropsFor(
         actions: (
           <TooltipProvider>
             <div className="flex items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-disabled="true"
-                    className="btn-glass cursor-not-allowed opacity-60"
-                    onClick={(e) => e.preventDefault()}
-                  >
-                    <Rss className="size-4" aria-hidden="true" />
-                    {t('news.actions.importRss')}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>{t('comingSoon')}</TooltipContent>
-              </Tooltip>
               <Button variant="default" onClick={_handlers.onNewsNew} data-testid="news-new-button">
                 <Plus className="size-4" aria-hidden="true" />
                 {t('news.actions.new')}

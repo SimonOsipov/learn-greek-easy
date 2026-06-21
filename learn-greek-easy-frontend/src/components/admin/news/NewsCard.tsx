@@ -46,8 +46,13 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onRequestDelete }) => 
   const hasB1 = item.description_el != null && item.description_el !== '';
   const hasA2 = item.description_el_a2 != null && item.description_el_a2 !== '';
 
-  const totalAudio = (item.audio_duration_seconds ?? 0) + (item.audio_a2_duration_seconds ?? 0);
-  const hasAudio = item.audio_duration_seconds != null || item.audio_a2_duration_seconds != null;
+  // F7: render each level's audio duration separately (never their sum). A track
+  // with no duration OR a stored 0-second duration is suppressed (never "0:00").
+  const b1Audio = item.audio_duration_seconds;
+  const a2Audio = item.audio_a2_duration_seconds;
+  const hasB1Audio = (b1Audio ?? 0) > 0;
+  const hasA2Audio = (a2Audio ?? 0) > 0;
+  const hasAudio = hasB1Audio || hasA2Audio;
 
   // Single source of truth: write to URL; NewsTab's URL→store effect opens the drawer.
   function openViaUrl() {
@@ -116,11 +121,20 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onRequestDelete }) => 
             </span>
           )}
 
-          {/* Audio duration */}
-          {hasAudio && (
+          {/* Audio duration — one indicator per level (B1 / A2), never summed.
+              B1/A2 are level codes, rendered literally (not translatable copy).
+              The label is a plain text prefix (not a .news-level pill, which is
+              reserved for the description-level chips above). */}
+          {hasB1Audio && (
             <span className="news-audio">
               <Play size={11} />
-              {formatDuration(totalAudio)}
+              B1 {formatDuration(b1Audio as number)}
+            </span>
+          )}
+          {hasA2Audio && (
+            <span className="news-audio">
+              <Play size={11} />
+              A2 {formatDuration(a2Audio as number)}
             </span>
           )}
 

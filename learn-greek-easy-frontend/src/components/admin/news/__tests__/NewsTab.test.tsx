@@ -50,6 +50,12 @@ const storeState = {
   searchQuery: '',
   sortMode: 'newest' as string,
   drawerItemId: null as string | null,
+  // ADMIN2-39-05 F8: per-country counts surfaced by the store.
+  countryCounts: { cyprus: 0, greece: 0, world: 0 } as {
+    cyprus: number;
+    greece: number;
+    world: number;
+  },
   fetchNewsItems: mockFetchNewsItems,
   openDrawer: mockOpenDrawer,
   closeDrawer: mockCloseDrawer,
@@ -127,6 +133,7 @@ beforeEach(async () => {
   storeState.b1AudioCount = 0;
   storeState.b1PendingRegenCount = 0;
   storeState.drawerItemId = null;
+  storeState.countryCounts = { cyprus: 0, greece: 0, world: 0 };
   await loadNewsTab();
 });
 
@@ -177,15 +184,13 @@ describe('NewsTab — basic rendering', () => {
     expect(screen.queryByTestId('stat-bars-country')).not.toBeInTheDocument();
   });
 
-  it('card #4 (country) shows literal "CY" as the KPI value', () => {
+  // ADMIN2-39-05 F8: the Countries card no longer renders a hardcoded "CY"
+  // KPI nor a "Cyprus only" sub — see the "F8 Countries live counter"
+  // describe block below for the live WR·CY·GR + reworded-sub coverage.
+  it('card #4 (country) shows reworded sub from i18n key news.stats.countrySub', () => {
     renderWithRouter();
-    expect(screen.getByText('CY')).toBeInTheDocument();
-  });
-
-  it('card #4 (country) shows sub from i18n key news.stats.countrySub', () => {
-    renderWithRouter();
-    // Resolves to "Cyprus only"
-    expect(screen.getByText('Cyprus only')).toBeInTheDocument();
+    // Reworded from "Cyprus only" → "By country" (C8 / D-C8-countrysub).
+    expect(screen.getByText('By country')).toBeInTheDocument();
   });
 
   it('card #3 (B1) renders real b1_audio_count value (not "—")', () => {
@@ -299,4 +304,56 @@ describe('NewsTab — URL deep-link (?edit=)', () => {
 
 describe('NewsTab — drawer close URL wiring (deferred)', () => {
   it.todo('drawer close clears ?edit= from URL — wired by NEWS-06');
+});
+
+// ── ADMIN2-39-05 F8: Countries stat card live WR·CY·GR counter ──────────────
+// The card currently renders a hardcoded n="CY" and a "Cyprus only" sub-label.
+// The target renders live per-country counts (order WR · CY · GR) from the store
+// and rewords the sub-label (no longer "Cyprus only").
+describe('NewsTab — F8 Countries live counter', () => {
+  /** Locate the .stat-card whose .stat-label is "Countries". */
+  function getCountriesCard(): HTMLElement {
+    const label = screen.getByText('Countries');
+    const card = label.closest('.stat-card');
+    if (!card) throw new Error('Countries stat-card not found');
+    return card as HTMLElement;
+  }
+
+  it('Countries card renders WR·CY·GR live counts (not hardcoded "CY")', () => {
+    storeState.countryCounts = { cyprus: 3, greece: 2, world: 5 };
+    renderWithRouter();
+
+    const card = getCountriesCard();
+    const kpi = card.querySelector('.stat-n');
+    const text = kpi?.textContent ?? '';
+    // Live counts present: world=5, cyprus=3, greece=2.
+    expect(text).toContain('5');
+    expect(text).toContain('3');
+    expect(text).toContain('2');
+    // No hardcoded "CY" literal as the KPI value.
+    expect(text).not.toBe('CY');
+  });
+
+  it('Countries sub-label is no longer "Cyprus only"', () => {
+    renderWithRouter();
+    // The reworded copy ("By country") may or may not be present, but the stale
+    // "Cyprus only" string must not appear anywhere on the page.
+    expect(screen.queryByText('Cyprus only')).not.toBeInTheDocument();
+  });
+
+  // ── ADMIN2-39-05 QA edge coverage (Mode B) ──────────────────────────────
+  // Proves the counter is genuinely live-wired even at zero: with countryCounts
+  // all zeros, the KPI renders "WR 0 · CY 0 · GR 0" (real zeros, not blank and
+  // not the old hardcoded "CY"). beforeEach resets countryCounts to {0,0,0}.
+  it('Countries card renders "WR 0 · CY 0 · GR 0" when all counts are zero (live wiring at zero)', () => {
+    renderWithRouter();
+
+    const card = getCountriesCard();
+    const kpi = card.querySelector('.stat-n');
+    const text = (kpi?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    // All three live zeros present in WR · CY · GR order — not blank, not "CY".
+    expect(text).toBe('WR 0 · CY 0 · GR 0');
+    expect(text).not.toBe('CY');
+    expect(text).not.toBe('');
+  });
 });
