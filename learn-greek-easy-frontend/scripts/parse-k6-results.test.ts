@@ -314,6 +314,15 @@ describe('PERF-12-02 baseline diff', () => {
   });
 
   it('test_read_baselines_parses_valid_file — temp JSON file is parsed correctly', () => {
+    // Capture the real writeFileSync BEFORE loadModule() installs the spy so
+    // that our fixture write actually lands on disk. loadModule() spies on the
+    // `require('fs')` instance (Guard 2), which under vitest's ESM environment
+    // is the same object reference as the `import fs from 'node:fs'` at the top
+    // of this file — so calling `fs.writeFileSync` after loadModule() is a no-op.
+    const realWriteFileSync = fs.writeFileSync.bind(fs);
+    const realExistsSync = fs.existsSync.bind(fs);
+    const realUnlinkSync = fs.unlinkSync.bind(fs);
+
     const { mod } = loadModule();
     const readBaselines = mod.readBaselines as (
       p: string
@@ -328,7 +337,8 @@ describe('PERF-12-02 baseline diff', () => {
         dashboard_load_time: { p95: 500 },
       },
     };
-    fs.writeFileSync(tmpPath, JSON.stringify(payload), 'utf8');
+    // Use the real (un-spied) writeFileSync so the file is actually written to disk.
+    realWriteFileSync(tmpPath, JSON.stringify(payload), 'utf8');
 
     try {
       const result = readBaselines(tmpPath);
@@ -336,8 +346,8 @@ describe('PERF-12-02 baseline diff', () => {
       expect(result.metrics.dashboard_load_time.p95).toBe(500);
     } finally {
       // Guard: file may not exist if readBaselines threw (pre-impl)
-      if (fs.existsSync(tmpPath)) {
-        fs.unlinkSync(tmpPath);
+      if (realExistsSync(tmpPath)) {
+        realUnlinkSync(tmpPath);
       }
     }
   });
