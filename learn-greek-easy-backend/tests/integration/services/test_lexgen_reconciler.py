@@ -545,9 +545,11 @@ class TestFlaggedFields:
             "gender disagreement must put 'gender' in proposal.flagged_fields (D19); "
             f"flagged_fields={proposal.flagged_fields!r}"
         )
-        # Must be sorted and unique
-        assert proposal.flagged_fields == sorted(set(proposal.flagged_fields)), (
-            "proposal.flagged_fields must be sorted and de-duplicated; "
+        # Must be de-duplicated (no field appears twice); order follows the resolver's
+        # field-resolution order (D19 / NounResolver._FIELD_ORDER), NOT alphabetical.
+        # See test_multiple_fields_flagged_order_matches_field_order in 08-02 unit tests.
+        assert len(proposal.flagged_fields) == len(set(proposal.flagged_fields)), (
+            "proposal.flagged_fields must not contain duplicates; "
             f"got {proposal.flagged_fields!r}"
         )
 

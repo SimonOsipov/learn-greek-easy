@@ -1,50 +1,36 @@
-"""Tests for the per-POS morphology resolver scaffolding (LEXGEN-08-01).
+"""Tests for the per-POS morphology resolver (LEXGEN-08-01 / 08-02).
 
-Originally authored test-first (RALPH Stage 2.5 / QA Mode A).  The module
-``src/core/lexgen_resolver.py`` does NOT exist yet, so every test in this
-file is RED for the right reason (ModuleNotFoundError / ImportError), NOT a
-collection or syntax error.  Two new schema types (``ResolutionContext`` and
-``ResolvedParadigm``) are also absent from ``src/schemas/lexgen.py`` until the
-executor implements this subtask.
+``src/core/lexgen_resolver.py`` and ``ResolutionContext`` / ``ResolvedParadigm``
+in ``src/schemas/lexgen.py`` are fully implemented; the suite is GREEN.
 
-After Mode B (QA verification), adversarial and witness-value coverage was added:
-- Co-rank-1 tuple order within NOUN_CHAINS (rules > wiktionary > lexicon)
-- lemma_exists co-rank-1 triple (wiktionary / lexicon / frequency all rank 1)
-- Witness-value pinning for pos / lemma_exists / declension_forms rungs (OQ-A)
-- ResolvedParadigm round-trip via model_dump / model_validate
-- resolver_for with empty-string and None-ish pos
-- Lexicon gender rung with forms missing the gender feature key
-- DR §3 — no numeric confidence in any rung output
+63 tests covering:
 
-14 Test Specs (Mode A) + 14 adversarial tests (Mode B) = 28 tests total.
+  LEXGEN-08-01 — resolver scaffolding (Mode A + Mode B)
+    Schema types: ResolutionContext, ResolvedParadigm importable from schemas.
+    Registry: RESOLVERS dict, resolver_for() for noun and unknown POS.
+    NOUN_CHAINS: 7 fields, all ('noun', field) keys, lowercase 'ipa', non-empty rungs.
+    Rung adapters: rules, wiktionary, lexicon, frequency — source reads, absent→None,
+      co-rank-1 order, witness-value pinning, DR §3 no-confidence invariant.
+    ResolvedParadigm round-trip via model_dump / model_validate.
+    resolver_for edge cases (empty string, uppercase, whitespace).
+    Lexicon gender rung — missing feature key, mixed forms.
 
-14 Mode A test specs covering:
-  Schema types
-  - test_resolution_context_carries_lemma_and_mutable_resolved
-  - test_resolved_paradigm_and_context_live_in_schemas_module
-
-  Registry
-  - test_resolver_for_noun_returns_noun_resolver
-  - test_resolver_for_unregistered_pos_returns_none
-
-  NOUN_CHAINS coverage
-  - test_noun_chains_cover_seven_fields
-  - test_field_keys_use_lowercase_ipa
-
-  Rung adapters (per-rung callable shape and source reads)
-  - test_gender_rule_rung_uses_lexgen_authority
-  - test_wiktionary_gender_rung_reads_packet_sources
-  - test_absent_source_rung_returns_none
-  - test_lexicon_gender_rung_extracts_from_forms
-  - test_lexicon_gender_rung_empty_forms_returns_none
-  - test_lexicon_gender_rung_inconsistent_genders_flags
-  - test_ipa_rule_rung_threads_candidate_from_packet_and_lemma_from_ctx
-  - test_declension_rule_rung_reads_resolved_gender_from_ctx
+  LEXGEN-08-02 — chain-walk (Mode A + Mode B)
+    First-confident-wins, agreeing cross-check, disagreement flag, co-rank flag,
+    unresolved field, lemma_exists co-rank triple, declension dependency (D3),
+    IPA validator gating, rule_ambiguous propagation.
+    Multiple-field flagging in field-resolution order (D19 contract for reconciler).
+    Fully-unresolved noun (all sources absent).
+    cross_checks structure (present/absent, FieldEvidence shape).
+    paradigm.pos / all-7-fields invariants.
+    J1 audit-flag semantics: rule_ambiguous, ipa_unvalidated,
+      lexicon_gender_inconsistent do NOT add a field to flagged_fields.
+    Three-way gender case (AMBIGUOUS + wikt + lexicon disagree).
 
 Verified facts used in these tests (no derivation):
-  - EvidencePacket / sources schema verified at src/schemas/lexgen.py lines 197–282
+  - EvidencePacket / sources schema verified at src/schemas/lexgen.py
   - FormBundle features["gender"] is the extraction point for lexicon gender (D18)
-  - rules_for(pos, field) two positional args verified at src/core/lexgen_authority.py:102
+  - rules_for(pos, field) two positional args verified at src/core/lexgen_authority.py
   - gender_evidence("θάλασσα").value == "feminine" (confirmed in test_lexgen_authority.py)
   - NOUN_CHAINS must have EXACTLY 7 fields (spec AC-5)
   - Field key "ipa" lowercase, never "IPA" (spec AC-5/AC-6)
@@ -191,15 +177,17 @@ class TestResolverRegistry:
 class TestNounChains:
     """NOUN_CHAINS must cover all seven fields from the authority matrix, keyed by ('noun', field)."""
 
-    _EXPECTED_FIELDS = {
-        "gender",
-        "declension_group",
-        "declension_forms",
-        "ipa",
-        "pos",
-        "lemma_exists",
-        "frequency_rank",
-    }
+    _EXPECTED_FIELDS: frozenset[str] = frozenset(
+        {
+            "gender",
+            "declension_group",
+            "declension_forms",
+            "ipa",
+            "pos",
+            "lemma_exists",
+            "frequency_rank",
+        }
+    )
 
     def test_noun_chains_cover_seven_fields(self) -> None:
         """NOUN_CHAINS must have exactly 7 entries under pos='noun'."""

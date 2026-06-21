@@ -213,7 +213,10 @@ class ResolvedParadigm(BaseModel):
     ``fields`` is one ``ResolvedField`` per resolved field; ``cross_checks`` maps
     each field to the lower-rank evidence that was considered (for the
     reconciler's audit log); ``flagged_fields`` is the convenience subset of
-    fields carrying any flag. POS-neutral: ``pos`` is free text, mirroring
+    fields carrying an actionable flag (``disagreement:*`` / ``unresolved:*``);
+    audit-only flags (``rule_ambiguous``, ``ipa_unvalidated``,
+    ``lexicon_gender_inconsistent``) stay in the per-field flags and do NOT add
+    the field here. POS-neutral: ``pos`` is free text, mirroring
     ``ProposalDraft``/``WordProposal``.
     """
 
