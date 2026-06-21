@@ -248,3 +248,137 @@ def test_gender_eta_sigma_is_ambiguous() -> None:
     """
     assert derive_gender("μαθητής") is AMBIGUOUS
     assert derive_gender("άντρας") is AMBIGUOUS
+
+
+# ---------------------------------------------------------------------------
+# Adversarial / edge / negative coverage (Mode B — added post-implementation)
+# ---------------------------------------------------------------------------
+
+
+def test_final_sigma_suffix_matching() -> None:
+    """Suffix tables use ς (U+03C2 final sigma); lemmas also end in ς.
+
+    Both normalize_greek_accents and endswith must handle this correctly.
+    Concretely: δρόμος ends in U+03C2, suffix -ος also ends in U+03C2
+    — they must match after accent normalization.
+
+    Regression guard: if someone inadvertently changes the suffix table
+    to medial σ (U+03C3) instead of ς, these would silently FAIL to match.
+    """
+    # masculine -ος (ends in final sigma ς)
+    assert derive_declension_group("δρόμος", "masculine") == "masculine_os"
+    # feminine -ος
+    assert derive_declension_group("οδός", "feminine") == "feminine_os"
+    # neuter -ος
+    assert derive_declension_group("δάσος", "neuter") == "neuter_os"
+    # derive_gender: -ος is AMBIGUOUS (also ends in final sigma)
+    assert derive_gender("δρόμος") is AMBIGUOUS
+
+
+def test_empty_string_returns_ambiguous_no_crash() -> None:
+    """Both functions must handle an empty string without raising.
+
+    An empty string matches no suffix in any gender → AMBIGUOUS for both.
+    Ensures callers can safely pass through blank lemma strings without guards.
+    """
+    assert derive_gender("") is AMBIGUOUS
+    assert derive_declension_group("", "masculine") is AMBIGUOUS
+    assert derive_declension_group("", "feminine") is AMBIGUOUS
+    assert derive_declension_group("", "neuter") is AMBIGUOUS
+
+
+def test_whitespace_only_lemma_returns_ambiguous_no_crash() -> None:
+    """Whitespace-only input must not raise and must return AMBIGUOUS.
+
+    _strip_article sees no matching article prefix, normalize_greek_accents
+    passes spaces through unchanged, and no suffix matches spaces.
+    """
+    assert derive_gender("   ") is AMBIGUOUS
+    assert derive_declension_group("   ", "masculine") is AMBIGUOUS
+
+
+def test_os_ending_all_three_genders_in_derive_declension_group() -> None:
+    """-ος is a valid suffix in all three gender tables.
+
+    derive_declension_group keys on the *passed-in* gender, not on a
+    gender it infers itself.  The same lemma (or equivalent endings)
+    must route to the correct group purely based on the gender argument.
+
+    This is a regression guard for the routing logic: if the function
+    accidentally merged tables or ignored the gender key, these assertions
+    would diverge.
+    """
+    assert derive_declension_group("δρόμος", "masculine") == "masculine_os"
+    assert derive_declension_group("οδός", "feminine") == "feminine_os"
+    assert derive_declension_group("δάσος", "neuter") == "neuter_os"
+
+
+def test_neuter_ma_longest_first_multiple_words() -> None:
+    """Additional -μα words guard against a rule-reordering regression.
+
+    test_neuter_ma_before_o uses only γράμμα.  If someone re-sorted the
+    neuter rules so -ο came before -μα, all three of these would return
+    'neuter_o' instead of 'neuter_ma' — giving the test suite coverage
+    beyond a single example.
+    """
+    assert derive_declension_group("πρόβλημα", "neuter") == "neuter_ma"
+    assert derive_declension_group("όνομα", "neuter") == "neuter_ma"
+    assert derive_declension_group("σώμα", "neuter") == "neuter_ma"
+
+
+def test_sentinel_identity_and_equality_safety() -> None:
+    """AMBIGUOUS must behave correctly in identity and equality checks.
+
+    The canonical caller pattern is ``result is AMBIGUOUS``; callers must
+    not accidentally match AMBIGUOUS via equality with a group string.
+    Also verifies that ``result == "masculine_os"`` is False when result
+    is AMBIGUOUS — i.e. _Ambiguous has no __eq__ override that could
+    silently match a string.
+    """
+    result = derive_gender("δρόμος")  # known AMBIGUOUS
+    assert result is AMBIGUOUS
+    assert result != "masculine_os"
+    assert result != "feminine_os"
+    assert result != "neuter_os"
+    assert result != ""
+    assert result != None  # noqa: E711  — explicit None check
+    # Two calls must return the *same* singleton (not a new object each time)
+    r2 = derive_gender("στυλό")
+    assert result is r2
+
+
+def test_derive_gender_never_fabricates_masculine() -> None:
+    """derive_gender must never return 'masculine' for any input.
+
+    The design decision (D4 + never-fabricate invariant) states that -ος/-ης/-ας
+    endings are ambiguous across genders and must NOT be resolved to masculine.
+    Loop a representative set of masculine-noun lemmas that could tempt the
+    function into returning 'masculine' and assert none does.
+    """
+    masculine_candidates = [
+        "δρόμος",  # -ος, masculine in practice
+        "μαθητής",  # -ης, masculine
+        "άντρας",  # -ας, masculine
+        "κλέφτης",  # -ης, masculine
+        "πατέρας",  # -ας, masculine
+        "ποιητής",  # -ής, masculine
+        "ήρωας",  # -ας, masculine
+    ]
+    for lemma in masculine_candidates:
+        result = derive_gender(lemma)
+        assert result != "masculine", (
+            f"derive_gender({lemma!r}) returned 'masculine' — "
+            "function must never fabricate gender from ambiguous endings"
+        )
+
+
+def test_article_stripped_before_suffix_match_gender() -> None:
+    """derive_gender strips the article before suffix matching.
+
+    'η θάλασσα' — feminine article 'η ' is stripped, leaving 'θάλασσα'
+    which ends in -α → 'feminine'.  Without stripping the article the
+    bare form would be 'η θάλασσα' which does NOT end in 'α'.
+    """
+    assert derive_gender("η θάλασσα") == "feminine"
+    assert derive_gender("το παιδί") == "neuter"
+    assert derive_gender("το γράμμα") == "neuter"
