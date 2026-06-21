@@ -35,13 +35,13 @@ test.beforeAll(async ({ request }) => {
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Admin News — drawer happy paths (NEWS-10)', () => {
-  test('1. /admin?tab=news renders shell with page-head, 4 stat cards, toolbar, grid', async ({
+  test('1. /admin?tab=news renders shell with page-head, 2 stat cards, toolbar, grid', async ({
     page,
   }) => {
     await navigateToAdminTab(page, 'news');
     await expect(page.locator('[data-testid="news-tab"]')).toBeVisible();
-    // 4 StatCard elements — StatCard renders with CSS class "stat-card"
-    await expect(page.locator('.stat-card')).toHaveCount(4, { timeout: 10_000 });
+    // 2 StatCard elements (F1/F2: "Total News" + "With Audio") — StatCard renders with CSS class "stat-card"
+    await expect(page.locator('.stat-card')).toHaveCount(2, { timeout: 10_000 });
     // Toolbar: Country SegControl includes an "All" button
     await expect(page.getByRole('button', { name: 'All' }).first()).toBeVisible();
     // Grid: at least one card from the seed
@@ -66,13 +66,13 @@ test.describe('Admin News — drawer happy paths (NEWS-10)', () => {
     await expect.poll(() => page.url(), { timeout: 5_000 }).toContain('country=greece');
   });
 
-  test('4. Click a card opens drawer on Translations tab + URL gains ?edit=', async ({ page }) => {
+  test('4. Click a card opens drawer on Title tab + URL gains ?edit=', async ({ page }) => {
     await navigateToAdminTab(page, 'news');
     const firstCard = page.locator('.news-card').first();
     await firstCard.click();
     await expect(page.locator('[data-testid="news-edit-drawer"]')).toBeVisible();
     await expect.poll(() => page.url(), { timeout: 5_000 }).toContain('edit=');
-    // Translations tab content is the default
+    // Title tab content is the default (F7: visible label "Translations" → "Title"; testid unchanged)
     await expect(page.locator('[data-testid="news-drawer-tab-translations-content"]')).toBeVisible();
   });
 
@@ -97,9 +97,9 @@ test.describe('Admin News — drawer happy paths (NEWS-10)', () => {
     await expect(b1Row.locator('.audio-wave')).toHaveCount(60);
     // B1 Play button is a real, enabled play control (NOT a phantom aria-disabled stub).
     await expect(b1Row.locator('.audio-play')).not.toHaveAttribute('aria-disabled', 'true');
-    // Each surviving row's Regenerate + Upload action buttons are aria-disabled stubs
-    // (coming-soon tooltip + red corner dot) — assert the two stubs are present in the B1 row.
-    await expect(b1Row.locator('.audio-actions button[aria-disabled="true"]')).toHaveCount(2);
+    // Regenerate is now wired for linked items (F10) — seeded news items have a linked situation,
+    // so their Regenerate buttons are enabled. No aria-disabled stubs remain in the B1 row.
+    await expect(b1Row.locator('.audio-actions button[aria-disabled="true"]')).toHaveCount(0);
   });
 
   test('6. Linked situation tab: action button is aria-disabled with comingSoon tooltip (no toast)', async ({
@@ -167,7 +167,7 @@ test.describe('Admin News — drawer happy paths (NEWS-10)', () => {
     });
   });
 
-  test('9. Direct nav /admin?tab=news&edit=<id> opens drawer on Translations tab', async ({
+  test('9. Direct nav /admin?tab=news&edit=<id> opens drawer on Title tab', async ({
     page,
   }) => {
     expect(firstItemId).toBeDefined();

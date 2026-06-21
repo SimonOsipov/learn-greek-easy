@@ -32,6 +32,8 @@ vi.mock('react-i18next', () => ({
       const map: Record<string, string> = {
         'news.card.editLabel': 'Edit',
         'news.card.deleteLabel': 'Delete',
+        'news.card.statusDraft': 'Draft',
+        'news.card.statusPublished': 'Published',
       };
       return map[key] ?? key;
     },
@@ -101,8 +103,12 @@ describe('NewsCard', () => {
   });
 
   it('renders image thumb when image_url is provided', () => {
-    renderWithRouter(<NewsCard item={makeItem()} onRequestDelete={mockOnRequestDelete} />);
-    const img = screen.getByRole('img');
+    const { container } = renderWithRouter(
+      <NewsCard item={makeItem()} onRequestDelete={mockOnRequestDelete} />
+    );
+    // Use querySelector for the actual <img> element to avoid ambiguity with
+    // the status dot span which also carries role="img".
+    const img = container.querySelector('img');
     expect(img).toHaveAttribute('src', 'https://example.com/img.jpg');
   });
 
@@ -115,28 +121,33 @@ describe('NewsCard', () => {
     expect(container.querySelector('img')).not.toBeInTheDocument();
   });
 
-  it('renders country flag for greece', () => {
+  it('renders country flag for greece in meta row', () => {
     const { container } = renderWithRouter(
       <NewsCard item={makeItem({ country: 'greece' })} onRequestDelete={mockOnRequestDelete} />
     );
-    const flag = container.querySelector('.news-thumb-flag');
+    // F4: flag now lives in .news-meta via .news-meta-flag, not on the thumbnail
+    const flag = container.querySelector('.news-meta-flag');
     expect(flag?.textContent).toBe('🇬🇷');
+    // .news-thumb-flag must be absent
+    expect(container.querySelector('.news-thumb-flag')).not.toBeInTheDocument();
   });
 
-  it('renders country flag for cyprus', () => {
+  it('renders country flag for cyprus in meta row', () => {
     const { container } = renderWithRouter(
       <NewsCard item={makeItem({ country: 'cyprus' })} onRequestDelete={mockOnRequestDelete} />
     );
-    const flag = container.querySelector('.news-thumb-flag');
+    const flag = container.querySelector('.news-meta-flag');
     expect(flag?.textContent).toBe('🇨🇾');
+    expect(container.querySelector('.news-thumb-flag')).not.toBeInTheDocument();
   });
 
-  it('renders country flag for world', () => {
+  it('renders country flag for world in meta row', () => {
     const { container } = renderWithRouter(
       <NewsCard item={makeItem({ country: 'world' })} onRequestDelete={mockOnRequestDelete} />
     );
-    const flag = container.querySelector('.news-thumb-flag');
+    const flag = container.querySelector('.news-meta-flag');
     expect(flag?.textContent).toBe('🌍');
+    expect(container.querySelector('.news-thumb-flag')).not.toBeInTheDocument();
   });
 
   it('renders date overlay in dd MMM yyyy format', () => {
@@ -304,14 +315,17 @@ describe('NewsCard', () => {
     expect(thumb).toBeInTheDocument();
   });
 
-  it('NADM-16: flag overlay has .news-thumb-flag class inside .news-thumb (top-left anchor)', () => {
+  it('NADM-16: flag is now in .news-meta (not .news-thumb) — F4 move', () => {
     const { container } = renderWithRouter(
       <NewsCard item={makeItem({ country: 'greece' })} onRequestDelete={mockOnRequestDelete} />
     );
-    const thumb = container.querySelector('.news-thumb');
-    const flag = thumb?.querySelector('.news-thumb-flag');
+    // F4: flag moved out of the thumbnail block and into .news-meta
+    const meta = container.querySelector('.news-meta');
+    const flag = meta?.querySelector('.news-meta-flag');
     expect(flag).toBeInTheDocument();
     expect(flag?.textContent).toBe('🇬🇷');
+    // Confirm .news-thumb-flag is absent from the entire card
+    expect(container.querySelector('.news-thumb-flag')).not.toBeInTheDocument();
   });
 
   it('NADM-16: date overlay has .news-thumb-date class inside .news-thumb (bottom-left anchor)', () => {
@@ -377,6 +391,31 @@ describe('NewsCard', () => {
     expect(actions).toBeInTheDocument();
     // Verify actions is inside the card
     expect(card?.contains(actions)).toBe(true);
+  });
+
+  // ── F5: publish-status dot ─────────────────────────────────────────────────
+  it('F5: status dot renders with bg-success and aria-label "Published" when status=published', () => {
+    const { container } = renderWithRouter(
+      <NewsCard item={makeItem({ status: 'published' })} onRequestDelete={mockOnRequestDelete} />
+    );
+    const dot = container.querySelector('.news-status-dot');
+    expect(dot).toBeInTheDocument();
+    expect(dot).toHaveClass('bg-success');
+    expect(dot).not.toHaveClass('bg-warning');
+    expect(dot).toHaveAttribute('aria-label', 'Published');
+    expect(dot).toHaveAttribute('role', 'img');
+  });
+
+  it('F5: status dot renders with bg-warning and aria-label "Draft" when status=draft', () => {
+    const { container } = renderWithRouter(
+      <NewsCard item={makeItem({ status: 'draft' })} onRequestDelete={mockOnRequestDelete} />
+    );
+    const dot = container.querySelector('.news-status-dot');
+    expect(dot).toBeInTheDocument();
+    expect(dot).toHaveClass('bg-warning');
+    expect(dot).not.toHaveClass('bg-success');
+    expect(dot).toHaveAttribute('aria-label', 'Draft');
+    expect(dot).toHaveAttribute('role', 'img');
   });
 
   it('NADM-16: pickNewsThumb used as fallback background when image_url is null', () => {

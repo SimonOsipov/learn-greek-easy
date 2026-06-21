@@ -75,9 +75,9 @@ describe('NewsEditDrawerTranslations — structure', () => {
 
   it('renders hint paragraphs for each field using i18n keys', () => {
     render(<Harness />);
-    expect(screen.getByText('Source language')).toBeInTheDocument();
-    expect(screen.getByText('Greek translation · used in the app')).toBeInTheDocument();
-    expect(screen.getByText('Russian translation · for fallback explanations')).toBeInTheDocument();
+    expect(screen.getByText('English translation')).toBeInTheDocument();
+    expect(screen.getByText('Greek translation')).toBeInTheDocument();
+    expect(screen.getByText('Russian translation')).toBeInTheDocument();
   });
 
   it('Greek textarea has lang="el"', () => {
