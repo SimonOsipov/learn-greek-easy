@@ -9,15 +9,17 @@ Tests cover:
 - Not found cases (404)
 - Validation errors (422)
 - Pagination
+- linked_situation picture fields (F4: picture_image_url, picture_image_variants, has_picture)
 """
 
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tests.factories import NewsItemFactory
+from tests.factories import NewsItemFactory, SituationFactory, SituationPictureFactory
 
 # =============================================================================
 # List News Items Endpoint Tests
@@ -287,7 +289,11 @@ class TestGetNewsItemEndpoint:
         client: AsyncClient,
         db_session: AsyncSession,
     ):
-        """linked_situation contains all 11 required fields with correct types."""
+        """linked_situation contains all 14 required fields with correct types.
+
+        ADMIN2-41-02 (F4): updated from 11 to 14 fields to include picture fields:
+        picture_image_url, picture_image_variants, has_picture.
+        """
         news_item = await NewsItemFactory.create(published=True)
 
         response = await client.get(f"/api/v1/news/{news_item.id}")
@@ -306,6 +312,10 @@ class TestGetNewsItemEndpoint:
         assert "turn_count" in linked
         assert "exercise_count" in linked
         assert "audio_seconds" in linked
+        # F4 picture fields — must be present in every response (null when no picture image)
+        assert "picture_image_url" in linked
+        assert "picture_image_variants" in linked
+        assert "has_picture" in linked
 
         assert isinstance(linked["role_count"], int)
         assert isinstance(linked["role_names"], list)
@@ -313,6 +323,7 @@ class TestGetNewsItemEndpoint:
         assert isinstance(linked["exercise_count"], int)
         assert isinstance(linked["audio_seconds"], float)
         assert isinstance(linked["levels"], list)
+        assert isinstance(linked["has_picture"], bool)
 
     @pytest.mark.asyncio
     async def test_get_news_item_linked_situation_id_matches(
@@ -346,3 +357,175 @@ class TestGetNewsItemEndpoint:
         item = data["items"][0]
         assert "linked_situation" in item
         assert item["linked_situation"] is not None
+
+
+# =============================================================================
+# ADMIN2-41-02 (F4): linked_situation picture fields
+# =============================================================================
+
+
+def _make_fake_s3(picture_url: str = "https://s3.example.com/picture.jpg") -> MagicMock:
+    """Return a mock S3 service that returns deterministic presigned URLs.
+
+    generate_presigned_url returns `picture_url` for any non-None key.
+    get_derivative_presigned_urls returns a dict with 400/800/1600 keys.
+    """
+    mock = MagicMock()
+    mock.generate_presigned_url.return_value = picture_url
+    mock.get_derivative_presigned_urls.return_value = {
+        400: f"{picture_url}?w=400",
+        800: f"{picture_url}?w=800",
+        1600: f"{picture_url}?w=1600",
+    }
+    return mock
+
+
+class TestLinkedSituationPictureFields:
+    """ADMIN2-41-02 (F4) — linked_situation must expose picture_image_url, has_picture, etc.
+
+    These tests are authored RED before the executor adds the picture fields to
+    LinkedSituationSummary and the corresponding presigning in _to_response /
+    _build_linked_situation_summary.
+    """
+
+    @pytest.mark.asyncio
+    async def test_linked_situation_includes_picture_url_when_present_list(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+    ):
+        """List path: linked_situation exposes picture_image_url and has_picture=True
+        when the linked SituationPicture has image_s3_key set.
+
+        Given: a published news item whose situation has a SituationPicture
+               with image_s3_key set (generated trait).
+        When:  GET /api/v1/news (list path).
+        Then:  item.linked_situation.picture_image_url is non-null,
+               item.linked_situation.has_picture is True.
+        """
+        # Build situation with a generated picture (image_s3_key set).
+        # NewsItemFactory.create(situation_id=...) creates the SituationDescription itself
+        # (else-branch), so we only need to pre-create the Situation + Picture.
+        situation = await SituationFactory.create(session=db_session, ready=True)
+        await SituationPictureFactory.create(
+            session=db_session,
+            situation_id=situation.id,
+            generated=True,  # sets image_s3_key via the generated Trait
+        )
+        news_item = await NewsItemFactory.create(
+            session=db_session,
+            situation_id=situation.id,
+            published=True,
+        )
+
+        fake_s3 = _make_fake_s3()
+        with patch("src.services.news_item_service.get_s3_service", return_value=fake_s3):
+            response = await client.get("/api/v1/news")
+
+        assert response.status_code == 200
+        items = response.json()["items"]
+        target = next(i for i in items if i["id"] == str(news_item.id))
+        linked = target["linked_situation"]
+
+        assert (
+            linked["picture_image_url"] is not None
+        ), "picture_image_url must be non-null when SituationPicture.image_s3_key is set"
+        assert (
+            linked["has_picture"] is True
+        ), "has_picture must be True when SituationPicture.image_s3_key is set"
+
+    @pytest.mark.asyncio
+    async def test_linked_situation_includes_picture_url_when_present_detail(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+    ):
+        """Detail path: linked_situation exposes picture_image_url and has_picture=True
+        when the linked SituationPicture has image_s3_key set.
+
+        This covers the SEPARATE detail code path (_build_linked_situation_summary),
+        which is distinct from the list path zero-aggregate path in _to_response.
+
+        Given: a published news item whose situation has a SituationPicture
+               with image_s3_key set (generated trait).
+        When:  GET /api/v1/news/{id} (detail path).
+        Then:  linked_situation.picture_image_url is non-null,
+               linked_situation.has_picture is True,
+               linked_situation.picture_image_variants is a dict with int keys.
+        """
+        situation = await SituationFactory.create(session=db_session, ready=True)
+        await SituationPictureFactory.create(
+            session=db_session,
+            situation_id=situation.id,
+            generated=True,
+        )
+        news_item = await NewsItemFactory.create(
+            session=db_session,
+            situation_id=situation.id,
+            published=True,
+        )
+
+        fake_s3 = _make_fake_s3()
+        with patch("src.services.news_item_service.get_s3_service", return_value=fake_s3):
+            response = await client.get(f"/api/v1/news/{news_item.id}")
+
+        assert response.status_code == 200
+        linked = response.json()["linked_situation"]
+
+        assert (
+            linked["picture_image_url"] is not None
+        ), "picture_image_url must be non-null on the detail path when image_s3_key is set"
+        assert linked["has_picture"] is True, "has_picture must be True on the detail path"
+        # picture_image_variants must be a dict with integer keys 400/800/1600
+        variants = linked["picture_image_variants"]
+        assert variants is not None, "picture_image_variants must be non-null when image present"
+        assert isinstance(variants, dict), "picture_image_variants must be a dict"
+        # JSON keys are always strings; the schema serialises int keys → string keys
+        assert len(variants) == 3, "Expected 3 derivative widths (400, 800, 1600)"
+
+    @pytest.mark.asyncio
+    async def test_linked_situation_null_picture_when_absent(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+    ):
+        """linked_situation.picture_image_url is null and has_picture is False when
+        the SituationPicture has no image_s3_key set (draft picture, no generated image).
+
+        Covers both the list and detail code paths.
+
+        Given: a published news item whose SituationPicture has image_s3_key = None
+               (default factory state, no generated trait).
+        When:  GET /api/v1/news (list) AND GET /api/v1/news/{id} (detail).
+        Then:  linked_situation.picture_image_url is null,
+               linked_situation.has_picture is False,
+               no exception is raised.
+        """
+        # NewsItemFactory already creates a SituationPicture with status=DRAFT,
+        # image_s3_key=None by default — no overrides needed.
+        news_item = await NewsItemFactory.create(published=True)
+
+        response_list = await client.get("/api/v1/news")
+        response_detail = await client.get(f"/api/v1/news/{news_item.id}")
+
+        assert response_list.status_code == 200
+        assert response_detail.status_code == 200
+
+        items = response_list.json()["items"]
+        target = next(i for i in items if i["id"] == str(news_item.id))
+        linked_list = target["linked_situation"]
+        linked_detail = response_detail.json()["linked_situation"]
+
+        # List path
+        assert (
+            linked_list["picture_image_url"] is None
+        ), "picture_image_url must be null when SituationPicture.image_s3_key is None"
+        assert linked_list["has_picture"] is False, "has_picture must be False when no image_s3_key"
+
+        # Detail path
+        assert (
+            linked_detail["picture_image_url"] is None
+        ), "picture_image_url must be null on the detail path when no image_s3_key"
+        assert (
+            linked_detail["has_picture"] is False
+        ), "has_picture must be False on the detail path when no image_s3_key"
