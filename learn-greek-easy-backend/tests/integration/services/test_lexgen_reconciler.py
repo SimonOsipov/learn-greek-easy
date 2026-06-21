@@ -97,7 +97,7 @@ SEAM CONTRACT — pinned by these RED tests (executor MUST honour):
 
 8.  No-requery spy targets:
     The executor MUST NOT call any of these from reconcile():
-      src.services.wiktionary_service.WiktionaryService
+      src.services.wiktionary_morphology_service.WiktionaryMorphologyService
       src.services.lexicon_service.LexiconService
       src.services.frequency_service.FrequencyService
     (These are the services evidence_assembly_service.assemble_evidence() calls.)
@@ -359,8 +359,10 @@ class TestPacketRebuiltViaModelValidate:
 
         with (
             patch(
-                "src.services.wiktionary_service.WiktionaryService",
-                side_effect=AssertionError("WiktionaryService must NOT be called by reconcile()"),
+                "src.services.wiktionary_morphology_service.WiktionaryMorphologyService",
+                side_effect=AssertionError(
+                    "WiktionaryMorphologyService must NOT be called by reconcile()"
+                ),
             ) as mock_wikt,
             patch(
                 "src.services.lexicon_service.LexiconService",
