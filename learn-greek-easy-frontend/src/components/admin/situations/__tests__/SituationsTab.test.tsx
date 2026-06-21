@@ -70,6 +70,10 @@ type StoreSituation = {
 const storeState = {
   situations: [] as StoreSituation[],
   total: 0,
+  // ADMIN2-41-03: statusCounts holds catalog-wide counts from the backend.
+  // The current selectStatsTotals mock (below) still reads from situations[] —
+  // that makes tests 5-8 RED until the real selector is fixed.
+  statusCounts: {} as Record<string, number>,
   drawerItemId: null as string | null,
   isLoading: false,
   fetchSituations: mockFetchSituations,
@@ -164,13 +168,14 @@ type SituationSeed = {
   levels?: string[];
 };
 
-function seedStore(situations: SituationSeed[]) {
+function seedStore(situations: SituationSeed[], statusCounts?: Record<string, number>) {
   storeState.situations = situations.map((s) => ({
     ...s,
     created_at: s.created_at ?? '2024-01-01T00:00:00Z',
     levels: s.levels ?? [],
   }));
   storeState.total = situations.length;
+  storeState.statusCounts = statusCounts ?? {};
 }
 
 function renderWithRouter(search = '') {
@@ -189,6 +194,7 @@ beforeEach(async () => {
   vi.clearAllMocks();
   storeState.situations = [];
   storeState.total = 0;
+  storeState.statusCounts = {};
   storeState.drawerItemId = null;
   mockFetchSituations.mockResolvedValue(undefined);
   await loadSituationsTab();
@@ -264,39 +270,47 @@ describe('SituationsTab — 4 StatCards rendered', () => {
     expect(classNames.some((c) => c.includes('tone-cyan'))).toBe(true);
   });
 
-  it('displays correct numbers (total=3, ready=1, draft=2, exercises=42)', () => {
-    seedStore([
-      {
-        id: '1',
-        status: 'ready',
-        dialog_exercises_count: 10,
-        description_exercises_count: 20,
-        picture_exercises_count: 12,
-      },
-      {
-        id: '2',
-        status: 'draft',
-        dialog_exercises_count: 0,
-        description_exercises_count: 0,
-        picture_exercises_count: 0,
-      },
-      {
-        id: '3',
-        status: 'draft',
-        dialog_exercises_count: 0,
-        description_exercises_count: 0,
-        picture_exercises_count: 0,
-      },
-    ]);
+  // ADMIN2-41-03 UPDATED: stat cards must show catalog totals from statusCounts,
+  // not page-local item counts. The page has 3 items (1 ready + 2 draft), but
+  // statusCounts reports ready=4, draft=71 for the whole catalog (total=75).
+  // This test is RED today (mock still computes from page) and GREEN after fix.
+  it('displays catalog numbers (total=75, ready=4, draft=71, exercises=42)', () => {
+    // Page: 1 ready with exercises + 2 draft; statusCounts: ready=4, draft=71 (catalog).
+    seedStore(
+      [
+        {
+          id: '1',
+          status: 'ready',
+          dialog_exercises_count: 10,
+          description_exercises_count: 20,
+          picture_exercises_count: 12,
+        },
+        {
+          id: '2',
+          status: 'draft',
+          dialog_exercises_count: 0,
+          description_exercises_count: 0,
+          picture_exercises_count: 0,
+        },
+        {
+          id: '3',
+          status: 'draft',
+          dialog_exercises_count: 0,
+          description_exercises_count: 0,
+          picture_exercises_count: 0,
+        },
+      ],
+      { ready: 4, draft: 71 } // catalog statusCounts — diverges from page (1 ready, 2 draft)
+    );
 
     renderWithRouter();
 
     const statNs = document.querySelectorAll('.stat-n');
     const texts = Array.from(statNs).map((el) => el.textContent);
-    expect(texts).toContain('3'); // total
-    expect(texts).toContain('1'); // ready
-    expect(texts).toContain('2'); // draft
-    expect(texts).toContain('42'); // exercises
+    expect(texts).toContain('75'); // catalog total (ready+draft from statusCounts) — FAILS today (shows 3)
+    expect(texts).toContain('4'); // catalog ready — FAILS today (shows 1)
+    expect(texts).toContain('71'); // catalog draft — FAILS today (shows 2)
+    expect(texts).toContain('42'); // exercises: still page-local sum (10+20+12)
   });
 });
 
@@ -433,5 +447,113 @@ describe('SituationsTab — fetchSituations on mount', () => {
   it('calls fetchSituations once on mount', () => {
     renderWithRouter();
     expect(mockFetchSituations).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ============================================================
+// ADMIN2-41-03 — SituationsTab catalog-total stat card RED tests (Tests 5-8)
+//
+// The selectStatsTotals mock in this file currently computes from page items
+// (s.situations.length, status loops) — NOT from statusCounts.
+// All tests below assert the POST-FIX contract; they FAIL today because the
+// mock still returns page-local values.
+// After fix: the real selector uses statusCounts AND the mock is updated to match.
+// ============================================================
+
+describe('SituationsTab — ADMIN2-41-03 catalog-total stat cards', () => {
+  // ── Test 5: StatCards render catalog numbers, not page numbers ───────────────
+  it('T5: Total card shows statusCounts sum (75), Ready shows 4, Drafts shows 71', () => {
+    // Page: 10 all-draft items; catalog statusCounts: ready=4, draft=71.
+    // The mock selectStatsTotals reads situations[] → returns total=10, ready=0, draft=10.
+    // Post-fix, it reads statusCounts → total=75, ready=4, draft=71.
+    seedStore(
+      Array.from({ length: 10 }, (_, i) => ({
+        id: String(i),
+        status: 'draft' as const,
+        dialog_exercises_count: 0,
+        description_exercises_count: 0,
+        picture_exercises_count: 0,
+      })),
+      { ready: 4, draft: 71 }
+    );
+
+    renderWithRouter();
+
+    const statNs = document.querySelectorAll('.stat-n');
+    const texts = Array.from(statNs).map((el) => el.textContent);
+    // FAILS today: mock returns 10/0/10 (page-local)
+    expect(texts).toContain('75'); // catalog total
+    expect(texts).toContain('4'); // catalog ready
+    expect(texts).toContain('71'); // catalog draft
+  });
+
+  // ── Test 6: readyPercent is catalog-consistent (4/75 ≈ 5%) ───────────────────
+  it('T6: Ready card sub shows 5% (round(4/75*100)), not page-local percent', () => {
+    // Page has 0 ready (0%) but catalog is 4/75 (5%).
+    seedStore(
+      Array.from({ length: 10 }, (_, i) => ({
+        id: String(i),
+        status: 'draft' as const,
+        dialog_exercises_count: 0,
+        description_exercises_count: 0,
+        picture_exercises_count: 0,
+      })),
+      { ready: 4, draft: 71 }
+    );
+
+    renderWithRouter();
+
+    const violetCard = Array.from(document.querySelectorAll('.stat-card')).find((c) =>
+      c.className.includes('tone-violet')
+    );
+    expect(violetCard).toBeDefined();
+    // The sub text is rendered via i18n key with pct interpolated.
+    // The mock t() returns the key string with {{pct}} replaced.
+    // Post-fix: pct = round(4/75*100) = 5; today pct = round(0/10*100) = 0.
+    // FAILS today: violet card stat-n shows 0, not 4 (ready count from catalog)
+    const statN = violetCard?.querySelector('.stat-n');
+    expect(statN?.textContent).toBe('4'); // catalog ready count — FAILS today (shows 0)
+  });
+
+  // ── Test 7: Exercises card does NOT show "Catalog total"/"footerCatalog" ──────
+  it('T7: Exercises StatCard does not show "Catalog total" footer label', () => {
+    seedStore([]);
+
+    renderWithRouter();
+
+    const cyanCard = Array.from(document.querySelectorAll('.stat-card')).find((c) =>
+      c.className.includes('tone-cyan')
+    );
+    expect(cyanCard).toBeDefined();
+    // Currently SituationsTab renders footerLabel={t('situations.stats.footerCatalog')} on ALL 4 cards.
+    // The i18n mock returns the key string: "situations.stats.footerCatalog".
+    // After fix, the Exercises card should NOT have this footer label (it gets a page-scoped sub).
+    // FAILS today: the cyan card contains the footerCatalog key text.
+    expect(cyanCard?.textContent).not.toContain('situations.stats.footerCatalog');
+  });
+
+  // ── Test 8: zero catalog edge — no divide-by-zero / NaN ──────────────────────
+  it('T8: empty statusCounts (zero catalog) renders 0 everywhere, no NaN', () => {
+    // statusCounts empty → ready=0, draft=0, total=0; page is also empty.
+    seedStore([], {});
+
+    renderWithRouter();
+
+    const statNs = document.querySelectorAll('.stat-n');
+    const texts = Array.from(statNs).map((el) => el.textContent);
+
+    // All numeric cards show clean values (no NaN/Infinity)
+    expect(texts.every((t) => t !== 'NaN' && t !== 'Infinity')).toBe(true);
+    // The blue (total) card shows 0
+    const blueCard = Array.from(document.querySelectorAll('.stat-card')).find((c) =>
+      c.className.includes('tone-blue')
+    );
+    expect(blueCard?.querySelector('.stat-n')?.textContent).toBe('0');
+
+    // readyPercent must be 0 (not NaN): violet card n=0
+    const violetCard = Array.from(document.querySelectorAll('.stat-card')).find((c) =>
+      c.className.includes('tone-violet')
+    );
+    expect(violetCard?.querySelector('.stat-n')?.textContent).toBe('0');
   });
 });
