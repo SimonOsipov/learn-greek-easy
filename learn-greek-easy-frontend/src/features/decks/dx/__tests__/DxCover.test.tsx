@@ -159,3 +159,90 @@ describe('DxCover — ADMIN2-40 F6-A: card-cap + original-URL fallback', () => {
     expect(hostStyle).not.toMatch(/url\(["']?https?:/);
   });
 });
+
+// ─── ADMIN2-40 F6-A adversarial / edge coverage (QA-added, task-1082) ────────
+
+describe('DxCover — ADMIN2-40 F6-A adversarial edge coverage', () => {
+  afterEach(() => {
+    setDevicePixelRatio(1);
+  });
+
+  // Edge #A — card variant on DPR1 must also be 800w (cap must not break 1x path).
+  // If someone accidentally changed the cap to a smaller value (e.g. 400) the 1x
+  // path would silently downgrade.  This test would catch that regression.
+  it('#A card variant paints 800w url on a 1x display (cap must not break DPR1 path)', () => {
+    setDevicePixelRatio(1);
+
+    const { getByTestId } = render(<DxCover deck={variantsDeck} variant="card" />);
+
+    const coverEl = getByTestId('dx-cover-img') as HTMLElement;
+    const style = coverEl.getAttribute('style') ?? '';
+
+    expect(style).toContain('a_800w.webp');
+    expect(style).not.toContain('a_400w.webp');
+    expect(style).not.toContain('a_1600w.webp');
+  });
+
+  // Edge #B — loop-guard: after the probe fires its error and displayedSrc swaps to
+  // the original URL, the component must be stable.  The probe stays in the DOM
+  // (its src is still the derivative URL — the one that 404'd), so if onError could
+  // re-fire it would thrash.  Verify that firing the probe error a SECOND time does
+  // NOT clear the displayed src — the gradient must NOT show instead of the original.
+  //
+  // Note: browsers typically do not re-fire `error` for the same broken src, but
+  // this test guards the JS-level idempotency of handleProbeError.
+  it('#B probe error is idempotent: firing a second error after swap does not hide the original cover', () => {
+    setDevicePixelRatio(1);
+
+    const { getByTestId, container } = render(<DxCover deck={variantsDeck} variant="card" />);
+
+    const probeImg = container.querySelector('img[src="a_800w.webp"]') as HTMLImageElement;
+    expect(probeImg).not.toBeNull();
+
+    // First error: swaps displayedSrc from derivative to original.
+    fireEvent.error(probeImg);
+
+    let coverEl = getByTestId('dx-cover-img') as HTMLElement;
+    let style = coverEl.getAttribute('style') ?? '';
+    expect(style).toContain('orig.png');
+
+    // Second error on the same probe: must NOT clear displayedSrc (must not return null).
+    // After the first swap, handleProbeError computes:
+    //   original (= 'orig.png') !== initialSrc (= 'a_800w.webp') → sets 'orig.png' again
+    // So idempotent — dx-cover-img must still be in the DOM (not removed), painted with
+    // 'orig.png', not the gradient.
+    fireEvent.error(probeImg);
+
+    coverEl = getByTestId('dx-cover-img') as HTMLElement;
+    style = coverEl.getAttribute('style') ?? '';
+    expect(style).toContain('orig.png');
+    // The cover element must still exist (gradient-only state would have no dx-cover-img).
+    expect(coverEl).not.toBeNull();
+  });
+
+  // Edge #C — AC-2 "when the original ALSO fails, gradient shows through".
+  // The original URL is painted as a CSS background-image: a broken CSS background-image
+  // transparently shows through to the gradient (no JS event; CSS does this for free).
+  // We verify that after a probe error the component is in the correct state FOR this
+  // CSS fallback to work: displayedSrc = original (so dx-cover-img is rendered with
+  // original URL), and there is NO second probe for the original (which would create
+  // an infinite onError loop if the original also 404s).
+  it('#C after probe error, no second probe img is rendered for the original URL (no loop risk)', () => {
+    setDevicePixelRatio(1);
+
+    const { container } = render(<DxCover deck={variantsDeck} variant="card" />);
+
+    const probeImg = container.querySelector('img[src="a_800w.webp"]') as HTMLImageElement;
+    fireEvent.error(probeImg);
+
+    // After swap: displayedSrc = 'orig.png'.  The probe condition is
+    //   initialSrc && initialSrc !== deck.coverImageUrl
+    // initialSrc is still 'a_800w.webp', so the probe is still rendered with
+    // src='a_800w.webp'. Crucially, there must be NO probe for 'orig.png' —
+    // that would fire an onError creating a loop if orig.png also 404s.
+    const probeForOriginal = container.querySelector(
+      'img[src="orig.png"]'
+    ) as HTMLImageElement | null;
+    expect(probeForOriginal).toBeNull();
+  });
+});
