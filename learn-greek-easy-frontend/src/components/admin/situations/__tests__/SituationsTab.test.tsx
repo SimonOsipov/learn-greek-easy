@@ -70,9 +70,7 @@ type StoreSituation = {
 const storeState = {
   situations: [] as StoreSituation[],
   total: 0,
-  // ADMIN2-41-03: statusCounts holds catalog-wide counts from the backend.
-  // The current selectStatsTotals mock (below) still reads from situations[] —
-  // that makes tests 5-8 RED until the real selector is fixed.
+  // statusCounts holds catalog-wide counts from the backend (used by selectStatsTotals).
   statusCounts: {} as Record<string, number>,
   drawerItemId: null as string | null,
   isLoading: false,

@@ -750,27 +750,14 @@ class TestUploadSituationPicture:
 
 
 class TestListSituationsPaginationStability:
-    """RED tests for F7: pagination duplicate rows due to missing tiebreaker.
+    """Tests for F7: stable pagination ordering via (created_at DESC, id DESC).
 
-    The bug: list_situations orders only by created_at.desc() — no unique
-    tiebreaker column (admin.py:5066).  When many rows share the same
-    created_at (batch-ingested from news), Postgres' sort among the ties is
-    non-deterministic per page, causing rows to appear on multiple pages
-    (duplicates) and other rows to be skipped entirely.
+    list_situations uses a compound sort key so that situations sharing the
+    same created_at (e.g. batch-ingested from news) are returned in a
+    deterministic, stable order across pages — no duplicates, no skipped rows.
 
-    The fix (to be written by the executor): add Situation.id.desc() as a
-    secondary sort key so that the combined (created_at DESC, id DESC) order is
-    deterministic across pages.
-
-    How these tests are deterministically RED pre-fix:
-    ──────────────────────────────────────────────────
-    All three tests assert that items with tied created_at are returned in
-    descending UUID order (id DESC).  The current query has NO secondary sort,
-    so Postgres returns tied rows in heap/insertion order — ascending UUID
-    order on this DB, which is the opposite of what the tests demand.
-    A test that asserts id DESC ordering will FAIL as long as the secondary
-    sort key is absent.  After the fix (id DESC tiebreaker added) every
-    assertion holds.
+    These tests assert the post-fix behaviour: items with tied created_at are
+    ordered by id DESC as the tiebreaker, producing consistent pagination.
     """
 
     # A single fixed timestamp shared by all "tied" situations in these tests.

@@ -429,10 +429,10 @@ describe('adminSituationStore — SIT-02 extensions', () => {
 
       const result = selectStatsTotals(useAdminSituationStore.getState());
       // Catalog total (from statusCounts sum) — NOT items.length
-      expect(result.total).toBe(75); // currently FAILS: selector returns items.length = 3
+      expect(result.total).toBe(75); // catalog total (statusCounts sum), not items.length
       // Catalog ready/draft (from statusCounts) — NOT page item status counts
-      expect(result.ready).toBe(4); // currently FAILS: selector counts page items, returns 2
-      expect(result.draft).toBe(71); // currently FAILS: selector counts page items, returns 1
+      expect(result.ready).toBe(4);
+      expect(result.draft).toBe(71);
       // exercisesGenerated still sums from the loaded page items (unchanged)
       expect(result.exercisesGenerated).toBe(13); // 2+3+1 + 0+4+0 + 1+0+2
     });
