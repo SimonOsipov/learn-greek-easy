@@ -165,13 +165,6 @@ export const SituationCard: React.FC<SituationCardProps> = ({ item, onRequestDel
           </div>
         )}
 
-        {/* FROM NEWS kicker */}
-        {item.source_title_en && (
-          <div className="sit-from">
-            {t('situations.card.fromNewsLabel')} · {item.source_title_en}
-          </div>
-        )}
-
         {/* Completion strip: 5 boolean pills + separator + 3 count pills */}
         <div className="sit-prog-strip">
           {/* Boolean pills */}

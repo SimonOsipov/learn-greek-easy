@@ -333,20 +333,19 @@ describe('SituationCard', () => {
     expect(container.querySelectorAll('.sit-levels')).toHaveLength(0);
   });
 
-  // ── Test 15: FROM NEWS kicker ─────────────────────────────────────────────
-  it('renders FROM NEWS kicker when source_title_en is set', () => {
+  // ── Test 15: FROM NEWS kicker removed (F8 ADMIN2-41) ─────────────────────
+  // The sit-from div was removed — source_title_en is no longer rendered in SituationCard.
+  it('does NOT render .sit-from div even when source_title_en is set (F8 removal)', () => {
     renderWithRouter(
       <SituationCard
         item={makeItem({ source_title_en: 'Kathimerini article' })}
         onRequestDelete={vi.fn()}
       />
     );
-    const kicker = document.querySelector('.sit-from');
-    expect(kicker).toBeInTheDocument();
-    expect(kicker!.textContent).toContain('Kathimerini article');
+    expect(document.querySelector('.sit-from')).not.toBeInTheDocument();
   });
 
-  it('hides FROM NEWS kicker when source_title_en is null', () => {
+  it('does NOT render .sit-from div when source_title_en is null', () => {
     renderWithRouter(
       <SituationCard item={makeItem({ source_title_en: null })} onRequestDelete={vi.fn()} />
     );

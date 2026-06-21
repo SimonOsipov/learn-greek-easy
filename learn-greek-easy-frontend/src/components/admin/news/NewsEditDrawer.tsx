@@ -377,6 +377,9 @@ function toLinkedSituationSummaryProp(
     turnCount: raw.turn_count,
     exerciseCount: raw.exercise_count,
     audioDurationSeconds: raw.audio_seconds,
+    pictureImageUrl: raw.picture_image_url,
+    pictureImageVariants: raw.picture_image_variants,
+    hasPicture: raw.has_picture,
   };
 }
 

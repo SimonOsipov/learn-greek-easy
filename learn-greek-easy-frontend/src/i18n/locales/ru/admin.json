@@ -1841,8 +1841,7 @@
       "linesCount_one": "{{count}} строка",
       "linesCount_few": "{{count}} строки",
       "linesCount_many": "{{count}} строк",
-      "linesCount_other": "{{count}} строк",
-      "fromNewsLabel": "ИЗ НОВОСТЕЙ"
+      "linesCount_other": "{{count}} строк"
     },
     "grid": {
       "noResults": "No results",

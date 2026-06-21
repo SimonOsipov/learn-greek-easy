@@ -1824,8 +1824,7 @@
     },
     "card": {
       "linesCount_one": "{{count}} line",
-      "linesCount_other": "{{count}} lines",
-      "fromNewsLabel": "FROM NEWS"
+      "linesCount_other": "{{count}} lines"
     },
     "grid": {
       "noResults": "No results",
