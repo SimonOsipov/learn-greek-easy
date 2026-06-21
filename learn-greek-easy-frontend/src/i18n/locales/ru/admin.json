@@ -558,7 +558,9 @@
     "card": {
       "editLabel": "Редактировать новость",
       "deleteLabel": "Удалить новость",
-      "publishedLabel": "Опубликовано"
+      "publishedLabel": "Опубликовано",
+      "statusDraft": "Черновик",
+      "statusPublished": "Опубликовано"
     },
     "toolbar": {
       "searchPlaceholder": "Поиск по заголовку, тексту или персонажу…",

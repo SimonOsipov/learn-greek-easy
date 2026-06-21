@@ -102,7 +102,6 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onRequestDelete }) => 
         ) : (
           <div className="news-thumb-fallback" style={{ background: pickNewsThumb(item.id) }} />
         )}
-        <span className="news-thumb-flag">{flag}</span>
         <span className="news-thumb-date">{formattedDate}</span>
       </div>
 
@@ -113,6 +112,25 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onRequestDelete }) => 
         </h3>
 
         <div className="news-meta">
+          {/* F4 — Country flag moved into meta row (before level pills) */}
+          <span className="news-meta-flag">{flag}</span>
+
+          {/* F5 — Publish-status dot: amber=draft, green=published */}
+          <span
+            className={
+              item.status === 'published'
+                ? 'news-status-dot bg-success'
+                : 'news-status-dot bg-warning'
+            }
+            role="img"
+            aria-label={t(
+              item.status === 'published' ? 'news.card.statusPublished' : 'news.card.statusDraft'
+            )}
+            title={t(
+              item.status === 'published' ? 'news.card.statusPublished' : 'news.card.statusDraft'
+            )}
+          />
+
           {/* Level pills — using .news-level mono utility */}
           {(hasB1 || hasA2) && (
             <span className="news-levels">

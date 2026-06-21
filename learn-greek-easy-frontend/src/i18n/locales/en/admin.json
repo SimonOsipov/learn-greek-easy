@@ -630,7 +630,9 @@
     "card": {
       "editLabel": "Edit",
       "deleteLabel": "Delete",
-      "publishedLabel": "Published"
+      "publishedLabel": "Published",
+      "statusDraft": "Draft",
+      "statusPublished": "Published"
     },
     "toolbar": {
       "searchPlaceholder": "Search by title, body, or person…",
