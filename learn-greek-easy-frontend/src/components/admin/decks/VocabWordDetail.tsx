@@ -20,7 +20,6 @@ import { WordEntryCards } from '@/components/admin/WordEntryCards';
 import { WordEntryContent } from '@/components/admin/WordEntryContent';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWordEntry } from '@/features/words/hooks/useWordEntry';
 import { computeCompletionPercentage } from '@/lib/completeness';
 import { getWordCompletion } from '@/lib/deckCompletion';
@@ -53,7 +52,9 @@ export function VocabWordDetail({ deck, itemId }: VocabWordDetailProps) {
 
   // ── URL-driven sub-tab state ───────────────────────────────────────────────
 
-  const subtab = searchParams.get('subtab') ?? 'entry';
+  // Normalize to a valid union so an invalid/garbage value (e.g. ?subtab=foo)
+  // never leaves both tabs unselected — default to 'entry'.
+  const subtab = searchParams.get('subtab') === 'cards' ? 'cards' : 'entry';
 
   const handleSubtabChange = useCallback(
     (value: string) => {
@@ -208,24 +209,59 @@ export function VocabWordDetail({ deck, itemId }: VocabWordDetailProps) {
       )}
 
       {/* ── Sub-tabs ── */}
-      <Tabs value={subtab} onValueChange={handleSubtabChange}>
-        <TabsList data-testid="word-entry-detail-tabs">
-          <TabsTrigger value="entry" data-testid="word-entry-tab-entry">
-            {t('wordEntryDetail.tabWordEntry')}
-          </TabsTrigger>
-          <TabsTrigger value="cards" data-testid="word-entry-tab-cards">
-            {t('wordEntryDetail.tabCards')}
-          </TabsTrigger>
-        </TabsList>
+      <div className="drawer-tab-group" role="tablist" data-testid="word-entry-detail-tabs">
+        <button
+          type="button"
+          role="tab"
+          id="word-entry-tab-entry"
+          aria-selected={subtab === 'entry'}
+          aria-controls="word-entry-tab-content-entry"
+          className={subtab === 'entry' ? 'drawer-tab is-active' : 'drawer-tab'}
+          onClick={() => handleSubtabChange('entry')}
+          data-testid="word-entry-tab-entry"
+        >
+          {t('wordEntryDetail.tabWordEntry')}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="word-entry-tab-cards"
+          aria-selected={subtab === 'cards'}
+          aria-controls="word-entry-tab-content-cards"
+          className={subtab === 'cards' ? 'drawer-tab is-active' : 'drawer-tab'}
+          onClick={() => handleSubtabChange('cards')}
+          data-testid="word-entry-tab-cards"
+        >
+          {t('wordEntryDetail.tabCards')}
+        </button>
+      </div>
 
-        <TabsContent value="entry" data-testid="word-entry-tab-content-entry">
-          <WordEntryContent wordEntryId={itemId} deckId={deck.id} onUnlinked={popToList} />
-        </TabsContent>
+      <div
+        role="tabpanel"
+        id="word-entry-tab-content-entry"
+        aria-labelledby="word-entry-tab-entry"
+        hidden={subtab !== 'entry'}
+        className="mt-2"
+        data-testid="word-entry-tab-content-entry"
+      >
+        <WordEntryContent
+          wordEntryId={itemId}
+          deckId={deck.id}
+          onUnlinked={popToList}
+          enabled={subtab === 'entry'}
+        />
+      </div>
 
-        <TabsContent value="cards" data-testid="word-entry-tab-content-cards">
-          <WordEntryCards entryId={itemId} />
-        </TabsContent>
-      </Tabs>
+      <div
+        role="tabpanel"
+        id="word-entry-tab-content-cards"
+        aria-labelledby="word-entry-tab-cards"
+        hidden={subtab !== 'cards'}
+        className="mt-2"
+        data-testid="word-entry-tab-content-cards"
+      >
+        <WordEntryCards entryId={itemId} enabled={subtab === 'cards'} />
+      </div>
     </div>
   );
 }

@@ -252,40 +252,18 @@ export const NewsEditDrawer: React.FC = () => {
         </SidePanel.Header>
 
         <SidePanel.Tabs>
-          <div className="flex w-full items-center justify-between">
-            <div className="flex gap-1">
-              {(['translations', 'body', 'audio', 'image', 'linkedSituation'] as const).map(
-                (tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    onClick={() => setActiveTab(tab)}
-                    className={`drawer-tab ${activeTab === tab ? 'is-active' : ''}`}
-                    data-testid={`news-drawer-tab-${tab}`}
-                  >
-                    {t(`news.drawer.tabs.${tab}`)}
-                  </button>
-                )
-              )}
-            </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  aria-disabled="true"
-                  className="btn-glass relative inline-flex cursor-not-allowed items-center gap-1 opacity-60"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  <Wand2 className="size-3" />
-                  {t('news.drawer.regenerateTranslations')}
-                  <span
-                    className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
-                    aria-hidden="true"
-                  />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>{t('comingSoon')}</TooltipContent>
-            </Tooltip>
+          <div className="flex gap-1">
+            {(['translations', 'body', 'audio', 'image', 'linkedSituation'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={`drawer-tab ${activeTab === tab ? 'is-active' : ''}`}
+                data-testid={`news-drawer-tab-${tab}`}
+              >
+                {t(`news.drawer.tabs.${tab}`)}
+              </button>
+            ))}
           </div>
         </SidePanel.Tabs>
 
@@ -307,7 +285,7 @@ export const NewsEditDrawer: React.FC = () => {
 
         <SidePanel.Footer>
           <div className="flex w-full items-center justify-between">
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-3 text-sm">
               <span className="text-muted-foreground">
                 {t('news.drawer.updatedRelative', {
                   relative: formatDistanceToNow(new Date(item.updated_at), {
@@ -316,6 +294,28 @@ export const NewsEditDrawer: React.FC = () => {
                   }),
                 })}
               </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-disabled="true"
+                      className="relative cursor-not-allowed opacity-60"
+                      onClick={(e) => e.preventDefault()}
+                    >
+                      <Wand2 className="size-3" />
+                      {t('news.drawer.regenerateTranslations')}
+                      <span
+                        className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
+                        aria-hidden="true"
+                      />
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{t('comingSoon')}</TooltipContent>
+              </Tooltip>
             </div>
             <div className="flex gap-2">
               <Button variant="ghost" onClick={requestCancel} data-testid="news-drawer-cancel">

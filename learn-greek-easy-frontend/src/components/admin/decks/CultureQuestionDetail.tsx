@@ -23,10 +23,10 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { CultureCardForm } from '@/components/admin/CultureCardForm';
+import { AnswerOption, type OptionLetter } from '@/components/culture/AnswerOption';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { computeCultureChips, isTranslationComplete } from '@/lib/cultureCompleteness';
 import {
   adminAPI,
   type AdminCultureQuestion,
@@ -47,7 +47,9 @@ export interface CultureQuestionDetailProps {
 }
 
 type Language = 'ru' | 'el' | 'en';
-const LANGUAGES: Language[] = ['en', 'el', 'ru'];
+// F4 (ADMIN2-39-03): the read-view language switcher shows ONE language at a time,
+// ordered Greek → English → Russian (Greek-first per the Round-9 design).
+const READ_LANGUAGES: Language[] = ['el', 'en', 'ru'];
 const LANGUAGE_LABELS: Record<Language, string> = { ru: 'RU', el: 'EL', en: 'EN' };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -110,6 +112,8 @@ export function CultureQuestionDetail({ deck, itemId }: CultureQuestionDetailPro
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  // F4 (ADMIN2-39-03): the read view shows one language at a time; default to Greek.
+  const [readLang, setReadLang] = useState<Language>('el');
 
   // ── Data lookup ────────────────────────────────────────────────────────────
   //
@@ -207,14 +211,12 @@ export function CultureQuestionDetail({ deck, itemId }: CultureQuestionDetailPro
   );
 
   // ── Derived state ──────────────────────────────────────────────────────────
+  //
+  // F3 (ADMIN2-39-02): the status badge reflects the real backend visibility flag
+  // (is_pending_review), NOT a frontend completeness heuristic. Learners see a
+  // question only when is_pending_review === false (culture_question_service.py:458,474).
 
-  const ready = question
-    ? (() => {
-        const chips = computeCultureChips(question);
-        const allOptionsFilled = chips.find((c) => c.name === 'opts')?.color === 'green';
-        return isTranslationComplete(question) && allOptionsFilled;
-      })()
-    : false;
+  const isPendingReview = question?.is_pending_review ?? false;
 
   const headingText = question ? resolveQuestionText(question.question_text) : '';
 
@@ -242,8 +244,11 @@ export function CultureQuestionDetail({ deck, itemId }: CultureQuestionDetailPro
             {headingText}
           </h3>
 
-          <Badge tone={ready ? 'green' : 'amber'} data-testid="culture-question-detail-status">
-            {ready ? t('decks.statusReady') : t('decks.statusDraft')}
+          <Badge
+            tone={isPendingReview ? 'amber' : 'green'}
+            data-testid="culture-question-detail-status"
+          >
+            {isPendingReview ? t('decks.statusPendingReview') : t('decks.statusVisible')}
           </Badge>
         </div>
       </div>
@@ -323,56 +328,68 @@ export function CultureQuestionDetail({ deck, itemId }: CultureQuestionDetailPro
                 </div>
               ) : (
                 <div className="space-y-4" data-testid="culture-question-read-view">
-                  {/* Question text, per language */}
+                  {/* F4: one-language-at-a-time switcher (EL · EN · RU) */}
+                  <div
+                    className="drawer-tab-group"
+                    role="tablist"
+                    data-testid="culture-read-lang-tabs"
+                  >
+                    {READ_LANGUAGES.map((lang) => (
+                      <button
+                        key={lang}
+                        type="button"
+                        role="tab"
+                        aria-selected={readLang === lang}
+                        className={readLang === lang ? 'drawer-tab is-active' : 'drawer-tab'}
+                        onClick={() => setReadLang(lang)}
+                        data-testid={`culture-read-lang-${lang}`}
+                      >
+                        {LANGUAGE_LABELS[lang]}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Question text in the selected language */}
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">
                       {t('decks.culture.read.questionLabel')}
                     </p>
-                    <dl className="space-y-1">
-                      {LANGUAGES.map((lang) => (
-                        <div key={lang} className="flex gap-2 text-sm">
-                          <dt className="w-6 shrink-0 font-medium text-muted-foreground">
-                            {LANGUAGE_LABELS[lang]}
-                          </dt>
-                          <dd className="font-medium">
-                            {question.question_text[lang]?.trim() || '—'}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
+                    <p className="text-sm font-medium" data-testid="culture-question-read-text">
+                      {question.question_text[readLang]?.trim() || '—'}
+                    </p>
                   </div>
 
-                  {/* Answers with correct-answer marker (EN, fallback chain) */}
+                  {/* F5: answers in the selected language with Situations correct treatment */}
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">
                       {t('decks.culture.read.answersLabel')}
                     </p>
-                    <ol className="space-y-1">
+                    <div className="space-y-2">
                       {activeOptions(question).map((opt, index) => {
                         const isCorrect = question.correct_option === index + 1;
-                        const label = ['A', 'B', 'C', 'D'][index];
-                        const text = firstNonEmpty(opt['en'], opt['el'], opt['ru']);
+                        const label = (['A', 'B', 'C', 'D'] as OptionLetter[])[index];
+                        const text = firstNonEmpty(opt[readLang], opt['el'], opt['en'], opt['ru']);
                         return (
-                          <li
-                            key={label}
-                            data-testid={`culture-question-read-answer-${label}`}
-                            className="flex items-center gap-2 text-sm"
-                          >
-                            <span className="w-6 shrink-0 font-medium text-muted-foreground">
-                              {label}.
-                            </span>
-                            <span className={isCorrect ? 'font-medium text-foreground' : ''}>
-                              {text}
-                            </span>
+                          <div key={label} data-testid={`culture-question-read-answer-${label}`}>
+                            <AnswerOption
+                              letter={label}
+                              text={text}
+                              isSelected={false}
+                              onClick={() => {}}
+                              disabled
+                              state={isCorrect ? 'correct' : 'default'}
+                            />
+                            {/* Behavioral testid contract: marks the correct row. The
+                                green "Correct" pill was dropped in favour of AnswerOption's
+                                state="correct" treatment; this non-visual node preserves the
+                                testid asserted by the adversarial tests. */}
                             {isCorrect && (
-                              <Badge tone="green" data-testid="culture-question-read-correct">
-                                {t('decks.culture.read.correctMarker')}
-                              </Badge>
+                              <span hidden data-testid="culture-question-read-correct" />
                             )}
-                          </li>
+                          </div>
                         );
                       })}
-                    </ol>
+                    </div>
                   </div>
                 </div>
               )}

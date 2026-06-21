@@ -238,7 +238,9 @@ describe('NewsEditDrawerAudio — Regenerate + Upload buttons', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
     const rows = document.querySelectorAll('.audio-row');
     rows.forEach((row) => {
-      const uploadBtn = row.querySelector('button.icon-btn[aria-disabled="true"]');
+      // ADMIN2-39 F9: upload stub is now the Button primitive (icon variant) —
+      // it is the disabled action carrying an aria-label (regenerate uses visible text).
+      const uploadBtn = row.querySelector('button[aria-disabled="true"][aria-label]');
       expect(uploadBtn).toBeTruthy();
     });
   });
@@ -279,7 +281,7 @@ describe('NewsEditDrawerAudio — NADM-19 chrome: Regenerate + Upload icons', ()
     render(<NewsEditDrawerAudio item={makeItem()} />);
     const rows = document.querySelectorAll('.audio-row');
     rows.forEach((row) => {
-      const uploadBtn = row.querySelector('button.icon-btn[aria-disabled="true"]');
+      const uploadBtn = row.querySelector('button[aria-disabled="true"][aria-label]');
       expect(uploadBtn).toBeTruthy();
       expect(uploadBtn?.querySelector('svg')).toBeTruthy();
     });

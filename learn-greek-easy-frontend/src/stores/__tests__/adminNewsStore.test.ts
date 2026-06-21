@@ -387,4 +387,74 @@ describe('adminNewsStore — NEWS-02 extensions', () => {
       expect(result.map((i) => i.id)).toEqual(['old', 'mid', 'new']);
     });
   });
+
+  // ============================================================
+  // ADMIN2-39-05 F8 — country_counts extraction from list response
+  // ============================================================
+  // The list response already returns country_counts, but fetchNewsItems
+  // currently discards it. The target adds a countryCounts field to the store
+  // (defaulting to zeros when the response omits it).
+  describe('F8 — fetchNewsItems extracts country_counts', () => {
+    // Base list-response shape so fetchNewsItems does not throw on missing fields.
+    function makeListResponse(
+      overrides: Partial<{
+        items: unknown[];
+        total: number;
+        page: number;
+        page_size: number;
+        country_counts: { cyprus: number; greece: number; world: number };
+        audio_count: number;
+        b1_audio_count: number;
+        b1_pending_regen_count: number;
+      }> = {}
+    ) {
+      const base: Record<string, unknown> = {
+        items: [],
+        total: 0,
+        page: 1,
+        page_size: 10,
+        audio_count: 0,
+        b1_audio_count: 0,
+        b1_pending_regen_count: 0,
+        ...overrides,
+      };
+      // Only attach country_counts when the override explicitly provides it,
+      // so the "omitted" test exercises the absent-field path.
+      if ('country_counts' in overrides) {
+        base.country_counts = overrides.country_counts;
+      }
+      return base;
+    }
+
+    it('store extracts country_counts', async () => {
+      vi.mocked(adminAPI.getAdminNewsItems).mockResolvedValue(
+        makeListResponse({ country_counts: { cyprus: 3, greece: 2, world: 5 } }) as any
+      );
+
+      await act(async () => {
+        await useAdminNewsStore.getState().fetchNewsItems();
+      });
+
+      expect(useAdminNewsStore.getState().countryCounts).toEqual({
+        cyprus: 3,
+        greece: 2,
+        world: 5,
+      });
+    });
+
+    it('store defaults country_counts safely when response omits it', async () => {
+      vi.mocked(adminAPI.getAdminNewsItems).mockResolvedValue(makeListResponse() as any);
+
+      // Must not throw even though the response has no country_counts.
+      await act(async () => {
+        await useAdminNewsStore.getState().fetchNewsItems();
+      });
+
+      expect(useAdminNewsStore.getState().countryCounts).toEqual({
+        cyprus: 0,
+        greece: 0,
+        world: 0,
+      });
+    });
+  });
 });

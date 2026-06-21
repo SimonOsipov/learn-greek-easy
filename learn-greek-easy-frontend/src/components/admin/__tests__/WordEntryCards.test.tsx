@@ -472,10 +472,40 @@ describe('WordEntryCards', () => {
         refetch: vi.fn(),
       });
       renderComponent();
-      // Human-readable fallback label (title-cased)
+      // Human-readable fallback label (title-cased) is shown for non-default variants
       expect(screen.getByText('Meaning El To En T1')).toBeInTheDocument();
-      // Raw key shown as secondary text
-      expect(screen.getByText('meaning_el_to_en_t1')).toBeInTheDocument();
+      // Raw monospace variant key is no longer rendered (ADMIN2-39 D-F1a: collapsed chrome)
+      expect(screen.queryByText('meaning_el_to_en_t1')).not.toBeInTheDocument();
+    });
+
+    // ── ADMIN2-39-01 QA edge coverage (AC#1): default variant carries NO chrome ──
+    it('renders NO variant label or key for a default-variant card', () => {
+      (useWordEntryCards as Mock).mockReturnValue({
+        cards: [createMockCard({ variant_key: 'default' })],
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      const record = screen.getByTestId('card-record-card-1');
+      // Neither the human label ("Default") nor the raw key ("default") is rendered
+      expect(record.textContent).not.toContain('Default');
+      expect(screen.queryByText('default')).not.toBeInTheDocument();
+    });
+
+    // ── ADMIN2-39-01 QA edge coverage (AC#2): tier demoted to bare number, no "Tier:" word ──
+    it('renders tier as a bare number with no "Tier:" label word', () => {
+      (useWordEntryCards as Mock).mockReturnValue({
+        cards: [createMockCard({ tier: 3, variant_key: 'default' })],
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      const record = screen.getByTestId('card-record-card-1');
+      expect(record.textContent).toContain('3');
+      // The "Tier:" shouting label is gone (AC#2 demotion to a single muted token)
+      expect(record.textContent).not.toContain('Tier');
     });
 
     it('card records have no interactive elements (no buttons)', () => {
@@ -532,7 +562,10 @@ describe('WordEntryCards', () => {
   describe('hook integration', () => {
     it('passes entryId to useWordEntryCards hook', () => {
       renderComponent('my-entry-id');
-      expect(useWordEntryCards).toHaveBeenCalledWith({ wordEntryId: 'my-entry-id' });
+      expect(useWordEntryCards).toHaveBeenCalledWith({
+        wordEntryId: 'my-entry-id',
+        enabled: true,
+      });
     });
   });
 
@@ -1168,7 +1201,7 @@ describe('Audio Status Badges', () => {
     it('calls useWordEntry with the entryId passed to the component', () => {
       setupAudioMocks({ cards: [] });
       renderComponent('entry-1');
-      expect(useWordEntry).toHaveBeenCalledWith({ wordId: 'entry-1' });
+      expect(useWordEntry).toHaveBeenCalledWith({ wordId: 'entry-1', enabled: true });
     });
   });
 });

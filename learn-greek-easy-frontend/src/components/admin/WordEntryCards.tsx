@@ -28,6 +28,9 @@ import { NotSet } from './NotSet';
 
 interface WordEntryCardsProps {
   entryId: string;
+  /** Whether the underlying queries should run (default true). Lets callers gate
+   * the fetch when this panel is mounted-but-hidden behind a tab. */
+  enabled?: boolean;
 }
 
 const CARD_TYPE_DISPLAY_ORDER: CardRecordType[] = [
@@ -221,12 +224,13 @@ function AvailableCardTypes({
   );
 }
 
-export function WordEntryCards({ entryId }: WordEntryCardsProps) {
+export function WordEntryCards({ entryId, enabled = true }: WordEntryCardsProps) {
   const { t } = useTranslation('admin');
   const { cards, isLoading, isError, refetch } = useWordEntryCards({
     wordEntryId: entryId,
+    enabled,
   });
-  const { wordEntry } = useWordEntry({ wordId: entryId });
+  const { wordEntry } = useWordEntry({ wordId: entryId, enabled });
   const generateCards = useGenerateCards();
 
   if (isLoading) {
@@ -392,9 +396,7 @@ function CardRecord({
     footerItems.push(
       <Tooltip key="tier">
         <TooltipTrigger asChild>
-          <span className="cursor-default">
-            {t('wordEntryDetail.cardTier')}: {card.tier}
-          </span>
+          <span className="cursor-default text-xs text-muted-foreground">{card.tier}</span>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs text-xs">
           {t('wordEntryDetail.cards.tierTooltip')}
@@ -402,12 +404,13 @@ function CardRecord({
       </Tooltip>
     );
   }
-  footerItems.push(
-    <span key="variant" className="flex flex-col leading-tight">
-      <span>{getVariantKeyLabel(card.variant_key)}</span>
-      <span className="font-mono text-xs text-muted-foreground/60">{card.variant_key}</span>
-    </span>
-  );
+  if (card.variant_key !== 'default') {
+    footerItems.push(
+      <span key="variant" className="text-xs text-muted-foreground">
+        {getVariantKeyLabel(card.variant_key)}
+      </span>
+    );
+  }
   if (audioStatus) {
     footerItems.push(
       <AudioStatusBadge

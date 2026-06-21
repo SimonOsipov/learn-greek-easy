@@ -33,11 +33,20 @@ interface WordEntryContentProps {
   wordEntryId: string;
   deckId?: string;
   onUnlinked?: () => void;
+  /** Whether the underlying query should run (default true). Lets callers gate
+   * the fetch when this panel is mounted-but-hidden behind a tab. */
+  enabled?: boolean;
 }
 
-export function WordEntryContent({ wordEntryId, deckId, onUnlinked }: WordEntryContentProps) {
+export function WordEntryContent({
+  wordEntryId,
+  deckId,
+  onUnlinked,
+  enabled = true,
+}: WordEntryContentProps) {
   const { wordEntry, isLoading, isError, refetch } = useWordEntry({
     wordId: wordEntryId,
+    enabled,
   });
   const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
   const [autoGenerateAfterEdit, setAutoGenerateAfterEdit] = useState(false);
