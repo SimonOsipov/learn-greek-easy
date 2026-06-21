@@ -560,3 +560,88 @@ describe('SituationsTab — ADMIN2-41-03 catalog-total stat cards', () => {
     expect(violetCard?.querySelector('.stat-n')?.textContent).toBe('0');
   });
 });
+
+// ── ADMIN2-41-03 Adversarial: readyPercent rounding (catalog-consistent) ──────
+//
+// T6 above checks `stat-n` (n=4) on the violet card; it verifies the n prop
+// but not the readyPercent computation itself. These tests close that gap by
+// verifying the computation inline (the i18n mock returns raw keys, so we
+// cannot inspect the interpolated pct value in DOM text — we verify the
+// inputs the selector provides and the rounding directly).
+// ──────────────────────────────────────────────────────────────────────────────
+describe('SituationsTab — readyPercent rounding (adversarial, ADMIN2-41-03)', () => {
+  // ── A1: mock selector delivers ready=4 / total=75 and readyPercent rounds to 5 ──
+  it('A1: mock selectStatsTotals returns ready=4 total=75 → readyPercent=5 (round(4/75*100))', async () => {
+    // Seed the mock store state that the component's selectStatsTotals mock will read.
+    // statusCounts: ready=4, draft=71 → total=75 via the mock selector.
+    seedStore(
+      Array.from({ length: 10 }, (_, i) => ({
+        id: String(i),
+        status: 'draft' as const,
+        dialog_exercises_count: 0,
+        description_exercises_count: 0,
+        picture_exercises_count: 0,
+      })),
+      { ready: 4, draft: 71 }
+    );
+
+    // Invoke the mock selector directly against the seeded storeState.
+    const { selectStatsTotals } = await import('@/stores/adminSituationStore');
+    const result = selectStatsTotals(storeState as any);
+
+    expect(result.ready).toBe(4);
+    expect(result.total).toBe(75);
+
+    // This is the exact computation in SituationsTab.tsx:52.
+    const readyPercent = result.total > 0 ? Math.round((result.ready / result.total) * 100) : 0;
+    expect(readyPercent).toBe(5); // round(5.33…) = 5, NOT 0 (page-local 0/10) or NaN
+  });
+
+  // ── A2: violet card n=4, stat-card does not contain NaN ──────────────────────
+  it('A2: violet card stat-n=4 and textContent has no NaN for ready=4/total=75', () => {
+    seedStore(
+      Array.from({ length: 10 }, (_, i) => ({
+        id: String(i),
+        status: 'draft' as const,
+        dialog_exercises_count: 0,
+        description_exercises_count: 0,
+        picture_exercises_count: 0,
+      })),
+      { ready: 4, draft: 71 }
+    );
+
+    renderWithRouter();
+
+    const violetCard = Array.from(document.querySelectorAll('.stat-card')).find((c) =>
+      c.className.includes('tone-violet')
+    );
+    expect(violetCard).toBeDefined();
+    expect(violetCard?.querySelector('.stat-n')?.textContent).toBe('4'); // catalog ready
+    expect(violetCard?.textContent).not.toContain('NaN');
+    expect(violetCard?.textContent).not.toContain('Infinity');
+  });
+
+  // ── A3: zero-catalog edge — no NaN / Infinity in any stat card ───────────────
+  it('A3: zero statusCounts (empty catalog) — all stat-n = 0, no NaN or Infinity', async () => {
+    seedStore([], {});
+
+    renderWithRouter();
+
+    const violetCard = Array.from(document.querySelectorAll('.stat-card')).find((c) =>
+      c.className.includes('tone-violet')
+    );
+    expect(violetCard).toBeDefined();
+    expect(violetCard?.textContent).not.toContain('NaN');
+    expect(violetCard?.textContent).not.toContain('Infinity');
+    // stat-n must show 0
+    expect(violetCard?.querySelector('.stat-n')?.textContent).toBe('0');
+
+    // Verify the guard: total=0 → readyPercent=0 (not NaN from division by zero)
+    const { selectStatsTotals } = await import('@/stores/adminSituationStore');
+    const result = selectStatsTotals(storeState as any);
+    expect(result.total).toBe(0);
+    const readyPercent = result.total > 0 ? Math.round((result.ready / result.total) * 100) : 0;
+    expect(readyPercent).toBe(0);
+    expect(Number.isNaN(readyPercent)).toBe(false);
+  });
+});

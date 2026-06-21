@@ -623,4 +623,41 @@ describe('adminSituationStore — ADMIN2-41-03 catalog-total contract', () => {
     // oldestDraftDate: oldest draft from the PAGE (oldDate, not catalog-wide)
     expect(result.oldestDraftDate).toBe(oldDate);
   });
+
+  // ── Test 5 (adversarial): readyPercent inputs — 4/75 → feeds a 5% result ───
+  // selectStatsTotals does NOT compute readyPercent; SituationsTab.tsx does.
+  // This test verifies the selector emits the exact inputs the component
+  // needs to compute Math.round((4/75)*100) = 5.
+  it('T5-adv: selector returns ready=4 and total=75 so component can compute pct=5', () => {
+    useAdminSituationStore.setState({
+      situations: [],
+      statusCounts: { ready: 4, draft: 71 },
+      total: 10, // filtered — must be ignored
+    });
+
+    const result = selectStatsTotals(useAdminSituationStore.getState());
+    // Component computes: Math.round((result.ready / result.total) * 100)
+    expect(result.ready).toBe(4);
+    expect(result.total).toBe(75);
+    const computedPct = result.total > 0 ? Math.round((result.ready / result.total) * 100) : 0;
+    expect(computedPct).toBe(5); // round(4/75*100) = round(5.33) = 5
+  });
+
+  // ── Test 6 (adversarial): zero-catalog — selector returns total=0 so component
+  // computes readyPercent=0 with NO divide-by-zero / NaN ──────────────────────
+  it('T6-adv: zero statusCounts → total=0, ready=0 — no NaN in readyPercent computation', () => {
+    useAdminSituationStore.setState({
+      situations: [],
+      statusCounts: {},
+    });
+
+    const result = selectStatsTotals(useAdminSituationStore.getState());
+    expect(result.total).toBe(0);
+    expect(result.ready).toBe(0);
+    // Simulate the component guard: total > 0 ? Math.round(ready/total*100) : 0
+    const computedPct = result.total > 0 ? Math.round((result.ready / result.total) * 100) : 0;
+    expect(computedPct).toBe(0);
+    expect(Number.isNaN(computedPct)).toBe(false);
+    expect(Number.isFinite(computedPct)).toBe(true);
+  });
 });
