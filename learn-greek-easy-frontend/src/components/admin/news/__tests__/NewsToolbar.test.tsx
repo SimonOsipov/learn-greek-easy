@@ -68,15 +68,16 @@ describe('NewsToolbar — renders all controls', () => {
     storeState.sortMode = 'newest';
   });
 
-  it('renders Country SegControl with All/CY/GR options (ES and World removed)', () => {
+  it('renders Country SegControl with All/CY/GR/WR options (ES removed)', () => {
     renderWithRouter();
     // Both SegControls have an "All" button — use getAllByText
     expect(screen.getAllByText('All').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('🇨🇾 CY')).toBeInTheDocument();
     expect(screen.getByText('🇬🇷 GR')).toBeInTheDocument();
+    // F3: World option added
+    expect(screen.getByText('🌍 WR')).toBeInTheDocument();
     // NBUG-02: ES removed from country filter options
     expect(screen.queryByText('🇪🇸 ES')).not.toBeInTheDocument();
-    expect(screen.queryByText('🌍 World')).not.toBeInTheDocument();
   });
 
   it('renders Level SegControl with B1/A2 options', () => {
@@ -322,9 +323,21 @@ describe('NewsToolbar — NADM-15 layout and chrome', () => {
     expect(screen.queryByText('🇪🇸 ES')).not.toBeInTheDocument();
   });
 
-  it('World country option is absent', () => {
+  it('World country option (🌍 WR) is present (F3)', () => {
     renderWithRouter();
-    expect(screen.queryByText('🌍 World')).not.toBeInTheDocument();
+    expect(screen.getByText('🌍 WR')).toBeInTheDocument();
+  });
+
+  it('selecting World option calls setCountryFilter("world") and writes ?country=world (F3)', async () => {
+    const user = userEvent.setup();
+    renderWithRouter();
+    await user.click(screen.getByText('🌍 WR'));
+    expect(mockSetCountryFilter).toHaveBeenCalledWith('world');
+  });
+
+  it('URL hydration calls setCountryFilter("world") when ?country=world (F3)', () => {
+    renderWithRouter('?country=world');
+    expect(mockSetCountryFilter).toHaveBeenCalledWith('world');
   });
 
   it('search input placeholder matches i18n key', () => {

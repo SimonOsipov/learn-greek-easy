@@ -441,10 +441,7 @@
     "stats": {
       "total": "Total News",
       "withAudio": "With Audio",
-      "b1Coverage": "B1 coverage",
-      "countries": "Countries",
       "audioCoverage": "{{count}}/{{total}} with audio",
-      "countrySub": "By country",
       "allTime": "All time",
       "recentThisWeek": "+{{count}} this week"
     },
@@ -549,9 +546,9 @@
     "drawer": {
       "title": "Edit article",
       "tabs": {
-        "translations": "Translations",
+        "translations": "Title",
         "body": "Body",
-        "audio": "Audio · 2 levels",
+        "audio": "Audio",
         "image": "Image",
         "linkedSituation": "Linked situation"
       },
@@ -586,20 +583,19 @@
       "audio": {
         "a2Narration": "A2 narration",
         "b1Narration": "B1 narration",
-        "generatedFrom": "Generated · ElevenLabs · Greek female voice — last {{date}}",
         "notGeneratedYet": "Not generated yet",
         "regenerate": "Regenerate",
         "playLabel": "Play {{level}} narration",
         "pauseLabel": "Pause {{level}} narration",
-        "uploadLabel": "Upload {{level}} audio"
+        "regenerateNoSituation": "No linked situation"
       },
       "translations": {
         "titleEn": "Title — English",
         "titleEl": "Τίτλος — Ελληνικά",
         "titleRu": "Заголовок — Русский",
-        "hintEn": "Source language",
-        "hintEl": "Greek translation · used in the app",
-        "hintRu": "Russian translation · for fallback explanations"
+        "hintEn": "English translation",
+        "hintEl": "Greek translation",
+        "hintRu": "Russian translation"
       },
       "body": {
         "greekBody": "Greek body",
@@ -633,7 +629,9 @@
     "card": {
       "editLabel": "Edit",
       "deleteLabel": "Delete",
-      "publishedLabel": "Published"
+      "publishedLabel": "Published",
+      "statusDraft": "Draft",
+      "statusPublished": "Published"
     },
     "toolbar": {
       "searchPlaceholder": "Search by title, body, or person…",

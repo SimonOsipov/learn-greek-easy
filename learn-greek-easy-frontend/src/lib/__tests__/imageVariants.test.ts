@@ -97,6 +97,38 @@ describe('pickBestSrc', () => {
   });
 });
 
+describe('pickBestSrc — ADMIN2-40 F6-A card-cap regression guards', () => {
+  // These three tests are GREEN guards: they assert the existing correct behaviour
+  // of pickBestSrc that the card-cap fix must NOT regress.
+  const variants = {
+    400: 'a_400w.webp',
+    800: 'a_800w.webp',
+    1600: 'a_1600w.webp',
+  };
+  const originalUrl = 'orig.png';
+
+  // Test #1 — capped target (800) returns the 800w url (the executor will call
+  //   pickBestSrc with target=800 for card variant on DPR2, not 1600).
+  it('returns 800w url when target is 800 (capped card target on retina)', () => {
+    expect(pickBestSrc(variants, 800, originalUrl)).toBe('a_800w.webp');
+  });
+
+  // Test #2 — non-card target 1600 still returns the 1600w url (stack/hero must
+  //   continue to receive the full DPR-scaled resolution).
+  it('returns 1600w url when target is 1600 (non-card retina — no regression)', () => {
+    expect(pickBestSrc(variants, 1600, originalUrl)).toBe('a_1600w.webp');
+  });
+
+  // Test #3 — null/empty variants always falls back to the original URL.
+  it('returns original url when variants is null', () => {
+    expect(pickBestSrc(null, 800, 'orig.png')).toBe('orig.png');
+  });
+
+  it('returns original url when variants is empty object', () => {
+    expect(pickBestSrc({}, 800, 'orig.png')).toBe('orig.png');
+  });
+});
+
 describe('recoverDerivativeError', () => {
   // Minimal stub of the SyntheticEvent shape the handler reads.
   const makeEvent = (img: Partial<HTMLImageElement>) =>
