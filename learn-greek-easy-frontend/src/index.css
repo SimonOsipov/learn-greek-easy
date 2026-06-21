@@ -3189,18 +3189,6 @@
     flex-wrap: wrap;
     gap: 4px;
   }
-  /* FROM NEWS kicker */
-  .sit-from {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: hsl(var(--fg-2));
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
   @media (max-width: 640px) {
     .sit-card {
       grid-template-columns: 96px 1fr;
