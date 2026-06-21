@@ -1,30 +1,28 @@
-"""Integration migration tests for LEXGEN-04-01: cefr_lemma + cefr_lemma_review tables.
+"""Integration migration tests for LEXGEN-05-01: frequency_rank table.
 
 Mode A — RED spec (Alembic round-trip).
 
 BACKGROUND
 ----------
-The LEXGEN-04-01 migration creates two tables in the `reference` schema:
-  - reference.cefr_lemma        (lemma, level, source, closed_class, created_at)
-  - reference.cefr_lemma_review (raw_lemma, normalized_lemma, level, source,
-                                  reason, created_at)
+The LEXGEN-05-01 migration creates one table in the `reference` schema:
+  - reference.frequency_rank  (id, lemma, source, rank, created_at)
 
-The migration must be down_revision == '5e8cc90e5bca' (LEXGEN-03 head).
+The migration must have down_revision == '844af57c6ca2' (LEXGEN-04 head).
 
 INDEXES
 -------
-After upgrade, reference.cefr_lemma must have:
-  - A UNIQUE index on (lemma) — the DB backstop for one-row-per-lemma invariant.
-  - A NON-UNIQUE index on (level) — for gate queries loading lemmas <= target level.
+After upgrade, reference.frequency_rank must have:
+  - A UNIQUE index on (lemma) — DB backstop for one-row-per-lemma invariant.
+  - A NON-UNIQUE index on (rank) — for range lookups by rank order.
 
-After downgrade, both tables and both indexes must be gone.
+After downgrade, the table and both indexes must be gone.
 
 HOW THESE TESTS WORK
 ---------------------
 The test spins up an isolated PostgreSQL database, applies all Alembic migrations
 from scratch via `alembic upgrade head` (subprocess), then verifies schema state
 via pg_catalog introspection.  It then runs `alembic downgrade -1` and verifies
-both tables are gone.
+the table is gone.
 
 Each test creates its own isolated DB and drops it in a finally block so the
 test is safe to run concurrently with other migration tests.
@@ -47,10 +45,10 @@ does not execute test bodies).
 TEST STATUS — Mode A (pre-implementation)
 ------------------------------------------
 test_migration_upgrade_downgrade_roundtrip:
-    CI-gated RED today.  The LEXGEN-04-01 migration does not exist yet.
-    `alembic upgrade head` stops at 5e8cc90e5bca (no cefr_lemma tables).
-    The assertion that reference.cefr_lemma exists after upgrade fails.
-    GREEN after: executor creates the migration and both models.
+    CI-gated RED today.  The LEXGEN-05-01 migration does not exist yet.
+    `alembic upgrade head` stops at 844af57c6ca2 (no frequency_rank table).
+    The assertion that reference.frequency_rank exists after upgrade fails.
+    GREEN after: executor creates the migration and the FrequencyRank model.
 """
 
 import os
@@ -144,7 +142,7 @@ _ADMIN_DB_URL = _BASE_DB_URL.rsplit("/", 1)[0] + "/postgres"
 
 
 # ---------------------------------------------------------------------------
-# Helpers (mirrors test_lexgen_03_wiktionary_pos.py pattern exactly)
+# Helpers (mirrors test_lexgen_04_cefr_lemma.py pattern exactly)
 # ---------------------------------------------------------------------------
 
 
@@ -321,36 +319,34 @@ def _get_non_unique_indexes_for_column(
 # ---------------------------------------------------------------------------
 
 
-class TestLexgen04CefrLemmaMigrationRoundTrip:
-    """AC-9: upgrade head then downgrade -1 round-trips both tables and indexes.
+class TestLexgen05FrequencyRankMigrationRoundTrip:
+    """AC-5: upgrade head then downgrade -1 round-trips the table and indexes.
 
     CI-gated RED today:
-    - The LEXGEN-04-01 migration does not exist.
-    - `alembic upgrade head` stops at 5e8cc90e5bca with no cefr_lemma tables.
-    - The assertion that reference.cefr_lemma exists after upgrade fails.
+    - The LEXGEN-05-01 migration does not exist.
+    - `alembic upgrade head` stops at 844af57c6ca2 with no frequency_rank table.
+    - The assertion that reference.frequency_rank exists after upgrade fails.
 
-    GREEN after: executor creates the migration (down_revision == '5e8cc90e5bca')
-    and both CefrLemma / CefrLemmaReview models in models.py.
+    GREEN after: executor creates the migration (down_revision == '844af57c6ca2')
+    and the FrequencyRank model in models.py.
     """
 
     def test_migration_upgrade_downgrade_roundtrip(self):
-        """AC-9: Full Alembic round-trip for LEXGEN-04-01.
+        """AC-5: Full Alembic round-trip for LEXGEN-05-01.
 
-        GIVEN  head at 5e8cc90e5bca (LEXGEN-03) on a real PG instance
+        GIVEN  head at 844af57c6ca2 (LEXGEN-04) on a real PG instance
         WHEN   alembic upgrade head
-        THEN   reference.cefr_lemma exists with:
-                 - a UNIQUE index on (lemma) alone (not on (lemma, level))
-                 - a non-unique index on (level)
-               reference.cefr_lemma_review exists
+        THEN   reference.frequency_rank exists with:
+                 - a UNIQUE index on (lemma) alone (not on (lemma, rank))
+                 - a non-unique index on (rank)
         WHEN   alembic downgrade -1
-        THEN   reference.cefr_lemma does NOT exist
-               reference.cefr_lemma_review does NOT exist
+        THEN   reference.frequency_rank does NOT exist
                both indexes are gone
 
         CI-gated RED today (migration not yet authored).
-        GREEN after: executor creates the LEXGEN-04-01 migration.
+        GREEN after: executor creates the LEXGEN-05-01 migration.
         """
-        db_name = "test_lexgen04_cefr_lemma"
+        db_name = "test_lexgen05_frequency_rank"
         setup_ok = False
         try:
             db_url = _setup_migration_db(db_name)
@@ -364,45 +360,42 @@ class TestLexgen04CefrLemmaMigrationRoundTrip:
 
         try:
             # ---- UPGRADE ----
-            # Pin to 844af57c6ca2 (LEXGEN-04 head) so a successor migration doesn't
+            # Pin to 6b8e5cdc102f (LEXGEN-05 head) so a successor migration doesn't
             # break this round-trip's downgrade -1 assertion.
-            result = _run_alembic(["upgrade", "844af57c6ca2"], db_url)
+            result = _run_alembic(["upgrade", "6b8e5cdc102f"], db_url)
             assert result.returncode == 0, (
-                f"alembic upgrade 844af57c6ca2 failed:\nSTDOUT:\n{result.stdout}\n"
+                f"alembic upgrade 6b8e5cdc102f failed:\nSTDOUT:\n{result.stdout}\n"
                 f"STDERR:\n{result.stderr}"
             )
 
             engine = _sync_engine(db_url)
             try:
-                # AC-9a: both tables exist after upgrade
+                # AC-5a: table exists after upgrade
                 assert _table_exists(
-                    engine, "reference", "cefr_lemma"
-                ), "reference.cefr_lemma must exist after alembic upgrade 844af57c6ca2"
-                assert _table_exists(
-                    engine, "reference", "cefr_lemma_review"
-                ), "reference.cefr_lemma_review must exist after alembic upgrade 844af57c6ca2"
+                    engine, "reference", "frequency_rank"
+                ), "reference.frequency_rank must exist after alembic upgrade 6b8e5cdc102f"
 
-                # AC-9b: UNIQUE index on (lemma) alone
-                unique_indexes = _get_unique_indexes(engine, "reference", "cefr_lemma")
+                # AC-5b: UNIQUE index on (lemma) alone
+                unique_indexes = _get_unique_indexes(engine, "reference", "frequency_rank")
                 unique_index_cols = list(unique_indexes.values())
                 assert any(cols == ["lemma"] for cols in unique_index_cols), (
                     f"Expected a unique index covering exactly (lemma) on "
-                    f"reference.cefr_lemma after upgrade; "
+                    f"reference.frequency_rank after upgrade; "
                     f"found unique indexes: {unique_indexes!r}"
                 )
-                # No UNIQUE(lemma, level) must exist
-                assert not any(cols == ["lemma", "level"] for cols in unique_index_cols), (
-                    "Found a forbidden UNIQUE(lemma, level) index — this would allow "
-                    "two contradictory CEFR levels for the same lemma"
+                # No UNIQUE(lemma, rank) must exist
+                assert not any(cols == ["lemma", "rank"] for cols in unique_index_cols), (
+                    "Found a forbidden UNIQUE(lemma, rank) index — this would allow "
+                    "two contradictory frequency ranks for the same lemma"
                 )
 
-                # AC-9c: non-unique index on (level)
-                level_non_unique = _get_non_unique_indexes_for_column(
-                    engine, "reference", "cefr_lemma", "level"
+                # AC-5c: non-unique index on (rank)
+                rank_non_unique = _get_non_unique_indexes_for_column(
+                    engine, "reference", "frequency_rank", "rank"
                 )
-                assert len(level_non_unique) >= 1, (
-                    "Expected a non-unique index on (level) for "
-                    "reference.cefr_lemma after upgrade; none found"
+                assert len(rank_non_unique) >= 1, (
+                    "Expected a non-unique index on (rank) for "
+                    "reference.frequency_rank after upgrade; none found"
                 )
 
             finally:
@@ -417,26 +410,23 @@ class TestLexgen04CefrLemmaMigrationRoundTrip:
 
             engine = _sync_engine(db_url)
             try:
-                # AC-9d: both tables gone after downgrade
+                # AC-5d: table gone after downgrade
                 assert not _table_exists(
-                    engine, "reference", "cefr_lemma"
-                ), "reference.cefr_lemma must NOT exist after alembic downgrade -1"
-                assert not _table_exists(
-                    engine, "reference", "cefr_lemma_review"
-                ), "reference.cefr_lemma_review must NOT exist after alembic downgrade -1"
+                    engine, "reference", "frequency_rank"
+                ), "reference.frequency_rank must NOT exist after alembic downgrade -1"
 
-                # AC-9e: indexes gone after downgrade
-                unique_indexes_after = _get_unique_indexes(engine, "reference", "cefr_lemma")
+                # AC-5e: indexes gone after downgrade
+                unique_indexes_after = _get_unique_indexes(engine, "reference", "frequency_rank")
                 assert unique_indexes_after == {}, (
-                    f"No unique indexes must exist on reference.cefr_lemma after "
+                    f"No unique indexes must exist on reference.frequency_rank after "
                     f"downgrade; found: {unique_indexes_after!r}"
                 )
-                level_non_unique_after = _get_non_unique_indexes_for_column(
-                    engine, "reference", "cefr_lemma", "level"
+                rank_non_unique_after = _get_non_unique_indexes_for_column(
+                    engine, "reference", "frequency_rank", "rank"
                 )
-                assert level_non_unique_after == [], (
-                    f"Non-unique level index must be gone after downgrade; "
-                    f"found: {level_non_unique_after!r}"
+                assert rank_non_unique_after == [], (
+                    f"Non-unique rank index must be gone after downgrade; "
+                    f"found: {rank_non_unique_after!r}"
                 )
             finally:
                 engine.dispose()
@@ -444,5 +434,169 @@ class TestLexgen04CefrLemmaMigrationRoundTrip:
         finally:
             # Only tear down a DB that setup actually created — a skipped/failed setup
             # leaves nothing to drop, and running teardown then can itself error.
+            if setup_ok:
+                _teardown_migration_db(db_name)
+
+
+# ---------------------------------------------------------------------------
+# Mode B adversarial / edge / boundary coverage (LEXGEN-05-01 QA, post-impl)
+# ---------------------------------------------------------------------------
+
+
+class TestLexgen05FrequencyRankConstraintEnforcement:
+    """Adversarial DB-level constraint tests for reference.frequency_rank.
+
+    The AC round-trip test (above) proves the UNIQUE index on (lemma) *exists*
+    after migration.  These tests prove the constraints are *enforced* by
+    PostgreSQL — i.e. they raise real IntegrityErrors when violated.  This is
+    the gap the round-trip cannot close on its own.
+
+    Three scenarios:
+      1. Duplicate lemma (same lemma, different rank) → IntegrityError (UNIQUE).
+      2. Duplicate rank (same rank, different lemma) → NO error (rank is non-unique).
+      3. NULL lemma insert → IntegrityError (NOT NULL).
+
+    Each test uses its own isolated DB to avoid cross-test interference.
+    """
+
+    def _upgraded_engine(self, db_name: str):
+        """Return (engine, db_url) for a fresh DB at head, or skip if PG unreachable.
+
+        Caller must call engine.dispose() and _teardown_migration_db(db_name) in a
+        finally block.
+        """
+        try:
+            db_url = _setup_migration_db(db_name)
+        except _DB_UNREACHABLE_ERRORS as exc:
+            pytest.skip(
+                f"Cannot create isolated migration DB '{db_name}': {exc}. "
+                "Requires a reachable PostgreSQL on localhost:5433 "
+                "(pgvector/pgvector:pg17). This test is CI-gated."
+            )
+
+        try:
+            result = _run_alembic(["upgrade", "head"], db_url)
+            assert result.returncode == 0, (
+                f"alembic upgrade head failed:\nSTDOUT:\n{result.stdout}\n"
+                f"STDERR:\n{result.stderr}"
+            )
+            engine = _sync_engine(db_url)
+        except Exception:
+            _teardown_migration_db(db_name)
+            raise
+        return engine, db_url
+
+    def test_unique_lemma_violation_raises_integrity_error(self):
+        """AC-2 adversarial: DB rejects a second row with the same lemma.
+
+        GIVEN  reference.frequency_rank has one row (lemma='αγαπώ', rank=1)
+        WHEN   we INSERT a second row with the same lemma but a different rank (rank=2)
+        THEN   PostgreSQL raises a UNIQUE constraint violation (IntegrityError)
+
+        This test is NOT redundant with the round-trip: the round-trip verifies the
+        index EXISTS; this test verifies it is ENFORCED.  A migration that creates the
+        index as DEFERRABLE INITIALLY DEFERRED would pass the round-trip but not this.
+        """
+        from sqlalchemy.exc import IntegrityError
+
+        db_name = "test_lexgen05_unique_lemma"
+        setup_ok = False
+        engine = None
+        try:
+            engine, _db_url = self._upgraded_engine(db_name)
+            setup_ok = True
+
+            insert_sql = text(
+                "INSERT INTO reference.frequency_rank (lemma, rank, source) "
+                "VALUES (:lemma, :rank, :source)"
+            )
+
+            # First insert must succeed
+            with engine.connect() as conn:
+                conn.execute(insert_sql, {"lemma": "αγαπώ", "rank": 1, "source": "wordfreq"})
+
+            # Second insert with same lemma, different rank must fail
+            with pytest.raises(IntegrityError, match="uq_frequency_rank_lemma"):
+                with engine.connect() as conn:
+                    conn.execute(insert_sql, {"lemma": "αγαπώ", "rank": 2, "source": "wordfreq"})
+        finally:
+            if engine is not None:
+                engine.dispose()
+            if setup_ok:
+                _teardown_migration_db(db_name)
+
+    def test_shared_rank_value_is_allowed(self):
+        """AC-2/AC-3 adversarial: two different lemmas may share the same rank.
+
+        GIVEN  reference.frequency_rank is empty
+        WHEN   we INSERT two rows with different lemmas but the same rank value (1)
+        THEN   both inserts succeed (rank index is NON-unique)
+
+        This guards against a regression where someone tightens the rank index to
+        UNIQUE — which would break many real frequency lists that use banded ranks.
+        """
+        db_name = "test_lexgen05_shared_rank"
+        setup_ok = False
+        engine = None
+        try:
+            engine, _db_url = self._upgraded_engine(db_name)
+            setup_ok = True
+
+            insert_sql = text(
+                "INSERT INTO reference.frequency_rank (lemma, rank, source) "
+                "VALUES (:lemma, :rank, :source)"
+            )
+
+            # Both inserts must succeed — no unique constraint on rank
+            with engine.connect() as conn:
+                conn.execute(insert_sql, {"lemma": "αγαπώ", "rank": 1, "source": "wordfreq"})
+                conn.execute(insert_sql, {"lemma": "είμαι", "rank": 1, "source": "wordfreq"})
+
+            # Verify both rows are present
+            with engine.connect() as conn:
+                row_count = conn.execute(
+                    text("SELECT COUNT(*) FROM reference.frequency_rank WHERE rank = 1")
+                ).scalar()
+            assert (
+                row_count == 2
+            ), f"Expected 2 rows with rank=1 (shared rank is allowed), got {row_count}"
+        finally:
+            if engine is not None:
+                engine.dispose()
+            if setup_ok:
+                _teardown_migration_db(db_name)
+
+    def test_null_lemma_raises_integrity_error(self):
+        """AC-1 adversarial: DB rejects a NULL lemma (NOT NULL enforced at DB level).
+
+        GIVEN  reference.frequency_rank is empty
+        WHEN   we INSERT a row with lemma=NULL
+        THEN   PostgreSQL raises an IntegrityError (NOT NULL violation)
+
+        The unit test (test_frequency_rank.py) verifies the SQLAlchemy mapping
+        carries `nullable=False`, but that only protects ORM-level inserts.  A raw
+        SQL insert bypasses ORM-level validation; this test confirms the DB column
+        itself is NOT NULL.
+        """
+        from sqlalchemy.exc import IntegrityError
+
+        db_name = "test_lexgen05_null_lemma"
+        setup_ok = False
+        engine = None
+        try:
+            engine, _db_url = self._upgraded_engine(db_name)
+            setup_ok = True
+
+            with pytest.raises(IntegrityError):
+                with engine.connect() as conn:
+                    conn.execute(
+                        text(
+                            "INSERT INTO reference.frequency_rank (lemma, rank, source) "
+                            "VALUES (NULL, 1, 'wordfreq')"
+                        )
+                    )
+        finally:
+            if engine is not None:
+                engine.dispose()
             if setup_ok:
                 _teardown_migration_db(db_name)

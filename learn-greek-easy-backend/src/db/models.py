@@ -3766,3 +3766,59 @@ class CefrLemmaReview(Base):
         return (
             f"<CefrLemmaReview(id={self.id}, raw_lemma={self.raw_lemma!r}, reason={self.reason!r})>"
         )
+
+
+class FrequencyRank(Base):
+    """Static word-frequency reference for Greek lemmas (LEXGEN-05).
+
+    Stored in the 'reference' PostgreSQL schema alongside cefr_lemma and
+    wiktionary_morphology. Lemma-keyed (D-UNIQUE-LEMMA): one row per lemma,
+    carrying a dense rank (1 = most frequent) and the source identifier.
+
+    The DB backstop is a UNIQUE index on ``(lemma)`` ALONE — NOT ``(lemma, rank)``:
+    a ``(lemma, rank)`` unique key would wrongly permit two contradictory frequency
+    ranks for the same lemma (e.g. from conflicting sources), corrupting the
+    single-source-of-truth invariant. The ``rank`` index stays separate and non-unique
+    so rank-ordered lookups ('all lemmas with rank <= N') remain efficient.
+
+    Populated only at runtime by the loader (no corpus data committed to the repo,
+    consistent with LEXGEN-04 AC-INV-4 precedent).
+    """
+
+    __tablename__ = "frequency_rank"
+    __table_args__ = (
+        Index("uq_frequency_rank_lemma", "lemma", unique=True),
+        Index("ix_frequency_rank_rank", "rank"),
+        {"schema": "reference"},
+    )
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Auto-incrementing primary key",
+    )
+    lemma: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Normalized Greek lemma — the join key (lowercase + NFC, matches cefr_lemma)",
+    )
+    rank: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        comment="Dense rank, 1 = most frequent",
+    )
+    source: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Provenance, e.g. 'wordfreq'",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        comment="Row creation timestamp",
+    )
+
+    def __repr__(self) -> str:
+        return f"<FrequencyRank(id={self.id}, lemma={self.lemma!r}, rank={self.rank!r})>"
