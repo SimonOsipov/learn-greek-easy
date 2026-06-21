@@ -1350,3 +1350,397 @@ class TestChainWalkFrequencyRank:
             freq_field.value == "42"
         ), f"int rank must be converted to str '42'; got '{freq_field.value}'"
         assert freq_field.source == "frequency"
+
+
+# ===========================================================================
+# Mode B — adversarial / edge coverage (QA LEXGEN-08-02)
+#
+# New tests authored AFTER implementation — chain-walk flags, cross_checks
+# structure, fully-unresolved nouns, multi-field flagging, pos/fields
+# invariants, and J1 (audit-flag vs. flagged_fields semantics).
+# ===========================================================================
+
+
+@pytest.mark.unit
+class TestChainWalkMultipleFieldsFlagged:
+    """Multiple fields flagged in one resolution: assert flagged_fields content and order."""
+
+    def test_multiple_fields_flagged_order_matches_field_order(self) -> None:
+        """When gender AND ipa both carry disagreement/unresolved flags, both appear in
+        flagged_fields in field-resolution order (gender before ipa, per _FIELD_ORDER).
+
+        Setup: θάλασσα — rules gender='feminine', wikt gender='masculine' (co-rank disagreement);
+        wikt pronunciation=None (so ipa is unresolved).
+        Expected: flagged_fields contains 'gender' before 'ipa'.
+        """
+        packet = _make_packet(
+            normalized_lemma="θάλασσα",
+            pos="noun",
+            rules_present=True,
+            wikt_present=True,
+            wikt_gender="masculine",  # deliberate co-rank-1 mismatch with rules
+            wikt_pronunciation=None,  # no IPA candidate → ipa unresolved
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("θάλασσα", packet)
+
+        assert (
+            "gender" in paradigm.flagged_fields
+        ), "gender must be flagged (disagreement:gender:rules!=wiktionary)"
+        assert (
+            "ipa" in paradigm.flagged_fields
+        ), "ipa must be flagged (unresolved:ipa — no pronunciation candidate)"
+        gender_idx = paradigm.flagged_fields.index("gender")
+        ipa_idx = paradigm.flagged_fields.index("ipa")
+        assert gender_idx < ipa_idx, (
+            f"gender must appear before ipa in flagged_fields "
+            f"(field-resolution order); got {paradigm.flagged_fields}"
+        )
+
+
+@pytest.mark.unit
+class TestChainWalkFullyUnresolved:
+    """A fully-unresolved noun: every field source absent → all fields unresolved, all in flagged_fields."""
+
+    def test_fully_unresolved_noun_all_fields_value_none(self) -> None:
+        """Packet with all sources absent: every field resolves to value=None, source='none'.
+
+        Every field must carry 'unresolved:<field>' in its flags.
+        Every field must appear in flagged_fields.
+        """
+        packet = _make_packet(
+            normalized_lemma="ξ",
+            pos="noun",
+            rules_present=False,  # rules rung returns None for unrecognized lemma anyway
+            wikt_present=False,
+            wikt_gender=None,
+            wikt_pronunciation=None,
+            lexicon_present=False,
+            lexicon_forms=[],
+            freq_present=False,
+            freq_rank=None,
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("ξ", packet)
+
+        # All 7 fields must be present in paradigm.fields
+        field_names = [rf.field for rf in paradigm.fields]
+        expected_fields = {
+            "gender",
+            "declension_group",
+            "declension_forms",
+            "ipa",
+            "pos",
+            "lemma_exists",
+            "frequency_rank",
+        }
+        assert (
+            set(field_names) == expected_fields
+        ), f"All 7 fields must be present even when all unresolved; got {field_names}"
+
+        # Every field must be unresolved (value=None, source='none')
+        for rf in paradigm.fields:
+            assert (
+                rf.value is None
+            ), f"Field '{rf.field}' must be None when all sources absent, got '{rf.value}'"
+            assert (
+                rf.source == "none"
+            ), f"Field '{rf.field}' source must be 'none', got '{rf.source}'"
+            assert any(
+                fl.startswith("unresolved:") for fl in rf.flags
+            ), f"Field '{rf.field}' must carry unresolved: flag; got {rf.flags}"
+
+        # Every field must be in flagged_fields
+        for field in expected_fields:
+            assert field in paradigm.flagged_fields, (
+                f"Unresolved field '{field}' must be in flagged_fields; "
+                f"flagged_fields={paradigm.flagged_fields}"
+            )
+
+
+@pytest.mark.unit
+class TestChainWalkCrossChecksStructure:
+    """cross_checks dict: a field with cross-checks has an entry; one without is ABSENT."""
+
+    def test_agreeing_cross_check_present_in_cross_checks(self) -> None:
+        """When multiple sources return values for a field (even agreeing), the non-primary
+        sources appear in cross_checks[field].
+
+        θάλασσα: rules=feminine (primary), wikt=feminine (cross-check, agrees).
+        paradigm.cross_checks['gender'] must exist and contain the wikt evidence.
+        """
+        packet = _make_packet(
+            normalized_lemma="θάλασσα",
+            pos="noun",
+            rules_present=True,
+            wikt_present=True,
+            wikt_gender="feminine",
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("θάλασσα", packet)
+
+        assert (
+            "gender" in paradigm.cross_checks
+        ), "gender must have a cross_checks entry when wiktionary also returns a value"
+        cross = paradigm.cross_checks["gender"]
+        assert len(cross) >= 1, "At least one cross-check (wiktionary) must be present"
+        sources = [cc.source for cc in cross]
+        assert (
+            "wiktionary" in sources
+        ), f"wiktionary must appear in gender cross_checks; got {sources}"
+
+    def test_single_source_field_absent_from_cross_checks(self) -> None:
+        """A field with only one source (no cross-checks) must NOT appear in cross_checks dict.
+
+        frequency_rank has a single rung. When that rung returns a value, it is
+        the sole primary with no cross-check — so cross_checks['frequency_rank'] must be absent.
+        """
+        packet = _make_packet(
+            normalized_lemma="θάλασσα",
+            pos="noun",
+            freq_present=True,
+            freq_rank=10,
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("θάλασσα", packet)
+
+        assert "frequency_rank" not in paradigm.cross_checks, (
+            "frequency_rank has a single rung and no cross-checks; "
+            "the field must be absent from cross_checks dict"
+        )
+
+    def test_cross_check_entry_has_correct_field_evidence_shape(self) -> None:
+        """Cross-check entries in cross_checks[field] are FieldEvidence objects with correct fields."""
+        forms = [
+            FormBundle(
+                form="θαλάσσης",
+                features={"case": "genitive", "number": "singular", "gender": "feminine"},
+            )
+        ]
+        packet = _make_packet(
+            normalized_lemma="θάλασσα",
+            pos="noun",
+            rules_present=True,
+            wikt_present=True,
+            wikt_gender="feminine",
+            lexicon_present=True,
+            lexicon_forms=forms,
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("θάλασσα", packet)
+
+        # Gender: rules=primary(feminine), wikt=cross-check(feminine), lexicon=cross-check(feminine)
+        assert "gender" in paradigm.cross_checks
+        for cc in paradigm.cross_checks["gender"]:
+            assert isinstance(cc, FieldEvidence)
+            assert cc.field == "gender"
+            assert cc.value is not None, "Cross-check FieldEvidence must have a non-None value"
+            assert cc.source in {"wiktionary", "lexicon"}
+
+
+@pytest.mark.unit
+class TestChainWalkPosAndFieldsInvariants:
+    """paradigm.pos matches packet.pos; all 7 fields always present in paradigm.fields."""
+
+    def test_paradigm_pos_equals_packet_pos(self) -> None:
+        """ResolvedParadigm.pos must equal packet.pos regardless of which sources are present."""
+        packet = _make_packet(normalized_lemma="θάλασσα", pos="noun")
+        resolver = NounResolver()
+        paradigm = resolver.resolve("θάλασσα", packet)
+        assert (
+            paradigm.pos == "noun"
+        ), f"paradigm.pos must equal packet.pos='noun'; got '{paradigm.pos}'"
+
+    def test_all_seven_fields_always_present_in_fields(self) -> None:
+        """Every one of the 7 configured fields must appear in paradigm.fields,
+        even when its value is None (unresolved). The resolver always walks all fields.
+        """
+        packet = _make_packet(
+            normalized_lemma="θάλασσα",
+            pos="noun",
+            rules_present=True,
+            wikt_present=True,
+            wikt_gender="feminine",
+            wikt_pronunciation="θaˈlasa",
+            freq_present=True,
+            freq_rank=5,
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("θάλασσα", packet)
+
+        field_names = {rf.field for rf in paradigm.fields}
+        expected = {
+            "gender",
+            "declension_group",
+            "declension_forms",
+            "ipa",
+            "pos",
+            "lemma_exists",
+            "frequency_rank",
+        }
+        assert field_names == expected, (
+            f"All 7 fields must appear in paradigm.fields; "
+            f"missing={expected - field_names}, extra={field_names - expected}"
+        )
+
+
+@pytest.mark.unit
+class TestChainWalkAuditFlagsNotInFlaggedFields:
+    """J1 verdict: audit flags (rule_ambiguous, ipa_unvalidated, lexicon_gender_inconsistent)
+    do NOT add a field to flagged_fields. Only disagreement:* and unresolved:* do.
+
+    This resolves the conflict between the story's "any flag" wording and the committed
+    Mode A test test_agreeing_lower_rung_no_flag, which explicitly asserts that 'gender'
+    is NOT in flagged_fields when only rule_ambiguous is present (βιβλίο: rules AMBIGUOUS,
+    wikt+lexicon agree on 'neuter'). The Mode A test was committed test-first as the
+    authoritative spec for this behavior; the story's "any flag" wording is overridden
+    by that committed test-spec.
+
+    These tests PIN the executor's narrowing as the correct behavior and would catch
+    any regression back to the "any flag" semantics.
+    """
+
+    def test_rule_ambiguous_alone_does_not_add_field_to_flagged_fields(self) -> None:
+        """rules gender AMBIGUOUS (καφές), wikt='feminine', lexicon agrees -> rule_ambiguous
+        is in field.flags BUT 'gender' must NOT be in flagged_fields.
+
+        Rationale: the ambiguous rules rung did not win; it just warned. The final
+        resolved value (from wikt) is confident and uncontested → no actionable flag.
+        """
+        packet = _make_packet(
+            normalized_lemma="καφές",
+            pos="noun",
+            rules_present=True,
+            wikt_present=True,
+            wikt_gender="feminine",
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("καφές", packet)
+
+        gender_field = next(f for f in paradigm.fields if f.field == "gender")
+        assert (
+            "rule_ambiguous" in gender_field.flags
+        ), "rule_ambiguous must be carried into field.flags (provenance)"
+        assert "gender" not in paradigm.flagged_fields, (
+            "rule_ambiguous alone must NOT add 'gender' to flagged_fields "
+            "(only disagreement:* or unresolved:* do); "
+            f"flagged_fields={paradigm.flagged_fields}"
+        )
+
+    def test_ipa_unvalidated_alone_does_not_add_field_to_flagged_fields(self) -> None:
+        """wikt pronunciation = illegal IPA → Rules rung fails → wikt becomes primary
+        with ipa_unvalidated flag. ipa_unvalidated is an audit flag → 'ipa' must NOT
+        be in flagged_fields.
+
+        This confirms ipa_unvalidated is informational, not actionable for the reconciler.
+        """
+        illegal_ipa = "QBAD"
+        packet = _make_packet(
+            normalized_lemma="τεστ",
+            pos="noun",
+            wikt_present=True,
+            wikt_pronunciation=illegal_ipa,
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("τεστ", packet)
+
+        ipa_field = next((f for f in paradigm.fields if f.field == "ipa"), None)
+        assert ipa_field is not None
+        assert "ipa_unvalidated" in ipa_field.flags, "ipa_unvalidated must be in field.flags"
+        assert "ipa" not in paradigm.flagged_fields, (
+            "ipa_unvalidated alone must NOT add 'ipa' to flagged_fields "
+            f"(only disagreement:* or unresolved:* do); flagged_fields={paradigm.flagged_fields}"
+        )
+
+    def test_lexicon_gender_inconsistent_alone_does_not_add_field_to_flagged_fields(self) -> None:
+        """Lexicon forms carry conflicting genders → lexicon_gender_inconsistent flag propagated;
+        but if wikt or rules supplies a confident value (primary), lexicon_gender_inconsistent
+        is an audit flag only → 'gender' must NOT be in flagged_fields.
+
+        Setup: θάλασσα — rules='feminine' (primary, wins). Lexicon forms have conflicting
+        genders (masculine vs feminine) → lexicon rung returns value=None +
+        lexicon_gender_inconsistent flag, propagated into gender_field.flags. No disagreement
+        (primary is rules, lexicon never produced a confident value to disagree with).
+        """
+        forms = [
+            FormBundle(
+                form="θάλασσα",
+                features={"case": "nominative", "number": "singular", "gender": "masculine"},
+            ),
+            FormBundle(
+                form="θαλάσσης",
+                features={"case": "genitive", "number": "singular", "gender": "feminine"},
+            ),
+        ]
+        packet = _make_packet(
+            normalized_lemma="θάλασσα",
+            pos="noun",
+            rules_present=True,
+            lexicon_present=True,
+            lexicon_forms=forms,
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("θάλασσα", packet)
+
+        gender_field = next(f for f in paradigm.fields if f.field == "gender")
+        # rules returns 'feminine' (confident primary)
+        assert (
+            gender_field.value == "feminine"
+        ), f"rules must win with 'feminine'; got '{gender_field.value}'"
+        assert (
+            "lexicon_gender_inconsistent" in gender_field.flags
+        ), "lexicon_gender_inconsistent must be propagated into field.flags"
+        assert "gender" not in paradigm.flagged_fields, (
+            "lexicon_gender_inconsistent alone must NOT add 'gender' to flagged_fields; "
+            f"flagged_fields={paradigm.flagged_fields}"
+        )
+
+
+@pytest.mark.unit
+class TestChainWalkThreeWayGender:
+    """Three-way gender case: rules=AMBIGUOUS, wikt disagrees with lexicon."""
+
+    def test_three_way_gender_rules_ambiguous_wikt_lexicon_disagree(self) -> None:
+        """rules gender AMBIGUOUS (καφές), wikt='feminine' (rank-1 primary after rules skip),
+        lexicon='masculine' (rank-2, disagrees).
+
+        Expected: primary=wikt (first confident after rules skip), value='feminine',
+        source='wiktionary', flags contain BOTH rule_ambiguous AND
+        disagreement:gender:wiktionary!=lexicon, AND 'gender' in flagged_fields
+        (because the disagreement flag is present).
+        """
+        forms = [
+            FormBundle(
+                form="καφέ",
+                features={"case": "vocative", "number": "singular", "gender": "masculine"},
+            )
+        ]
+        packet = _make_packet(
+            normalized_lemma="καφές",
+            pos="noun",
+            rules_present=True,
+            wikt_present=True,
+            wikt_gender="feminine",
+            lexicon_present=True,
+            lexicon_forms=forms,
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("καφές", packet)
+
+        gender_field = next(f for f in paradigm.fields if f.field == "gender")
+        assert (
+            gender_field.value == "feminine"
+        ), f"Wikt must win as first confident rung (rules AMBIGUOUS); got '{gender_field.value}'"
+        assert (
+            gender_field.source == "wiktionary"
+        ), f"Source must be 'wiktionary'; got '{gender_field.source}'"
+        assert (
+            "rule_ambiguous" in gender_field.flags
+        ), f"rule_ambiguous must be carried from the AMBIGUOUS rules rung; got {gender_field.flags}"
+        assert (
+            "disagreement:gender:wiktionary!=lexicon" in gender_field.flags
+        ), f"Lexicon disagreement must be flagged; got {gender_field.flags}"
+        # disagreement is actionable → field IS in flagged_fields
+        assert (
+            "gender" in paradigm.flagged_fields
+        ), "disagreement:gender flag → 'gender' must be in flagged_fields"
