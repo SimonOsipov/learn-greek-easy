@@ -1,8 +1,5 @@
 """Noun morphology heuristics for the LEXGEN pipeline (LEXGEN-07-01).
 
-SKELETON ONLY — all derivation logic raises NotImplementedError.
-The executor will replace the bodies in Stage 3.
-
 Public surface:
   AMBIGUOUS           — singleton sentinel for unknown / genuinely ambiguous results
   derive_gender       — lemma → "feminine" | "neuter" | AMBIGUOUS
@@ -10,6 +7,8 @@ Public surface:
 """
 
 from __future__ import annotations
+
+from src.utils.greek_text import _strip_article, normalize_greek_accents
 
 
 class _Ambiguous:
@@ -28,6 +27,52 @@ class _Ambiguous:
 
 AMBIGUOUS = _Ambiguous()
 
+# ---------------------------------------------------------------------------
+# Declension rules — copied/generalised from NounDataGenerationService
+# (LEXGEN-07-01 D1: original left untouched; retired in LEXGEN-09).
+#
+# The table is keyed by gender and contains (suffix, group) pairs.  Within
+# each gender the pairs are already ordered longest-suffix-first so that
+# multi-character suffixes (e.g. "-μα") are matched before shorter ones
+# (e.g. "-α", "-ο").
+# ---------------------------------------------------------------------------
+_DECLENSION_RULES: dict[str, list[tuple[str, str]]] = {
+    "masculine": [
+        ("-ος", "masculine_os"),
+        ("-ας", "masculine_as"),
+        ("-ής", "masculine_is"),
+        ("-ης", "masculine_is"),
+    ],
+    "feminine": [
+        ("-ος", "feminine_os"),
+        ("-α", "feminine_a"),
+        ("-η", "feminine_i"),
+    ],
+    "neuter": [
+        ("-μα", "neuter_ma"),
+        ("-ος", "neuter_os"),
+        ("-ο", "neuter_o"),
+        ("-ι", "neuter_i"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Gender heuristics — ordered longest-suffix-first so that "-μα" (neuter)
+# is tested before the single-char "-α" (feminine) class.
+# Only endings that *unambiguously* signal a single gender are included.
+# ---------------------------------------------------------------------------
+_GENDER_RULES: list[tuple[str, str]] = [
+    ("-μα", "neuter"),  # γράμμα, πρόβλημα — must precede "-α"
+    ("-α", "feminine"),  # θάλασσα, γλώσσα
+    ("-η", "feminine"),  # νίκη, πόλη
+    ("-ι", "neuter"),  # παιδί, ταξίδι
+]
+
+
+def _prepare(lemma: str) -> str:
+    """Strip article and normalise accents for suffix matching."""
+    return normalize_greek_accents(_strip_article(lemma))
+
 
 def derive_gender(lemma: str) -> str | _Ambiguous:
     """Derive grammatical gender from a Greek noun lemma by its ending.
@@ -42,7 +87,12 @@ def derive_gender(lemma: str) -> str | _Ambiguous:
     Internally strips the definite article and normalises Greek accents so
     matching is article-tolerant and accent-insensitive.
     """
-    raise NotImplementedError
+    bare = _prepare(lemma)
+    for suffix, gender in _GENDER_RULES:
+        suffix_norm = normalize_greek_accents(suffix.lstrip("-"))
+        if bare.endswith(suffix_norm):
+            return gender
+    return AMBIGUOUS
 
 
 def derive_declension_group(lemma: str, gender: str) -> str | _Ambiguous:
@@ -63,4 +113,14 @@ def derive_declension_group(lemma: str, gender: str) -> str | _Ambiguous:
     Internally strips the definite article and normalises Greek accents so
     matching is article-tolerant and accent-insensitive.
     """
-    raise NotImplementedError
+    rules = _DECLENSION_RULES.get(gender)
+    if rules is None:
+        return AMBIGUOUS
+
+    bare = _prepare(lemma)
+    for suffix, group in rules:
+        suffix_norm = normalize_greek_accents(suffix.lstrip("-"))
+        if bare.endswith(suffix_norm):
+            return group
+
+    return AMBIGUOUS
