@@ -213,6 +213,224 @@ describe('parse-k6-results.cjs — testability refactor (PERF-12-01)', () => {
 });
 
 // ============================================================================
+// PERF-12-02: Baseline Δ tracking (RED spec — Mode A)
+// ============================================================================
+// Tests for: readBaselines, computeDelta, formatDelta, and the new
+// "Δ vs main" column in generateMetricsSection.
+//
+// Before the executor's implementation these tests FAIL because:
+//   - mod.readBaselines / computeDelta / formatDelta → undefined (not a function)
+//   - generateMetricsSection output has no "Δ vs main" header (tests 7–9)
+// After the fix all 9 pass.
+// ============================================================================
+
+import os from 'node:os';
+import fs from 'node:fs';
+
+describe('PERF-12-02 baseline diff', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete require.cache[MODULE_PATH];
+  });
+
+  // --------------------------------------------------------------------------
+  // computeDelta
+  // --------------------------------------------------------------------------
+
+  it('test_compute_delta_regression_up — 1200 vs 1000 → absMs=200, pct=20, direction=up', () => {
+    const { mod } = loadModule();
+    const computeDelta = mod.computeDelta as (
+      current: number,
+      baseline: number | null | undefined
+    ) => { absMs: number; pct: number; direction: string };
+
+    const delta = computeDelta(1200, 1000);
+    expect(delta.absMs).toBe(200);
+    expect(delta.pct).toBe(20);
+    expect(delta.direction).toBe('up');
+  });
+
+  it('test_compute_delta_improvement_down — 900 vs 1000 → absMs=-100, pct=-10, direction=down', () => {
+    const { mod } = loadModule();
+    const computeDelta = mod.computeDelta as (
+      current: number,
+      baseline: number | null | undefined
+    ) => { absMs: number; pct: number; direction: string };
+
+    const delta = computeDelta(900, 1000);
+    expect(delta.absMs).toBe(-100);
+    expect(delta.pct).toBe(-10);
+    expect(delta.direction).toBe('down');
+  });
+
+  it('test_compute_delta_flat_band — 1010 vs 1000 → direction=flat (|1%| < 2%)', () => {
+    const { mod } = loadModule();
+    const computeDelta = mod.computeDelta as (
+      current: number,
+      baseline: number | null | undefined
+    ) => { absMs: number; pct: number; direction: string };
+
+    const delta = computeDelta(1010, 1000);
+    expect(delta.direction).toBe('flat');
+  });
+
+  it('test_compute_delta_no_baseline_is_new — null and undefined baselines → direction=new, no throw', () => {
+    const { mod } = loadModule();
+    const computeDelta = mod.computeDelta as (
+      current: number,
+      baseline: number | null | undefined
+    ) => { absMs: number; pct: number; direction: string };
+
+    expect(() => {
+      const d1 = computeDelta(1000, null);
+      expect(d1.direction).toBe('new');
+    }).not.toThrow();
+
+    expect(() => {
+      const d2 = computeDelta(1000, undefined);
+      expect(d2.direction).toBe('new');
+    }).not.toThrow();
+  });
+
+  // --------------------------------------------------------------------------
+  // readBaselines
+  // --------------------------------------------------------------------------
+
+  it('test_read_baselines_missing_file_returns_empty — absent path returns {metrics:{}} without throwing', () => {
+    const { mod } = loadModule();
+    const readBaselines = mod.readBaselines as (
+      p: string
+    ) => { metrics: Record<string, unknown> };
+
+    let result: { metrics: Record<string, unknown> } | null = null;
+    expect(() => {
+      result = readBaselines('/no/such/path/baselines.json');
+    }).not.toThrow();
+
+    // Must return an object with a .metrics key (not null/undefined/throw)
+    expect(result).not.toBeNull();
+    expect(result).toHaveProperty('metrics');
+    expect(typeof (result as { metrics: Record<string, unknown> }).metrics).toBe('object');
+  });
+
+  it('test_read_baselines_parses_valid_file — temp JSON file is parsed correctly', () => {
+    const { mod } = loadModule();
+    const readBaselines = mod.readBaselines as (
+      p: string
+    ) => { metrics: Record<string, { p95: number }> };
+
+    const tmpPath = path.join(os.tmpdir(), `perf-12-02-baselines-${Date.now()}.json`);
+    const payload = {
+      updated_at: '2026-06-21T00:00:00Z',
+      commit: 'abc1234',
+      metrics: {
+        auth_total_time: { p95: 1000 },
+        dashboard_load_time: { p95: 500 },
+      },
+    };
+    fs.writeFileSync(tmpPath, JSON.stringify(payload), 'utf8');
+
+    try {
+      const result = readBaselines(tmpPath);
+      expect(result.metrics.auth_total_time.p95).toBe(1000);
+      expect(result.metrics.dashboard_load_time.p95).toBe(500);
+    } finally {
+      // Guard: file may not exist if readBaselines threw (pre-impl)
+      if (fs.existsSync(tmpPath)) {
+        fs.unlinkSync(tmpPath);
+      }
+    }
+  });
+
+  // --------------------------------------------------------------------------
+  // generateMetricsSection — Δ vs main column
+  // --------------------------------------------------------------------------
+
+  it('test_metrics_section_renders_delta_column — Δ header and formatted cell present', () => {
+    const { mod } = loadModule();
+    const generateMetricsSection = mod.generateMetricsSection as (
+      title: string,
+      metrics: Record<string, unknown>,
+      metricConfig: Record<string, { label: string; threshold: number }>,
+      baselines?: Record<string, { p95: number }>
+    ) => string;
+    const AUTH_METRICS = mod.AUTH_METRICS as Record<string, { label: string; threshold: number }>;
+
+    // auth_total_time: p95=1200 vs baseline p95=1000 → +200ms (+20.0%)
+    const metricsObj = {
+      auth_total_time: { values: { 'p(95)': 1200, med: 100 } },
+    };
+    const baselinesMap = { auth_total_time: { p95: 1000 } };
+
+    const output = generateMetricsSection('Auth Flow Metrics', metricsObj, AUTH_METRICS, baselinesMap);
+
+    // Δ header must be present (escaped unicode or literal Δ)
+    expect(output).toMatch(/Δ\s*vs\s*main|δ\s*vs\s*main|Δ\s*vs\s*main/i);
+
+    // Formatted delta cell must appear: +200ms and (+20.0%)
+    expect(output).toContain('+200ms');
+    expect(output).toContain('+20.0%');
+  });
+
+  it('test_metrics_section_missing_baseline_renders_new — absent metric → "new", no NaN, no throw', () => {
+    const { mod } = loadModule();
+    const generateMetricsSection = mod.generateMetricsSection as (
+      title: string,
+      metrics: Record<string, unknown>,
+      metricConfig: Record<string, { label: string; threshold: number }>,
+      baselines?: Record<string, { p95: number }>
+    ) => string;
+    const AUTH_METRICS = mod.AUTH_METRICS as Record<string, { label: string; threshold: number }>;
+
+    const metricsObj = {
+      auth_total_time: { values: { 'p(95)': 1200, med: 100 } },
+    };
+    // Empty baselines map — auth_total_time has no baseline entry
+    const baselinesMap: Record<string, { p95: number }> = {};
+
+    let output = '';
+    expect(() => {
+      output = generateMetricsSection('Auth Flow Metrics', metricsObj, AUTH_METRICS, baselinesMap);
+    }).not.toThrow();
+
+    expect(output).toContain('new');
+    expect(output).not.toContain('NaN');
+  });
+
+  it('test_delta_does_not_change_status — high-vs-baseline regression but under threshold keeps ✅; section has Δ header', () => {
+    const { mod } = loadModule();
+    const generateMetricsSection = mod.generateMetricsSection as (
+      title: string,
+      metrics: Record<string, unknown>,
+      metricConfig: Record<string, { label: string; threshold: number }>,
+      baselines?: Record<string, { p95: number }>
+    ) => string;
+    const AUTH_METRICS = mod.AUTH_METRICS as Record<string, { label: string; threshold: number }>;
+
+    // auth_total_time threshold = 8000; p95=1200 is well under 8000 → status='pass' → ✅
+    // But p95=1200 is 200ms above baseline 1000 (20% regression by delta, informational only).
+    const metricsObj: Record<string, unknown> = {};
+    // Populate all AUTH_METRICS keys so every row is present; only auth_total_time has non-null p95
+    for (const name of Object.keys(AUTH_METRICS)) {
+      if (name === 'auth_total_time') {
+        metricsObj[name] = { values: { 'p(95)': 1200, med: 100 } };
+      } else {
+        metricsObj[name] = null;
+      }
+    }
+    const baselinesMap = { auth_total_time: { p95: 1000 } };
+
+    const output = generateMetricsSection('Auth Flow Metrics', metricsObj, AUTH_METRICS, baselinesMap);
+
+    // Status icon for p95=1200 vs threshold=8000 must be ✅ (pass), NOT ❌ or ⚠️
+    expect(output).toContain('✅'); // ✅
+
+    // The Δ column header must be present (this is what fails pre-impl, making the test RED)
+    expect(output).toMatch(/Δ\s*vs\s*main|δ\s*vs\s*main|Δ\s*vs\s*main/i);
+  });
+});
+
+// ============================================================================
 // Adversarial / edge coverage (PERF-12-01 Mode B)
 // ============================================================================
 // These tests are appended AFTER the 6 AC tests and must NOT modify them.
