@@ -31,6 +31,7 @@ from src.core.logging import get_logger
 from src.core.word_proposal_state import transition
 from src.db.models import WordProposal, WordProposalState
 from src.schemas.lexgen import EvidencePacket, GeneratedLexContent, ResolvedParadigm
+from src.services.cefr_vocabulary_service import CefrVocabularyService
 from src.services.openrouter_service import OpenRouterService, get_openrouter_service
 
 logger = get_logger(__name__)
@@ -145,18 +146,25 @@ class LexgenGeneratorService:
         self.db = db
         self.openrouter = openrouter
 
-    def _assemble_allowed_lemmas(
+    async def _assemble_allowed_lemmas(
         self,
         packet: EvidencePacket,
-        resolved: ResolvedParadigm | None,  # noqa: ARG002 — used in 09-03
+        resolved: ResolvedParadigm | None,  # noqa: ARG002 — reserved for future use
     ) -> set[str]:
-        """Return the closed vocabulary set for the example sentence.
+        """Return the closed vocabulary set for the example sentence (LEXGEN-09-03).
 
-        PLACEHOLDER for LEXGEN-09-03: currently returns only the target lemma.
-        09-03 will flesh this out with the CEFR A1/A2 lemma set so the example
-        sentence stays within a learner-appropriate vocabulary.
+        Assembles the allowed-lemma set as:
+            (await CefrVocabularyService(self.db).allowed_lemmas())
+            | {packet.normalized_lemma}
+
+        The target lemma is always included even if absent from reference.cefr_lemma.
+        Target level is hardcoded to B1 (TARGET_LEVEL_DEFAULT — D11/F2; no per-lemma lookup).
+        This is a PROMPT INPUT helper only — no enforcement/rejection (that is LEXGEN-10).
         """
-        return {packet.normalized_lemma}
+        cefr = CefrVocabularyService(self.db)
+        allowed = await cefr.allowed_lemmas()  # hardcoded B1 default (D11/F2)
+        allowed.add(packet.normalized_lemma)
+        return allowed
 
     async def generate(self, proposal: WordProposal) -> None:
         """Author the four content fields via the OpenRouter LLM (up to 3 attempts).
@@ -185,8 +193,8 @@ class LexgenGeneratorService:
             resolver.resolve(packet.normalized_lemma, packet) if resolver is not None else None
         )
 
-        # Stage 3 — assemble the closed-vocabulary set (placeholder; 09-03 expands).
-        allowed_lemmas = self._assemble_allowed_lemmas(packet, resolved)
+        # Stage 3 — assemble the closed-vocabulary set from CEFR reference (09-03).
+        allowed_lemmas = await self._assemble_allowed_lemmas(packet, resolved)
 
         # Stage 4 — retry loop (max 3 attempts = 2 retries).
         attempts = 0

@@ -39,7 +39,7 @@ SEAM CONTRACT — pinned by these RED tests (executor MUST honour):
 from __future__ import annotations
 
 import json
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -77,15 +77,36 @@ def _get_service_class():
     return LexgenGeneratorService
 
 
-def _make_service(mock_openrouter: AsyncMock) -> object:
-    """Return a LexgenGeneratorService with a mocked db and openrouter.
+def _make_db_mock() -> AsyncMock:
+    """Return a mocked AsyncSession with the CEFR execute chain pre-configured.
 
-    db is an AsyncMock whose .flush() is awaitable (AsyncMock default).
+    CefrVocabularyService.allowed_lemmas() does:
+        result = await db.execute(...)
+        return set(result.scalars().all())
+
+    Since db is AsyncMock, awaiting db.execute(...) returns db.execute.return_value.
+    But db.execute.return_value is itself AsyncMock (child of AsyncMock), so
+    .scalars() would be AsyncMock and return a coroutine — causing AttributeError.
+    Fix: replace execute.return_value with a plain MagicMock so .scalars().all()
+    returns [] synchronously. This is a realistic empty-CEFR-set mock.
     """
     mock_db = AsyncMock()
     mock_db.flush = AsyncMock()
+    mock_execute_result = MagicMock()
+    mock_execute_result.scalars.return_value.all.return_value = []
+    mock_db.execute.return_value = mock_execute_result
+    return mock_db
+
+
+def _make_service(mock_openrouter: AsyncMock) -> object:
+    """Return a LexgenGeneratorService with a mocked db and openrouter.
+
+    db is an AsyncMock whose .flush() is awaitable and whose .execute() chain
+    returns an empty CEFR set ([] from result.scalars().all()) so 09-02 assertions
+    hold with the 09-03 CefrVocabularyService call wired in.
+    """
     cls = _get_service_class()
-    return cls(db=mock_db, openrouter=mock_openrouter)
+    return cls(db=_make_db_mock(), openrouter=mock_openrouter)
 
 
 # ---------------------------------------------------------------------------

@@ -11,7 +11,7 @@ All tests use the same fixture helpers as the AC test file.
 from __future__ import annotations
 
 import json
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -39,11 +39,29 @@ def _get_service_class():
     return LexgenGeneratorService
 
 
-def _make_service(mock_openrouter: AsyncMock) -> object:
+def _make_db_mock() -> AsyncMock:
+    """Return a mocked AsyncSession with the CEFR execute chain pre-configured.
+
+    CefrVocabularyService.allowed_lemmas() does:
+        result = await db.execute(...)
+        return set(result.scalars().all())
+
+    Since db is AsyncMock, db.execute.return_value is itself AsyncMock, so
+    .scalars() would be AsyncMock and return a coroutine — AttributeError.
+    Fix: replace execute.return_value with a plain MagicMock so .scalars().all()
+    returns [] synchronously. Realistic empty-CEFR-set mock.
+    """
     mock_db = AsyncMock()
     mock_db.flush = AsyncMock()
+    mock_execute_result = MagicMock()
+    mock_execute_result.scalars.return_value.all.return_value = []
+    mock_db.execute.return_value = mock_execute_result
+    return mock_db
+
+
+def _make_service(mock_openrouter: AsyncMock) -> object:
     cls = _get_service_class()
-    return cls(db=mock_db, openrouter=mock_openrouter)
+    return cls(db=_make_db_mock(), openrouter=mock_openrouter)
 
 
 # ---------------------------------------------------------------------------
@@ -478,8 +496,7 @@ class TestFlushCounts:
         packet = _make_noun_packet()
         proposal = _make_proposal_from_packet(packet)
 
-        mock_db = AsyncMock()
-        mock_db.flush = AsyncMock()
+        mock_db = _make_db_mock()
         cls = _get_service_class()
         svc = cls(db=mock_db, openrouter=mock_openrouter)
 
@@ -501,8 +518,7 @@ class TestFlushCounts:
         packet = _make_noun_packet()
         proposal = _make_proposal_from_packet(packet)
 
-        mock_db = AsyncMock()
-        mock_db.flush = AsyncMock()
+        mock_db = _make_db_mock()
         cls = _get_service_class()
         svc = cls(db=mock_db, openrouter=mock_openrouter)
 
