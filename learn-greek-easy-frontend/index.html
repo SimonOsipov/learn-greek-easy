@@ -17,27 +17,25 @@
     <link rel="preconnect" href="https://accounts.google.com" crossorigin />
     <link rel="dns-prefetch" href="https://accounts.google.com" />
     <link rel="preconnect" href="https://eu.i.posthog.com" crossorigin />
-    <link rel="preconnect" href="https://ingest.us.sentry.io" crossorigin />
+    <link rel="preconnect" href="https://o4510597104009216.ingest.de.sentry.io" crossorigin />
     <!-- LCP image origin (Railway Object Storage, the host presigned image URLs serve from). NO crossorigin: a plain <img> is a non-CORS request, so the anonymous socket is the one the image reuses; a crossorigin preconnect would warm a separate CORS socket the <img> can't reuse. -->
     <link rel="preconnect" href="https://storage.railway.app" />
     <link rel="dns-prefetch" href="https://storage.railway.app" />
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@700&display=swap"
-    />
+    <!-- Inter 400-700 is self-hosted via @fontsource/inter (see src/main.tsx); only the
+         not-self-hosted families/weights are loaded from Google, and non-render-blocking. -->
     <link
       rel="stylesheet"
       media="print"
       onload="this.media='all'"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@800&family=Inter+Tight:wght@500;600;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif:ital,wght@0,400;0,600;1,400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@800&family=Inter+Tight:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif:ital,wght@0,400;0,600;1,400&display=swap"
     />
     <noscript>
       <link
         rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@800&family=Inter+Tight:wght@500;600;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif:ital,wght@0,400;0,600;1,400&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@800&family=Inter+Tight:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif:ital,wght@0,400;0,600;1,400&display=swap"
       />
     </noscript>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
