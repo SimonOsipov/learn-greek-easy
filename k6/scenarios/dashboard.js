@@ -144,12 +144,12 @@ export const options = {
   },
   thresholds: {
     dashboard_load_time: ['p(95)<2000'],
-    dashboard_stats_api_time: ['p(95)<3000'],
+    dashboard_stats_api_time: ['p(95)<2500'],
     deck_navigation_time: ['p(95)<1000'],
     deck_load_time: ['p(95)<2000'],
     session_start_time: ['p(95)<2000'],
     card_interaction_time: ['p(95)<1500'],
-    dashboard_flow_total_time: ['p(95)<15000'],
+    dashboard_flow_total_time: ['p(95)<10000'],
     checks: ['rate>0.95'],
   },
 };

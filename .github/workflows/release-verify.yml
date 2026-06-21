@@ -806,6 +806,7 @@ jobs:
       status: ${{ steps.results.outputs.status }}
       auth_p95: ${{ steps.results.outputs.auth_p95 }}
       dashboard_p95: ${{ steps.results.outputs.dashboard_p95 }}
+      api_p95: ${{ steps.results.outputs.api_p95 }}
 
     steps:
       - name: Checkout code
@@ -855,6 +856,21 @@ jobs:
           k6 run k6/scenarios/dashboard.js 2>&1 | tee k6/reports/dashboard-output.txt
           echo "exit_code=$?" >> $GITHUB_OUTPUT
 
+      - name: Run API Latency Scenario
+        id: api_latency
+        continue-on-error: true
+        env:
+          K6_ENV: preview
+          K6_API_BASE_URL: ${{ needs.deploy.outputs.frontend_url }}
+          K6_FRONTEND_BASE_URL: ${{ needs.deploy.outputs.frontend_url }}
+          K6_SCENARIO: smoke
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          echo "Running K6 API Latency (protocol) Scenario"
+          k6 run k6/scenarios/api-latency.js 2>&1 | tee k6/reports/api-latency-output.txt
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+
       - name: Aggregate Results
         id: results
         if: always()
@@ -888,6 +904,16 @@ jobs:
 
           echo "auth_p95=${AUTH_P95}" >> $GITHUB_OUTPUT
           echo "dashboard_p95=${DASHBOARD_P95}" >> $GITHUB_OUTPUT
+
+          # Protocol scenario is informational-only in v1 (non-blocking, per AC-5/D7)
+          API_P95="N/A"
+          for f in k6/reports/api-latency-preview-*.json; do
+            if [ -f "$f" ]; then
+              API_P95=$(jq -r '.metrics.api_total_time.values["p(95)"] // "N/A"' "$f" 2>/dev/null || echo "N/A")
+              break
+            fi
+          done
+          echo "api_p95=${API_P95}" >> $GITHUB_OUTPUT
 
       - name: Upload K6 Reports
         uses: actions/upload-artifact@v7

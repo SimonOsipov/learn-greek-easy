@@ -188,7 +188,64 @@ gh pr edit 123 --add-label "perf-test"
 
 Tests run against the deployed preview environment with results posted as a PR comment.
 
-See [CI/CD Labels documentation](../docs/ci-cd-labels.md) for more details.
+See [CI/CD Labels documentation](../docs/ci-cd-labels.md) for more details (including `skip-k6` to suppress the k6 job on a given PR).
+
+## k6 Baselines
+
+### What they are
+
+`k6/baselines.json` is a committed file at the repo root that stores the last known-good p95 timings for every k6 metric. The PR-comment parser (`learn-greek-easy-frontend/scripts/parse-k6-results.cjs`) reads this file and renders a **Δ vs main** column in each PR comment showing whether the current run is faster, slower, or flat relative to the main branch.
+
+**Schema:**
+```json
+{
+  "updated_at": "<ISO-8601 timestamp>",
+  "commit": "<git SHA of the run that produced these values>",
+  "metrics": {
+    "<metric-name>": { "p95": <number in ms, integer> }
+  }
+}
+```
+
+### First-run / "new" behaviour
+
+When `metrics` is empty (the initial committed state) or a metric has no entry yet, the PR comment renders **new** in the Δ column. This is intentional — the first real CI run that populates baselines will show all entries as `new`, and subsequent PRs will see real deltas.
+
+### How baselines are refreshed
+
+The `.github/workflows/k6-baseline-update.yml` workflow runs on every push to `main` (except `[skip ci]` commits and changes to `k6/baselines.json` itself). It:
+
+1. Runs the three k6 smoke scenarios (`auth`, `dashboard`, `api-latency`) against the dev environment (`frontend-dev-8db9.up.railway.app`) with `continue-on-error: true` — a flaky run or a dev-environment outage does not break anything.
+2. Runs `node learn-greek-easy-frontend/scripts/write-k6-baseline.cjs` to parse the reports and write `k6/baselines.json`.
+3. Uploads `k6/baselines.json` as a workflow artifact (`k6-baselines`).
+4. Attempts to commit and push the updated file to `main` with `[skip ci]` in the message (to avoid re-triggering this workflow).
+
+The workflow runs in the **`dev-release-lease` concurrency group** (same as release-verify), so baseline updates are serialized with deploys and cannot stomp on each other.
+
+### Branch-protection caveat & manual fallback
+
+The bot push in step 4 **will be blocked** by the `CI Gate` required status check on `main` — the `github-actions[bot]` is not a repo admin, and `enforce_admins` being `false` only allows *human* admins to bypass required checks.
+
+Until a bypass PAT is provisioned, the fallback is:
+
+1. After the workflow run completes, download the **`k6-baselines`** artifact from the Actions run page.
+2. Extract `k6/baselines.json` and commit it directly to `main` — a repo admin (`enforce_admins=false`) can push this file directly without triggering the CI Gate requirement.
+
+Alternatively, run the scenarios and writer locally:
+```bash
+# From repo root
+K6_ENV=preview K6_API_BASE_URL=https://frontend-dev-8db9.up.railway.app \
+  K6_FRONTEND_BASE_URL=https://frontend-dev-8db9.up.railway.app \
+  K6_SCENARIO=smoke k6 run k6/scenarios/auth.js
+# (repeat for dashboard.js and api-latency.js)
+K6_REPORTS_DIR=./k6/reports node learn-greek-easy-frontend/scripts/write-k6-baseline.cjs
+git add k6/baselines.json && git commit -m "chore(k6): refresh baselines [skip ci]"
+git push origin main
+```
+
+### Threshold tuning
+
+The D2 threshold numbers baked into the scenario files (`k6/scenarios/*.js`) are conservative starting values. Once a few real baseline runs have accumulated, refine them to sit comfortably above the observed p95 values so thresholds are meaningful without being too noisy.
 
 ## Troubleshooting
 
