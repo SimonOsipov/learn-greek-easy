@@ -343,3 +343,75 @@ class TestLexgen09GeneratedContentMigrationRoundTrip:
         finally:
             if setup_ok:
                 _teardown_migration_db(db_name)
+
+
+class TestLexgen09DowngradeNarrowness:
+    """Mode B adversarial: the downgrade only removes generated_content.
+
+    Guards against an over-broad downgrade that could accidentally drop
+    sibling JSONB columns (generated_fields, evidence_packet, etc.) instead
+    of just the one column it is supposed to remove.
+
+    This is a real risk: a copy-paste error in op.drop_column / op.add_column
+    could name the wrong column, silently destroying reconciler data on rollback.
+    """
+
+    def test_downgrade_does_not_remove_sibling_columns(self):
+        """After downgrade -1, sibling word_proposal columns still exist.
+
+        GIVEN  DB upgraded to lexgen09_generated_content
+        WHEN   alembic downgrade -1
+        THEN   generated_content is gone AND generated_fields / evidence_packet /
+               reconciliation_log / judge_scores / flagged_fields all still exist.
+
+        A narrow downgrade (op.drop_column "generated_content" only) is safe.
+        An over-broad downgrade that drops sibling columns is a data-destroying bug.
+        """
+        db_name = "test_lexgen09_downgrade_narrowness"
+        setup_ok = False
+        try:
+            db_url = _setup_migration_db(db_name)
+            setup_ok = True
+        except _DB_UNREACHABLE_ERRORS as exc:
+            pytest.skip(
+                f"Cannot create isolated migration DB '{db_name}': {exc}. "
+                "Requires a reachable PostgreSQL on localhost:5433."
+            )
+
+        try:
+            # Upgrade to the revision under test
+            result = _run_alembic(["upgrade", _THIS_REVISION], db_url)
+            assert (
+                result.returncode == 0
+            ), f"upgrade failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+
+            # Downgrade -1
+            result = _run_alembic(["downgrade", "-1"], db_url)
+            assert (
+                result.returncode == 0
+            ), f"downgrade failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+
+            engine = _sync_engine(db_url)
+            try:
+                # generated_content must be gone
+                assert not _column_exists(
+                    engine, "public", "word_proposal", "generated_content"
+                ), "generated_content must be removed by downgrade"
+                # Sibling columns that must NOT have been touched
+                for sibling in (
+                    "generated_fields",
+                    "evidence_packet",
+                    "reconciliation_log",
+                    "judge_scores",
+                    "flagged_fields",
+                ):
+                    assert _column_exists(engine, "public", "word_proposal", sibling), (
+                        f"sibling column '{sibling}' must still exist after downgrade -1 "
+                        "(the downgrade must only remove generated_content)"
+                    )
+            finally:
+                engine.dispose()
+
+        finally:
+            if setup_ok:
+                _teardown_migration_db(db_name)

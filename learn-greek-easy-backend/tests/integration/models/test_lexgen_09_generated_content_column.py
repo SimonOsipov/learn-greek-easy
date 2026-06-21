@@ -123,3 +123,132 @@ class TestGeneratedContentColumnRoundTrip:
 
         # Column is absent/NULL — not set by any default
         assert proposal.generated_content is None  # type: ignore[attr-defined]
+
+
+# ---------------------------------------------------------------------------
+# Mode B adversarial / edge DB-level tests (QA-authored).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.db
+class TestGeneratedContentColumnAdversarial:
+    """DB-level adversarial coverage for the generated_content JSONB column.
+
+    These tests exercise behaviors the AC round-trip does not cover: nested
+    dict byte-identity, the fact that other JSONB columns survive a
+    generated_content write (no over-broad side effects), and that a
+    model_validate on the round-tripped dict is idempotent.
+    """
+
+    async def test_nested_dict_round_trips_byte_identical(self, db_session: AsyncSession):
+        """JSONB stores and returns a nested dict exactly — no key reordering or coercion.
+
+        The real payload is flat (4 top-level string keys), but JSONB serializes
+        via json.dumps and PostgreSQL returns a deserialized dict. This test pins
+        that the round-tripped value compares equal to the original (no key
+        casing, value coercion, or silent truncation).
+
+        Also confirms that model_validate(fetched.generated_content) succeeds,
+        meaning LEXGEN-10/11 can re-validate the persisted payload without error.
+        """
+        from src.schemas.lexgen import GeneratedLexContent  # noqa: PLC0415
+
+        lex_dict = {
+            "gloss_en": "house",
+            "gloss_ru": "дом",
+            "example_greek": "Το σπίτι είναι μεγάλο.",
+            "example_translation": "The house is big.",
+        }
+        proposal = WordProposal(
+            lemma_input="σπίτι",
+            pos="noun",
+            origin=WordProposalOrigin.ADMIN,
+            status=WordProposalState.PENDING,
+            generated_content=lex_dict,
+        )
+        db_session.add(proposal)
+        await db_session.flush()
+        await db_session.refresh(proposal)
+
+        # Byte-identical round-trip through JSONB
+        assert proposal.generated_content == lex_dict  # type: ignore[attr-defined]
+        assert proposal.generated_content["gloss_en"] == "house"  # type: ignore[attr-defined]
+        assert proposal.generated_content["gloss_ru"] == "дом"  # type: ignore[attr-defined]
+        # Cyrillic and Greek characters survive JSONB serialization
+        assert proposal.generated_content["example_greek"] == "Το σπίτι είναι μεγάλο."  # type: ignore[attr-defined]
+        assert proposal.generated_content["example_translation"] == "The house is big."  # type: ignore[attr-defined]
+
+        # model_validate on the stored dict is idempotent (LEXGEN-10/11 dependency)
+        revalidated = GeneratedLexContent.model_validate(proposal.generated_content)
+        assert revalidated.gloss_en == "house"
+        assert revalidated.gloss_ru == "дом"
+
+    async def test_other_jsonb_columns_unaffected_by_generated_content_write(
+        self, db_session: AsyncSession
+    ):
+        """Writing generated_content does NOT disturb sibling JSONB columns.
+
+        Guards against an over-broad migration downgrade or a SQLAlchemy ORM
+        bug that could clobber a neighbouring column when generated_content is
+        updated. Sets generated_fields to a sentinel dict, then writes
+        generated_content, and verifies generated_fields is unchanged after flush.
+        """
+        sentinel_generated_fields = {"gender": "neuter", "declension_group": "2nd"}
+        proposal = WordProposal(
+            lemma_input="σπίτι",
+            pos="noun",
+            origin=WordProposalOrigin.ADMIN,
+            status=WordProposalState.PENDING,
+            generated_fields=sentinel_generated_fields,
+        )
+        db_session.add(proposal)
+        await db_session.flush()
+
+        # Now write generated_content
+        proposal.generated_content = {  # type: ignore[attr-defined]
+            "gloss_en": "house",
+            "gloss_ru": "дом",
+            "example_greek": "Το σπίτι είναι μεγάλο.",
+            "example_translation": "The house is big.",
+        }
+        await db_session.flush()
+        await db_session.refresh(proposal)
+
+        # generated_fields must be unaffected
+        assert proposal.generated_fields == sentinel_generated_fields
+        # generated_content is the new value
+        assert proposal.generated_content["gloss_en"] == "house"  # type: ignore[attr-defined]
+
+    async def test_generated_content_update_from_none_to_dict(self, db_session: AsyncSession):
+        """A proposal can transition generated_content from NULL → dict in a single flush.
+
+        This mirrors the generator service's write path (LEXGEN-09-02): the
+        proposal arrives with generated_content=None, the LLM runs, and the
+        service sets generated_content to the validated dict and flushes.
+        """
+        proposal = WordProposal(
+            lemma_input="γράφω",
+            pos="verb",
+            origin=WordProposalOrigin.ADMIN,
+            status=WordProposalState.GENERATING,
+        )
+        db_session.add(proposal)
+        await db_session.flush()
+        await db_session.refresh(proposal)
+
+        assert proposal.generated_content is None  # type: ignore[attr-defined]
+
+        # Simulate what LexgenGeneratorService.generate() will do
+        proposal.generated_content = {  # type: ignore[attr-defined]
+            "gloss_en": "to write",
+            "gloss_ru": "писать",
+            "example_greek": "Γράφω ένα γράμμα.",
+            "example_translation": "I am writing a letter.",
+        }
+        await db_session.flush()
+        await db_session.refresh(proposal)
+
+        assert proposal.generated_content is not None  # type: ignore[attr-defined]
+        assert proposal.generated_content["gloss_en"] == "to write"  # type: ignore[attr-defined]
