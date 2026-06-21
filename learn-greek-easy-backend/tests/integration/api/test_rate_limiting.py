@@ -66,10 +66,6 @@ def create_test_app() -> FastAPI:
     async def test_endpoint():
         return {"status": "ok"}
 
-    @app.post("/api/v1/auth/login")
-    async def login_endpoint():
-        return {"status": "logged_in"}
-
     return app
 
 
@@ -188,42 +184,6 @@ class TestRateLimitingWithRedis:
         assert remaining1 == limit - 1, f"IP1: expected {limit - 1}, got {remaining1}"
         assert remaining2 == limit - 1, f"IP2: expected {limit - 1}, got {remaining2}"
 
-    @pytest.mark.asyncio
-    async def test_auth_endpoint_has_stricter_limit(self):
-        """Test that auth endpoints have stricter rate limits."""
-        # Initialize Redis in this test's event loop
-        if not await ensure_redis_initialized():
-            pytest.skip("Redis not available")
-
-        app = create_test_app()
-        unique_ip = generate_unique_ip()
-
-        async with httpx.AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            response = await client.post(
-                "/api/v1/auth/login",
-                headers={"X-Forwarded-For": unique_ip},
-            )
-
-        assert response.status_code == 200
-
-        limit = int(response.headers["X-RateLimit-Limit"])
-        remaining = int(response.headers["X-RateLimit-Remaining"])
-
-        # Auth endpoints should have stricter limit from settings
-        expected_auth_limit = settings.rate_limit_auth_per_minute
-        assert (
-            limit == expected_auth_limit
-        ), f"Expected auth limit {expected_auth_limit}, got {limit}"
-        assert remaining == limit - 1, f"Expected {limit - 1}, got {remaining}"
-
-        # Auth limit should be stricter than general limit
-        assert limit < settings.rate_limit_per_minute, (
-            f"Auth limit ({limit}) should be less than "
-            f"general limit ({settings.rate_limit_per_minute})"
-        )
-
 
 @pytest.mark.integration
 @pytest.mark.slow
@@ -231,23 +191,24 @@ class TestRateLimitExhaustion:
     """Tests for rate limit exhaustion (may be slow)."""
 
     @pytest.mark.asyncio
-    async def test_returns_429_when_limit_exceeded(self):
+    async def test_returns_429_when_limit_exceeded(self, monkeypatch):
         """Test that 429 is returned when limit is exceeded.
 
-        This test uses the auth endpoint which has a stricter limit,
-        so we need fewer requests to trigger 429.
+        Uses the general endpoint with a lowered limit so the loop stays
+        small (~10 iterations) and the test actually executes.
         """
         # Initialize Redis in this test's event loop
         if not await ensure_redis_initialized():
             pytest.skip("Redis not available")
 
+        # Lower the general limit so we need only ~10 requests
+        monkeypatch.setattr(settings, "rate_limit_per_minute", 5)
+
         app = create_test_app()
         unique_ip = generate_unique_ip()
 
-        # Use auth limit which should be stricter
-        auth_limit = settings.rate_limit_auth_per_minute
-        # Make more requests than the limit to ensure we hit 429
-        max_requests = auth_limit + 5
+        # Make more requests than the lowered limit to ensure we hit 429
+        max_requests = settings.rate_limit_per_minute + 5
 
         got_429 = False
         async with httpx.AsyncClient(
@@ -255,8 +216,8 @@ class TestRateLimitExhaustion:
         ) as client:
             # Make requests until limit is exceeded
             for i in range(max_requests):
-                response = await client.post(
-                    "/api/v1/auth/login",
+                response = await client.get(
+                    "/api/v1/test",
                     headers={"X-Forwarded-For": unique_ip},
                 )
 

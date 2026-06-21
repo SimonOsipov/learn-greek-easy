@@ -64,8 +64,8 @@ export const NewsEditDrawerBody: React.FC<Props> = () => {
         />
       </Field>
 
-      {/* 2-col row: Scenario B1 (left) + A2 pair (right) */}
-      <div className="dr-2col">
+      {/* Stacked: Scenario B1 above A2 pair */}
+      <div className="space-y-4">
         {/* Left: B1 section */}
         <div className="dr-field">
           <p className="dr-section-label" data-testid="news-drawer-body-b1-label">

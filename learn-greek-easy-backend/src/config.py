@@ -306,10 +306,6 @@ class Settings(BaseSettings):
         default=200,
         description="General API rate limit per minute",
     )
-    rate_limit_auth_per_minute: int = Field(
-        default=10,
-        description="Auth endpoint rate limit per minute (stricter for brute force protection)",
-    )
 
     # =========================================================================
     # Logging

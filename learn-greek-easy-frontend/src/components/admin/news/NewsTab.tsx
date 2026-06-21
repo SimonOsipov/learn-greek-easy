@@ -4,7 +4,7 @@
  * NewsTab — NEWS-05 rewrite
  *
  * Integration shell for ADMIN2-07.
- * Renders 4-up StatCard grid + NewsToolbar + NewsGrid +
+ * Renders 2-up StatCard grid + NewsToolbar + NewsGrid +
  * NewsItemCreateModal + NewsItemDeleteDialog + NewsEditDrawer.
  *
  * PageHead is owned by AdminPage (ADMIN2-HEAD).
@@ -16,7 +16,7 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { Globe, Newspaper, Play, RefreshCcw } from 'lucide-react';
+import { Newspaper, Play } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
@@ -41,17 +41,8 @@ export const NewsTab: React.FC<NewsTabProps> = ({ createOpen, onCreateOpenChange
   const { t } = useTranslation('admin');
 
   // ── Store ─────────────────────────────────────────────────────────────────
-  const {
-    newsItems,
-    total,
-    audioCount,
-    b1AudioCount,
-    b1PendingRegenCount,
-    countryCounts,
-    fetchNewsItems,
-    openDrawer,
-    closeDrawer,
-  } = useAdminNewsStore();
+  const { newsItems, total, audioCount, fetchNewsItems, openDrawer, closeDrawer } =
+    useAdminNewsStore();
 
   // ── Fetch on mount ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -77,8 +68,8 @@ export const NewsTab: React.FC<NewsTabProps> = ({ createOpen, onCreateOpenChange
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6" data-testid="news-tab">
-      {/* ── 4-up StatCard grid ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* ── 2-up StatCard grid (F1/F2: B1-coverage + Countries removed) ─── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/* Card #1 — Total articles */}
         <StatCard
           title={t('news.stats.total')}
@@ -94,31 +85,6 @@ export const NewsTab: React.FC<NewsTabProps> = ({ createOpen, onCreateOpenChange
           n={audioCount}
           icon={<Play />}
           tone="violet"
-        />
-        {/* Card #3 — B1 coverage */}
-        <StatCard
-          title={t('news.stats.b1Coverage')}
-          n={b1AudioCount}
-          sub={
-            <>
-              <b>{b1PendingRegenCount}</b> awaiting regen · {b1AudioCount}/{total}
-            </>
-          }
-          icon={<RefreshCcw />}
-          tone="amber"
-        />
-        {/* Card #4 — Country (live per-country counts, order WR · CY · GR).
-            WR/CY/GR are country codes, rendered literally (not translatable copy). */}
-        <StatCard
-          title={t('news.stats.countries')}
-          sub={t('news.stats.countrySub')}
-          n={
-            <span className="whitespace-nowrap">
-              WR {countryCounts.world} · CY {countryCounts.cyprus} · GR {countryCounts.greece}
-            </span>
-          }
-          icon={<Globe />}
-          tone="cyan"
         />
       </div>
 

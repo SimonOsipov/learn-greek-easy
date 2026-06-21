@@ -2,7 +2,6 @@
 
 Tests cover:
 - Rate limit enforcement for general API endpoints
-- Stricter limits for auth endpoints
 - Rate limit headers in responses
 - 429 response format when limit exceeded
 - Path exemption logic
@@ -45,10 +44,6 @@ class TestRateLimitEnforcement:
         @app.get("/api/v1/test")
         async def test_endpoint():
             return {"status": "ok"}
-
-        @app.post("/api/v1/auth/login")
-        async def login_endpoint():
-            return {"status": "logged_in"}
 
         return app
 
@@ -160,8 +155,8 @@ class TestRateLimitEnforcement:
             assert retry_after <= 60
 
 
-class TestAuthEndpointLimits:
-    """Tests for stricter auth endpoint rate limits."""
+class TestGeneralEndpointLimit:
+    """Tests for general endpoint rate limit."""
 
     @pytest.fixture
     def app(self) -> FastAPI:
@@ -173,18 +168,6 @@ class TestAuthEndpointLimits:
         async def test_endpoint():
             return {"status": "ok"}
 
-        @app.post("/api/v1/auth/login")
-        async def login_endpoint():
-            return {"status": "logged_in"}
-
-        @app.post("/api/v1/auth/register")
-        async def register_endpoint():
-            return {"status": "registered"}
-
-        @app.post("/api/v1/auth/google")
-        async def google_endpoint():
-            return {"status": "google_auth"}
-
         return app
 
     @pytest.fixture
@@ -192,37 +175,8 @@ class TestAuthEndpointLimits:
         """Create test client."""
         return TestClient(app)
 
-    def test_auth_endpoint_has_stricter_limit(self, client: TestClient):
-        """Test that auth endpoints use stricter rate limit."""
-        with (
-            patch("src.middleware.rate_limit.get_redis") as mock_get_redis,
-            patch("src.middleware.rate_limit.settings") as mock_settings,
-        ):
-            mock_settings.feature_rate_limiting = True
-            mock_settings.is_testing = False
-            mock_settings.rate_limit_per_minute = 100
-            mock_settings.rate_limit_auth_per_minute = 10
-
-            # Create a proper async mock pipeline
-            mock_pipeline = AsyncMock()
-            mock_pipeline.zremrangebyscore = MagicMock(return_value=mock_pipeline)
-            mock_pipeline.zcard = MagicMock(return_value=mock_pipeline)
-            mock_pipeline.zadd = MagicMock(return_value=mock_pipeline)
-            mock_pipeline.expire = MagicMock(return_value=mock_pipeline)
-            mock_pipeline.execute = AsyncMock(return_value=[0, 0, True, True])
-
-            mock_redis = MagicMock()
-            mock_redis.pipeline = MagicMock(return_value=mock_pipeline)
-            mock_get_redis.return_value = mock_redis
-
-            response = client.post("/api/v1/auth/login")
-
-            assert response.status_code == 200
-            # Auth limit should be 10, not 100
-            assert response.headers["X-RateLimit-Limit"] == "10"
-
     def test_general_endpoint_has_higher_limit(self, client: TestClient):
-        """Test that general endpoints use higher rate limit."""
+        """Test that general endpoints use the configured rate limit."""
         with (
             patch("src.middleware.rate_limit.get_redis") as mock_get_redis,
             patch("src.middleware.rate_limit.settings") as mock_settings,
@@ -230,7 +184,6 @@ class TestAuthEndpointLimits:
             mock_settings.feature_rate_limiting = True
             mock_settings.is_testing = False
             mock_settings.rate_limit_per_minute = 100
-            mock_settings.rate_limit_auth_per_minute = 10
 
             # Create a proper async mock pipeline
             mock_pipeline = AsyncMock()
@@ -485,12 +438,12 @@ class TestRateLimitConfig:
         config = RateLimitConfig(
             limit=10,
             window_seconds=30,
-            key_prefix="ratelimit:auth",
+            key_prefix="ratelimit:custom",
         )
 
         assert config.limit == 10
         assert config.window_seconds == 30
-        assert config.key_prefix == "ratelimit:auth"
+        assert config.key_prefix == "ratelimit:custom"
 
 
 class TestGetRateConfig:
@@ -501,34 +454,6 @@ class TestGetRateConfig:
         """Create middleware instance."""
         return RateLimitingMiddleware(app=MagicMock())
 
-    def test_auth_login_gets_auth_config(self, middleware):
-        """Test that auth/login gets auth rate config."""
-        with patch("src.middleware.rate_limit.settings") as mock_settings:
-            mock_settings.rate_limit_auth_per_minute = 10
-
-            config = middleware._get_rate_config("/api/v1/auth/login")
-
-            assert config.limit == 10
-            assert config.key_prefix == "ratelimit:auth"
-
-    def test_auth_register_gets_auth_config(self, middleware):
-        """Test that auth/register gets auth rate config."""
-        with patch("src.middleware.rate_limit.settings") as mock_settings:
-            mock_settings.rate_limit_auth_per_minute = 10
-
-            config = middleware._get_rate_config("/api/v1/auth/register")
-
-            assert config.limit == 10
-
-    def test_auth_google_gets_auth_config(self, middleware):
-        """Test that auth/google gets auth rate config."""
-        with patch("src.middleware.rate_limit.settings") as mock_settings:
-            mock_settings.rate_limit_auth_per_minute = 10
-
-            config = middleware._get_rate_config("/api/v1/auth/google")
-
-            assert config.limit == 10
-
     def test_general_endpoint_gets_general_config(self, middleware):
         """Test that general endpoints get general rate config."""
         with patch("src.middleware.rate_limit.settings") as mock_settings:
@@ -537,6 +462,63 @@ class TestGetRateConfig:
             config = middleware._get_rate_config("/api/v1/decks")
 
             assert config.limit == 100
+            assert config.key_prefix == "ratelimit:api"
+
+    def test_former_auth_paths_get_general_config(self, middleware):
+        """Test that former auth paths now resolve to the general rate config.
+
+        Behaviour-preservation regression guard (AC-5): the auth-specific branch
+        has been removed, so /auth/login|register|google must fall through to the
+        same general ratelimit:api config as any other endpoint.
+        """
+        with patch("src.middleware.rate_limit.settings") as mock_settings:
+            mock_settings.rate_limit_per_minute = 100
+
+            for path in (
+                "/api/v1/auth/login",
+                "/api/v1/auth/register",
+                "/api/v1/auth/google",
+            ):
+                config = middleware._get_rate_config(path)
+                assert config.limit == 100, f"Expected general limit for {path}"
+                assert (
+                    config.key_prefix == "ratelimit:api"
+                ), f"Expected general key_prefix for {path}"
+
+    def test_real_auth_endpoints_get_general_config(self, middleware):
+        """Test that live auth endpoints resolve to the general rate config.
+
+        Adversarial guard: covers the real production auth endpoints
+        (/me, /logout, /logout-all) which were never in AUTH_PATHS but
+        sit under the /auth prefix. Ensures no future re-introduction of
+        a startswith('/api/v1/auth') branch accidentally catches them with
+        a tighter limit.
+        """
+        with patch("src.middleware.rate_limit.settings") as mock_settings:
+            mock_settings.rate_limit_per_minute = 200
+
+            for path in (
+                "/api/v1/auth/me",
+                "/api/v1/auth/logout",
+                "/api/v1/auth/logout-all",
+                "/api/v1/auth/avatar/upload-url",
+            ):
+                config = middleware._get_rate_config(path)
+                assert config.limit == 200, f"Expected general limit 200 for {path}"
+                assert config.key_prefix == "ratelimit:api", f"Expected ratelimit:api for {path}"
+
+    def test_authentication_prefix_collision_gets_general_config(self, middleware):
+        """Test that a path starting with /auth but not an exact former auth path
+        resolves to the general config.
+
+        Guards against a naive startswith('/api/v1/auth') re-introduction that
+        would also catch /api/v1/authentication or similar future paths.
+        """
+        with patch("src.middleware.rate_limit.settings") as mock_settings:
+            mock_settings.rate_limit_per_minute = 200
+
+            config = middleware._get_rate_config("/api/v1/authentication/sso")
+            assert config.limit == 200
             assert config.key_prefix == "ratelimit:api"
 
 

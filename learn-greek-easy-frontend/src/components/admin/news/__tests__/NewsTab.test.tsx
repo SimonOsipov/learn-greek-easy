@@ -2,11 +2,13 @@
  * NewsTab Component Tests — NEWS-05
  *
  * Covers:
- * - Renders news-tab root with PageHead breadcrumb area, 4 StatCards, NewsToolbar, NewsGrid.
+ * - Renders news-tab root with PageHead breadcrumb area, 2 StatCards, NewsToolbar, NewsGrid.
  * - Import RSS button is aria-disabled, shows Coming-soon tooltip text.
  * - "+ New article" button click opens NewsItemCreateModal.
  * - URL deep-link: ?edit=<id> → openDrawer called with that id.
  * - Drawer close URL wiring deferred to NEWS-06.
+ *
+ * ADMIN2-40 F1/F2: B1-coverage and Countries stat cards removed; 2 cards remain.
  */
 
 import { render, screen } from '@testing-library/react';
@@ -50,7 +52,6 @@ const storeState = {
   searchQuery: '',
   sortMode: 'newest' as string,
   drawerItemId: null as string | null,
-  // ADMIN2-39-05 F8: per-country counts surfaced by the store.
   countryCounts: { cyprus: 0, greece: 0, world: 0 } as {
     cyprus: number;
     greece: number;
@@ -145,13 +146,14 @@ describe('NewsTab — basic rendering', () => {
     expect(screen.getByTestId('news-tab')).toBeInTheDocument();
   });
 
-  it('renders 4 StatCards by title', () => {
+  it('renders exactly 2 StatCards by title (F1/F2: B1-coverage and Countries removed)', () => {
     renderWithRouter();
-    // StatCard renders title via .stat-label — queried by resolved en copy
+    // Only Total and With Audio remain
     expect(screen.getByText('Total News')).toBeInTheDocument();
     expect(screen.getByText('With Audio')).toBeInTheDocument();
-    expect(screen.getByText('B1 coverage')).toBeInTheDocument();
-    expect(screen.getByText('Countries')).toBeInTheDocument();
+    // Removed cards must not appear
+    expect(screen.queryByText('B1 coverage')).not.toBeInTheDocument();
+    expect(screen.queryByText('Countries')).not.toBeInTheDocument();
   });
 
   it('card #1 (total) renders no sparkline bars (F3: height parity)', () => {
@@ -178,45 +180,6 @@ describe('NewsTab — basic rendering', () => {
     expect(screen.getByText('0/0 with audio')).toBeInTheDocument();
   });
 
-  it('card #4 (country) renders no sparkline bars (F3: height parity)', () => {
-    // barsTestId removed → element must be absent
-    renderWithRouter();
-    expect(screen.queryByTestId('stat-bars-country')).not.toBeInTheDocument();
-  });
-
-  // ADMIN2-39-05 F8: the Countries card no longer renders a hardcoded "CY"
-  // KPI nor a "Cyprus only" sub — see the "F8 Countries live counter"
-  // describe block below for the live WR·CY·GR + reworded-sub coverage.
-  it('card #4 (country) shows reworded sub from i18n key news.stats.countrySub', () => {
-    renderWithRouter();
-    // Reworded from "Cyprus only" → "By country" (C8 / D-C8-countrysub).
-    expect(screen.getByText('By country')).toBeInTheDocument();
-  });
-
-  it('card #3 (B1) renders real b1_audio_count value (not "—")', () => {
-    storeState.b1AudioCount = 63;
-    storeState.b1PendingRegenCount = 4;
-    storeState.total = 67;
-    renderWithRouter();
-    expect(screen.getByText('63')).toBeInTheDocument();
-  });
-
-  it('card #3 (B1) renders a <b> element in sub wrapping the awaiting regen count', () => {
-    storeState.b1AudioCount = 63;
-    storeState.b1PendingRegenCount = 4;
-    storeState.total = 67;
-    renderWithRouter();
-    const boldEls = document.querySelectorAll('.stat-sub b');
-    const b1Bold = Array.from(boldEls).find((el) => el.textContent === '4');
-    expect(b1Bold).toBeTruthy();
-  });
-
-  it('card #3 (B1) renders no sparkline bars (F3: height parity)', () => {
-    // barsTestId removed → element must be absent
-    renderWithRouter();
-    expect(screen.queryByTestId('stat-bars-b1')).not.toBeInTheDocument();
-  });
-
   it('renders NewsToolbar (via search input sentinel)', () => {
     renderWithRouter();
     expect(screen.getByTestId('news-toolbar-search')).toBeInTheDocument();
@@ -231,34 +194,6 @@ describe('NewsTab — basic rendering', () => {
   it('calls fetchNewsItems on mount', () => {
     renderWithRouter();
     expect(mockFetchNewsItems).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('NewsTab — B1 coverage card (#3)', () => {
-  it('renders real b1_audio_count value (not "—")', () => {
-    storeState.b1AudioCount = 63;
-    storeState.b1PendingRegenCount = 4;
-    storeState.total = 67;
-    renderWithRouter();
-    // stat-n for B1 card shows the b1AudioCount number
-    expect(screen.getByText('63')).toBeInTheDocument();
-  });
-
-  it('renders a <b> element in card #3 sub wrapping the awaiting count', () => {
-    storeState.b1AudioCount = 63;
-    storeState.b1PendingRegenCount = 4;
-    storeState.total = 67;
-    renderWithRouter();
-    // The <b> element should contain the pending regen count
-    const boldEls = document.querySelectorAll('.stat-sub b');
-    const b1Bold = Array.from(boldEls).find((el) => el.textContent === '4');
-    expect(b1Bold).toBeTruthy();
-  });
-
-  it('renders no sparkline bars for card #3 (F3: height parity)', () => {
-    // barsTestId removed → element must be absent
-    renderWithRouter();
-    expect(screen.queryByTestId('stat-bars-b1')).not.toBeInTheDocument();
   });
 });
 
@@ -304,56 +239,4 @@ describe('NewsTab — URL deep-link (?edit=)', () => {
 
 describe('NewsTab — drawer close URL wiring (deferred)', () => {
   it.todo('drawer close clears ?edit= from URL — wired by NEWS-06');
-});
-
-// ── ADMIN2-39-05 F8: Countries stat card live WR·CY·GR counter ──────────────
-// The card currently renders a hardcoded n="CY" and a "Cyprus only" sub-label.
-// The target renders live per-country counts (order WR · CY · GR) from the store
-// and rewords the sub-label (no longer "Cyprus only").
-describe('NewsTab — F8 Countries live counter', () => {
-  /** Locate the .stat-card whose .stat-label is "Countries". */
-  function getCountriesCard(): HTMLElement {
-    const label = screen.getByText('Countries');
-    const card = label.closest('.stat-card');
-    if (!card) throw new Error('Countries stat-card not found');
-    return card as HTMLElement;
-  }
-
-  it('Countries card renders WR·CY·GR live counts (not hardcoded "CY")', () => {
-    storeState.countryCounts = { cyprus: 3, greece: 2, world: 5 };
-    renderWithRouter();
-
-    const card = getCountriesCard();
-    const kpi = card.querySelector('.stat-n');
-    const text = kpi?.textContent ?? '';
-    // Live counts present: world=5, cyprus=3, greece=2.
-    expect(text).toContain('5');
-    expect(text).toContain('3');
-    expect(text).toContain('2');
-    // No hardcoded "CY" literal as the KPI value.
-    expect(text).not.toBe('CY');
-  });
-
-  it('Countries sub-label is no longer "Cyprus only"', () => {
-    renderWithRouter();
-    // The reworded copy ("By country") may or may not be present, but the stale
-    // "Cyprus only" string must not appear anywhere on the page.
-    expect(screen.queryByText('Cyprus only')).not.toBeInTheDocument();
-  });
-
-  // ── ADMIN2-39-05 QA edge coverage (Mode B) ──────────────────────────────
-  // Proves the counter is genuinely live-wired even at zero: with countryCounts
-  // all zeros, the KPI renders "WR 0 · CY 0 · GR 0" (real zeros, not blank and
-  // not the old hardcoded "CY"). beforeEach resets countryCounts to {0,0,0}.
-  it('Countries card renders "WR 0 · CY 0 · GR 0" when all counts are zero (live wiring at zero)', () => {
-    renderWithRouter();
-
-    const card = getCountriesCard();
-    const kpi = card.querySelector('.stat-n');
-    const text = (kpi?.textContent ?? '').replace(/\s+/g, ' ').trim();
-    // All three live zeros present in WR · CY · GR order — not blank, not "CY".
-    expect(text).toBe('WR 0 · CY 0 · GR 0');
-    expect(text).not.toBe('CY');
-    expect(text).not.toBe('');
-  });
 });
