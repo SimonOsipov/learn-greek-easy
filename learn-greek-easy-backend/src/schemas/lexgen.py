@@ -199,17 +199,38 @@ class WiktionarySource(BaseModel):
 
     ``forms`` reuses the LEXGEN-02 ``FormBundle`` type; an empty list means
     the entry existed but carried no inflected forms.
+
+    ``gender`` is set for single-gender lemmas (e.g. "neuter"), ``None`` for
+    common-gender (multi-row) lemmas. ``genders`` is populated only for
+    common-gender lemmas, carrying per-gender detail dicts.
+    ``pronunciation`` and ``glosses_en`` come from the WiktionaryMorphology row.
     """
 
     present: bool
     forms: list[FormBundle] = Field(default_factory=list)
+    gender: str | None = None
+    pronunciation: str | None = None
+    glosses_en: str | None = None
+    genders: list | None = None
 
 
 class GreekLexiconSource(BaseModel):
-    """Evidence collected from the GreekLexicon database for one lemma."""
+    """Evidence collected from the GreekLexicon database for one lemma.
+
+    ``attested_lemma``: True when the normalized lemma matched the ``lemma``
+    column of a GreekLexicon row directly.
+    ``attested_surface_form``: True when the normalized lemma matched the
+    ``form`` column (inflected surface form) but NOT the ``lemma`` column.
+    ``resolved_lemma``: The canonical lemma used for fetching declensions —
+    equals the normalized lemma for a lemma-column hit, or the row's
+    ``.lemma`` value for a surface-form-only hit.
+    """
 
     present: bool
     forms: list[FormBundle] = Field(default_factory=list)
+    attested_lemma: bool = False
+    attested_surface_form: bool = False
+    resolved_lemma: str | None = None
 
 
 class FrequencySource(BaseModel):

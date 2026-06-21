@@ -44,6 +44,7 @@ from loguru import logger
 
 from src.config import settings
 from src.schemas.nlp import NormalizedLemma
+from src.utils.greek_text import _final_sigma_unfold  # noqa: WPS450 (private import by design)
 
 FREQUENCY_TABLE = "reference.frequency_rank"
 SOURCE = "wordfreq"
@@ -96,20 +97,6 @@ def _resolve_word_source() -> WordSourceFn:
 # ---------------------------------------------------------------------------
 # Pure helpers
 # ---------------------------------------------------------------------------
-
-
-def _final_sigma_unfold(token: str) -> str:
-    """Replace a word-final medial sigma (σ) with the correct final sigma (ς).
-
-    Some corpora (including wordfreq) emit surface tokens where the last
-    character is σ rather than ς. This one-character substitution fixes that
-    before the token is passed to the spaCy lemmatiser.
-
-    Only the LAST character is touched; interior σ characters are left as-is.
-    """
-    if token and token[-1] == "σ":
-        return token[:-1] + "ς"
-    return token
 
 
 def _surface_to_lemma(token: str, normalize: NormalizeFn) -> str | None:

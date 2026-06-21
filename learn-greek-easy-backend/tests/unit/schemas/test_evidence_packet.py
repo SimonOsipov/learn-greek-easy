@@ -755,7 +755,22 @@ def test_evidence_packet_all_absent_sources_serializes():
         pytest.fail(f"All-absent packet serialization raised TypeError: {exc}")
 
     dumped = packet.model_dump(mode="json")
-    assert dumped["sources"]["wiktionary"] == {"present": False, "forms": []}
-    assert dumped["sources"]["greek_lexicon"] == {"present": False, "forms": []}
+    # WiktionarySource absent shape now includes LEXGEN-06-02 optional fields (all None/[])
+    assert dumped["sources"]["wiktionary"] == {
+        "present": False,
+        "forms": [],
+        "gender": None,
+        "pronunciation": None,
+        "glosses_en": None,
+        "genders": None,
+    }
+    # GreekLexiconSource absent shape now includes LEXGEN-06-02 optional fields
+    assert dumped["sources"]["greek_lexicon"] == {
+        "present": False,
+        "forms": [],
+        "attested_lemma": False,
+        "attested_surface_form": False,
+        "resolved_lemma": None,
+    }
     assert dumped["sources"]["frequency"] == {"present": False, "rank": None, "band": None}
     assert dumped["sources"]["rules"] == {"present": False}
