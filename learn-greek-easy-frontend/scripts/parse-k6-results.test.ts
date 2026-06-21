@@ -211,3 +211,139 @@ describe('parse-k6-results.cjs — testability refactor (PERF-12-01)', () => {
     expect(getMetricLabel('nope_xyz')).toBe('nope_xyz');
   });
 });
+
+// ============================================================================
+// Adversarial / edge coverage (PERF-12-01 Mode B)
+// ============================================================================
+// These tests are appended AFTER the 6 AC tests and must NOT modify them.
+// All assertions were verified against the real implementation before writing.
+
+describe('parse-k6-results.cjs — adversarial / edge coverage (PERF-12-01)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    const MODULE_PATH_INNER = path.resolve(process.cwd(), 'scripts/parse-k6-results.cjs');
+    delete require.cache[MODULE_PATH_INNER];
+  });
+
+  // --------------------------------------------------------------------------
+  // formatMs boundaries
+  // --------------------------------------------------------------------------
+  it('edge_formatMs_boundaries — 0, 999, 1000 exact boundaries and non-integer ≥ 1000', () => {
+    const { mod } = loadModule();
+    const formatMs = mod.formatMs as (ms: number | null | undefined) => string;
+
+    // 0 is < 1000 → Math.round(0) → '0ms'
+    expect(formatMs(0)).toBe('0ms');
+
+    // 999 is < 1000 → Math.round(999) → '999ms'
+    expect(formatMs(999)).toBe('999ms');
+
+    // 1000 is >= 1000 → (1000/1000).toFixed(2) → '1.00s'
+    expect(formatMs(1000)).toBe('1.00s');
+
+    // Non-integer ≥ 1000: 1234.6 → (1234.6/1000).toFixed(2) = '1.23s'
+    // NOT '1235ms' — the ≥ 1000 branch fires, producing seconds format.
+    expect(formatMs(1234.6)).toBe('1.23s');
+  });
+
+  // --------------------------------------------------------------------------
+  // getMetricStatus exact-threshold boundary
+  // --------------------------------------------------------------------------
+  it('edge_getMetricStatus_exact_threshold — value === threshold yields warning, not pass', () => {
+    const { mod } = loadModule();
+    const getMetricStatus = mod.getMetricStatus as (
+      value: number | null,
+      threshold: number
+    ) => 'pass' | 'warning' | 'fail';
+
+    // value === threshold: 1000 > 1000 is false (not fail),
+    // but 1000 > 1000*0.8 = 800 is true → 'warning', NOT 'pass'.
+    expect(getMetricStatus(1000, 1000)).toBe('warning');
+
+    // value === threshold * 0.8: 800 > 800 is false → 'pass' (boundary is strict >)
+    expect(getMetricStatus(800, 1000)).toBe('pass');
+
+    // value = 0 is always < threshold → 'pass'
+    expect(getMetricStatus(0, 1000)).toBe('pass');
+  });
+
+  // --------------------------------------------------------------------------
+  // extractPercentiles — p(50) fallback vs med priority
+  // --------------------------------------------------------------------------
+  it('edge_extractPercentiles_p50_fallback — p(50) used when med absent; med wins when both present', () => {
+    const { mod } = loadModule();
+    type ExtractFn = (m: unknown) => { p50: number | null };
+    const extractPercentiles = mod.extractPercentiles as ExtractFn;
+
+    // Only p(50) present → p50 = 77
+    const onlyP50 = extractPercentiles({ values: { 'p(50)': 77 } });
+    expect(onlyP50.p50).toBe(77);
+
+    // Both med and p(50): med wins via ?? short-circuit (values.med ?? values['p(50)'])
+    const bothPresent = extractPercentiles({ values: { med: 50, 'p(50)': 77 } });
+    expect(bothPresent.p50).toBe(50);
+  });
+
+  // --------------------------------------------------------------------------
+  // getMetricLabel — DASHBOARD metric + edge inputs
+  // --------------------------------------------------------------------------
+  it('edge_getMetricLabel_dashboard_and_edge_inputs — known dashboard key, empty string, undefined', () => {
+    const { mod } = loadModule();
+    const getMetricLabel = mod.getMetricLabel as (name: unknown) => unknown;
+
+    // Known DASHBOARD key
+    expect(getMetricLabel('dashboard_load_time')).toBe('Dashboard Load');
+
+    // Empty string: not in AUTH_METRICS or DASHBOARD_METRICS → allMetrics[''] is undefined
+    // → falls back to returning the raw name (''), does not throw.
+    expect(getMetricLabel('')).toBe('');
+
+    // undefined: allMetrics[undefined] is undefined → returns undefined, does not throw.
+    expect(getMetricLabel(undefined)).toBeUndefined();
+  });
+
+  // --------------------------------------------------------------------------
+  // module.exports does NOT leak main (exactly 8 symbols)
+  // --------------------------------------------------------------------------
+  it('edge_exports_no_main_leak — module.exports has exactly 8 keys, main is absent', () => {
+    const { mod } = loadModule();
+
+    const exportedKeys = Object.keys(mod);
+    const expectedExports = [
+      'extractPercentiles',
+      'formatMs',
+      'formatMetricValue',
+      'getMetricStatus',
+      'generateMetricsSection',
+      'getMetricLabel',
+      'AUTH_METRICS',
+      'DASHBOARD_METRICS',
+    ];
+
+    // Exactly the 8 pure helpers — no side-effectful 'main'
+    expect(exportedKeys).toHaveLength(8);
+    expect(exportedKeys.sort()).toEqual(expectedExports.sort());
+    expect(mod).not.toHaveProperty('main');
+  });
+
+  // --------------------------------------------------------------------------
+  // require.main === module guard — second require is idempotent (cached)
+  // --------------------------------------------------------------------------
+  it('edge_second_require_idempotent — re-requiring module hits cache, main never runs again', () => {
+    // First load (clears cache via afterEach of previous test, sets up spies)
+    const { mod: mod1, exitSpy, writeSpy } = loadModule();
+
+    // Second require of the same path — Node caches CJS modules, so the guard
+    // code path (if require.main === module) is not re-evaluated.
+    // The spies are still installed; if main() ran again, exitSpy would be called.
+    const MODULE_PATH_INNER = path.resolve(process.cwd(), 'scripts/parse-k6-results.cjs');
+    const mod2 = require(MODULE_PATH_INNER) as Record<string, unknown>;
+
+    // Both should be the exact same cached object reference
+    expect(mod1).toBe(mod2);
+
+    // process.exit was never called — main() did not run on either require
+    expect(exitSpy).not.toHaveBeenCalled();
+    expect(writeSpy).not.toHaveBeenCalled();
+  });
+});
