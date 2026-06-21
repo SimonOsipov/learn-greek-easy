@@ -59,9 +59,11 @@ Trace notes (inputs traced through REAL normalize_ipa before setting verdict):
   ""              → normalize_ipa("") == ""  → early return FAIL "empty pronunciation"
 """
 
+import dataclasses
+
 import pytest
 
-from src.core.lexgen_g2p import G2PResult, validate_ipa
+from src.core.lexgen_g2p import GREEK_PHONEME_INVENTORY, G2PResult, validate_ipa
 
 # ---------------------------------------------------------------------------
 # PASS cases — standard IPA
@@ -231,7 +233,15 @@ def test_deterministic_no_side_effects() -> None:
     """validate_ipa is pure: two calls with identical args return equal results.
 
     Also verifies that inputs are not mutated (frozen dataclass output and
-    the function must not alter the string arguments).
+    the function must not alter the string arguments), and that G2PResult is
+    truly frozen (direct attribute assignment raises FrozenInstanceError).
+
+    BUG FIX NOTE: the original test used ``object.__setattr__(r1, "ok", ...)``
+    which BYPASSES the dataclass frozen guard (object.__setattr__ is the
+    low-level setter used internally by the frozen machinery; calling it
+    directly skips the guard and never raises).  The correct way to exercise
+    the frozen guard is a plain attribute assignment, which triggers the
+    __setattr__ override that @dataclass(frozen=True) installs.
     """
     lemma = "σπίτι"
     candidate = "/ˈspiti/"
@@ -253,6 +263,213 @@ def test_deterministic_no_side_effects() -> None:
     assert id(lemma) == lemma_id
     assert id(candidate) == candidate_id
 
-    # G2PResult must be frozen (mutation must raise FrozenInstanceError)
-    with pytest.raises(Exception):  # dataclasses.FrozenInstanceError (Python 3.11+)
-        object.__setattr__(r1, "ok", not r1.ok)
+    # G2PResult must be frozen — direct attribute assignment raises
+    # FrozenInstanceError (NOT object.__setattr__, which bypasses the guard).
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        r1.ok = not r1.ok  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# Adversarial / edge coverage (Mode B — QA post-implementation, LEXGEN-07-02)
+# ---------------------------------------------------------------------------
+
+
+class TestInventoryMembership:
+    """AC5/D8: verify exact codepoint membership — both g variants, x, LLM
+    substitutions, and a comprehensive set of non-members."""
+
+    def test_latin_g_u0067_in_inventory(self) -> None:
+        """g (U+0067, LATIN SMALL LETTER G) is the LLM variant and must be in
+        the inventory — it is DISTINCT from ɡ (U+0261, LATIN SMALL LETTER
+        SCRIPT G) even though they look similar."""
+        assert (
+            chr(0x0067) in GREEK_PHONEME_INVENTORY
+        ), "g U+0067 (LLM substitute for ɡ) must be in GREEK_PHONEME_INVENTORY"
+
+    def test_ipa_script_g_u0261_in_inventory(self) -> None:
+        """ɡ (U+0261, LATIN SMALL LETTER SCRIPT G) is the standard IPA symbol
+        for the voiced velar stop and must be in the inventory."""
+        assert (
+            chr(0x0261) in GREEK_PHONEME_INVENTORY
+        ), "ɡ U+0261 (IPA script g) must be in GREEK_PHONEME_INVENTORY"
+
+    def test_g_and_script_g_are_distinct_codepoints(self) -> None:
+        """g (U+0067) and ɡ (U+0261) must be two different codepoints, both
+        independently present in the inventory."""
+        g_latin = chr(0x0067)
+        g_script = chr(0x0261)
+        assert g_latin != g_script, "U+0067 and U+0261 must be distinct characters"
+        assert g_latin in GREEK_PHONEME_INVENTORY
+        assert g_script in GREEK_PHONEME_INVENTORY
+
+    def test_x_latin_u0078_in_inventory(self) -> None:
+        """x (U+0078, LATIN SMALL LETTER X) is the velar fricative and must be
+        in the inventory."""
+        assert chr(0x0078) in GREEK_PHONEME_INVENTORY, "x U+0078 must be in GREEK_PHONEME_INVENTORY"
+
+    def test_llm_substitution_chars_in_inventory(self) -> None:
+        """c, y, h are LLM simplified-Latin substitution residuals and must all
+        be in the inventory."""
+        for ch in ("c", "y", "h"):
+            assert (
+                ch in GREEK_PHONEME_INVENTORY
+            ), f"LLM residual {ch!r} must be in GREEK_PHONEME_INVENTORY"
+
+    def test_standard_greek_ipa_chars_in_inventory(self) -> None:
+        """θ, ð, ɣ, ç are standard IPA symbols for Greek phonemes and must all
+        be in the inventory."""
+        for ch in ("θ", "ð", "ɣ", "ç"):
+            assert (
+                ch in GREEK_PHONEME_INVENTORY
+            ), f"Standard Greek IPA symbol {ch!r} must be in GREEK_PHONEME_INVENTORY"
+
+    def test_english_ipa_symbols_not_in_inventory(self) -> None:
+        """q, w, ʔ, ɔ, ɪ are English-English or non-Greek IPA symbols and must
+        NOT be in the Greek phoneme inventory."""
+        for ch in ("q", "w", "ʔ", "ɔ", "ɪ"):  # ʔ ɔ ɪ
+            assert (
+                ch not in GREEK_PHONEME_INVENTORY
+            ), f"Non-Greek IPA symbol {ch!r} (U+{ord(ch):04X}) must NOT be in inventory"
+
+
+class TestReasonDiagnostics:
+    """Verify that the reason string names the offending symbol, not just any
+    non-empty text — so it is genuinely diagnostic for LLM output debugging."""
+
+    def test_reason_names_first_offending_symbol_w(self) -> None:
+        """For /wɔɪ/ the first illegal char is w; the reason must contain 'w'.
+
+        normalize_ipa trace: strip / → wɔɪ
+        Scan order: w is encountered first → reason names 'w'.
+        """
+        result = validate_ipa("x", "/wɔɪ/")
+        assert result.ok is False
+        assert result.reason is not None
+        assert (
+            "w" in result.reason
+        ), f"reason {result.reason!r} must contain the first offending symbol 'w'"
+
+    def test_multi_illegal_reason_names_first_encountered(self) -> None:
+        """A candidate with two illegal symbols returns the FIRST one encountered.
+
+        /qw/ normalises to "qw"; the scan hits 'q' before 'w', so reason must
+        contain 'q', not 'w' (though both are illegal).
+        """
+        result = validate_ipa("x", "/qw/")
+        assert result.ok is False
+        assert result.reason is not None
+        assert (
+            "q" in result.reason
+        ), f"reason {result.reason!r} must name first offending symbol 'q', got: {result.reason!r}"
+        # Reason must not be about 'w' instead (regression guard)
+        # It's fine if 'w' also appears, but 'q' must be there.
+        assert "q" in result.reason
+
+
+class TestGlottalStop:
+    """ʔ (U+0294, LATIN LETTER GLOTTAL STOP) is a common IPA symbol absent
+    from Greek phonology.  It must be rejected."""
+
+    def test_glottal_stop_fails(self) -> None:
+        """ʔ is not a Greek phoneme.
+
+        normalize_ipa trace: strip / → ʔ
+        Residual "ʔ" (U+0294): ʔ ∉ inventory → ok=False.
+        """
+        result = validate_ipa("x", "/ʔ/")
+        assert result.ok is False
+        assert result.reason is not None and len(result.reason) > 0
+
+
+class TestEmptyGuardVariants:
+    """The empty-input guard must fire for any input that normalises to "".
+
+    This exercises the guard via non-trivially-empty raw inputs (a stress
+    mark alone, and pure whitespace) so that the guard is proven for inputs
+    that are NOT the bare empty string "".
+    """
+
+    def test_stress_marker_only_becomes_empty(self) -> None:
+        """A raw input of "/ˈ/" normalises to "" and triggers the empty guard.
+
+        normalize_ipa trace: strip / → ˈ → strip ˈ → "" → strip → ""
+        Result: ok=False, reason=="empty pronunciation".
+        """
+        result = validate_ipa("x", "/ˈ/")
+        assert result.ok is False
+        assert result.reason == "empty pronunciation"
+
+    def test_whitespace_only_becomes_empty(self) -> None:
+        """Pure whitespace normalises to "" via the whitespace-collapse step.
+
+        normalize_ipa trace: "   " → no delimiters/stress → collapse → "" → strip → ""
+        Result: ok=False, reason=="empty pronunciation".
+        """
+        result = validate_ipa("x", "   ")
+        assert result.ok is False
+        assert result.reason == "empty pronunciation"
+
+
+class TestCaseSensitivity:
+    """normalize_ipa does NOT lowercase — uppercase Latin letters are not in
+    the inventory (which holds only lowercase IPA symbols)."""
+
+    def test_uppercase_greek_letters_fail(self) -> None:
+        """Uppercase Greek Unicode letters (Σ, Π, Τ) pass through normalize_ipa
+        intact and are not in the Latin/IPA inventory → fail.
+
+        normalize_ipa trace: strip / → ΣΠΙΤΙ → normalize_greek_accents (no
+        accented chars, unchanged) → ΣΠΙΤΙ
+        Residual: Σ,Π,Ι,Τ,Ι ∉ inventory → ok=False.
+        """
+        result = validate_ipa("σπίτι", "/ΣΠΙΤΙ/")
+        assert result.ok is False
+        assert result.reason is not None and len(result.reason) > 0
+
+
+class TestInputImmutabilityOnFailure:
+    """Input strings must not be mutated on failure paths, just as on success."""
+
+    def test_input_not_mutated_on_fail(self) -> None:
+        """Passing an illegal candidate must leave the input strings unchanged.
+
+        Strings are immutable in Python, but this guards against the function
+        accidentally rebinding the caller's variable or returning a modified
+        object in a refactor.
+        """
+        lemma = "x"
+        candidate = "/wɔɪ/"
+        lemma_id = id(lemma)
+        candidate_id = id(candidate)
+
+        result = validate_ipa(lemma, candidate)
+
+        assert result.ok is False
+        assert id(lemma) == lemma_id, "lemma reference must be unchanged after a failing call"
+        assert (
+            id(candidate) == candidate_id
+        ), "candidate reference must be unchanged after a failing call"
+
+
+class TestBothGVariantsPassValidation:
+    """Both g (U+0067) and ɡ (U+0261) must produce ok=True when used in an
+    otherwise-valid candidate IPA string, confirming validate_ipa (not just
+    the inventory set) accepts both codepoints."""
+
+    def test_latin_g_u0067_passes_in_candidate(self) -> None:
+        """A candidate using g (U+0067) in a valid Greek transcription must pass.
+
+        normalize_ipa trace for "gala" (bare, no delimiters): gala
+        Residual "gala": g,a,l,a — g U+0067 ∈ inventory → ok=True.
+        """
+        result = validate_ipa("γάλα", "gala")
+        assert result.ok is True, f"g U+0067 in candidate should pass; got reason={result.reason!r}"
+
+    def test_ipa_script_g_u0261_passes_in_candidate(self) -> None:
+        """A candidate using ɡ (U+0261) in a valid Greek transcription must pass.
+
+        normalize_ipa trace for "/ɡala/": strip / → ɡala
+        Residual "ɡala": ɡ U+0261 ∈ inventory → ok=True.
+        """
+        result = validate_ipa("γάλα", "/ɡala/")
+        assert result.ok is True, f"ɡ U+0261 in candidate should pass; got reason={result.reason!r}"
