@@ -933,3 +933,313 @@ class TestListSituationsPaginationStability:
             "Without Situation.id.desc() tiebreaker, tied-created_at rows appear "
             "in non-deterministic (heap/insertion) order instead of id DESC."
         )
+
+
+class TestListSituationsPaginationStabilityAdversarial:
+    """Adversarial / edge / boundary coverage for F7 pagination stability.
+
+    These tests extend the AC tests (TestListSituationsPaginationStability) with:
+    - Stability under status filter (AC3 regression guard)
+    - Stability under search filter (AC3 regression guard)
+    - status_counts remain global (unaffected by ordering change)
+    - Boundary: last partial page has no overlap with penultimate page
+    - Boundary: out-of-range page returns empty, no crash
+    """
+
+    TIED_TS = datetime(2025, 2, 15, 8, 0, 0, tzinfo=timezone.utc)
+
+    @pytest.mark.asyncio
+    async def test_pagination_stability_with_status_filter(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Pagination is stable (id DESC tiebreaker) when a status=draft filter is active.
+
+        Creates 6 tied-created_at draft situations + 2 ready situations with the same
+        created_at.  Paginates with ?status=draft&page_size=2, asserts:
+        - all 6 draft IDs returned exactly once
+        - within the filtered window, ordering is id DESC
+        - total == 6 (only drafts counted by the filtered count_query)
+        """
+        from src.db.models import SituationStatus
+
+        unique_prefix = f"STBL-STATUS-{uuid4().hex[:8]}"
+        draft_ids: list[str] = []
+        for i in range(6):
+            s = await SituationFactory.create(
+                created_at=self.TIED_TS,
+                status=SituationStatus.DRAFT,
+                scenario_en=f"{unique_prefix} draft {i}",
+                scenario_el=f"Πρόχειρο {unique_prefix} {i}",
+                scenario_ru=f"Черновик {unique_prefix} {i}",
+            )
+            draft_ids.append(str(s.id))
+
+        # Create 2 ready situations with the same timestamp — must NOT appear in draft filter
+        for i in range(2):
+            await SituationFactory.create(
+                created_at=self.TIED_TS,
+                status=SituationStatus.READY,
+                scenario_en=f"{unique_prefix} ready {i}",
+                scenario_el=f"Έτοιμο {unique_prefix} {i}",
+                scenario_ru=f"Готово {unique_prefix} {i}",
+            )
+
+        page_size = 2
+        expected_order = sorted(draft_ids, reverse=True)
+
+        all_returned_ids: list[str] = []
+        total_pages = math.ceil(len(draft_ids) / page_size)
+        reported_total: int | None = None
+
+        for page in range(1, total_pages + 1):
+            resp = await client.get(
+                f"{BASE_URL}?status=draft&search={unique_prefix}&page={page}&page_size={page_size}",
+                headers=superuser_auth_headers,
+            )
+            assert resp.status_code == 200
+            data = resp.json()
+            if reported_total is None:
+                reported_total = data["total"]
+            all_returned_ids.extend(item["id"] for item in data["items"])
+
+        # total must reflect only the filtered (draft) count
+        assert reported_total == len(
+            draft_ids
+        ), f"Filtered total should be {len(draft_ids)} (drafts only), got {reported_total}."
+
+        # No ready IDs should leak into the draft-filtered results
+        ready_leaked = [id_ for id_ in all_returned_ids if id_ not in draft_ids]
+        assert (
+            ready_leaked == []
+        ), f"Ready situations leaked into status=draft results: {ready_leaked}"
+
+        # No duplicates
+        duplicates = [id_ for id_ in all_returned_ids if all_returned_ids.count(id_) > 1]
+        assert duplicates == [], f"Duplicate IDs across pages with status filter: {set(duplicates)}"
+
+        # Order must be (created_at DESC, id DESC) — same tiebreaker guarantees apply with filter
+        assert all_returned_ids == expected_order, (
+            f"With status=draft filter, tied-created_at rows not in id DESC order.\n"
+            f"  Got:      {all_returned_ids}\n"
+            f"  Expected: {expected_order}\n"
+            "list_situations must apply id DESC tiebreaker even under status filter."
+        )
+
+    @pytest.mark.asyncio
+    async def test_pagination_stability_with_search_filter(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Pagination is stable (id DESC tiebreaker) when a search= filter is active.
+
+        Creates 6 tied-created_at situations whose scenario_en contains a unique prefix.
+        Creates 3 additional situations (different prefix, same created_at) that must be
+        excluded from the search.  Paginates with ?search=<prefix>&page_size=2, asserts:
+        - all 6 prefix IDs returned exactly once in id DESC order
+        - the 3 non-matching situations are not present
+        """
+        unique_prefix = f"STBL-SRCH-{uuid4().hex[:8]}"
+        noise_prefix = f"NOISE-{uuid4().hex[:8]}"
+
+        target_ids: list[str] = []
+        for i in range(6):
+            s = await SituationFactory.create(
+                created_at=self.TIED_TS,
+                scenario_en=f"{unique_prefix} item {i}",
+                scenario_el=f"Στοιχείο {i}",
+                scenario_ru=f"Элемент {i}",
+            )
+            target_ids.append(str(s.id))
+
+        # Noise situations — same created_at but different prefix (must not match search)
+        for i in range(3):
+            await SituationFactory.create(
+                created_at=self.TIED_TS,
+                scenario_en=f"{noise_prefix} noise {i}",
+                scenario_el=f"Θόρυβος {i}",
+                scenario_ru=f"Шум {i}",
+            )
+
+        page_size = 2
+        expected_order = sorted(target_ids, reverse=True)
+        all_returned_ids: list[str] = []
+        total_pages = math.ceil(len(target_ids) / page_size)
+
+        for page in range(1, total_pages + 1):
+            resp = await client.get(
+                f"{BASE_URL}?search={unique_prefix}&page={page}&page_size={page_size}",
+                headers=superuser_auth_headers,
+            )
+            assert resp.status_code == 200
+            all_returned_ids.extend(item["id"] for item in resp.json()["items"])
+
+        # No noise IDs leak through
+        noise_leaked = [id_ for id_ in all_returned_ids if id_ not in target_ids]
+        assert (
+            noise_leaked == []
+        ), f"Non-matching situations leaked through search filter: {noise_leaked}"
+
+        # No duplicates
+        duplicates = [id_ for id_ in all_returned_ids if all_returned_ids.count(id_) > 1]
+        assert duplicates == [], f"Duplicate IDs across pages with search filter: {set(duplicates)}"
+
+        # Order preserved under search filter
+        assert all_returned_ids == expected_order, (
+            f"With search filter, tied-created_at rows not in id DESC order.\n"
+            f"  Got:      {all_returned_ids}\n"
+            f"  Expected: {expected_order}\n"
+            "list_situations must apply id DESC tiebreaker even under search filter."
+        )
+
+    @pytest.mark.asyncio
+    async def test_status_counts_unchanged_by_ordering_fix(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """status_counts in the list response reflect ALL situations globally,
+        not just those on the current page or matching the current filter.
+
+        This guards AC3: the ordering change must not affect counts_query (which
+        has no ORDER BY and no WHERE). We create a known draft+ready split, apply
+        a status=ready filter, and assert status_counts still includes draft counts.
+        """
+        from src.db.models import SituationStatus
+
+        unique_prefix = f"STBL-CNT-{uuid4().hex[:8]}"
+        # Create 3 draft + 2 ready (all with tied ts to stress the ordering path)
+        for i in range(3):
+            await SituationFactory.create(
+                created_at=self.TIED_TS,
+                status=SituationStatus.DRAFT,
+                scenario_en=f"{unique_prefix} draft {i}",
+                scenario_el=f"Πρόχειρο {unique_prefix} {i}",
+                scenario_ru=f"Черновик {unique_prefix} {i}",
+            )
+        for i in range(2):
+            await SituationFactory.create(
+                created_at=self.TIED_TS,
+                status=SituationStatus.READY,
+                scenario_en=f"{unique_prefix} ready {i}",
+                scenario_el=f"Έτοιμο {unique_prefix} {i}",
+                scenario_ru=f"Готово {unique_prefix} {i}",
+            )
+
+        # Filter by ready — but status_counts must include the global draft count
+        resp = await client.get(
+            f"{BASE_URL}?status=ready",
+            headers=superuser_auth_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+
+        # The global counts_query is unfiltered — must include our 3 new drafts
+        assert data["status_counts"]["draft"] >= 3, (
+            f"status_counts['draft'] should be >=3 (global, unfiltered), "
+            f"got {data['status_counts']['draft']}."
+        )
+        assert data["status_counts"]["ready"] >= 2, (
+            f"status_counts['ready'] should be >=2 (global, unfiltered), "
+            f"got {data['status_counts']['ready']}."
+        )
+        # The filtered total must equal only the ready count in our batch
+        # (using search to isolate our batch from other test data)
+        resp2 = await client.get(
+            f"{BASE_URL}?status=ready&search={unique_prefix}",
+            headers=superuser_auth_headers,
+        )
+        assert resp2.status_code == 200
+        assert resp2.json()["total"] == 2, (
+            f"Filtered total for status=ready with our prefix should be 2, "
+            f"got {resp2.json()['total']}."
+        )
+
+    @pytest.mark.asyncio
+    async def test_last_partial_page_no_overlap_with_penultimate(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Last (partial) page contains only the remaining items with no overlap.
+
+        Creates 7 situations (page_size=3 → 3 full pages: [3, 3, 1]).
+        Verifies:
+        - page 3 has exactly 1 item
+        - pages 2 and 3 share no IDs
+        - union of all 3 pages == all 7 created IDs
+        """
+        unique_prefix = f"STBL-PART-{uuid4().hex[:8]}"
+        all_ids: list[str] = []
+        for i in range(7):
+            s = await SituationFactory.create(
+                created_at=self.TIED_TS,
+                scenario_en=f"{unique_prefix} item {i}",
+                scenario_el=f"Στοιχείο {unique_prefix} {i}",
+                scenario_ru=f"Элемент {unique_prefix} {i}",
+            )
+            all_ids.append(str(s.id))
+
+        page_size = 3
+        pages_data: dict[int, list[str]] = {}
+
+        for page in range(1, 4):
+            resp = await client.get(
+                f"{BASE_URL}?search={unique_prefix}&page={page}&page_size={page_size}",
+                headers=superuser_auth_headers,
+            )
+            assert resp.status_code == 200
+            pages_data[page] = [item["id"] for item in resp.json()["items"]]
+
+        # Page 1 and 2 must each have page_size items
+        assert (
+            len(pages_data[1]) == page_size
+        ), f"Page 1 should have {page_size} items, got {len(pages_data[1])}."
+        assert (
+            len(pages_data[2]) == page_size
+        ), f"Page 2 should have {page_size} items, got {len(pages_data[2])}."
+        # Last page: exactly 1 item (7 % 3 = 1)
+        assert (
+            len(pages_data[3]) == 1
+        ), f"Page 3 (last/partial) should have 1 item, got {len(pages_data[3])}."
+
+        # No overlap between penultimate (page 2) and last (page 3)
+        overlap = set(pages_data[2]) & set(pages_data[3])
+        assert (
+            overlap == set()
+        ), f"Pages 2 and 3 share IDs (overlap), indicating broken offset: {overlap}"
+
+        # Union covers all created IDs exactly
+        union = set(pages_data[1]) | set(pages_data[2]) | set(pages_data[3])
+        assert union == set(all_ids), (
+            f"Union of all pages does not match the full catalog.\n"
+            f"  Missing: {set(all_ids) - union}\n"
+            f"  Extra:   {union - set(all_ids)}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_out_of_range_page_returns_empty_no_crash(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Requesting a page beyond the last page returns 200 with empty items.
+
+        Creates 2 situations (page_size=5 → 1 page total). Requesting page=99
+        must return 200, items=[], total=2 (total stays accurate, items just empty).
+        No 500 / no crash.
+        """
+        unique_prefix = f"STBL-OOB-{uuid4().hex[:8]}"
+        for i in range(2):
+            await SituationFactory.create(
+                created_at=self.TIED_TS,
+                scenario_en=f"{unique_prefix} oob {i}",
+                scenario_el=f"ΕΚΤ {unique_prefix} {i}",
+                scenario_ru=f"ВНД {unique_prefix} {i}",
+            )
+
+        resp = await client.get(
+            f"{BASE_URL}?search={unique_prefix}&page=99&page_size=5",
+            headers=superuser_auth_headers,
+        )
+        assert (
+            resp.status_code == 200
+        ), f"Out-of-range page should return 200, got {resp.status_code}."
+        data = resp.json()
+        assert (
+            data["items"] == []
+        ), f"Out-of-range page should return empty items list, got {data['items']}."
+        assert data["total"] == 2, f"total should still be 2 (accurate count), got {data['total']}."
+        assert data["page"] == 99, f"Response page should echo back 99, got {data['page']}."
