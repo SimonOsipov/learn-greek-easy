@@ -6,7 +6,6 @@ algorithm with Redis Sorted Sets for accurate rate limiting.
 
 Features:
 - Redis-based sliding window algorithm for accurate limiting
-- Different limits for auth endpoints vs general API
 - Graceful degradation when Redis is unavailable (allows requests)
 - Rate limit headers in all responses
 - IP-based client identification with proxy header support
@@ -82,17 +81,8 @@ class RateLimitingMiddleware:
     allowing all requests and logging a warning.
 
     Attributes:
-        AUTH_PATHS: Paths that receive stricter rate limiting.
         EXEMPT_PATHS: Paths exempt from rate limiting entirely.
     """
-
-    # Auth endpoints receive stricter rate limiting
-    # These are sensitive endpoints vulnerable to brute force attacks
-    AUTH_PATHS: list[str] = [
-        "/api/v1/auth/login",
-        "/api/v1/auth/register",
-        "/api/v1/auth/google",
-    ]
 
     # Paths exempt from rate limiting
     # Health checks must always be accessible for monitoring
@@ -201,8 +191,7 @@ class RateLimitingMiddleware:
     def _get_rate_config(self, path: str) -> RateLimitConfig:
         """Get rate limit configuration for the given path.
 
-        Auth endpoints receive stricter limits to protect against
-        brute force attacks. All other endpoints use the general limit.
+        Returns the general rate-limit configuration for the given path.
 
         Args:
             path: The request URL path.
@@ -210,13 +199,6 @@ class RateLimitingMiddleware:
         Returns:
             RateLimitConfig with appropriate limit settings.
         """
-        if any(path.startswith(auth_path) for auth_path in self.AUTH_PATHS):
-            return RateLimitConfig(
-                limit=settings.rate_limit_auth_per_minute,
-                window_seconds=60,
-                key_prefix="ratelimit:auth",
-            )
-
         return RateLimitConfig(
             limit=settings.rate_limit_per_minute,
             window_seconds=60,
