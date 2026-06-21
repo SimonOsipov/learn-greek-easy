@@ -529,3 +529,147 @@ class TestLinkedSituationPictureFields:
         assert (
             linked_detail["has_picture"] is False
         ), "has_picture must be False on the detail path when no image_s3_key"
+
+    # =========================================================================
+    # Adversarial / edge tests (Mode B, ADMIN2-41-02)
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_variants_absent_does_not_raise_and_nulls_variants(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+    ):
+        """picture_image_url is non-null and has_picture is True even when S3 returns no
+        derivatives (get_derivative_presigned_urls returns None).
+
+        Guards the dict-guard branch in _to_response:
+            picture_image_variants = _raw_pic_variants if isinstance(_raw_pic_variants, dict) else None
+
+        Given:  SituationPicture with image_s3_key set (generated trait).
+                S3 mock: generate_presigned_url → URL string,
+                         get_derivative_presigned_urls → None  (no derivatives yet).
+        When:   GET /api/v1/news (list) AND GET /api/v1/news/{id} (detail).
+        Then:   picture_image_url is non-null (presign worked),
+                picture_image_variants is null (no derivatives),
+                has_picture is True,
+                no exception is raised.
+        """
+        situation = await SituationFactory.create(session=db_session, ready=True)
+        await SituationPictureFactory.create(
+            session=db_session,
+            situation_id=situation.id,
+            generated=True,
+        )
+        news_item = await NewsItemFactory.create(
+            session=db_session,
+            situation_id=situation.id,
+            published=True,
+        )
+
+        # S3 mock: presign returns a URL, derivatives return None (not yet generated)
+        mock_no_variants = MagicMock()
+        mock_no_variants.generate_presigned_url.return_value = "https://s3.example.com/pic.jpg"
+        mock_no_variants.get_derivative_presigned_urls.return_value = None
+
+        with patch("src.services.news_item_service.get_s3_service", return_value=mock_no_variants):
+            response_list = await client.get("/api/v1/news")
+            response_detail = await client.get(f"/api/v1/news/{news_item.id}")
+
+        assert response_list.status_code == 200
+        assert response_detail.status_code == 200
+
+        items = response_list.json()["items"]
+        target = next(i for i in items if i["id"] == str(news_item.id))
+        linked_list = target["linked_situation"]
+        linked_detail = response_detail.json()["linked_situation"]
+
+        for label, linked in [("list", linked_list), ("detail", linked_detail)]:
+            assert (
+                linked["picture_image_url"] is not None
+            ), f"[{label}] picture_image_url must be non-null when image_s3_key is set"
+            assert linked["picture_image_variants"] is None, (
+                f"[{label}] picture_image_variants must be None when get_derivative_presigned_urls "
+                "returns None"
+            )
+            assert (
+                linked["has_picture"] is True
+            ), f"[{label}] has_picture must be True when image_s3_key is set"
+
+    @pytest.mark.asyncio
+    async def test_detail_model_copy_preserves_all_preexisting_fields(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+    ):
+        """model_copy(update={picture fields}) on the detail path must NOT clobber any of
+        the fields computed by _build_linked_situation_summary.
+
+        The risk: model_copy with a partial update dict could inadvertently zero-out
+        fields that share a default (e.g. role_count=0, turn_count=0) if it rebuilds
+        from defaults instead of copying. Pydantic v2 model_copy(update=) is safe —
+        this test is the regression guard.
+
+        We need a situation WITH a dialog (so role_count/turn_count are non-zero and
+        the assertion is load-bearing) — but that requires a ListeningDialog, which is
+        heavy. The cheaper approach: we only need to verify the fields are present and
+        consistent on both list and detail paths. The list path builds the summary
+        inline (no model_copy). The detail path uses model_copy. If they agree on
+        id/title/status/levels/country, the copy is faithful.
+
+        Given:  a published news item with a known situation (title_en, title_el,
+                levels, country, status all set), and a SituationPicture with
+                image_s3_key set.
+        When:   GET /api/v1/news (list) AND GET /api/v1/news/{id} (detail).
+        Then:   For every non-picture field in linked_situation, the detail path
+                returns the identical value as the list path (model_copy did not
+                clobber anything).
+        """
+        situation = await SituationFactory.create(session=db_session, ready=True)
+        await SituationPictureFactory.create(
+            session=db_session,
+            situation_id=situation.id,
+            generated=True,
+        )
+        news_item = await NewsItemFactory.create(
+            session=db_session,
+            situation_id=situation.id,
+            published=True,
+        )
+
+        fake_s3 = _make_fake_s3()
+        with patch("src.services.news_item_service.get_s3_service", return_value=fake_s3):
+            response_list = await client.get("/api/v1/news")
+            response_detail = await client.get(f"/api/v1/news/{news_item.id}")
+
+        assert response_list.status_code == 200
+        assert response_detail.status_code == 200
+
+        items = response_list.json()["items"]
+        target = next(i for i in items if i["id"] == str(news_item.id))
+        linked_list = target["linked_situation"]
+        linked_detail = response_detail.json()["linked_situation"]
+
+        # Fields that _build_linked_situation_summary sets — must survive model_copy intact.
+        PREEXISTING_FIELDS = [
+            "id",
+            "title_en",
+            "title_el",
+            "status",
+            "levels",
+            "country",
+            "role_count",
+            "role_names",
+            "turn_count",
+            "exercise_count",
+            "audio_seconds",
+        ]
+
+        for field in PREEXISTING_FIELDS:
+            assert (
+                field in linked_detail
+            ), f"model_copy dropped field '{field}' from linked_situation on detail path"
+            assert linked_detail[field] == linked_list[field], (
+                f"model_copy clobbered '{field}': "
+                f"detail={linked_detail[field]!r} != list={linked_list[field]!r}"
+            )
