@@ -485,3 +485,277 @@ def test_absent_source_serializes_present_false():
         f"frequency absent shape must be exactly "
         f"{{'present': False, 'rank': None, 'band': None}}, got: {freq_dump}"
     )
+
+
+# ---------------------------------------------------------------------------
+# ADVERSARIAL / EDGE COVERAGE (Mode B — QA LEXGEN-06-01)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_evidence_packet_round_trip_through_json():
+    """Round-trip: model_validate(json.loads(json.dumps(packet.model_dump(mode='json')))) == packet.
+
+    Verifies that the packet survives a JSONB write+read cycle (serialize →
+    JSON string → deserialize → EvidencePacket).  A structural regression
+    (e.g. a nested FormBundle that loses its 'features' after round-trip, or a
+    field that serializes to a non-deserializable type) would break this.
+    """
+    import json as _json
+
+    (
+        FEATURE_KEYS,
+        EvidencePacket,
+        EvidencePacketSources,
+        FormBundle,
+        FrequencySource,
+        GreekLexiconSource,
+        RulesSource,
+        WiktionarySource,
+    ) = _import_symbols()
+
+    packet = EvidencePacket(
+        lemma_input="Γυναίκα",
+        normalized_lemma="γυναίκα",
+        pos="noun",
+        sources=EvidencePacketSources(
+            wiktionary=WiktionarySource(
+                present=True,
+                forms=[
+                    FormBundle(
+                        form="γυναίκα",
+                        features={"case": "nominative", "number": "singular", "gender": "feminine"},
+                    ),
+                    FormBundle(
+                        form="γυναικών",
+                        features={"case": "genitive", "number": "plural", "gender": "feminine"},
+                    ),
+                ],
+            ),
+            greek_lexicon=GreekLexiconSource(
+                present=True,
+                forms=[
+                    FormBundle(
+                        form="γυναίκα",
+                        features={"case": "nominative", "number": "singular", "gender": "feminine"},
+                    )
+                ],
+            ),
+            frequency=FrequencySource(present=True, rank=42, band="high"),
+            rules=RulesSource(present=False),
+        ),
+    )
+
+    json_str = _json.dumps(packet.model_dump(mode="json"))
+    reconstructed = EvidencePacket.model_validate(_json.loads(json_str))
+
+    assert reconstructed == packet, (
+        "Round-trip failed: model_validate(json.loads(json.dumps(packet.model_dump(mode='json')))) "
+        "did not equal the original packet"
+    )
+
+
+@pytest.mark.unit
+def test_invalid_feature_key_inside_source_is_rejected():
+    """FormBundle validator fires through nested packet validation.
+
+    A flat UI-edge key (e.g. 'genitive_plural') passed as a FormBundle.features
+    key inside a WiktionarySource must raise a ValidationError — even when the
+    bundle is nested inside a full EvidencePacket.  This pins the seam-#1
+    invariant documented in lexgen.py: flat keys are NEVER allowed inside
+    FormBundle.features, regardless of nesting depth.
+    """
+    from pydantic import ValidationError
+
+    (
+        FEATURE_KEYS,
+        EvidencePacket,
+        EvidencePacketSources,
+        FormBundle,
+        FrequencySource,
+        GreekLexiconSource,
+        RulesSource,
+        WiktionarySource,
+    ) = _import_symbols()
+
+    with pytest.raises(ValidationError) as exc_info:
+        WiktionarySource(
+            present=True,
+            forms=[
+                FormBundle(
+                    form="γυναικών",
+                    features={"genitive_plural": "γυναικών"},  # flat UI-edge key — must be rejected
+                )
+            ],
+        )
+
+    # Confirm the rejection names the bad key (not a generic pydantic error)
+    error_str = str(exc_info.value)
+    assert (
+        "genitive_plural" in error_str or "Unknown feature key" in error_str
+    ), f"ValidationError should mention the unknown flat key, got: {error_str[:300]}"
+
+
+@pytest.mark.unit
+def test_present_true_with_empty_forms_is_allowed():
+    """present=True with forms=[] is a valid state — presence is independent of having forms.
+
+    A source can be 'present' (the entry was found in the data source) but carry
+    zero inflected forms (e.g. the Wiktionary page existed but had no declension
+    table). This test PINS that the schema permits it.
+
+    Note: If the never-invent gate in LEXGEN-06-03 later interprets
+    present=True + forms=[] differently from present=True + forms=[...], that
+    gate must enforce the distinction itself — the schema must not prevent the
+    state from being created.
+    """
+    (
+        FEATURE_KEYS,
+        EvidencePacket,
+        EvidencePacketSources,
+        FormBundle,
+        FrequencySource,
+        GreekLexiconSource,
+        RulesSource,
+        WiktionarySource,
+    ) = _import_symbols()
+
+    ws = WiktionarySource(present=True, forms=[])
+    dumped = ws.model_dump(mode="json")
+
+    assert dumped["present"] is True
+    assert (
+        dumped["forms"] == []
+    ), "present=True with empty forms should serialize to forms=[], got: " + repr(dumped["forms"])
+
+    # Also verify inside a full packet (no validation error raised)
+    EvidencePacket(
+        lemma_input="σπίτι",
+        normalized_lemma="σπίτι",
+        pos="noun",
+        sources=EvidencePacketSources(
+            wiktionary=WiktionarySource(present=True, forms=[]),
+            greek_lexicon=GreekLexiconSource(present=True, forms=[]),
+            frequency=FrequencySource(present=False),
+            rules=RulesSource(present=False),
+        ),
+    )
+
+
+@pytest.mark.unit
+def test_frequency_source_present_path_dumps_real_values():
+    """AC-6 counterpart: FrequencySource(present=True, rank=5, band='common') dumps real values.
+
+    AC-6 tests the absent-path shape; this test verifies the present-path
+    counterpart so that both branches of the present discriminator are pinned.
+    A regression (e.g. rank serializing to a string or band becoming null)
+    would break the LEXGEN-06-02 assembler and LEXGEN-06-03 gate.
+    """
+    (
+        FEATURE_KEYS,
+        EvidencePacket,
+        EvidencePacketSources,
+        FormBundle,
+        FrequencySource,
+        GreekLexiconSource,
+        RulesSource,
+        WiktionarySource,
+    ) = _import_symbols()
+
+    freq = FrequencySource(present=True, rank=5, band="common")
+    dumped = freq.model_dump(mode="json")
+
+    assert dumped == {"present": True, "rank": 5, "band": "common"}, (
+        f"FrequencySource present-path shape must be "
+        f"{{'present': True, 'rank': 5, 'band': 'common'}}, got: {dumped}"
+    )
+
+
+@pytest.mark.unit
+def test_rules_source_extra_kwarg_silently_dropped_not_serialized():
+    """Pin current extra='ignore' behavior: stray kwargs to RulesSource are silently dropped.
+
+    Pydantic's default is extra='ignore', meaning RulesSource(present=False,
+    stray_resolver='hello') constructs without error but the stray field does
+    NOT appear in model_dump().  AC-3's exact-equality check catches stray
+    fields IN THE DUMP, but not the silent construction.
+
+    This test documents and pins that behavior.
+
+    Design observation carried to LEXGEN-06-02/03: the schema has no
+    extra='forbid' guard.  For an auditable provenance stub this is a
+    provenance-integrity gap — a caller could pass undocumented kwargs and
+    believe they were stored.  If LEXGEN-06-02 adds resolver fields to
+    RulesSource, consider adding extra='forbid' to prevent silent data loss
+    at that point.
+    """
+    (
+        FEATURE_KEYS,
+        EvidencePacket,
+        EvidencePacketSources,
+        FormBundle,
+        FrequencySource,
+        GreekLexiconSource,
+        RulesSource,
+        WiktionarySource,
+    ) = _import_symbols()
+
+    # Construction succeeds silently (no ValidationError)
+    rules = RulesSource(present=False, stray_resolver="hello")
+
+    # Stray field does NOT appear in the dump
+    dumped = rules.model_dump(mode="json")
+    assert "stray_resolver" not in dumped, (
+        "Stray kwarg 'stray_resolver' must NOT appear in model_dump — "
+        "it should be silently dropped per extra='ignore' default"
+    )
+    assert dumped == {
+        "present": False
+    }, f"dump with stray kwarg must still equal {{'present': False}}, got: {dumped}"
+
+
+@pytest.mark.unit
+def test_evidence_packet_all_absent_sources_serializes():
+    """All-absent packet (every source present=False) is a valid and serializable state.
+
+    This represents the degenerate case where Stage 1 finds no evidence in any
+    source (all consultations returned absent).  The never-invent gate in
+    LEXGEN-06-03 must be able to handle this shape — it cannot assume any
+    source is present.
+    """
+    import json as _json
+
+    (
+        FEATURE_KEYS,
+        EvidencePacket,
+        EvidencePacketSources,
+        FormBundle,
+        FrequencySource,
+        GreekLexiconSource,
+        RulesSource,
+        WiktionarySource,
+    ) = _import_symbols()
+
+    packet = EvidencePacket(
+        lemma_input="ξ",
+        normalized_lemma="ξ",
+        pos="noun",
+        sources=EvidencePacketSources(
+            wiktionary=WiktionarySource(present=False),
+            greek_lexicon=GreekLexiconSource(present=False),
+            frequency=FrequencySource(present=False),
+            rules=RulesSource(present=False),
+        ),
+    )
+
+    # Must serialize without error
+    try:
+        _json.dumps(packet.model_dump(mode="json"))
+    except TypeError as exc:
+        pytest.fail(f"All-absent packet serialization raised TypeError: {exc}")
+
+    dumped = packet.model_dump(mode="json")
+    assert dumped["sources"]["wiktionary"] == {"present": False, "forms": []}
+    assert dumped["sources"]["greek_lexicon"] == {"present": False, "forms": []}
+    assert dumped["sources"]["frequency"] == {"present": False, "rank": None, "band": None}
+    assert dumped["sources"]["rules"] == {"present": False}
