@@ -245,4 +245,40 @@ describe('DxCover — ADMIN2-40 F6-A adversarial edge coverage', () => {
     ) as HTMLImageElement | null;
     expect(probeForOriginal).toBeNull();
   });
+
+  // Edge #D — stale displayedSrc when the same DxCover instance re-renders with a
+  // DIFFERENT deck (e.g. virtualized list row reuse).  useState(initialSrc) only seeds
+  // the FIRST render, so without a reset effect the old deck's cover stays painted.
+  //
+  // This test FAILS before the useEffect fix and PASSES after.
+  it('#D re-renders with a different deck paints the NEW deck cover, not the previous one', () => {
+    setDevicePixelRatio(1);
+
+    const deckB = {
+      id: 'deck-variants-2',
+      level: 'B1' as DeckLevel,
+      category: 'vocabulary' as DeckCategory,
+      coverImageVariants: {
+        400: 'b_400w.webp',
+        800: 'b_800w.webp',
+        1600: 'b_1600w.webp',
+      },
+      coverImageUrl: 'orig-b.png',
+    };
+
+    const { getByTestId, rerender } = render(<DxCover deck={variantsDeck} variant="card" />);
+
+    // First render: must show deck A's 800w cover.
+    let coverEl = getByTestId('dx-cover-img') as HTMLElement;
+    expect(coverEl.getAttribute('style')).toContain('a_800w.webp');
+
+    // Re-render the SAME DxCover instance with deck B.
+    rerender(<DxCover deck={deckB} variant="card" />);
+
+    // After re-render: must paint deck B's 800w cover, not the stale deck A cover.
+    coverEl = getByTestId('dx-cover-img') as HTMLElement;
+    const style = coverEl.getAttribute('style') ?? '';
+    expect(style).toContain('b_800w.webp');
+    expect(style).not.toContain('a_800w.webp');
+  });
 });

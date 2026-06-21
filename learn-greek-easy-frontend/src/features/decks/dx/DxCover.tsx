@@ -21,7 +21,7 @@
 //   - A hidden probe <img> fires onError when the selected WebP derivative 404s,
 //     swapping the painted background to deck.coverImageUrl (the original upload).
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { pickBestSrc } from '@/lib/imageVariants';
 import type { Deck } from '@/types/deck';
@@ -76,6 +76,13 @@ export function DxCover({ deck, variant = 'card', className, children }: DxCover
   // Guard against loops: if the original also fails, we clear the src so the gradient
   // shows through (the probe's onError is only wired when displayedSrc === initialSrc).
   const [displayedSrc, setDisplayedSrc] = useState<string | null | undefined>(initialSrc);
+
+  // Reset displayedSrc whenever initialSrc changes (e.g. same DxCover instance reused
+  // for a different deck in a virtualized list). useState only seeds the first render;
+  // without this effect the previous deck's cover would stay painted after a prop change.
+  useEffect(() => {
+    setDisplayedSrc(initialSrc);
+  }, [initialSrc]);
 
   // `has-cover` lets the scrim darken the left text column more on photo covers.
   const cls = ['dx-cover-host', displayedSrc && 'has-cover', className].filter(Boolean).join(' ');
