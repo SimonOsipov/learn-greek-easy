@@ -608,7 +608,7 @@ describe('parse-k6-results.cjs — adversarial / edge coverage (PERF-12-02)', ()
   // Defect: pct = Infinity (unguarded). formatDelta renders '+Infinity%'.
   // This test LOCKS the actual broken behavior so a future guard is explicit.
   // --------------------------------------------------------------------------
-  it('edge_zero_baseline_produces_infinity — DEFECT: formatDelta renders +Infinity% (unguarded div/0)', () => {
+  it('edge_zero_baseline_is_new — zero baseline treated as no-baseline (direction=new, no Infinity)', () => {
     const { mod } = loadModule();
     const computeDelta = mod.computeDelta as (
       current: number | null,
@@ -618,22 +618,18 @@ describe('parse-k6-results.cjs — adversarial / edge coverage (PERF-12-02)', ()
       delta: { absMs: number | null; pct: number | null; direction: string }
     ) => string;
 
-    // 0 baseline: == null check does NOT catch 0, so arithmetic runs
+    // 0 baseline: now guarded by baselineP95 <= 0 → returns 'new' shape
     const delta = computeDelta(1000, 0);
 
-    // pct = (1000 / 0) * 100 = Infinity; JSON serialises Infinity as null,
-    // but the runtime value IS Infinity — direction resolves to 'up' (Infinity > 0)
-    expect(delta.direction).toBe('up');
-    // The pct field holds Infinity (JSON.stringify shows null but runtime is not null)
-    expect(delta.pct).toBe(Infinity);
-    // absMs is well-defined (1000 - 0 = 1000)
-    expect(delta.absMs).toBe(1000);
+    expect(delta.direction).toBe('new');
+    expect(delta.absMs).toBeNull();
+    expect(delta.pct).toBeNull();
 
-    // formatDelta exposes the Infinity: produces '+1000ms (+Infinity%)' — a real defect
+    // formatDelta must render 'new', never '+Infinity%' or any NaN/Infinity string
     const rendered = formatDelta(delta);
-    // DEFECT: this renders Infinity literally in a GitHub PR comment markdown cell.
-    // A correct guard would return 'new' (baseline=0 is not a meaningful baseline).
-    expect(rendered).toBe('+1000ms (+Infinity%)');
+    expect(rendered).toBe('new');
+    expect(rendered).not.toContain('Infinity');
+    expect(rendered).not.toContain('NaN');
   });
 
   // --------------------------------------------------------------------------

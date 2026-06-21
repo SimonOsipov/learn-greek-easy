@@ -556,11 +556,14 @@ function readBaselines(baselinePath) {
  * @returns {{ absMs: number|null, pct: number|null, direction: 'new'|'flat'|'up'|'down' }}
  */
 function computeDelta(currentP95, baselineP95) {
-  if (currentP95 == null || baselineP95 == null) {
+  if (currentP95 == null || baselineP95 == null || baselineP95 <= 0) {
     return { absMs: null, pct: null, direction: 'new' };
   }
   const absMs = currentP95 - baselineP95;
   const pct = (absMs / baselineP95) * 100;
+  if (!isFinite(pct)) {
+    return { absMs: null, pct: null, direction: 'new' };
+  }
   let direction;
   if (Math.abs(pct) < 2) {
     direction = 'flat';
