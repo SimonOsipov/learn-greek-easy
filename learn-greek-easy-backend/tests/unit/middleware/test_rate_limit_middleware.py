@@ -485,6 +485,42 @@ class TestGetRateConfig:
                     config.key_prefix == "ratelimit:api"
                 ), f"Expected general key_prefix for {path}"
 
+    def test_real_auth_endpoints_get_general_config(self, middleware):
+        """Test that live auth endpoints resolve to the general rate config.
+
+        Adversarial guard: covers the real production auth endpoints
+        (/me, /logout, /logout-all) which were never in AUTH_PATHS but
+        sit under the /auth prefix. Ensures no future re-introduction of
+        a startswith('/api/v1/auth') branch accidentally catches them with
+        a tighter limit.
+        """
+        with patch("src.middleware.rate_limit.settings") as mock_settings:
+            mock_settings.rate_limit_per_minute = 200
+
+            for path in (
+                "/api/v1/auth/me",
+                "/api/v1/auth/logout",
+                "/api/v1/auth/logout-all",
+                "/api/v1/auth/avatar/upload-url",
+            ):
+                config = middleware._get_rate_config(path)
+                assert config.limit == 200, f"Expected general limit 200 for {path}"
+                assert config.key_prefix == "ratelimit:api", f"Expected ratelimit:api for {path}"
+
+    def test_authentication_prefix_collision_gets_general_config(self, middleware):
+        """Test that a path starting with /auth but not an exact former auth path
+        resolves to the general config.
+
+        Guards against a naive startswith('/api/v1/auth') re-introduction that
+        would also catch /api/v1/authentication or similar future paths.
+        """
+        with patch("src.middleware.rate_limit.settings") as mock_settings:
+            mock_settings.rate_limit_per_minute = 200
+
+            config = middleware._get_rate_config("/api/v1/authentication/sso")
+            assert config.limit == 200
+            assert config.key_prefix == "ratelimit:api"
+
 
 class TestRateLimitResponse:
     """Tests for _rate_limit_response method."""
