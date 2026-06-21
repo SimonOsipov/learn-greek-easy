@@ -1,0 +1,75 @@
+name: K6 Baseline Update
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'k6/baselines.json'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dev-release-lease
+  cancel-in-progress: false
+
+jobs:
+  k6-baseline-update:
+    name: Refresh k6 baselines
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    env:
+      DEV_FRONTEND_URL: frontend-dev-8db9.up.railway.app
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: grafana/setup-k6-action@v1
+        with:
+          browser: true
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - run: mkdir -p k6/reports
+
+      - name: Run smoke scenarios against dev (best-effort)
+        continue-on-error: true
+        env:
+          K6_ENV: preview
+          K6_API_BASE_URL: https://frontend-dev-8db9.up.railway.app
+          K6_FRONTEND_BASE_URL: https://frontend-dev-8db9.up.railway.app
+          K6_SCENARIO: smoke
+          K6_BROWSER_HEADLESS: 'true'
+          K6_BROWSER_ARGS: 'no-sandbox,disable-dev-shm-usage,disable-gpu'
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          k6 run k6/scenarios/auth.js 2>&1 | tee k6/reports/auth-output.txt || true
+          k6 run k6/scenarios/dashboard.js 2>&1 | tee k6/reports/dashboard-output.txt || true
+          k6 run k6/scenarios/api-latency.js 2>&1 | tee k6/reports/api-latency-output.txt || true
+
+      - name: Regenerate baselines
+        env:
+          K6_REPORTS_DIR: ./k6/reports
+          GITHUB_SHA: ${{ github.sha }}
+        run: node learn-greek-easy-frontend/scripts/write-k6-baseline.cjs
+
+      - name: Upload baselines artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: k6-baselines
+          path: k6/baselines.json
+
+      - name: Commit refreshed baselines (best-effort; branch protection may block bot push)
+        continue-on-error: true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- k6/baselines.json; then
+            echo "No baseline change."; exit 0
+          fi
+          git add k6/baselines.json
+          git commit -m "chore(k6): refresh baselines [skip ci]"
+          git push origin HEAD:main || echo "::warning::Direct push to main blocked by branch protection (required CI Gate; bot is not admin). Download the 'k6-baselines' artifact and commit k6/baselines.json (a repo admin can push directly — enforce_admins is off). See k6/README.md > k6 Baselines."

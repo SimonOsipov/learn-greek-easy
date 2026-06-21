@@ -624,4 +624,4 @@ function formatDelta(delta) {
 
 if (require.main === module) { main(); }
 
-module.exports = { extractPercentiles, formatMs, formatMetricValue, getMetricStatus, generateMetricsSection, getMetricLabel, generateMarkdown, AUTH_METRICS, DASHBOARD_METRICS, PROTOCOL_METRICS, readBaselines, computeDelta, formatDelta };
+module.exports = { extractPercentiles, formatMs, formatMetricValue, getMetricStatus, generateMetricsSection, getMetricLabel, generateMarkdown, AUTH_METRICS, DASHBOARD_METRICS, PROTOCOL_METRICS, readBaselines, computeDelta, formatDelta, findLatestReport, parseReport };
