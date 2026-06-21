@@ -578,3 +578,256 @@ describe('parse-k6-results.cjs — adversarial / edge coverage (PERF-12-01)', ()
     expect(writeSpy).not.toHaveBeenCalled();
   });
 });
+
+// ============================================================================
+// Adversarial / edge coverage (PERF-12-02 Mode B)
+// ============================================================================
+// These tests document the TRUE behavior of the implementation for every
+// adversarial edge case requested. Where the code has a genuine robustness
+// defect, the test LOCKS the actual (broken) output so CI catches any future
+// change — and the defect is reported to the executor separately.
+//
+// DEFECT FOUND (QA_FAILED flag below):
+//   computeDelta(1000, 0): zero baseline causes pct=Infinity (unguarded divide-
+//   by-zero). formatDelta then renders '+1000ms (+Infinity%)' in the PR comment
+//   markdown — not 'new', not 'flat', but a literal "+Infinity%" string.
+//   This is a real robustness bug against AC-2's "no error / first-run safe"
+//   spirit; a zero-baseline is an edge case that should render 'new' or a safe
+//   sentinel, not expose JavaScript's Infinity artefact in a GitHub comment.
+// ============================================================================
+
+describe('parse-k6-results.cjs — adversarial / edge coverage (PERF-12-02)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    const MODULE_PATH_INNER = path.resolve(process.cwd(), 'scripts/parse-k6-results.cjs');
+    delete require.cache[MODULE_PATH_INNER];
+  });
+
+  // --------------------------------------------------------------------------
+  // Division-by-zero / zero baseline
+  // Defect: pct = Infinity (unguarded). formatDelta renders '+Infinity%'.
+  // This test LOCKS the actual broken behavior so a future guard is explicit.
+  // --------------------------------------------------------------------------
+  it('edge_zero_baseline_produces_infinity — DEFECT: formatDelta renders +Infinity% (unguarded div/0)', () => {
+    const { mod } = loadModule();
+    const computeDelta = mod.computeDelta as (
+      current: number | null,
+      baseline: number | null
+    ) => { absMs: number | null; pct: number | null; direction: string };
+    const formatDelta = mod.formatDelta as (
+      delta: { absMs: number | null; pct: number | null; direction: string }
+    ) => string;
+
+    // 0 baseline: == null check does NOT catch 0, so arithmetic runs
+    const delta = computeDelta(1000, 0);
+
+    // pct = (1000 / 0) * 100 = Infinity; JSON serialises Infinity as null,
+    // but the runtime value IS Infinity — direction resolves to 'up' (Infinity > 0)
+    expect(delta.direction).toBe('up');
+    // The pct field holds Infinity (JSON.stringify shows null but runtime is not null)
+    expect(delta.pct).toBe(Infinity);
+    // absMs is well-defined (1000 - 0 = 1000)
+    expect(delta.absMs).toBe(1000);
+
+    // formatDelta exposes the Infinity: produces '+1000ms (+Infinity%)' — a real defect
+    const rendered = formatDelta(delta);
+    // DEFECT: this renders Infinity literally in a GitHub PR comment markdown cell.
+    // A correct guard would return 'new' (baseline=0 is not a meaningful baseline).
+    expect(rendered).toBe('+1000ms (+Infinity%)');
+  });
+
+  // --------------------------------------------------------------------------
+  // Null current p95 — handled safely by the == null guard
+  // --------------------------------------------------------------------------
+  it('edge_null_current_p95 — computeDelta(null, 1000) returns direction=new, does not throw', () => {
+    const { mod } = loadModule();
+    const computeDelta = mod.computeDelta as (
+      current: number | null,
+      baseline: number | null
+    ) => { absMs: number | null; pct: number | null; direction: string };
+    const formatDelta = mod.formatDelta as (
+      delta: { absMs: number | null; pct: number | null; direction: string }
+    ) => string;
+
+    let delta: { absMs: number | null; pct: number | null; direction: string } | null = null;
+    expect(() => {
+      delta = computeDelta(null, 1000);
+    }).not.toThrow();
+
+    // null current triggers the == null guard → direction='new', absMs=null, pct=null
+    expect(delta!.direction).toBe('new');
+    expect(delta!.absMs).toBeNull();
+    expect(delta!.pct).toBeNull();
+    expect(formatDelta(delta!)).toBe('new');
+  });
+
+  // --------------------------------------------------------------------------
+  // Malformed baselines file (real-fs write, no writeFileSync spy active)
+  // The spy from loadModule() is installed only on the require('fs') instance
+  // AFTER loadModule() runs. We capture real bindings BEFORE calling loadModule().
+  // --------------------------------------------------------------------------
+  it('edge_malformed_baselines_file — invalid JSON → readBaselines returns {metrics:{}}, no throw', () => {
+    // Capture real fs methods before loadModule installs its spy
+    const realWrite = fs.writeFileSync.bind(fs);
+    const realExists = fs.existsSync.bind(fs);
+    const realUnlink = fs.unlinkSync.bind(fs);
+
+    const { mod } = loadModule();
+    const readBaselines = mod.readBaselines as (
+      p: string
+    ) => { metrics: Record<string, unknown> };
+
+    const tmpPath = path.join(os.tmpdir(), `perf-12-02-malformed-${Date.now()}.json`);
+    realWrite(tmpPath, '{ not json', 'utf8');
+
+    try {
+      let result: { metrics: Record<string, unknown> } | null = null;
+      expect(() => {
+        result = readBaselines(tmpPath);
+      }).not.toThrow();
+
+      expect(result).not.toBeNull();
+      expect(result).toHaveProperty('metrics');
+      expect(result!.metrics).toEqual({});
+    } finally {
+      if (realExists(tmpPath)) realUnlink(tmpPath);
+    }
+  });
+
+  // --------------------------------------------------------------------------
+  // Baselines file missing the 'metrics' key entirely
+  // readBaselines uses `parsed.metrics || {}` so missing key → empty map.
+  // Downstream lookup of a metric → null → formatDelta renders 'new', no NaN.
+  // --------------------------------------------------------------------------
+  it('edge_baselines_no_metrics_key — {updated_at:"x"} → metrics:{}, downstream renders new', () => {
+    const realWrite = fs.writeFileSync.bind(fs);
+    const realExists = fs.existsSync.bind(fs);
+    const realUnlink = fs.unlinkSync.bind(fs);
+
+    const { mod } = loadModule();
+    const readBaselines = mod.readBaselines as (
+      p: string
+    ) => { metrics: Record<string, { p95: number }> };
+    const generateMetricsSection = mod.generateMetricsSection as (
+      title: string,
+      metrics: Record<string, unknown>,
+      metricConfig: Record<string, { label: string; threshold: number }>,
+      baselines?: Record<string, { p95: number }>
+    ) => string;
+    const AUTH_METRICS = mod.AUTH_METRICS as Record<string, { label: string; threshold: number }>;
+
+    const tmpPath = path.join(os.tmpdir(), `perf-12-02-no-metrics-${Date.now()}.json`);
+    realWrite(tmpPath, JSON.stringify({ updated_at: 'x' }), 'utf8');
+
+    try {
+      const result = readBaselines(tmpPath);
+      // metrics key is absent in JSON → `parsed.metrics || {}` → empty object
+      expect(result.metrics).toEqual({});
+
+      // Downstream: no baseline entry for auth_total_time → baselineP95=null → 'new'
+      const metricsObj = { auth_total_time: { values: { 'p(95)': 1200, med: 100 } } };
+      let output = '';
+      expect(() => {
+        output = generateMetricsSection('Test', metricsObj, AUTH_METRICS, result.metrics);
+      }).not.toThrow();
+
+      expect(output).toContain('new');
+      expect(output).not.toContain('NaN');
+      expect(output).not.toContain('undefined');
+    } finally {
+      if (realExists(tmpPath)) realUnlink(tmpPath);
+    }
+  });
+
+  // --------------------------------------------------------------------------
+  // Table alignment: every pipe-delimited row has the same column count
+  // Header and separator are fixed by the template; each data row must match.
+  // --------------------------------------------------------------------------
+  it('edge_delta_column_table_alignment — header, separator, and every data row have 9 pipes', () => {
+    const { mod } = loadModule();
+    const generateMetricsSection = mod.generateMetricsSection as (
+      title: string,
+      metrics: Record<string, unknown>,
+      metricConfig: Record<string, { label: string; threshold: number }>,
+      baselines?: Record<string, { p95: number }>
+    ) => string;
+    const AUTH_METRICS = mod.AUTH_METRICS as Record<string, { label: string; threshold: number }>;
+
+    const metricsObj = { auth_total_time: { values: { 'p(95)': 1200, med: 100 } } };
+    const baselinesMap = { auth_total_time: { p95: 1000 } };
+
+    const output = generateMetricsSection('Auth Flow Metrics', metricsObj, AUTH_METRICS, baselinesMap);
+
+    // Each markdown table row starts with '|'. Count pipes per row.
+    const tableRows = output.split('\n').filter((l) => l.trim().startsWith('|'));
+    expect(tableRows.length).toBeGreaterThan(0);
+
+    // The header row pipe count determines the expected column count for all rows
+    const headerPipeCount = (tableRows[0].match(/\|/g) ?? []).length;
+    // 8 columns (Metric | p50 | p90 | p95 | p99 | Δ vs main | Threshold | Status) = 9 pipes
+    expect(headerPipeCount).toBe(9);
+
+    for (const row of tableRows) {
+      const pipeCount = (row.match(/\|/g) ?? []).length;
+      expect(pipeCount).toBe(headerPipeCount);
+    }
+  });
+
+  // --------------------------------------------------------------------------
+  // formatDelta rounding: 1-decimal percent and correct sign on negative
+  // --------------------------------------------------------------------------
+  it('edge_formatDelta_rounding — 12.3% rounds to one decimal; negative delta has - sign', () => {
+    const { mod } = loadModule();
+    const computeDelta = mod.computeDelta as (
+      current: number,
+      baseline: number
+    ) => { absMs: number; pct: number; direction: string };
+    const formatDelta = mod.formatDelta as (
+      delta: { absMs: number; pct: number; direction: string }
+    ) => string;
+
+    // 1123 vs 1000: absMs=123, pct=12.3, direction='up'
+    const up = computeDelta(1123, 1000);
+    expect(up.absMs).toBe(123);
+    expect(up.pct).toBeCloseTo(12.3, 5);
+    expect(up.direction).toBe('up');
+    expect(formatDelta(up)).toBe('+123ms (+12.3%)');
+
+    // 877 vs 1000: absMs=-123, pct=-12.3, direction='down'
+    const down = computeDelta(877, 1000);
+    expect(down.absMs).toBe(-123);
+    expect(down.pct).toBeCloseTo(-12.3, 5);
+    expect(down.direction).toBe('down');
+    expect(formatDelta(down)).toBe('-123ms (-12.3%)');
+  });
+
+  // --------------------------------------------------------------------------
+  // Flat-band boundary: |pct| < 2 is STRICT — exactly 2.0% is NOT flat
+  // --------------------------------------------------------------------------
+  it('edge_flat_band_boundary — 2.0% exact is up (strict < 2); 1.9% is flat', () => {
+    const { mod } = loadModule();
+    const computeDelta = mod.computeDelta as (
+      current: number,
+      baseline: number
+    ) => { absMs: number; pct: number; direction: string };
+
+    // computeDelta(1020, 1000): absMs=20, pct=2.0 exactly
+    // Math.abs(2.0) < 2 is false → direction='up' (not flat)
+    const exactly2 = computeDelta(1020, 1000);
+    expect(exactly2.pct).toBe(2);
+    expect(exactly2.direction).toBe('up');
+
+    // computeDelta(1019, 1000): pct=1.9 → |1.9| < 2 is true → 'flat'
+    const justUnder2 = computeDelta(1019, 1000);
+    expect(justUnder2.direction).toBe('flat');
+
+    // computeDelta(981, 1000): pct=-1.9 → |−1.9| < 2 → 'flat'
+    const negJustUnder2 = computeDelta(981, 1000);
+    expect(negJustUnder2.direction).toBe('flat');
+
+    // computeDelta(980, 1000): pct=-2.0 → |−2| < 2 is false → pct < 0 → 'down'
+    const negExactly2 = computeDelta(980, 1000);
+    expect(negExactly2.pct).toBe(-2);
+    expect(negExactly2.direction).toBe('down');
+  });
+});
