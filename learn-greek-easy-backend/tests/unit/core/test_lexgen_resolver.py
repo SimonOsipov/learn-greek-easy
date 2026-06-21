@@ -849,3 +849,496 @@ class TestDR3NoConfidence:
                 f"Rung for source='{ev.source}' field='{ev.field}' "
                 f"set confidence={ev.confidence!r}; DR §3 requires None"
             )
+
+
+# ===========================================================================
+# Mode A — Chain-walk tests (LEXGEN-08-02, 14 Test Specs)
+#
+# These tests verify NounResolver.resolve() — the first-confident-wins walk,
+# disagreement / unresolved flagging, gender-before-declension dependency, and
+# IPA validator gating.  All tests FAIL RED because NounResolver.resolve raises
+# NotImplementedError until 08-02 is implemented.
+#
+# Pinned witness values (derived from real module outputs):
+#   derive_gender("θάλασσα")           -> "feminine"
+#   derive_gender("βιβλίο")            -> AMBIGUOUS  (ends -ο, no gender rule)
+#   derive_gender("καφές")             -> AMBIGUOUS  (ends -ς/-ης/-ας shared)
+#   derive_declension_group("βιβλίο", "neuter") -> "neuter_o"
+#   derive_declension_group("θάλασσα","feminine") -> "feminine_a"
+#   normalize_ipa("vivˈlio")           -> "vivlio"
+#   validate_ipa("βιβλίο", "vivˈlio") -> G2PResult(ok=True, reason=None)
+#   normalize_ipa("θaˈlasa")           -> "θalasa"
+#   validate_ipa("θάλασσα","θaˈlasa") -> G2PResult(ok=True, reason=None)
+#
+# NOTE: derive_gender("βιβλίο") is AMBIGUOUS (not "neuter").  Tests that need
+# βιβλίο resolved to "neuter" supply it via wikt_gender="neuter" in the packet
+# OR directly in ctx.resolved["gender"], bypassing the rules rung.
+# ===========================================================================
+
+
+@pytest.mark.unit
+class TestChainWalkFirstConfidentWins:
+    """AC-1: first rung with a non-null value becomes primary; remaining are cross-checks."""
+
+    def test_first_confident_rung_wins(self) -> None:
+        """Rules gender='feminine' (θάλασσα) AND wikt gender='feminine' -> primary source='rules'.
+
+        The rules rung is rank-1 co-rank-1 and returns a confident value ('feminine').
+        The wiktionary rung also returns 'feminine' but becomes a cross-check, not primary.
+        """
+        packet = _make_packet(
+            normalized_lemma="θάλασσα",
+            pos="noun",
+            rules_present=True,
+            wikt_present=True,
+            wikt_gender="feminine",
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("θάλασσα", packet)
+
+        gender_field = next(f for f in paradigm.fields if f.field == "gender")
+        assert gender_field.value == "feminine"
+        assert (
+            gender_field.source == "rules"
+        ), f"Expected primary source='rules' (first co-rank-1 rung), got '{gender_field.source}'"
+
+    def test_agreeing_lower_rung_no_flag(self) -> None:
+        """Rules='neuter'(*), wikt gender='neuter', lexicon gender='neuter' (βιβλίο) -> no flag.
+
+        (*) βιβλίο's rules rung returns AMBIGUOUS (ends -ο, no gender rule), so the
+        ACTUAL primary here is wiktionary.  Both wikt and lexicon agree -> flags empty.
+        We supply wikt_gender='neuter' and lexicon forms with gender='neuter'.
+        """
+        forms = [
+            FormBundle(
+                form="βιβλίο",
+                features={"case": "nominative", "number": "singular", "gender": "neuter"},
+            ),
+            FormBundle(
+                form="βιβλίου",
+                features={"case": "genitive", "number": "singular", "gender": "neuter"},
+            ),
+        ]
+        packet = _make_packet(
+            normalized_lemma="βιβλίο",
+            pos="noun",
+            rules_present=True,
+            wikt_present=True,
+            wikt_gender="neuter",
+            lexicon_present=True,
+            lexicon_forms=forms,
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("βιβλίο", packet)
+
+        gender_field = next(f for f in paradigm.fields if f.field == "gender")
+        assert gender_field.value == "neuter"
+        # No disagreement flags — all sources agree
+        disagreement_flags = [fl for fl in gender_field.flags if fl.startswith("disagreement:")]
+        assert (
+            disagreement_flags == []
+        ), f"Agreeing sources must produce no disagreement flags; got {gender_field.flags}"
+        assert (
+            "gender" not in paradigm.flagged_fields
+        ), "Agreeing gender field must NOT appear in flagged_fields"
+        # cross_checks for gender must all agree
+        if "gender" in paradigm.cross_checks:
+            for cc in paradigm.cross_checks["gender"]:
+                assert (
+                    cc.value == "neuter"
+                ), f"Cross-check source='{cc.source}' should agree value='neuter', got '{cc.value}'"
+
+    def test_lower_rank_disagreement_flags_field(self) -> None:
+        """Wikt gender='masculine' (rank-1 primary, rules AMBIGUOUS), lexicon='feminine' (rank-2).
+
+        Primary = wikt (first confident rung at rank-1).  Lexicon disagrees at rank-2
+        -> flag 'disagreement:gender:wiktionary!=lexicon' AND 'gender' in flagged_fields.
+        Primary value 'masculine' is still returned (AC-2).
+        """
+        forms = [
+            FormBundle(
+                form="ποιητής",
+                features={"case": "nominative", "number": "singular", "gender": "feminine"},
+            )
+        ]
+        packet = _make_packet(
+            normalized_lemma="ποιητής",
+            pos="noun",
+            rules_present=True,
+            wikt_present=True,
+            wikt_gender="masculine",
+            lexicon_present=True,
+            lexicon_forms=forms,
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("ποιητής", packet)
+
+        gender_field = next(f for f in paradigm.fields if f.field == "gender")
+        assert (
+            gender_field.value == "masculine"
+        ), f"Primary value must be 'masculine' (wikt primary), got '{gender_field.value}'"
+        assert (
+            "disagreement:gender:wiktionary!=lexicon" in gender_field.flags
+        ), f"Expected 'disagreement:gender:wiktionary!=lexicon' in flags, got {gender_field.flags}"
+        assert (
+            "gender" in paradigm.flagged_fields
+        ), "Field with disagreement must appear in flagged_fields"
+
+    def test_corank_disagreement_also_flags_field(self) -> None:
+        """Co-rank-1 rules='neuter' (βιβλίο — WAIT: rules AMBIGUOUS for βιβλίο).
+
+        Use θάλασσα where rules give 'feminine', then supply wikt gender='masculine'
+        to get a genuine co-rank-1 disagreement.  Rules wins (D2 priority rules>wikt).
+        Expected: value='feminine', source='rules', flag 'disagreement:gender:rules!=wiktionary',
+        'gender' in flagged_fields.
+        """
+        packet = _make_packet(
+            normalized_lemma="θάλασσα",
+            pos="noun",
+            rules_present=True,
+            wikt_present=True,
+            wikt_gender="masculine",  # deliberate mismatch at co-rank-1
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("θάλασσα", packet)
+
+        gender_field = next(f for f in paradigm.fields if f.field == "gender")
+        assert (
+            gender_field.source == "rules"
+        ), f"rules rung must win at co-rank-1 (D2 priority), got source='{gender_field.source}'"
+        assert gender_field.value == "feminine"
+        assert (
+            "disagreement:gender:rules!=wiktionary" in gender_field.flags
+        ), f"Expected co-rank-1 disagreement flag, got {gender_field.flags}"
+        assert "gender" in paradigm.flagged_fields
+
+    def test_no_confident_source_unresolved_flag(self) -> None:
+        """Rules AMBIGUOUS, wikt gender=None, lexicon no gender -> unresolved:gender + flagged.
+
+        Expected: ResolvedField(field='gender', value=None, source='none'),
+        'unresolved:gender' in flags, 'gender' in flagged_fields.
+        """
+        packet = _make_packet(
+            normalized_lemma="καφές",
+            pos="noun",
+            rules_present=True,
+            wikt_present=True,
+            wikt_gender=None,  # no gender from wikt
+            lexicon_present=True,
+            lexicon_forms=[],  # no forms -> lexicon gender rung skipped
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("καφές", packet)
+
+        gender_field = next(f for f in paradigm.fields if f.field == "gender")
+        assert (
+            gender_field.value is None
+        ), f"No confident source -> value must be None, got '{gender_field.value}'"
+        assert (
+            gender_field.source == "none"
+        ), f"No confident source -> source must be 'none', got '{gender_field.source}'"
+        assert (
+            "unresolved:gender" in gender_field.flags
+        ), f"Expected 'unresolved:gender' in flags, got {gender_field.flags}"
+        assert "gender" in paradigm.flagged_fields
+
+
+@pytest.mark.unit
+class TestChainWalkLemmaExists:
+    """AC-4: co-rank-1 lemma_exists; agreeing across wikt/lexicon/frequency -> no flag."""
+
+    def test_corank_lemma_exists_priority_and_agreement(self) -> None:
+        """wikt.present=True, lexicon.present=True, freq.present=True -> primary='wiktionary', no flag.
+
+        D2 priority: wiktionary is first co-rank-1 rung for lemma_exists -> primary source.
+        All three agree on value 'true' -> no disagreement flag, lemma_exists NOT in flagged_fields.
+        """
+        packet = _make_packet(
+            normalized_lemma="θάλασσα",
+            pos="noun",
+            wikt_present=True,
+            lexicon_present=True,
+            freq_present=True,
+            freq_rank=100,
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("θάλασσα", packet)
+
+        le_field = next((f for f in paradigm.fields if f.field == "lemma_exists"), None)
+        assert le_field is not None, "lemma_exists must be present in resolved fields"
+        assert le_field.value == "true"
+        assert (
+            le_field.source == "wiktionary"
+        ), f"D2 priority: wiktionary must be primary for lemma_exists, got '{le_field.source}'"
+        assert (
+            "lemma_exists" not in paradigm.flagged_fields
+        ), "All three sources agree on 'true' -> lemma_exists must NOT be in flagged_fields"
+
+
+@pytest.mark.unit
+class TestChainWalkDeclensionDependency:
+    """AC-5: gender resolved before declension_group; ambiguous/None gender -> Rules rung skipped."""
+
+    def test_declension_skips_rule_rung_when_gender_ambiguous(self) -> None:
+        """καφές: rules gender AMBIGUOUS -> ctx.resolved['gender'] is None -> declension Rules rung skipped.
+
+        If no other source supplies declension_group either, field is unresolved.
+        The key invariant: the Rules rung must NOT be called (it would fabricate a group
+        without a valid gender). We observe this by checking the field is unresolved
+        (not 'masculine_is' or any fabricated value).
+        """
+        packet = _make_packet(
+            normalized_lemma="καφές",
+            pos="noun",
+            rules_present=True,
+            wikt_present=True,
+            wikt_gender=None,
+            lexicon_present=True,
+            lexicon_forms=[],
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("καφές", packet)
+
+        decl_field = next((f for f in paradigm.fields if f.field == "declension_group"), None)
+        if decl_field is not None:
+            # The Rules rung must NOT have produced a value; it was skipped because gender is None.
+            # The field may be unresolved (value=None, source='none') if no other rung supplies it.
+            assert decl_field.value != "masculine_is", (
+                "Rules rung must be skipped when gender is None/AMBIGUOUS; "
+                "must not produce masculine_is"
+            )
+        # If decl_field is not present in fields at all, that is also acceptable
+        # (implementation may omit fields with no rungs returning a value).
+        # The important invariant is no fabricated group from the Rules rung.
+
+    def test_resolved_gender_threaded_into_declension_rung(self) -> None:
+        """βιβλίο: rules gender AMBIGUOUS, wikt gender='neuter' -> ctx.resolved['gender']='neuter'.
+
+        After gender is resolved to 'neuter' (from wikt), the declension Rules rung is called
+        with ('βιβλίο', 'neuter') -> derive_declension_group returns 'neuter_o'.
+        Expected: declension_group primary value == 'neuter_o', source == 'rules'.
+        """
+        packet = _make_packet(
+            normalized_lemma="βιβλίο",
+            pos="noun",
+            rules_present=True,
+            wikt_present=True,
+            wikt_gender="neuter",  # rules is AMBIGUOUS for βιβλίο; wikt supplies gender
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("βιβλίο", packet)
+
+        decl_field = next((f for f in paradigm.fields if f.field == "declension_group"), None)
+        assert (
+            decl_field is not None
+        ), "declension_group must be present in resolved fields when gender is 'neuter'"
+        assert (
+            decl_field.value == "neuter_o"
+        ), f"derive_declension_group('βιβλίο','neuter')='neuter_o'; got '{decl_field.value}'"
+        assert decl_field.source == "rules"
+
+
+@pytest.mark.unit
+class TestChainWalkIpa:
+    """AC-5: IPA Rules rung only runs when wikt.pronunciation is non-null."""
+
+    def test_ipa_rule_rung_skipped_without_candidate(self) -> None:
+        """wikt.pronunciation=None -> Rules validator not run; no wikt pronunciation either -> unresolved.
+
+        Expected: ipa field value=None, source='none', 'unresolved:ipa' in flags.
+        """
+        packet = _make_packet(
+            normalized_lemma="βιβλίο",
+            pos="noun",
+            wikt_present=True,
+            wikt_pronunciation=None,
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("βιβλίο", packet)
+
+        ipa_field = next((f for f in paradigm.fields if f.field == "ipa"), None)
+        if ipa_field is not None:
+            assert ipa_field.value is None, "No pronunciation candidate -> ipa value must be None"
+            assert (
+                ipa_field.source == "none"
+            ), f"No pronunciation -> source must be 'none', got '{ipa_field.source}'"
+            assert (
+                "unresolved:ipa" in ipa_field.flags
+            ), f"Expected 'unresolved:ipa' in flags, got {ipa_field.flags}"
+
+    def test_ipa_taken_unvalidated_when_only_wiktionary(self) -> None:
+        """wikt.pronunciation present but NO rules candidate path results in wikt value + ipa_unvalidated.
+
+        IMPORTANT: The IPA chain is:
+          rung-0: Rules (validates wikt candidate — but returns None when wikt has NO pronunciation)
+          rung-1: _wiktionary_pronunciation_rung (raw wikt value, no validation)
+
+        When wikt.pronunciation IS present, the Rules rung IS called first (it validates the
+        candidate).  To get the 'ipa_unvalidated' scenario we need the Rules rung to return
+        value=None (i.e., validate_ipa fails, flags ipa_invalid) AND the wikt rung to be primary.
+
+        Use a pronunciation string with illegal IPA symbols to force Rules to fail.
+        Illegal symbol 'Q' (uppercase Q is not in the Greek phoneme inventory).
+        Expected: value=='QBAD' (raw wikt), source='wiktionary', flag 'ipa_unvalidated'.
+
+        NOTE: The spec says 'ipa_unvalidated' fires when 'no rules candidate path'.
+        In the actual chain, the Rules rung IS present when wikt.pronunciation is non-null;
+        it either validates (-> primary 'rules') or fails (-> value=None + ipa_invalid flag;
+        chain continues to wikt rung which becomes primary with 'ipa_unvalidated').
+        """
+        illegal_ipa = "QBAD"  # 'Q' is illegal in GREEK_PHONEME_INVENTORY
+        packet = _make_packet(
+            normalized_lemma="τεστ",
+            pos="noun",
+            wikt_present=True,
+            wikt_pronunciation=illegal_ipa,
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("τεστ", packet)
+
+        ipa_field = next((f for f in paradigm.fields if f.field == "ipa"), None)
+        assert ipa_field is not None, "ipa field must be present when wikt.pronunciation is set"
+        assert (
+            ipa_field.value == illegal_ipa
+        ), f"Wikt raw value must be primary when Rules rung fails; got '{ipa_field.value}'"
+        assert (
+            ipa_field.source == "wiktionary"
+        ), f"Source must be 'wiktionary' when Rules validation fails, got '{ipa_field.source}'"
+        assert "ipa_unvalidated" in ipa_field.flags, (
+            f"Expected 'ipa_unvalidated' in flags when wikt value taken without validation, "
+            f"got {ipa_field.flags}"
+        )
+
+    def test_ipa_rule_validates_wiktionary_candidate(self) -> None:
+        """wikt.pronunciation='θaˈlasa' (legal IPA) -> Rules rung validates -> primary source='rules'.
+
+        normalize_ipa('θaˈlasa') = 'θalasa' — all chars in GREEK_PHONEME_INVENTORY.
+        validate_ipa returns ok=True -> ipa_evidence returns value='θalasa', source='rules'.
+        Expected: ipa field value='θalasa', source='rules', no ipa_unvalidated/ipa_invalid flag.
+        """
+        packet = _make_packet(
+            normalized_lemma="θάλασσα",
+            pos="noun",
+            wikt_present=True,
+            wikt_pronunciation="θaˈlasa",
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("θάλασσα", packet)
+
+        ipa_field = next((f for f in paradigm.fields if f.field == "ipa"), None)
+        assert ipa_field is not None, "ipa field must be present when pronunciation is supplied"
+        assert (
+            ipa_field.value == "θalasa"
+        ), f"normalize_ipa('θaˈlasa')='θalasa'; got '{ipa_field.value}'"
+        assert (
+            ipa_field.source == "rules"
+        ), f"Rules rung validates the legal IPA -> source must be 'rules', got '{ipa_field.source}'"
+        bad_flags = [fl for fl in ipa_field.flags if fl.startswith("ipa_")]
+        assert (
+            bad_flags == []
+        ), f"No ipa_* flags expected when validation passes; got {ipa_field.flags}"
+
+
+@pytest.mark.unit
+class TestChainWalkRuleAmbiguousPropagated:
+    """Rule-ambiguous evidence carries the flag but does NOT become primary (never-invent)."""
+
+    def test_rule_ambiguous_flag_propagated_not_primary(self) -> None:
+        """Rules gender AMBIGUOUS (καφές) but wikt gender='feminine' -> primary=wikt, flag carried.
+
+        The Rules rung returns FieldEvidence(value=None, flags=['rule_ambiguous']).
+        'rule_ambiguous' must appear in the resolved gender field's flags (carried through),
+        but the primary value must be 'feminine' from wiktionary (not None from rules).
+        """
+        packet = _make_packet(
+            normalized_lemma="καφές",
+            pos="noun",
+            rules_present=True,
+            wikt_present=True,
+            wikt_gender="feminine",
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("καφές", packet)
+
+        gender_field = next(f for f in paradigm.fields if f.field == "gender")
+        assert (
+            gender_field.value == "feminine"
+        ), f"Primary must be wikt 'feminine'; got '{gender_field.value}'"
+        assert (
+            gender_field.source == "wiktionary"
+        ), f"Primary source must be 'wiktionary'; got '{gender_field.source}'"
+        assert "rule_ambiguous" in gender_field.flags, (
+            f"rule_ambiguous flag from the Rules rung must be carried into the field; "
+            f"got {gender_field.flags}"
+        )
+
+
+@pytest.mark.unit
+class TestChainWalkNoNumericConfidence:
+    """AC-6: every ResolvedField.confidence is None; no numeric constant from {0.05,0.20,...}."""
+
+    _FORBIDDEN_CONSTANTS: frozenset[float] = frozenset({0.05, 0.20, 0.85, 0.90, 0.75})
+
+    def test_no_numeric_routing_confidence_is_none(self) -> None:
+        """Any resolved paradigm: all ResolvedField.confidence values must be None (DR §3).
+
+        Also checks that none of the forbidden routing constants appear as confidence values.
+        """
+        forms = [
+            FormBundle(
+                form="θάλασσα",
+                features={"case": "nominative", "number": "singular", "gender": "feminine"},
+            )
+        ]
+        packet = _make_packet(
+            normalized_lemma="θάλασσα",
+            pos="noun",
+            rules_present=True,
+            wikt_present=True,
+            wikt_gender="feminine",
+            wikt_pronunciation="θaˈlasa",
+            wikt_forms=forms,
+            lexicon_present=True,
+            lexicon_forms=forms,
+            freq_present=True,
+            freq_rank=7,
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("θάλασσα", packet)
+
+        assert paradigm.fields, "Paradigm must have at least one resolved field"
+        for rf in paradigm.fields:
+            assert rf.confidence is None, (
+                f"ResolvedField field='{rf.field}' has confidence={rf.confidence!r}; "
+                f"DR §3 requires None"
+            )
+            if rf.confidence is not None:
+                assert (
+                    rf.confidence not in self._FORBIDDEN_CONSTANTS
+                ), f"Forbidden routing constant {rf.confidence} found in field '{rf.field}'"
+
+
+@pytest.mark.unit
+class TestChainWalkFrequencyRank:
+    """AC-1/F8: frequency_rank is resolved from packet.sources.frequency.rank as str."""
+
+    def test_frequency_rank_resolved_from_packet(self) -> None:
+        """freq.rank=42 -> resolve frequency_rank -> value='42' (int->str, F8), source='frequency'.
+
+        Expected: ResolvedField(field='frequency_rank', value='42', source='frequency').
+        """
+        packet = _make_packet(
+            normalized_lemma="θάλασσα",
+            pos="noun",
+            freq_present=True,
+            freq_rank=42,
+        )
+        resolver = NounResolver()
+        paradigm = resolver.resolve("θάλασσα", packet)
+
+        freq_field = next((f for f in paradigm.fields if f.field == "frequency_rank"), None)
+        assert freq_field is not None, "frequency_rank must be present when freq.rank=42"
+        assert (
+            freq_field.value == "42"
+        ), f"int rank must be converted to str '42'; got '{freq_field.value}'"
+        assert freq_field.source == "frequency"
