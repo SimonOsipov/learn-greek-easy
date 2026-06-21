@@ -17,16 +17,14 @@ from __future__ import annotations
 
 from typing import Callable
 
-from src.core.lexgen_g2p import (  # noqa: F401 — used by adapters after Stage 3
-    G2PResult,
-    validate_ipa,
-)
-from src.core.lexgen_rules import (  # noqa: F401 — used by adapters after Stage 3
+from src.core.lexgen_g2p import validate_ipa
+from src.core.lexgen_rules import (
     AMBIGUOUS,
     derive_declension_group,
     derive_gender,
 )
 from src.schemas.lexgen import FieldEvidence
+from src.utils.greek_text import normalize_ipa
 
 # ---------------------------------------------------------------------------
 # Type alias
@@ -48,7 +46,10 @@ def gender_evidence(lemma: str) -> FieldEvidence:
       value=<gender string> when derive_gender resolves unambiguously
       value=None, flags=["rule_ambiguous"] when derive_gender returns AMBIGUOUS
     """
-    raise NotImplementedError
+    g = derive_gender(lemma)
+    if g is AMBIGUOUS:
+        return FieldEvidence(source="rules", field="gender", value=None, flags=["rule_ambiguous"])
+    return FieldEvidence(source="rules", field="gender", value=g)
 
 
 def declension_group_evidence(lemma: str, gender: str) -> FieldEvidence:
@@ -59,7 +60,12 @@ def declension_group_evidence(lemma: str, gender: str) -> FieldEvidence:
       value=<group string> when derive_declension_group resolves unambiguously
       value=None, flags=["rule_ambiguous"] when derive_declension_group returns AMBIGUOUS
     """
-    raise NotImplementedError
+    grp = derive_declension_group(lemma, gender)
+    if grp is AMBIGUOUS:
+        return FieldEvidence(
+            source="rules", field="declension_group", value=None, flags=["rule_ambiguous"]
+        )
+    return FieldEvidence(source="rules", field="declension_group", value=grp)
 
 
 def ipa_evidence(lemma: str, candidate_ipa: str) -> FieldEvidence:
@@ -70,7 +76,10 @@ def ipa_evidence(lemma: str, candidate_ipa: str) -> FieldEvidence:
       value=<normalized ipa> when validate_ipa passes (ok=True)
       value=None, flags=["ipa_invalid:<reason>"] when validate_ipa fails (ok=False)
     """
-    raise NotImplementedError
+    r = validate_ipa(lemma, candidate_ipa)
+    if r.ok:
+        return FieldEvidence(source="rules", field="ipa", value=normalize_ipa(candidate_ipa))
+    return FieldEvidence(source="rules", field="ipa", value=None, flags=[f"ipa_invalid:{r.reason}"])
 
 
 # ---------------------------------------------------------------------------
