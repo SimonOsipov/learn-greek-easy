@@ -497,15 +497,23 @@ class TestDeclensionRuleRung:
 
 
 @pytest.mark.unit
-class TestNounResolverSkeletonExists:
-    """NounResolver.resolve must exist as an empty skeleton that raises NotImplementedError (08-02 fills it)."""
+class TestNounResolverImplemented:
+    """NounResolver.resolve is implemented in 08-02 — it returns a ResolvedParadigm.
 
-    def test_noun_resolver_resolve_raises_not_implemented(self) -> None:
-        """NounResolver.resolve is an empty skeleton; calling it raises NotImplementedError."""
+    (Was the 08-01 skeleton guard asserting NotImplementedError; 08-02 replaces
+    the skeleton with the chain walk, so the guard is rewritten to assert the new
+    behaviour rather than deleted — it keeps the ownership of the transition
+    traceable.)
+    """
+
+    def test_noun_resolver_resolve_returns_paradigm(self) -> None:
+        """NounResolver.resolve no longer raises; it returns a ResolvedParadigm for the lemma/pos."""
         resolver = NounResolver()
         packet = _make_packet()
-        with pytest.raises(NotImplementedError):
-            resolver.resolve("θάλασσα", packet)
+        paradigm = resolver.resolve("θάλασσα", packet)
+        assert isinstance(paradigm, ResolvedParadigm)
+        assert paradigm.lemma == "θάλασσα"
+        assert paradigm.pos == "noun"
 
 
 # ---------------------------------------------------------------------------

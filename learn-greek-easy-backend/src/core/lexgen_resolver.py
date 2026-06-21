@@ -18,12 +18,10 @@ What ships in 08-01 (this subtask)
   ``packet.sources.*`` (NEVER a top-level packet attribute) and either returns
   one source's evidence or ``None`` when that source is absent (rung skipped —
   never a fabricated value).
-- ``NounResolver`` with an EMPTY ``resolve`` skeleton.
+- ``NounResolver`` with the first-confident-wins chain walk (filled in 08-02).
 
 What does NOT ship here
 -----------------------
-- The chain walk itself (``NounResolver.resolve`` is a ``NotImplementedError``
-  skeleton; the walk lands in 08-02).
 - The reconciler service (08-03).
 
 Rules rungs delegate to ``src/core/lexgen_authority.py`` via
@@ -46,6 +44,7 @@ from src.schemas.lexgen import (
     FieldEvidence,
     FormBundle,
     ResolutionContext,
+    ResolvedField,
     ResolvedParadigm,
 )
 
@@ -72,12 +71,141 @@ class MorphologyResolver(Protocol):
 class NounResolver:
     """Resolver for ``pos == "noun"``.
 
-    The chain walk is implemented in 08-02; here ``resolve`` is an EMPTY
-    skeleton that raises ``NotImplementedError``.
+    Walks each ``("noun", field)`` chain in :data:`NOUN_CHAINS` and produces a
+    :class:`ResolvedParadigm`. The walk is first-confident-wins: the first rung
+    returning a non-null value is the field's PRIMARY (D1 — "confident" simply
+    means a non-null value; there is no ``>= τ`` gate). Lower- and co-rank rungs
+    that also return a value become cross-checks; a cross-check whose value
+    differs from the primary flags the field (F6). No confident rung leaves the
+    field Unresolved (``value=None``, ``source="none"``) with an
+    ``unresolved:<field>`` flag.
+
+    Decision Record §3: ``confidence`` is inert / logged-only — it is carried
+    through from the primary rung (always ``None`` in v1) and NEVER read to route
+    a decision. There is NO numeric ``adjust()`` / arithmetic anywhere in this
+    walk; the §6 schematic's numeric step is intentionally omitted (DR §3).
     """
 
+    # Fields resolved in DEPENDENCY order so ``gender`` is written to
+    # ``ctx.resolved`` before ``declension_group`` runs (D3 — the declension
+    # Rules rung reads ``ctx.resolved["gender"]``).
+    _FIELD_ORDER: tuple[str, ...] = (
+        "gender",
+        "declension_group",
+        "declension_forms",
+        "ipa",
+        "pos",
+        "lemma_exists",
+        "frequency_rank",
+    )
+
     def resolve(self, lemma: str, packet: EvidencePacket) -> ResolvedParadigm:
-        raise NotImplementedError("NounResolver.resolve is implemented in LEXGEN-08-02")
+        ctx = ResolutionContext(lemma=lemma, resolved={})
+        fields: list[ResolvedField] = []
+        cross_checks: dict[str, list[FieldEvidence]] = {}
+
+        for field in self._FIELD_ORDER:
+            resolved_field, considered = self._resolve_field(field, packet, ctx)
+            fields.append(resolved_field)
+            if considered:
+                cross_checks[field] = considered
+
+        # ``flagged_fields`` is the reconciler's "needs a human look" subset: a
+        # field is flagged only when it carries an ACTIONABLE reconciliation flag
+        # (``disagreement:*`` or ``unresolved:*``). Pure audit/provenance flags
+        # (``rule_ambiguous`` / ``ipa_unvalidated`` / ``lexicon_gender_inconsistent``)
+        # stay in ``ResolvedField.flags`` for observability but do NOT by
+        # themselves mark a field — an ambiguous rule that a confident source
+        # then covered is not a problem to surface. (This narrows the
+        # task-description's "any non-empty flags" wording to match the
+        # committed chain-walk tests, e.g. test_agreeing_lower_rung_no_flag where
+        # rule_ambiguous is carried but gender is NOT flagged — see 08-03/QA.)
+        flagged_fields = [
+            rf.field
+            for rf in fields
+            if any(fl.startswith(("disagreement:", "unresolved:")) for fl in rf.flags)
+        ]
+
+        return ResolvedParadigm(
+            lemma=lemma,
+            pos=packet.pos,
+            fields=fields,
+            cross_checks=cross_checks,
+            flagged_fields=flagged_fields,
+        )
+
+    def _resolve_field(
+        self, field: str, packet: EvidencePacket, ctx: ResolutionContext
+    ) -> tuple[ResolvedField, list[FieldEvidence]]:
+        """Walk one field's chain, returning its ResolvedField + considered cross-checks.
+
+        Side effect: writes the chosen value (or ``None``) into
+        ``ctx.resolved[field]`` so a later, dependent field's rung can read it
+        (progressive resolution, D3).
+        """
+        chain = NOUN_CHAINS[(packet.pos, field)]
+        flags: list[str] = []
+        primary: FieldEvidence | None = None
+        cross_checks: list[FieldEvidence] = []
+
+        for rung in chain:
+            ev = rung(packet, ctx)
+            if ev is None or ev.value is None:
+                # Not confident (D1). Carry forward any audit flags the skipped
+                # rung emitted (rule_ambiguous / lexicon_gender_inconsistent),
+                # so the never-invent provenance survives even though this rung
+                # did not win. EXCEPTION (ipa, DR/spec): the Rules ipa rung's
+                # ``ipa_invalid:*`` is NEVER propagated onto the final field — it
+                # stays inside that rung's own evidence; the ``ipa_unvalidated``
+                # marker is added below purely because the raw wiktionary rung
+                # became primary.
+                if ev is not None and ev.flags:
+                    flags.extend(self._carry_flags(field, ev.flags))
+                continue
+            if primary is None:
+                primary = ev
+            else:
+                cross_checks.append(ev)
+                if ev.value != primary.value:
+                    flags.append(f"disagreement:{field}:{primary.source}!={ev.source}")
+
+        if primary is None:
+            flags.append(f"unresolved:{field}")
+            ctx.resolved[field] = None
+            return (
+                ResolvedField(field=field, value=None, source="none", flags=flags),
+                cross_checks,
+            )
+
+        # The raw Wiktionary pronunciation rung becoming primary for ``ipa`` means
+        # the value was taken WITHOUT the G2P validator confirming it (the Rules
+        # rung either was absent or returned value=None). Mark it as unvalidated.
+        if field == "ipa" and primary.source == "wiktionary":
+            flags.append("ipa_unvalidated")
+
+        ctx.resolved[field] = primary.value
+        return (
+            ResolvedField(
+                field=field,
+                value=primary.value,
+                source=primary.source,
+                confidence=primary.confidence,  # inert None passed through (DR §3)
+                flags=flags,
+            ),
+            cross_checks,
+        )
+
+    @staticmethod
+    def _carry_flags(field: str, rung_flags: list[str]) -> list[str]:
+        """Filter a skipped rung's flags before carrying them onto the field.
+
+        For ``ipa`` the Rules rung's ``ipa_invalid:*`` flag is dropped (it stays
+        inside that rung's own evidence; the field instead gets ``ipa_unvalidated``
+        when the raw wiktionary rung wins). All other flags pass through.
+        """
+        if field == "ipa":
+            return [fl for fl in rung_flags if not fl.startswith("ipa_invalid")]
+        return list(rung_flags)
 
 
 # Per-POS resolver registry. Additive by construction: registering a verb
