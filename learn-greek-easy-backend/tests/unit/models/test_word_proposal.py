@@ -156,6 +156,7 @@ class TestWordProposalModel:
             "reconciliation_log",
             "judge_scores",
             "flagged_fields",
+            "generated_content",
         ):
             assert WordProposal.__table__.columns[name].nullable is True, name
 
@@ -177,6 +178,7 @@ class TestWordProposalModel:
             "reconciliation_log",
             "judge_scores",
             "flagged_fields",
+            "generated_content",
         ):
             assert isinstance(WordProposal.__table__.columns[name].type, JSONB), name
 

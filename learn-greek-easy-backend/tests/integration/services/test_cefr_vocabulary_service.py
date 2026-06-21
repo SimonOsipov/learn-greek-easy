@@ -3,7 +3,7 @@
 Tests the closed-vocabulary lemma-set assembly from reference.cefr_lemma:
   - Level arm: include rows where CEFR_ORDER.index(level) <= CEFR_ORDER.index(target)
   - Closed-class arm: always include rows where closed_class == True
-  - Target lemma: always included even if absent from cefr_lemma
+  - Target lemma: NOT added by this service; the generator unions it separately
   - Fail-safe: rows with a level NOT in CEFR_ORDER are EXCLUDED (narrower set)
 
 These tests require a real Postgres db_session (function-scoped AsyncSession at :5433).

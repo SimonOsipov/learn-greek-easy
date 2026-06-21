@@ -228,9 +228,9 @@ class LexgenGeneratorService:
         # All 3 attempts exhausted → hard reject.
         # transition() is the ONLY status mutation; IllegalProposalTransition
         # deliberately propagates (AC #8 — not wrapped in try/except).
+        transition(proposal, WordProposalState.REJECTED)
         proposal.retry_attempts = attempts
         proposal.rejection_reason = f"generation_invalid_after_retries: {last_error}"
-        transition(proposal, WordProposalState.REJECTED)
         await self.db.flush()
 
 
