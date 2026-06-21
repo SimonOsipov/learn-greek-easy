@@ -6,6 +6,7 @@
 // NADM-19: chrome tests — audio-play class, RefreshCw icon, Upload icon, primary colors.
 // ADMIN2-32: audio tab is now B1 + A2 (two rows); the phantom disabled B1 row was removed.
 // ADMIN2-40 F10 (RED specs, task-1084): SSE wiring for Audio Regenerate button.
+// ADMIN2-40 F10 (QA adversarial, task-1084): edge/negative/boundary coverage.
 
 import React from 'react';
 
@@ -622,5 +623,249 @@ describe('NewsEditDrawerAudio — time display', () => {
     const timeDivs = document.querySelectorAll('.audio-time');
     // After timeupdate, B1 should show 1:05 / 2:00
     expect(timeDivs[0].textContent).toBe('1:05 / 2:00');
+  });
+});
+
+// ── ADMIN2-40 F10 (QA adversarial, task-1084): edge / negative / boundary ─────
+//
+// These tests extend the RED→green AC suite with adversarial, race-condition,
+// and recovery scenarios that the AC specs did not include.
+
+describe('ADMIN2-40 F10 (adversarial) — double-click same level while in-flight', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedOnEvent = undefined;
+    capturedOnError = undefined;
+    lastUseSSECallArgs = undefined;
+  });
+
+  it('B1 Regenerate button is native-disabled while B1 is in-flight (no double-click possible)', () => {
+    // The linked button uses disabled={isInFlight} (native disabled), not aria-disabled.
+    // Once clicked, the button is HTML-disabled — further clicks cannot fire the handler.
+    render(<NewsEditDrawerAudio item={makeLinkedItem('sit-1')} />);
+
+    const regenBtns = screen.getAllByText('Regenerate');
+    const b1Btn = regenBtns[0].closest('button')!;
+
+    // Click once — starts B1 regen.
+    fireEvent.click(b1Btn);
+    expect(lastUseSSECallArgs?.options.enabled).toBe(true);
+    expect(lastUseSSECallArgs?.url).toContain('level=b1');
+
+    // The B1 button must now be native-disabled (not just aria-disabled).
+    expect(b1Btn).toHaveAttribute('disabled');
+
+    // A second click on the disabled button must not change the SSE state.
+    const urlBeforeSecondClick = lastUseSSECallArgs?.url;
+    fireEvent.click(b1Btn);
+    // url is stable — no second stream was opened with a different value.
+    expect(lastUseSSECallArgs?.url).toBe(urlBeforeSecondClick);
+  });
+
+  it('single useSSE call still holds after attempted in-flight re-click (no stream duplication)', () => {
+    // useSSE is a hook — called once per render cycle (React rules).
+    // The lastUseSSECallArgs tracker captures the final call per render.
+    // After the first click, the B1 button is native-disabled; a second fireEvent.click
+    // on a disabled button must not trigger a state change → no additional render →
+    // lastUseSSECallArgs.url is unchanged and still points at b1.
+    render(<NewsEditDrawerAudio item={makeLinkedItem('sit-1')} />);
+
+    const regenBtns = screen.getAllByText('Regenerate');
+    const b1Btn = regenBtns[0].closest('button')!;
+
+    // Click once — B1 regen starts (enabled=true, url=b1).
+    fireEvent.click(b1Btn);
+    const urlAfterFirstClick = lastUseSSECallArgs?.url;
+    expect(urlAfterFirstClick).toContain('level=b1');
+    expect(lastUseSSECallArgs?.options.enabled).toBe(true);
+
+    // Try clicking again on the now-disabled button.
+    fireEvent.click(b1Btn);
+
+    // No second stream opened: url and enabled unchanged.
+    expect(lastUseSSECallArgs?.url).toBe(urlAfterFirstClick);
+    expect(lastUseSSECallArgs?.options.enabled).toBe(true);
+  });
+});
+
+describe('ADMIN2-40 F10 (adversarial) — null situationId defensive guard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedOnEvent = undefined;
+    capturedOnError = undefined;
+    lastUseSSECallArgs = undefined;
+  });
+
+  it('unlinked item: clicking the aria-disabled Regenerate never sets enabled=true', () => {
+    // Even if e.preventDefault() is called on the click, ensure no state mutation
+    // routes enabled=true into useSSE.  The guard sits at the streamUrl derivation:
+    //   streamUrl = regenLevel !== null && situationId !== null ? ... : ''
+    // and at enabled: regenLevel !== null && situationId !== null.
+    render(<NewsEditDrawerAudio item={makeUnlinkedItem()} />);
+
+    const regenBtns = screen.getAllByText('Regenerate');
+    // Attempt click on both buttons (both should be no-ops).
+    regenBtns.forEach((textNode) => {
+      fireEvent.click(textNode.closest('button')!);
+    });
+
+    // enabled must never be true when situationId is null.
+    const wasEverEnabled = (lastUseSSECallArgs?.options.enabled ?? false) === true;
+    expect(wasEverEnabled).toBe(false);
+  });
+
+  it('unlinked item: streamUrl is empty string (no POST SSE issued)', () => {
+    // With situationId=null the derived streamUrl must be '' which useSSE treats as disabled.
+    render(<NewsEditDrawerAudio item={makeUnlinkedItem()} />);
+
+    // The last useSSE call after initial render must have url='' (disabled path).
+    expect(lastUseSSECallArgs?.url).toBe('');
+  });
+});
+
+describe('ADMIN2-40 F10 (adversarial) — complete event with mismatched level clears idle cleanly', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedOnEvent = undefined;
+    capturedOnError = undefined;
+    lastUseSSECallArgs = undefined;
+  });
+
+  it('complete event with data.level=a2 while regenLevel=b1 still clears and refreshes', async () => {
+    // Race scenario: regenLevel='b1' is active, but the server sends a complete event
+    // tagged with level='a2' (e.g. a race from a previous request or a misbehaving server).
+    // The handler ignores the level field in the payload and clears unconditionally — that is
+    // the correct behavior; we assert the result is idle + refreshed, not stuck.
+    render(<NewsEditDrawerAudio item={makeLinkedItem('sit-1')} />);
+
+    const regenBtns = screen.getAllByText('Regenerate');
+    // Start B1 regen.
+    fireEvent.click(regenBtns[0].closest('button')!);
+    expect(lastUseSSECallArgs?.options.enabled).toBe(true);
+
+    expect(capturedOnEvent).toBeDefined();
+
+    // Fire complete with mismatched level.
+    act(() => {
+      capturedOnEvent?.({
+        type: 'description_audio:complete',
+        data: { level: 'a2', audio_url: 'new-a2.mp3', duration_seconds: 45 },
+      });
+    });
+
+    // Regardless of payload level: fetchNewsItems called + enabled back to false.
+    expect(mockFetchNewsItems).toHaveBeenCalledTimes(1);
+    expect(lastUseSSECallArgs?.options.enabled).toBe(false);
+  });
+});
+
+describe('ADMIN2-40 F10 (adversarial) — error recovery: retry after error', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedOnEvent = undefined;
+    capturedOnError = undefined;
+    lastUseSSECallArgs = undefined;
+  });
+
+  it('after error clears regenLevel, clicking Regenerate again re-enables SSE and clears error', async () => {
+    render(<NewsEditDrawerAudio item={makeLinkedItem('sit-1')} />);
+
+    const regenBtns = screen.getAllByText('Regenerate');
+    const b1Btn = regenBtns[0].closest('button')!;
+
+    // Step 1: start B1 regen.
+    fireEvent.click(b1Btn);
+    expect(lastUseSSECallArgs?.options.enabled).toBe(true);
+    expect(capturedOnEvent).toBeDefined();
+
+    // Step 2: error event arrives.
+    act(() => {
+      capturedOnEvent?.({
+        type: 'description_audio:error',
+        data: { stage: 'tts', error: 'TTS service unavailable' },
+      });
+    });
+
+    // Error surfaced in DOM.
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('alert').textContent).toBe('TTS service unavailable');
+
+    // regenLevel cleared → SSE disabled.
+    expect(lastUseSSECallArgs?.options.enabled).toBe(false);
+
+    // Step 3: user retries — click Regenerate again.
+    // Button is no longer disabled (regenLevel was cleared by error).
+    fireEvent.click(b1Btn);
+
+    // SSE re-enabled with the same URL.
+    expect(lastUseSSECallArgs?.options.enabled).toBe(true);
+    expect(lastUseSSECallArgs?.url).toContain('level=b1');
+
+    // Error banner cleared on retry (setRegenError(null) fires before setRegenLevel).
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('transport error (onError callback) also clears regenLevel and surfaces error', async () => {
+    render(<NewsEditDrawerAudio item={makeLinkedItem('sit-1')} />);
+
+    const regenBtns = screen.getAllByText('Regenerate');
+    fireEvent.click(regenBtns[0].closest('button')!);
+
+    // At this point capturedOnError is set (enabled=true → callbacks captured).
+    expect(capturedOnError).toBeDefined();
+
+    act(() => {
+      capturedOnError?.(new Error('WebSocket closed unexpectedly'));
+    });
+
+    // Error banner present in DOM.
+    expect(screen.getByRole('alert').textContent).toBe('WebSocket closed unexpectedly');
+
+    // regenLevel cleared → enabled=false.
+    expect(lastUseSSECallArgs?.options.enabled).toBe(false);
+  });
+});
+
+describe('ADMIN2-40 F10 (adversarial) — meaningfulness verification', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedOnEvent = undefined;
+    capturedOnError = undefined;
+    lastUseSSECallArgs = undefined;
+  });
+
+  it('AC #2 is meaningful: SSE NOT called with enabled=true if click handler is bypassed', () => {
+    // This test proves that useSSE enabled=true is CAUSED by the click (not the render).
+    // On initial render with a linked item, enabled must be false (no regen started yet).
+    render(<NewsEditDrawerAudio item={makeLinkedItem('sit-1')} />);
+
+    // After initial render — no click yet — enabled must be false.
+    expect(lastUseSSECallArgs?.options.enabled).toBe(false);
+
+    // Only after a click does enabled flip to true.
+    const regenBtns = screen.getAllByText('Regenerate');
+    fireEvent.click(regenBtns[0].closest('button')!);
+    expect(lastUseSSECallArgs?.options.enabled).toBe(true);
+  });
+
+  it('AC #6 is meaningful: unlinked guard prevents SSE even when aria-disabled is removed from DOM', () => {
+    // Simulate removal of the aria-disabled attribute (e.g. browser extension or test tampering)
+    // and a subsequent click. The guard in the onClick handler (e.preventDefault()) and the
+    // streamUrl derivation (situationId === null → '') must still hold.
+    render(<NewsEditDrawerAudio item={makeUnlinkedItem()} />);
+
+    const regenBtns = screen.getAllByText('Regenerate');
+    const btn = regenBtns[0].closest('button')!;
+
+    // Manually remove aria-disabled to simulate tampering.
+    btn.removeAttribute('aria-disabled');
+
+    // Now click the "un-protected" button.
+    fireEvent.click(btn);
+
+    // The onClick handler calls e.preventDefault() — state is never mutated.
+    // situationId is still null → streamUrl is '' → enabled stays false.
+    const wasEnabled = (lastUseSSECallArgs?.options.enabled ?? false) === true;
+    expect(wasEnabled).toBe(false);
   });
 });
