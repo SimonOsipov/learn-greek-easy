@@ -48,7 +48,7 @@ function useDebounce<T>(value: T, delay: number): T {
 // Option definitions
 // ---------------------------------------------------------------------------
 
-type CountryValue = 'all' | 'cyprus' | 'greece';
+type CountryValue = 'all' | 'cyprus' | 'greece' | 'world';
 type LevelValue = 'all' | 'B1' | 'A2';
 type SortValue = 'newest' | 'oldest' | 'updated';
 
@@ -56,6 +56,7 @@ const COUNTRY_OPTIONS: SegOption<CountryValue>[] = [
   { value: 'all', label: 'All' },
   { value: 'cyprus', label: '🇨🇾 CY' },
   { value: 'greece', label: '🇬🇷 GR' },
+  { value: 'world', label: '🌍 WR' },
 ];
 
 const LEVEL_OPTIONS: SegOption<LevelValue>[] = [
