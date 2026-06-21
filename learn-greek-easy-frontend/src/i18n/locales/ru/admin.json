@@ -583,9 +583,9 @@
     "drawer": {
       "title": "Редактировать статью",
       "tabs": {
-        "translations": "Переводы",
+        "translations": "Заголовок",
         "body": "Текст",
-        "audio": "Аудио · 2 уровня",
+        "audio": "Аудио",
         "image": "Изображение",
         "linkedSituation": "Связанная ситуация"
       },
@@ -620,20 +620,18 @@
       "audio": {
         "a2Narration": "Нарратив A2",
         "b1Narration": "Нарратив B1",
-        "generatedFrom": "Создано · ElevenLabs · Греческий женский голос — последний {{date}}",
         "notGeneratedYet": "Ещё не создано",
         "regenerate": "Перегенерировать",
         "playLabel": "Воспроизвести нарратив {{level}}",
-        "pauseLabel": "Пауза нарратива {{level}}",
-        "uploadLabel": "Загрузить аудио {{level}}"
+        "pauseLabel": "Пауза нарратива {{level}}"
       },
       "translations": {
         "titleEn": "Заголовок — English",
         "titleEl": "Τίτλος — Ελληνικά",
         "titleRu": "Заголовок — Русский",
-        "hintEn": "Исходный язык",
-        "hintEl": "Перевод на греческий · используется в приложении",
-        "hintRu": "Перевод на русский · для резервных пояснений"
+        "hintEn": "Перевод на английский",
+        "hintEl": "Перевод на греческий",
+        "hintRu": "Перевод на русский"
       },
       "body": {
         "greekBody": "Греческий текст",

@@ -289,53 +289,29 @@ describe('Disabled-control marker audit — Audio Regenerate ×2 (NewsEditDrawer
   });
 });
 
-describe('Disabled-control marker audit — Audio Upload ×2 (NewsEditDrawer.audio)', () => {
-  it('B1 Upload audio: has red-dot marker + tooltip trigger + is disabled', () => {
+describe('Disabled-control marker audit — Audio Upload removed (F9)', () => {
+  it('B1 row has no Upload button (F9 removal)', () => {
     render(<AudioWrapper item={makeItem()} />);
 
     const rows = document.querySelectorAll('.audio-row');
     const b1Row = rows[0];
-    // Upload button is the icon-btn in the audio-actions area.
-    const uploadBtns = b1Row.querySelectorAll('button[aria-disabled="true"]');
-    // There are 2 disabled buttons per row: Regenerate + Upload.
-    const uploadBtn = uploadBtns[1]; // second disabled btn is the upload icon-btn
-    expect(uploadBtn, 'B1 Upload: button not found').toBeDefined();
-    assertDisabledControlContract(uploadBtn, 'Audio Upload (B1)');
+    // F9: Upload removed — only one disabled button (Regenerate) per row.
+    const disabledBtns = b1Row.querySelectorAll('button[aria-disabled="true"]');
+    expect(disabledBtns.length).toBe(1);
+    // The remaining disabled button must be Regenerate (has visible text, no aria-label).
+    const regenBtn = disabledBtns[0];
+    expect(regenBtn.getAttribute('aria-label')).toBeNull();
   });
 
-  it('A2 Upload audio: has red-dot marker + tooltip trigger + is disabled', () => {
+  it('A2 row has no Upload button (F9 removal)', () => {
     render(<AudioWrapper item={makeItem()} />);
 
     const rows = document.querySelectorAll('.audio-row');
     const a2Row = rows[1];
-    const uploadBtns = a2Row.querySelectorAll('button[aria-disabled="true"]');
-    const uploadBtn = uploadBtns[1];
-    expect(uploadBtn, 'A2 Upload: button not found').toBeDefined();
-    assertDisabledControlContract(uploadBtn, 'Audio Upload (A2)');
-  });
-
-  // ADMIN2-39 F9.2 (QA edge): the icon-only upload Button must carry a non-empty,
-  // resolved accessible name (the a11y gap the sweep closed via news.drawer.audio.uploadLabel).
-  // Asserts the {{level}} interpolation actually resolved (no leftover key / empty label).
-  it('Upload audio: icon-only button exposes a resolved, level-specific accessible name', () => {
-    render(<AudioWrapper item={makeItem()} />);
-
-    const rows = document.querySelectorAll('.audio-row');
-    const levels = ['B1', 'A2'];
-    rows.forEach((row, i) => {
-      const uploadBtn = row.querySelector<HTMLButtonElement>(
-        'button[aria-disabled="true"][aria-label]'
-      );
-      expect(uploadBtn, `${levels[i]} Upload: aria-labelled button not found`).not.toBeNull();
-      const label = uploadBtn!.getAttribute('aria-label') ?? '';
-      expect(
-        label.trim().length,
-        `${levels[i]} Upload: aria-label must be non-empty`
-      ).toBeGreaterThan(0);
-      // i18n key must have resolved (not the raw dotted key) and include the level token value.
-      expect(label).not.toContain('uploadLabel');
-      expect(label).toContain(levels[i]);
-    });
+    const disabledBtns = a2Row.querySelectorAll('button[aria-disabled="true"]');
+    expect(disabledBtns.length).toBe(1);
+    const regenBtn = disabledBtns[0];
+    expect(regenBtn.getAttribute('aria-label')).toBeNull();
   });
 });
 

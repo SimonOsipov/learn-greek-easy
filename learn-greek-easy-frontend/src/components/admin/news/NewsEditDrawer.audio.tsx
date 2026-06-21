@@ -5,7 +5,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 
-import { Pause, Play, RefreshCw, Upload } from 'lucide-react';
+import { Pause, Play, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
@@ -60,7 +60,7 @@ interface Props {
 }
 
 export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
-  const { t, i18n } = useTranslation('admin');
+  const { t } = useTranslation('admin');
 
   // Which row is actively playing.
   const [playing, setPlaying] = useState<AudioLevel | null>(null);
@@ -159,12 +159,10 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
 
   function renderSubText(level: AudioLevel): string {
     const url = level === 'b1' ? item.audio_url : item.audio_a2_url;
-    const generatedAt = level === 'b1' ? item.audio_generated_at : item.audio_a2_generated_at;
 
     if (!url) return t('news.drawer.audio.notGeneratedYet');
 
-    const dateStr = generatedAt ? new Date(generatedAt).toLocaleDateString(i18n.language) : '';
-    return t('news.drawer.audio.generatedFrom', { date: dateStr });
+    return '';
   }
 
   function renderRow(level: AudioLevel, tone: 'violet', badgeLabel: string, nameKey: string) {
@@ -204,30 +202,6 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
                 >
                   <RefreshCw size={14} />
                   {t('news.drawer.audio.regenerate')}
-                  <span
-                    className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
-                    aria-hidden="true"
-                  />
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>{t('comingSoon')}</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-disabled="true"
-                  aria-label={t('news.drawer.audio.uploadLabel', {
-                    level: level.toUpperCase(),
-                  })}
-                  className="relative cursor-not-allowed opacity-60"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  <Upload size={16} />
                   <span
                     className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
                     aria-hidden="true"

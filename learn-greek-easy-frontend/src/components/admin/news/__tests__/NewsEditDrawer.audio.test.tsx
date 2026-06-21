@@ -98,10 +98,10 @@ describe('NewsEditDrawerAudio — row rendering', () => {
     expect(screen.getByText('A2 narration')).toBeInTheDocument();
   });
 
-  it('shows "Generated · ElevenLabs..." sub for B1 when audio_url present', () => {
+  it('shows no subtext for B1 when audio_url is present (generated tracks show no subtext)', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
-    const subs = screen.getAllByText(/Generated · ElevenLabs/);
-    expect(subs.length).toBeGreaterThanOrEqual(1);
+    // F9 (D-A8): generated tracks show no subtext — only notGeneratedYet is shown for missing audio.
+    expect(screen.queryByText(/Generated · ElevenLabs/)).not.toBeInTheDocument();
   });
 
   it('shows "notGeneratedYet" sub for B1 when audio_url is null', () => {
@@ -217,7 +217,7 @@ describe('NewsEditDrawerAudio — play / pause control', () => {
   });
 });
 
-describe('NewsEditDrawerAudio — Regenerate + Upload buttons', () => {
+describe('NewsEditDrawerAudio — Regenerate stub buttons (Upload removed in F9)', () => {
   it('every row has a Regenerate button with aria-disabled="true"', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
     const regenBtns = screen.getAllByText('Regenerate');
@@ -230,18 +230,17 @@ describe('NewsEditDrawerAudio — Regenerate + Upload buttons', () => {
   it('every Regenerate button has a "Coming soon" tooltip', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
     const comingSoon = screen.getAllByText('Coming soon');
-    // One Regenerate + one Upload tooltip per row × 2 rows.
+    // One "Coming soon" tooltip per Regenerate stub per row × 2 rows.
     expect(comingSoon.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('Upload icon buttons have aria-disabled="true"', () => {
+  it('Upload icon buttons are removed (F9)', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
     const rows = document.querySelectorAll('.audio-row');
     rows.forEach((row) => {
-      // ADMIN2-39 F9: upload stub is now the Button primitive (icon variant) —
-      // it is the disabled action carrying an aria-label (regenerate uses visible text).
+      // F9: Upload button removed — no icon-only button with aria-label remains.
       const uploadBtn = row.querySelector('button[aria-disabled="true"][aria-label]');
-      expect(uploadBtn).toBeTruthy();
+      expect(uploadBtn).toBeNull();
     });
   });
 });
@@ -264,7 +263,7 @@ describe('NewsEditDrawerAudio — NADM-19 chrome: audio-play class', () => {
   });
 });
 
-describe('NewsEditDrawerAudio — NADM-19 chrome: Regenerate + Upload icons', () => {
+describe('NewsEditDrawerAudio — NADM-19 chrome: Regenerate icons (Upload removed in F9)', () => {
   it('each Regenerate button contains a RefreshCw SVG icon', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
     const regenBtns = screen.getAllByText('Regenerate');
@@ -277,13 +276,13 @@ describe('NewsEditDrawerAudio — NADM-19 chrome: Regenerate + Upload icons', ()
     });
   });
 
-  it('each Upload button contains an Upload SVG icon', () => {
+  it('Upload SVG icon is removed (F9)', () => {
     render(<NewsEditDrawerAudio item={makeItem()} />);
     const rows = document.querySelectorAll('.audio-row');
     rows.forEach((row) => {
+      // F9: Upload button removed — no icon-only button with aria-label in audio-actions.
       const uploadBtn = row.querySelector('button[aria-disabled="true"][aria-label]');
-      expect(uploadBtn).toBeTruthy();
-      expect(uploadBtn?.querySelector('svg')).toBeTruthy();
+      expect(uploadBtn).toBeNull();
     });
   });
 });
