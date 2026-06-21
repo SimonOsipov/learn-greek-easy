@@ -523,7 +523,7 @@ describe('parse-k6-results.cjs — adversarial / edge coverage (PERF-12-01)', ()
   // --------------------------------------------------------------------------
   // module.exports does NOT leak main (exactly 8 symbols)
   // --------------------------------------------------------------------------
-  it('edge_exports_no_main_leak — module.exports has exactly 8 keys, main is absent', () => {
+  it('edge_exports_no_main_leak — module.exports has exactly 11 keys, main is absent', () => {
     const { mod } = loadModule();
 
     const exportedKeys = Object.keys(mod);
@@ -536,10 +536,13 @@ describe('parse-k6-results.cjs — adversarial / edge coverage (PERF-12-01)', ()
       'getMetricLabel',
       'AUTH_METRICS',
       'DASHBOARD_METRICS',
+      'readBaselines',
+      'computeDelta',
+      'formatDelta',
     ];
 
-    // Exactly the 8 pure helpers — no side-effectful 'main'
-    expect(exportedKeys).toHaveLength(8);
+    // Exactly the 11 pure helpers (8 original + 3 baseline-diff additions) — no side-effectful 'main'
+    expect(exportedKeys).toHaveLength(11);
     expect(exportedKeys.sort()).toEqual(expectedExports.sort());
     expect(mod).not.toHaveProperty('main');
   });

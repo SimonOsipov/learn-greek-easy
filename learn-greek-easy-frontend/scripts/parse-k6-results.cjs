@@ -94,8 +94,12 @@ function main() {
     if (authData) console.log(`Auth report parsed: ${authReport}`);
     if (dashboardData) console.log(`Dashboard report parsed: ${dashboardReport}`);
 
+    // Load baselines (returns {metrics:{}} if file is absent/malformed — never throws)
+    const baselineFilePath = process.env.K6_BASELINE_FILE || path.resolve(__dirname, '../../k6/baselines.json');
+    const baselines = readBaselines(baselineFilePath);
+
     // Generate markdown
-    const markdown = generateMarkdown(authData, dashboardData);
+    const markdown = generateMarkdown(authData, dashboardData, baselines);
 
     // Write output
     fs.writeFileSync(OUTPUT_FILE, markdown);
@@ -279,9 +283,10 @@ function formatMs(ms) {
  *
  * @param {Object|null} authData - Parsed auth scenario data
  * @param {Object|null} dashboardData - Parsed dashboard scenario data
+ * @param {{ metrics: Record<string, { p95: number }> }|null} baselines - Optional baselines from readBaselines()
  * @returns {string} Markdown content
  */
-function generateMarkdown(authData, dashboardData) {
+function generateMarkdown(authData, dashboardData, baselines) {
   let md = `## K6 Performance Report\n\n`;
 
   // Determine overall status
@@ -323,12 +328,12 @@ function generateMarkdown(authData, dashboardData) {
 
   // Auth Flow metrics section
   if (authData) {
-    md += generateMetricsSection('Auth Flow Metrics', authData.metrics, AUTH_METRICS);
+    md += generateMetricsSection('Auth Flow Metrics', authData.metrics, AUTH_METRICS, baselines && baselines.metrics);
   }
 
   // Dashboard Flow metrics section
   if (dashboardData) {
-    md += generateMetricsSection('Dashboard Flow Metrics', dashboardData.metrics, DASHBOARD_METRICS);
+    md += generateMetricsSection('Dashboard Flow Metrics', dashboardData.metrics, DASHBOARD_METRICS, baselines && baselines.metrics);
   }
 
   // Threshold violations section
@@ -364,24 +369,30 @@ function generateMarkdown(authData, dashboardData) {
  * @param {string} title - Section title
  * @param {Object} metrics - The k6 metrics object
  * @param {Object} metricConfig - Configuration for which metrics to display
+ * @param {Object|undefined} baselines - Optional baselines map ({ <name>: { p95: number } })
  * @returns {string} Markdown section
  */
-function generateMetricsSection(title, metrics, metricConfig) {
+function generateMetricsSection(title, metrics, metricConfig, baselines) {
+  // Δ = Δ — matches house style of escaped-unicode symbols
   let md = `### ${title}\n\n`;
-  md += `| Metric | p50 | p90 | p95 | p99 | Threshold | Status |\n`;
-  md += `|--------|-----|-----|-----|-----|-----------|--------|\n`;
+  md += `| Metric | p50 | p90 | p95 | p99 | Δ vs main | Threshold | Status |\n`;
+  md += `|--------|-----|-----|-----|-----|------------|-----------|--------|\n`;
 
   for (const [metricName, config] of Object.entries(metricConfig)) {
     const metric = metrics[metricName];
     const percentiles = extractPercentiles(metric);
 
     // Determine status based on p95 vs threshold
+    // Δ is informational only — never affects status or exit code.
     const p95Value = percentiles.p95;
     const threshold = config.threshold;
     const status = getMetricStatus(p95Value, threshold);
     const statusIcon = getStatusIcon(status);
 
-    md += `| ${config.label} | ${formatMs(percentiles.p50)} | ${formatMs(percentiles.p90)} | ${formatMs(percentiles.p95)} | ${formatMs(percentiles.p99)} | <${formatMs(threshold)} | ${statusIcon} |\n`;
+    const baselineP95 = baselines && baselines[metricName] ? baselines[metricName].p95 : null;
+    const deltaCell = formatDelta(computeDelta(p95Value, baselineP95));
+
+    md += `| ${config.label} | ${formatMs(percentiles.p50)} | ${formatMs(percentiles.p90)} | ${formatMs(percentiles.p95)} | ${formatMs(percentiles.p99)} | ${deltaCell} | <${formatMs(threshold)} | ${statusIcon} |\n`;
   }
 
   md += `\n`;
@@ -515,9 +526,71 @@ function generateErrorMarkdown(errorMessage) {
 }
 
 // ============================================================================
+// Baseline Δ Tracking
+// ============================================================================
+
+/**
+ * Read the baselines JSON file from disk.
+ * Returns { metrics: {} } on any error (missing file, malformed JSON) — never throws.
+ *
+ * File schema: { updated_at, commit, metrics: { <name>: { p95: <number ms> } } }
+ *
+ * @param {string} baselinePath - Absolute path to the baselines JSON file
+ * @returns {{ metrics: Record<string, { p95: number }> }}
+ */
+function readBaselines(baselinePath) {
+  try {
+    const content = fs.readFileSync(baselinePath, 'utf-8');
+    const parsed = JSON.parse(content);
+    return { metrics: parsed.metrics || {} };
+  } catch (_err) {
+    return { metrics: {} };
+  }
+}
+
+/**
+ * Compute the delta between a current p95 value and a baseline p95 value.
+ *
+ * @param {number|null|undefined} currentP95 - Current p95 in ms
+ * @param {number|null|undefined} baselineP95 - Baseline p95 in ms
+ * @returns {{ absMs: number|null, pct: number|null, direction: 'new'|'flat'|'up'|'down' }}
+ */
+function computeDelta(currentP95, baselineP95) {
+  if (currentP95 == null || baselineP95 == null) {
+    return { absMs: null, pct: null, direction: 'new' };
+  }
+  const absMs = currentP95 - baselineP95;
+  const pct = (absMs / baselineP95) * 100;
+  let direction;
+  if (Math.abs(pct) < 2) {
+    direction = 'flat';
+  } else if (pct > 0) {
+    direction = 'up';
+  } else {
+    direction = 'down';
+  }
+  return { absMs, pct, direction };
+}
+
+/**
+ * Format a delta object into a human-readable ASCII string.
+ *
+ * @param {{ absMs: number|null, pct: number|null, direction: string }} delta
+ * @returns {string}
+ */
+function formatDelta(delta) {
+  if (delta.direction === 'new') return 'new';
+  if (delta.direction === 'flat') return 'flat';
+  const { absMs, pct } = delta;
+  const absSign = absMs >= 0 ? '+' : '';
+  const pctSign = pct >= 0 ? '+' : '';
+  return `${absSign}${absMs}ms (${pctSign}${pct.toFixed(1)}%)`;
+}
+
+// ============================================================================
 // Run
 // ============================================================================
 
 if (require.main === module) { main(); }
 
-module.exports = { extractPercentiles, formatMs, formatMetricValue, getMetricStatus, generateMetricsSection, getMetricLabel, AUTH_METRICS, DASHBOARD_METRICS };
+module.exports = { extractPercentiles, formatMs, formatMetricValue, getMetricStatus, generateMetricsSection, getMetricLabel, AUTH_METRICS, DASHBOARD_METRICS, readBaselines, computeDelta, formatDelta };
