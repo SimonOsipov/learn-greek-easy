@@ -307,3 +307,57 @@ describe('SituationDrawerLinkedNews — card click navigation', () => {
     expect(mockOpenIn).toHaveBeenCalledWith('news', { edit: 'news-1' });
   });
 });
+
+// ── ADMIN2-42-04 Stage 4: adversarial / edge coverage ────────────────────────
+
+// D. F12 link CTA: exhaustive present/absent coverage
+
+describe('SituationDrawerLinkedNews — F12 link CTA adversarial', () => {
+  it('link CTA is absent even when linked_news has only minimum required fields', async () => {
+    // Minimal linked_news object — CTA must still be hidden (not a "rich enough" check)
+    const minimalNews = {
+      id: 'n-min',
+      title_en: null,
+      country: null,
+      published_at: '2026-01-01T00:00:00Z',
+    };
+    await renderComponent(makeSituation({ linked_news: minimalNews }));
+    expect(
+      screen.queryByRole('button', { name: 'situations.drawer.linkedNews.linkCta' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('exactly one link CTA is shown when linked_news is null (no duplicates)', async () => {
+    await renderComponent(makeSituation({ linked_news: null }));
+    const ctaBtns = screen.getAllByRole('button', {
+      name: 'situations.drawer.linkedNews.linkCta',
+    });
+    expect(ctaBtns).toHaveLength(1);
+  });
+
+  it('link CTA click does not propagate to openIn (aria-disabled blocks intent)', async () => {
+    const user = userEvent.setup();
+    await renderComponent(makeSituation({ linked_news: null }));
+    const btn = screen.getByRole('button', { name: 'situations.drawer.linkedNews.linkCta' });
+    // The button uses onClick={e => e.preventDefault()} not disabled attr; clicking must not
+    // trigger any navigation side-effect.
+    await user.click(btn);
+    expect(mockOpenIn).not.toHaveBeenCalled();
+    expect(mockCloseDrawer).not.toHaveBeenCalled();
+  });
+
+  it('Unlink button is NOT aria-disabled when linked_news is set', async () => {
+    await renderComponent(makeSituation({ linked_news: LINKED_NEWS }));
+    // Use the data-testid for the active unlink button (not the ghost disabled one)
+    const unlinkBtn = screen.getByTestId('linked-news-unlink-btn');
+    expect(unlinkBtn).not.toHaveAttribute('aria-disabled');
+    expect(unlinkBtn).not.toBeDisabled();
+  });
+
+  it('Re-derive button is NOT aria-disabled when linked_news is set', async () => {
+    await renderComponent(makeSituation({ linked_news: LINKED_NEWS }));
+    const rederiveBtn = screen.getByTestId('linked-news-re-derive-btn');
+    expect(rederiveBtn).not.toHaveAttribute('aria-disabled');
+    expect(rederiveBtn).not.toBeDisabled();
+  });
+});
