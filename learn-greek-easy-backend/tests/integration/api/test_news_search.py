@@ -9,22 +9,24 @@ All tests require a live PostgreSQL test DB (immutable_unaccent is a Postgres
 function).  They must FAIL until NWS8-01 is implemented.
 
 Factories/fixtures reused:
-- NewsItemFactory  (tests/factories/news.py)
 - SituationFactory (tests/factories/situation.py)
 - SituationDescriptionFactory (tests/factories/situation_description.py)
 - SituationPictureFactory (tests/factories/situation_picture.py)
 - client / db_session  (tests/conftest.py)
+
+Note: NewsItem is created directly (not via NewsItemFactory) to avoid the factory's
+else-branch creating a duplicate SituationDescription, which violates unique=True.
 """
 
+import datetime
 from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import DescriptionSourceType, NewsCountry
+from src.db.models import DescriptionSourceType, NewsCountry, NewsItem, NewsItemStatus
 from tests.factories import (
-    NewsItemFactory,
     SituationDescriptionFactory,
     SituationFactory,
     SituationPictureFactory,
@@ -44,11 +46,16 @@ async def _make_news_item(
     url_suffix: str | None = None,
     country: NewsCountry = NewsCountry.CYPRUS,
     published: bool = True,
-) -> object:
+) -> NewsItem:
     """Seed a published (or draft) news item with specific searchable content.
 
     Creates: Situation (scenario_el=title_el) → SituationDescription (text_el,
     text_el_a2, country) → SituationPicture → NewsItem with the given URL.
+
+    NOTE: Creates NewsItem directly (not via NewsItemFactory.create) to avoid
+    the factory's else-branch creating a second SituationDescription.
+    SituationDescription.situation_id has a unique=True constraint — two inserts
+    for the same situation_id would raise IntegrityError.
 
     Returns the NewsItem ORM instance.
     """
@@ -66,12 +73,14 @@ async def _make_news_item(
     suffix = url_suffix or uuid4().hex[:8]
     url = f"https://test-source-{suffix}.example.com/article-{uuid4().hex[:4]}"
 
-    news_item = await NewsItemFactory.create(
-        session=db_session,
+    news_item = NewsItem(
         situation_id=situation.id,
+        publication_date=datetime.date.today(),
         original_article_url=url,
-        published=published,
+        status=NewsItemStatus.PUBLISHED if published else NewsItemStatus.DRAFT,
     )
+    db_session.add(news_item)
+    await db_session.flush()
     return news_item
 
 
@@ -245,12 +254,16 @@ class TestNewsSearchBySourceURL:
             source_type=DescriptionSourceType.NEWS,
         )
         await SituationPictureFactory.create(session=db_session, situation_id=situation.id)
-        target = await NewsItemFactory.create(
-            session=db_session,
+        # Create NewsItem directly — NewsItemFactory.create(situation_id=...) would create
+        # a second SituationDescription, violating the unique=True constraint.
+        target = NewsItem(
             situation_id=situation.id,
+            publication_date=datetime.date.today(),
             original_article_url=f"https://{unique_host}/some-article",
-            published=True,
+            status=NewsItemStatus.PUBLISHED,
         )
+        db_session.add(target)
+        await db_session.flush()
 
         # Also create a decoy with a different hostname
         await _make_news_item(
@@ -670,3 +683,138 @@ class TestNewsSearchCountryCounts:
             "(count_by_country is not AND-ed with country filter)."
         )
         assert country_counts.get("greece", 0) >= 1
+
+
+# ---------------------------------------------------------------------------
+# Mode B adversarial / edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestNewsSearchAdversarial:
+    """Adversarial and edge cases added in Mode B QA verification."""
+
+    @pytest.mark.asyncio
+    async def test_multi_column_match_no_double_count(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+    ):
+        """A term matching BOTH scenario_el AND text_el of the same item returns it once, not twice.
+
+        The OR predicate spans 4 columns — if the JOIN produces duplicate rows for a
+        multi-column match, count_all / total would over-count.  This test pins that
+        a single item matching on multiple columns is counted exactly once.
+        """
+        unique_term = f"dup{uuid4().hex[:6]}"
+        # Item where term appears in both title (scenario_el) AND body (text_el)
+        await _make_news_item(
+            db_session,
+            title_el=f"Τίτλος με {unique_term}",
+            text_el=f"Κείμενο που περιέχει επίσης {unique_term}.",
+        )
+
+        response = await client.get(f"/api/v1/news?q={unique_term}")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1, (
+            f"Expected exactly 1 item for a term matching multiple columns of the same item, "
+            f"got {data['total']}. The OR predicate must not double-count a row."
+        )
+        assert len(data["items"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_underscore_in_q_not_wildcard(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+    ):
+        """F5: a literal `_` in q must match only items containing `_`, not any single char.
+
+        Without escaping, `_` in ILIKE is a single-character wildcard.
+        This test seeds items with no `_` in any searchable field — a literal `_`
+        query should return 0 items, not all items.
+        """
+        for i in range(3):
+            await _make_news_item(
+                db_session,
+                title_el=f"Τίτλος χωρίς κάτω παύλα {i}",
+                text_el=f"Κείμενο χωρίς κάτω παύλα {i}.",
+            )
+
+        response = await client.get("/api/v1/news", params={"q": "_"})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 0, (
+            f"Literal '_' in q should return 0 items (no stored content has a bare underscore), "
+            f"but got {data['total']}. The `_` was treated as a SQL LIKE single-char wildcard — "
+            "escaping is missing in the ILIKE implementation."
+        )
+
+    @pytest.mark.asyncio
+    async def test_q_plus_country_plus_pagination(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+    ):
+        """Combined q + country + pagination: total/pages are AND-filtered correctly.
+
+        Seeds: 8 Cyprus + 3 Greece items sharing a term; 2 decoy items without the term.
+        ?q=<term>&country=cyprus&page_size=5 →
+          - page 1: 5 items, total=8
+          - page 2: 3 items, total=8
+          - all items are Cyprus only
+        """
+        shared_term = f"combo{uuid4().hex[:4]}"
+
+        for i in range(8):
+            await _make_news_item(
+                db_session,
+                title_el=f"Κυπριακό {shared_term} {i}",
+                text_el="Κείμενο.",
+                country=NewsCountry.CYPRUS,
+            )
+        for i in range(3):
+            await _make_news_item(
+                db_session,
+                title_el=f"Ελληνικό {shared_term} {i}",
+                text_el="Κείμενο.",
+                country=NewsCountry.GREECE,
+            )
+        # Decoys: no term
+        for i in range(2):
+            await _make_news_item(
+                db_session,
+                title_el=f"Άσχετο {i}",
+                text_el="Τίποτα.",
+                country=NewsCountry.CYPRUS,
+            )
+
+        resp1 = await client.get(f"/api/v1/news?q={shared_term}&country=cyprus&page=1&page_size=5")
+        resp2 = await client.get(f"/api/v1/news?q={shared_term}&country=cyprus&page=2&page_size=5")
+
+        assert resp1.status_code == 200
+        assert resp2.status_code == 200
+        d1 = resp1.json()
+        d2 = resp2.json()
+
+        assert d1["total"] == 8, f"Expected total=8 (8 cyprus items matching q), got {d1['total']}."
+        assert len(d1["items"]) == 5, f"Expected 5 items on page 1, got {len(d1['items'])}."
+        assert len(d2["items"]) == 3, f"Expected 3 items on page 2, got {len(d2['items'])}."
+        assert d2["total"] == 8
+
+        # No page overlap
+        p1_ids = {item["id"] for item in d1["items"]}
+        p2_ids = {item["id"] for item in d2["items"]}
+        assert p1_ids.isdisjoint(p2_ids), "Pages must not overlap."
+
+        # country_counts must still show the q-filtered TOTAL per country (F2)
+        cc = d1["country_counts"]
+        assert (
+            cc.get("cyprus", -1) == 8
+        ), f"country_counts['cyprus'] should be 8 (all cyprus q-matches), got {cc.get('cyprus')}."
+        assert cc.get("greece", -1) == 3, (
+            f"country_counts['greece'] should be 3 (greece q-matches, not 0), "
+            f"got {cc.get('greece')}."
+        )
