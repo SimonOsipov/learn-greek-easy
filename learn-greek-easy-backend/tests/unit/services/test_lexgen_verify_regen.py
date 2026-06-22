@@ -708,3 +708,295 @@ class TestRG07ContractGuard:
             cls, "_on_hard_fail"
         ), "RG-07: LexgenVerifyService must have _on_hard_fail method (10-04 seam)"
         assert callable(getattr(cls, "_on_hard_fail")), "RG-07: _on_hard_fail must be callable"
+
+
+# ---------------------------------------------------------------------------
+# ADV-A  generate() RAISES mid-loop → exception propagates (not swallowed)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+class TestAdvAGeneratorRaisesPropagates:
+    """ADV-A: generate() throws an exception during the regen loop.
+
+    The verify service MUST NOT swallow the exception. A silent-fail here would
+    leave the proposal in a half-mutated state (neither FLAGGED nor REJECTED) and
+    give a spurious PASS outcome to the caller.
+
+    Verify: the exception propagates out of svc.verify(); proposal is not left
+    in a fake-PASS state.
+    """
+
+    async def test_adva_generator_raises_exception_propagates(self) -> None:
+        """generate() raises RuntimeError on first call → exception escapes verify()."""
+        proposal = _make_proposal(example_greek=_FAILING_SENTENCE)
+        svc = _make_service()
+
+        async def _raise(_proposal):
+            raise RuntimeError("simulated OpenRouter network error")
+
+        mock_gen = AsyncMock()
+        mock_gen.generate = AsyncMock(side_effect=_raise)
+
+        with (
+            patch(_PATCH_GENERATOR, return_value=mock_gen, create=True),
+            patch(_PATCH_CEFR, side_effect=lambda db: _cefr_mock(_ALLOWED_FAIL)),
+            patch(_PATCH_LEXICON, return_value=_lexicon_mock()),
+            patch(_PATCH_MORPHOLOGY, return_value=_morphology_mock_failing()),
+        ):
+            with pytest.raises(RuntimeError, match="simulated OpenRouter network error"):
+                await svc.verify(proposal)
+
+        # The proposal must NOT be in a silently-PASS state.
+        # It should still be GENERATING (no transition was called).
+        assert proposal.status == WordProposalState.GENERATING, (
+            f"ADV-A: proposal.status must remain GENERATING after exception; "
+            f"got {proposal.status!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# ADV-B  Regen fixes check_e but introduces a gloss warn → PASS-with-warn
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+class TestAdvBRegenHealsCheckEButAddsGlossWarn:
+    """ADV-B: first regen fixes the Check E hard-fail but introduces a gloss_subset warn.
+
+    After self-heal (regen #1 passes Check E), the loop exits immediately.
+    The gloss warn path (_record_warns) must fire, producing:
+        - outcome.status == "PASS"
+        - outcome.check_e_regens == 1
+        - proposal.flagged_fields contains "gloss_en" (the warn field)
+        - "check_e" NOT in proposal.flagged_fields (it was healed, never flagged)
+
+    This exercises the post-self-heal warn-recording branch inside _on_hard_fail.
+    """
+
+    async def test_advb_regen_heals_check_e_then_gloss_warn_recorded(self) -> None:
+        proposal = _make_proposal(
+            gloss_en="tome",  # "tome" is NOT in "book; volume" → gloss warn after regen
+            example_greek=_FAILING_SENTENCE,
+        )
+        svc = _make_service()
+
+        # After generate() the sentence becomes the passing sentence.
+        # But the gloss_en stays "tome" (the generator mock only rewrites example_greek).
+        async def _side_effect(_proposal):
+            _proposal.generated_content = {
+                "gloss_en": "tome",  # still not in wiktionary glosses → warn
+                "gloss_ru": "книга",
+                "example_greek": _PASSING_SENTENCE,
+                "example_translation": "The mother reads a book at home.",
+            }
+
+        mock_gen = AsyncMock()
+        mock_gen.generate = AsyncMock(side_effect=_side_effect)
+
+        # Morphology: fail on first call, pass on second (after regen heals the sentence).
+        failing_morph = _morphology_mock_failing()
+        passing_morph = _morphology_mock_passing()
+        call_count = [0]
+
+        def _morph_factory():
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return failing_morph
+            return passing_morph
+
+        with (
+            patch(_PATCH_GENERATOR, return_value=mock_gen, create=True),
+            patch(_PATCH_CEFR, side_effect=lambda db: _cefr_mock(_ALLOWED_FAIL)),
+            patch(_PATCH_LEXICON, return_value=_lexicon_mock()),
+            patch(_PATCH_MORPHOLOGY, side_effect=_morph_factory),
+        ):
+            outcome = await svc.verify(proposal)
+
+        assert (
+            outcome.status == "PASS"
+        ), f"ADV-B: self-heal with warn must produce PASS; got {outcome.status!r}"
+        assert (
+            outcome.check_e_regens == 1
+        ), f"ADV-B: check_e_regens must be 1 after one regen; got {outcome.check_e_regens}"
+        assert (
+            proposal.flagged_fields is not None
+        ), "ADV-B: proposal.flagged_fields must be set for the gloss warn"
+        assert "gloss_en" in proposal.flagged_fields, (
+            f"ADV-B: 'gloss_en' must be in flagged_fields after warn; "
+            f"got {proposal.flagged_fields!r}"
+        )
+        assert "check_e" not in (proposal.flagged_fields or []), (
+            f"ADV-B: 'check_e' must NOT be in flagged_fields (it was healed); "
+            f"got {proposal.flagged_fields!r}"
+        )
+        assert mock_gen.generate.call_count == 1, (
+            f"ADV-B: generate() must be called exactly once; " f"got {mock_gen.generate.call_count}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# ADV-C  check_e_regens write doesn't clobber existing generated_content keys
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+class TestAdvCRegenCountDoesNotClobberContent:
+    """ADV-C: check_e_regens JSONB write must merge into existing generated_content.
+
+    After a persistent fail (2 regens), the service writes
+    proposal.generated_content['check_e_regens'] = 2.  It must NOT clobber the
+    other keys (gloss_en, gloss_ru, example_greek, example_translation) that were
+    present before the write.
+
+    This verifies that the impl uses dict merge (`new_content = dict(...); new_content[key]=val`)
+    rather than a full replacement that discards existing content.
+    """
+
+    async def test_advc_regen_count_write_preserves_existing_keys(self) -> None:
+        proposal = _make_proposal(example_greek=_FAILING_SENTENCE)
+        # Pre-set a rich generated_content with all expected keys.
+        proposal.generated_content = {
+            "gloss_en": "book",
+            "gloss_ru": "книга",
+            "example_greek": _FAILING_SENTENCE,
+            "example_translation": "The mother sees a quantum.",
+        }
+        svc = _make_service()
+
+        gen_mock = _make_generator_mock_always_fail(proposal)
+
+        with (
+            patch(_PATCH_GENERATOR, return_value=gen_mock, create=True),
+            patch(_PATCH_CEFR, side_effect=lambda db: _cefr_mock(_ALLOWED_FAIL)),
+            patch(_PATCH_LEXICON, return_value=_lexicon_mock()),
+            patch(_PATCH_MORPHOLOGY, return_value=_morphology_mock_failing()),
+        ):
+            outcome = await svc.verify(proposal)
+
+        assert outcome.status == "FLAGGED"  # confirm we hit the persistent-fail path
+        content = proposal.generated_content
+        assert (
+            content.get("check_e_regens") == 2
+        ), f"ADV-C: check_e_regens must be 2; got {content.get('check_e_regens')!r}"
+        assert (
+            content.get("gloss_en") == "book"
+        ), f"ADV-C: gloss_en must be preserved; got {content.get('gloss_en')!r}"
+        assert (
+            content.get("gloss_ru") == "книга"
+        ), f"ADV-C: gloss_ru must be preserved; got {content.get('gloss_ru')!r}"
+        assert content.get("example_translation") == "The mother sees a quantum.", (
+            f"ADV-C: example_translation must be preserved; "
+            f"got {content.get('example_translation')!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# ADV-D  REJECTED on the SECOND regen (not first) → generate() called twice
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+class TestAdvDRejectedOnSecondRegen:
+    """ADV-D: generator does NOT reject on regen #1 (gates still fail), then REJECTS on regen #2.
+
+    Verifies that the loop correctly handles a mid-second-regen rejection:
+        - generate() called exactly twice.
+        - outcome.status == "REJECTED".
+        - outcome.check_e_regens == 2 (both regen attempts consumed).
+    """
+
+    async def test_advd_rejected_on_second_regen(self) -> None:
+        proposal = _make_proposal(example_greek=_FAILING_SENTENCE)
+        svc = _make_service()
+
+        call_count = [0]
+
+        async def _side_effect(_proposal):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # First call: no-op — content stays failing, no rejection.
+                pass
+            else:
+                # Second call: generator hits its own 3-failure terminal → REJECTED.
+                _proposal.status = WordProposalState.REJECTED
+
+        mock_gen = AsyncMock()
+        mock_gen.generate = AsyncMock(side_effect=_side_effect)
+
+        with (
+            patch(_PATCH_GENERATOR, return_value=mock_gen, create=True),
+            patch(_PATCH_CEFR, side_effect=lambda db: _cefr_mock(_ALLOWED_FAIL)),
+            patch(_PATCH_LEXICON, return_value=_lexicon_mock()),
+            patch(_PATCH_MORPHOLOGY, return_value=_morphology_mock_failing()),
+        ):
+            outcome = await svc.verify(proposal)
+
+        assert mock_gen.generate.call_count == 2, (
+            f"ADV-D: generate() must be called exactly twice (reject on 2nd); "
+            f"got call_count={mock_gen.generate.call_count}"
+        )
+        assert (
+            outcome.status == "REJECTED"
+        ), f"ADV-D: outcome.status must be 'REJECTED'; got {outcome.status!r}"
+        assert outcome.check_e_regens == 2, (
+            f"ADV-D: check_e_regens must be 2 (both regens consumed); "
+            f"got {outcome.check_e_regens}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# ADV-E  Pre-existing flagged_fields are APPENDED to (not clobbered) after loop
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+class TestAdvEPreExistingFlaggedFieldsPreserved:
+    """ADV-E: proposal.flagged_fields pre-populated (e.g. a prior judge flag) must be
+    APPENDED to, not replaced, when the persistent-fail path writes gate names.
+
+    Scenario: proposal arrives with flagged_fields=["prior_judge_flag"].
+    After 2 failed regens, _on_hard_fail must:
+        - Append "check_e" to the existing list.
+        - NOT discard "prior_judge_flag".
+        - NOT produce a duplicate "check_e" if it was already present.
+    """
+
+    async def test_adve_prior_flags_appended_not_clobbered(self) -> None:
+        proposal = _make_proposal(example_greek=_FAILING_SENTENCE)
+        proposal.flagged_fields = ["prior_judge_flag"]  # pre-populated by a prior stage
+        svc = _make_service()
+
+        gen_mock = _make_generator_mock_always_fail(proposal)
+
+        with (
+            patch(_PATCH_GENERATOR, return_value=gen_mock, create=True),
+            patch(_PATCH_CEFR, side_effect=lambda db: _cefr_mock(_ALLOWED_FAIL)),
+            patch(_PATCH_LEXICON, return_value=_lexicon_mock()),
+            patch(_PATCH_MORPHOLOGY, return_value=_morphology_mock_failing()),
+        ):
+            outcome = await svc.verify(proposal)
+
+        assert outcome.status == "FLAGGED"
+        assert (
+            proposal.flagged_fields is not None
+        ), "ADV-E: proposal.flagged_fields must not be None after persistent fail"
+        assert "prior_judge_flag" in proposal.flagged_fields, (
+            f"ADV-E: pre-existing 'prior_judge_flag' must NOT be clobbered; "
+            f"got {proposal.flagged_fields!r}"
+        )
+        assert "check_e" in proposal.flagged_fields, (
+            f"ADV-E: 'check_e' must be appended to flagged_fields; "
+            f"got {proposal.flagged_fields!r}"
+        )
+        # No duplicates: check_e must appear exactly once.
+        check_e_count = proposal.flagged_fields.count("check_e")
+        assert check_e_count == 1, (
+            f"ADV-E: 'check_e' must appear exactly once in flagged_fields; "
+            f"got count={check_e_count}, full list={proposal.flagged_fields!r}"
+        )
