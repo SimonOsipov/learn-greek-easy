@@ -884,6 +884,60 @@ export interface LexgenProposalListParams {
   page_size?: number;
 }
 
+/**
+ * One morphological / scalar field in the proposal detail view.
+ *
+ * Score-stripped projection of a `reconciliation_log.fields[*]` entry joined
+ * with `generated_fields` (LEXGEN-12-01). Carries ONLY value + provenance
+ * source + flagged — never `confidence`, `judge_scores`, or `trust_score`
+ * (anti-anchoring invariant, Decision Record §3).
+ *
+ * `field` is a flat key: scalars (`gender`, `declension_group`, `ipa`,
+ * `frequency_rank`) plus already-flat form keys (`nominative_singular`…).
+ */
+export interface LexgenProposalField {
+  field: string;
+  value: string | null;
+  source: string | null;
+  flagged: boolean;
+}
+
+/**
+ * One content field (gloss / example) in the proposal detail view.
+ *
+ * Structurally parallel to {@link LexgenProposalField} so ONE row component +
+ * ONE flagged-badge rule renders BOTH lists. Content is produced by the
+ * LEXGEN-09 generator and has no `reconciliation_log` provenance, so `source`
+ * is always the constant `"lexgen_generator"`.
+ *
+ * `field` is one of: `gloss_en`, `gloss_ru`, `example_greek`,
+ * `example_translation`.
+ */
+export interface LexgenProposalContentField {
+  field: string;
+  value: string | null;
+  source: string;
+  flagged: boolean;
+}
+
+/**
+ * Proposal detail response for the verification inbox.
+ * Mirrors the LEXGEN-12-01 `LexgenProposalDetailResponse` schema.
+ *
+ * The score-exclusion guarantee lives in this shape: there is NO
+ * `judge_scores`, NO `trust_score`, and NO `confidence` field — flagged state
+ * is the per-field `flagged` boolean ONLY.
+ */
+export interface LexgenProposalDetailResponse {
+  id: string;
+  lemma: string;
+  pos: string;
+  status: string;
+  created_at: string;
+  fields: LexgenProposalField[];
+  content: LexgenProposalContentField[];
+}
+
 // ============================================
 // Admin API Methods
 // ============================================
