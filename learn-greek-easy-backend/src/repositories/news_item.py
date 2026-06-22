@@ -2,11 +2,12 @@
 
 from uuid import UUID
 
-from sqlalchemy import cast, desc, func, select
+from sqlalchemy import cast, desc, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy.sql import ColumnElement
 
 from src.db.models import (
     ListeningDialog,
@@ -18,6 +19,35 @@ from src.db.models import (
     SituationPicture,
 )
 from src.repositories.base import BaseRepository
+
+
+def _like_escape(q: str) -> str:
+    """Escape LIKE special characters in a search term.
+
+    Escapes ``\\``, ``%``, and ``_`` so a literal ``%`` in the user's
+    query is not treated as a SQL wildcard by the ILIKE clause.
+    The escape character is ``\\`` (passed to ``.ilike(..., escape='\\\\')``.
+    """
+    return q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _search_predicate(q: str) -> ColumnElement:
+    """Build the OR search predicate for accent+case-insensitive substring match.
+
+    Applies ``immutable_unaccent(col).ilike(immutable_unaccent('%<q>%'))``
+    across: Situation.scenario_el, SituationDescription.text_el,
+    SituationDescription.text_el_a2, and NewsItem.original_article_url.
+
+    The search term is LIKE-escaped so ``%`` / ``_`` are treated as literals.
+    """
+    escaped = _like_escape(q)
+    pattern = func.immutable_unaccent(f"%{escaped}%")
+    return or_(
+        func.immutable_unaccent(Situation.scenario_el).ilike(pattern, escape="\\"),
+        func.immutable_unaccent(SituationDescription.text_el).ilike(pattern, escape="\\"),
+        func.immutable_unaccent(SituationDescription.text_el_a2).ilike(pattern, escape="\\"),
+        func.immutable_unaccent(NewsItem.original_article_url).ilike(pattern, escape="\\"),
+    )
 
 
 class NewsItemRepository(BaseRepository[NewsItem]):
@@ -43,11 +73,16 @@ class NewsItemRepository(BaseRepository[NewsItem]):
         limit: int = 20,
         country: NewsCountry | None = None,
         published_only: bool = True,
+        q: str | None = None,
     ) -> list[Row]:
         """Get news items with situation/description/picture via JOIN, ordered by publication_date DESC.
 
         When ``published_only`` is True (the default, for the public feed), draft
         items are excluded. Admin callers pass False to see drafts too.
+
+        When ``q`` is a non-blank string, results are filtered to items whose
+        scenario_el, text_el, text_el_a2, or original_article_url contain the
+        search term (accent+case-insensitive substring via immutable_unaccent+ilike).
         """
         query = (
             select(NewsItem, Situation, SituationDescription, SituationPicture)
@@ -59,6 +94,8 @@ class NewsItemRepository(BaseRepository[NewsItem]):
             query = query.where(NewsItem.status == NewsItemStatus.PUBLISHED)
         if country is not None:
             query = query.where(SituationDescription.country == country)
+        if q and q.strip():
+            query = query.where(_search_predicate(q.strip()))
         query = (
             query.order_by(
                 desc(NewsItem.publication_date),
@@ -83,16 +120,21 @@ class NewsItemRepository(BaseRepository[NewsItem]):
         return await self.exists(original_article_url=url)
 
     async def count_all(
-        self, country: NewsCountry | None = None, *, published_only: bool = True
+        self,
+        country: NewsCountry | None = None,
+        *,
+        published_only: bool = True,
+        q: str | None = None,
     ) -> int:
         """Count news items (only those with situation/description via JOIN).
 
         Args:
             country: Optional country filter
             published_only: Exclude drafts (default True, for the public feed)
+            q: Optional search term (accent+case-insensitive substring)
 
         Returns:
-            Total number of news items in the database (filtered if country provided)
+            Total number of news items in the database (filtered if country/q provided)
         """
         query = (
             select(func.count())
@@ -104,6 +146,8 @@ class NewsItemRepository(BaseRepository[NewsItem]):
             query = query.where(NewsItem.status == NewsItemStatus.PUBLISHED)
         if country is not None:
             query = query.where(SituationDescription.country == country)
+        if q and q.strip():
+            query = query.where(_search_predicate(q.strip()))
         result = await self.db.execute(query)
         return result.scalar_one()
 
@@ -171,8 +215,17 @@ class NewsItemRepository(BaseRepository[NewsItem]):
         result = await self.db.execute(query)
         return result.scalar_one()
 
-    async def count_by_country(self, *, published_only: bool = True) -> dict[str, int]:
+    async def count_by_country(
+        self,
+        *,
+        published_only: bool = True,
+        q: str | None = None,
+    ) -> dict[str, int]:
         """Count news items grouped by SituationDescription.country.
+
+        Filtered by ``q`` only (NOT by the selected country filter), so the
+        country pills show per-country totals within the q-filtered set regardless
+        of which country tab is currently selected (F2).
 
         Returns:
             Dict mapping country value strings to counts, e.g. {"cyprus": 5, "greece": 3, "world": 2}
@@ -186,6 +239,8 @@ class NewsItemRepository(BaseRepository[NewsItem]):
         )
         if published_only:
             query = query.where(NewsItem.status == NewsItemStatus.PUBLISHED)
+        if q and q.strip():
+            query = query.where(_search_predicate(q.strip()))
         result = await self.db.execute(query)
         rows = result.all()
         counts = {c.value: 0 for c in NewsCountry}
