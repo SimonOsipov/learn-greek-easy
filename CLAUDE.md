@@ -54,8 +54,8 @@ cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && /User
 
 ## Design System
 
-**Source of truth:** [docs/design-system.md](docs/design-system.md).
-Visual snapshot: [Design-System-v2.4.html](docs/design-system/Design-System-v2.4.html).
+**Token source of truth:** the **"Greeklish Design System" project on claude.ai/design**. The token layer (colors, spacing, radii, shadows, fonts, animations) is authored there and pulled/reconciled into `src/index.css`; the repo *follows* Claude Design for token values. Components, `tailwind.config.js`, and the build stay code-owned.
+**Reference doc:** [docs/design-system.md](docs/design-system.md). Visual snapshot: [Design-System-v2.4.html](docs/design-system/Design-System-v2.4.html).
 
 **Read it first** before any task involving color, spacing, radius, shadow, font, animation, or new visual component. The doc is ~290 lines and grep-friendly.
 
@@ -77,7 +77,7 @@ Visual snapshot: [Design-System-v2.4.html](docs/design-system/Design-System-v2.4
 
 If you need a value that isn't in the doc:
 
-1. Define it in `src/index.css` (with light + dark) or `tailwind.config.js`.
+1. **Tokens:** author it in **Claude Design** first (the token source of truth), then pull/reconcile into `src/index.css` (with light + dark) — add a `tailwind.config.js` alias if needed. **Classes / animations** are code-owned: define them in `src/index.css` / `tailwind.config.js` directly.
 2. Update [docs/design-system.md](docs/design-system.md) in the same PR.
 3. Call it out in the PR description under **Design system delta**.
 
