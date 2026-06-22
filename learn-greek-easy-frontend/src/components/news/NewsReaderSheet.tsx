@@ -18,6 +18,7 @@ import { ArrowLeft, ExternalLink, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
+import { KaraokeText } from '@/components/shared/KaraokeText';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -26,6 +27,7 @@ import {
   SheetDescription,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { useAudioTimeMs } from '@/hooks/useAudioTimeMs';
 import { tDynamic } from '@/i18n/tDynamic';
 import { track } from '@/lib/analytics';
 import { buildSrcSet, recoverDerivativeError } from '@/lib/imageVariants';
@@ -63,6 +65,19 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
     ? article?.audio_a2_duration_seconds
     : article?.audio_duration_seconds;
   const hasAudio = !!audioUrl;
+
+  // Karaoke word-level highlighting (reuses the Situations primitive). The same
+  // forced-alignment timestamps the backend stores for Situations are now exposed
+  // on the news API; pick the set that matches the displayed level + its audio.
+  const wordTimestamps = useA2Content
+    ? (article?.word_timestamps_a2 ?? [])
+    : (article?.word_timestamps ?? []);
+  const karaokeEnabled = hasAudio && wordTimestamps.length > 0;
+
+  // Container wrapping the WaveformPlayer's <audio>; the hook polls it for currentTime.
+  // Re-keyed with the player below so it re-attaches when level/article changes.
+  const [audioContainerEl, setAudioContainerEl] = useState<HTMLElement | null>(null);
+  const audioTimeMs = useAudioTimeMs(audioContainerEl, karaokeEnabled);
 
   // resetKey forces WaveformPlayer remount when level or article changes
   const [resetKey, setResetKey] = useState(0);
@@ -372,26 +387,41 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
                   {title}
                 </h2>
 
-                {/* Audio player (full — scrub enabled, 3 speeds) */}
+                {/* Audio player (full — scrub enabled, 3 speeds).
+                    Wrapped in a ref'd container so useAudioTimeMs can find the <audio>;
+                    the remount key (previously on the player) lives on the wrapper so a
+                    level/article switch swaps the audio element AND re-attaches the
+                    karaoke time tracker to the fresh element. */}
                 {hasAudio && (
-                  <WaveformPlayer
-                    key={`reader-${resetKey}-${level}-${article.id}`}
-                    variant="news-mini"
-                    audioUrl={audioUrl ?? undefined}
-                    duration={audioDuration ?? undefined}
-                    barCount={44}
-                    showSpeedControl
-                    disabled={!audioUrl}
-                    onPlay={handlePlay}
-                    onPause={handlePause}
-                    onComplete={handleComplete}
-                  />
+                  <div key={`reader-${resetKey}-${level}-${article.id}`} ref={setAudioContainerEl}>
+                    <WaveformPlayer
+                      variant="news-mini"
+                      audioUrl={audioUrl ?? undefined}
+                      duration={audioDuration ?? undefined}
+                      barCount={44}
+                      showSpeedControl
+                      disabled={!audioUrl}
+                      onPlay={handlePlay}
+                      onPause={handlePause}
+                      onComplete={handleComplete}
+                    />
+                  </div>
                 )}
 
-                {/* Body text — Noto Serif (font-serif), full un-clamped paragraph */}
-                <div lang="el" className="font-serif text-[17px] leading-[1.72] text-fg2">
-                  {bodyText}
-                </div>
+                {/* Body text — Noto Serif (font-serif). Karaoke-highlighted in sync with
+                    the audio when per-word timings exist; plain paragraph otherwise. */}
+                {karaokeEnabled ? (
+                  <KaraokeText
+                    wordTimestamps={wordTimestamps}
+                    currentTimeMs={audioTimeMs}
+                    fallbackText={bodyText}
+                    className="font-serif text-[17px] leading-[1.72] text-fg2"
+                  />
+                ) : (
+                  <div lang="el" className="font-serif text-[17px] leading-[1.72] text-fg2">
+                    {bodyText}
+                  </div>
+                )}
 
                 {/* Primary CTA — "Open original" — real anchor for accessibility + testability.
                     Only navigates when the URL scheme is http/https (XSS guard). When the URL

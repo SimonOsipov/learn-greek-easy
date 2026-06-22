@@ -571,6 +571,8 @@ class NewsItemService:
             audio_a2_generated_at=None,
             audio_a2_duration_seconds=description.audio_a2_duration_seconds,
             audio_a2_file_size_bytes=None,
+            word_timestamps=description.word_timestamps,
+            word_timestamps_a2=description.word_timestamps_a2,
             alt_text=picture.alt_text if picture else None,
             photo_credit=picture.photo_credit if picture else None,
             status=news_item.status,

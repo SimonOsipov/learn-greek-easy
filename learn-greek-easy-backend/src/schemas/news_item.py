@@ -21,6 +21,7 @@ from pydantic import (
 )
 
 from src.db.models import NewsCountry, NewsItemStatus
+from src.schemas.admin import WordTimestamp
 from src.schemas.exercise_payload import MultilingualField, SelectCorrectAnswerPayload
 
 
@@ -214,6 +215,17 @@ class NewsItemResponse(BaseModel):
     )
     audio_a2_file_size_bytes: Optional[int] = Field(
         None, description="Size of A2 audio file in bytes"
+    )
+
+    # Per-word audio alignment for karaoke-style highlighting in the reader.
+    # Sourced from the linked SituationDescription (populated by the same
+    # forced-alignment pipeline that powers Situations). None when audio for that
+    # level has not been generated (or predates the alignment pipeline).
+    word_timestamps: Optional[list[WordTimestamp]] = Field(
+        None, description="B1 per-word timings ({word, start_ms, end_ms}) for karaoke highlighting"
+    )
+    word_timestamps_a2: Optional[list[WordTimestamp]] = Field(
+        None, description="A2 per-word timings ({word, start_ms, end_ms}) for karaoke highlighting"
     )
 
     # Publication status (NADM-25)
