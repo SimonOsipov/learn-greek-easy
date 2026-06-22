@@ -158,6 +158,29 @@ class WordProposalOrigin(str, enum.Enum):
     BATCH = "batch"
 
 
+class ReviewAction(str, enum.Enum):
+    """Action taken by a reviewer on a specific field of a word proposal.
+
+    Maps to the ``review_action`` PG enum (lowercase values, LEXGEN-13-01).
+    """
+
+    APPROVE = "approve"
+    EDIT = "edit"
+    REGENERATE = "regenerate"
+    REJECT = "reject"
+
+
+class HumanDecision(str, enum.Enum):
+    """Final human decision on a word proposal review.
+
+    Maps to the ``human_decision`` PG enum (lowercase values, LEXGEN-13-01).
+    """
+
+    ACCEPT = "accept"
+    EDIT = "edit"
+    REJECT = "reject"
+
+
 class AchievementCategory(str, enum.Enum):
     """Category of achievement."""
 
@@ -1032,6 +1055,176 @@ class WordProposal(Base, TimestampMixin):
         return (
             f"<WordProposal(id={self.id}, lemma_input={self.lemma_input}, "
             f"status={self.status})>"
+        )
+
+
+class WordProposalReviewLog(Base):
+    """Per-field reviewer decision log for a LEXGEN word proposal (LEXGEN-13-01).
+
+    Tracks every discrete action a human reviewer takes on a single field
+    of a ``WordProposal``.  Does NOT use ``TimestampMixin`` (no ``updated_at``
+    — review log rows are append-only).
+
+    Design notes:
+    - ``human_decision`` is nullable so a log row can capture a pure field-level
+      action (e.g. APPROVE/EDIT on one field) without forcing a final verdict yet.
+    - ``reviewer_id`` is SET NULL (not CASCADE) so review history survives
+      account deletion (mirrors ``WordProposal.requested_by`` convention).
+    """
+
+    __tablename__ = "word_proposal_review_log"
+    __table_args__ = (Index("ix_word_proposal_review_log_proposal_id", "proposal_id"),)
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    proposal_id: Mapped[UUID] = mapped_column(
+        ForeignKey("word_proposal.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="The proposal this review log row belongs to",
+    )
+
+    action: Mapped[ReviewAction] = mapped_column(
+        SAEnum(
+            ReviewAction,
+            values_callable=lambda e: [v.value for v in e],
+            name="review_action",
+            create_type=False,
+        ),
+        nullable=False,
+        comment="Action the reviewer took on this field: approve | edit | regenerate | reject",
+    )
+
+    field: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Which proposal field this action applies to (NULL for proposal-level actions)",
+    )
+    pipeline_value: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="The pipeline-generated value at review time (for diff / audit purposes)",
+    )
+    edited_value: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="The reviewer's edited value (NULL when action != edit)",
+    )
+
+    human_decision: Mapped[HumanDecision | None] = mapped_column(
+        SAEnum(
+            HumanDecision,
+            values_callable=lambda e: [v.value for v in e],
+            name="human_decision",
+            create_type=False,
+        ),
+        nullable=True,
+        comment="Final reviewer verdict on the proposal (nullable for field-level-only rows)",
+    )
+
+    reviewer_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="User who performed the review (SET NULL; NULL after account deletion)",
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        comment="Timestamp when this review log row was created",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<WordProposalReviewLog(id={self.id}, proposal_id={self.proposal_id}, "
+            f"action={self.action})>"
+        )
+
+
+class ProposalAttempt(Base):
+    """Snapshot of a single LEXGEN pipeline run for a word proposal (LEXGEN-13-01).
+
+    Each time the pipeline runs for a proposal (initial run + regeneration
+    retries), a ``ProposalAttempt`` row captures the full JSONB state of that
+    run.  ``attempt_no`` is 1-based and monotonically increasing per proposal.
+    ``superseded_at`` is set when a newer attempt replaces this one.
+
+    Does NOT use ``TimestampMixin`` — no ``updated_at`` (rows are effectively
+    immutable once the next attempt supersedes them).
+    """
+
+    __tablename__ = "proposal_attempt"
+    __table_args__ = (Index("ix_proposal_attempt_proposal_id", "proposal_id"),)
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    proposal_id: Mapped[UUID] = mapped_column(
+        ForeignKey("word_proposal.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="The proposal this attempt belongs to",
+    )
+
+    attempt_no: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        comment="1-based attempt number (monotonically increasing per proposal)",
+    )
+
+    # JSONB snapshots — match the column names on WordProposal for easy diffing
+    generated_content: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="RAG generator output for this attempt (LEXGEN-09 format)",
+    )
+    generated_fields: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Reconciler-owned fields for this attempt",
+    )
+    reconciliation_log: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Reconciliation log snapshot for this attempt",
+    )
+    judge_scores: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Per-field judge scores snapshot (JSONB, NOT a numeric aggregate — LEXGEN-11 D8)",
+    )
+    flagged_fields: Mapped[list | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Fields flagged for reviewer attention in this attempt",
+    )
+
+    retry_attempts: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="Number of generation retries within this attempt",
+    )
+    superseded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="When this attempt was superseded by a newer run (NULL = current attempt)",
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        comment="Timestamp when this attempt row was created",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<ProposalAttempt(id={self.id}, proposal_id={self.proposal_id}, "
+            f"attempt_no={self.attempt_no})>"
         )
 
 
