@@ -4,7 +4,7 @@
 // Generate button (disabled / "Coming soon"), per-source empty state.
 // Data is fetched once by SituationExercisesTab; source switching is client-side.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -43,6 +43,17 @@ function getCount(
   src: ExerciseSourceType
 ): number {
   return exercisesData?.groups.find((g) => g.source_type === src)?.exercise_count ?? 0;
+}
+
+// Returns the first source in dialog→description→picture order that has count > 0.
+// Falls back to 'dialog' when all counts are zero (D9).
+export function pickDefaultExerciseSource(
+  counts: Record<ExerciseSourceType, number>
+): ExerciseSourceType {
+  for (const src of SOURCE_TYPES) {
+    if (counts[src] > 0) return src;
+  }
+  return 'dialog';
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -120,10 +131,14 @@ export function SituationDrawerExercises({ situation }: Props) {
   const [exercisesData, setExercisesData] = useState<SituationExercisesResponse | null>(null);
   const [activeSource, setActiveSource] = useState<ExerciseSourceType>('dialog');
 
+  // Guards the one-time auto-select: reset on situation change, flipped on first data load (D8/D16).
+  const hasAutoSelectedRef = useRef(false);
+
   // Reset state when navigating to a different situation.
   useEffect(() => {
     setExercisesData(null);
     setActiveSource('dialog');
+    hasAutoSelectedRef.current = false;
   }, [situation.id]);
 
   const counts = {
@@ -148,7 +163,11 @@ export function SituationDrawerExercises({ situation }: Props) {
           <SegControl<ExerciseSourceType>
             options={segOptions}
             value={activeSource}
-            onChange={setActiveSource}
+            onChange={(src) => {
+              // Any manual source switch marks the auto-select as consumed (D8/D16).
+              hasAutoSelectedRef.current = true;
+              setActiveSource(src);
+            }}
           />
           <GenerateButton source={activeSource} situationId={situation.id} />
         </div>
@@ -163,8 +182,26 @@ export function SituationDrawerExercises({ situation }: Props) {
           situationId={situation.id}
           hideSourceFilter
           value={activeSource}
-          onValueChange={setActiveSource}
-          onDataLoaded={setExercisesData}
+          onValueChange={(src) => {
+            // Any manual source switch marks the auto-select as consumed (D8/D16).
+            hasAutoSelectedRef.current = true;
+            setActiveSource(src);
+          }}
+          onDataLoaded={(data) => {
+            setExercisesData(data);
+            // Auto-select fires exactly once per situation on first data load (D8/D16).
+            // Skipped if the admin has already manually switched source.
+            if (!hasAutoSelectedRef.current) {
+              hasAutoSelectedRef.current = true;
+              const loadedCounts: Record<ExerciseSourceType, number> = {
+                dialog: data.groups.find((g) => g.source_type === 'dialog')?.exercise_count ?? 0,
+                description:
+                  data.groups.find((g) => g.source_type === 'description')?.exercise_count ?? 0,
+                picture: data.groups.find((g) => g.source_type === 'picture')?.exercise_count ?? 0,
+              };
+              setActiveSource(pickDefaultExerciseSource(loadedCounts));
+            }
+          }}
         />
 
         {/* Per-source empty state — shown only after data has loaded */}

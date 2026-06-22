@@ -5,6 +5,9 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+import { el } from 'date-fns/locale/el';
+import { ru } from 'date-fns/locale/ru';
+
 import {
   normalizeToMidnight,
   getTodayAtMidnight,
@@ -12,6 +15,7 @@ import {
   parseAndNormalizeDate,
   formatDisplayDate,
   toISOString,
+  getDateLocale,
 } from '../dateUtils';
 
 describe('dateUtils', () => {
@@ -152,6 +156,24 @@ describe('dateUtils', () => {
       const expected = date.toISOString();
 
       expect(result).toBe(expected);
+    });
+  });
+
+  describe('getDateLocale', () => {
+    it("should return the ru locale for 'ru'", () => {
+      expect(getDateLocale('ru')).toBe(ru);
+    });
+
+    it("should return the ru locale for 'ru-RU' (region-suffix normalized)", () => {
+      expect(getDateLocale('ru-RU')).toBe(ru);
+    });
+
+    it("should return undefined for 'en-US'", () => {
+      expect(getDateLocale('en-US')).toBeUndefined();
+    });
+
+    it("should return the el locale for 'el-GR'", () => {
+      expect(getDateLocale('el-GR')).toBe(el);
     });
   });
 });

@@ -98,8 +98,13 @@ test.describe('Admin Situations — drawer happy paths (SIT-08)', () => {
   test('6. Linked news tab: Link to article button is disabled with "Coming soon" tooltip', async ({
     page,
   }) => {
-    await navigateToAdminTab(page, 'situations');
-    await page.locator('[data-testid^="sit-card-"]').first().click();
+    // Deep-link to the seeded "At the coffee shop" situation, which has NO linked
+    // article (linked_news = null). Per F12 (ADMIN2-42), the disabled "Link to
+    // article" CTA renders ONLY when the situation is NOT already linked — so we
+    // must open a known-unlinked situation here rather than grid .first() (whose
+    // linked state depends on uncontrolled DB ordering).
+    expect(coffeeShopId).toBeDefined();
+    await page.goto(`/admin?tab=situations&edit=${coffeeShopId}`);
     await expect(page.locator('[data-testid="situation-edit-drawer"]')).toBeVisible();
     await page.locator('[data-testid="situation-drawer-tab-linkedNews"]').click();
     await expect(

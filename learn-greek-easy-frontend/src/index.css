@@ -1271,7 +1271,10 @@
   .drawer-meta {
     display: flex;
     gap: 6px;
-    flex-wrap: wrap;
+    /* F8: keep the badge cluster (status + level×N + exercise count) on one line.
+       ~4 badges max; nowrap is safe within the drawer header content column. */
+    flex-wrap: nowrap;
+    min-width: 0;
   }
   .drawer-head-content {
     display: flex;
@@ -1319,6 +1322,8 @@
     cursor: pointer;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
+    /* F9: prevent multi-token labels ("Dialog · 0 lines") from wrapping to 2 lines. */
+    white-space: nowrap;
   }
   .drawer-tab:hover {
     color: hsl(var(--fg));
@@ -3200,7 +3205,9 @@
   /* ── Audio tab rows (NEWS-07c) ─────────────────────────────────────────── */
   .audio-row {
     display: grid;
-    grid-template-columns: minmax(220px, 260px) 1fr auto;
+    /* F4: relax left-column min so the 1fr waveform compresses before the
+       auto action-button column is clipped at RU label widths. */
+    grid-template-columns: minmax(160px, 1fr) 1fr auto;
     gap: 12px;
     align-items: center;
     padding: 10px;

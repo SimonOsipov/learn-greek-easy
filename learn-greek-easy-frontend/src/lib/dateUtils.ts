@@ -7,6 +7,33 @@
  * Created to fix BUG-003: Date comparison discrepancy between stats and review API
  */
 
+import { el } from 'date-fns/locale/el';
+import { ru } from 'date-fns/locale/ru';
+
+import type { Locale } from 'date-fns';
+
+/**
+ * Map an i18n language code to a date-fns Locale.
+ *
+ * Returns `undefined` for English (date-fns defaults to EN when no locale is passed),
+ * `ru` for Russian, and `el` for Greek.
+ *
+ * Named `getDateLocale` to match the 10 existing inline copies across the app,
+ * enabling frictionless future consolidation (D3/D11, ADMIN2-42).
+ */
+export function getDateLocale(language: string): Locale | undefined {
+  // Normalize region-qualified tags (e.g. 'ru-RU' -> 'ru'), matching the
+  // LanguageContext `.split('-')[0]` convention.
+  switch (language.split('-')[0]) {
+    case 'ru':
+      return ru;
+    case 'el':
+      return el;
+    default:
+      return undefined;
+  }
+}
+
 /**
  * Normalize a date to midnight (00:00:00.000) in local timezone
  * This ensures date comparisons work correctly for "due today" logic

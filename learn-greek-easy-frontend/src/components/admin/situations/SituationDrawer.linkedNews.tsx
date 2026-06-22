@@ -40,7 +40,7 @@ interface Props {
 }
 
 export function SituationDrawerLinkedNews({ situation }: Props) {
-  const { t } = useTranslation('admin');
+  const { t, i18n } = useTranslation('admin');
   const { openIn } = useAdminTabNav();
   const fetchSituationDetail = useAdminSituationStore((s) => s.fetchSituationDetail);
   const closeDrawer = useAdminSituationStore((s) => s.closeDrawer);
@@ -114,7 +114,7 @@ export function SituationDrawerLinkedNews({ situation }: Props) {
               <p className="mb-1 text-xs text-muted-foreground">
                 {countryFlag(linkedNews.country)}
                 {countryFlag(linkedNews.country) && ' '}
-                {new Date(linkedNews.published_at).toLocaleDateString()}
+                {new Date(linkedNews.published_at).toLocaleDateString(i18n.language)}
               </p>
 
               {/* Title */}
@@ -136,24 +136,26 @@ export function SituationDrawerLinkedNews({ situation }: Props) {
         </div>
       )}
 
-      {/* "Link to article" CTA — always disabled (Coming soon) regardless of linked state */}
-      <div className="flex justify-center">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span>
-              <Button
-                variant="default"
-                aria-disabled="true"
-                className="cursor-not-allowed opacity-60"
-                onClick={(e) => e.preventDefault()}
-              >
-                {t('situations.drawer.linkedNews.linkCta')}
-              </Button>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>{t('comingSoon')}</TooltipContent>
-        </Tooltip>
-      </div>
+      {/* "Link to article" CTA — shown only when no article is linked (F12 / D15) */}
+      {!linkedNews && (
+        <div className="flex justify-center">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
+                <Button
+                  variant="default"
+                  aria-disabled="true"
+                  className="cursor-not-allowed opacity-60"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  {t('situations.drawer.linkedNews.linkCta')}
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{t('comingSoon')}</TooltipContent>
+          </Tooltip>
+        </div>
+      )}
 
       {/* Footer actions — active when linked_news is set, disabled otherwise */}
       <div className="flex gap-2 border-t border-border pt-2">
