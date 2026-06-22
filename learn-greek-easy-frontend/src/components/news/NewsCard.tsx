@@ -5,9 +5,18 @@
  *         level chips (A2/B1), and Greek headline.
  * Zone B: Solid body with description, compact audio player, source/date footer.
  *
- * Card surface is keyboard-activatable and calls onOpen(article) when clicked.
- * Falls back to opening original_article_url in a new tab when onOpen is absent
- * (forward-compatible with Batch 3's slide-over reader).
+ * The card renders in two modes based on whether `onOpen` is provided:
+ *
+ *   Reader mode  (onOpen provided)  — used on /news page.
+ *     Root is <article role="button">. Card click opens the in-app reader sheet.
+ *     External-link button (top-right) is interactive: stops propagation + window.open.
+ *
+ *   Link mode    (!onOpen)          — used on the dashboard.
+ *     Root is <a href target="_blank" rel>. Native anchor navigation to the source article.
+ *     External-link icon (top-right) is DECORATIVE only (aria-hidden, pointer-events-none)
+ *     to preserve the visual without creating a nested interactive element.
+ *     Audio player container calls stopPropagation+preventDefault so play/pause clicks
+ *     do not trigger anchor navigation.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -133,41 +142,48 @@ export const NewsCard: React.FC<NewsCardProps> = ({
     ? (article.description_el_a2 ?? article.description_el)
     : article.description_el;
 
-  /** Open the external source article. Fires the analytics event. */
+  /** Fire the analytics event for an outbound click. */
+  const fireClickedAnalytics = useCallback(() => {
+    try {
+      const domain = new URL(article.original_article_url).hostname;
+      track('news_article_clicked', {
+        item_id: article.id,
+        article_domain: domain,
+        level: level ?? 'b1',
+      });
+    } catch {
+      track('news_article_clicked', {
+        item_id: article.id,
+        article_domain: 'unknown',
+        level: level ?? 'b1',
+      });
+    }
+  }, [article.id, article.original_article_url, level]);
+
+  /**
+   * Reader mode only: external-link button handler.
+   * Stops propagation (so card's onOpen doesn't also fire) and opens URL in new tab.
+   */
   const openExternal = useCallback(
     (e: React.MouseEvent | React.KeyboardEvent) => {
       e.stopPropagation();
-      try {
-        const domain = new URL(article.original_article_url).hostname;
-        track('news_article_clicked', {
-          item_id: article.id,
-          article_domain: domain,
-          level: level ?? 'b1',
-        });
-      } catch {
-        track('news_article_clicked', {
-          item_id: article.id,
-          article_domain: 'unknown',
-          level: level ?? 'b1',
-        });
-      }
+      fireClickedAnalytics();
       window.open(article.original_article_url, '_blank', 'noopener,noreferrer');
     },
-    [article.id, article.original_article_url, level]
+    [article.original_article_url, fireClickedAnalytics]
   );
 
-  /** Activate the card body: open the reader (via onOpen) or fall back to the external URL.
+  /**
+   * Reader mode only: card body click handler.
    *
    * NOTE: `news_article_clicked` is intentionally NOT fired here — that event is
    * reserved for actual outbound link clicks (external-link button on the card and
    * "Open original" CTA in the reader). The reader-open action fires
-   * `news_article_opened` from NewsPage's onOpen handler. */
+   * `news_article_opened` from NewsPage's onOpen handler.
+   */
   const handleCardActivate = useCallback(() => {
     if (onOpen) {
       onOpen(article);
-    } else {
-      // Fallback when reader is not wired (e.g. dashboard usage): open external URL directly.
-      window.open(article.original_article_url, '_blank', 'noopener,noreferrer');
     }
   }, [onOpen, article]);
 
@@ -180,6 +196,16 @@ export const NewsCard: React.FC<NewsCardProps> = ({
     },
     [handleCardActivate]
   );
+
+  /**
+   * Link mode only: handler for the audio player container div.
+   * Prevents clicks on the WaveformPlayer (play/pause/scrub) from bubbling to the
+   * parent <a> anchor, which would otherwise trigger navigation.
+   */
+  const handlePlayerClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+  }, []);
 
   // Source hostname for footer
   let sourceHostname = '';
@@ -201,22 +227,9 @@ export const NewsCard: React.FC<NewsCardProps> = ({
   // Gradient fallback when no image
   const thumbGradient = pickNewsThumb(article.id);
 
-  return (
-    <article
-      data-testid={`news-card-${article.id}`}
-      role="button"
-      tabIndex={0}
-      aria-label={title ?? ''}
-      className={cn(
-        'group flex cursor-pointer flex-col overflow-hidden rounded-[var(--radius-lg)]',
-        'border border-line bg-card shadow-1',
-        'transition-all duration-200',
-        'hover:-translate-y-[3px] hover:border-line-2 hover:shadow-2',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2'
-      )}
-      onClick={handleCardActivate}
-      onKeyDown={handleCardKeyDown}
-    >
+  // ── Shared inner content (same for both modes) ──────────────────────────
+  const cardInner = (
+    <>
       {/* ── Zone A: Photo block ───────────────────────────────────────── */}
       <div
         className="relative aspect-[16/11] overflow-hidden rounded-t-[var(--radius-lg)]"
@@ -250,23 +263,43 @@ export const NewsCard: React.FC<NewsCardProps> = ({
           </span>
         )}
 
-        {/* External-link button — top-right; stops propagation so card click doesn't also fire */}
-        <button
-          type="button"
-          aria-label={t('dashboard.news.readMore')}
-          onClick={openExternal}
-          className={cn(
-            'absolute right-2 top-2 z-10',
-            'flex h-[30px] w-[30px] items-center justify-center',
-            'rounded-[9px] border border-line',
-            'bg-card/80 text-fg2 backdrop-blur-sm',
-            'transition-all duration-150',
-            'hover:-translate-y-px hover:text-primary',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1'
-          )}
-        >
-          <ExternalLink className="h-[14px] w-[14px]" aria-hidden="true" />
-        </button>
+        {/*
+         * External-link affordance — top-right, above the photo.
+         *
+         * Reader mode: interactive <button> that stops propagation and opens the source URL.
+         * Link mode:   decorative <span> (aria-hidden, pointer-events-none) — the whole card
+         *              is already the link, so no nested interactive element is needed.
+         */}
+        {onOpen ? (
+          <button
+            type="button"
+            aria-label={t('dashboard.news.readMore')}
+            onClick={openExternal}
+            className={cn(
+              'absolute right-2 top-2 z-10',
+              'flex h-[30px] w-[30px] items-center justify-center',
+              'rounded-[9px] border border-line',
+              'bg-card/80 text-fg2 backdrop-blur-sm',
+              'transition-all duration-150',
+              'hover:-translate-y-px hover:text-primary',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1'
+            )}
+          >
+            <ExternalLink className="h-[14px] w-[14px]" aria-hidden="true" />
+          </button>
+        ) : (
+          <span
+            aria-hidden="true"
+            className={cn(
+              'pointer-events-none absolute right-2 top-2 z-10',
+              'flex h-[30px] w-[30px] items-center justify-center',
+              'rounded-[9px] border border-line',
+              'bg-card/80 text-fg2 backdrop-blur-sm'
+            )}
+          >
+            <ExternalLink className="h-[14px] w-[14px]" />
+          </span>
+        )}
 
         {/* Over-photo bottom text: level chips + Greek title */}
         <div className="absolute bottom-0 left-0 right-0 z-10 flex flex-col gap-[9px] p-4">
@@ -322,10 +355,13 @@ export const NewsCard: React.FC<NewsCardProps> = ({
           </p>
         )}
 
-        {/* Compact audio player — no speed pills on card (design spec §3 "Speeds non-compact only") */}
+        {/* Compact audio player — no speed pills on card (design spec §3 "Speeds non-compact only").
+            In link mode, wrap in a div that stops propagation so play/pause clicks do not
+            navigate the parent <a>. In reader mode, the card is not an anchor so no guard needed. */}
         {hasAudio && (
           <div
             className={cn('relative transition-opacity duration-300', showError && 'opacity-60')}
+            {...(!onOpen ? { onClick: handlePlayerClick } : {})}
           >
             {showError && (
               <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
@@ -357,6 +393,47 @@ export const NewsCard: React.FC<NewsCardProps> = ({
           <span className="flex-shrink-0 font-mono text-[11.5px] text-fg3">{formattedDate}</span>
         </div>
       </div>
+    </>
+  );
+
+  // Shared className for the card root element (same in both modes)
+  const cardClassName = cn(
+    'group flex cursor-pointer flex-col overflow-hidden rounded-[var(--radius-lg)]',
+    'border border-line bg-card shadow-1',
+    'transition-all duration-200',
+    'hover:-translate-y-[3px] hover:border-line-2 hover:shadow-2',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2'
+  );
+
+  // ── Link mode (dashboard, no reader wired): root is a native anchor ──────
+  if (!onOpen) {
+    return (
+      <a
+        data-testid={`news-card-${article.id}`}
+        href={article.original_article_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={title ?? ''}
+        className={cardClassName}
+        onClick={fireClickedAnalytics}
+      >
+        {cardInner}
+      </a>
+    );
+  }
+
+  // ── Reader mode (/news page, onOpen provided): root is an article button ─
+  return (
+    <article
+      data-testid={`news-card-${article.id}`}
+      role="button"
+      tabIndex={0}
+      aria-label={title ?? ''}
+      className={cardClassName}
+      onClick={handleCardActivate}
+      onKeyDown={handleCardKeyDown}
+    >
+      {cardInner}
     </article>
   );
 };

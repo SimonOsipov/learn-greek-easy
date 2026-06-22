@@ -274,7 +274,7 @@ describe('NewsCard Compact Variant', () => {
 // ---------------------------------------------------------------------------
 
 describe('NewsCard two-zone: onOpen wiring (AC-5, AC-9, AC-13)', () => {
-  it('card body click calls onOpen with the article — NOT window.open', () => {
+  it('card body click calls onOpen with the article — NOT window.open (reader mode)', () => {
     const onOpen = vi.fn();
     const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
     const article = createMockArticle();
@@ -288,25 +288,36 @@ describe('NewsCard two-zone: onOpen wiring (AC-5, AC-9, AC-13)', () => {
     windowOpenSpy.mockRestore();
   });
 
-  it('card body click falls back to window.open when onOpen is absent', () => {
-    const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+  it('card renders as native anchor with correct href/target/rel when onOpen is absent (link mode)', () => {
     const article = createMockArticle({
       original_article_url: 'https://example.com/fallback',
     });
     render(<NewsCard article={article} newsLang="el" />);
 
     const card = screen.getByTestId(`news-card-${article.id}`);
-    fireEvent.click(card);
-
-    expect(windowOpenSpy).toHaveBeenCalledWith(
-      'https://example.com/fallback',
-      '_blank',
-      'noopener,noreferrer'
-    );
-    windowOpenSpy.mockRestore();
+    expect(card.tagName.toLowerCase()).toBe('a');
+    expect(card).toHaveAttribute('href', 'https://example.com/fallback');
+    expect(card).toHaveAttribute('target', '_blank');
+    expect(card).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
-  it('Enter key activates card body (calls onOpen)', () => {
+  it('card click fires news_article_clicked analytics when onOpen is absent (link mode)', () => {
+    vi.clearAllMocks();
+    const article = createMockArticle({
+      original_article_url: 'https://ekathimerini.com/article',
+    });
+    render(<NewsCard article={article} newsLang="el" />);
+
+    const card = screen.getByTestId(`news-card-${article.id}`);
+    fireEvent.click(card);
+
+    expect(vi.mocked(track)).toHaveBeenCalledWith(
+      'news_article_clicked',
+      expect.objectContaining({ item_id: article.id })
+    );
+  });
+
+  it('Enter key activates card body (calls onOpen) — reader mode', () => {
     const onOpen = vi.fn();
     const article = createMockArticle();
     render(<NewsCard article={article} newsLang="el" onOpen={onOpen} />);
@@ -317,7 +328,7 @@ describe('NewsCard two-zone: onOpen wiring (AC-5, AC-9, AC-13)', () => {
     expect(onOpen).toHaveBeenCalledWith(article);
   });
 
-  it('Space key activates card body (calls onOpen)', () => {
+  it('Space key activates card body (calls onOpen) — reader mode', () => {
     const onOpen = vi.fn();
     const article = createMockArticle();
     render(<NewsCard article={article} newsLang="el" onOpen={onOpen} />);
@@ -466,12 +477,20 @@ describe('NewsCard image: null → gradient fallback (AC-4)', () => {
 });
 
 describe('NewsCard accessibility: aria-labels, lang, tabIndex (AC-5, AC-14)', () => {
-  it('card surface has role="button" and tabIndex=0', () => {
+  it('card surface has role="button" and tabIndex=0 in reader mode (onOpen provided)', () => {
     const article = createMockArticle();
-    render(<NewsCard article={article} newsLang="el" />);
+    render(<NewsCard article={article} newsLang="el" onOpen={vi.fn()} />);
     const card = screen.getByTestId(`news-card-${article.id}`);
     expect(card).toHaveAttribute('role', 'button');
     expect(card).toHaveAttribute('tabindex', '0');
+  });
+
+  it('card root is an <a> (not role=button) in link mode (no onOpen)', () => {
+    const article = createMockArticle();
+    render(<NewsCard article={article} newsLang="el" />);
+    const card = screen.getByTestId(`news-card-${article.id}`);
+    expect(card.tagName.toLowerCase()).toBe('a');
+    expect(card).not.toHaveAttribute('role', 'button');
   });
 
   it('Greek title has lang="el"', () => {
@@ -481,11 +500,20 @@ describe('NewsCard accessibility: aria-labels, lang, tabIndex (AC-5, AC-14)', ()
     expect(title).toHaveAttribute('lang', 'el');
   });
 
-  it('external-link button has aria-label', () => {
+  it('external-link button has aria-label in reader mode (onOpen provided)', () => {
     const article = createMockArticle();
-    render(<NewsCard article={article} newsLang="el" />);
+    render(<NewsCard article={article} newsLang="el" onOpen={vi.fn()} />);
     const extBtn = screen.getByRole('button', { name: /dashboard\.news\.readMore|read more/i });
     expect(extBtn).toHaveAttribute('aria-label');
+  });
+
+  it('external-link icon is decorative (aria-hidden span, no interactive button) in link mode', () => {
+    const article = createMockArticle();
+    render(<NewsCard article={article} newsLang="el" />);
+    // No interactive button with that label in link mode
+    expect(
+      screen.queryByRole('button', { name: /dashboard\.news\.readMore|read more/i })
+    ).not.toBeInTheDocument();
   });
 
   it('description paragraph has lang="el"', () => {
