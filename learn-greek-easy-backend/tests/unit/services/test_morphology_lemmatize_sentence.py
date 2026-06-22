@@ -259,3 +259,291 @@ class TestLemmatizeSentenceLikeNum:
         spiti_tokens = [t for t in result if t.text == "σπίτι"]
         assert spiti_tokens, "No 'σπίτι' token found in sentence"
         assert spiti_tokens[0].like_num is False, "'σπίτι' should not be number-like"
+
+
+# ---------------------------------------------------------------------------
+# Adversarial / edge / boundary tests  (LEXGEN-10-02 Mode B QA additions)
+# ---------------------------------------------------------------------------
+
+
+class TestLemmatizeSentenceEmptyString:
+    """MS-ADV-01: empty string produces an empty list (not an error)."""
+
+    def test_empty_string_returns_empty_list(self, morphology_service):
+        """lemmatize_sentence('') must return [] — spaCy emits no tokens for empty input."""
+        result = morphology_service.lemmatize_sentence("")
+        assert result == [], (
+            f"Expected [] for empty string, got {result!r}. "
+            "lemmatize_sentence('') must return an empty list."
+        )
+
+    def test_empty_string_return_type_is_list(self, morphology_service):
+        """Return value for empty input must still be a list, not None."""
+        result = morphology_service.lemmatize_sentence("")
+        assert isinstance(
+            result, list
+        ), f"Expected list, got {type(result).__name__}. Must never return None."
+
+
+class TestLemmatizeSentenceWhitespaceOnly:
+    """MS-ADV-02: whitespace-only sentence — tokens must be flagged is_space=True."""
+
+    def test_whitespace_only_tokens_are_space_flagged(self, morphology_service):
+        """A whitespace-only string produces tokens all flagged is_space=True.
+
+        spaCy emits the whitespace as a single token; the method must surface
+        it with is_space=True so the caller can skip it.
+        """
+        result = morphology_service.lemmatize_sentence("   ")
+        assert result, "Expected at least one token for whitespace-only input, got []"
+        non_space_tokens = [t for t in result if not t.is_space]
+        assert not non_space_tokens, (
+            f"All tokens from a whitespace-only sentence must have is_space=True. "
+            f"Non-space tokens found: {[(t.text, t.is_space) for t in non_space_tokens]}"
+        )
+
+    def test_whitespace_token_is_not_punct(self, morphology_service):
+        """Whitespace token must NOT also be flagged is_punct — they are mutually exclusive."""
+        result = morphology_service.lemmatize_sentence("   ")
+        for tok in result:
+            if tok.is_space:
+                assert tok.is_punct is False, (
+                    f"Token '{tok.text!r}' is is_space=True but also is_punct=True — "
+                    "whitespace and punctuation flags should not both be set."
+                )
+
+
+class TestLemmatizeSentenceDigitToken:
+    """MS-ADV-03: Arabic digit in a Greek sentence has like_num=True."""
+
+    def test_arabic_digit_is_like_num(self, morphology_service):
+        """In 'Έχω 3 βιβλία.', the '3' token must have like_num=True.
+
+        This is a distinct code path from the 'ένα' (Greek numeral word) check
+        in MS-06: it validates that the Arabic digit itself is caught.
+        """
+        result = morphology_service.lemmatize_sentence("Έχω 3 βιβλία.")
+        digit_tokens = [t for t in result if t.text == "3"]
+        assert digit_tokens, f"No token with text '3' found. Tokens: {[t.text for t in result]}"
+        tok = digit_tokens[0]
+        assert tok.like_num is True, (
+            f"Expected '3' to have like_num=True, got like_num={tok.like_num}. "
+            "Arabic digits must be flagged number-like."
+        )
+
+    def test_arabic_digit_is_not_punct(self, morphology_service):
+        """'3' must NOT be flagged is_punct — digits are not punctuation."""
+        result = morphology_service.lemmatize_sentence("Έχω 3 βιβλία.")
+        digit_tokens = [t for t in result if t.text == "3"]
+        assert digit_tokens, f"No '3' token found. Tokens: {[t.text for t in result]}"
+        assert digit_tokens[0].is_punct is False, "'3' must not be flagged as punctuation"
+
+    def test_non_digit_word_is_not_like_num_in_digit_sentence(self, morphology_service):
+        """'βιβλία' adjacent to a digit must NOT be flagged like_num."""
+        result = morphology_service.lemmatize_sentence("Έχω 3 βιβλία.")
+        vivlia_tokens = [t for t in result if t.text == "βιβλία"]
+        assert vivlia_tokens, f"No 'βιβλία' token found. Tokens: {[t.text for t in result]}"
+        assert vivlia_tokens[0].like_num is False, "'βιβλία' should not be number-like"
+
+
+class TestLemmatizeSentenceMultipleContractions:
+    """MS-ADV-04: multiple contraction tokens each get space-joined lemmas; none are split."""
+
+    def test_ston_has_space_joined_lemma(self, morphology_service):
+        """'στον' in 'στον κήπο και στη θάλασσα' must have lemma 'σε ο' (space-joined)."""
+        result = morphology_service.lemmatize_sentence("στον κήπο και στη θάλασσα")
+        ston_tokens = [t for t in result if t.text == "στον"]
+        assert ston_tokens, f"No 'στον' token found. Tokens: {[t.text for t in result]}"
+        tok = ston_tokens[0]
+        assert tok.lemma == "σε ο", (
+            f"Expected 'στον' lemma 'σε ο', got '{tok.lemma}'. "
+            "el_core_news_md returns space-joined lemma for contractions."
+        )
+
+    def test_sth_has_space_joined_lemma(self, morphology_service):
+        """'στη' in 'στον κήπο και στη θάλασσα' must also have lemma 'σε ο'."""
+        result = morphology_service.lemmatize_sentence("στον κήπο και στη θάλασσα")
+        sth_tokens = [t for t in result if t.text == "στη"]
+        assert sth_tokens, f"No 'στη' token found. Tokens: {[t.text for t in result]}"
+        tok = sth_tokens[0]
+        assert tok.lemma == "σε ο", (
+            f"Expected 'στη' lemma 'σε ο', got '{tok.lemma}'. "
+            "Both contraction forms must return the space-joined lemma."
+        )
+
+    def test_contraction_lemmas_contain_space(self, morphology_service):
+        """Both contraction lemmas contain an internal space — confirming not-split contract."""
+        result = morphology_service.lemmatize_sentence("στον κήπο και στη θάλασσα")
+        contraction_texts = {"στον", "στη"}
+        contraction_tokens = [t for t in result if t.text in contraction_texts]
+        assert len(contraction_tokens) == 2, (
+            f"Expected 2 contraction tokens (στον, στη), found {len(contraction_tokens)}: "
+            f"{[(t.text, t.lemma) for t in contraction_tokens]}"
+        )
+        for tok in contraction_tokens:
+            assert " " in tok.lemma, (
+                f"Contraction token '{tok.text}' lemma '{tok.lemma}' must contain a space "
+                "(space-joined, NOT split). lemmatize_sentence must not post-process the lemma."
+            )
+
+    def test_non_contraction_token_lemma_has_no_space(self, morphology_service):
+        """'κήπο' (regular inflected noun) must NOT have a space-joined lemma."""
+        result = morphology_service.lemmatize_sentence("στον κήπο και στη θάλασσα")
+        kipos_tokens = [t for t in result if t.text == "κήπο"]
+        assert kipos_tokens, f"No 'κήπο' token found. Tokens: {[t.text for t in result]}"
+        assert " " not in kipos_tokens[0].lemma, (
+            f"'κήπο' lemma '{kipos_tokens[0].lemma}' must not contain a space "
+            "(only contractions have space-joined lemmas)."
+        )
+
+
+class TestLemmatizeSentenceMixedScript:
+    """MS-ADV-05: sentence with Latin/English tokens mixed in does not crash."""
+
+    def test_mixed_script_sentence_does_not_raise(self, morphology_service):
+        """lemmatize_sentence must not raise on mixed Greek/Latin input."""
+        # Should not raise any exception
+        result = morphology_service.lemmatize_sentence("Η cat είναι εδώ")
+        assert isinstance(result, list), "Must return a list, not raise"
+
+    def test_mixed_script_returns_all_tokens(self, morphology_service):
+        """All tokens from a mixed-script sentence are returned — Greek, Latin, and punct."""
+        result = morphology_service.lemmatize_sentence("Η cat είναι εδώ")
+        texts = [t.text for t in result]
+        assert "Η" in texts, f"Greek token 'Η' not found. Got: {texts}"
+        assert "cat" in texts, f"Latin token 'cat' not found. Got: {texts}"
+        assert "είναι" in texts, f"Greek token 'είναι' not found. Got: {texts}"
+
+    def test_latin_token_has_bool_flags(self, morphology_service):
+        """Latin token 'cat' must still carry proper bool flags (no crash on flag access)."""
+        result = morphology_service.lemmatize_sentence("Η cat είναι εδώ")
+        cat_tokens = [t for t in result if t.text == "cat"]
+        assert cat_tokens, f"No 'cat' token found. Tokens: {[t.text for t in result]}"
+        tok = cat_tokens[0]
+        assert isinstance(tok.is_punct, bool)
+        assert isinstance(tok.is_space, bool)
+        assert isinstance(tok.like_num, bool)
+        assert tok.is_punct is False
+        assert tok.is_space is False
+
+
+class TestLemmatizeSentenceTokenOrder:
+    """MS-ADV-06: token order in the returned list matches left-to-right sentence order."""
+
+    def test_token_order_matches_sentence_order(self, morphology_service):
+        """Tokens must appear in the same order as in the input sentence.
+
+        This is a non-trivial property to test: if the implementation iterated
+        over doc in reverse or sorted tokens, order would be broken.
+        """
+        sentence = "ένα δύο τρία"
+        result = morphology_service.lemmatize_sentence(sentence)
+        texts = [t.text for t in result]
+        assert texts == ["ένα", "δύο", "τρία"], (
+            f"Token order must match input left-to-right. "
+            f"Expected ['ένα', 'δύο', 'τρία'], got {texts}"
+        )
+
+    def test_sentence_7_first_token_is_article(self, morphology_service):
+        """In SENTENCE_7, the first non-space token is 'Η' (the definite article).
+
+        This catches order inversion: if the list were reversed, 'Η' would be last.
+        """
+        result = morphology_service.lemmatize_sentence(SENTENCE_7)
+        non_space = [t for t in result if not t.is_space]
+        assert non_space, "Must have at least one non-space token"
+        assert non_space[0].text == "Η", (
+            f"First non-space token must be 'Η' (sentence starts with article). "
+            f"Got '{non_space[0].text}'. Token order is reversed or wrong."
+        )
+
+    def test_sentence_7_last_token_is_period(self, morphology_service):
+        """In SENTENCE_7, the last token is '.' (the trailing period).
+
+        Paired with the first-token check, this confirms full order preservation.
+        """
+        result = morphology_service.lemmatize_sentence(SENTENCE_7)
+        assert result, "Must have tokens"
+        assert result[-1].text == ".", (
+            f"Last token must be '.' (sentence ends with period). "
+            f"Got '{result[-1].text}'. Token order may be wrong."
+        )
+
+
+class TestLemmatizeSentenceReturnTypes:
+    """MS-ADV-07: return type is list[SentenceToken] with correctly typed fields."""
+
+    def test_each_token_is_sentence_token_instance(self, morphology_service):
+        """Every item in the returned list must be a SentenceToken instance."""
+        from src.schemas.nlp import SentenceToken
+
+        result = morphology_service.lemmatize_sentence(SENTENCE_7)
+        assert result, "Must have tokens to verify"
+        for i, tok in enumerate(result):
+            assert isinstance(tok, SentenceToken), (
+                f"Token at index {i} is {type(tok).__name__}, expected SentenceToken. "
+                f"token repr: {tok!r}"
+            )
+
+    def test_field_types_are_correct(self, morphology_service):
+        """text/lemma are str; is_punct/is_space/like_num are bool — not int or None."""
+        result = morphology_service.lemmatize_sentence(SENTENCE_7)
+        for tok in result:
+            assert type(tok.text) is str, f"text must be str, got {type(tok.text)}"
+            assert type(tok.lemma) is str, f"lemma must be str, got {type(tok.lemma)}"
+            # Strict bool check (not just truthy): isinstance(True, int) is True in Python,
+            # so we use `type(...) is bool` to reject bare int flags.
+            assert type(tok.is_punct) is bool, f"is_punct must be bool, got {type(tok.is_punct)}"
+            assert type(tok.is_space) is bool, f"is_space must be bool, got {type(tok.is_space)}"
+            assert type(tok.like_num) is bool, f"like_num must be bool, got {type(tok.like_num)}"
+
+    def test_text_and_lemma_are_never_none(self, morphology_service):
+        """text and lemma must be non-None strings for every token."""
+        result = morphology_service.lemmatize_sentence(SENTENCE_7)
+        for tok in result:
+            assert tok.text is not None, "token.text must not be None"
+            assert tok.lemma is not None, "token.lemma must not be None"
+
+
+class TestLemmatizeSentenceNoSecondSpacyLoad:
+    """MS-ADV-08: lemmatize_sentence() uses self._nlp — does NOT call spacy.load() again."""
+
+    def test_lemmatize_sentence_uses_existing_nlp_attribute(self, morphology_service):
+        """lemmatize_sentence() delegates to self._nlp, not a fresh spacy.load().
+
+        Approach: swap self._nlp with a tracking wrapper that records calls,
+        then confirm lemmatize_sentence() calls it without going through spacy.load.
+        """
+        from unittest.mock import patch
+
+        import spacy
+
+        # Capture the real _nlp reference to restore afterwards
+        real_nlp = morphology_service._nlp
+
+        call_log = []
+
+        class TrackingNlp:
+            """Wraps the real nlp and records __call__ invocations."""
+
+            def __call__(self, text):
+                call_log.append(text)
+                return real_nlp(text)
+
+        morphology_service._nlp = TrackingNlp()
+        try:
+            with patch.object(
+                spacy,
+                "load",
+                side_effect=AssertionError(
+                    "spacy.load() must NOT be called inside lemmatize_sentence()"
+                ),
+            ):
+                result = morphology_service.lemmatize_sentence("στο σπίτι")
+            # spacy.load was patched to raise — if we get here it wasn't called
+            assert (
+                len(call_log) == 1
+            ), f"Expected self._nlp to be called exactly once; call_log={call_log}"
+            assert result, "lemmatize_sentence must return tokens via self._nlp"
+        finally:
+            morphology_service._nlp = real_nlp
