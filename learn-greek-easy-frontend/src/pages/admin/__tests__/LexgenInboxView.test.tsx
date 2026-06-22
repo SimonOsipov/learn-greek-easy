@@ -173,3 +173,154 @@ describe('LexgenInboxView', () => {
     expect(onSelectProposal).toHaveBeenCalledWith('a');
   });
 });
+
+// ---------------------------------------------------------------------------
+// QA adversarial coverage (LEXGEN-12-02) — counts, dates, no-score, a11y.
+// These probe boundaries the happy-path suite above does not: a zero/large
+// flagged count, locale-aware age rendering, the anti-anchoring invariant
+// across the WHOLE rendered subtree, Space-key activation, error state, and
+// that a row click passes the *correct* id when multiple rows exist.
+// ---------------------------------------------------------------------------
+
+describe('LexgenInboxView — adversarial', () => {
+  it('renders a flagged_field_count=0 row without crashing (badge still present)', () => {
+    mockUseLexgenProposals.mockReturnValue(
+      loaded({ items: [makeItem('z', { flagged_field_count: 0 })], total: 1 })
+    );
+
+    render(<LexgenInboxView />);
+
+    const row = screen.getByTestId('lexgen-inbox-row-z');
+    expect(row).toBeTruthy();
+    // The count cell renders the literal 0 (a count, not a score) — no crash,
+    // no empty cell.
+    expect(row.textContent).toContain('0');
+  });
+
+  it('renders a large flagged_field_count without truncation or crash', () => {
+    mockUseLexgenProposals.mockReturnValue(
+      loaded({ items: [makeItem('big', { flagged_field_count: 999 })], total: 1 })
+    );
+
+    render(<LexgenInboxView />);
+
+    expect(screen.getByText('999')).toBeTruthy();
+  });
+
+  it('renders a relative age from created_at (default/EN locale)', () => {
+    // ~3 days before a fixed "now" so the english "days ago" phrasing is stable.
+    const now = new Date('2026-06-23T10:00:00.000Z');
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+    try {
+      mockUseLexgenProposals.mockReturnValue(
+        loaded({
+          items: [makeItem('age', { created_at: '2026-06-20T10:00:00.000Z' })],
+          total: 1,
+        })
+      );
+
+      render(<LexgenInboxView />);
+
+      const row = screen.getByTestId('lexgen-inbox-row-age');
+      // date-fns formatDistanceToNow(addSuffix) → "3 days ago" in EN.
+      expect(row.textContent?.toLowerCase()).toMatch(/ago/);
+      expect(row.textContent).toMatch(/3 days/i);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('never renders any text matching /score/i anywhere in the view (anti-anchoring)', () => {
+    mockUseLexgenProposals.mockReturnValue(
+      loaded({
+        items: [
+          makeItem('a', { flagged_field_count: 5 }),
+          makeItem('b', { lemma: 'σπίτι', flagged_field_count: 0 }),
+        ],
+        total: 2,
+      })
+    );
+
+    const { container } = render(<LexgenInboxView />) as { container: HTMLElement };
+
+    expect(container.textContent ?? '').not.toMatch(/score/i);
+    // Belt-and-suspenders: no element carries a "score" testid either.
+    expect(container.querySelector('[data-testid*="score" i]')).toBeNull();
+  });
+
+  it('passes the correct id when one of several rows is clicked', () => {
+    const onSelectProposal = vi.fn();
+    mockUseLexgenProposals.mockReturnValue(
+      loaded({ items: [makeItem('a'), makeItem('b'), makeItem('c')], total: 3 })
+    );
+
+    render(<LexgenInboxView onSelectProposal={onSelectProposal} />);
+
+    fireEvent.click(screen.getByTestId('lexgen-inbox-row-b'));
+    expect(onSelectProposal).toHaveBeenCalledTimes(1);
+    expect(onSelectProposal).toHaveBeenCalledWith('b');
+  });
+
+  it('invokes onSelectProposal on keyboard activation (Space)', () => {
+    const onSelectProposal = vi.fn();
+    mockUseLexgenProposals.mockReturnValue(loaded({ items: [makeItem('a')], total: 1 }));
+
+    render(<LexgenInboxView onSelectProposal={onSelectProposal} />);
+
+    fireEvent.keyDown(screen.getByTestId('lexgen-inbox-row-a'), { key: ' ' });
+    expect(onSelectProposal).toHaveBeenCalledWith('a');
+  });
+
+  it('does not fire onSelectProposal for a non-activation key (ArrowDown)', () => {
+    const onSelectProposal = vi.fn();
+    mockUseLexgenProposals.mockReturnValue(loaded({ items: [makeItem('a')], total: 1 }));
+
+    render(<LexgenInboxView onSelectProposal={onSelectProposal} />);
+
+    fireEvent.keyDown(screen.getByTestId('lexgen-inbox-row-a'), { key: 'ArrowDown' });
+    expect(onSelectProposal).not.toHaveBeenCalled();
+  });
+
+  it('rows are keyboard-focusable (role=button, tabIndex=0)', () => {
+    mockUseLexgenProposals.mockReturnValue(loaded({ items: [makeItem('a')], total: 1 }));
+
+    render(<LexgenInboxView />);
+
+    const row = screen.getByTestId('lexgen-inbox-row-a');
+    expect(row.getAttribute('role')).toBe('button');
+    expect(row.getAttribute('tabindex')).toBe('0');
+  });
+
+  it('does not throw when a row is activated with no onSelectProposal handler', () => {
+    mockUseLexgenProposals.mockReturnValue(loaded({ items: [makeItem('a')], total: 1 }));
+
+    render(<LexgenInboxView />);
+
+    expect(() => fireEvent.click(screen.getByTestId('lexgen-inbox-row-a'))).not.toThrow();
+    expect(() =>
+      fireEvent.keyDown(screen.getByTestId('lexgen-inbox-row-a'), { key: 'Enter' })
+    ).not.toThrow();
+  });
+
+  it('renders the error state (role=alert) when the query errors', () => {
+    mockUseLexgenProposals.mockReturnValue({ data: undefined, isLoading: false, isError: true });
+
+    render(<LexgenInboxView />);
+
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.queryByTestId('lexgen-inbox-table')).toBeNull();
+    expect(screen.queryByTestId('lexgen-inbox-loading')).toBeNull();
+  });
+
+  it('shows the "showing X-Y of N" range on a paginated queue', () => {
+    // 41 rows → 3 pages, so the range summary + controls render.
+    mockUseLexgenProposals.mockReturnValue(loaded({ items: [makeItem('a')], total: 41 }));
+
+    render(<LexgenInboxView />);
+
+    // EN: "Showing 1-20 of 41"
+    expect(screen.getByText(/1-20/)).toBeTruthy();
+    expect(screen.getByText(/of 41/)).toBeTruthy();
+  });
+});
