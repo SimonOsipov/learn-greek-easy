@@ -1015,6 +1015,18 @@ export const adminAPI = {
   },
 
   /**
+   * Fetch a single LEXGEN proposal detail for the verification inbox.
+   *
+   * Read-only (LEXGEN-12). The response is score-free by construction — it
+   * carries per-field `value`/`source`/`flagged` only, never `judge_scores`,
+   * `trust_score`, or `confidence` (anti-anchoring). 404s for an unknown id or a
+   * row whose status is not `needs_review`. Requires superuser authentication.
+   */
+  getLexgenProposal: async (id: string): Promise<LexgenProposalDetailResponse> => {
+    return api.get<LexgenProposalDetailResponse>(`/api/v1/admin/lexgen/proposals/${id}`);
+  },
+
+  /**
    * Update a vocabulary deck's metadata
    *
    * Updates deck name, description, level, or active status.

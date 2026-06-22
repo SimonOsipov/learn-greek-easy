@@ -19,8 +19,10 @@ import type { LexgenProposalListResponse } from '@/services/adminAPI';
 // ---------------------------------------------------------------------------
 
 const mockUseLexgenProposals = vi.fn();
+const mockUseLexgenProposal = vi.fn();
 vi.mock('@/hooks/useLexgenProposals', () => ({
   useLexgenProposals: (...args: unknown[]) => mockUseLexgenProposals(...args),
+  useLexgenProposal: (...args: unknown[]) => mockUseLexgenProposal(...args),
 }));
 
 const mockTrack = vi.fn();
@@ -59,7 +61,11 @@ function loaded(data: Partial<LexgenProposalListResponse>) {
 
 beforeEach(() => {
   mockUseLexgenProposals.mockReset();
+  mockUseLexgenProposal.mockReset();
   mockTrack.mockReset();
+  // Detail panel hook: idle by default (no proposal selected). Individual
+  // tests that exercise the detail panel override this.
+  mockUseLexgenProposal.mockReturnValue({ data: undefined, isLoading: false, isError: false });
 });
 
 // ---------------------------------------------------------------------------

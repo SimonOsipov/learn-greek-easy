@@ -6,13 +6,22 @@ import { formatDistanceToNow } from 'date-fns';
 import { ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { LexgenProposalDetail } from '@/components/admin/LexgenProposalDetail';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollableTable } from '@/components/ui/scrollable-table';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useLexgenProposals } from '@/hooks/useLexgenProposals';
+import { useLexgenProposal, useLexgenProposals } from '@/hooks/useLexgenProposals';
 import { track } from '@/lib/analytics';
 import { getDateLocale } from '@/lib/dateUtils';
+import type { LexgenProposalListItem } from '@/services/adminAPI';
 
 const PAGE_SIZE = 20;
 
@@ -38,8 +47,15 @@ interface LexgenInboxViewProps {
 export default function LexgenInboxView({ onSelectProposal }: LexgenInboxViewProps) {
   const { t, i18n } = useTranslation('admin');
   const [page, setPage] = useState(1);
+  const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null);
 
   const { data, isLoading, isError } = useLexgenProposals({ page, page_size: PAGE_SIZE });
+
+  const {
+    data: detail,
+    isLoading: isDetailLoading,
+    isError: isDetailError,
+  } = useLexgenProposal(selectedProposalId);
 
   // Fire the open event once on mount (ref guard for StrictMode double-invoke).
   const openedRef = useRef(false);
@@ -61,8 +77,19 @@ export default function LexgenInboxView({ onSelectProposal }: LexgenInboxViewPro
     if (page < totalPages) setPage((p) => p + 1);
   };
 
-  const handleRowActivate = (proposalId: string) => {
-    onSelectProposal?.(proposalId);
+  const handleRowActivate = (item: LexgenProposalListItem) => {
+    setSelectedProposalId(item.id);
+    onSelectProposal?.(item.id);
+    // Fire once per open, using the LIST row's data (anti-anchoring: no score).
+    track('lexgen_proposal_viewed', {
+      proposal_id: item.id,
+      lemma: item.lemma,
+      flagged_field_count: item.flagged_field_count,
+    });
+  };
+
+  const handleDetailOpenChange = (open: boolean) => {
+    if (!open) setSelectedProposalId(null);
   };
 
   if (isLoading) {
@@ -119,11 +146,11 @@ export default function LexgenInboxView({ onSelectProposal }: LexgenInboxViewPro
                 tabIndex={0}
                 data-testid={`lexgen-inbox-row-${item.id}`}
                 className="cursor-pointer border-b last:border-0 hover:bg-muted/50 focus:bg-muted/50 focus:outline-none"
-                onClick={() => handleRowActivate(item.id)}
+                onClick={() => handleRowActivate(item)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    handleRowActivate(item.id);
+                    handleRowActivate(item);
                   }
                 }}
               >
@@ -182,6 +209,30 @@ export default function LexgenInboxView({ onSelectProposal }: LexgenInboxViewPro
           </div>
         </div>
       )}
+
+      <Sheet open={selectedProposalId !== null} onOpenChange={handleDetailOpenChange}>
+        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
+          <SheetHeader className="sr-only">
+            <SheetTitle>{t('lexgenInbox.title')}</SheetTitle>
+            <SheetDescription>{t('lexgenInbox.detail.readOnlyNote')}</SheetDescription>
+          </SheetHeader>
+          {isDetailLoading && (
+            <div className="space-y-3" data-testid="lexgen-detail-loading">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-8 w-full" />
+              ))}
+            </div>
+          )}
+          {isDetailError && (
+            <div role="alert" className="py-12 text-center text-sm text-muted-foreground">
+              {t('lexgenInbox.error')}
+            </div>
+          )}
+          {detail && !isDetailLoading && !isDetailError && (
+            <LexgenProposalDetail proposal={detail} />
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

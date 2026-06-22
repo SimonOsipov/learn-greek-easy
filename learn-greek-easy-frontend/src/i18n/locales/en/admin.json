@@ -2249,6 +2249,23 @@
       "pos": "Part of speech",
       "flaggedFields": "Flagged fields",
       "age": "Age"
+    },
+    "detail": {
+      "provenance": "Source",
+      "flagged": "Flagged",
+      "readOnlyNote": "Read-only — review actions arrive in the next release",
+      "fieldsHeading": "Fields",
+      "contentHeading": "Glosses & example",
+      "field": {
+        "gender": "Gender",
+        "declensionGroup": "Declension group",
+        "ipa": "Pronunciation (IPA)",
+        "frequency": "Frequency rank",
+        "glossEn": "English gloss",
+        "glossRu": "Russian gloss",
+        "exampleGreek": "Example sentence",
+        "exampleTranslation": "Example translation"
+      }
     }
   },
   "dashboard": {

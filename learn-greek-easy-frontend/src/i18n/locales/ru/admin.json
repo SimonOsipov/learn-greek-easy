@@ -2269,6 +2269,23 @@
       "pos": "Часть речи",
       "flaggedFields": "Отмеченные поля",
       "age": "Возраст"
+    },
+    "detail": {
+      "provenance": "Источник",
+      "flagged": "Отмечено",
+      "readOnlyNote": "Только для чтения — действия по проверке появятся в следующем релизе",
+      "fieldsHeading": "Поля",
+      "contentHeading": "Толкования и пример",
+      "field": {
+        "gender": "Род",
+        "declensionGroup": "Группа склонения",
+        "ipa": "Произношение (IPA)",
+        "frequency": "Ранг частотности",
+        "glossEn": "Толкование (англ.)",
+        "glossRu": "Толкование (рус.)",
+        "exampleGreek": "Пример предложения",
+        "exampleTranslation": "Перевод примера"
+      }
     }
   },
   "dashboard": {
