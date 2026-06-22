@@ -9,6 +9,7 @@
 export type AdminTabType =
   | 'dashboard'
   | 'inbox'
+  | 'lexgenInbox'
   | 'decks'
   | 'news'
   | 'situations'
@@ -21,6 +22,7 @@ export type AdminTabType =
 const VALID_TABS: readonly AdminTabType[] = [
   'dashboard',
   'inbox',
+  'lexgenInbox',
   'decks',
   'news',
   'situations',

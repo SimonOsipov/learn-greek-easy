@@ -278,6 +278,7 @@
     "exercisesReading": "Reading",
     "dashboard": "Dashboard",
     "inbox": "Inbox",
+    "lexgenInbox": "Verification Inbox",
     "exercises": "Exercises",
     "errors": "Card errors",
     "errorsHint": "Open reports (pending + reviewed)"
@@ -2231,6 +2232,23 @@
     "empty": {
       "title": "No items needing attention",
       "sub": "Aggregated inbox coming soon. New feedback, draft warnings, audio regens, and card errors will surface here automatically."
+    }
+  },
+  "lexgenInbox": {
+    "breadcrumb": {
+      "dashboard": "Admin",
+      "current": "Verification Inbox"
+    },
+    "kicker": "Admin · LEXGEN",
+    "title": "Verification Inbox",
+    "sub": "Proposals awaiting native-speaker review, most-flagged first.",
+    "empty": "No proposals awaiting review",
+    "error": "Could not load the verification queue. Please try again.",
+    "column": {
+      "lemma": "Lemma",
+      "pos": "Part of speech",
+      "flaggedFields": "Flagged fields",
+      "age": "Age"
     }
   },
   "dashboard": {

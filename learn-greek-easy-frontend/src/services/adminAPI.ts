@@ -845,6 +845,46 @@ export interface ReverseLookupResponse {
 }
 
 // ============================================
+// LEXGEN Verification Inbox (read-only) — LEXGEN-12
+// ============================================
+
+/**
+ * One row in the verification-inbox queue.
+ *
+ * Score-free by construction (LEXGEN-12 anti-anchoring invariant): the API
+ * never serializes `judge_scores` / `trust_score` / confidence — `flagged_field_count`
+ * is a COUNT of flagged fields, not a numeric score.
+ */
+export interface LexgenProposalListItem {
+  id: string;
+  lemma: string;
+  pos: string;
+  flagged_field_count: number;
+  created_at: string;
+}
+
+/**
+ * Paginated response for the verification-inbox queue.
+ * Mirrors the LEXGEN-12-01 `LexgenProposalListResponse` schema.
+ */
+export interface LexgenProposalListResponse {
+  items: LexgenProposalListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+/**
+ * Client-controllable params for the queue list. `status` is hardcoded
+ * server-side to `needs_review` (not a client param in v1), so it is not
+ * exposed here.
+ */
+export interface LexgenProposalListParams {
+  page?: number;
+  page_size?: number;
+}
+
+// ============================================
 // Admin API Methods
 // ============================================
 
@@ -900,6 +940,24 @@ export const adminAPI = {
    */
   getDeck: async (deckId: string): Promise<UnifiedDeckItem> => {
     return api.get<UnifiedDeckItem>(`/api/v1/admin/decks/${deckId}`);
+  },
+
+  /**
+   * List `needs_review` LEXGEN word proposals for the verification inbox.
+   *
+   * Read-only queue (LEXGEN-12). `status` is hardcoded server-side to
+   * `needs_review`; results are ordered most-flagged first, then FIFO.
+   * Requires superuser authentication. Score-free response.
+   */
+  listLexgenProposals: async (
+    params: LexgenProposalListParams = {}
+  ): Promise<LexgenProposalListResponse> => {
+    const queryString = buildQueryString({
+      status: 'needs_review',
+      page: params.page,
+      page_size: params.page_size,
+    });
+    return api.get<LexgenProposalListResponse>(`/api/v1/admin/lexgen/proposals${queryString}`);
   },
 
   /**
