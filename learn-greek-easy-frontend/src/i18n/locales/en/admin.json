@@ -1762,6 +1762,9 @@
         "savedToast": "Picture prompt saved",
         "trioRuleHint": "Provide all three scene fields (EN/EL/RU) or leave all three empty.",
         "hints": {
+          "scene_en": "Per-situation English scene description fed to the image generator",
+          "scene_el": "Per-situation Greek scene description (paired with scene_en)",
+          "scene_ru": "Per-situation Russian scene description (paired with scene_en + scene_el)",
           "style_en": "Locked across the catalog · edit cautiously"
         }
       },
