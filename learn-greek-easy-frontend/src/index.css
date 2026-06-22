@@ -11,14 +11,14 @@
     --glass: 0 0% 100% / 0.55;
     --fg: 222 32% 12%;
     --fg-2: 222 18% 38%;
-    --fg-3: 222 14% 45%;
+    --fg-3: 222 14% 56%;
     --line: 222 20% 90%;
     --line-2: 222 25% 84%;
 
     /* ── Brand & status ── */
     --primary: 221 83% 53%;
     --primary-2: 221 83% 65%;
-    --accent: 262 83% 58%; /* Deviation from handoff (280 92% 62%): 262 is the established app-wide accent already shipped across non-decks surfaces; matching handoff would fork the accent & force a global re-theme. Decks 'violet' tone uses its own data-tone mapping, so the deviation is scoped. */
+    --accent: 280 92% 62%; /* electric violet */
     --accent-2: 188 95% 50%; /* cyan */
     --accent-3: 32 100% 60%; /* burnt orange */
 

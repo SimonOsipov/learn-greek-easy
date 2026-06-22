@@ -1,10 +1,13 @@
 # Greeklish Design System
 
-**Source of truth.** All colors, spacing, radii, shadows, fonts, animations, and shared component patterns must come from here. If a value isn't listed, it doesn't ship.
+**Source of truth — tokens.** The **token layer** (colors, spacing, radii, shadows, fonts, animations) is authored in **Claude Design** — the "Greeklish Design System" project on claude.ai/design — and flows *into* this repo. You design in Claude Design; its `design-system/tokens.css` is then pulled and reconciled into `src/index.css`. The repo **follows** Claude Design for token values — it does not author them. If a value isn't in Claude Design's token set, it doesn't ship.
 
-- **Visual snapshot:** [`docs/design-system/Design-System-v2.4.html`](./design-system/Design-System-v2.4.html) — open in a browser to see swatches, components, motion demos.
-- **Live tokens:** `frontend/src/index.css` (`:root` + `.dark`), `frontend/tailwind.config.js`.
-- **Live components:** `frontend/src/components/ui/*` (shadcn).
+**Code-owned (Claude Design does not model these):** the shadcn component implementations (`frontend/src/components/ui/*`), `frontend/tailwind.config.js`, and the build. Claude Design is authoritative for token *values*, not component logic.
+
+- **Token source of truth:** the "Greeklish Design System" project on claude.ai/design (`design-system/tokens.css`).
+- **Visual snapshot:** [`docs/design-system/Design-System-v2.4.html`](./design-system/Design-System-v2.4.html) — swatches, components, motion demos.
+- **Live tokens (reconciled from Claude Design):** `frontend/src/index.css` (`:root` + `.dark`), `frontend/tailwind.config.js`.
+- **Live components (code-owned):** `frontend/src/components/ui/*` (shadcn).
 
 ---
 
@@ -18,7 +21,7 @@ Forbidden in `src/**/*.{ts,tsx,css}` (allowed only in `src/index.css` and `tailw
 - Raw CSS color keywords (`text-white`, `bg-black`, `border-white`, `style={{ color: 'white' }}`) — use a token (e.g. `text-landing-header-fg`, `text-primary-foreground`). `transparent` and `currentColor` remain allowed because they carry semantic, not chromatic, meaning.
 - New `@keyframes` — add to `src/index.css` and `tailwind.config.js` `animation` map.
 
-If you need a value that isn't here, add it to `src/index.css` + `tailwind.config.js` AND update this doc in the same PR.
+If you need a new token, add it in **Claude Design** first (the token source of truth), then pull/reconcile it into `src/index.css` (+ `tailwind.config.js` if it needs a Tailwind alias) and update this doc in the same PR.
 
 ---
 
@@ -406,7 +409,7 @@ See the v2.4 HTML "Voice & tone" tab for full do/don't rewrite examples.
 
 When you add a token / class / animation / component:
 
-1. Define it in `src/index.css` or `tailwind.config.js`.
+1. **Tokens:** author the value in **Claude Design** (the token source of truth), then pull/reconcile it into `src/index.css` (and `tailwind.config.js` if it needs a Tailwind alias). Classes / components are code-owned — define those in `src/index.css` / `tailwind.config.js` directly.
 2. Add a row to the relevant table above.
 3. If it's a non-trivial visual addition, also update `Design-System-v2.4.html` (or bump to `-v2.5.html` if the change is large enough to warrant a snapshot).
 4. PR description should call it out under "Design system delta".
