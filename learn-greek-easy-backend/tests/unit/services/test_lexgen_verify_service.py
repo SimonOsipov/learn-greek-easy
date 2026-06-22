@@ -1,35 +1,24 @@
-"""RED unit tests for LEXGEN-10-03: LexgenVerifyService gate orchestration (VS-06, VS-08).
+"""Unit tests for LEXGEN-10-03: LexgenVerifyService gate orchestration (VS-06, VS-08).
 
 These tests verify two critical no-side-effect contracts WITHOUT a real DB,
 using mocked dependencies.
 
 VS-06 no-requery:    proposal.evidence_packet is present → verify() reads ONLY from
                      the JSONB snapshot (EvidencePacket.model_validate); it NEVER
-                     instantiates WiktionaryMorphologyService / EvidenceAssemblyService /
-                     FrequencyService. Assert via mock that those classes are not called.
+                     instantiates EvidenceAssemblyService / WiktionaryMorphologyService /
+                     FrequencyService. Assert via mock that those assembly classes are
+                     not called.
 
 VS-08 no-state-mutation:  proposal in GENERATING → after verify() (any outcome)
                            proposal.status must still be GENERATING; transition()
                            must never be called.
 
-Expected RED failure mode: NotImplementedError
-  verify() raises NotImplementedError immediately — the tests call verify() without
-  catching the exception, so they FAIL with NotImplementedError.
-  This is the correct RED mode: assertion/implementation error, NOT import/collection error.
-
-These tests will become GREEN once LEXGEN-10-03 implements LexgenVerifyService.verify().
-
-===========================================================================
-SEAM CONTRACT — pinned by these RED tests (executor MUST honour):
-1.  LexgenVerifyService(db: AsyncSession, openrouter: OpenRouterService).
-2.  async def verify(self, proposal: WordProposal) -> VerifyOutcome.
-3.  VerifyOutcome has: status ("PASS"|"FLAGGED"|"REJECTED"), gate_results,
-    check_e_regens (int, default 0), flagged (list[str]).
-4.  verify() NEVER writes generated_fields / reconciliation_log / judge_scores /
-    trust_score. NEVER calls transition().
-5.  verify() rebuilds the EvidencePacket from JSONB; it does NOT re-instantiate
-    Wiktionary/Lexicon-assembly/Frequency assembly services.
-===========================================================================
+Dependency mocking strategy:
+    CefrVocabularyService and LexiconService are patched at the verify-service
+    module level (src.services.lexgen_verify_service.*) so they work without a
+    real DB session. The assembly services (EvidenceAssemblyService,
+    WiktionaryMorphologyService, FrequencyService) are patched with
+    side_effect=AssertionError to catch any accidental re-assembly.
 """
 
 from __future__ import annotations
@@ -51,8 +40,7 @@ from src.schemas.lexgen import (
 
 # ---------------------------------------------------------------------------
 # Deferred import helper — keeps file collectable.
-# The stub module exists so imports succeed. Tests FAIL on verify() raising
-# NotImplementedError — the expected RED failure mode.
+# The stub module exists so imports succeed.
 # ---------------------------------------------------------------------------
 
 
@@ -138,13 +126,43 @@ def _make_proposal_with_content(
 
 
 def _make_service(*, mock_db: AsyncMock | None = None) -> object:
-    """Return a LexgenVerifyService with mocked db and openrouter."""
+    """Return a LexgenVerifyService with mocked db and openrouter.
+
+    NOTE: CefrVocabularyService and LexiconService are NOT mocked here because
+    they must be patched at the verify-service module namespace level before
+    calling svc.verify().  Each test that calls verify() must apply those patches
+    itself (see _CEFR_PATCH / _LEXICON_PATCH helpers or inline context managers).
+    """
     cls = _get_service_class()
     if mock_db is None:
         mock_db = AsyncMock()
         mock_db.flush = AsyncMock()
     mock_openrouter = MagicMock()
     return cls(db=mock_db, openrouter=mock_openrouter)
+
+
+def _cefr_mock(lemma_set: set[str] | None = None):
+    """Return a configured CefrVocabularyService mock instance.
+
+    lemma_set: the set returned by allowed_lemmas().  Defaults to a set that
+    covers the §7 sentence content words (excluding the target βιβλίο, which
+    verify() always adds itself).
+    """
+    if lemma_set is None:
+        lemma_set = {"μητέρα", "διαβάζω", "σπίτι", "σε", "ο", "η", "ένα"}
+    instance = AsyncMock()
+    instance.allowed_lemmas = AsyncMock(return_value=lemma_set)
+    return instance
+
+
+def _lexicon_mock(return_value=None):
+    """Return a configured LexiconService mock instance.
+
+    return_value: what lookup() returns (None = lexicon miss, is_unknown=True).
+    """
+    instance = AsyncMock()
+    instance.lookup = AsyncMock(return_value=return_value)
+    return instance
 
 
 # ---------------------------------------------------------------------------
@@ -157,50 +175,77 @@ def _make_service(*, mock_db: AsyncMock | None = None) -> object:
 class TestNoRequery:
     """VS-06: verify() reads only from proposal.evidence_packet JSONB — no re-assembly.
 
-    RED mode: verify() raises NotImplementedError — tests FAIL on that.
+    CefrVocabularyService and LexiconService are legitimate gate-internal services
+    (not assembly services) and ARE allowed to be called; they are mocked with proper
+    return values so verify() completes without a real DB.
+
+    The assertion targets the three EVIDENCE-ASSEMBLY services that must never be
+    instantiated by verify():
+        - EvidenceAssemblyService   (assembles the evidence packet from sources)
+        - WiktionaryMorphologyService (fetches Wiktionary data)
+        - FrequencyService           (fetches frequency rank)
+
+    These are patched with side_effect=AssertionError so any accidental call from
+    within verify() would raise immediately and fail the test.
     """
 
-    async def test_vs06_verify_does_not_call_wiktionary_assembly_frequency_services(
+    async def test_vs06_verify_does_not_call_evidence_assembly_services(
         self,
     ) -> None:
-        """VS-06: packet present → verify() never touches source-assembly services.
+        """VS-06: packet present → verify() never touches evidence-assembly services.
 
-        This test patches three source-assembly services so that any instantiation
-        raises AssertionError. verify() must NOT call any of them.
+        Assembly services are patched with side_effect=AssertionError; any
+        instantiation from within verify() would fail the test immediately.
+        The gate-internal services (CefrVocabularyService, LexiconService) are
+        properly mocked so verify() can complete.
 
-        RED: verify() raises NotImplementedError (stub not yet implemented).
-        GREEN: verify() returns VerifyOutcome AND the patched services stay uncalled.
+        GREEN: verify() returns VerifyOutcome AND the assembly services stay uncalled.
         """
         proposal = _make_proposal_with_content()
         svc = _make_service()
 
         with (
+            # Gate-internal services — mocked so verify() works without a DB.
+            patch(
+                "src.services.lexgen_verify_service.CefrVocabularyService",
+                return_value=_cefr_mock(),
+            ),
+            patch(
+                "src.services.lexgen_verify_service.LexiconService",
+                return_value=_lexicon_mock(),
+            ),
+            # Evidence-ASSEMBLY services — must never be called by verify().
+            patch(
+                "src.services.evidence_assembly_service.EvidenceAssemblyService",
+                side_effect=AssertionError(
+                    "VS-06: EvidenceAssemblyService must NOT be instantiated by verify()"
+                ),
+            ) as mock_assembly,
             patch(
                 "src.services.wiktionary_morphology_service.WiktionaryMorphologyService",
                 side_effect=AssertionError(
-                    "VS-06: WiktionaryMorphologyService must NOT be called by verify()"
+                    "VS-06: WiktionaryMorphologyService must NOT be instantiated by verify()"
                 ),
             ) as mock_wikt,
             patch(
-                "src.services.lexicon_service.LexiconService",
-                side_effect=AssertionError(
-                    "VS-06: LexiconService must NOT be called as an ASSEMBLY service by verify()"
-                ),
-            ) as mock_lex,
-            patch(
                 "src.services.frequency_service.FrequencyService",
                 side_effect=AssertionError(
-                    "VS-06: FrequencyService must NOT be called by verify()"
+                    "VS-06: FrequencyService must NOT be instantiated by verify()"
                 ),
             ) as mock_freq,
         ):
-            # RED: raises NotImplementedError (stub). GREEN: returns VerifyOutcome.
-            outcome = await svc.verify(proposal)  # noqa: F841
+            outcome = await svc.verify(proposal)
 
-        # GREEN assertions (reached only after implementation):
-        # The patched services must not have been called.
+        # verify() must return a valid outcome (reads packet from JSONB, not re-assembled).
+        VerifyOutcome = _get_verify_outcome_class()
+        assert isinstance(
+            outcome, VerifyOutcome
+        ), f"VS-06: verify() must return a VerifyOutcome; got {type(outcome).__name__}"
+
+        # Evidence-assembly services must be uncalled.
+        # (If any were called, they would have raised AssertionError above.)
+        mock_assembly.assert_not_called()
         mock_wikt.assert_not_called()
-        mock_lex.assert_not_called()
         mock_freq.assert_not_called()
 
 
@@ -214,7 +259,8 @@ class TestNoRequery:
 class TestNoStateMutation:
     """VS-08: verify() never mutates proposal.status or calls transition().
 
-    RED mode: verify() raises NotImplementedError — tests FAIL on that.
+    CefrVocabularyService and LexiconService are mocked at the verify-service
+    module level so verify() can complete without a real DB.
     """
 
     async def test_vs08_status_stays_generating_after_verify(self) -> None:
@@ -223,8 +269,6 @@ class TestNoStateMutation:
         The verify service is explicitly prohibited from calling transition()
         (Architecture-Schematics §5; LEXGEN-10-03 contract).
 
-        RED: verify() raises NotImplementedError (stub). The assertion after the
-        await is never reached — test FAILS on NotImplementedError.
         GREEN: verify() returns; proposal.status must be GENERATING; transition()
         must not have been called.
         """
@@ -235,15 +279,25 @@ class TestNoStateMutation:
 
         svc = _make_service()
 
-        # Spy on transition at the module location the service will import it from.
-        with patch(
-            "src.core.word_proposal_state.transition",
-            wraps=__import__("src.core.word_proposal_state", fromlist=["transition"]).transition,
-        ) as mock_transition:
-            # RED: raises NotImplementedError. GREEN: returns VerifyOutcome.
+        with (
+            patch(
+                "src.services.lexgen_verify_service.CefrVocabularyService",
+                return_value=_cefr_mock(),
+            ),
+            patch(
+                "src.services.lexgen_verify_service.LexiconService",
+                return_value=_lexicon_mock(),
+            ),
+            # Spy on transition at the module location the service will import it from.
+            patch(
+                "src.core.word_proposal_state.transition",
+                wraps=__import__(
+                    "src.core.word_proposal_state", fromlist=["transition"]
+                ).transition,
+            ) as mock_transition,
+        ):
             outcome = await svc.verify(proposal)  # noqa: F841
 
-        # GREEN assertions (reached only after implementation):
         assert proposal.status == WordProposalState.GENERATING, (
             "VS-08: proposal.status must remain GENERATING after verify() (any outcome); "
             f"got {proposal.status!r}"
@@ -254,8 +308,7 @@ class TestNoStateMutation:
         """VS-08 extension: verify() must not write generated_fields / reconciliation_log /
         judge_scores / trust_score.
 
-        RED: verify() raises NotImplementedError. GREEN: verify() returns;
-        the columns are still None.
+        GREEN: verify() returns; the columns are still None.
         """
         proposal = _make_proposal_with_content()
         assert proposal.generated_fields is None
@@ -265,10 +318,18 @@ class TestNoStateMutation:
 
         svc = _make_service()
 
-        # RED: raises NotImplementedError. GREEN: returns VerifyOutcome.
-        outcome = await svc.verify(proposal)  # noqa: F841
+        with (
+            patch(
+                "src.services.lexgen_verify_service.CefrVocabularyService",
+                return_value=_cefr_mock(),
+            ),
+            patch(
+                "src.services.lexgen_verify_service.LexiconService",
+                return_value=_lexicon_mock(),
+            ),
+        ):
+            outcome = await svc.verify(proposal)  # noqa: F841
 
-        # GREEN assertions:
         assert proposal.generated_fields is None, (
             "VS-08: verify() must NOT write generated_fields; " f"got {proposal.generated_fields!r}"
         )

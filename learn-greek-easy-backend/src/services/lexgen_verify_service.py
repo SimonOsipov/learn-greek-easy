@@ -44,9 +44,7 @@ from src.core.lexgen_verify import (
 )
 from src.schemas.lexgen import EvidencePacket, GeneratedLexContent
 from src.services.cefr_vocabulary_service import CefrVocabularyService
-from src.services.lexicon_service import (  # module-level import — VS-06 patch doesn't reach this binding  # noqa: E501
-    LexiconService,
-)
+from src.services.lexicon_service import LexiconService
 from src.services.morphology_service import get_morphology_service
 from src.services.openrouter_service import OpenRouterService, get_openrouter_service
 
@@ -125,12 +123,7 @@ class LexgenVerifyService:
         checked_sub_lemmas, all_sub_lemmas = await self._resolve_token_lemmas(content.example_greek)
 
         # Step 7 — build the allowed set (CEFR + closed-class + target)
-        try:
-            cefr_lemmas = await CefrVocabularyService(self.db).allowed_lemmas()
-        except Exception:
-            # Unit tests pass a minimal AsyncMock — fall back to empty set
-            # (only target stays allowed).
-            cefr_lemmas = set()
+        cefr_lemmas = await CefrVocabularyService(self.db).allowed_lemmas()
         allowed: set[str] = {normalize_lemma(lem) for lem in cefr_lemmas} | {normalized_target}
 
         # Step 8–10 — run the three pure gates
@@ -180,20 +173,14 @@ class LexgenVerifyService:
         """Return (resolved_lemma, is_unknown) for a single non-skip token.
 
         Uses spaCy's lemma when it differs from the surface form. When they
-        match (spaCy uncertain), falls back to LexiconService. Failure of the
-        lookup (including mocked sessions in unit tests) marks the token unknown.
+        match (spaCy uncertain), falls back to LexiconService. Returns (lemma, True)
+        when the lexicon has no entry (token is unknown_to_analyzer).
         """
         if token.lemma != token.text:
             return token.lemma, False
 
         # spaCy uncertain: lemma == text — try lexicon fallback.
-        # LexiconService imported at module level; VS-06's patch on
-        # src.services.lexicon_service.LexiconService does NOT reach
-        # this already-bound local name.
-        try:
-            entry = await LexiconService(self.db).lookup(token.text)
-        except Exception:
-            entry = None
+        entry = await LexiconService(self.db).lookup(token.text)
 
         if entry is not None:
             return entry.lemma, False
