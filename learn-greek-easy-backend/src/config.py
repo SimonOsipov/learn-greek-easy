@@ -569,6 +569,38 @@ class Settings(BaseSettings):
     )
 
     # =========================================================================
+    # LEXGEN Ensemble Judge (Stage 5 — LEXGEN-11)
+    # =========================================================================
+    lexgen_judge_models: list[str] = Field(
+        default=["openai/gpt-4.1-mini", "anthropic/claude-haiku-4.5"],
+        description=(
+            "OpenRouter slugs for the two-judge ensemble (Decision Record §3). Exactly "
+            "two judges, deliberately from different model families than each other and "
+            "than the generator (google/gemini-2.5-flash-lite). Both slugs are NEW config "
+            "here (the wired cross-AI secondary is qwen/...). Shadow-mode in v1: the judge "
+            "scores produce calibration data only — there is NO numeric trust threshold and "
+            "the auto-approve edge is deferred (DR §3/§4); the threshold is the OUTPUT of "
+            "calibration, not implemented here. Cost guardrail: 2 judges × <=3 attempts."
+        ),
+    )
+    lexgen_judge_max_attempts: int = Field(
+        default=3,
+        description=(
+            "Per-judge JSON-validation retry cap. Part of the cost guardrail "
+            "(2 judges × <=3 attempts); see DR §3/§4 — no numeric threshold, "
+            "auto-approve deferred to calibration."
+        ),
+    )
+    lexgen_judge_max_tokens: int = Field(
+        default=1024,
+        description=(
+            "Max response tokens per judge call. Part of the cost guardrail "
+            "(2 judges × <=3 attempts); see DR §3/§4 — no numeric threshold, "
+            "auto-approve deferred to calibration."
+        ),
+    )
+
+    # =========================================================================
     # Picture Generation (SIT-08, SCENE-01)
     # =========================================================================
     picture_house_style_default: str = Field(

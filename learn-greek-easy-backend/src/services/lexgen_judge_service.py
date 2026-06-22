@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Literal, cast
+from typing import Literal
 
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -214,14 +214,9 @@ class LexgenJudgeService:
         packet = EvidencePacket.model_validate(proposal.evidence_packet)
 
         # Run each configured judge sequentially (exactly two slugs in v1).
-        # NOTE (LEXGEN-11-03): the three ``settings.lexgen_judge_*`` reads in this
-        # service go through ``getattr`` + ``cast`` because those fields are added
-        # to config.py only in LEXGEN-11-03 (the FINAL subtask) — a direct dotted
-        # read would trip mypy's ``attr-defined`` until then. Once the fields land,
-        # simplify these to plain ``settings.lexgen_judge_models`` etc.
-        judge_models = cast(list[str], getattr(settings, "lexgen_judge_models"))
         judges: list[JudgeResult] = [
-            await self._run_one_judge(slug, content, packet) for slug in judge_models
+            await self._run_one_judge(slug, content, packet)
+            for slug in settings.lexgen_judge_models
         ]
         rubric_a = judges[0].rubric if judges else None
         rubric_b = judges[1].rubric if len(judges) > 1 else None
@@ -274,9 +269,8 @@ class LexgenJudgeService:
         is exhausted on invalid JSON OR when an OpenRouter call raises — a single
         judge failure NEVER raises out of ``judge()`` (degraded path).
         """
-        # getattr+cast: field added in LEXGEN-11-03 (see judge() note).
-        max_attempts = cast(int, getattr(settings, "lexgen_judge_max_attempts"))
-        max_tokens = cast(int, getattr(settings, "lexgen_judge_max_tokens"))
+        max_attempts = settings.lexgen_judge_max_attempts
+        max_tokens = settings.lexgen_judge_max_tokens
         last_error: str | None = None
 
         for attempt in range(1, max_attempts + 1):

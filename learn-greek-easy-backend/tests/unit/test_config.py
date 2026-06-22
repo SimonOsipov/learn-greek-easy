@@ -82,6 +82,61 @@ class TestOpenRouterImageSettings:
         assert settings.openrouter_image_aspect_ratio == "1:1"
 
 
+class TestLexgenJudgeSettings:
+    """Tests for the LEXGEN ensemble-judge config defaults (LEXGEN-11-03)."""
+
+    def test_lexgen_judge_models_default(self, monkeypatch):
+        """lexgen_judge_models falls back to the two documented judge slugs when unset."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("PICTURE_HOUSE_STYLE_DEFAULT", "style")
+        monkeypatch.delenv("LEXGEN_JUDGE_MODELS", raising=False)
+
+        settings = Settings()
+        assert settings.lexgen_judge_models == [
+            "openai/gpt-4.1-mini",
+            "anthropic/claude-haiku-4.5",
+        ]
+
+    def test_lexgen_judge_models_differ_from_generator_and_each_other(self, monkeypatch):
+        """Both judge slugs differ from the generator default and from each other."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("PICTURE_HOUSE_STYLE_DEFAULT", "style")
+
+        settings = Settings()
+        judges = settings.lexgen_judge_models
+        # Different model families from the generator (google/gemini-2.5-flash-lite)...
+        assert all(slug != settings.openrouter_default_model for slug in judges)
+        # ...and from each other (ensemble requires two distinct judges).
+        assert len(judges) == 2
+        assert judges[0] != judges[1]
+
+    def test_lexgen_judge_max_attempts_default(self, monkeypatch):
+        """lexgen_judge_max_attempts defaults to the documented retry cap (3)."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("PICTURE_HOUSE_STYLE_DEFAULT", "style")
+        monkeypatch.delenv("LEXGEN_JUDGE_MAX_ATTEMPTS", raising=False)
+
+        settings = Settings()
+        assert settings.lexgen_judge_max_attempts == 3
+
+    def test_lexgen_judge_max_tokens_default(self, monkeypatch):
+        """lexgen_judge_max_tokens defaults to the documented per-call cap (1024)."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("PICTURE_HOUSE_STYLE_DEFAULT", "style")
+        monkeypatch.delenv("LEXGEN_JUDGE_MAX_TOKENS", raising=False)
+
+        settings = Settings()
+        assert settings.lexgen_judge_max_tokens == 1024
+
+
 class TestDatabasePoolWarmMin:
     """Tests for database_pool_warm_min config setting (PERF-07-01)."""
 
