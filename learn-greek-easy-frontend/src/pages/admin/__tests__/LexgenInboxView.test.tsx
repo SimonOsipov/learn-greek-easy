@@ -330,3 +330,139 @@ describe('LexgenInboxView — adversarial', () => {
     expect(screen.getByText(/of 41/)).toBeTruthy();
   });
 });
+
+// ---------------------------------------------------------------------------
+// QA adversarial coverage (LEXGEN-12-03) — the DEFERRED analytics + Sheet rows.
+//
+// AC #6 (lexgen_proposal_viewed) and the detail Sheet open/close lifecycle are
+// owned by THIS container (the presentational LexgenProposalDetail does no
+// fetching/analytics). The 12-02 happy-path suite asserts only `onSelectProposal`
+// — the analytics event and the Sheet open/close were left UNCOVERED. These
+// close that gap.
+//
+// `lexgen_proposal_viewed` fires from the LIST row's data (anti-anchoring: the
+// payload carries id/lemma/flagged_field_count, never a score), so a row mock
+// is sufficient — no detail fetch needed to assert the event.
+// ---------------------------------------------------------------------------
+
+describe('LexgenInboxView — detail analytics & Sheet (12-03)', () => {
+  it('fires lexgen_proposal_viewed once with {proposal_id, lemma, flagged_field_count} on row click', () => {
+    mockUseLexgenProposals.mockReturnValue(
+      loaded({
+        items: [makeItem('p1', { lemma: 'σπίτι', flagged_field_count: 3 })],
+        total: 1,
+      })
+    );
+
+    render(<LexgenInboxView />);
+
+    fireEvent.click(screen.getByTestId('lexgen-inbox-row-p1'));
+
+    expect(mockTrack).toHaveBeenCalledWith('lexgen_proposal_viewed', {
+      proposal_id: 'p1',
+      lemma: 'σπίτι',
+      flagged_field_count: 3,
+    });
+    // exactly one viewed event for the single activation (inbox_opened is separate)
+    const viewedCalls = mockTrack.mock.calls.filter((c) => c[0] === 'lexgen_proposal_viewed');
+    expect(viewedCalls).toHaveLength(1);
+  });
+
+  it('fires lexgen_proposal_viewed with NO score-bearing prop (anti-anchoring)', () => {
+    mockUseLexgenProposals.mockReturnValue(
+      loaded({ items: [makeItem('p1', { flagged_field_count: 2 })], total: 1 })
+    );
+
+    render(<LexgenInboxView />);
+    fireEvent.click(screen.getByTestId('lexgen-inbox-row-p1'));
+
+    const viewed = mockTrack.mock.calls.find((c) => c[0] === 'lexgen_proposal_viewed');
+    expect(viewed).toBeTruthy();
+    const props = (viewed?.[1] ?? {}) as Record<string, unknown>;
+    // exactly the three contract keys — no judge_scores/trust_score/confidence/score
+    expect(Object.keys(props).sort()).toEqual(['flagged_field_count', 'lemma', 'proposal_id']);
+    for (const k of Object.keys(props)) {
+      expect(k).not.toMatch(/score|confidence|trust|naturalness|sense_fit/i);
+    }
+  });
+
+  it('fires lexgen_proposal_viewed on keyboard (Enter) activation too', () => {
+    mockUseLexgenProposals.mockReturnValue(
+      loaded({ items: [makeItem('k1', { lemma: 'νερό', flagged_field_count: 1 })], total: 1 })
+    );
+
+    render(<LexgenInboxView />);
+    fireEvent.keyDown(screen.getByTestId('lexgen-inbox-row-k1'), { key: 'Enter' });
+
+    expect(mockTrack).toHaveBeenCalledWith('lexgen_proposal_viewed', {
+      proposal_id: 'k1',
+      lemma: 'νερό',
+      flagged_field_count: 1,
+    });
+  });
+
+  it('opens the detail Sheet (rendering the resolved detail) on row click', () => {
+    mockUseLexgenProposals.mockReturnValue(loaded({ items: [makeItem('p1')], total: 1 }));
+    // Detail hook resolves once a row is selected → the Sheet shows the detail.
+    mockUseLexgenProposal.mockReturnValue({
+      data: {
+        id: 'p1',
+        lemma: 'σπίτι',
+        pos: 'noun',
+        status: 'needs_review',
+        created_at: '2026-06-22T10:00:00Z',
+        fields: [{ field: 'gender', value: 'n', source: 'greek_lexicon', flagged: false }],
+        content: [],
+      },
+      isLoading: false,
+      isError: false,
+    });
+
+    render(<LexgenInboxView />);
+
+    // Closed before interaction.
+    expect(screen.queryByTestId('lexgen-proposal-detail')).toBeNull();
+
+    fireEvent.click(screen.getByTestId('lexgen-inbox-row-p1'));
+
+    // Sheet opened → the presentational detail mounted (portal-rendered).
+    expect(screen.getByTestId('lexgen-proposal-detail')).toBeTruthy();
+  });
+
+  it('shows the detail skeleton while the detail query is loading', () => {
+    mockUseLexgenProposals.mockReturnValue(loaded({ items: [makeItem('p1')], total: 1 }));
+    mockUseLexgenProposal.mockReturnValue({ data: undefined, isLoading: true, isError: false });
+
+    render(<LexgenInboxView />);
+    fireEvent.click(screen.getByTestId('lexgen-inbox-row-p1'));
+
+    expect(screen.getByTestId('lexgen-detail-loading')).toBeTruthy();
+    expect(screen.queryByTestId('lexgen-proposal-detail')).toBeNull();
+  });
+
+  it('closes the detail Sheet (unmounts the detail) when dismissed', () => {
+    mockUseLexgenProposals.mockReturnValue(loaded({ items: [makeItem('p1')], total: 1 }));
+    mockUseLexgenProposal.mockReturnValue({
+      data: {
+        id: 'p1',
+        lemma: 'σπίτι',
+        pos: 'noun',
+        status: 'needs_review',
+        created_at: '2026-06-22T10:00:00Z',
+        fields: [{ field: 'gender', value: 'n', source: 'greek_lexicon', flagged: false }],
+        content: [],
+      },
+      isLoading: false,
+      isError: false,
+    });
+
+    render(<LexgenInboxView />);
+    fireEvent.click(screen.getByTestId('lexgen-inbox-row-p1'));
+    expect(screen.getByTestId('lexgen-proposal-detail')).toBeTruthy();
+
+    // Radix Sheet exposes a labelled Close button; Escape also triggers onOpenChange(false).
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+
+    expect(screen.queryByTestId('lexgen-proposal-detail')).toBeNull();
+  });
+});

@@ -252,3 +252,102 @@ describe('LexgenProposalDetail (LEXGEN-12-03)', () => {
     expect(screen.queryByRole('button', { name: /approve|edit|regenerate|reject/i })).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// QA adversarial coverage (LEXGEN-12-03) — null/edge values, unknown flat keys,
+// flagged on a MORPHOLOGICAL (not content) field, and the no-phantom-row
+// invariant. The 8 AC tests cover the happy path + the score-hiding poison
+// pill; these probe the brittle edges around `value: null` / `source: null`,
+// an unknown form key, and the strict "rows == fields + content" mapping.
+// ---------------------------------------------------------------------------
+
+describe('LexgenProposalDetail — adversarial (12-03)', () => {
+  it('renders a content field with value=null without crashing (label + provenance still show)', () => {
+    const proposal = makeProposal({
+      fields: [],
+      content: [makeContentField({ field: 'gloss_en', value: null, source: 'lexgen_generator' })],
+    });
+    renderWithProviders(<LexgenProposalDetail proposal={proposal} />);
+
+    // The row exists (no crash) and still surfaces its provenance source.
+    const row = screen.getByTestId('lexgen-field-row-gloss_en');
+    expect(row).toBeInTheDocument();
+    expect(row.textContent).toContain('lexgen_generator');
+    // The i18n label for gloss_en is rendered (English gloss in the EN test locale).
+    expect(row.textContent).toMatch(/English gloss/i);
+  });
+
+  it('renders a morphological field with source=null without crashing (no provenance line)', () => {
+    const proposal = makeProposal({
+      fields: [makeField({ field: 'nominative_singular', value: 'σπίτι', source: null })],
+      content: [],
+    });
+    renderWithProviders(<LexgenProposalDetail proposal={proposal} />);
+
+    const row = screen.getByTestId('lexgen-field-row-nominative_singular');
+    expect(row).toBeInTheDocument();
+    // value still renders…
+    expect(row.textContent).toContain('σπίτι');
+    // …but with no source there is no "Source:" provenance line in that row.
+    expect(row.textContent).not.toMatch(/source/i);
+  });
+
+  it('renders an UNKNOWN flat key (no i18n label) as its raw flat key', () => {
+    const proposal = makeProposal({
+      // nominative_plural is a valid form key but is NOT in KNOWN_FIELD_LABEL_KEYS,
+      // so it must fall back to rendering the raw flat key as the label.
+      fields: [makeField({ field: 'nominative_plural', value: 'σπίτια', source: 'wiktionary' })],
+      content: [],
+    });
+    renderWithProviders(<LexgenProposalDetail proposal={proposal} />);
+
+    const row = screen.getByTestId('lexgen-field-row-nominative_plural');
+    expect(row).toBeInTheDocument();
+    // The label is the raw flat key (it bypasses t() entirely).
+    expect(row.textContent).toContain('nominative_plural');
+    expect(row.textContent).toContain('σπίτια');
+  });
+
+  it('shows the Flagged badge on a flagged MORPHOLOGICAL form key (not just scalars/content)', () => {
+    const proposal = makeProposal({
+      fields: [
+        makeField({
+          field: 'genitive_singular',
+          value: 'σπιτιού',
+          source: 'wiktionary',
+          flagged: true,
+        }),
+        makeField({
+          field: 'nominative_singular',
+          value: 'σπίτι',
+          source: 'wiktionary',
+          flagged: false,
+        }),
+      ],
+      content: [],
+    });
+    renderWithProviders(<LexgenProposalDetail proposal={proposal} />);
+
+    const flaggedRow = screen.getByTestId('lexgen-field-row-genitive_singular');
+    const cleanRow = screen.getByTestId('lexgen-field-row-nominative_singular');
+    expect(flaggedRow.querySelector('[data-testid="lexgen-field-flagged-badge"]')).not.toBeNull();
+    expect(cleanRow.querySelector('[data-testid="lexgen-field-flagged-badge"]')).toBeNull();
+  });
+
+  it('renders exactly fields.length + content.length rows — no phantom rows from stray keys', () => {
+    const proposal = makeProposal(); // 6 fields + 4 content = 10 rows
+    const { container } = renderWithProviders(<LexgenProposalDetail proposal={proposal} />);
+
+    const rows = container.querySelectorAll('[data-testid^="lexgen-field-row-"]');
+    expect(rows).toHaveLength(proposal.fields.length + proposal.content.length);
+    expect(rows).toHaveLength(10);
+  });
+
+  it('renders the read-only note (no action surface in this slice)', () => {
+    const proposal = makeProposal();
+    renderWithProviders(<LexgenProposalDetail proposal={proposal} />);
+
+    // EN locale read-only note from lexgenInbox.detail.readOnlyNote.
+    expect(screen.getByText(/Read-only/i)).toBeInTheDocument();
+  });
+});
