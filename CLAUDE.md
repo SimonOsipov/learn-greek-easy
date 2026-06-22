@@ -97,6 +97,14 @@ Existing code may use raw hex (notably the `--practice-*` palette in `src/index.
 - **Don't mass-migrate legacy drift** — that's a separate track (the token migration in §3).
 - **Don't introduce new drift** — use tokens for what you're adding.
 
+### Claude Design projects
+
+The token layer is authored in Claude Design and pulled into the repo via `/design-pull` (tokens-only, report-only); that skill resolves these from here:
+
+- **Design System project** (token source of truth): `019deeaf-9c30-71f6-81e1-3898d141e8c6` — tokens at `design-system/tokens.css`.
+- **Repo tokens** (reconcile target): `learn-greek-easy-frontend/src/index.css`.
+- **Prototypes project** (screens; for a future prototype-pull skill): `019e1856-774d-7795-8b57-fbba04550fc7`.
+
 ## Testing
 
 ```bash
