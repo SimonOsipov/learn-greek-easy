@@ -177,6 +177,11 @@ Auto-updated project state file: `~/.claude/projects/-Users-samosipov-Downloads-
 
 Update this file when features are merged, phases change, or key decisions are made.
 
+**Keep it lean (hard limit ~24 KB; target <22 KB):**
+- Every "Recently Shipped" and "Memory Files" entry is ONE line ≤200 chars — a hook, not a summary. All detail lives in the linked `project_*.md` / `feedback_*.md` / `reference_*.md` topic file, never inline here.
+- Cap "Recently Shipped" at ~12 entries; older ones drop to `completed-features-archive.md` (the topic-file link stays in the "Memory Files" index, so nothing is orphaned).
+- A SessionStart hook (`~/.claude/hooks/memory-guard.sh` → `optimize-memory.sh`) auto-trims MEMORY.md back under limit if it grows past it — it backs up to `memory/.backups/` and only keeps the rewrite if it shrank without losing a link. Write concisely so it rarely needs to fire.
+
 ## Documentation
 
 - [Deployment Guide](docs/deployment-guide.md) - Sequential deploy, rollback, troubleshooting
