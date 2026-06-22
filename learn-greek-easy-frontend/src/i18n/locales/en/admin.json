@@ -1619,7 +1619,8 @@
         "sub": "across all situations",
         "subPage": "on the current page"
       },
-      "footerCatalog": "Catalog total"
+      "footerCatalog": "Catalog total",
+      "footerLast30": "Last 30 days"
     },
     "search": {
       "placeholder": "Search situations...",

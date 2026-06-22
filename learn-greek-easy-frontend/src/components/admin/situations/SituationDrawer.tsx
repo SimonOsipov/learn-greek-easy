@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
+import { getDateLocale } from '@/lib/dateUtils';
 import { adminAPI } from '@/services/adminAPI';
 import { APIRequestError } from '@/services/api';
 import { useAdminSituationStore } from '@/stores/adminSituationStore';
@@ -87,7 +88,7 @@ function toDefaults(
 // ── Component ───────────────────────────────────────────────────────────────────
 
 export const SituationDrawer: React.FC = () => {
-  const { t } = useTranslation('admin');
+  const { t, i18n } = useTranslation('admin');
   const [, setSearchParams] = useSearchParams();
 
   const drawerItemId = useAdminSituationStore((s) => s.drawerItemId);
@@ -412,7 +413,10 @@ export const SituationDrawer: React.FC = () => {
               {updatedAt && (
                 <span className="text-muted-foreground">
                   {t('situations.drawer.footer.autoSavedRelative', {
-                    relative: formatDistanceToNow(new Date(updatedAt), { addSuffix: true }),
+                    relative: formatDistanceToNow(new Date(updatedAt), {
+                      addSuffix: true,
+                      locale: getDateLocale(i18n.language),
+                    }),
                   })}
                 </span>
               )}

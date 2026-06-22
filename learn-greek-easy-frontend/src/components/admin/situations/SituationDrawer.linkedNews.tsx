@@ -40,7 +40,7 @@ interface Props {
 }
 
 export function SituationDrawerLinkedNews({ situation }: Props) {
-  const { t } = useTranslation('admin');
+  const { t, i18n } = useTranslation('admin');
   const { openIn } = useAdminTabNav();
   const fetchSituationDetail = useAdminSituationStore((s) => s.fetchSituationDetail);
   const closeDrawer = useAdminSituationStore((s) => s.closeDrawer);
@@ -114,7 +114,7 @@ export function SituationDrawerLinkedNews({ situation }: Props) {
               <p className="mb-1 text-xs text-muted-foreground">
                 {countryFlag(linkedNews.country)}
                 {countryFlag(linkedNews.country) && ' '}
-                {new Date(linkedNews.published_at).toLocaleDateString()}
+                {new Date(linkedNews.published_at).toLocaleDateString(i18n.language)}
               </p>
 
               {/* Title */}

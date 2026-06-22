@@ -7,6 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
 import { StatCard } from '@/components/ui/stat-card';
+import { getDateLocale } from '@/lib/dateUtils';
 import {
   useAdminSituationStore,
   selectStatsTotals,
@@ -24,7 +25,7 @@ interface SituationsTabProps {
 }
 
 export function SituationsTab({ createOpen, onCreateOpenChange }: SituationsTabProps) {
-  const { t } = useTranslation('admin');
+  const { t, i18n } = useTranslation('admin');
 
   // ── Store ─────────────────────────────────────────────────────────────────
   const fetchSituations = useAdminSituationStore((s) => s.fetchSituations);
@@ -52,7 +53,7 @@ export function SituationsTab({ createOpen, onCreateOpenChange }: SituationsTabP
   const readyPercent = total > 0 ? Math.round((ready / total) * 100) : 0;
   const visibleReady = filteredSituations.filter((s) => s.status === 'ready').length;
   const oldestDraftFormatted = oldestDraftDate
-    ? format(new Date(oldestDraftDate), 'd MMM yyyy')
+    ? format(new Date(oldestDraftDate), 'd MMM yyyy', { locale: getDateLocale(i18n.language) })
     : null;
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -99,6 +100,7 @@ export function SituationsTab({ createOpen, onCreateOpenChange }: SituationsTabP
           icon={<Sparkles />}
           tone="cyan"
           sub={t('situations.stats.exercisesGenerated.subPage')}
+          footerLabel={t('situations.stats.footerLast30')}
         />
       </div>
 
