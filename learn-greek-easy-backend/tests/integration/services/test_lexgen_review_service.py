@@ -239,6 +239,13 @@ def _noop_reconcile_patch():
     The real reconcile() calls transition(proposal, GENERATING→SCORED) + flush.
     The noop must simulate that side effect so downstream mocks (judge) see a
     SCORED proposal — matching the real pipeline's precondition.
+
+    Uses new_callable=AsyncMock so the patch installs a MagicMock attribute on
+    the class (not a plain function).  A plain function would be bound as an
+    unbound method via the descriptor protocol, causing a
+    ``TypeError: takes 1 positional argument but 2 were given`` when the service
+    calls ``reconciler_svc.reconcile(proposal)`` — that passes ``(self, proposal)``
+    to a function that only expects ``(proposal_arg,)``.
     """
     from src.core.word_proposal_state import transition  # noqa: PLC0415
     from src.db.models import WordProposalState  # noqa: PLC0415
@@ -248,7 +255,8 @@ def _noop_reconcile_patch():
 
     return patch(
         "src.services.lexgen_reconciler_service.LexgenReconcilerService.reconcile",
-        new=_reconcile_side_effect,
+        new_callable=AsyncMock,
+        side_effect=_reconcile_side_effect,
     )
 
 
@@ -260,6 +268,13 @@ def _noop_judge_patch():
     transition(proposal, SCORED→NEEDS_REVIEW) + flush. The noop must simulate
     that side effect so tests asserting proposal.status==NEEDS_REVIEW after edit/
     regenerate are correct.
+
+    Uses new_callable=AsyncMock so the patch installs a MagicMock attribute on
+    the class (not a plain function).  A plain function would be bound as an
+    unbound method via the descriptor protocol, causing a
+    ``TypeError: takes 1 positional argument but 2 were given`` when the service
+    calls ``judge_svc.judge(proposal)`` — that passes ``(self, proposal)``
+    to a function that only expects ``(proposal_arg,)``.
     """
     from src.core.word_proposal_state import transition  # noqa: PLC0415
     from src.db.models import WordProposalState  # noqa: PLC0415
@@ -277,7 +292,8 @@ def _noop_judge_patch():
 
     return patch(
         "src.services.lexgen_judge_service.LexgenJudgeService.judge",
-        new=_judge_side_effect,
+        new_callable=AsyncMock,
+        side_effect=_judge_side_effect,
     )
 
 
@@ -784,10 +800,17 @@ class TestRegenerate:
         async def _spy_generate(proposal_arg: WordProposal) -> None:
             status_at_generate_entry.append(proposal_arg.status)
 
+        # Use new_callable=AsyncMock so the patch installs a descriptor-free
+        # MagicMock on the class.  ``new=_spy_generate`` would trigger the
+        # descriptor protocol: accessing it via the instance binds it as an
+        # unbound method, so the call ``generator_svc.generate(proposal)``
+        # resolves to ``_spy_generate(generator_svc, proposal)`` — 2 args to a
+        # 1-param function → TypeError.
         with (
             patch(
                 "src.services.lexgen_generator_service.LexgenGeneratorService.generate",
-                new=_spy_generate,
+                new_callable=AsyncMock,
+                side_effect=_spy_generate,
             ),
             _noop_verify_patch(),
             _noop_reconcile_patch(),
@@ -1029,4 +1052,251 @@ class TestActionsRejectNonNeedsReview:
         assert proposal.status == original_status, (
             f"status must not change when guard raises; "
             f"expected {original_status!r}, got {proposal.status!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Test class 7 — adversarial / edge / negative / boundary coverage (QA Mode B)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+class TestAdversarial:
+    """Edge, negative, and boundary tests added by QA Mode B.
+
+    These tests are NOT part of the original AC spec — they probe failure modes
+    and boundary conditions not exercised by the AC suite.
+    """
+
+    # -----------------------------------------------------------------------
+    # approve: multiple flagged fields → one accept log row per field
+    # -----------------------------------------------------------------------
+
+    async def test_approve_multiple_flagged_fields_one_log_row_each(
+        self, db_session: AsyncSession
+    ) -> None:
+        """approve with N flagged fields must write EXACTLY one APPROVE log row per field.
+
+        Boundary: count assertion ensures no deduplication and no over-emission.
+        """
+        svc_cls = _get_service_class()
+        flagged = ["gender", "ipa", "nominative_singular"]
+        proposal = await _make_needs_review_proposal(db_session, flagged_fields=flagged)
+        svc = svc_cls(db_session)
+
+        await svc.approve(proposal, deck_id=_FAKE_DECK_ID, reviewer_id=_FAKE_REVIEWER_ID)
+
+        result = await db_session.execute(
+            select(WordProposalReviewLog).where(
+                WordProposalReviewLog.proposal_id == proposal.id,
+                WordProposalReviewLog.action == ReviewAction.APPROVE,
+            )
+        )
+        log_rows = result.scalars().all()
+        # Must be exactly len(flagged) rows — one per field, no more, no less.
+        assert len(log_rows) == len(flagged), (
+            f"approve with {len(flagged)} flagged fields must produce exactly {len(flagged)} "
+            f"APPROVE log rows; got {len(log_rows)}"
+        )
+        logged_fields = {row.field for row in log_rows}
+        assert logged_fields == set(flagged), (
+            f"Logged fields must exactly match flagged_fields={flagged!r}; "
+            f"got {logged_fields!r}"
+        )
+
+    # -----------------------------------------------------------------------
+    # approve: unknown POS free-text → ValidationException, no status mutation
+    # -----------------------------------------------------------------------
+
+    async def test_approve_unknown_pos_raises_validation_exception(
+        self, db_session: AsyncSession
+    ) -> None:
+        """approve when proposal.pos is not a valid PartOfSpeech enum value → ValidationException.
+
+        proposal.pos='adj' (Kaikki-style) is NOT in the PartOfSpeech enum
+        (which uses 'adjective').  The service calls PartOfSpeech(proposal.pos)
+        which raises ValueError → wrapped in ValidationException → 422.
+        Status must not mutate; no word_entries row; no log rows.
+        """
+        svc_cls = _get_service_class()
+        # 'adj' is the Kaikki raw form; PartOfSpeech enum only contains 'adjective'.
+        proposal = await _make_needs_review_proposal(db_session, pos="adj")
+        original_status = proposal.status
+        svc = svc_cls(db_session)
+
+        with pytest.raises(ValidationException):
+            await svc.approve(proposal, deck_id=_FAKE_DECK_ID, reviewer_id=_FAKE_REVIEWER_ID)
+
+        # Status must not have changed (pre-mutation guard).
+        assert proposal.status == original_status == WordProposalState.NEEDS_REVIEW, (
+            f"status must stay NEEDS_REVIEW when approve raises ValidationException "
+            f"(unknown pos); got {proposal.status!r}"
+        )
+        # No word_entries row.
+        result = await db_session.execute(select(WordEntry))
+        entries = result.scalars().all()
+        assert len(entries) == 0, (
+            f"No WordEntry rows must exist after failed approve (bad pos); " f"got {len(entries)}"
+        )
+        # No log rows.
+        result = await db_session.execute(
+            select(WordProposalReviewLog).where(WordProposalReviewLog.proposal_id == proposal.id)
+        )
+        log_rows = result.scalars().all()
+        assert (
+            len(log_rows) == 0
+        ), f"No log rows must exist after failed approve (bad pos); got {len(log_rows)}"
+
+    # -----------------------------------------------------------------------
+    # approve: missing translation_en → atomicity of the failure path
+    # (negative regression on AC-3 — confirm ALL four guarantees at once)
+    # -----------------------------------------------------------------------
+
+    async def test_approve_missing_translation_en_no_word_entry_no_log_no_status_change(
+        self, db_session: AsyncSession
+    ) -> None:
+        """Atomicity of AC-3: missing gloss_en → ValidationException before ANY mutation.
+
+        Asserts four things in one test: status unchanged, shipped_word_entry_id None,
+        zero word_entries rows, zero log rows.  This is the most dangerous failure
+        path to get wrong — a partial commit here could leak a corrupted entry.
+        """
+        svc_cls = _get_service_class()
+        proposal = await _make_needs_review_proposal(
+            db_session,
+            generated_content={
+                # gloss_en intentionally absent — translation_en is underivable
+                "gloss_ru": "книга",
+                "example_greek": "Τεστ.",
+                "example_translation": "Test.",
+            },
+        )
+        original_status = proposal.status
+        svc = svc_cls(db_session)
+
+        with pytest.raises(ValidationException):
+            await svc.approve(proposal, deck_id=_FAKE_DECK_ID, reviewer_id=_FAKE_REVIEWER_ID)
+
+        assert proposal.status == original_status  # (1) status unchanged
+        assert proposal.shipped_word_entry_id is None  # (2) FK not set
+        result = await db_session.execute(select(WordEntry))
+        assert len(result.scalars().all()) == 0  # (3) no word_entries row
+        result = await db_session.execute(
+            select(WordProposalReviewLog).where(WordProposalReviewLog.proposal_id == proposal.id)
+        )
+        assert len(result.scalars().all()) == 0  # (4) no log rows
+
+    # -----------------------------------------------------------------------
+    # edit: non-declension field in edits (e.g. 'gloss_ru') raises UnknownFlatFormKey
+    # -----------------------------------------------------------------------
+
+    async def test_edit_non_declension_field_raises_unknown_flat_form_key(
+        self, db_session: AsyncSession
+    ) -> None:
+        """edit with a key that is not a valid {case}_{number} flat key raises UnknownFlatFormKey.
+
+        flat_to_bundles is called at the UI edge to validate all edited keys.
+        'gloss_ru' has no '_' separator splitting into a valid case+number pair
+        → UnknownFlatFormKey.  Status must stay needs_review; no log rows written.
+        """
+        from src.core.exceptions import UnknownFlatFormKey  # noqa: PLC0415
+
+        svc_cls = _get_service_class()
+        proposal = await _make_needs_review_proposal(db_session)
+        original_status = proposal.status
+        svc = svc_cls(db_session)
+
+        with pytest.raises(UnknownFlatFormKey):
+            with _noop_judge_patch():
+                await svc.edit(
+                    proposal,
+                    field_edits={"gloss_ru": "книга_new"},
+                    reviewer_id=_FAKE_REVIEWER_ID,
+                )
+
+        # Status must not have mutated (flat_to_bundles validates before transition).
+        assert proposal.status == original_status == WordProposalState.NEEDS_REVIEW, (
+            f"status must stay NEEDS_REVIEW when edit raises UnknownFlatFormKey; "
+            f"got {proposal.status!r}"
+        )
+        # No log rows (raise happens before log write).
+        result = await db_session.execute(
+            select(WordProposalReviewLog).where(WordProposalReviewLog.proposal_id == proposal.id)
+        )
+        log_rows = result.scalars().all()
+        assert (
+            len(log_rows) == 0
+        ), f"No log rows must exist after failed edit (bad flat key); got {len(log_rows)}"
+
+    # -----------------------------------------------------------------------
+    # regenerate: prior proposal_attempt row preserves retry_attempts value
+    # -----------------------------------------------------------------------
+
+    async def test_regenerate_proposal_attempt_snapshot_preserves_retry_attempts(
+        self, db_session: AsyncSession
+    ) -> None:
+        """AC-5 boundary: ProposalAttempt.retry_attempts == proposal.retry_attempts at snapshot time.
+
+        Snapshot fidelity: the attempt row must capture retry_attempts as it was
+        BEFORE the chain (the generator may increment it during the new run).
+        """
+        svc_cls = _get_service_class()
+        proposal = await _make_needs_review_proposal(db_session)
+        # Simulate a prior run that attempted twice before reaching needs_review.
+        proposal.retry_attempts = 2
+        await db_session.flush()
+        pre_regenerate_retry_attempts = proposal.retry_attempts
+        svc = svc_cls(db_session)
+
+        with (
+            _noop_generate_patch(),
+            _noop_verify_patch(),
+            _noop_reconcile_patch(),
+            _noop_judge_patch(),
+        ):
+            await svc.regenerate(proposal, reviewer_id=_FAKE_REVIEWER_ID)
+
+        result = await db_session.execute(
+            select(ProposalAttempt).where(ProposalAttempt.proposal_id == proposal.id)
+        )
+        attempt = result.scalar_one()
+        assert attempt.retry_attempts == pre_regenerate_retry_attempts, (
+            f"ProposalAttempt.retry_attempts must capture the PRIOR value ({pre_regenerate_retry_attempts}); "
+            f"got {attempt.retry_attempts!r}"
+        )
+
+    # -----------------------------------------------------------------------
+    # reject: terminal — cannot be re-rejected (IllegalProposalTransition)
+    # -----------------------------------------------------------------------
+
+    async def test_reject_already_rejected_proposal_raises(self, db_session: AsyncSession) -> None:
+        """AC-6/AC-7 boundary: reject on an already-REJECTED proposal raises IllegalProposalTransition.
+
+        REJECTED is terminal.  Calling reject() again (or any action) must raise
+        immediately — no partial mutation, no double-write of log rows.
+        """
+        svc_cls = _get_service_class()
+        proposal = await _make_needs_review_proposal(db_session, flagged_fields=["gender"])
+        svc = svc_cls(db_session)
+
+        # First reject — succeeds.
+        await svc.reject(
+            proposal,
+            rejection_reason="First rejection.",
+            reviewer_id=_FAKE_REVIEWER_ID,
+        )
+        assert proposal.status == WordProposalState.REJECTED
+
+        # Second reject on a terminal REJECTED proposal — must raise.
+        with pytest.raises(IllegalProposalTransition):
+            await svc.reject(
+                proposal,
+                rejection_reason="Should not be accepted.",
+                reviewer_id=_FAKE_REVIEWER_ID,
+            )
+
+        # rejection_reason must still be the FIRST reason (no overwrite).
+        assert proposal.rejection_reason == "First rejection.", (
+            f"rejection_reason must not be overwritten by the failed second reject; "
+            f"got {proposal.rejection_reason!r}"
         )
