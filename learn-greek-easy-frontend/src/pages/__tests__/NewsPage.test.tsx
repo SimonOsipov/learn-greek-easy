@@ -163,7 +163,7 @@ describe('NewsPage Component', () => {
       render(<NewsPage />);
 
       await waitFor(() => {
-        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, undefined);
+        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, undefined, undefined);
       });
     });
 
@@ -357,7 +357,7 @@ describe('NewsPage Component', () => {
       await user.click(screen.getByTestId('news-pagination-next'));
 
       await waitFor(() => {
-        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(2, 12, undefined);
+        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(2, 12, undefined, undefined);
       });
     });
 
@@ -424,7 +424,7 @@ describe('NewsPage Component', () => {
       await user.click(screen.getByTestId('news-pagination-next'));
 
       await waitFor(() => {
-        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(2, 12, undefined);
+        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(2, 12, undefined, undefined);
       });
 
       // Should still only be called once
@@ -598,7 +598,7 @@ describe('Country Filter Buttons', () => {
     await user.click(within(filters).getByRole('button', { name: /Cyprus/ }));
 
     await waitFor(() => {
-      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'cyprus');
+      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'cyprus', undefined);
     });
   });
 
@@ -621,13 +621,13 @@ describe('Country Filter Buttons', () => {
     // Click Cyprus first
     await user.click(within(filters).getByRole('button', { name: /Cyprus/ }));
     await waitFor(() => {
-      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'cyprus');
+      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'cyprus', undefined);
     });
 
     // Then click All
     await user.click(within(filters).getByRole('button', { name: /All/ }));
     await waitFor(() => {
-      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, undefined);
+      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, undefined, undefined);
     });
   });
 
@@ -662,7 +662,7 @@ describe('Country Filter Buttons', () => {
     await user.click(within(filters).getByRole('button', { name: /Greece/ }));
 
     await waitFor(() => {
-      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'greece');
+      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'greece', undefined);
     });
   });
 });
