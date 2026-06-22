@@ -580,6 +580,10 @@ export interface LinkedSituationSummary {
   turn_count: number;
   exercise_count: number;
   audio_seconds: number;
+  /** F4 (ADMIN2-41-02): picture fields populated from linked SituationPicture. */
+  picture_image_url: string | null;
+  picture_image_variants: Record<number, string> | null;
+  has_picture: boolean;
 }
 
 /**

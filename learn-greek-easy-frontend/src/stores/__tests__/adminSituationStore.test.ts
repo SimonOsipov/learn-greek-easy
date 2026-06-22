@@ -372,8 +372,9 @@ describe('adminSituationStore — SIT-02 extensions', () => {
   // 12. selectStatsTotals — empty
   // ============================================================
   describe('selectStatsTotals — empty', () => {
-    it('returns all zeros when situations is empty', () => {
-      useAdminSituationStore.setState({ situations: [] });
+    it('returns all zeros when statusCounts is empty and situations is empty', () => {
+      // Post-fix contract: total = statusCounts.ready + statusCounts.draft (both 0 when missing)
+      useAdminSituationStore.setState({ situations: [], statusCounts: {} });
       const result = selectStatsTotals(useAdminSituationStore.getState());
       expect(result).toEqual({
         total: 0,
@@ -387,10 +388,15 @@ describe('adminSituationStore — SIT-02 extensions', () => {
   });
 
   // ============================================================
-  // 13. selectStatsTotals — mixed
+  // 13. selectStatsTotals — catalog contract (ADMIN2-41-03 regression oracle)
+  //
+  // UPDATED from page-local to catalog contract. The page has 2 ready + 1 draft
+  // (3 items), but statusCounts reports ready=4, draft=71 for the whole catalog.
+  // Post-fix: total=75, ready=4, draft=71 — NOT page item counts.
   // ============================================================
-  describe('selectStatsTotals — mixed', () => {
-    it('counts statuses and sums exercise counts correctly', () => {
+  describe('selectStatsTotals — catalog contract (ADMIN2-41-03)', () => {
+    it('total/ready/draft come from statusCounts, not from counting page items', () => {
+      // Page has 2 ready + 1 draft — diverges from catalog statusCounts intentionally.
       const items = [
         makeSituation({
           id: '1',
@@ -401,7 +407,7 @@ describe('adminSituationStore — SIT-02 extensions', () => {
         }),
         makeSituation({
           id: '2',
-          status: 'draft',
+          status: 'ready',
           dialog_exercises_count: 0,
           description_exercises_count: 4,
           picture_exercises_count: 0,
@@ -414,16 +420,21 @@ describe('adminSituationStore — SIT-02 extensions', () => {
           picture_exercises_count: 2,
         }),
       ];
-      useAdminSituationStore.setState({ situations: items as any });
+      // Catalog has 4 ready + 71 draft = 75 total; page has 2 ready + 1 draft = 3 total.
+      useAdminSituationStore.setState({
+        situations: items as any,
+        statusCounts: { ready: 4, draft: 71 },
+        total: 3, // filtered total — must be IGNORED for stat cards
+      });
 
       const result = selectStatsTotals(useAdminSituationStore.getState());
-      expect(result).toMatchObject({
-        total: 3,
-        ready: 1,
-        draft: 2,
-        exercisesGenerated: 13, // 2+3+1 + 0+4+0 + 1+0+2
-        // totalLast30d and oldestDraftDate depend on current date — verified in level filter tests
-      });
+      // Catalog total (from statusCounts sum) — NOT items.length
+      expect(result.total).toBe(75); // catalog total (statusCounts sum), not items.length
+      // Catalog ready/draft (from statusCounts) — NOT page item status counts
+      expect(result.ready).toBe(4);
+      expect(result.draft).toBe(71);
+      // exercisesGenerated still sums from the loaded page items (unchanged)
+      expect(result.exercisesGenerated).toBe(13); // 2+3+1 + 0+4+0 + 1+0+2
     });
   });
 
@@ -516,5 +527,137 @@ describe('adminSituationStore — SIT-02 extensions', () => {
       const result = selectFilteredSituations(useAdminSituationStore.getState());
       expect(result.map((i) => i.id)).toEqual(['b']);
     });
+  });
+});
+
+// ============================================================
+// ADMIN2-41-03 — selectStatsTotals catalog-total RED tests
+//
+// These 4 specs lock in the POST-FIX contract for F6.
+// They FAIL today because selectStatsTotals currently reads from
+// state.situations (page items), not state.statusCounts (catalog).
+// They will turn GREEN once the executor updates selectStatsTotals to:
+//   total = (statusCounts.ready ?? 0) + (statusCounts.draft ?? 0)
+//   ready = statusCounts.ready ?? 0
+//   draft  = statusCounts.draft  ?? 0
+// ============================================================
+
+describe('adminSituationStore — ADMIN2-41-03 catalog-total contract', () => {
+  beforeEach(() => {
+    useAdminSituationStore.setState(initialState);
+    vi.clearAllMocks();
+  });
+
+  // ── Test 1: total = statusCounts sum, NOT situations.length ─────────────────
+  it('T1: total is statusCounts.ready + statusCounts.draft, not page item count', () => {
+    // 10 page items all draft; catalog reports 4 ready + 71 draft = 75.
+    const pageItems = Array.from({ length: 10 }, (_, i) =>
+      makeSituation({ id: String(i), status: 'draft' })
+    );
+    useAdminSituationStore.setState({
+      situations: pageItems as any,
+      statusCounts: { ready: 4, draft: 71 },
+      total: 10, // filtered state.total — must be ignored
+    });
+
+    const result = selectStatsTotals(useAdminSituationStore.getState());
+    // FAILS today (returns 10 = items.length); GREEN after fix (returns 75)
+    expect(result.total).toBe(75);
+  });
+
+  // ── Test 2: ready/draft come from statusCounts, not page item status tallies ─
+  it('T2: ready and draft are from statusCounts, not from counting page statuses', () => {
+    // Page has 10 all-draft items; catalog reports 4 ready + 71 draft.
+    const pageItems = Array.from({ length: 10 }, (_, i) =>
+      makeSituation({ id: String(i), status: 'draft' })
+    );
+    useAdminSituationStore.setState({
+      situations: pageItems as any,
+      statusCounts: { ready: 4, draft: 71 },
+    });
+
+    const result = selectStatsTotals(useAdminSituationStore.getState());
+    // FAILS today: current selector counts page → ready=0, draft=10
+    expect(result.ready).toBe(4);
+    expect(result.draft).toBe(71);
+  });
+
+  // ── Test 3: state.total (filtered) is ignored; catalog total uses statusCounts ─
+  it('T3: catalog total ignores filtered state.total (uses statusCounts sum instead)', () => {
+    // state.total=10 is the filtered page count; statusCounts sum=75 is the catalog.
+    const pageItems = Array.from({ length: 10 }, (_, i) =>
+      makeSituation({ id: String(i), status: 'draft' })
+    );
+    useAdminSituationStore.setState({
+      situations: pageItems as any,
+      statusCounts: { ready: 4, draft: 71 },
+      total: 10,
+    });
+
+    const result = selectStatsTotals(useAdminSituationStore.getState());
+    // Must equal 75 (statusCounts sum), NOT 10 (state.total filtered), NOT 10 (items.length)
+    expect(result.total).toBe(75); // FAILS today
+    expect(result.total).not.toBe(10);
+  });
+
+  // ── Test 4: totalLast30d and oldestDraftDate remain PAGE-LOCAL (D12) ─────────
+  it('T4: totalLast30d and oldestDraftDate are still computed from loaded page items', () => {
+    const recentDate = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(); // 5 days ago
+    const oldDate = '2020-01-01T00:00:00Z'; // well outside 30-day window
+
+    const pageItems = [
+      makeSituation({ id: '1', status: 'draft', created_at: recentDate }),
+      makeSituation({ id: '2', status: 'draft', created_at: oldDate }),
+      makeSituation({ id: '3', status: 'ready', created_at: recentDate }),
+    ];
+    // statusCounts has much larger catalog numbers — should NOT affect page-local stats
+    useAdminSituationStore.setState({
+      situations: pageItems as any,
+      statusCounts: { ready: 4, draft: 71 },
+    });
+
+    const result = selectStatsTotals(useAdminSituationStore.getState());
+
+    // totalLast30d: only items within 30 days from the PAGE (2 of 3: id=1 and id=3)
+    expect(result.totalLast30d).toBe(2);
+    // oldestDraftDate: oldest draft from the PAGE (oldDate, not catalog-wide)
+    expect(result.oldestDraftDate).toBe(oldDate);
+  });
+
+  // ── Test 5 (adversarial): readyPercent inputs — 4/75 → feeds a 5% result ───
+  // selectStatsTotals does NOT compute readyPercent; SituationsTab.tsx does.
+  // This test verifies the selector emits the exact inputs the component
+  // needs to compute Math.round((4/75)*100) = 5.
+  it('T5-adv: selector returns ready=4 and total=75 so component can compute pct=5', () => {
+    useAdminSituationStore.setState({
+      situations: [],
+      statusCounts: { ready: 4, draft: 71 },
+      total: 10, // filtered — must be ignored
+    });
+
+    const result = selectStatsTotals(useAdminSituationStore.getState());
+    // Component computes: Math.round((result.ready / result.total) * 100)
+    expect(result.ready).toBe(4);
+    expect(result.total).toBe(75);
+    const computedPct = result.total > 0 ? Math.round((result.ready / result.total) * 100) : 0;
+    expect(computedPct).toBe(5); // round(4/75*100) = round(5.33) = 5
+  });
+
+  // ── Test 6 (adversarial): zero-catalog — selector returns total=0 so component
+  // computes readyPercent=0 with NO divide-by-zero / NaN ──────────────────────
+  it('T6-adv: zero statusCounts → total=0, ready=0 — no NaN in readyPercent computation', () => {
+    useAdminSituationStore.setState({
+      situations: [],
+      statusCounts: {},
+    });
+
+    const result = selectStatsTotals(useAdminSituationStore.getState());
+    expect(result.total).toBe(0);
+    expect(result.ready).toBe(0);
+    // Simulate the component guard: total > 0 ? Math.round(ready/total*100) : 0
+    const computedPct = result.total > 0 ? Math.round((result.ready / result.total) * 100) : 0;
+    expect(computedPct).toBe(0);
+    expect(Number.isNaN(computedPct)).toBe(false);
+    expect(Number.isFinite(computedPct)).toBe(true);
   });
 });

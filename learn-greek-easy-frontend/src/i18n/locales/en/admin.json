@@ -556,8 +556,6 @@
       "save": "Save changes",
       "saving": "Saving…",
       "cancel": "Cancel",
-      "regenerateTranslations": "Regenerate translations",
-      "updatedRelative": "Updated {{relative}}",
       "published": "Published",
       "publishedPill": "Published",
       "draftPill": "Draft — not visible",
@@ -609,13 +607,7 @@
       },
       "image": {
         "kicker": "Source image",
-        "helper": "Enter a URL to replace the current image. The original source URL is not stored after upload.",
-        "sourceUrl": "Source image URL",
-        "altText": "Alt text — English",
-        "photoCredit": "Photo credit",
-        "invalidUrl": "Image URL is not valid",
-        "altWarning": "This article has no alt text. Consider adding it for accessibility before publishing.",
-        "missingAlt": "This image has no alt text — consider adding it for accessibility."
+        "altWarning": "This article has no alt text. Consider adding it for accessibility before publishing."
       },
       "linkedSituation": {
         "kicker": "Linked situation",
@@ -1624,7 +1616,8 @@
       },
       "exercisesGenerated": {
         "title": "Exercises generated",
-        "sub": "across all situations"
+        "sub": "across all situations",
+        "subPage": "on the current page"
       },
       "footerCatalog": "Catalog total"
     },
@@ -1831,8 +1824,7 @@
     },
     "card": {
       "linesCount_one": "{{count}} line",
-      "linesCount_other": "{{count}} lines",
-      "fromNewsLabel": "FROM NEWS"
+      "linesCount_other": "{{count}} lines"
     },
     "grid": {
       "noResults": "No results",
@@ -2103,7 +2095,6 @@
     "statusDraft": "Draft",
     "statusVisible": "Visible to learners",
     "statusPendingReview": "Pending review",
-    "regenerateTranslations": "Regenerate translations",
     "sourcePrefix": "Source",
     "openInNews": "Open in News",
     "loadingLabel": "Loading decks",

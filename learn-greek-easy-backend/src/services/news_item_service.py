@@ -494,6 +494,19 @@ class NewsItemService:
         audio_url = self.s3_service.generate_presigned_url(description.audio_s3_key)
         audio_a2_url = self.s3_service.generate_presigned_url(description.audio_a2_s3_key)
 
+        # F4 (ADMIN2-41-02): compute picture fields from row[3] for both paths.
+        # Uses self.s3_service so the mock seam (patch get_s3_service) intercepts correctly.
+        picture_image_url: str | None = None
+        picture_image_variants: dict[int, str] | None = None
+        has_picture: bool = False
+        if picture is not None and picture.image_s3_key:
+            picture_image_url = self.s3_service.generate_presigned_url(picture.image_s3_key)
+            _raw_pic_variants = self.s3_service.get_derivative_presigned_urls(picture.image_s3_key)
+            picture_image_variants = (
+                _raw_pic_variants if isinstance(_raw_pic_variants, dict) else None
+            )
+            has_picture = True
+
         if linked_situation is None:
             # create/update/list path: dialog not loaded, build a zero-aggregate summary.
             # Accessing situation.dialog would trigger lazy="raise", so construct directly.
@@ -513,6 +526,19 @@ class NewsItemService:
                 turn_count=0,
                 exercise_count=0,
                 audio_seconds=0.0,
+                picture_image_url=picture_image_url,
+                picture_image_variants=picture_image_variants,
+                has_picture=has_picture,
+            )
+        else:
+            # detail path: _build_linked_situation_summary was called without picture data;
+            # apply the three picture fields via model_copy so the original is not mutated.
+            linked_situation = linked_situation.model_copy(
+                update={
+                    "picture_image_url": picture_image_url,
+                    "picture_image_variants": picture_image_variants,
+                    "has_picture": has_picture,
+                }
             )
 
         return NewsItemResponse(

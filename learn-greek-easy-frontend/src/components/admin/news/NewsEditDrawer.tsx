@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { format, formatDistanceToNow, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { el } from 'date-fns/locale/el';
 import { ru } from 'date-fns/locale/ru';
-import { Check, Pencil, Wand2 } from 'lucide-react';
+import { Check, Pencil } from 'lucide-react';
 import { FormProvider, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -45,9 +45,6 @@ export interface NewsDrawerFormData {
   description_el: string;
   title_el_a2: string | null;
   description_el_a2: string | null;
-  source_image_url: string;
-  alt_text: string;
-  photo_credit: string;
 }
 
 function getDateLocale(language: string): Locale | undefined {
@@ -122,20 +119,6 @@ export const NewsEditDrawer: React.FC = () => {
     if (dirty.description_el) payload.text_el = data.description_el;
     if (dirty.title_el_a2 !== undefined) payload.scenario_el_a2 = data.title_el_a2 || null;
     if (dirty.description_el_a2 !== undefined) payload.text_el_a2 = data.description_el_a2 || null;
-    const trimmedImageUrl = (data.source_image_url || '').trim();
-    if (dirty.source_image_url) {
-      if (trimmedImageUrl !== '') {
-        try {
-          new URL(trimmedImageUrl);
-        } catch {
-          toast({ title: t('news.drawer.image.invalidUrl'), variant: 'destructive' });
-          return;
-        }
-        payload.source_image_url = trimmedImageUrl;
-      }
-    }
-    if (dirty.alt_text) payload.alt_text = data.alt_text.trim() || null;
-    if (dirty.photo_credit) payload.photo_credit = data.photo_credit.trim() || null;
     if (Object.keys(payload).length === 0) {
       closeAndClearUrl();
       return;
@@ -285,38 +268,6 @@ export const NewsEditDrawer: React.FC = () => {
 
         <SidePanel.Footer>
           <div className="flex w-full items-center justify-between">
-            <div className="flex items-center gap-3 text-sm">
-              <span className="text-muted-foreground">
-                {t('news.drawer.updatedRelative', {
-                  relative: formatDistanceToNow(new Date(item.updated_at), {
-                    addSuffix: true,
-                    locale: getDateLocale(i18n.language),
-                  }),
-                })}
-              </span>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      aria-disabled="true"
-                      className="relative cursor-not-allowed opacity-60"
-                      onClick={(e) => e.preventDefault()}
-                    >
-                      <Wand2 className="size-3" />
-                      {t('news.drawer.regenerateTranslations')}
-                      <span
-                        className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive"
-                        aria-hidden="true"
-                      />
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>{t('comingSoon')}</TooltipContent>
-              </Tooltip>
-            </div>
             <div className="flex gap-2">
               <Button variant="ghost" onClick={requestCancel} data-testid="news-drawer-cancel">
                 {t('news.drawer.cancel')}
@@ -406,9 +357,6 @@ function toDefaults(item: NewsItemResponse | null): NewsDrawerFormData {
     description_el: item?.description_el ?? '',
     title_el_a2: item?.title_el_a2 ?? null,
     description_el_a2: item?.description_el_a2 ?? null,
-    source_image_url: '',
-    alt_text: item?.alt_text ?? '',
-    photo_credit: item?.photo_credit ?? '',
   };
 }
 
@@ -429,6 +377,9 @@ function toLinkedSituationSummaryProp(
     turnCount: raw.turn_count,
     exerciseCount: raw.exercise_count,
     audioDurationSeconds: raw.audio_seconds,
+    pictureImageUrl: raw.picture_image_url,
+    pictureImageVariants: raw.picture_image_variants,
+    hasPicture: raw.has_picture,
   };
 }
 

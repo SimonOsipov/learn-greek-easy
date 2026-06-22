@@ -320,6 +320,9 @@ describe('NewsEditDrawer — linked situation pill', () => {
         turn_count: 8,
         exercise_count: 2,
         audio_seconds: 30,
+        picture_image_url: null,
+        picture_image_variants: null,
+        has_picture: false,
       },
     });
     storeState.drawerItemId = item.id;
@@ -332,17 +335,13 @@ describe('NewsEditDrawer — linked situation pill', () => {
   });
 });
 
-describe('NewsEditDrawer — Regenerate button with icon', () => {
-  it('renders Regenerate button with aria-disabled and Wand2 icon', () => {
+describe('NewsEditDrawer — Regenerate button removed (F1)', () => {
+  it('does NOT render Regenerate translations button (F1 removal)', () => {
     const item = makeItem();
     storeState.drawerItemId = item.id;
     storeState.newsItems = [item];
     renderDrawer();
-    const btn = screen.getByText('Regenerate translations').closest('button');
-    expect(btn).toBeInTheDocument();
-    expect(btn).toHaveAttribute('aria-disabled', 'true');
-    // Wand2 icon is an SVG inside the button
-    expect(btn!.querySelector('svg')).toBeInTheDocument();
+    expect(screen.queryByText('Regenerate translations')).not.toBeInTheDocument();
   });
 });
 
@@ -403,11 +402,10 @@ describe('NewsEditDrawer — footer', () => {
     storeState.newsItems = [item];
   });
 
-  it('renders updatedRelative text', () => {
+  it('does NOT render updatedRelative text (F2 removal)', () => {
     renderDrawer();
-    // Real i18n resolves to "Updated <relative>" e.g. "Updated about 1 year ago"
-    const footerText = screen.getByText(/Updated/);
-    expect(footerText).toBeInTheDocument();
+    // "Updated N days ago" span removed in F2 — must not appear in footer
+    expect(screen.queryByText(/Updated/)).not.toBeInTheDocument();
   });
 
   it('renders Cancel button', () => {

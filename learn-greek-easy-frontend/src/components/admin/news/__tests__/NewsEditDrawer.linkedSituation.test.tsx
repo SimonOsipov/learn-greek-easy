@@ -11,6 +11,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { NewsItemResponse } from '@/services/adminAPI';
+import type { LinkedSituationSummary } from '../NewsEditDrawer.linkedSituation';
 
 // ── Module mocks ───────────────────────────────────────────────────────────────
 
@@ -111,7 +112,7 @@ function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
   };
 }
 
-const FIXTURE_SITUATION = {
+const FIXTURE_SITUATION: LinkedSituationSummary = {
   id: 'sit-abc',
   titleEn: 'At the Pharmacy',
   titleEl: 'Στο φαρμακείο',
@@ -123,6 +124,9 @@ const FIXTURE_SITUATION = {
   turnCount: 12,
   exerciseCount: 3,
   audioDurationSeconds: 45.3,
+  pictureImageUrl: null,
+  pictureImageVariants: null,
+  hasPicture: false,
 };
 
 // ── Lazy-loaded modules ────────────────────────────────────────────────────────
@@ -464,6 +468,37 @@ describe('NewsEditDrawerLinkedSituation — NADM-23 handoff fidelity', () => {
     const meta = document.querySelector('.dr-sit-meta');
     expect(meta!.textContent).toContain('2:05');
   });
+
+  it('renders <img> with dr-sit-thumb-img class when hasPicture=true and pictureImageUrl is set', () => {
+    const item = makeItem();
+    const sit = {
+      ...FIXTURE_SITUATION,
+      hasPicture: true,
+      pictureImageUrl: 'https://example.com/sit.jpg',
+      pictureImageVariants: { 400: 'https://example.com/sit_400w.webp' },
+    };
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} linkedSituation={sit} />
+      </MemoryRouter>
+    );
+    const img = document.querySelector('img.dr-sit-thumb-img') as HTMLImageElement;
+    expect(img).toBeInTheDocument();
+    expect(img.src).toBe('https://example.com/sit.jpg');
+    // Flag placeholder is NOT rendered when picture is present
+    expect(document.querySelector('.dr-sit-flag')).not.toBeInTheDocument();
+  });
+
+  it('renders flag placeholder (no <img>) when hasPicture=false', () => {
+    const item = makeItem();
+    render(
+      <MemoryRouter>
+        <NewsEditDrawerLinkedSituation item={item} linkedSituation={FIXTURE_SITUATION} />
+      </MemoryRouter>
+    );
+    expect(document.querySelector('.dr-sit-flag')).toBeInTheDocument();
+    expect(document.querySelector('img.dr-sit-thumb-img')).not.toBeInTheDocument();
+  });
 });
 
 describe('NewsEditDrawerLinkedSituation — footer buttons (NADM-24)', () => {
@@ -689,6 +724,9 @@ describe('NewsEditDrawer — linked situation populated card path', () => {
         turn_count: 12,
         exercise_count: 3,
         audio_seconds: 45.3,
+        picture_image_url: null,
+        picture_image_variants: null,
+        has_picture: false,
       },
     });
     storeState.drawerItemId = item.id;

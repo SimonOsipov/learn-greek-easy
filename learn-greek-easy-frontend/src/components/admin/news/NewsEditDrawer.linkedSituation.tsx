@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Kicker } from '@/components/ui/kicker';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { tDynamic } from '@/i18n/tDynamic';
+import { buildSrcSet, recoverDerivativeError } from '@/lib/imageVariants';
 import type { NewsItemResponse } from '@/services/adminAPI';
 
 // Country code → flag emoji lookup (ISO 3166-1 alpha-2 and common backend string values).
@@ -48,6 +49,10 @@ export interface LinkedSituationSummary {
   turnCount: number;
   exerciseCount: number;
   audioDurationSeconds: number;
+  // picture fields (F4 ADMIN2-41):
+  pictureImageUrl: string | null;
+  pictureImageVariants: Record<number, string> | null;
+  hasPicture: boolean;
 }
 
 interface Props {
@@ -109,7 +114,21 @@ export const NewsEditDrawerLinkedSituation: React.FC<Props> = ({
           data-testid="news-drawer-linked-situation-card"
         >
           <div className="dr-sit-thumb">
-            <span className="dr-sit-flag">{countryToFlag(linkedSituation.country)}</span>
+            {linkedSituation.hasPicture && linkedSituation.pictureImageUrl ? (
+              <img
+                className="dr-sit-thumb-img"
+                src={linkedSituation.pictureImageUrl}
+                srcSet={buildSrcSet(linkedSituation.pictureImageVariants)}
+                sizes="(max-width: 640px) 50vw, 160px"
+                alt=""
+                width={160}
+                height={120}
+                loading="lazy"
+                onError={recoverDerivativeError}
+              />
+            ) : (
+              <span className="dr-sit-flag">{countryToFlag(linkedSituation.country)}</span>
+            )}
           </div>
           <div className="dr-sit-body">
             {/* Status + level badges */}

@@ -593,8 +593,6 @@
       "save": "Сохранить изменения",
       "saving": "Сохранение…",
       "cancel": "Отмена",
-      "regenerateTranslations": "Перегенерировать переводы",
-      "updatedRelative": "Обновлено {{relative}}",
       "published": "Опубликовано",
       "publishedPill": "Опубликовано",
       "draftPill": "Черновик — не виден",
@@ -646,13 +644,7 @@
       },
       "image": {
         "kicker": "Исходное изображение",
-        "helper": "Введите URL, чтобы заменить текущее изображение. Исходный URL не сохраняется после загрузки.",
-        "sourceUrl": "URL исходного изображения",
-        "altText": "Альтернативный текст — English",
-        "photoCredit": "Фото-кредит",
-        "invalidUrl": "URL изображения недействителен",
-        "altWarning": "У этой статьи нет альтернативного текста. Рекомендуется добавить его для доступности перед публикацией.",
-        "missingAlt": "У этого изображения нет альтернативного текста — рекомендуется добавить его для доступности."
+        "altWarning": "У этой статьи нет альтернативного текста. Рекомендуется добавить его для доступности перед публикацией."
       },
       "linkedSituation": {
         "kicker": "Связанная ситуация",
@@ -1638,7 +1630,8 @@
       },
       "exercisesGenerated": {
         "title": "Упражнений создано",
-        "sub": "по всем ситуациям"
+        "sub": "по всем ситуациям",
+        "subPage": "на текущей странице"
       },
       "footerCatalog": "Итого по каталогу"
     },
@@ -1848,8 +1841,7 @@
       "linesCount_one": "{{count}} строка",
       "linesCount_few": "{{count}} строки",
       "linesCount_many": "{{count}} строк",
-      "linesCount_other": "{{count}} строк",
-      "fromNewsLabel": "ИЗ НОВОСТЕЙ"
+      "linesCount_other": "{{count}} строк"
     },
     "grid": {
       "noResults": "No results",
@@ -2122,7 +2114,6 @@
     "statusDraft": "Черновик",
     "statusVisible": "Виден ученикам",
     "statusPendingReview": "На проверке",
-    "regenerateTranslations": "Перегенерировать переводы",
     "sourcePrefix": "Источник",
     "openInNews": "Открыть в Новостях",
     "loadingLabel": "Загрузка колод",

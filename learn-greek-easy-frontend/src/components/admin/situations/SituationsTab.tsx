@@ -98,8 +98,7 @@ export function SituationsTab({ createOpen, onCreateOpenChange }: SituationsTabP
           n={exercisesGenerated}
           icon={<Sparkles />}
           tone="cyan"
-          sub={t('situations.stats.exercisesGenerated.sub')}
-          footerLabel={t('situations.stats.footerCatalog')}
+          sub={t('situations.stats.exercisesGenerated.subPage')}
         />
       </div>
 

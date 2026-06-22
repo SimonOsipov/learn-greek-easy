@@ -3189,18 +3189,6 @@
     flex-wrap: wrap;
     gap: 4px;
   }
-  /* FROM NEWS kicker */
-  .sit-from {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: hsl(var(--fg-2));
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
   @media (max-width: 640px) {
     .sit-card {
       grid-template-columns: 96px 1fr;
@@ -3348,7 +3336,7 @@
     display: grid;
     grid-template-columns: 160px 1fr;
     gap: 12px;
-    align-items: start;
+    align-items: stretch;
     padding: 12px;
     background: hsl(var(--card));
     border: 1px solid hsl(var(--fg) / 0.08);
@@ -3365,15 +3353,21 @@
   .dr-sit-thumb {
     position: relative;
     width: 160px;
-    aspect-ratio: 4 / 3;
-    height: auto;
+    min-height: 120px;
     border-radius: 10px;
     background: linear-gradient(135deg, hsl(var(--accent-2)), hsl(var(--primary)));
     display: flex;
     align-items: center;
     justify-content: center;
-    object-fit: cover;
     overflow: hidden;
+  }
+  .dr-sit-thumb-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
   }
   .dr-sit-flag {
     font-size: 40px;
