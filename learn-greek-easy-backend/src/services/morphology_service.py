@@ -7,7 +7,7 @@ import spacy
 from spacy.language import Language
 
 from src.core.logging import get_logger
-from src.schemas.nlp import MorphologyResult
+from src.schemas.nlp import MorphologyResult, SentenceToken
 
 logger = get_logger(__name__)
 
@@ -155,6 +155,27 @@ class MorphologyService:
             is_known=is_known,
             analysis_successful=True,
         )
+
+    def lemmatize_sentence(self, sentence: str) -> list[SentenceToken]:
+        """Tokenize a Greek sentence and return per-token lemma metadata.
+
+        Each token in the returned list exposes the raw spaCy attributes needed
+        by the closed-vocab gate: text, lemma (raw token.lemma_), is_punct,
+        is_space, like_num.
+
+        Contraction lemmas (e.g. 'στο' → 'σε ο') are returned space-joined,
+        NOT split, because splitting is the caller's responsibility.
+
+        Args:
+            sentence: A Greek sentence string (may include punctuation).
+
+        Returns:
+            list[SentenceToken]: One entry per spaCy token.
+
+        Raises:
+            NotImplementedError: Implementation pending (LEXGEN-10-02).
+        """
+        raise NotImplementedError("lemmatize_sentence not yet implemented — LEXGEN-10-02")
 
 
 _morphology_service: Optional[MorphologyService] = None
