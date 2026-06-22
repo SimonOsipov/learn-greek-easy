@@ -1,5 +1,6 @@
 """NewsItem repository for news feed operations."""
 
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import cast, desc, func, or_, select
@@ -31,22 +32,40 @@ def _like_escape(q: str) -> str:
     return q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
+def _search_normalize(expr: Any) -> ColumnElement:
+    """Normalize a text expression for Greek-aware substring matching.
+
+    Three transforms, applied to BOTH the column and the search pattern so
+    matching is symmetric:
+    - ``immutable_unaccent`` strips diacritics (e.g. ``ειδήσεις`` ↔ ``ειδησεις``);
+    - ``lower`` folds case (the primary case-insensitivity guarantee, independent
+      of the ``ilike`` collation);
+    - ``replace(…, 'ς', 'σ')`` collapses Greek **final sigma**: case-folding an
+      uppercase ``Σ`` yields ``σ`` (never ``ς``), so without this an uppercase
+      query like ``ΕΚΛΟΓΕΣ`` would miss a lowercase title ending in ``ς``
+      (``εκλογές`` → ``εκλογες``). Collapsing ``ς`` → ``σ`` on both sides fixes it.
+    """
+    return func.replace(func.lower(func.immutable_unaccent(expr)), "ς", "σ")
+
+
 def _search_predicate(q: str) -> ColumnElement:
     """Build the OR search predicate for accent+case-insensitive substring match.
 
-    Applies ``immutable_unaccent(col).ilike(immutable_unaccent('%<q>%'))``
-    across: Situation.scenario_el, SituationDescription.text_el,
-    SituationDescription.text_el_a2, and NewsItem.original_article_url.
+    Applies :func:`_search_normalize` to each searched column and to the
+    ``%<q>%`` pattern, then matches with ``ilike`` (case folding is already done
+    by ``lower`` in the normalizer; ``ilike`` is kept as defensive belt-and-braces).
+    Searched columns: Situation.scenario_el, SituationDescription.text_el,
+    SituationDescription.text_el_a2, NewsItem.original_article_url.
 
     The search term is LIKE-escaped so ``%`` / ``_`` are treated as literals.
     """
     escaped = _like_escape(q)
-    pattern = func.immutable_unaccent(f"%{escaped}%")
+    pattern = _search_normalize(f"%{escaped}%")
     return or_(
-        func.immutable_unaccent(Situation.scenario_el).ilike(pattern, escape="\\"),
-        func.immutable_unaccent(SituationDescription.text_el).ilike(pattern, escape="\\"),
-        func.immutable_unaccent(SituationDescription.text_el_a2).ilike(pattern, escape="\\"),
-        func.immutable_unaccent(NewsItem.original_article_url).ilike(pattern, escape="\\"),
+        _search_normalize(Situation.scenario_el).ilike(pattern, escape="\\"),
+        _search_normalize(SituationDescription.text_el).ilike(pattern, escape="\\"),
+        _search_normalize(SituationDescription.text_el_a2).ilike(pattern, escape="\\"),
+        _search_normalize(NewsItem.original_article_url).ilike(pattern, escape="\\"),
     )
 
 
