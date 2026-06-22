@@ -46,9 +46,7 @@ vi.mock('@/lib/imageVariants', () => ({
   recoverDerivativeError: vi.fn(),
 }));
 
-// Window.open mock so we can assert outbound navigation without leaving jsdom
-const mockWindowOpen = vi.fn();
-Object.defineProperty(window, 'open', { value: mockWindowOpen, writable: true });
+// (window.open is no longer called — the CTA is a real <a> anchor that navigates natively)
 
 // ---------------------------------------------------------------------------
 // Imports that must come after mocks (dynamic import order)
@@ -302,13 +300,23 @@ describe('NewsReaderSheet — A2 segment disabled when has_a2_content=false', ()
 describe('NewsReaderSheet — "Open original" CTA', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockWindowOpen.mockClear();
+  });
+
+  it('CTA is a real anchor with correct href, target, rel, and data-testid', () => {
+    renderReader({ level: 'b1' });
+
+    const cta = screen.getByTestId('news-reader-open-original');
+    expect(cta.tagName).toBe('A');
+    expect(cta).toHaveAttribute('href', 'https://www.ekathimerini.com/article/123');
+    expect(cta).toHaveAttribute('target', '_blank');
+    expect(cta.getAttribute('rel')).toContain('noopener');
+    expect(cta).toHaveAttribute('data-testid', 'news-reader-open-original');
   });
 
   it('fires news_article_clicked with correct domain on CTA click', async () => {
     renderReader({ level: 'b1' });
 
-    const cta = screen.getByRole('button', { name: /open original/i });
+    const cta = screen.getByTestId('news-reader-open-original');
     await userEvent.click(cta);
 
     expect(track).toHaveBeenCalledWith(
@@ -320,24 +328,22 @@ describe('NewsReaderSheet — "Open original" CTA', () => {
     );
   });
 
-  it('opens original_article_url in a new tab on CTA click', async () => {
+  it('does NOT call window.open on CTA click (anchor navigates natively)', async () => {
+    const windowOpenSpy = vi.spyOn(window, 'open');
     renderReader({ level: 'b1' });
 
-    const cta = screen.getByRole('button', { name: /open original/i });
+    const cta = screen.getByTestId('news-reader-open-original');
     await userEvent.click(cta);
 
-    expect(mockWindowOpen).toHaveBeenCalledWith(
-      'https://www.ekathimerini.com/article/123',
-      '_blank',
-      'noopener,noreferrer'
-    );
+    expect(windowOpenSpy).not.toHaveBeenCalled();
+    windowOpenSpy.mockRestore();
   });
 
   it('fires news_article_clicked with article_domain="unknown" when URL is invalid', async () => {
     const article = createArticle({ original_article_url: 'not-a-url' });
     renderReader({ article });
 
-    const cta = screen.getByRole('button', { name: /open original/i });
+    const cta = screen.getByTestId('news-reader-open-original');
     await userEvent.click(cta);
 
     expect(track).toHaveBeenCalledWith(
@@ -351,11 +357,19 @@ describe('NewsReaderSheet — "Open original" CTA', () => {
   it('does NOT fire news_article_opened on CTA click (only news_article_clicked)', async () => {
     renderReader({ level: 'b1' });
 
-    const cta = screen.getByRole('button', { name: /open original/i });
+    const cta = screen.getByTestId('news-reader-open-original');
     await userEvent.click(cta);
 
     const calls = vi.mocked(track).mock.calls;
     expect(calls.some(([evt]) => evt === 'news_article_opened')).toBe(false);
+  });
+
+  it('CTA href points to the article original_article_url (invalid URL article renders anchor)', () => {
+    const article = createArticle({ original_article_url: 'not-a-url' });
+    renderReader({ article });
+
+    const cta = screen.getByTestId('news-reader-open-original');
+    expect(cta).toHaveAttribute('href', 'not-a-url');
   });
 });
 

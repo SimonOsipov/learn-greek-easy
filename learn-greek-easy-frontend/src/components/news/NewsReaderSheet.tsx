@@ -142,8 +142,8 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
     [onLevelChange]
   );
 
-  /** Open the external article. Fires news_article_clicked (outbound). */
-  const handleOpenOriginal = useCallback(() => {
+  /** Fire analytics for the "Open original" outbound click. The anchor handles navigation. */
+  const handleOpenOriginalAnalytics = useCallback(() => {
     if (!article) return;
     try {
       const domain = new URL(article.original_article_url).hostname;
@@ -159,7 +159,6 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
         level: level ?? 'b1',
       });
     }
-    window.open(article.original_article_url, '_blank', 'noopener,noreferrer');
   }, [article, level]);
 
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
@@ -201,6 +200,7 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
+        data-testid="news-reader-sheet"
         // Override default padding (p-6) + width (sm:max-w-sm) + hide the built-in X button
         // The built-in X (SheetPrimitive.Close) is rendered as the first child button;
         // we replace it with our own sticky-header close button.
@@ -381,14 +381,19 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
                   {bodyText}
                 </div>
 
-                {/* Primary CTA — "Open original" */}
-                <Button
-                  onClick={handleOpenOriginal}
-                  className="w-full gap-2"
-                  aria-label={t('news.reader.openOriginal', 'Open original')}
-                >
-                  {t('news.reader.openOriginal', 'Open original')}
-                  <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                {/* Primary CTA — "Open original" — real anchor for accessibility + testability */}
+                <Button asChild className="w-full gap-2">
+                  <a
+                    href={article.original_article_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-testid="news-reader-open-original"
+                    aria-label={t('news.reader.openOriginal', 'Open original')}
+                    onClick={handleOpenOriginalAnalytics}
+                  >
+                    {t('news.reader.openOriginal', 'Open original')}
+                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                  </a>
                 </Button>
 
                 {/* Source line */}
