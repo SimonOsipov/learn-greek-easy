@@ -678,3 +678,326 @@ class TestGrammarDataSchemaImmutabilityAdversarial:
         """A read of an absent pos (e.g. "verb") raises KeyError — no verb schema yet."""
         with pytest.raises(KeyError):
             _ = GRAMMAR_DATA_SCHEMA["verb"]
+
+
+# ---------------------------------------------------------------------------
+# LEXGEN-09-01 — GeneratedLexContent schema (Mode A RED tests).
+#
+# These tests target ``src.schemas.lexgen.GeneratedLexContent`` which does NOT
+# exist yet in the module.  The entire class is absent, so the import below
+# (``from src.schemas.lexgen import GeneratedLexContent``) will raise
+# ``ImportError``/``cannot import name`` — that IS the expected RED failure mode
+# for a top-level import.
+#
+# Rather than failing at collection time (which would make ALL tests in the file
+# uncollectable), the import is deferred into a module-level helper so the
+# existing tests above remain runnable.  Each test in TestGeneratedLexContent
+# calls ``_get_schema()`` which raises ImportError → the test body fails with
+# ImportError, not a collection error.  That is the correct not-implemented
+# signal.
+# ---------------------------------------------------------------------------
+
+
+def _get_generated_lex_content_class():
+    """Deferred import of GeneratedLexContent.
+
+    Raises ImportError if the class does not exist yet — that IS the expected
+    RED failure mode for LEXGEN-09-01 Mode A tests.
+    """
+    from src.schemas.lexgen import GeneratedLexContent  # noqa: PLC0415
+
+    return GeneratedLexContent
+
+
+# A canonical valid payload used across tests.
+_VALID_PAYLOAD: dict = {
+    "gloss_en": "house",
+    "gloss_ru": "дом",
+    "example_greek": "Το σπίτι είναι μεγάλο.",
+    "example_translation": "The house is big.",
+}
+
+
+@pytest.mark.unit
+class TestGeneratedLexContent:
+    """LEXGEN-09-01: GeneratedLexContent Pydantic v2 schema — Mode A RED tests.
+
+    GeneratedLexContent does NOT exist yet in src/schemas/lexgen.py.  Every
+    test in this class will fail with ImportError from _get_generated_lex_content_class()
+    until the executor adds the class.  That is the intended RED failure mode —
+    NOT a typo or wrong-import bug in the tests themselves.
+    """
+
+    def test_generated_lex_content_accepts_valid(self):
+        """AC-1: a dict with all four non-empty fields constructs successfully.
+
+        GIVEN  a dict with gloss_en, gloss_ru, example_greek, example_translation
+        WHEN   GeneratedLexContent.model_validate(d)
+        THEN   returns a model with those exact values
+        """
+        GeneratedLexContent = _get_generated_lex_content_class()
+        model = GeneratedLexContent.model_validate(_VALID_PAYLOAD)
+        assert model.gloss_en == "house"
+        assert model.gloss_ru == "дом"
+        assert model.example_greek == "Το σπίτι είναι μεγάλο."
+        assert model.example_translation == "The house is big."
+
+    def test_generated_lex_content_forbids_morphology_field(self):
+        """AC-2: extra="forbid" rejects a morphology field alongside valid ones.
+
+        GIVEN  a valid dict plus "gender": "neuter"
+        WHEN   model_validate
+        THEN   raises ValidationError (extra field forbidden)
+
+        This is the primary guard that the schema structurally cannot accept
+        morphology output — adding gender, cases, number, or any other
+        non-lexical field is an immediate hard error, not silent data loss.
+        """
+        GeneratedLexContent = _get_generated_lex_content_class()
+        bad = {**_VALID_PAYLOAD, "gender": "neuter"}
+        with pytest.raises(ValidationError):
+            GeneratedLexContent.model_validate(bad)
+
+    def test_generated_lex_content_forbids_cases_field(self):
+        """AC-3: extra="forbid" rejects a cases field (another morphology field).
+
+        GIVEN  a valid dict plus "cases": {"nominative_singular": "σπίτι"}
+        WHEN   model_validate
+        THEN   raises ValidationError
+
+        Mirrors AC-2 but for a dict-typed morphology key — both scalar and
+        nested extra fields must be rejected.
+        """
+        GeneratedLexContent = _get_generated_lex_content_class()
+        bad = {**_VALID_PAYLOAD, "cases": {"nominative_singular": "σπίτι"}}
+        with pytest.raises(ValidationError):
+            GeneratedLexContent.model_validate(bad)
+
+    def test_generated_lex_content_rejects_missing_field(self):
+        """AC-4: each of the four fields is required — omitting one raises.
+
+        GIVEN  a dict missing gloss_ru
+        WHEN   model_validate
+        THEN   raises ValidationError (missing required field)
+        """
+        GeneratedLexContent = _get_generated_lex_content_class()
+        missing_gloss_ru = {k: v for k, v in _VALID_PAYLOAD.items() if k != "gloss_ru"}
+        with pytest.raises(ValidationError):
+            GeneratedLexContent.model_validate(missing_gloss_ru)
+
+    def test_generated_lex_content_rejects_empty_string(self):
+        """AC-5: each field has min_length=1 — an empty string raises.
+
+        GIVEN  a dict with example_greek=""
+        WHEN   model_validate
+        THEN   raises ValidationError (min_length violation)
+        """
+        GeneratedLexContent = _get_generated_lex_content_class()
+        empty_field = {**_VALID_PAYLOAD, "example_greek": ""}
+        with pytest.raises(ValidationError):
+            GeneratedLexContent.model_validate(empty_field)
+
+    def test_generated_lex_content_uses_v2_config(self):
+        """AC-6: model_config is a Pydantic v2 ConfigDict with extra="forbid".
+
+        GIVEN  the GeneratedLexContent class
+        WHEN   inspect model_config
+        THEN   extra == "forbid" (Pydantic v2 ConfigDict, not a silently-
+               ignored v1 ``class Config``)
+
+        The RED guard here is twofold:
+        1. If GeneratedLexContent doesn't exist → ImportError (not-implemented).
+        2. If it exists but uses ``class Config`` instead of ``ConfigDict`` →
+           model_config["extra"] is absent or the value is wrong → AssertionError.
+
+        This pins that the executor must use ``model_config = ConfigDict(extra="forbid")``
+        (not the v1 inner-class pattern, which Pydantic v2 silently ignores).
+        """
+        GeneratedLexContent = _get_generated_lex_content_class()
+        # model_config is a dict-like on Pydantic v2 BaseModel subclasses.
+        assert GeneratedLexContent.model_config.get("extra") == "forbid"
+
+
+# ---------------------------------------------------------------------------
+# LEXGEN-09-01 — Mode B adversarial / edge / negative coverage (QA-authored).
+#
+# The AC tests above cover: valid payload, one extra morphology scalar, one
+# extra morphology dict, one missing field, one empty-string field, and the
+# ConfigDict check. These tests pin the BOUNDARIES and coercion behavior so a
+# future loosening is a conscious, test-breaking change.
+#
+# All behaviors below were probed live against the shipped impl before pinning.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestGeneratedLexContentAdversarial:
+    """Mode B adversarial / edge / negative coverage for GeneratedLexContent.
+
+    Documents precise coercion behavior and pins it — a future schema change
+    that alters any of these behaviors will break here rather than going unnoticed.
+    """
+
+    def test_multiple_extra_morphology_fields_all_rejected(self):
+        """extra="forbid" fires even when MULTIPLE extra fields are present.
+
+        The AC tests cover a single extra key. This pins that two extras
+        (gender + ipa) still raise — verifying Pydantic reports all offenders,
+        not just the first.
+
+        Probed live: ValidationError with 2 errors.
+        """
+        GeneratedLexContent = _get_generated_lex_content_class()
+        bad = {
+            **_VALID_PAYLOAD,
+            "gender": "neuter",
+            "ipa": "/ˈspiti/",
+        }
+        with pytest.raises(ValidationError) as exc_info:
+            GeneratedLexContent.model_validate(bad)
+        # Both extra fields are reported, not just the first.
+        assert exc_info.value.error_count() == 2
+
+    def test_extra_field_with_null_value_is_still_forbidden(self):
+        """extra="forbid" fires even when the extra field's VALUE is None.
+
+        A null-valued morphology key is not a pass — the key's presence is
+        what's forbidden, regardless of value. Pins that there is no
+        "null → silently accept" shortcut.
+
+        Probed live: ValidationError with 1 error.
+        """
+        GeneratedLexContent = _get_generated_lex_content_class()
+        bad = {**_VALID_PAYLOAD, "gender": None}
+        with pytest.raises(ValidationError):
+            GeneratedLexContent.model_validate(bad)
+
+    def test_int_field_value_is_rejected(self):
+        """Pydantic v2 does NOT coerce int → str for str-annotated fields.
+
+        ``gloss_en=123`` raises ValidationError rather than silently producing
+        ``gloss_en="123"``. This pins the strict-ish str type gate (Pydantic v2
+        lax mode coerces numbers by default for some types; GeneratedLexContent
+        uses no lax validator, so plain str annotation rejects int).
+
+        Probed live: ValidationError with 1 error.
+        """
+        GeneratedLexContent = _get_generated_lex_content_class()
+        bad = {**_VALID_PAYLOAD, "gloss_en": 123}
+        with pytest.raises(ValidationError):
+            GeneratedLexContent.model_validate(bad)
+
+    def test_list_field_value_is_rejected(self):
+        """A list value for a str-annotated field raises ValidationError.
+
+        ``example_greek=["x"]`` is not coerced to a string — Pydantic v2 does
+        not stringify list types for str fields.
+
+        Probed live: ValidationError with 1 error.
+        """
+        GeneratedLexContent = _get_generated_lex_content_class()
+        bad = {**_VALID_PAYLOAD, "example_greek": ["Λέω ότι έχεις δίκιο."]}
+        with pytest.raises(ValidationError):
+            GeneratedLexContent.model_validate(bad)
+
+    def test_none_field_value_is_rejected(self):
+        """None is not accepted for any of the four required str fields.
+
+        Fields are declared ``str = Field(..., min_length=1)`` — not
+        ``str | None`` — so None raises a missing/type error.
+
+        Probed live: ValidationError with 1 error.
+        """
+        GeneratedLexContent = _get_generated_lex_content_class()
+        bad = {**_VALID_PAYLOAD, "gloss_ru": None}
+        with pytest.raises(ValidationError):
+            GeneratedLexContent.model_validate(bad)
+
+    def test_whitespace_only_string_is_currently_allowed(self):
+        """CONTRACT PIN + ADVISORY FINDING: whitespace-only strings pass min_length=1.
+
+        ``min_length=1`` counts CHARACTERS, not non-whitespace characters. A
+        string of spaces (length 3) satisfies the constraint even though it is
+        semantically empty. This is PINNED deliberately — it is the same
+        trade-off as ``FormBundle.form`` (see ``test_whitespace_only_form_currently_accepted``
+        in TestFormConstraintAdversarial) and mirrors ``MorphologyResult.nominative``
+        in ``src/schemas/nlp.py``.
+
+        ADVISORY FINDING (not a failing defect): LEXGEN-10/11 (the closed-
+        vocab gate and verification step) should add a strip/non-whitespace
+        check before persisting the generator's output, since a whitespace-only
+        gloss or example would pass schema validation but be meaningless data.
+        This is NOT fixed here — LEXGEN-09 ACs only mandate min_length=1.
+
+        Probed live: construction succeeds, whitespace value stored verbatim.
+        """
+        GeneratedLexContent = _get_generated_lex_content_class()
+        content = GeneratedLexContent.model_validate({**_VALID_PAYLOAD, "gloss_en": "   "})
+        assert content.gloss_en == "   "
+
+    def test_model_dump_has_exactly_four_keys(self):
+        """model_dump() yields exactly the 4 declared fields, no extras.
+
+        Guards against a future schema widening (adding a 5th field) going
+        unnoticed in downstream code that unpacks the dump by key name.
+        Also confirms extra="forbid" does not leak a hidden _extras_ key.
+
+        Probed live: dump has exactly {gloss_en, gloss_ru, example_greek, example_translation}.
+        """
+        GeneratedLexContent = _get_generated_lex_content_class()
+        content = GeneratedLexContent.model_validate(_VALID_PAYLOAD)
+        dump = content.model_dump()
+        assert set(dump.keys()) == {
+            "gloss_en",
+            "gloss_ru",
+            "example_greek",
+            "example_translation",
+        }
+        assert len(dump) == 4
+
+    def test_model_validate_of_model_dump_is_idempotent(self):
+        """model_validate(content.model_dump()) returns an equal model.
+
+        Pins that the schema is a clean round-trip: the output of model_dump()
+        is a valid input to model_validate(). This matters because the generator
+        service will persist content.model_dump() to JSONB, then LEXGEN-10/11
+        will re-validate the stored dict via GeneratedLexContent.model_validate.
+        If the round-trip were lossy or the dump produced an invalid payload,
+        the verify/ship step would silently fail.
+
+        Probed live: idempotent equality confirmed.
+        """
+        GeneratedLexContent = _get_generated_lex_content_class()
+        original = GeneratedLexContent.model_validate(_VALID_PAYLOAD)
+        round_tripped = GeneratedLexContent.model_validate(original.model_dump())
+        assert round_tripped == original
+        assert round_tripped.gloss_en == original.gloss_en
+        assert round_tripped.gloss_ru == original.gloss_ru
+        assert round_tripped.example_greek == original.example_greek
+        assert round_tripped.example_translation == original.example_translation
+
+    def test_all_four_fields_each_required_individually(self):
+        """Each of the four fields is required on its own — not just as a group.
+
+        The AC test (test_generated_lex_content_rejects_missing_field) omits only
+        gloss_ru. This parametric extension covers all four omissions so that a
+        future refactor making only one or two fields required is caught.
+        """
+        GeneratedLexContent = _get_generated_lex_content_class()
+        for key in ("gloss_en", "gloss_ru", "example_greek", "example_translation"):
+            partial = {k: v for k, v in _VALID_PAYLOAD.items() if k != key}
+            with pytest.raises(ValidationError):
+                GeneratedLexContent.model_validate(partial)
+
+    def test_empty_string_rejected_for_all_four_fields(self):
+        """min_length=1 fires for each field individually.
+
+        The AC test covers example_greek only. This ensures all four fields
+        have the constraint — a future accident of dropping min_length on
+        gloss_en or gloss_ru is caught here.
+        """
+        GeneratedLexContent = _get_generated_lex_content_class()
+        for key in ("gloss_en", "gloss_ru", "example_greek", "example_translation"):
+            bad = {**_VALID_PAYLOAD, key: ""}
+            with pytest.raises(ValidationError):
+                GeneratedLexContent.model_validate(bad)
