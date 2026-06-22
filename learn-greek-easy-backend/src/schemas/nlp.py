@@ -6,6 +6,23 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
+class SentenceToken(BaseModel):
+    """A single token from lemmatize_sentence() output.
+
+    Exposes the raw spaCy token attributes needed by the closed-vocab gate.
+    The lemma field is the raw token.lemma_ value — space-joined for
+    contractions (e.g. 'στο' → 'σε ο') and NOT split further here.
+    """
+
+    text: str = Field(..., description="Original token text as it appears in the sentence")
+    lemma: str = Field(
+        ..., description="Raw spaCy token.lemma_ (may be space-joined for contractions)"
+    )
+    is_punct: bool = Field(..., description="True if this token is punctuation")
+    is_space: bool = Field(..., description="True if this token is whitespace-only")
+    like_num: bool = Field(..., description="True if spaCy considers this token number-like")
+
+
 class SpellcheckResult(BaseModel):
     """Result of a spellcheck operation on a Greek word."""
 
