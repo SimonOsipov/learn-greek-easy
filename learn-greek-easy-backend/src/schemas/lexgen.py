@@ -70,7 +70,7 @@ are likewise documented out of scope here; only the noun value map is authored.
 from types import MappingProxyType
 from typing import Mapping
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # The controlled vocabulary of morphological feature keys, aligned 1:1 to the
 # GreekLexicon morphology columns. Exactly ten keys; no more, no less.
@@ -326,3 +326,29 @@ class EvidencePacket(BaseModel):
     normalized_lemma: str
     pos: str
     sources: EvidencePacketSources
+
+
+class GeneratedLexContent(BaseModel):
+    """The ONLY content the RAG generator authors/selects (LEXGEN-09).
+
+    Morphology is structurally impossible here: ``extra="forbid"`` rejects any
+    gender/ipa/declension/form field (cardinal invariant — Decision Record §1;
+    LLM never produces a morphological form).
+
+    The four fields map to the reconciler's declared gaps as follows:
+    - ``gloss_en``           → gap "gloss_en"  (selection from Wiktionary candidates)
+    - ``gloss_ru``           → gap "gloss_ru"  (generated; Generator rank 1)
+    - ``example_greek``      → gap "example"   (1→2 mapping; sentence under closed-vocab)
+    - ``example_translation`` → gap "example"  (1→2 mapping; translation; Generator rank 1)
+
+    ``"example"`` is the reconciler's gap LABEL only — it is NEVER a literal key
+    in ``generated_content`` (D6/F1).  Downstream consumers (LEXGEN-10/11) resolve
+    it via the fixed 1→2 mapping to these two concrete keys.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    gloss_en: str = Field(..., min_length=1)
+    gloss_ru: str = Field(..., min_length=1)
+    example_greek: str = Field(..., min_length=1)
+    example_translation: str = Field(..., min_length=1)
