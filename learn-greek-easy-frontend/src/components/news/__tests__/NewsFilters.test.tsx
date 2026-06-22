@@ -10,6 +10,8 @@ const defaultProps = {
   newsLevel: 'a2' as const,
   onLevelChange: vi.fn(),
   countryCounts: { cyprus: 10, greece: 5, world: 3 },
+  searchValue: '',
+  onSearchChange: vi.fn(),
 };
 
 describe('NewsFilters', () => {

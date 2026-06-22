@@ -1,3 +1,6 @@
+import { useEffect, useRef, useState } from 'react';
+
+import { Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { tDynamic } from '@/i18n/tDynamic';
@@ -13,6 +16,10 @@ export interface NewsFiltersProps {
   newsLevel: NewsLevel;
   onLevelChange: (level: NewsLevel) => void;
   countryCounts: { cyprus: number; greece: number; world: number };
+  /** Controlled search query value (omit to hide the search input entirely). */
+  searchValue?: string;
+  /** Called with debounced query string when the user types (omit to hide the search input). */
+  onSearchChange?: (q: string) => void;
   className?: string;
 }
 
@@ -22,9 +29,42 @@ export function NewsFilters({
   newsLevel,
   onLevelChange,
   countryCounts,
+  searchValue = '',
+  onSearchChange,
   className,
 }: NewsFiltersProps) {
   const { t } = useTranslation('common');
+
+  // Internal display value — controlled locally; debounced propagation to onSearchChange
+  const [inputValue, setInputValue] = useState(searchValue);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // Sync external reset (e.g. parent clears the query) back into local display value
+  useEffect(() => {
+    setInputValue(searchValue);
+  }, [searchValue]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputValue(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      onSearchChange?.(val);
+    }, 300);
+  };
+
+  const handleClear = () => {
+    setInputValue('');
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    onSearchChange?.('');
+  };
+
+  // Clean up debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const totalCount = countryCounts.cyprus + countryCounts.greece + countryCounts.world;
 
@@ -33,6 +73,40 @@ export function NewsFilters({
       className={cn('flex flex-wrap items-center justify-between gap-5', className)}
       data-testid="news-filters"
     >
+      {/* Search input — only rendered when onSearchChange is wired (news page, not dashboard) */}
+      {onSearchChange && (
+        <div className="relative flex h-[38px] items-center">
+          <Search
+            className="pointer-events-none absolute left-3 h-[15px] w-[15px] text-fg3"
+            aria-hidden="true"
+          />
+          <input
+            type="search"
+            data-testid="news-search-input"
+            value={inputValue}
+            onChange={handleInputChange}
+            placeholder={t('news.search.placeholder')}
+            className={cn(
+              'h-[38px] rounded-full border border-line bg-card pl-9 pr-8 text-[13.5px] text-fg',
+              'placeholder:text-fg3',
+              'outline-none transition-all duration-200',
+              'focus:ring-2 focus:ring-primary focus:ring-offset-1',
+              'w-[200px] sm:w-[240px]'
+            )}
+          />
+          {inputValue && (
+            <button
+              type="button"
+              aria-label={t('news.search.clear')}
+              onClick={handleClear}
+              className="absolute right-2.5 flex h-5 w-5 items-center justify-center rounded-full text-fg3 transition-colors hover:text-fg"
+            >
+              <X className="h-[13px] w-[13px]" aria-hidden="true" />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Country pills (left) */}
       <div className="flex flex-wrap items-center gap-1.5" data-testid="news-country-filters">
         {/* "All" country pill */}
