@@ -56,6 +56,10 @@ export const NewsPage: React.FC = () => {
   // Track if we've already tracked the page view (only track on first successful load)
   const hasTrackedPageView = useRef(false);
 
+  // Stale-response guard — incremented on each fetch; resolved responses from
+  // older requests are discarded if a newer request has already been issued.
+  const latestRequestId = useRef(0);
+
   // Cache for previously fetched country+page results (cleared on unmount)
   const newsCache = useRef<
     Record<
@@ -76,6 +80,9 @@ export const NewsPage: React.FC = () => {
    */
   const fetchNews = useCallback(
     async (page: number, country?: NewsCountry, q?: string) => {
+      // Assign a unique ID to this invocation so stale responses can be detected
+      const requestId = ++latestRequestId.current;
+
       const cacheKey = `${country ?? 'all'}:${q ?? ''}:${page}`;
 
       // Return cached data instantly (no loading spinner, no API call)
@@ -94,6 +101,10 @@ export const NewsPage: React.FC = () => {
 
       try {
         const response = await adminAPI.getNewsItems(page, ITEMS_PER_PAGE, country, q || undefined);
+
+        // Discard if a newer request was issued while this one was in flight
+        if (requestId !== latestRequestId.current) return;
+
         setArticles(response.items);
         setTotalItems(response.total);
         setCurrentPage(page);
@@ -114,6 +125,9 @@ export const NewsPage: React.FC = () => {
           hasTrackedPageView.current = true;
         }
       } catch (err) {
+        // Don't update error state if a newer request has already taken over
+        if (requestId !== latestRequestId.current) return;
+
         const errorMessage = err instanceof Error ? err.message : t('news.error.description');
         setError(errorMessage);
         reportAPIError(err, {
@@ -122,7 +136,10 @@ export const NewsPage: React.FC = () => {
           page,
         });
       } finally {
-        setIsLoading(false);
+        // Only clear loading if this is still the latest request
+        if (requestId === latestRequestId.current) {
+          setIsLoading(false);
+        }
       }
     },
     [t]

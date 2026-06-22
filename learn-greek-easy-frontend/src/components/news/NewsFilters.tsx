@@ -83,6 +83,7 @@ export function NewsFilters({
           <input
             type="search"
             data-testid="news-search-input"
+            aria-label={t('news.search.placeholder')}
             value={inputValue}
             onChange={handleInputChange}
             placeholder={t('news.search.placeholder')}

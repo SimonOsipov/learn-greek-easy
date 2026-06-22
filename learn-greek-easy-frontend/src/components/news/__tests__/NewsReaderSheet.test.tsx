@@ -580,6 +580,11 @@ describe('NewsReaderSheet — NWS8-05 sr-only SheetTitle and SheetDescription (a
     // is outside the body conditional so it should still render.
     const dialog = document.querySelector('[role="dialog"]');
     expect(dialog).not.toBeNull();
+
+    // The sr-only SheetTitle must contain the fallback text so screen readers announce the sheet
+    const srOnlyTitle = dialog!.querySelector('.sr-only');
+    expect(srOnlyTitle).not.toBeNull();
+    expect(srOnlyTitle!.textContent).toBe('news.page.title');
   });
 
   it('no visible change to the sticky header layout (CA3, CA4) — back and close buttons still present', () => {

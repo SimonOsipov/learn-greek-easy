@@ -376,8 +376,8 @@ class TestNewsSearchAndCountry:
         assert data["items"][0]["title_el"] is not None
         # The returned item must be for Greece, not Cyprus
         assert (
-            "Ελλάδας" in data["items"][0]["title_el"] or shared_term in data["items"][0]["title_el"]
-        ), "Returned item is not the Greece item."
+            data["items"][0]["country"] == "greece"
+        ), "Returned item is not the Greece item — country filter or q not AND-combined."
 
 
 # ---------------------------------------------------------------------------

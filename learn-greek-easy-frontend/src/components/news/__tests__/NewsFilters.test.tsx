@@ -5,12 +5,19 @@ import { waitFor } from '@testing-library/react';
 import { NewsFilters } from '@/components/news/NewsFilters';
 import { render, screen, within } from '@/lib/test-utils';
 
+// Base props without search — search is opt-in per test.
+// Keeping search out of defaultProps ensures the Layout/separator test is unambiguous:
+// it will only find the difficulty-section aria-hidden separator, not the search icon.
 const defaultProps = {
   countryFilter: 'all' as const,
   onCountryChange: vi.fn(),
   newsLevel: 'a2' as const,
   onLevelChange: vi.fn(),
   countryCounts: { cyprus: 10, greece: 5, world: 3 },
+};
+
+// Convenience spread for tests that need the search input rendered
+const withSearch = {
   searchValue: '',
   onSearchChange: vi.fn(),
 };
@@ -135,24 +142,23 @@ describe('NewsFilters', () => {
     });
 
     it('renders the search input when onSearchChange is provided', () => {
-      render(<NewsFilters {...defaultProps} />);
+      render(<NewsFilters {...defaultProps} {...withSearch} />);
       expect(screen.getByTestId('news-search-input')).toBeInTheDocument();
     });
 
     it('does NOT render the search input when onSearchChange is omitted (dashboard guard)', () => {
-      const { onSearchChange: _omit, searchValue: _sv, ...dashboardProps } = defaultProps;
-      render(<NewsFilters {...dashboardProps} />);
+      render(<NewsFilters {...defaultProps} />);
       expect(screen.queryByTestId('news-search-input')).not.toBeInTheDocument();
     });
 
     it('search input has data-testid="news-search-input"', () => {
-      render(<NewsFilters {...defaultProps} />);
+      render(<NewsFilters {...defaultProps} {...withSearch} />);
       const input = screen.getByTestId('news-search-input');
       expect(input).toHaveAttribute('data-testid', 'news-search-input');
     });
 
     it('is controlled by searchValue prop — reflects external value', () => {
-      render(<NewsFilters {...defaultProps} searchValue="Cyprus" />);
+      render(<NewsFilters {...defaultProps} {...withSearch} searchValue="Cyprus" />);
       const input = screen.getByTestId('news-search-input') as HTMLInputElement;
       expect(input.value).toBe('Cyprus');
     });
@@ -191,13 +197,13 @@ describe('NewsFilters', () => {
     });
 
     it('shows the clear button only when input has a value', () => {
-      render(<NewsFilters {...defaultProps} searchValue="test" />);
+      render(<NewsFilters {...defaultProps} {...withSearch} searchValue="test" />);
       // Clear button should be present when input has value
       expect(screen.getByRole('button', { name: /clear search/i })).toBeInTheDocument();
     });
 
     it('hides the clear button when input is empty', () => {
-      render(<NewsFilters {...defaultProps} searchValue="" />);
+      render(<NewsFilters {...defaultProps} {...withSearch} searchValue="" />);
       expect(screen.queryByRole('button', { name: /clear search/i })).not.toBeInTheDocument();
     });
 
@@ -214,7 +220,7 @@ describe('NewsFilters', () => {
     });
 
     it('country pills and A2/B1 segment are still rendered when search input is present', () => {
-      render(<NewsFilters {...defaultProps} />);
+      render(<NewsFilters {...defaultProps} {...withSearch} />);
       expect(screen.getByTestId('news-country-filters')).toBeInTheDocument();
       expect(screen.getByTestId('news-difficulty-selector')).toBeInTheDocument();
     });
