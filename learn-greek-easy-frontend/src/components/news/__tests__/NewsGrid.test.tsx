@@ -94,7 +94,7 @@ describe('NewsGrid Component', () => {
       const grid = screen.getByTestId('news-grid');
       expect(grid).toHaveClass('grid');
       expect(grid).toHaveClass('grid-cols-1');
-      expect(grid).toHaveClass('gap-4');
+      expect(grid).toHaveClass('gap-6');
       expect(grid).toHaveClass('sm:grid-cols-2');
       expect(grid).toHaveClass('lg:grid-cols-3');
       expect(grid).not.toHaveClass('xl:grid-cols-4');
@@ -181,7 +181,7 @@ describe('NewsGrid Component', () => {
       const loadingGrid = screen.getByTestId('news-grid-loading');
       expect(loadingGrid).toHaveClass('grid');
       expect(loadingGrid).toHaveClass('grid-cols-1');
-      expect(loadingGrid).toHaveClass('gap-4');
+      expect(loadingGrid).toHaveClass('gap-6');
       expect(loadingGrid).toHaveClass('sm:grid-cols-2');
       expect(loadingGrid).toHaveClass('lg:grid-cols-3');
       expect(loadingGrid).not.toHaveClass('xl:grid-cols-4');

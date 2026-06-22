@@ -46,7 +46,7 @@ export const NewsGrid: React.FC<NewsGridProps> = ({
   if (isLoading) {
     return (
       <div
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
         data-testid="news-grid-loading"
         role="list"
         aria-label={t('news.loading')}
@@ -69,7 +69,7 @@ export const NewsGrid: React.FC<NewsGridProps> = ({
   // Render news grid
   return (
     <div
-      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
       data-testid="news-grid"
       role="list"
       aria-label={t('news.gridLabel')}
