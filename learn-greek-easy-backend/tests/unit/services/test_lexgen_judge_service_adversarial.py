@@ -1,11 +1,9 @@
 """Adversarial / edge / negative coverage for LexgenJudgeService (LEXGEN-11-02 QA Mode A).
 
 These tests cover boundary, negative, and failure-mode scenarios that the AC tests
-do not address. They target ``src/services/lexgen_judge_service.py`` which does NOT
-exist yet — deferred imports ensure collectability.
-
-Expected failure mode when run before the implementation:
-    ModuleNotFoundError: No module named 'src.services.lexgen_judge_service'
+do not address: the non-SCORED transition guard, the one-judge-errored routing path,
+deterministic-primacy (judge() never writes morphology), and the None-generated_content
+assert.
 
 Tests:
   AC-10  Non-SCORED proposal raises IllegalProposalTransition (propagates, not swallowed).

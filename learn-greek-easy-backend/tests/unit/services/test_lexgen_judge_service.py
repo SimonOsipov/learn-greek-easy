@@ -1,16 +1,11 @@
-"""RED unit tests for LEXGEN-11-02: LexgenJudgeService ensemble judge.
+"""Unit tests for LexgenJudgeService (LEXGEN-11-02) — the Stage 5 ensemble judge.
 
-These tests target ``src/services/lexgen_judge_service.py`` which does NOT
-exist yet. The deferred import pattern (_get_service_class / _get_judge_outcome
-/ _get_judge_result) ensures the file is COLLECTABLE and each test fails
-individually with a ModuleNotFoundError/ImportError (not a collection-abort
-error).
-
-Expected failure mode when run before the implementation:
-    ModuleNotFoundError: No module named 'src.services.lexgen_judge_service'
+Verifies the ensemble judge call (two judges, one per configured slug), the D1
+disagreement rule, judge_scores JSONB persistence, the binary SCORED→NEEDS_REVIEW
+routing, and the degraded one-judge-errored path.
 
 ===========================================================================
-SEAM CONTRACT — pinned by these RED tests (executor MUST honour):
+SEAM CONTRACT — pinned by these tests (the implementation MUST honour):
 
 1.  ``class LexgenJudgeService`` with ``__init__(self, db: AsyncSession,
     openrouter: OpenRouterService)`` — per-request, NOT a singleton.
