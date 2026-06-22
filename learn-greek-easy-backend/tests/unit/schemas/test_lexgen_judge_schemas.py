@@ -221,3 +221,207 @@ class TestJudgeRubricDimensionsConstant:
         }
         assert set(JUDGE_RUBRIC_DIMENSIONS) == expected
         assert len(set(JUDGE_RUBRIC_DIMENSIONS)) == 5
+
+
+# ---------------------------------------------------------------------------
+# Adversarial / edge coverage (Mode B, LEXGEN-11-01 QA verification).
+# ---------------------------------------------------------------------------
+
+
+def _get_critiqueable_fields():
+    """Deferred import of _JUDGE_CRITIQUEABLE_FIELDS."""
+    from src.schemas.lexgen import _JUDGE_CRITIQUEABLE_FIELDS  # noqa: PLC0415
+
+    return _JUDGE_CRITIQUEABLE_FIELDS
+
+
+@pytest.mark.unit
+class TestAllContentFieldsAccepted:
+    """ADV-01: each of the four content fields is valid in JudgeBlockingIssue.
+
+    The AC test only exercises ``example_greek``.  This class proves the full
+    four-value vocabulary so a silent rename of a field name in
+    ``_JUDGE_CRITIQUEABLE_FIELDS`` would be caught immediately.
+    """
+
+    @pytest.mark.parametrize(
+        "content_field",
+        ["gloss_en", "gloss_ru", "example_greek", "example_translation"],
+    )
+    def test_content_field_accepted(self, content_field: str):
+        """ADV-01: every declared content field constructs JudgeBlockingIssue.
+
+        GIVEN  {"field": <content_field>, "issue": "test issue"}
+               where <content_field> ∈ {gloss_en, gloss_ru, example_greek,
+               example_translation}
+        WHEN   JudgeBlockingIssue.model_validate(payload)
+        THEN   model.field == content_field (no ValidationError)
+        """
+        JudgeBlockingIssue = _get_judge_blocking_issue()
+        issue = JudgeBlockingIssue.model_validate({"field": content_field, "issue": "test issue"})
+        assert issue.field == content_field
+
+
+@pytest.mark.unit
+class TestDimensionTypeCoercion:
+    """ADV-02: lock Pydantic v2 lax-mode coercion contract for int dimensions.
+
+    Pydantic v2 (lax mode, the default for model_validate) coerces:
+      - a string of digits (e.g. "5") → int  [ACCEPTED]
+      - a whole float (e.g. 4.0)     → int  [ACCEPTED]
+      - a fractional float (e.g. 4.5) raises ValidationError  [REJECTED]
+
+    These tests lock the ACTUAL documented behavior so that if the schema ever
+    switches to strict mode (which would tighten this), the tests break loudly
+    and the change is reviewed.
+    """
+
+    def test_string_digit_coerced_to_int(self):
+        """ADV-02a: naturalness="3" is lax-mode coerced to int 3.
+
+        GIVEN  a payload where naturalness is the string "3"
+        WHEN   JudgeRubric.model_validate(payload)
+        THEN   model.naturalness == 3  (Pydantic v2 lax coercion; no error)
+        """
+        JudgeRubric = _get_judge_rubric()
+        model = JudgeRubric.model_validate({**_VALID_RUBRIC_NO_ISSUES, "naturalness": "3"})
+        assert model.naturalness == 3
+
+    def test_whole_float_coerced_to_int(self):
+        """ADV-02b: naturalness=4.0 is lax-mode coerced to int 4.
+
+        GIVEN  a payload where naturalness is the float 4.0
+        WHEN   JudgeRubric.model_validate(payload)
+        THEN   model.naturalness == 4  (Pydantic v2 lax coercion; no error)
+        """
+        JudgeRubric = _get_judge_rubric()
+        model = JudgeRubric.model_validate({**_VALID_RUBRIC_NO_ISSUES, "naturalness": 4.0})
+        assert model.naturalness == 4
+
+    def test_fractional_float_rejected(self):
+        """ADV-02c: naturalness=4.5 is rejected (int_from_float error).
+
+        GIVEN  a payload where naturalness is the float 4.5
+        WHEN   JudgeRubric.model_validate(payload)
+        THEN   raises ValidationError (fractional float cannot coerce to int)
+        """
+        JudgeRubric = _get_judge_rubric()
+        with pytest.raises(ValidationError):
+            JudgeRubric.model_validate({**_VALID_RUBRIC_NO_ISSUES, "naturalness": 4.5})
+
+
+@pytest.mark.unit
+class TestMissingRequiredDimension:
+    """ADV-03: omitting any of the five required dimensions raises ValidationError.
+
+    All five dimension fields have no default (``Field(...)``), so any missing
+    one must be rejected.  The AC tests confirm range validation on ``naturalness``
+    only; this test confirms the required-ness of a different dimension
+    (``sense_fit``) to prove the constraint is not incidentally passing via the
+    shared payload.
+    """
+
+    def test_missing_dimension_rejected(self):
+        """ADV-03: a rubric missing sense_fit raises ValidationError.
+
+        GIVEN  a payload with naturalness/translation_faith_en/translation_faith_ru/
+               a2_appropriateness but NO sense_fit key
+        WHEN   JudgeRubric.model_validate(payload)
+        THEN   raises ValidationError (missing required field)
+        """
+        JudgeRubric = _get_judge_rubric()
+        incomplete = {
+            "naturalness": 4,
+            "translation_faith_en": 5,
+            "translation_faith_ru": 4,
+            "a2_appropriateness": 3,
+            # sense_fit deliberately omitted
+        }
+        with pytest.raises(ValidationError):
+            JudgeRubric.model_validate(incomplete)
+
+
+@pytest.mark.unit
+class TestJudgeBlockingIssueExtraKeyRejected:
+    """ADV-04: JudgeBlockingIssue also carries extra="forbid".
+
+    The AC test covers extra-key rejection on JudgeRubric (the outer model).
+    This test confirms the same constraint applies to the nested issue model —
+    a judge cannot smuggle extra keys into a blocking issue either.
+    """
+
+    def test_blocking_issue_extra_key_rejected(self):
+        """ADV-04: an extra key on JudgeBlockingIssue raises ValidationError.
+
+        GIVEN  {"field": "gloss_en", "issue": "bad gloss", "confidence": 0.9}
+        WHEN   JudgeBlockingIssue.model_validate(payload)
+        THEN   raises ValidationError (extra field forbidden)
+        """
+        JudgeBlockingIssue = _get_judge_blocking_issue()
+        with pytest.raises(ValidationError):
+            JudgeBlockingIssue.model_validate(
+                {"field": "gloss_en", "issue": "bad gloss", "confidence": 0.9}
+            )
+
+
+@pytest.mark.unit
+class TestBlockingIssuesDefaultEmpty:
+    """ADV-05: blocking_issues defaults to [] when the key is omitted.
+
+    ``Field(default_factory=list)`` must produce an empty list — not None
+    and not a shared mutable sentinel.
+    """
+
+    def test_blocking_issues_defaults_to_empty_list(self):
+        """ADV-05: blocking_issues is [] when the key is absent from the payload.
+
+        GIVEN  a valid rubric payload that omits the blocking_issues key
+        WHEN   JudgeRubric.model_validate(payload)
+        THEN   model.blocking_issues == []  (default_factory=list fires)
+        """
+        JudgeRubric = _get_judge_rubric()
+        model = JudgeRubric.model_validate(_VALID_RUBRIC_NO_ISSUES)
+        assert model.blocking_issues == []
+
+    def test_blocking_issues_default_is_not_shared_sentinel(self):
+        """ADV-05b: two instances have independent default lists (not shared).
+
+        GIVEN  two JudgeRubric instances created without blocking_issues
+        WHEN   we mutate one instance's list
+        THEN   the other instance's list is unaffected (default_factory, not [])
+        """
+        JudgeRubric = _get_judge_rubric()
+        m1 = JudgeRubric.model_validate(_VALID_RUBRIC_NO_ISSUES)
+        m2 = JudgeRubric.model_validate(_VALID_RUBRIC_NO_ISSUES)
+        m1.blocking_issues.append({"field": "gloss_en", "issue": "x"})  # type: ignore[attr-defined]
+        assert m2.blocking_issues == []
+
+
+@pytest.mark.unit
+class TestCritiqueableFieldsMorphologyExcluded:
+    """ADV-06: _JUDGE_CRITIQUEABLE_FIELDS must NOT contain morphology fields.
+
+    This is the deterministic-primacy fence: if a morphology field were
+    inadvertently added to ``_JUDGE_CRITIQUEABLE_FIELDS``, the judge could
+    raise blocking issues against fields it has no authority over (gender,
+    case, IPA pronunciation).  These assertions are the canary.
+    """
+
+    @pytest.mark.parametrize("morphology_field", ["gender", "case", "ipa"])
+    def test_morphology_field_not_in_critiqueable_set(self, morphology_field: str):
+        """ADV-06: morphology fields are absent from _JUDGE_CRITIQUEABLE_FIELDS.
+
+        GIVEN  _JUDGE_CRITIQUEABLE_FIELDS
+        THEN   "gender", "case", and "ipa" are NOT members of the set
+        """
+        fields = _get_critiqueable_fields()
+        assert morphology_field not in fields
+
+    def test_critiqueable_fields_has_exactly_four_members(self):
+        """ADV-06b: the closed-vocabulary set has exactly four entries.
+
+        Guards against silent addition of a fifth field (e.g. a morphology
+        field accidentally added alongside a real content field).
+        """
+        fields = _get_critiqueable_fields()
+        assert len(fields) == 4
