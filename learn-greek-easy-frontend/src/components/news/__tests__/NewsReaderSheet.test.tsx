@@ -364,12 +364,13 @@ describe('NewsReaderSheet — "Open original" CTA', () => {
     expect(calls.some(([evt]) => evt === 'news_article_opened')).toBe(false);
   });
 
-  it('CTA href points to the article original_article_url (invalid URL article renders anchor)', () => {
+  it('CTA has no href when URL is unsafe/unparseable (XSS guard — renders non-navigating)', () => {
     const article = createArticle({ original_article_url: 'not-a-url' });
     renderReader({ article });
 
     const cta = screen.getByTestId('news-reader-open-original');
-    expect(cta).toHaveAttribute('href', 'not-a-url');
+    // Unsafe URL → no href attribute (renders a <span>, not a navigating anchor)
+    expect(cta).not.toHaveAttribute('href');
   });
 });
 

@@ -31,6 +31,7 @@ import { buildSrcSet, recoverDerivativeError } from '@/lib/imageVariants';
 import { clearActivePlayer, registerActivePlayer } from '@/lib/newsAudioCoordinator';
 import { cn } from '@/lib/utils';
 import type { NewsCountry, NewsItemResponse } from '@/services/adminAPI';
+import { formatPublicationDate, safeExternalHref } from '@/utils/newsFormat';
 import type { NewsLevel } from '@/utils/newsLevel';
 
 import { COUNTRY_CONFIG } from './countryConfig';
@@ -163,12 +164,16 @@ export const NewsCard: React.FC<NewsCardProps> = ({
   /**
    * Reader mode only: external-link button handler.
    * Stops propagation (so card's onOpen doesn't also fire) and opens URL in new tab.
+   * Only opens if the URL has an http/https scheme (XSS guard).
    */
   const openExternal = useCallback(
     (e: React.MouseEvent | React.KeyboardEvent) => {
       e.stopPropagation();
       fireClickedAnalytics();
-      window.open(article.original_article_url, '_blank', 'noopener,noreferrer');
+      const safeHref = safeExternalHref(article.original_article_url);
+      if (safeHref) {
+        window.open(safeHref, '_blank', 'noopener,noreferrer');
+      }
     },
     [article.original_article_url, fireClickedAnalytics]
   );
@@ -215,14 +220,8 @@ export const NewsCard: React.FC<NewsCardProps> = ({
     // ignore
   }
 
-  // Publication date formatted
-  const formattedDate = article.publication_date
-    ? new Date(article.publication_date).toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      })
-    : '';
+  // Publication date formatted — UTC-safe helper avoids day-shift in negative-UTC-offset locales.
+  const formattedDate = formatPublicationDate(article.publication_date);
 
   // Gradient fallback when no image
   const thumbGradient = pickNewsThumb(article.id);
@@ -407,18 +406,33 @@ export const NewsCard: React.FC<NewsCardProps> = ({
 
   // ── Link mode (dashboard, no reader wired): root is a native anchor ──────
   if (!onOpen) {
+    const safeHref = safeExternalHref(article.original_article_url);
+    // Only render a navigable anchor when the URL scheme is http/https.
+    // Unsafe or unparseable URLs fall back to a non-navigating div so nothing
+    // dangerous is clickable (XSS guard for admin-supplied URLs).
+    if (safeHref) {
+      return (
+        <a
+          data-testid={`news-card-${article.id}`}
+          href={safeHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={title ?? ''}
+          className={cardClassName}
+          onClick={fireClickedAnalytics}
+        >
+          {cardInner}
+        </a>
+      );
+    }
     return (
-      <a
+      <div
         data-testid={`news-card-${article.id}`}
-        href={article.original_article_url}
-        target="_blank"
-        rel="noopener noreferrer"
         aria-label={title ?? ''}
         className={cardClassName}
-        onClick={fireClickedAnalytics}
       >
         {cardInner}
-      </a>
+      </div>
     );
   }
 

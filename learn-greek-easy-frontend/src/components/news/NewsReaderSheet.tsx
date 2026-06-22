@@ -26,6 +26,7 @@ import { buildSrcSet, recoverDerivativeError } from '@/lib/imageVariants';
 import { clearActivePlayer, registerActivePlayer } from '@/lib/newsAudioCoordinator';
 import { cn } from '@/lib/utils';
 import type { NewsCountry, NewsItemResponse } from '@/services/adminAPI';
+import { formatPublicationDate, safeExternalHref } from '@/utils/newsFormat';
 import type { NewsLevel } from '@/utils/newsLevel';
 
 import { COUNTRY_CONFIG } from './countryConfig';
@@ -173,14 +174,8 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
     }
   }
 
-  // Publication date formatted
-  const formattedDate = article?.publication_date
-    ? new Date(article.publication_date).toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      })
-    : '';
+  // Publication date formatted — UTC-safe helper avoids day-shift in negative-UTC-offset locales.
+  const formattedDate = formatPublicationDate(article?.publication_date);
 
   // Body text respects level
   const bodyText = useA2Content
@@ -195,6 +190,9 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
 
   // Whether A2 variant is available for the current article
   const a2Available = article?.has_a2_content ?? false;
+
+  // Safe outbound URL — only http/https schemes pass through (XSS guard for admin-supplied URLs).
+  const safeCtaHref = safeExternalHref(article?.original_article_url);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -381,20 +379,36 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
                   {bodyText}
                 </div>
 
-                {/* Primary CTA — "Open original" — real anchor for accessibility + testability */}
-                <Button asChild className="w-full gap-2">
-                  <a
-                    href={article.original_article_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                {/* Primary CTA — "Open original" — real anchor for accessibility + testability.
+                    Only navigates when the URL scheme is http/https (XSS guard). When the URL
+                    is unsafe or unparseable, the button renders non-navigating (no href/navigation). */}
+                {safeCtaHref ? (
+                  <Button asChild className="w-full gap-2">
+                    <a
+                      href={safeCtaHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-testid="news-reader-open-original"
+                      aria-label={t('news.reader.openOriginal', 'Open original')}
+                      onClick={handleOpenOriginalAnalytics}
+                    >
+                      {t('news.reader.openOriginal', 'Open original')}
+                      <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                    </a>
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    className="w-full gap-2"
                     data-testid="news-reader-open-original"
                     aria-label={t('news.reader.openOriginal', 'Open original')}
                     onClick={handleOpenOriginalAnalytics}
+                    aria-disabled="true"
                   >
                     {t('news.reader.openOriginal', 'Open original')}
                     <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                  </a>
-                </Button>
+                  </Button>
+                )}
 
                 {/* Source line */}
                 {sourceHostname && <p className="text-[12.5px] text-fg3">{sourceHostname}</p>}
