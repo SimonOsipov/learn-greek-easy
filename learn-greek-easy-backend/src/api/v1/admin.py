@@ -87,6 +87,8 @@ from src.db.models import (
     WiktionaryMorphology,
     WordEntry,
     WordOrderExercise,
+    WordProposal,
+    WordProposalState,
 )
 from src.db.session import get_session_factory
 from src.repositories.deck import DeckRepository
@@ -105,6 +107,11 @@ from src.schemas.admin import (
     GenerateCardsResponse,
     GenerateWordEntryRequest,
     GenerateWordEntryResponse,
+    LexgenProposalContentField,
+    LexgenProposalDetailResponse,
+    LexgenProposalField,
+    LexgenProposalListItem,
+    LexgenProposalListResponse,
     ListeningDialogCreateFromJSON,
     ListeningDialogDetail,
     ListeningDialogListItem,
@@ -1165,6 +1172,164 @@ async def check_article_usage(
     return ArticleCheckResponse(
         used=question_id is not None,
         question_id=question_id,
+    )
+
+
+# ============================================================================
+# LEXGEN Verification Inbox (LEXGEN-12, read-only — DR §D2, no reviewer role)
+# ============================================================================
+#
+# Two read-only superuser endpoints over the ``needs_review`` queue. Numeric
+# scores are NEVER serialized (anti-anchoring, Decision Record §3): the
+# response schemas have no field for judge_scores / trust_score / confidence,
+# and the serializers below whitelist only value / source / flagged per field.
+
+# The four generator content keys, in fixed display order (LEXGEN-09). The
+# ``flagged`` match is against the JUDGE's content field names
+# (example_greek / example_translation), which equal these generated_content
+# keys — see Decision D-CONTENT-PROVENANCE.
+_LEXGEN_CONTENT_KEYS = ("gloss_en", "gloss_ru", "example_greek", "example_translation")
+
+
+@router.get(
+    "/lexgen/proposals",
+    response_model=LexgenProposalListResponse,
+    summary="List LEXGEN proposals awaiting verification",
+    responses={
+        200: {"description": "Paginated needs_review queue"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+    },
+)
+async def list_lexgen_proposals(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> LexgenProposalListResponse:
+    """Paginated list of ``needs_review`` word proposals (verification queue).
+
+    Ordering (D-ORDER): most-flagged first, FIFO tiebreak, id final tiebreak.
+    No numeric score is surfaced (anti-anchoring, Decision Record §3).
+    """
+    # Count total needs_review rows.
+    count_result = await db.execute(
+        select(func.count(WordProposal.id)).where(
+            WordProposal.status == WordProposalState.NEEDS_REVIEW
+        )
+    )
+    total = count_result.scalar() or 0
+
+    # ORDER BY most-flagged DESC, created_at ASC, id ASC (D-ORDER).
+    # jsonb_typeof guard: flagged_fields may be SQL NULL *or* a JSONB scalar
+    # (JSON null), so coalesce alone is not enough — jsonb_array_length only
+    # accepts arrays. Treat anything that is not a JSON array as length 0.
+    offset = (page - 1) * page_size
+    result = await db.execute(
+        select(WordProposal)
+        .where(WordProposal.status == WordProposalState.NEEDS_REVIEW)
+        .order_by(
+            text(
+                "CASE WHEN jsonb_typeof(word_proposal.flagged_fields) = 'array' "
+                "THEN jsonb_array_length(word_proposal.flagged_fields) ELSE 0 END DESC"
+            ),
+            WordProposal.created_at.asc(),
+            WordProposal.id.asc(),
+        )
+        .offset(offset)
+        .limit(page_size)
+    )
+    proposals = result.scalars().all()
+
+    return LexgenProposalListResponse(
+        total=total,
+        page=page,
+        page_size=page_size,
+        items=[
+            LexgenProposalListItem(
+                id=p.id,
+                lemma=p.lemma_input,
+                pos=p.pos,
+                flagged_field_count=len(p.flagged_fields or []),
+                created_at=p.created_at,
+            )
+            for p in proposals
+        ],
+    )
+
+
+@router.get(
+    "/lexgen/proposals/{proposal_id}",
+    response_model=LexgenProposalDetailResponse,
+    summary="Get a LEXGEN proposal detail (verification view)",
+    responses={
+        200: {"description": "Proposal detail (scores excluded)"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Proposal not found or not in the review queue"},
+    },
+)
+async def get_lexgen_proposal(
+    proposal_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> LexgenProposalDetailResponse:
+    """Detail view for a single ``needs_review`` proposal.
+
+    404s when the id is unknown OR the row's status is not ``needs_review``
+    (D-DETAIL-404 — the inbox only serves the review queue). Projects
+    reconciliation_log fields + generated_content into score-free shapes; no
+    judge_scores / trust_score / confidence value is ever copied.
+    """
+    result = await db.execute(
+        select(WordProposal).where(
+            WordProposal.id == proposal_id,
+            WordProposal.status == WordProposalState.NEEDS_REVIEW,
+        )
+    )
+    proposal = result.scalar_one_or_none()
+
+    if not proposal:
+        raise NotFoundException(
+            resource="Proposal",
+            detail=f"Proposal with ID '{proposal_id}' not found in the review queue",
+        )
+
+    flagged_fields = proposal.flagged_fields or []
+
+    # Morphological/scalar fields: whitelist value/source/flagged from the
+    # reconciliation_log; NEVER copy confidence / cross_checks / flags.
+    recon_fields = (proposal.reconciliation_log or {}).get("fields") or {}
+    fields = [
+        LexgenProposalField(
+            field=name,
+            value=entry.get("value"),
+            source=entry.get("source"),
+            flagged=name in flagged_fields,
+        )
+        for name, entry in recon_fields.items()
+    ]
+
+    # Generator content (glosses + example): fixed key order, constant source.
+    generated_content = proposal.generated_content or {}
+    content = [
+        LexgenProposalContentField(
+            field=key,
+            value=generated_content.get(key),
+            source="lexgen_generator",
+            flagged=key in flagged_fields,
+        )
+        for key in _LEXGEN_CONTENT_KEYS
+    ]
+
+    return LexgenProposalDetailResponse(
+        id=proposal.id,
+        lemma=proposal.lemma_input,
+        pos=proposal.pos,
+        status=proposal.status.value,
+        created_at=proposal.created_at,
+        fields=fields,
+        content=content,
     )
 
 
