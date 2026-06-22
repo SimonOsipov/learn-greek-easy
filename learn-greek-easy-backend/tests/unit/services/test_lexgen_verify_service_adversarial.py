@@ -40,6 +40,22 @@ from src.schemas.lexgen import (
     WiktionarySource,
 )
 
+# Patch target for LexgenGeneratorService within the verify-service module namespace.
+# Tests that exercise hard-fail paths MUST patch this to avoid a real LLM call.
+_PATCH_GENERATOR = "src.services.lexgen_verify_service.LexgenGeneratorService"
+
+
+def _make_always_failing_generator_mock() -> AsyncMock:
+    """Return a generator mock whose generate() is a no-op (content stays unchanged).
+
+    Used in hard-fail unit tests so the regen loop runs 2 times with gates still
+    failing, reaching the persistent-fail → FLAGGED terminal without any LLM call.
+    """
+    mock_gen = AsyncMock()
+    mock_gen.generate = AsyncMock()  # no-op: proposal.generated_content unchanged
+    return mock_gen
+
+
 # ---------------------------------------------------------------------------
 # Helpers — reuse from the AC test file pattern
 # ---------------------------------------------------------------------------
@@ -168,6 +184,7 @@ class TestBothCheckEFailAndGlossWarn:
     async def test_adv01_check_e_fail_takes_priority_gloss_gate_still_present(self) -> None:
         """ADV-01: sentence has out-of-vocab + gloss not in Wikt.
         _on_hard_fail fires for check_e; gloss gate result still in outcome.gate_results.
+        Generator is mocked (always-failing) so regen loop runs 2× → FLAGGED.
         """
         # gloss_en="tome" not in glosses_en="book; volume" → gloss warn
         # example with κβάντο → check_e fail (not in empty cefr_lemmas)
@@ -178,7 +195,9 @@ class TestBothCheckEFailAndGlossWarn:
         )
         svc = _make_service()
 
+        gen_mock = _make_always_failing_generator_mock()
         with (
+            patch(_PATCH_GENERATOR, return_value=gen_mock),
             patch(
                 "src.services.lexgen_verify_service.CefrVocabularyService",
                 return_value=_cefr_mock(),  # empty set → κβάντο OOV
@@ -268,14 +287,18 @@ class TestPreExistingFlaggedFields:
         ), f"ADV-02: 'gloss_en' must be appended; got {proposal.flagged_fields!r}"
 
     async def test_adv02_verify_appends_to_existing_flagged_fields_on_hard_fail(self) -> None:
-        """ADV-02b: pre-existing flag; check_e hard-fails; _on_hard_fail must append, not replace."""
+        """ADV-02b: pre-existing flag; check_e hard-fails; _on_hard_fail must append, not replace.
+        Generator is mocked (always-failing) so regen loop runs 2× → FLAGGED.
+        """
         proposal = _make_proposal(
             example_greek="Το βιβλίο κβάντο.",  # κβάντο OOV → check_e fail
             flagged_fields=["some_prior_field"],
         )
         svc = _make_service()
 
+        gen_mock = _make_always_failing_generator_mock()
         with (
+            patch(_PATCH_GENERATOR, return_value=gen_mock),
             patch(
                 "src.services.lexgen_verify_service.CefrVocabularyService",
                 return_value=_cefr_mock(),  # empty → κβάντο OOV
@@ -297,14 +320,18 @@ class TestPreExistingFlaggedFields:
         ), f"ADV-02b: check_e not appended; got {proposal.flagged_fields!r}"
 
     async def test_adv02_no_duplicate_flags(self) -> None:
-        """ADV-02c: if 'check_e' is ALREADY in flagged_fields, verify must not add it twice."""
+        """ADV-02c: if 'check_e' is ALREADY in flagged_fields, verify must not add it twice.
+        Generator is mocked (always-failing) so regen loop runs 2× → FLAGGED.
+        """
         proposal = _make_proposal(
             example_greek="Το βιβλίο κβάντο.",
             flagged_fields=["check_e"],  # already present from a prior stage
         )
         svc = _make_service()
 
+        gen_mock = _make_always_failing_generator_mock()
         with (
+            patch(_PATCH_GENERATOR, return_value=gen_mock),
             patch(
                 "src.services.lexgen_verify_service.CefrVocabularyService",
                 return_value=_cefr_mock(),  # empty → κβάντο OOV
@@ -405,6 +432,7 @@ class TestMultipleOutOfVocabOffenders:
     async def test_adv05_multiple_oov_words_all_recorded_in_offending(self) -> None:
         """ADV-05: sentence "Το βιβλίο κβάντο φοτόν." — κβάντο and φοτόν both OOV.
         GateResult.offending must contain both.
+        Generator is mocked (always-failing) so regen loop runs 2× → FLAGGED.
         """
         # All CEFR lemmas empty (default mock), so κβάντο and φοτόν both fail
         proposal = _make_proposal(
@@ -412,7 +440,9 @@ class TestMultipleOutOfVocabOffenders:
         )
         svc = _make_service()
 
+        gen_mock = _make_always_failing_generator_mock()
         with (
+            patch(_PATCH_GENERATOR, return_value=gen_mock),
             patch(
                 "src.services.lexgen_verify_service.CefrVocabularyService",
                 return_value=_cefr_mock(),  # empty set → all non-target OOV
@@ -464,6 +494,9 @@ class TestVS06CorrectPatchTarget:
         stays 0 regardless of whether LexiconService was actually used by verify().
 
         This confirms the definition-module patch provides no meaningful protection.
+
+        Generator is mocked (always-failing) to handle any hard-fail path reached via
+        real spaCy — avoids a real LLM call with the MagicMock openrouter.
         """
         # Sentence with an uncertain token (lemma == text) to trigger LexiconService fallback.
         proposal = _make_proposal(
@@ -472,7 +505,9 @@ class TestVS06CorrectPatchTarget:
         svc = _make_service()
 
         # Patch definition module AND provide proper verify-module patches so verify() runs.
+        gen_mock = _make_always_failing_generator_mock()
         with (
+            patch(_PATCH_GENERATOR, return_value=gen_mock),
             patch(
                 "src.services.lexgen_verify_service.CefrVocabularyService",
                 return_value=_cefr_mock(),
@@ -504,13 +539,18 @@ class TestVS06CorrectPatchTarget:
         (for sentences with uncertain tokens).
 
         This is the correct patch target used by VS-06 in the AC test suite.
+
+        Generator is mocked (always-failing) to handle any hard-fail path reached via
+        real spaCy — avoids a real LLM call with the MagicMock openrouter.
         """
         proposal = _make_proposal(
             example_greek="Το βιβλίο τσιπς.",  # "τσιπς" likely uncertain → triggers fallback
         )
         svc = _make_service()
 
+        gen_mock = _make_always_failing_generator_mock()
         with (
+            patch(_PATCH_GENERATOR, return_value=gen_mock),
             patch(
                 "src.services.lexgen_verify_service.CefrVocabularyService",
                 return_value=_cefr_mock(),
@@ -610,7 +650,10 @@ class TestTargetInContraction:
 
         svc = _make_service()
 
+        # Generator mock guards against any hard-fail path with real spaCy + MagicMock openrouter.
+        gen_mock = _make_always_failing_generator_mock()
         with (
+            patch(_PATCH_GENERATOR, return_value=gen_mock),
             patch(
                 "src.services.lexgen_verify_service.CefrVocabularyService",
                 return_value=_cefr_mock({"μητέρα", "πάω", "σπίτι", "σε", "ο", "η", "στο"}),

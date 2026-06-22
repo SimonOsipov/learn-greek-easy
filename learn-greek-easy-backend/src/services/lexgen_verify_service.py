@@ -1,12 +1,15 @@
-"""LEXGEN-10-03 — Verify service: gate orchestration.
+"""LEXGEN-10-03/04 — Verify service: gate orchestration + regenerate loop.
 
 This module runs the three deterministic gates on a GENERATING proposal's
 content (Check E, target-attested, gloss-subset) and records the outcome.
+On a hard gate failure (Check E or gloss whitespace-reject), the service
+delegates to _on_hard_fail which runs up to 2 outer regenerations (LEXGEN-10-04).
 
 Public surface:
     LexgenVerifyService(db, openrouter) — constructor
     async verify(proposal) -> VerifyOutcome — runs all gates
-    _on_hard_fail(proposal, failing_gates) — injectable seam (10-04 replaces body)
+    _on_hard_fail(proposal, failing_gates, *, allowed, normalized_target)
+        — injectable async seam (10-04 implements the regen loop here)
     VerifyOutcome — result dataclass
     get_lexgen_verify_service(db) — factory
 
@@ -14,7 +17,8 @@ SEAM CONTRACT (pinned by RED tests — executor MUST honour):
 1.  LexgenVerifyService(db: AsyncSession, openrouter: OpenRouterService)
     Single canonical constructor (same signature for 10-03 AND 10-04).
 2.  async def verify(self, proposal: WordProposal) -> VerifyOutcome
-3.  def _on_hard_fail(self, proposal, failing_gates) — injectable seam for 10-04.
+3.  async def _on_hard_fail(self, proposal, failing_gates, *, allowed, normalized_target)
+        — injectable seam, returns VerifyOutcome.
 4.  VerifyOutcome.status: Literal["PASS", "FLAGGED", "REJECTED"]
     VerifyOutcome.gate_results: list[GateResult]
     VerifyOutcome.check_e_regens: int  (default 0)
@@ -24,8 +28,9 @@ SEAM CONTRACT (pinned by RED tests — executor MUST honour):
 Invariants:
     - NEVER calls transition() on the proposal.
     - NEVER writes generated_fields / reconciliation_log / judge_scores /
-      trust_score.
-    - proposal.status stays GENERATING after verify() returns.
+      trust_score / retry_attempts.
+    - proposal.status stays GENERATING after verify() returns (unless the
+      generator's own terminal path transitions it to REJECTED during regen).
 """
 
 from __future__ import annotations
@@ -42,8 +47,10 @@ from src.core.lexgen_verify import (
     check_target_attested,
     normalize_lemma,
 )
+from src.db.models import WordProposalState
 from src.schemas.lexgen import EvidencePacket, GeneratedLexContent
 from src.services.cefr_vocabulary_service import CefrVocabularyService
+from src.services.lexgen_generator_service import LexgenGeneratorService
 from src.services.lexicon_service import LexiconService
 from src.services.morphology_service import get_morphology_service
 from src.services.openrouter_service import OpenRouterService, get_openrouter_service
@@ -137,7 +144,9 @@ class LexgenVerifyService:
         ]
 
         # Step 11 — aggregate into outcome
-        return await self._build_outcome(proposal, gate_results)
+        return await self._build_outcome(
+            proposal, gate_results, allowed=allowed, normalized_target=normalized_target
+        )
 
     async def _resolve_token_lemmas(self, sentence: str) -> tuple[list[str], list[str]]:
         """Lemmatize a sentence and return (checked_sub_lemmas, all_sub_lemmas).
@@ -190,6 +199,9 @@ class LexgenVerifyService:
         self,
         proposal: "WordProposal",
         gate_results: list[GateResult],
+        *,
+        allowed: set[str],
+        normalized_target: str,
     ) -> VerifyOutcome:
         """Translate gate results into a VerifyOutcome and mutate proposal.flagged_fields."""
         hard_fails = [r for r in gate_results if r.severity == "fail"]
@@ -197,12 +209,12 @@ class LexgenVerifyService:
         flagged: list[str] = []
 
         if hard_fails:
-            self._on_hard_fail(proposal, hard_fails)
-            flagged = list(proposal.flagged_fields) if proposal.flagged_fields else []
-            return VerifyOutcome(
-                status="FLAGGED",
+            return await self._on_hard_fail(
+                proposal,
+                hard_fails,
                 gate_results=gate_results,
-                flagged=flagged,
+                allowed=allowed,
+                normalized_target=normalized_target,
             )
 
         if warns:
@@ -232,27 +244,133 @@ class LexgenVerifyService:
             await self.db.flush()
         return warn_fields
 
-    def _on_hard_fail(
+    async def _evaluate(
+        self,
+        proposal: "WordProposal",
+        *,
+        allowed: set[str],
+        normalized_target: str,
+    ) -> tuple[list[GateResult], list[GateResult]]:
+        """Re-evaluate the three pure gates against proposal's CURRENT generated_content.
+
+        Returns (gate_results, hard_fails).  Called by _on_hard_fail after each regen
+        so it sees the mutated generated_content without re-querying the CEFR table.
+
+        Args:
+            proposal:         The WordProposal being evaluated (reads generated_content).
+            allowed:          Pre-computed allowed lemma set (CEFR + target).
+            normalized_target: Normalized target lemma for Check E and target-attested.
+        """
+        content = GeneratedLexContent.model_validate(proposal.generated_content)
+        checked_sub_lemmas, all_sub_lemmas = await self._resolve_token_lemmas(content.example_greek)
+
+        # Rebuild the packet once to get the wiktionary glosses for the gloss gate.
+        packet = EvidencePacket.model_validate(proposal.evidence_packet)
+        gate_results = [
+            check_e(checked_sub_lemmas, allowed, normalized_target),
+            check_target_attested(all_sub_lemmas, normalized_target),
+            check_gloss_subset(
+                content.gloss_en,
+                packet.sources.wiktionary.glosses_en if packet.sources.wiktionary else None,
+            ),
+        ]
+        hard_fails = [r for r in gate_results if r.severity == "fail"]
+        return gate_results, hard_fails
+
+    async def _on_hard_fail(
         self,
         proposal: "WordProposal",
         failing_gates: list[GateResult],
-    ) -> None:
-        """Handle a hard gate failure — injectable seam for 10-04.
+        *,
+        gate_results: list[GateResult],
+        allowed: set[str],
+        normalized_target: str,
+    ) -> VerifyOutcome:
+        """Handle a hard gate failure — bounded outer regeneration loop (LEXGEN-10-04).
 
-        10-03 stub behavior: append each failing gate name to proposal.flagged_fields
-        (no regen, no transition). proposal.status stays GENERATING.
+        Runs up to 2 outer regenerations:
+        - Calls generator.generate(proposal) to re-author generated_content.
+        - Re-evaluates all gates (_evaluate) against the updated content.
+        - If gates now pass → returns PASS (records check_e_regens count).
+        - If generator transitions proposal to REJECTED → stops and returns REJECTED.
+        - After 2 failed regens still failing → appends gate names to
+          proposal.flagged_fields, writes check_e_regens to generated_content JSONB,
+          flushes once, returns FLAGGED.
 
-        10-04 replaces this body with the bounded outer regeneration loop
-        (≤ 2 regens → flag) WITHOUT changing the verify() orchestration.
+        NEVER calls transition(). NEVER writes retry_attempts.
 
         Args:
-            proposal:      The WordProposal being verified (mutated in place).
-            failing_gates: GateResult entries with severity="fail".
+            proposal:          The WordProposal being verified (mutated in place).
+            failing_gates:     GateResult entries with severity="fail" from initial run.
+            gate_results:      All gate results from the initial evaluation (for FLAGGED outcome).
+            allowed:           Pre-computed allowed lemma set (passed from verify()).
+            normalized_target: Normalized target lemma (passed from verify()).
         """
-        gate_names = [r.gate for r in failing_gates]
+        _MAX_REGENS = 2
+        generator = LexgenGeneratorService(self.db, self.openrouter)
+
+        current_gate_results = gate_results
+        current_hard_fails = failing_gates
+        regen_count = 0
+
+        for _ in range(_MAX_REGENS):
+            await generator.generate(proposal)
+            regen_count += 1
+
+            # If the generator's own 3-failure terminal path rejected the proposal, stop.
+            if proposal.status == WordProposalState.REJECTED:
+                return VerifyOutcome(
+                    status="REJECTED",
+                    gate_results=current_gate_results,
+                    check_e_regens=regen_count,
+                    flagged=[],
+                )
+
+            # Re-evaluate gates against the new generated_content.
+            current_gate_results, current_hard_fails = await self._evaluate(
+                proposal, allowed=allowed, normalized_target=normalized_target
+            )
+
+            if not current_hard_fails:
+                # Gates now pass — self-healed.
+                warns = [r for r in current_gate_results if r.severity == "warn"]
+                flagged: list[str] = []
+                if warns:
+                    flagged = await self._record_warns(proposal, warns)
+                # Persist the regen count into generated_content JSONB.
+                assert proposal.generated_content is not None  # generator always writes this
+                new_content = dict(proposal.generated_content)
+                new_content["check_e_regens"] = regen_count
+                proposal.generated_content = new_content
+                return VerifyOutcome(
+                    status="PASS",
+                    gate_results=current_gate_results,
+                    check_e_regens=regen_count,
+                    flagged=flagged,
+                )
+
+        # Persistent fail after _MAX_REGENS regenerations — flag and flush.
+        gate_names = [r.gate for r in current_hard_fails]
         existing = list(proposal.flagged_fields) if proposal.flagged_fields else []
-        # Reassign (not append-in-place) so SQLAlchemy JSONB change detection fires.
+        # Reassign (not in-place append) so SQLAlchemy JSONB change detection fires.
         proposal.flagged_fields = existing + [n for n in gate_names if n not in existing]
+
+        # Persist the regen count into generated_content JSONB.
+        assert proposal.generated_content is not None  # generator always writes this
+        new_content = dict(proposal.generated_content)
+        new_content["check_e_regens"] = regen_count
+        proposal.generated_content = new_content
+
+        # Single flush after all terminal mutations.
+        await self.db.flush()
+
+        flagged_list = list(proposal.flagged_fields)
+        return VerifyOutcome(
+            status="FLAGGED",
+            gate_results=current_gate_results,
+            check_e_regens=regen_count,
+            flagged=flagged_list,
+        )
 
 
 def get_lexgen_verify_service(db: AsyncSession) -> LexgenVerifyService:

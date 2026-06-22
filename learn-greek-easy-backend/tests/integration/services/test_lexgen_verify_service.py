@@ -55,7 +55,7 @@ SEAM CONTRACT — pinned by these RED tests:
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -88,13 +88,30 @@ def _get_service_class():
 def _make_service(db_session: AsyncSession) -> object:
     """Return a LexgenVerifyService bound to the test session, mocked OpenRouter.
 
-    OpenRouter is mocked because the 10-03 stub never reads it (NotImplementedError
-    fires before any use). The 10-04 regeneration loop integration tests (separate
-    file) will supply a real mock with side-effects.
+    OpenRouter is mocked (MagicMock). Tests that exercise hard-fail paths (Check E,
+    target-attested, gloss hard-fail) MUST also patch LexgenGeneratorService at the
+    verify-module namespace (_PATCH_GENERATOR) so the regen loop (LEXGEN-10-04) does
+    not attempt a real LLM call with the MagicMock openrouter.
     """
     cls = _get_service_class()
     mock_openrouter = MagicMock()
     return cls(db=db_session, openrouter=mock_openrouter)
+
+
+# Patch target for LexgenGeneratorService within the verify-service module namespace.
+_PATCH_GENERATOR = "src.services.lexgen_verify_service.LexgenGeneratorService"
+
+
+def _make_always_failing_generator_mock() -> AsyncMock:
+    """Return a generator mock whose generate() does nothing (content stays failing).
+
+    Used in hard-fail integration tests so the regen loop runs 2 times, gates keep
+    failing (content unchanged), and the service reaches the persistent-fail → FLAGGED
+    terminal. This avoids a real LLM call via the MagicMock openrouter.
+    """
+    mock_gen = AsyncMock()
+    mock_gen.generate = AsyncMock()  # no-op side effect: proposal stays unchanged
+    return mock_gen
 
 
 # ---------------------------------------------------------------------------
@@ -279,11 +296,12 @@ class TestOutOfVocabFail:
     async def test_vs02_out_of_vocab_lemma_fails_check_e(self, db_session: AsyncSession) -> None:
         """VS-02: "κβάντο" is not in cefr_lemma and not the target → Check E fails.
 
-        Per the 10-03 stub's _on_hard_fail: flags immediately (no regen yet).
-        outcome.status == "FLAGGED"; proposal.flagged_fields contains "check_e".
+        With LEXGEN-10-04 the regen loop fires: LexgenGeneratorService is mocked
+        with an always-failing generator (content unchanged each regen) so the loop
+        runs 2 times deterministically and reaches the persistent-fail → FLAGGED
+        terminal without a real LLM call.
 
-        RED: verify() raises NotImplementedError.
-        GREEN: outcome.status == "FLAGGED"; "check_e" in proposal.flagged_fields.
+        outcome.status == "FLAGGED"; proposal.flagged_fields contains "check_e".
         """
         await _seed_closed_class_function_words(db_session)
         await _seed_s7_content_words(db_session)
@@ -296,9 +314,12 @@ class TestOutOfVocabFail:
         )
         svc = _make_service(db_session)
 
-        # RED: raises NotImplementedError.
-        # GREEN: outcome.status == "FLAGGED"; Check E gate failed.
-        outcome = await svc.verify(proposal)
+        # Mock LexgenGeneratorService so the regen loop never calls the real LLM.
+        # The always-failing mock leaves generated_content unchanged → gates keep
+        # failing → persistent-fail → FLAGGED after 2 regens.
+        gen_mock = _make_always_failing_generator_mock()
+        with patch(_PATCH_GENERATOR, return_value=gen_mock):
+            outcome = await svc.verify(proposal)
 
         assert (
             outcome.status == "FLAGGED"
@@ -313,7 +334,7 @@ class TestOutOfVocabFail:
         ), f"VS-02: check_e severity must be 'fail'; got {check_e_gates[0].severity!r}"
         assert (
             proposal.flagged_fields is not None
-        ), "VS-02: proposal.flagged_fields must be non-null after Check E fail"
+        ), "VS-02: proposal.flagged_fields must be non-null after Check E persistent fail"
         assert "check_e" in proposal.flagged_fields, (
             f"VS-02: 'check_e' must be in proposal.flagged_fields; "
             f"got {proposal.flagged_fields!r}"
@@ -339,8 +360,9 @@ class TestMissingTargetFail:
         The sentence "Η μητέρα διαβάζει ένα σπίτι στο σπίτι." has no βιβλίο.
         All other content words are seeded. Only the target-attested gate fires.
 
-        RED: verify() raises NotImplementedError.
-        GREEN: target-attested gate in outcome.gate_results has passed=False.
+        With LEXGEN-10-04 the regen loop fires; the always-failing generator mock
+        leaves content unchanged → 2 regens → FLAGGED. The target_attested gate
+        result is still in outcome.gate_results from the final evaluation.
         """
         await _seed_closed_class_function_words(db_session)
         await _seed_s7_content_words(db_session)
@@ -352,9 +374,9 @@ class TestMissingTargetFail:
         )
         svc = _make_service(db_session)
 
-        # RED: raises NotImplementedError.
-        # GREEN: target-attested gate reports fail.
-        outcome = await svc.verify(proposal)
+        gen_mock = _make_always_failing_generator_mock()
+        with patch(_PATCH_GENERATOR, return_value=gen_mock):
+            outcome = await svc.verify(proposal)
 
         target_gates = [r for r in outcome.gate_results if r.gate == "target_attested"]
         assert len(target_gates) == 1, (
@@ -449,10 +471,9 @@ class TestWhitespaceGlossReject:
 
         Per D-GLOSS-SEVERITY and core/lexgen_verify.py check_gloss_subset():
         an empty/whitespace-only gloss is a HARD fail, not a warn.
-        The 10-03 stub's _on_hard_fail flags immediately.
 
-        RED: verify() raises NotImplementedError.
-        GREEN: gloss gate severity=="fail"; outcome.status == "FLAGGED".
+        With LEXGEN-10-04 the regen loop fires; the always-failing generator mock
+        leaves content unchanged → 2 regens → FLAGGED. gloss gate remains in gate_results.
         """
         await _seed_closed_class_function_words(db_session)
         await _seed_s7_content_words(db_session)
@@ -464,9 +485,9 @@ class TestWhitespaceGlossReject:
         )
         svc = _make_service(db_session)
 
-        # RED: raises NotImplementedError.
-        # GREEN: gloss gate severity=="fail".
-        outcome = await svc.verify(proposal)
+        gen_mock = _make_always_failing_generator_mock()
+        with patch(_PATCH_GENERATOR, return_value=gen_mock):
+            outcome = await svc.verify(proposal)
 
         gloss_gates = [r for r in outcome.gate_results if r.gate == "gloss_subset"]
         assert len(gloss_gates) == 1, (

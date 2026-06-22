@@ -170,8 +170,10 @@ def _tokens_for_passing_sentence():
 
 # Allowed set for PASS scenario: covers all tokens in _PASSING_SENTENCE
 _ALLOWED_PASS = {"ο", "μητέρα", "διαβάζω", "ένα", "σε", "σπίτι"}
-# Allowed set for FAIL scenario: covers some tokens but NOT "βλέπω"
-_ALLOWED_FAIL = {"ο", "μητέρα", "ένα"}
+# Allowed set for FAIL scenario: covers all passing-sentence resolved lemmas but NOT "βλέπω"
+# (the failing sentence has "βλέπει"→"βλέπω" which is excluded from this set, so Check E
+#  hard-fails on the failing sentence but PASSES on the passing sentence after regen).
+_ALLOWED_FAIL = {"ο", "μητέρα", "ένα", "διαβάζω", "σε", "σπίτι"}
 
 
 # ---------------------------------------------------------------------------
