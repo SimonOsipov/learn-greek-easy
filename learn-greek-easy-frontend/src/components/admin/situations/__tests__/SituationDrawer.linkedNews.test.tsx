@@ -237,8 +237,27 @@ describe('SituationDrawerLinkedNews — linked state (linked_news set)', () => {
     expect(screen.queryByText('situations.drawer.linkedNews.empty')).not.toBeInTheDocument();
   });
 
-  it('renders disabled Link to article button (always shown, Coming soon)', async () => {
+  // ADMIN2-42-04 (task-1121, D15): the F12 fix hides the "Link to article" CTA when
+  // linked_news is already set. This test REPLACES the old "always shown, Coming soon"
+  // assertion (which asserted the CTA IS present when linked — now incorrect).
+  it('link CTA hidden when article linked', async () => {
     await renderComponent(makeSituation({ linked_news: LINKED_NEWS }));
+    // The "Link to article" CTA must NOT be in the document when an article is linked
+    expect(
+      screen.queryByRole('button', { name: 'situations.drawer.linkedNews.linkCta' })
+    ).not.toBeInTheDocument();
+    // Unlink and Re-derive buttons ARE present (active footer actions)
+    expect(screen.getByTestId('linked-news-unlink-btn')).toBeInTheDocument();
+    expect(screen.getByTestId('linked-news-re-derive-btn')).toBeInTheDocument();
+  });
+});
+
+// ── Tests: F12 — link CTA shown when no article linked (ADMIN2-42-04) ──────────
+
+describe('SituationDrawerLinkedNews — F12 link CTA visibility', () => {
+  it('link CTA shown when no article linked', async () => {
+    // linked_news = null → disabled "Link to article" CTA IS present
+    await renderComponent(makeSituation({ linked_news: null }));
     const btn = screen.getByRole('button', {
       name: 'situations.drawer.linkedNews.linkCta',
     });

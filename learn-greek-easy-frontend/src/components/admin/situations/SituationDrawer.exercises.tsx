@@ -45,6 +45,15 @@ function getCount(
   return exercisesData?.groups.find((g) => g.source_type === src)?.exercise_count ?? 0;
 }
 
+// ── STUB: replaced by executor with real implementation (ADMIN2-42-04) ─────────
+// Returns the first source in dialog→description→picture order that has count > 0.
+// Falls back to 'dialog' when all counts are zero.
+export function pickDefaultExerciseSource(
+  _counts: Record<ExerciseSourceType, number>
+): ExerciseSourceType {
+  throw new Error('not implemented: pickDefaultExerciseSource');
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function GenerateButton({
