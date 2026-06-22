@@ -343,10 +343,15 @@ class LexgenReviewService:
                 ),
             )
 
-        # Validate edits via flat_to_bundles (raises UnknownFlatFormKey on bad keys).
-        # UI-edge round-trip: flat → bundles (validate only; we keep the flat form).
-        if field_edits:
-            flat_to_bundles(field_edits, pos=proposal.pos or "noun")
+        # Validate declension edits via flat_to_bundles (raises UnknownFlatFormKey on
+        # bad keys). Scalar keys (gender, ipa, frequency_rank, pos) are excluded from
+        # flat-key validation — they are free-form and do not follow {case}_{number}
+        # syntax. Only the morphological declension keys are round-tripped here.
+        declension_edits = {
+            k: v for k, v in field_edits.items() if k not in _GENERATED_FIELDS_SCALAR_KEYS
+        }
+        if declension_edits:
+            flat_to_bundles(declension_edits, pos=proposal.pos or "noun")
 
         # Capture old values before mutation for log rows.
         current_fields: dict = dict(proposal.generated_fields or {})
@@ -463,6 +468,12 @@ class LexgenReviewService:
 
         generator_svc = LexgenGeneratorService(self.db, openrouter)
         await generator_svc.generate(proposal)
+
+        # If the generator hard-rejected the proposal (e.g. evidence_packet missing or
+        # all retries exhausted), skip the remaining pipeline stages and commit.
+        if proposal.status == WordProposalState.REJECTED:
+            await self.db.commit()
+            return
 
         verify_svc = LexgenVerifyService(self.db, openrouter)
         await verify_svc.verify(proposal)

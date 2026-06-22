@@ -181,6 +181,15 @@ class LexgenGeneratorService:
         judge_scores, trust_score (cardinal invariant — those belong to LEXGEN-08).
         """
         # Stage 1 — rebuild evidence packet from the JSONB snapshot (never re-query).
+        # Guard: evidence_packet may be absent for test-seeded proposals. Treat as a
+        # hard validation failure so the retry loop exhausts and transitions to REJECTED
+        # rather than crashing with a Pydantic ValidationError.
+        if proposal.evidence_packet is None:
+            transition(proposal, WordProposalState.REJECTED)
+            proposal.retry_attempts = _MAX_ATTEMPTS
+            proposal.rejection_reason = "evidence_packet_missing: cannot generate without evidence"
+            await self.db.flush()
+            return
         packet = EvidencePacket.model_validate(proposal.evidence_packet)
 
         # Stage 2 — run the resolver for READ-ONLY morphology context.

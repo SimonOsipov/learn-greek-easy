@@ -644,3 +644,37 @@ class LexgenProposalDetailResponse(BaseModel):
     created_at: datetime
     fields: list[LexgenProposalField]
     content: list[LexgenProposalContentField]
+
+
+# ============================================================================
+# LEXGEN-13-03 Review-action request/response schemas
+# ============================================================================
+
+
+class LexgenApproveRequest(BaseModel):
+    """Request body for POST …/{proposal_id}/approve."""
+
+    deck_id: UUID = Field(
+        ..., description="Target vocabulary deck ID to link the shipped word entry"
+    )
+
+
+class LexgenApproveResponse(BaseModel):
+    """Response body for a successful approve — the shipped WordEntry identifiers."""
+
+    id: UUID = Field(..., description="ID of the created WordEntry")
+    lemma: str = Field(..., description="Lemma of the shipped word entry")
+
+
+class LexgenEditRequest(BaseModel):
+    """Request body for PATCH …/{proposal_id} (edit action)."""
+
+    field_edits: dict[str, Any] = Field(
+        ..., description="Flat field→value edits to apply to generated_fields"
+    )
+
+
+class LexgenRejectRequest(BaseModel):
+    """Request body for POST …/{proposal_id}/reject."""
+
+    reason: str = Field(..., description="Human-readable rejection reason stored on the proposal")
