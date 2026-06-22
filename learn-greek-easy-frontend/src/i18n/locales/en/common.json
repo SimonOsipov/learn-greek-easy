@@ -384,7 +384,12 @@
     "gridLabel": "News articles",
     "reader": {
       "back": "Back to news",
-      "openOriginal": "Open original"
+      "openOriginal": "Open original",
+      "description": "Read the full article in Greek"
+    },
+    "search": {
+      "placeholder": "Search news...",
+      "clear": "Clear search"
     }
   },
   "situations": {

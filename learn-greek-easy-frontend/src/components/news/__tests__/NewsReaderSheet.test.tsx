@@ -25,6 +25,7 @@ import { NewsReaderSheet } from '../NewsReaderSheet';
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: string) => fallback ?? key,
+    i18n: { language: 'en' },
   }),
 }));
 
@@ -133,7 +134,8 @@ describe('NewsReaderSheet — open/close', () => {
 
   it('renders content when open=true and article is provided', () => {
     renderReader();
-    expect(screen.getByText('Ελληνικός τίτλος B1')).toBeInTheDocument();
+    // Title appears in both sr-only SheetTitle and visible h2 — check at least one is present
+    expect(screen.getAllByText('Ελληνικός τίτλος B1').length).toBeGreaterThan(0);
   });
 
   it('renders nothing when open=false', () => {
@@ -210,12 +212,14 @@ describe('NewsReaderSheet — level switch swaps body text AND audio', () => {
 
   it('shows B1 title when level=b1', () => {
     renderReader({ level: 'b1' });
-    expect(screen.getByText('Ελληνικός τίτλος B1')).toBeInTheDocument();
+    // Title appears in both sr-only SheetTitle and visible h2
+    expect(screen.getAllByText('Ελληνικός τίτλος B1').length).toBeGreaterThan(0);
   });
 
   it('shows A2 title when level=a2', () => {
     renderReader({ level: 'a2' });
-    expect(screen.getByText('Ελληνικός τίτλος A2')).toBeInTheDocument();
+    // Title appears in both sr-only SheetTitle and visible h2
+    expect(screen.getAllByText('Ελληνικός τίτλος A2').length).toBeGreaterThan(0);
   });
 
   it('switches audio src by remounting player when level changes (B1 → A2)', async () => {
@@ -426,8 +430,12 @@ describe('NewsReaderSheet — accessibility', () => {
 
   it('title element has lang="el"', () => {
     renderReader({ level: 'b1' });
-    const title = screen.getByText('Ελληνικός τίτλος B1');
-    expect(title).toHaveAttribute('lang', 'el');
+    // Both the sr-only SheetTitle (Radix h2) and the visible body h2 contain the title.
+    // Only the body heading carries lang="el" — find it by that attribute.
+    const titleElements = screen.getAllByText('Ελληνικός τίτλος B1');
+    const langElTitle = titleElements.find((el) => el.getAttribute('lang') === 'el');
+    expect(langElTitle).toBeDefined();
+    expect(langElTitle).toHaveAttribute('lang', 'el');
   });
 
   it('body text element has lang="el"', () => {

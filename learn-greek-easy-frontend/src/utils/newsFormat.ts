@@ -33,7 +33,7 @@ export function formatPublicationDate(raw: string | null | undefined, locale?: s
     const [, y, mo, d] = m;
     return new Intl.DateTimeFormat(locale, {
       year: 'numeric',
-      month: 'short',
+      month: 'long',
       day: 'numeric',
       timeZone: 'UTC',
     }).format(new Date(Date.UTC(Number(y), Number(mo) - 1, Number(d))));
@@ -43,7 +43,7 @@ export function formatPublicationDate(raw: string | null | undefined, locale?: s
   const parsed = new Date(s);
   return Number.isNaN(parsed.getTime())
     ? ''
-    : parsed.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
+    : parsed.toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 /**
