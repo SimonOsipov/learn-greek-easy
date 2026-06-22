@@ -50,8 +50,9 @@ function makeState(
     isLoading: boolean;
     error: string | null;
     onToggle: () => void;
-    speed: 1 | 0.75;
-    setSpeed: (s: 1 | 0.75) => void;
+    // NWSR-05: AudioSpeed extended to 1 | 0.75 | 1.25
+    speed: 1 | 0.75 | 1.25;
+    setSpeed: (s: 1 | 0.75 | 1.25) => void;
   }> = {}
 ) {
   return {

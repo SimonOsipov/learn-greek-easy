@@ -9,7 +9,7 @@ import { getPersistedAudioSpeed, setPersistedAudioSpeed } from '@/utils/audioSpe
 const BAR_COUNT = 48;
 const DEFAULT_DURATION = 90;
 const TICK_INTERVAL_MS = 100;
-const SPEED_OPTIONS = [0.75, 1] as const;
+const SPEED_OPTIONS = [0.75, 1, 1.25] as const;
 type Speed = (typeof SPEED_OPTIONS)[number];
 
 function formatTime(seconds: number): string {
@@ -296,7 +296,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
           isAdmin
             ? 'border bg-muted p-[14px]'
             : isNewsMini
-              ? 'rounded-lg bg-white/10 p-2'
+              ? 'rounded-[12px] border border-line bg-bg-2 px-[10px] py-[8px]'
               : 'border border-border bg-background p-[14px]',
           disabled && (isNewsMini ? 'opacity-40' : 'opacity-50'),
           className
@@ -318,7 +318,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
               (isAdmin
                 ? 'bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-primary'
                 : isNewsMini
-                  ? 'bg-white/20 text-white hover:bg-white/30 focus:ring-white/50'
+                  ? 'bg-primary text-primary-foreground hover:opacity-90 focus:ring-primary/50'
                   : [
                       'bg-practice-accent text-primary-foreground',
                       'hover:opacity-90 focus:ring-practice-accent',
@@ -327,7 +327,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
               (isAdmin
                 ? 'bg-primary text-primary-foreground'
                 : isNewsMini
-                  ? 'bg-white/20 text-white'
+                  ? 'bg-primary/60 text-primary-foreground'
                   : 'bg-practice-accent text-primary-foreground')
           )}
           aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
@@ -374,9 +374,9 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                 className={cn(
                   'flex-1 rounded-t-sm',
                   !isFilled &&
-                    (isAdmin ? 'bg-muted-foreground/30' : isNewsMini ? 'bg-white/25' : 'bg-fg3/35'),
-                  // news-mini filled bar: white/80 over photo overlay — not a tokenizable surface.
-                  isFilled && isNewsMini && 'bg-white/80'
+                    (isAdmin ? 'bg-muted-foreground/30' : isNewsMini ? 'bg-fg3/40' : 'bg-fg3/35'),
+                  // news-mini filled bar uses primary token (on solid bg-bg-2 surface, design spec §3).
+                  isFilled && isNewsMini && 'bg-primary'
                 )}
                 style={{
                   height: `${height * 100}%`,
@@ -401,12 +401,10 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
             className={cn('text-xs', isAdmin ? 'font-mono' : 'font-practice-mono')}
             style={{ fontVariantNumeric: 'tabular-nums' }}
           >
-            {/* news-mini time text: white over photo overlay — not a tokenizable surface. */}
+            {/* news-mini time text: fg2/fg3 tokens on solid bg-2 surface (design spec §3). */}
             <span
               data-testid="waveform-time-current"
-              className={cn(
-                isNewsMini && (isPlaying && !disabled ? 'text-white' : 'text-white/60')
-              )}
+              className={cn(isNewsMini && (isPlaying && !disabled ? 'text-fg2' : 'text-fg3'))}
               style={
                 isNewsMini
                   ? undefined
@@ -424,7 +422,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
               {formatTime(disabled ? 0 : currentTime)}
             </span>
             <span
-              className={cn(isNewsMini && 'text-white/50')}
+              className={cn(isNewsMini && 'text-fg3')}
               style={
                 isNewsMini
                   ? undefined
@@ -439,7 +437,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
             </span>
             <span
               data-testid="waveform-time-total"
-              className={cn(isNewsMini && 'text-white/50')}
+              className={cn(isNewsMini && 'text-fg3')}
               style={
                 isNewsMini
                   ? undefined

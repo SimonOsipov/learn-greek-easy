@@ -76,17 +76,21 @@ describe('WaveformPlayer', () => {
       expect(totalTime).toHaveTextContent('1:30');
     });
 
-    it('renders 2 speed pills with 1x selected by default', () => {
+    it('renders 3 speed pills with 1x selected by default', () => {
+      // NWSR-05: SPEED_OPTIONS extended to [0.75, 1, 1.25] — 3 pills now.
       render(<WaveformPlayer />);
 
       const pills = screen.getAllByRole('radio');
-      expect(pills).toHaveLength(2);
+      expect(pills).toHaveLength(3);
 
       const pill1x = screen.getByRole('radio', { name: '1x speed' });
       expect(pill1x).toHaveAttribute('aria-checked', 'true');
 
       const pill075x = screen.getByRole('radio', { name: '0.75x speed' });
       expect(pill075x).toHaveAttribute('aria-checked', 'false');
+
+      const pill125x = screen.getByRole('radio', { name: '1.25x speed' });
+      expect(pill125x).toHaveAttribute('aria-checked', 'false');
     });
   });
 
@@ -561,8 +565,9 @@ describe('WaveformPlayer', () => {
       const speedPills = screen.getByTestId('waveform-speed-pills');
       expect(speedPills).toBeInTheDocument();
 
+      // NWSR-05: SPEED_OPTIONS extended to [0.75, 1, 1.25] — 3 pills now.
       const pills = screen.getAllByRole('radio');
-      expect(pills).toHaveLength(2);
+      expect(pills).toHaveLength(3);
     });
 
     it('shows speed pills when showSpeedControl={true}', () => {
@@ -571,8 +576,9 @@ describe('WaveformPlayer', () => {
       const speedPills = screen.getByTestId('waveform-speed-pills');
       expect(speedPills).toBeInTheDocument();
 
+      // NWSR-05: SPEED_OPTIONS extended to [0.75, 1, 1.25] — 3 pills now.
       const pills = screen.getAllByRole('radio');
-      expect(pills).toHaveLength(2);
+      expect(pills).toHaveLength(3);
     });
   });
 
@@ -594,10 +600,12 @@ describe('WaveformPlayer', () => {
     });
 
     it('applies news-mini variant classes when variant="news-mini"', () => {
+      // NWSR-05: news-mini now renders on solid bg-bg-2 surface (not photo overlay).
+      // Container uses bg-bg-2 + border-line tokens instead of the old bg-white/10.
       render(<WaveformPlayer variant="news-mini" />);
       const container = screen.getByTestId('waveform-player');
-      expect(container.className).toContain('bg-white/10');
-      expect(container.className).not.toContain('border');
+      expect(container.className).toContain('bg-bg-2');
+      expect(container.className).toContain('border-line');
     });
   });
 

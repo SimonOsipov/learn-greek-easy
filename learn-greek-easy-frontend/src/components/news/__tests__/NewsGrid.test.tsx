@@ -250,14 +250,14 @@ describe('NewsGrid Component', () => {
   });
 
   describe('NewsCard Integration', () => {
-    it('should pass height="tall" to NewsCard components', () => {
+    it('should render NewsCard components for each article', () => {
+      // NWSR-01: NewsCard no longer uses fixed h-[NNpx] height classes — it uses
+      // aspect-[16/11] for the photo block. The test intent (card renders) is preserved.
       const articles = [createMockNewsItem({ id: 'article-1' })];
       render(<NewsGrid {...createProps({ articles })} />);
 
-      // NewsCard with height="tall" uses h-[300px] class
-      // We can verify the card link has this height class
       const card = screen.getByTestId('news-card-article-1');
-      expect(card).toHaveClass('h-[300px]');
+      expect(card).toBeInTheDocument();
     });
   });
 
