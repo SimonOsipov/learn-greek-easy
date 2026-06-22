@@ -171,11 +171,20 @@ class MorphologyService:
 
         Returns:
             list[SentenceToken]: One entry per spaCy token.
-
-        Raises:
-            NotImplementedError: Implementation pending (LEXGEN-10-02).
         """
-        raise NotImplementedError("lemmatize_sentence not yet implemented — LEXGEN-10-02")
+        if self._nlp is None:
+            return []
+        doc = self._nlp(sentence)
+        return [
+            SentenceToken(
+                text=token.text,
+                lemma=token.lemma_,
+                is_punct=token.is_punct,
+                is_space=token.is_space,
+                like_num=token.like_num,
+            )
+            for token in doc
+        ]
 
 
 _morphology_service: Optional[MorphologyService] = None
