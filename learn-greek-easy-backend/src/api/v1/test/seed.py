@@ -10,7 +10,7 @@ Security layers:
 4. Optional X-Test-Seed-Secret header validation
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from time import perf_counter
 from typing import Optional
 from uuid import uuid4
@@ -36,6 +36,9 @@ from src.db.models import (
     FeedbackCategory,
     FeedbackStatus,
     NewsItem,
+    WordProposal,
+    WordProposalOrigin,
+    WordProposalState,
 )
 from src.repositories.user import UserRepository, UserSettingsRepository
 from src.schemas.seed import (
@@ -489,6 +492,308 @@ async def clear_news_items(
         timestamp=datetime.now(timezone.utc),
         duration_ms=duration_ms,
         results={"cleared": True, "table": "news_items"},
+    )
+
+
+# ── LEXGEN Verification Inbox (LEXGEN-12-05) ──────────────────────────────────
+# Seed a DETERMINISTIC set of word_proposal rows so the read-only Verification
+# Inbox E2E spec (admin-lexgen-inbox.spec.ts) can assert the queue filter,
+# priority ordering, per-field provenance, and the anti-anchoring invariant
+# (Decision Record §3 — NO numeric score reaches the DOM). Gated on
+# verify_seed_access; never mounted in production. Mirrors /news-feed +
+# /news-feed/clear (deletes only word_proposal rows; NEVER /truncate).
+#
+# DIGIT-COLLISION CONTRACT: the spec asserts each returned ``judge_score_digits``
+# value is absent from the detail-panel text. The panel renders a formatted
+# created_at date (arbitrary digits, not under our control), so we (1) keep every
+# DISPLAYED value (lemma / pos / field value / source) strictly DIGIT-FREE, and
+# (2) seed + return DISTINCTIVE 6-digit sentinels — a 6-digit run never substrings
+# a formatted date or a digit-free value, making the assertion sound by
+# construction and locale-independent. Real 1–5 rubric ints also live in
+# judge_scores, but those are never serialized by the inbox API anyway.
+
+# Distinctive 6-digit sentinels seeded into judge_scores / trust_score on the
+# most-flagged row, returned as judge_score_digits. Chosen so the digit-string
+# of each can never appear in a formatted date or any digit-free displayed value.
+_LEXGEN_JUDGE_SENTINELS = [717273, 818283, 919293]
+
+
+@router.post(
+    "/lexgen-proposals",
+    response_model=SeedResultResponse,
+    summary="Seed LEXGEN verification-inbox proposals",
+    description="Create a deterministic set of word_proposal rows for the "
+    "Verification Inbox E2E spec: one heavily-flagged needs_review row (sorts "
+    "first), one zero-flagged needs_review row, a few intermediate needs_review "
+    "rows, and a couple of NON-needs_review rows that must be excluded from the "
+    "queue. Idempotent — deletes all word_proposal rows first.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_lexgen_proposals(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Seed a deterministic word_proposal set for the Verification Inbox E2E spec.
+
+    Creates (after deleting all existing rows for determinism):
+      (a) ONE heavily-flagged ``needs_review`` row (>=3 flagged fields incl. a
+          morphological key + a content key) carrying judge_scores + trust_score
+          — this row sorts FIRST (most-flagged, oldest).
+      (b) ONE ``needs_review`` row with ZERO flagged fields (still renders).
+      (c) THREE ``needs_review`` rows with intermediate (1-2) flag counts.
+      (d) TWO NON-``needs_review`` rows (scored, shipped) to prove the queue
+          filter excludes them.
+
+    All needs_review rows (total 5) fit on page 1 (PAGE_SIZE=20). Every displayed
+    value is digit-free so the seeded judge_score sentinels can never collide.
+
+    Returns:
+        SeedResultResponse whose ``results`` includes needs_review_created,
+        non_review_created, and judge_score_digits (the seeded sentinels).
+    """
+    start_time = perf_counter()
+
+    # Determinism: wipe the table first so counts are exact.
+    await db.execute(delete(WordProposal))
+    await db.flush()
+
+    base_ts = datetime.now(timezone.utc)
+
+    def _recon_field(value: str, source: str) -> dict:
+        """One reconciliation_log.fields entry (lexgen.reconciliation.v1 shape).
+
+        Mirrors LexgenReconcilerService: value / source / confidence(None) /
+        flags / cross_checks. The inbox detail serializer reads only value +
+        source, but we carry the full shape for fidelity.
+        """
+        return {
+            "value": value,
+            "source": source,
+            "confidence": None,
+            "flags": [],
+            "cross_checks": [],
+        }
+
+    def _recon_log(pos: str, lemma: str, fields: dict[str, dict]) -> dict:
+        return {
+            "schema_version": "lexgen.reconciliation.v1",
+            "pos": pos,
+            "lemma": lemma,
+            "fields": fields,
+            "gaps": [],
+        }
+
+    def _generated_content(gloss_en: str, gloss_ru: str, ex_el: str, ex_tr: str) -> dict:
+        return {
+            "gloss_en": gloss_en,
+            "gloss_ru": gloss_ru,
+            "example_greek": ex_el,
+            "example_translation": ex_tr,
+        }
+
+    proposals: list[WordProposal] = []
+
+    # (a) Heavily-flagged needs_review — sorts FIRST. Earliest created_at so the
+    # FIFO tiebreak is also unambiguous. >=3 flagged fields including the
+    # morphological "gender" and the content "example_greek".
+    most_flagged = WordProposal(
+        lemma_input="θάλασσα",
+        pos="noun",
+        origin=WordProposalOrigin.ADMIN,
+        status=WordProposalState.NEEDS_REVIEW,
+        flagged_fields=["gender", "declension_group", "example_greek"],
+        reconciliation_log=_recon_log(
+            "noun",
+            "θάλασσα",
+            {
+                "gender": _recon_field("feminine", "wiktionary"),
+                "declension_group": _recon_field("first declension", "triantafyllidis"),
+            },
+        ),
+        generated_content=_generated_content(
+            "sea",
+            "море",
+            "Η θάλασσα είναι ήρεμη σήμερα.",
+            "The sea is calm today.",
+        ),
+        # Realistic rubric ints (1-5) PLUS distinctive 6-digit sentinels seeded
+        # under non-serialized keys. The inbox API never serializes judge_scores,
+        # so neither the ints nor the sentinels can leak; the sentinels are
+        # returned so the spec's "digits absent from the DOM" assertion is real.
+        judge_scores={
+            "schema_version": "lexgen.judge.v1",
+            "judges": [
+                {
+                    "model": "openai/gpt-4.1-mini",
+                    "status": "scored",
+                    "rubric": {
+                        "naturalness": 4,
+                        "sense_fit": 3,
+                        "translation_faith_en": 4,
+                        "translation_faith_ru": 5,
+                        "a2_appropriateness": 4,
+                        "blocking_issues": [],
+                    },
+                },
+                {
+                    "model": "anthropic/claude-haiku-4.5",
+                    "status": "scored",
+                    "rubric": {
+                        "naturalness": 2,
+                        "sense_fit": 3,
+                        "translation_faith_en": 4,
+                        "translation_faith_ru": 4,
+                        "a2_appropriateness": 3,
+                        "blocking_issues": [
+                            {"field": "example_greek", "issue": "register too formal"}
+                        ],
+                    },
+                },
+            ],
+            "disagreement": {
+                "disagreed": True,
+                "dimensions": ["naturalness"],
+                "rule": "per_dimension_delta>=2 OR blocking_issue_field_mismatch",
+            },
+            # Sentinels live here so they are GENUINELY seeded into judge_scores.
+            "seed_sentinels": _LEXGEN_JUDGE_SENTINELS,
+        },
+        trust_score=float(_LEXGEN_JUDGE_SENTINELS[0]),
+    )
+    most_flagged.created_at = base_ts
+    proposals.append(most_flagged)
+
+    # (c) Three intermediate needs_review rows (1-2 flags each), created LATER so
+    # they sort after the most-flagged row.
+    intermediate_specs = [
+        (
+            "βιβλίο",
+            ["gender"],
+            {"gender": _recon_field("neuter", "wiktionary")},
+            ("book", "книга", "Το βιβλίο είναι στο τραπέζι.", "The book is on the table."),
+        ),
+        (
+            "ποτάμι",
+            ["example_translation", "gloss_ru"],
+            {"gender": _recon_field("neuter", "triantafyllidis")},
+            ("river", "река", "Το ποτάμι κυλάει αργά.", "The river flows slowly."),
+        ),
+        (
+            "δρόμος",
+            ["gender"],
+            {"gender": _recon_field("masculine", "wiktionary")},
+            ("road", "дорога", "Ο δρόμος είναι μακρύς.", "The road is long."),
+        ),
+    ]
+    for offset, (lemma, flagged, recon_fields, content) in enumerate(intermediate_specs, start=1):
+        row = WordProposal(
+            lemma_input=lemma,
+            pos="noun",
+            origin=WordProposalOrigin.ADMIN,
+            status=WordProposalState.NEEDS_REVIEW,
+            flagged_fields=flagged,
+            reconciliation_log=_recon_log("noun", lemma, recon_fields),
+            generated_content=_generated_content(*content),
+        )
+        row.created_at = base_ts + timedelta(minutes=offset)
+        proposals.append(row)
+
+    # (b) Zero-flagged needs_review — still renders detail (recon + content), but
+    # carries an empty flagged_fields list. Created last among needs_review rows.
+    zero_flagged = WordProposal(
+        lemma_input="ουρανός",
+        pos="noun",
+        origin=WordProposalOrigin.ADMIN,
+        status=WordProposalState.NEEDS_REVIEW,
+        flagged_fields=[],
+        reconciliation_log=_recon_log(
+            "noun",
+            "ουρανός",
+            {"gender": _recon_field("masculine", "wiktionary")},
+        ),
+        generated_content=_generated_content(
+            "sky",
+            "небо",
+            "Ο ουρανός είναι γαλάζιος.",
+            "The sky is blue.",
+        ),
+    )
+    zero_flagged.created_at = base_ts + timedelta(minutes=10)
+    proposals.append(zero_flagged)
+
+    needs_review_created = len(proposals)
+
+    # (d) NON-needs_review rows — MUST be excluded from the queue. shipped's
+    # shipped_word_entry_id is a nullable SET-NULL FK, so a None target is valid.
+    non_review = [
+        WordProposal(
+            lemma_input="πίνακας",
+            pos="noun",
+            origin=WordProposalOrigin.ADMIN,
+            status=WordProposalState.SCORED,
+            flagged_fields=[],
+        ),
+        WordProposal(
+            lemma_input="καρέκλα",
+            pos="noun",
+            origin=WordProposalOrigin.ADMIN,
+            status=WordProposalState.SHIPPED,
+            flagged_fields=[],
+            shipped_word_entry_id=None,
+        ),
+    ]
+    proposals.extend(non_review)
+    non_review_created = len(non_review)
+
+    db.add_all(proposals)
+    await db.commit()
+
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    return SeedResultResponse(
+        success=True,
+        operation="lexgen-proposals",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results={
+            "needs_review_created": needs_review_created,
+            "non_review_created": non_review_created,
+            "judge_score_digits": _LEXGEN_JUDGE_SENTINELS,
+        },
+    )
+
+
+@router.post(
+    "/lexgen-proposals/clear",
+    response_model=SeedResultResponse,
+    summary="Clear LEXGEN word proposals only",
+    description="Delete only word_proposal rows without affecting other data. "
+    "Mirrors /news-feed/clear (NEVER /truncate).",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def clear_lexgen_proposals(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Clear only word_proposal rows from the database.
+
+    Unlike /truncate, this only affects the word_proposal table, leaving users,
+    decks, cards, and other data intact (D-SEED-CLEAR).
+
+    Returns:
+        SeedResultResponse with clear operation results and timing.
+    """
+    start_time = perf_counter()
+
+    await db.execute(delete(WordProposal))
+    await db.commit()
+
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    return SeedResultResponse(
+        success=True,
+        operation="clear_lexgen_proposals",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results={"cleared": True, "table": "word_proposal"},
     )
 
 

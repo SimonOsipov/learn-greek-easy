@@ -845,6 +845,100 @@ export interface ReverseLookupResponse {
 }
 
 // ============================================
+// LEXGEN Verification Inbox (read-only) — LEXGEN-12
+// ============================================
+
+/**
+ * One row in the verification-inbox queue.
+ *
+ * Score-free by construction (LEXGEN-12 anti-anchoring invariant): the API
+ * never serializes `judge_scores` / `trust_score` / confidence — `flagged_field_count`
+ * is a COUNT of flagged fields, not a numeric score.
+ */
+export interface LexgenProposalListItem {
+  id: string;
+  lemma: string;
+  pos: string;
+  flagged_field_count: number;
+  created_at: string;
+}
+
+/**
+ * Paginated response for the verification-inbox queue.
+ * Mirrors the LEXGEN-12-01 `LexgenProposalListResponse` schema.
+ */
+export interface LexgenProposalListResponse {
+  items: LexgenProposalListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+/**
+ * Client-controllable params for the queue list. `status` is hardcoded
+ * server-side to `needs_review` (not a client param in v1), so it is not
+ * exposed here.
+ */
+export interface LexgenProposalListParams {
+  page?: number;
+  page_size?: number;
+}
+
+/**
+ * One morphological / scalar field in the proposal detail view.
+ *
+ * Score-stripped projection of a `reconciliation_log.fields[*]` entry joined
+ * with `generated_fields` (LEXGEN-12-01). Carries ONLY value + provenance
+ * source + flagged — never `confidence`, `judge_scores`, or `trust_score`
+ * (anti-anchoring invariant, Decision Record §3).
+ *
+ * `field` is a flat key: scalars (`gender`, `declension_group`, `ipa`,
+ * `frequency_rank`) plus already-flat form keys (`nominative_singular`…).
+ */
+export interface LexgenProposalField {
+  field: string;
+  value: string | null;
+  source: string | null;
+  flagged: boolean;
+}
+
+/**
+ * One content field (gloss / example) in the proposal detail view.
+ *
+ * Structurally parallel to {@link LexgenProposalField} so ONE row component +
+ * ONE flagged-badge rule renders BOTH lists. Content is produced by the
+ * LEXGEN-09 generator and has no `reconciliation_log` provenance, so `source`
+ * is always the constant `"lexgen_generator"`.
+ *
+ * `field` is one of: `gloss_en`, `gloss_ru`, `example_greek`,
+ * `example_translation`.
+ */
+export interface LexgenProposalContentField {
+  field: string;
+  value: string | null;
+  source: string;
+  flagged: boolean;
+}
+
+/**
+ * Proposal detail response for the verification inbox.
+ * Mirrors the LEXGEN-12-01 `LexgenProposalDetailResponse` schema.
+ *
+ * The score-exclusion guarantee lives in this shape: there is NO
+ * `judge_scores`, NO `trust_score`, and NO `confidence` field — flagged state
+ * is the per-field `flagged` boolean ONLY.
+ */
+export interface LexgenProposalDetailResponse {
+  id: string;
+  lemma: string;
+  pos: string;
+  status: string;
+  created_at: string;
+  fields: LexgenProposalField[];
+  content: LexgenProposalContentField[];
+}
+
+// ============================================
 // Admin API Methods
 // ============================================
 
@@ -900,6 +994,36 @@ export const adminAPI = {
    */
   getDeck: async (deckId: string): Promise<UnifiedDeckItem> => {
     return api.get<UnifiedDeckItem>(`/api/v1/admin/decks/${deckId}`);
+  },
+
+  /**
+   * List `needs_review` LEXGEN word proposals for the verification inbox.
+   *
+   * Read-only queue (LEXGEN-12). `status` is hardcoded server-side to
+   * `needs_review`; results are ordered most-flagged first, then FIFO.
+   * Requires superuser authentication. Score-free response.
+   */
+  listLexgenProposals: async (
+    params: LexgenProposalListParams = {}
+  ): Promise<LexgenProposalListResponse> => {
+    const queryString = buildQueryString({
+      status: 'needs_review',
+      page: params.page,
+      page_size: params.page_size,
+    });
+    return api.get<LexgenProposalListResponse>(`/api/v1/admin/lexgen/proposals${queryString}`);
+  },
+
+  /**
+   * Fetch a single LEXGEN proposal detail for the verification inbox.
+   *
+   * Read-only (LEXGEN-12). The response is score-free by construction — it
+   * carries per-field `value`/`source`/`flagged` only, never `judge_scores`,
+   * `trust_score`, or `confidence` (anti-anchoring). 404s for an unknown id or a
+   * row whose status is not `needs_review`. Requires superuser authentication.
+   */
+  getLexgenProposal: async (id: string): Promise<LexgenProposalDetailResponse> => {
+    return api.get<LexgenProposalDetailResponse>(`/api/v1/admin/lexgen/proposals/${id}`);
   },
 
   /**

@@ -25,6 +25,7 @@ export async function seedAdminCardErrorsBatch(page: Page): Promise<{ ids: strin
 type AdminTabKey =
   | 'dashboard'
   | 'inbox'
+  | 'lexgenInbox'
   | 'decks'
   | 'news'
   | 'situations'

@@ -567,3 +567,80 @@ class ReconcileDiffResponse(BaseModel):
     newly_locked_ids: list[str]  # always [] in QUIET; reserved for symmetry
     projection_version: int
     computed_at: datetime
+
+
+# ============================================================================
+# LEXGEN Verification Inbox Schemas (LEXGEN-12, read-only)
+# ============================================================================
+#
+# Anti-anchoring invariant (Decision Record §3 / D-SCORE-EXCLUSION): NONE of
+# these schemas has a field for ``judge_scores``, ``trust_score``, or any
+# ``confidence`` value. The score-hiding guarantee is enforced HERE, at the
+# response-model field set — the raw JSONB columns are never passed through.
+# The serializer whitelists only ``value`` / ``source`` / ``flagged`` per field.
+
+
+class LexgenProposalListItem(BaseModel):
+    """One row in the verification-inbox queue (score-free by construction).
+
+    Only these five keys exist — no numeric score is ever surfaced.
+    """
+
+    id: UUID
+    lemma: str  # = WordProposal.lemma_input
+    pos: str
+    flagged_field_count: int  # = len(flagged_fields or [])
+    created_at: datetime
+
+
+class LexgenProposalListResponse(BaseModel):
+    """Paginated ``needs_review`` queue response."""
+
+    total: int
+    page: int
+    page_size: int
+    items: list[LexgenProposalListItem]
+
+
+class LexgenProposalField(BaseModel):
+    """Score-stripped projection of one ``reconciliation_log.fields[*]`` entry.
+
+    Carries value + provenance + flagged ONLY — never ``confidence``,
+    ``cross_checks``, ``flags``, or any judge/trust score.
+    """
+
+    field: str
+    value: str | None
+    source: str | None
+    flagged: bool
+
+
+class LexgenProposalContentField(BaseModel):
+    """Parallel projection of one ``generated_content`` key (gloss/example).
+
+    Structurally identical to ``LexgenProposalField`` so one row component +
+    one flagged-badge rule renders both. ``source`` is the hardcoded constant
+    ``"lexgen_generator"`` — content is produced by the LEXGEN-09 generator and
+    has no ``reconciliation_log`` provenance.
+    """
+
+    field: str
+    value: str | None
+    source: Literal["lexgen_generator"]
+    flagged: bool
+
+
+class LexgenProposalDetailResponse(BaseModel):
+    """Proposal detail — per-field value/provenance/flagged, scores absent.
+
+    The score-exclusion guarantee lives in this field set: there is no field
+    for ``judge_scores``, ``trust_score``, or ``confidence`` anywhere.
+    """
+
+    id: UUID
+    lemma: str  # = lemma_input
+    pos: str
+    status: str
+    created_at: datetime
+    fields: list[LexgenProposalField]
+    content: list[LexgenProposalContentField]

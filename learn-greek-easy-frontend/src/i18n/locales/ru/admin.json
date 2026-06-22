@@ -290,6 +290,7 @@
     "exercisesReading": "Чтение",
     "dashboard": "Панель",
     "inbox": "Входящие",
+    "lexgenInbox": "Инбокс проверки",
     "exercises": "Упражнения",
     "errors": "Ошибки",
     "errorsHint": "Открытые отчёты (ожидающие + рассмотренные)"
@@ -2251,6 +2252,40 @@
     "empty": {
       "title": "No items needing attention",
       "sub": "Aggregated inbox coming soon. New feedback, draft warnings, audio regens, and card errors will surface here automatically."
+    }
+  },
+  "lexgenInbox": {
+    "breadcrumb": {
+      "dashboard": "Админ",
+      "current": "Инбокс проверки"
+    },
+    "kicker": "Админ · LEXGEN",
+    "title": "Инбокс проверки",
+    "sub": "Предложения, ожидающие проверки носителем языка, сначала с наибольшим числом меток.",
+    "empty": "Нет предложений, ожидающих проверки",
+    "error": "Не удалось загрузить очередь проверки. Попробуйте ещё раз.",
+    "column": {
+      "lemma": "Лемма",
+      "pos": "Часть речи",
+      "flaggedFields": "Отмеченные поля",
+      "age": "Возраст"
+    },
+    "detail": {
+      "provenance": "Источник",
+      "flagged": "Отмечено",
+      "readOnlyNote": "Только для чтения — действия по проверке появятся в следующем релизе",
+      "fieldsHeading": "Поля",
+      "contentHeading": "Толкования и пример",
+      "field": {
+        "gender": "Род",
+        "declensionGroup": "Группа склонения",
+        "ipa": "Произношение (IPA)",
+        "frequency": "Ранг частотности",
+        "glossEn": "Толкование (англ.)",
+        "glossRu": "Толкование (рус.)",
+        "exampleGreek": "Пример предложения",
+        "exampleTranslation": "Перевод примера"
+      }
     }
   },
   "dashboard": {

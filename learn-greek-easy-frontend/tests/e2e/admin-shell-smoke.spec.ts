@@ -42,11 +42,11 @@ test('ASHELL-SMOKE-01: /admin renders shell chrome (global header + page head + 
   // PageHead contains an <h1 class="va-h1">
   await expect(page.locator('h1.va-h1')).toBeVisible();
 
-  // SectionTabs renders exactly 10 tab buttons (the 10 AdminTabType values:
+  // SectionTabs renders exactly 11 tab buttons (the 11 AdminTabType values:
   // dashboard | inbox | decks | news | situations | exercises |
-  // errors | feedback | changelog | announcements)
+  // errors | feedback | changelog | announcements | lexgenInbox)
   const tabs = page.locator('.va-tabs [role="tab"]');
-  await expect(tabs).toHaveCount(10);
+  await expect(tabs).toHaveCount(11);
 });
 
 // ---------------------------------------------------------------------------
@@ -180,6 +180,7 @@ const ADMIN_TABS = [
   'feedback',
   'changelog',
   'announcements',
+  'lexgenInbox',
 ] as const;
 
 for (const tab of ADMIN_TABS) {

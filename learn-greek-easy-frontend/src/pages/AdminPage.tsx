@@ -52,6 +52,7 @@ import CardErrorsView from '@/pages/admin/CardErrorsView';
 import DashboardView from '@/pages/admin/DashboardView';
 import ExercisesView from '@/pages/admin/ExercisesView';
 import InboxView from '@/pages/admin/InboxView';
+import LexgenInboxView from '@/pages/admin/LexgenInboxView';
 import { adminAPI } from '@/services/adminAPI';
 import type {
   ContentStatsResponse,
@@ -515,6 +516,19 @@ export function pageHeadPropsFor(
         subTestId: 'admin-subtitle' as const,
       };
 
+    case 'lexgenInbox':
+      return {
+        breadcrumb: [
+          { label: t('lexgenInbox.breadcrumb.dashboard') },
+          { label: t('lexgenInbox.breadcrumb.current') },
+        ],
+        kicker: <Kicker dot="primary">{t('lexgenInbox.kicker')}</Kicker>,
+        title: t('lexgenInbox.title'),
+        sub: t('lexgenInbox.sub'),
+        titleTestId: 'admin-title' as const,
+        subTestId: 'admin-subtitle' as const,
+      };
+
     case 'dashboard':
       return {
         breadcrumb: [
@@ -808,6 +822,7 @@ const AdminPage: React.FC = () => {
   const tabsConfig: SectionTabItem[] = [
     { key: 'dashboard', label: t('tabs.dashboard'), count: 0 },
     { key: 'inbox', label: t('tabs.inbox'), count: tabCounts?.inbox ?? 0, tone: 'amber' },
+    { key: 'lexgenInbox', label: t('tabs.lexgenInbox'), count: 0 },
     { key: 'decks', label: t('tabs.decks'), count: tabCounts?.decks ?? 0 },
     { key: 'news', label: t('tabs.news'), count: tabCounts?.news ?? 0 },
     { key: 'situations', label: t('tabs.situations'), count: tabCounts?.situations ?? 0 },
@@ -1107,6 +1122,11 @@ const AdminPage: React.FC = () => {
 
       {activeTab === 'dashboard' && <DashboardView stats={stats} setActiveTab={setActiveTab} />}
       {activeTab === 'inbox' && <InboxView />}
+      {activeTab === 'lexgenInbox' && (
+        <section aria-label={t('lexgenInbox.title')}>
+          <LexgenInboxView />
+        </section>
+      )}
 
       {/* Deck Create Modal */}
       <DeckCreateModal
