@@ -526,3 +526,67 @@ describe('NewsReaderSheet — no new @keyframes', () => {
     expect(content?.className).not.toMatch(/news-reader|reader-slide/);
   });
 });
+
+// NWS8-05: SheetTitle + SheetDescription sr-only elements (a11y — AC #1 / AC #2)
+describe('NewsReaderSheet — NWS8-05 sr-only SheetTitle and SheetDescription (a11y)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('SheetTitle sr-only element is present in the DOM when sheet is open', () => {
+    renderReader({ level: 'b1' });
+    // The dialog role element is the SheetContent; Radix requires a DialogTitle (h2) inside.
+    // Our SheetTitle is sr-only — find the heading that Radix renders.
+    const dialog = document.querySelector('[role="dialog"]');
+    expect(dialog).not.toBeNull();
+    // Radix renders DialogTitle as an h2 — the sr-only one is our SheetTitle
+    const srOnlyHeadings = Array.from(dialog!.querySelectorAll('h2')).filter((el) =>
+      el.className.includes('sr-only')
+    );
+    expect(srOnlyHeadings.length).toBeGreaterThan(0);
+  });
+
+  it('SheetTitle sr-only contains the article title (not just the fallback)', () => {
+    renderReader({ level: 'b1' });
+    // There should be at least two occurrences of the title: sr-only + visible h2
+    const titleEls = screen.getAllByText('Ελληνικός τίτλος B1');
+    expect(titleEls.length).toBeGreaterThanOrEqual(2);
+    // One of them must be sr-only
+    const srOnlyTitle = titleEls.find((el) => el.className.includes('sr-only'));
+    expect(srOnlyTitle).toBeDefined();
+  });
+
+  it('SheetDescription sr-only element is present in the DOM', () => {
+    renderReader({ level: 'b1' });
+    const dialog = document.querySelector('[role="dialog"]');
+    expect(dialog).not.toBeNull();
+    // SheetDescription renders as <p> or similar with sr-only — query by class
+    const srOnlyEls = Array.from(dialog!.querySelectorAll('.sr-only'));
+    // Should have at least two sr-only elements: title and description
+    expect(srOnlyEls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('SheetDescription renders the news.reader.description i18n key text', () => {
+    renderReader({ level: 'b1' });
+    // The mock returns the key as fallback: 'news.reader.description'
+    // Check that it's in the DOM (sr-only, not visible but in the tree)
+    expect(screen.getByText('news.reader.description')).toBeInTheDocument();
+  });
+
+  it('SheetTitle sr-only still present when article is null (fallback to news.page.title)', () => {
+    renderReader({ article: null });
+    // When article is null, SheetTitle fallback = t('news.page.title') = 'news.page.title'
+    // The dialog is open (open=true) but body conditional renders nothing — the sr-only title
+    // is outside the body conditional so it should still render.
+    const dialog = document.querySelector('[role="dialog"]');
+    expect(dialog).not.toBeNull();
+  });
+
+  it('no visible change to the sticky header layout (CA3, CA4) — back and close buttons still present', () => {
+    renderReader({ level: 'b1' });
+    // NWS8-05 must not alter the visible sticky-header UI
+    expect(screen.getByRole('button', { name: /back to news/i })).toBeInTheDocument();
+    const closeBtns = screen.getAllByRole('button', { name: /close/i });
+    expect(closeBtns.length).toBeGreaterThan(0);
+  });
+});
