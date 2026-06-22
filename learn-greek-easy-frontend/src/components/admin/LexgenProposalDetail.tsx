@@ -1,6 +1,11 @@
+import { useEffect, useState } from 'react';
+
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import type {
   LexgenProposalContentField,
   LexgenProposalDetailResponse,
@@ -8,26 +13,23 @@ import type {
 } from '@/services/adminAPI';
 
 /**
- * Read-only proposal DETAIL view (LEXGEN-12-03).
+ * Detail view for a LEXGEN verification-inbox proposal (LEXGEN-12-03).
  *
- * Presentational only: receives a fully-resolved `LexgenProposalDetailResponse`
- * and renders, per field, the value + provenance source + a `Flagged` badge
- * when flagged — for BOTH the morphological `fields` list AND the parallel
- * `content` list (structurally identical schemas, so ONE row renderer + ONE
- * flagged-badge rule covers both).
+ * Renders morphological `fields[]` and content `content[]` via `FieldRow`.
+ * When `onSaveField` is provided, each row gains an inline edit affordance
+ * (pencil → Input/Textarea → Save/Cancel). Save fires `onSaveField` with the
+ * flat key and new value; the sheet re-renders in place on success.
  *
  * Anti-anchoring invariant (Decision Record §3): NO numeric score / confidence /
- * trust value is rendered anywhere. This is enforced structurally — the row
- * renderer maps ONLY over the typed `fields[]` / `content[]` arrays and reads
- * ONLY `value` / `source` / `flagged`; it never iterates the raw proposal
- * object, so any unexpected score-bearing key on the payload is invisible.
- *
- * Read-only slice: no approve / edit / regenerate / reject controls (LEXGEN-13
- * owns the action surface).
+ * trust value is rendered anywhere. The row renderer maps ONLY over the typed
+ * arrays and reads ONLY `value` / `source` / `flagged`.
  */
 
 /** A row carrying value + provenance + flagged — shared shape across both lists. */
 type DetailRow = LexgenProposalField | LexgenProposalContentField;
+
+// Content field keys that benefit from a multi-line Textarea instead of Input.
+const MULTILINE_FIELDS = new Set(['example_greek', 'example_translation', 'gloss_en', 'gloss_ru']);
 
 interface FieldRowProps {
   row: DetailRow;
@@ -37,9 +39,54 @@ interface FieldRowProps {
   sourceLabel: string;
   /** i18n "Flagged" label. */
   flaggedLabel: string;
+  /**
+   * When provided, adds an inline edit affordance to this row.
+   * Receives the flat key and the new value; should return a promise that
+   * resolves on success. On rejection the row stays in edit mode.
+   */
+  onSaveField?: (fieldKey: string, value: string | null) => Promise<void>;
+  /** Passed-in reset counter — incremented externally to cancel any open edits. */
+  resetKey?: number;
 }
 
-function FieldRow({ row, label, sourceLabel, flaggedLabel }: FieldRowProps) {
+function FieldRow({ row, label, sourceLabel, flaggedLabel, onSaveField, resetKey }: FieldRowProps) {
+  const { t } = useTranslation('admin');
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(row.value ?? '');
+  const [saving, setSaving] = useState(false);
+
+  // When the proposal changes (resetKey incremented) or row value refreshes,
+  // exit edit mode and reset the draft to the current value.
+  useEffect(() => {
+    setEditing(false);
+    setDraft(row.value ?? '');
+  }, [resetKey, row.value]);
+
+  const handleEdit = () => {
+    setDraft(row.value ?? '');
+    setEditing(true);
+  };
+
+  const handleCancel = () => {
+    setDraft(row.value ?? '');
+    setEditing(false);
+  };
+
+  const handleSave = async () => {
+    if (!onSaveField) return;
+    setSaving(true);
+    try {
+      await onSaveField(row.field, draft || null);
+      setEditing(false);
+    } catch {
+      // Stay in edit mode on error (toast is handled by the mutation hook).
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isMultiline = MULTILINE_FIELDS.has(row.field);
+
   return (
     <div
       data-testid={`lexgen-field-row-${row.field}`}
@@ -55,7 +102,65 @@ function FieldRow({ row, label, sourceLabel, flaggedLabel }: FieldRowProps) {
           </Badge>
         )}
       </div>
-      <span className="text-sm text-foreground">{row.value}</span>
+
+      {editing && onSaveField ? (
+        <div className="flex flex-col gap-2">
+          {isMultiline ? (
+            <Textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              rows={3}
+              className="text-sm"
+              data-testid={`lexgen-field-edit-${row.field}`}
+              autoFocus
+            />
+          ) : (
+            <Input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              className="h-8 text-sm"
+              data-testid={`lexgen-field-edit-${row.field}`}
+              autoFocus
+            />
+          )}
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="default"
+              onClick={handleSave}
+              disabled={saving}
+              data-testid={`lexgen-field-save-${row.field}`}
+            >
+              {t('lexgenInbox.action.save')}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCancel}
+              disabled={saving}
+              data-testid={`lexgen-field-cancel-${row.field}`}
+            >
+              {t('lexgenInbox.action.cancel')}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-sm text-foreground">{row.value}</span>
+          {onSaveField && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleEdit}
+              className="h-6 shrink-0 px-2 text-xs text-muted-foreground"
+              data-testid={`lexgen-field-edit-btn-${row.field}`}
+            >
+              {t('lexgenInbox.action.edit')}
+            </Button>
+          )}
+        </div>
+      )}
+
       {row.source && (
         <span className="text-xs text-muted-foreground">
           {sourceLabel}: <span className="text-foreground">{row.source}</span>
@@ -65,7 +170,25 @@ function FieldRow({ row, label, sourceLabel, flaggedLabel }: FieldRowProps) {
   );
 }
 
-export function LexgenProposalDetail({ proposal }: { proposal: LexgenProposalDetailResponse }) {
+interface LexgenProposalDetailProps {
+  proposal: LexgenProposalDetailResponse;
+  /**
+   * When provided, each field row gains an inline edit affordance.
+   * Called with the flat field key and the new value on save.
+   */
+  onSaveField?: (fieldKey: string, value: string | null) => Promise<void>;
+  /**
+   * Incremented by the parent when the proposal changes, to reset any open
+   * inline edits and prevent stale draft values from bleeding across proposals.
+   */
+  resetKey?: number;
+}
+
+export function LexgenProposalDetail({
+  proposal,
+  onSaveField,
+  resetKey,
+}: LexgenProposalDetailProps) {
   const { t, i18n } = useTranslation('admin');
 
   // Label resolution: i18n for the known scalar/content keys, otherwise fall
@@ -110,6 +233,8 @@ export function LexgenProposalDetail({ proposal }: { proposal: LexgenProposalDet
                 label={labelFor(row.field)}
                 sourceLabel={sourceLabel}
                 flaggedLabel={flaggedLabel}
+                onSaveField={onSaveField}
+                resetKey={resetKey}
               />
             ))}
           </div>
@@ -129,6 +254,8 @@ export function LexgenProposalDetail({ proposal }: { proposal: LexgenProposalDet
                 label={labelFor(row.field)}
                 sourceLabel={sourceLabel}
                 flaggedLabel={flaggedLabel}
+                onSaveField={onSaveField}
+                resetKey={resetKey}
               />
             ))}
           </div>

@@ -2253,7 +2253,7 @@
     "detail": {
       "provenance": "Source",
       "flagged": "Flagged",
-      "readOnlyNote": "Read-only — review actions arrive in the next release",
+      "readOnlyNote": "Review and take action using the controls below.",
       "fieldsHeading": "Fields",
       "contentHeading": "Glosses & example",
       "field": {
@@ -2266,6 +2266,21 @@
         "exampleGreek": "Example sentence",
         "exampleTranslation": "Example translation"
       }
+    },
+    "action": {
+      "approve": "Approve & ship",
+      "edit": "Edit field",
+      "regenerate": "Regenerate",
+      "reject": "Reject",
+      "cancel": "Cancel",
+      "save": "Save",
+      "approveConfirm": "Ship this proposal as a word entry?",
+      "rejectConfirm": "Reject and archive this proposal?",
+      "regenerateConfirm": "Regenerate? The current attempt is kept on record.",
+      "saved": "Saved",
+      "shipped": "Shipped as word entry",
+      "rejected": "Proposal rejected",
+      "regenerated": "Regenerated — prior attempt kept"
     }
   },
   "dashboard": {
