@@ -1,10 +1,12 @@
-export type AudioSpeed = 1 | 0.75;
+export type AudioSpeed = 1 | 0.75 | 1.25;
 export const AUDIO_SPEED_KEY = 'greekly_audio_speed';
 export function getPersistedAudioSpeed(): AudioSpeed {
   try {
     if (typeof window === 'undefined') return 1;
     const stored = window.localStorage.getItem(AUDIO_SPEED_KEY);
-    return stored === '0.75' ? 0.75 : 1;
+    if (stored === '0.75') return 0.75;
+    if (stored === '1.25') return 1.25;
+    return 1;
   } catch {
     return 1;
   }

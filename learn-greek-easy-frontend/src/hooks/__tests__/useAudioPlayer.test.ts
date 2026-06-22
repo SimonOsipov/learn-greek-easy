@@ -266,10 +266,12 @@ describe('useAudioPlayer Hook', () => {
       expect(result.current.speed).toBe(0.75);
     });
 
-    it('3. treats "1.25" in localStorage as 1', () => {
+    it('3. reads persisted 1.25 from localStorage (NEWS-07: 1.25x added to AudioSpeed)', () => {
+      // Prior to NEWS-07, AudioSpeed was 0.75|1 and "1.25" mapped to the default 1.
+      // NEWS-07 extended AudioSpeed to 0.75|1|1.25, so "1.25" now correctly restores to 1.25.
       localStorage.setItem('greekly_audio_speed', '1.25');
       const { result } = renderHook(() => useAudioPlayer('https://example.com/audio.mp3'));
-      expect(result.current.speed).toBe(1);
+      expect(result.current.speed).toBe(1.25);
     });
 
     it('4. treats "abc" in localStorage as 1', () => {

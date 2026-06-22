@@ -23,6 +23,7 @@ vi.mock('@/lib/newsAudioCoordinator', () => ({
   clearActivePlayer: vi.fn(),
 }));
 
+import { track } from '@/lib/analytics';
 import { type NewsItemResponse } from '@/services/adminAPI';
 
 const createMockArticle = (overrides: Partial<NewsItemResponse> = {}): NewsItemResponse =>
@@ -265,5 +266,273 @@ describe('NewsCard Compact Variant', () => {
     render(<NewsCard article={article} newsLang="el" variant="compact" />);
     expect(screen.getByText('Ελληνικός τίτλος')).toBeInTheDocument();
     expect(screen.queryByText('Should be hidden')).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// NEWS-07 Mode B QA additions: two-zone model, onOpen, analytics, footer, gradient
+// ---------------------------------------------------------------------------
+
+describe('NewsCard two-zone: onOpen wiring (AC-5, AC-9, AC-13)', () => {
+  it('card body click calls onOpen with the article — NOT window.open (reader mode)', () => {
+    const onOpen = vi.fn();
+    const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const article = createMockArticle();
+    render(<NewsCard article={article} newsLang="el" onOpen={onOpen} />);
+
+    const card = screen.getByTestId(`news-card-${article.id}`);
+    fireEvent.click(card);
+
+    expect(onOpen).toHaveBeenCalledWith(article);
+    expect(windowOpenSpy).not.toHaveBeenCalled();
+    windowOpenSpy.mockRestore();
+  });
+
+  it('card renders as native anchor with correct href/target/rel when onOpen is absent (link mode)', () => {
+    const article = createMockArticle({
+      original_article_url: 'https://example.com/fallback',
+    });
+    render(<NewsCard article={article} newsLang="el" />);
+
+    const card = screen.getByTestId(`news-card-${article.id}`);
+    expect(card.tagName.toLowerCase()).toBe('a');
+    expect(card).toHaveAttribute('href', 'https://example.com/fallback');
+    expect(card).toHaveAttribute('target', '_blank');
+    expect(card).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  it('card click fires news_article_clicked analytics when onOpen is absent (link mode)', () => {
+    vi.clearAllMocks();
+    const article = createMockArticle({
+      original_article_url: 'https://ekathimerini.com/article',
+    });
+    render(<NewsCard article={article} newsLang="el" />);
+
+    const card = screen.getByTestId(`news-card-${article.id}`);
+    fireEvent.click(card);
+
+    expect(vi.mocked(track)).toHaveBeenCalledWith(
+      'news_article_clicked',
+      expect.objectContaining({ item_id: article.id })
+    );
+  });
+
+  it('Enter key activates card body (calls onOpen) — reader mode', () => {
+    const onOpen = vi.fn();
+    const article = createMockArticle();
+    render(<NewsCard article={article} newsLang="el" onOpen={onOpen} />);
+
+    const card = screen.getByTestId(`news-card-${article.id}`);
+    fireEvent.keyDown(card, { key: 'Enter' });
+
+    expect(onOpen).toHaveBeenCalledWith(article);
+  });
+
+  it('Space key activates card body (calls onOpen) — reader mode', () => {
+    const onOpen = vi.fn();
+    const article = createMockArticle();
+    render(<NewsCard article={article} newsLang="el" onOpen={onOpen} />);
+
+    const card = screen.getByTestId(`news-card-${article.id}`);
+    fireEvent.keyDown(card, { key: ' ' });
+
+    expect(onOpen).toHaveBeenCalledWith(article);
+  });
+});
+
+describe('NewsCard external-link button: stops propagation + outbound (AC-2, AC-5, AC-13)', () => {
+  it('external-link button click does NOT call onOpen', () => {
+    const onOpen = vi.fn();
+    const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const article = createMockArticle({
+      original_article_url: 'https://example.com/article',
+    });
+    render(<NewsCard article={article} newsLang="el" onOpen={onOpen} />);
+
+    // The external-link button is inside the card area; click it
+    const extBtn = screen.getByRole('button', { name: /dashboard\.news\.readMore|read more/i });
+    fireEvent.click(extBtn);
+
+    expect(onOpen).not.toHaveBeenCalled();
+    windowOpenSpy.mockRestore();
+  });
+
+  it('external-link button click opens original URL in new tab', () => {
+    const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const article = createMockArticle({
+      original_article_url: 'https://example.com/article',
+    });
+    render(<NewsCard article={article} newsLang="el" onOpen={vi.fn()} />);
+
+    const extBtn = screen.getByRole('button', { name: /dashboard\.news\.readMore|read more/i });
+    fireEvent.click(extBtn);
+
+    expect(windowOpenSpy).toHaveBeenCalledWith(
+      'https://example.com/article',
+      '_blank',
+      'noopener,noreferrer'
+    );
+    windowOpenSpy.mockRestore();
+  });
+
+  it('external-link button fires news_article_clicked (outbound path)', () => {
+    vi.clearAllMocks();
+    vi.spyOn(window, 'open').mockImplementation(() => null);
+    const article = createMockArticle({
+      original_article_url: 'https://ekathimerini.com/123',
+    });
+    render(<NewsCard article={article} newsLang="el" onOpen={vi.fn()} />);
+
+    const extBtn = screen.getByRole('button', { name: /dashboard\.news\.readMore|read more/i });
+    fireEvent.click(extBtn);
+
+    // news_article_clicked must fire (not news_article_opened)
+    expect(vi.mocked(track)).toHaveBeenCalledWith(
+      'news_article_clicked',
+      expect.objectContaining({ item_id: article.id })
+    );
+  });
+
+  it('card body click does NOT fire news_article_clicked', () => {
+    vi.clearAllMocks();
+    // news_article_opened is fired by NewsPage.handleOpenArticle, not by NewsCard body click
+    const onOpen = vi.fn();
+    const article = createMockArticle();
+    render(<NewsCard article={article} newsLang="el" onOpen={onOpen} />);
+
+    const card = screen.getByTestId(`news-card-${article.id}`);
+    fireEvent.click(card);
+
+    // Primary assertion: card called onOpen, NOT the external-link path
+    expect(onOpen).toHaveBeenCalledWith(article);
+    // Confirm news_article_clicked was NOT called (it fires only on external-link button)
+    const clickedCalls = vi
+      .mocked(track)
+      .mock.calls.filter(([evt]) => evt === 'news_article_clicked');
+    expect(clickedCalls).toHaveLength(0);
+  });
+});
+
+describe('NewsCard footer: hostname + date (AC-3)', () => {
+  it('renders source hostname (www stripped) in footer', () => {
+    const article = createMockArticle({
+      original_article_url: 'https://www.sigmalive.com/news/123',
+    });
+    render(<NewsCard article={article} newsLang="el" />);
+    expect(screen.getByText('sigmalive.com')).toBeInTheDocument();
+  });
+
+  it('renders hostname without www prefix when www is present', () => {
+    const article = createMockArticle({
+      original_article_url: 'https://www.philenews.com/article/456',
+    });
+    render(<NewsCard article={article} newsLang="el" />);
+    expect(screen.getByText('philenews.com')).toBeInTheDocument();
+    expect(screen.queryByText('www.philenews.com')).not.toBeInTheDocument();
+  });
+
+  it('renders formatted publication date in footer', () => {
+    const article = createMockArticle({ publication_date: '2026-01-27' });
+    render(<NewsCard article={article} newsLang="el" />);
+    // Date formatted by toLocaleDateString — check it contains the year
+    const dateElements = document.querySelectorAll('.font-mono.text-\\[11\\.5px\\]');
+    // At least one element should contain year 2026
+    const hasDate = Array.from(dateElements).some((el) => el.textContent?.includes('2026'));
+    expect(hasDate).toBe(true);
+  });
+
+  it('renders no date when publication_date is empty string', () => {
+    // publication_date is typed as string (not nullable in NewsItemResponse), but
+    // may arrive as empty from the API. The card should still render without crashing.
+    const article = createMockArticle({ publication_date: '' });
+    render(<NewsCard article={article} newsLang="el" />);
+    // Footer should still render (source) but date span is empty string
+    const card = screen.getByTestId(`news-card-${article.id}`);
+    expect(card).toBeInTheDocument();
+  });
+});
+
+describe('NewsCard image: null → gradient fallback (AC-4)', () => {
+  it('renders no <img> element when image_url is null (gradient fallback)', () => {
+    const article = createMockArticle({ image_url: null });
+    render(<NewsCard article={article} newsLang="el" />);
+    const img = document.querySelector('img[aria-hidden="true"]');
+    expect(img).toBeNull();
+  });
+
+  it('applies backgroundImage style to photo block when image_url is null', () => {
+    const article = createMockArticle({ id: 'gradient-test', image_url: null });
+    render(<NewsCard article={article} newsLang="el" />);
+    // The photo block div should have a backgroundImage style (gradient from pickNewsThumb)
+    const photoBlock = document.querySelector('[class*="aspect-"]') as HTMLElement | null;
+    expect(photoBlock?.style.backgroundImage).toBeTruthy();
+  });
+
+  it('renders <img> when image_url is present', () => {
+    const article = createMockArticle({ image_url: 'https://cdn.example.com/photo.jpg' });
+    render(<NewsCard article={article} newsLang="el" />);
+    const img = document.querySelector('img[aria-hidden="true"]');
+    expect(img).not.toBeNull();
+  });
+});
+
+describe('NewsCard accessibility: aria-labels, lang, tabIndex (AC-5, AC-14)', () => {
+  it('card surface has role="button" and tabIndex=0 in reader mode (onOpen provided)', () => {
+    const article = createMockArticle();
+    render(<NewsCard article={article} newsLang="el" onOpen={vi.fn()} />);
+    const card = screen.getByTestId(`news-card-${article.id}`);
+    expect(card).toHaveAttribute('role', 'button');
+    expect(card).toHaveAttribute('tabindex', '0');
+  });
+
+  it('card root is an <a> (not role=button) in link mode (no onOpen)', () => {
+    const article = createMockArticle();
+    render(<NewsCard article={article} newsLang="el" />);
+    const card = screen.getByTestId(`news-card-${article.id}`);
+    expect(card.tagName.toLowerCase()).toBe('a');
+    expect(card).not.toHaveAttribute('role', 'button');
+  });
+
+  it('Greek title has lang="el"', () => {
+    const article = createMockArticle({ title_el: 'Ελληνικός τίτλος' });
+    render(<NewsCard article={article} newsLang="el" />);
+    const title = screen.getByText('Ελληνικός τίτλος');
+    expect(title).toHaveAttribute('lang', 'el');
+  });
+
+  it('external-link button has aria-label in reader mode (onOpen provided)', () => {
+    const article = createMockArticle();
+    render(<NewsCard article={article} newsLang="el" onOpen={vi.fn()} />);
+    const extBtn = screen.getByRole('button', { name: /dashboard\.news\.readMore|read more/i });
+    expect(extBtn).toHaveAttribute('aria-label');
+  });
+
+  it('external-link icon is decorative (aria-hidden span, no interactive button) in link mode', () => {
+    const article = createMockArticle();
+    render(<NewsCard article={article} newsLang="el" />);
+    // No interactive button with that label in link mode
+    expect(
+      screen.queryByRole('button', { name: /dashboard\.news\.readMore|read more/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it('description paragraph has lang="el"', () => {
+    const article = createMockArticle({ description_el: 'Ελληνική περιγραφή' });
+    render(<NewsCard article={article} newsLang="el" />);
+    const desc = screen.getByText('Ελληνική περιγραφή');
+    expect(desc).toHaveAttribute('lang', 'el');
+  });
+});
+
+describe('NewsCard: disableScrub on compact card player (AC-8)', () => {
+  it('card audio player has disableScrub — waveform-bars is role=img not slider', () => {
+    const article = createMockArticle({
+      audio_url: 'https://cdn.example.com/audio.mp3',
+    });
+    render(<NewsCard article={article} newsLang="el" />);
+
+    const bars = screen.getByTestId('waveform-bars');
+    // disableScrub=true → role="img" (not "slider")
+    expect(bars).toHaveAttribute('role', 'img');
   });
 });

@@ -31,6 +31,8 @@ export interface NewsGridProps {
   /** Number of skeleton cards to show during loading */
   skeletonCount?: number;
   level?: NewsLevel;
+  /** Called when the user activates a card body (wires into the slide-over reader). */
+  onOpen?: (article: NewsItemResponse) => void;
 }
 
 export const NewsGrid: React.FC<NewsGridProps> = ({
@@ -39,6 +41,7 @@ export const NewsGrid: React.FC<NewsGridProps> = ({
   isLoading = false,
   skeletonCount = 8,
   level,
+  onOpen,
 }) => {
   const { t } = useTranslation('common');
 
@@ -46,7 +49,7 @@ export const NewsGrid: React.FC<NewsGridProps> = ({
   if (isLoading) {
     return (
       <div
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
         data-testid="news-grid-loading"
         role="list"
         aria-label={t('news.loading')}
@@ -69,14 +72,21 @@ export const NewsGrid: React.FC<NewsGridProps> = ({
   // Render news grid
   return (
     <div
-      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
       data-testid="news-grid"
       role="list"
       aria-label={t('news.gridLabel')}
     >
       {articles.map((article) => (
         <div key={article.id} role="listitem">
-          <NewsCard article={article} newsLang={newsLang} height="tall" page="news" level={level} />
+          <NewsCard
+            article={article}
+            newsLang={newsLang}
+            height="tall"
+            page="news"
+            level={level}
+            onOpen={onOpen}
+          />
         </div>
       ))}
     </div>

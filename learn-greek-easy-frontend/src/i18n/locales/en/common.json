@@ -374,10 +374,18 @@
       "a2": "A2",
       "b1": "B1",
       "label": "Content level",
-      "difficulty": "Difficulty:"
+      "difficulty": "Difficulty:",
+      "hint": {
+        "a2": "Easier",
+        "b1": "Harder"
+      }
     },
     "loading": "Loading news articles",
-    "gridLabel": "News articles"
+    "gridLabel": "News articles",
+    "reader": {
+      "back": "Back to news",
+      "openOriginal": "Open original"
+    }
   },
   "situations": {
     "page": {

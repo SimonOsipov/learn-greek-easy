@@ -94,7 +94,7 @@ describe('NewsGrid Component', () => {
       const grid = screen.getByTestId('news-grid');
       expect(grid).toHaveClass('grid');
       expect(grid).toHaveClass('grid-cols-1');
-      expect(grid).toHaveClass('gap-4');
+      expect(grid).toHaveClass('gap-6');
       expect(grid).toHaveClass('sm:grid-cols-2');
       expect(grid).toHaveClass('lg:grid-cols-3');
       expect(grid).not.toHaveClass('xl:grid-cols-4');
@@ -181,7 +181,7 @@ describe('NewsGrid Component', () => {
       const loadingGrid = screen.getByTestId('news-grid-loading');
       expect(loadingGrid).toHaveClass('grid');
       expect(loadingGrid).toHaveClass('grid-cols-1');
-      expect(loadingGrid).toHaveClass('gap-4');
+      expect(loadingGrid).toHaveClass('gap-6');
       expect(loadingGrid).toHaveClass('sm:grid-cols-2');
       expect(loadingGrid).toHaveClass('lg:grid-cols-3');
       expect(loadingGrid).not.toHaveClass('xl:grid-cols-4');
@@ -250,14 +250,14 @@ describe('NewsGrid Component', () => {
   });
 
   describe('NewsCard Integration', () => {
-    it('should pass height="tall" to NewsCard components', () => {
+    it('should render NewsCard components for each article', () => {
+      // NWSR-01: NewsCard no longer uses fixed h-[NNpx] height classes — it uses
+      // aspect-[16/11] for the photo block. The test intent (card renders) is preserved.
       const articles = [createMockNewsItem({ id: 'article-1' })];
       render(<NewsGrid {...createProps({ articles })} />);
 
-      // NewsCard with height="tall" uses h-[300px] class
-      // We can verify the card link has this height class
       const card = screen.getByTestId('news-card-article-1');
-      expect(card).toHaveClass('h-[300px]');
+      expect(card).toBeInTheDocument();
     });
   });
 

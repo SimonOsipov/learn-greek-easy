@@ -16,3 +16,6 @@ export type { NewsPaginationProps } from './NewsPagination';
 export { ScrollToTopButton } from './ScrollToTopButton';
 
 export { COUNTRY_CONFIG } from './countryConfig';
+
+export { NewsReaderSheet } from './NewsReaderSheet';
+export type { NewsReaderSheetProps } from './NewsReaderSheet';

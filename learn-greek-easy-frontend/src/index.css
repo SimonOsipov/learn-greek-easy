@@ -755,6 +755,14 @@
       0 14px 30px -6px hsl(var(--primary) / 0.65),
       0 0 0 1px hsl(var(--primary) / 0.9);
   }
+  /* News filter bar — active country pill (primary gradient + glow shadow). */
+  /* Used in NewsFilters.tsx; pill-specific shadow differs from .btn-primary. */
+  .news-filter-pill-active {
+    background: linear-gradient(180deg, hsl(var(--primary-2)), hsl(var(--primary)));
+    border-color: transparent;
+    color: white;
+    box-shadow: 0 6px 16px -6px hsl(var(--primary) / 0.6);
+  }
   .btn-glass {
     background: hsl(var(--glass));
     backdrop-filter: blur(16px);

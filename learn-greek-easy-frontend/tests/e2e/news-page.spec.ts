@@ -184,7 +184,7 @@ test.describe('News Feed Page - Desktop Tests', () => {
     await expect(showingText).toContainText('13-24');
   });
 
-  test('NEWSFEED-PAGE-06: Click article opens detail - verify href attribute exists', async ({
+  test('NEWSFEED-PAGE-06: Click article opens reader with external "Open original" link', async ({
     page,
   }) => {
     await page.goto('/news');
@@ -192,18 +192,23 @@ test.describe('News Feed Page - Desktop Tests', () => {
 
     await waitForNewsGridLoaded(page);
 
-    // Get first news card
     const firstCard = page.locator('[data-testid^="news-card-"]').first();
     await expect(firstCard).toBeVisible();
 
-    // Verify it has an href attribute (external link)
-    const href = await firstCard.getAttribute('href');
-    expect(href).toBeTruthy();
-    expect(href).toMatch(/^https?:\/\//); // Should be a valid URL
+    // Click the Greek title (<h3> inside the card) — avoids the external-link button
+    // (top-right, stops propagation) and the audio player (Zone B), so the card's
+    // reader-open handler fires reliably.
+    const cardTitle = firstCard.locator('h3').first();
+    await cardTitle.click();
 
-    // Verify target="_blank" for external links
-    const target = await firstCard.getAttribute('target');
-    expect(target).toBe('_blank');
+    // Reader sheet opens with the "Open original" external link
+    const openOriginal = page.getByTestId('news-reader-open-original');
+    await expect(openOriginal).toBeVisible({ timeout: 10000 });
+
+    const href = await openOriginal.getAttribute('href');
+    expect(href).toBeTruthy();
+    expect(href).toMatch(/^https?:\/\//);
+    expect(await openOriginal.getAttribute('target')).toBe('_blank');
   });
 
 });
