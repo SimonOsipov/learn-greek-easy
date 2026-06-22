@@ -109,9 +109,13 @@ class TestLegalTransitions:
 
 @pytest.mark.unit
 class TestAllowedTransitionsEdgeSet:
-    """ALLOWED_TRANSITIONS must contain exactly the 10 story edges."""
+    """ALLOWED_TRANSITIONS must contain exactly the 11 story edges.
 
-    def test_all_ten_legal_edges_present(self):
+    LEXGEN-13-02 added the needs_review → generating edge (D-REGEN-EDGE-MANDATORY)
+    to support the reviewer "regenerate" action that restarts the pipeline.
+    """
+
+    def test_all_eleven_legal_edges_present(self):
         expected_edges = {
             (WordProposalState.PENDING, WordProposalState.GENERATING),
             (WordProposalState.GENERATING, WordProposalState.SCORED),
@@ -119,6 +123,7 @@ class TestAllowedTransitionsEdgeSet:
             (WordProposalState.SCORED, WordProposalState.AUTO_APPROVED),
             (WordProposalState.SCORED, WordProposalState.NEEDS_REVIEW),
             (WordProposalState.SCORED, WordProposalState.REJECTED),
+            (WordProposalState.NEEDS_REVIEW, WordProposalState.GENERATING),  # LEXGEN-13-02
             (WordProposalState.NEEDS_REVIEW, WordProposalState.SCORED),
             (WordProposalState.NEEDS_REVIEW, WordProposalState.SHIPPED),
             (WordProposalState.NEEDS_REVIEW, WordProposalState.REJECTED),
