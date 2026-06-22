@@ -1,18 +1,18 @@
-"""STUB — pure deterministic gate functions for the LEXGEN verify stage (LEXGEN-10-01).
+"""Pure deterministic gate functions for the LEXGEN verify stage (LEXGEN-10-01).
 
-This file is the MINIMAL STUB authored during QA Mode A (test-first RED phase).
-The ``GateResult`` dataclass is defined in full (trivial, lets tests construct
-and compare instances without errors).  The three gate functions and
-``normalize_lemma`` raise ``NotImplementedError`` so that every test that
-calls them is RED for the right reason (NotImplementedError), NOT a collection
-error.
+This module is intentionally free of I/O, database access, LLM calls, and
+heavy NLP dependencies (no spaCy, no SQLAlchemy).  All functions are pure and
+side-effect-free — inputs in, GateResult out.
 
-The executor will replace the ``raise NotImplementedError`` bodies with the
-real implementations in LEXGEN-10-01.
+The verify service (LEXGEN-10-03) is responsible for:
+  - Lemmatizing the sentence (spaCy) and producing the post-skip/post-split
+    sub-lemma list.
+  - Calling ``normalize_lemma`` on each lemma before passing it here.
+  - Passing the normalized allowed set.
 
 Public surface:
 
-    GateResult          — frozen dataclass (passed, severity, gate, offending, reason)
+    GateResult              — frozen dataclass (passed, severity, gate, offending, reason)
     normalize_lemma(lemma) -> str
     check_e(token_lemmas, allowed, target_lemma) -> GateResult
     check_target_attested(token_lemmas, target_lemma) -> GateResult
@@ -21,6 +21,7 @@ Public surface:
 
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -60,7 +61,7 @@ def normalize_lemma(lemma: str) -> str:
     Returns:
         Lowercased, NFC-normalized lemma string with accents intact.
     """
-    raise NotImplementedError
+    return unicodedata.normalize("NFC", lemma.lower())
 
 
 def check_e(
@@ -89,7 +90,15 @@ def check_e(
         On pass: passed=True, severity="pass", offending=[].
         On fail: passed=False, severity="fail", offending=[out-of-vocab lemmas].
     """
-    raise NotImplementedError
+    offending = [lemma for lemma in token_lemmas if lemma != target_lemma and lemma not in allowed]
+    passed = not offending
+    return GateResult(
+        passed=passed,
+        severity="pass" if passed else "fail",
+        gate="check_e",
+        offending=offending,
+        reason=None if passed else f"out-of-vocab lemmas: {offending}",
+    )
 
 
 def check_target_attested(
@@ -107,7 +116,14 @@ def check_target_attested(
         On pass: passed=True, severity="pass".
         On fail: passed=False, severity="fail".
     """
-    raise NotImplementedError
+    passed = target_lemma in token_lemmas
+    return GateResult(
+        passed=passed,
+        severity="pass" if passed else "fail",
+        gate="target_attested",
+        offending=[],
+        reason=None if passed else f"target lemma '{target_lemma}' not found in sentence",
+    )
 
 
 def check_gloss_subset(
@@ -134,4 +150,33 @@ def check_gloss_subset(
     Returns:
         GateResult with gate="gloss_subset".
     """
-    raise NotImplementedError
+    stripped_gloss = gloss_en.strip()
+
+    if not stripped_gloss:
+        return GateResult(
+            passed=False,
+            severity="fail",
+            gate="gloss_subset",
+            offending=[],
+            reason="gloss is empty or whitespace-only",
+        )
+
+    glosses_str = wiktionary_glosses or ""
+    gloss_set = {entry.strip() for entry in glosses_str.split(";") if entry.strip()}
+
+    if stripped_gloss in gloss_set:
+        return GateResult(
+            passed=True,
+            severity="pass",
+            gate="gloss_subset",
+            offending=[],
+            reason=None,
+        )
+
+    return GateResult(
+        passed=False,
+        severity="warn",
+        gate="gloss_subset",
+        offending=[],
+        reason=f"gloss '{stripped_gloss}' not found in Wiktionary glosses",
+    )
