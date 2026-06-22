@@ -64,6 +64,59 @@ describe('formatPublicationDate — full ISO 8601 timestamps', () => {
 });
 
 // ---------------------------------------------------------------------------
+// NWS8-04 RED tests: localized long-month format
+//
+// The current implementation uses month:'short' and does not propagate the
+// locale to callers.  These tests assert the DESIRED behaviour (month:'long'
+// with the supplied locale) and will fail until the implementation is updated.
+//
+// NOTE: May ('мая') is identical in RU short and long forms, so we use
+// January ('янв.' short vs 'января' long) to produce a guaranteed RED for
+// the RU locale case.  The subtask spec example uses May to show the target
+// format; we assert the same structural requirements with a month that
+// distinguishes short from long.
+// ---------------------------------------------------------------------------
+
+describe('formatPublicationDate — NWS8-04: localized long-month (RED)', () => {
+  // formats_long_month_ru
+  // 'month: short' + locale 'ru' renders 'янв.' — long form renders 'января'.
+  it('formats_long_month_ru: locale ru, bare date → long Russian month name', () => {
+    const result = formatPublicationDate('2026-01-26', 'ru');
+    // 'января' is the long-form genitive of January in Russian.
+    // With month:'short' this would be 'янв.' — assertion will fail RED.
+    expect(result).toContain('января');
+    expect(result).toContain('26');
+    expect(result).toContain('2026');
+  });
+
+  // formats_long_month_en
+  // 'month: short' + locale 'en' renders 'Jan' — long form renders 'January'.
+  it('formats_long_month_en: locale en, bare date → long English month name', () => {
+    const result = formatPublicationDate('2026-01-26', 'en');
+    // 'January' is the long form; 'Jan' is the short form.
+    // With month:'short' this would be 'Jan' — assertion will fail RED.
+    expect(result).toContain('January');
+    expect(result).toContain('26');
+    expect(result).toContain('2026');
+  });
+
+  // utc_safe_bare_date — already covered by the existing UTC-shift test above;
+  // not duplicated here per F6 instructions.
+
+  // invalid_input_returns_empty — '' and 'not-a-date' are already covered in
+  // the first describe block above; not duplicated here per F6 instructions.
+
+  // full_timestamp_long_month
+  // Full ISO timestamp with locale 'en' and January → 'January' (long) not 'Jan' (short).
+  it('full_timestamp_long_month: full ISO timestamp, locale en → long month name', () => {
+    const result = formatPublicationDate('2026-01-26T10:00:00Z', 'en');
+    // With month:'short' this renders 'Jan' — assertion will fail RED.
+    expect(result).toContain('January');
+    expect(result).toContain('2026');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // safeExternalHref
 // ---------------------------------------------------------------------------
 
