@@ -5,7 +5,7 @@ import logging
 from functools import lru_cache
 from typing import List, Optional
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -567,6 +567,60 @@ class Settings(BaseSettings):
         default="https://openrouter.ai/api/v1",
         description="OpenRouter API base URL",
     )
+
+    # =========================================================================
+    # LEXGEN Ensemble Judge (Stage 5 — LEXGEN-11)
+    # =========================================================================
+    lexgen_judge_models: list[str] = Field(
+        default=["openai/gpt-4.1-mini", "anthropic/claude-haiku-4.5"],
+        min_length=2,
+        max_length=2,
+        description=(
+            "OpenRouter slugs for the two-judge ensemble (Decision Record §3). Exactly "
+            "two judges, deliberately from different model families than each other and "
+            "than the generator (google/gemini-2.5-flash-lite). Both slugs are NEW config "
+            "here (the wired cross-AI secondary is qwen/...). Shadow-mode in v1: the judge "
+            "scores produce calibration data only — there is NO numeric trust threshold and "
+            "the auto-approve edge is deferred (DR §3/§4); the threshold is the OUTPUT of "
+            "calibration, not implemented here. Cost guardrail: 2 judges x <=3 attempts."
+        ),
+    )
+    lexgen_judge_max_attempts: int = Field(
+        default=3,
+        ge=1,
+        le=3,
+        description=(
+            "Per-judge JSON-validation retry cap. Part of the cost guardrail "
+            "(2 judges x <=3 attempts); see DR §3/§4 — no numeric threshold, "
+            "auto-approve deferred to calibration."
+        ),
+    )
+    lexgen_judge_max_tokens: int = Field(
+        default=1024,
+        ge=1,
+        le=1024,
+        description=(
+            "Max response tokens per judge call. Part of the cost guardrail "
+            "(2 judges x <=3 attempts); see DR §3/§4 — no numeric threshold, "
+            "auto-approve deferred to calibration."
+        ),
+    )
+
+    @field_validator("lexgen_judge_models")
+    @classmethod
+    def _validate_judge_models(cls, value: list[str]) -> list[str]:
+        """Enforce the two-judge ensemble contract (DR §3): exactly two distinct,
+        non-empty OpenRouter slugs. Guards against env overrides that would break
+        the two-judge semantics / cost guardrail."""
+        stripped = [slug.strip() for slug in value]
+        if any(not slug for slug in stripped):
+            raise ValueError("lexgen_judge_models slugs must be non-empty")
+        if len(set(stripped)) != 2:
+            raise ValueError(
+                "lexgen_judge_models must contain exactly 2 distinct slugs "
+                "(the ensemble requires two different judges)"
+            )
+        return stripped
 
     # =========================================================================
     # Picture Generation (SIT-08, SCENE-01)

@@ -82,6 +82,94 @@ class TestOpenRouterImageSettings:
         assert settings.openrouter_image_aspect_ratio == "1:1"
 
 
+class TestLexgenJudgeSettings:
+    """Tests for the LEXGEN ensemble-judge config defaults (LEXGEN-11-03)."""
+
+    def test_lexgen_judge_models_default(self, monkeypatch):
+        """lexgen_judge_models falls back to the two documented judge slugs when unset."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("PICTURE_HOUSE_STYLE_DEFAULT", "style")
+        monkeypatch.delenv("LEXGEN_JUDGE_MODELS", raising=False)
+
+        settings = Settings()
+        assert settings.lexgen_judge_models == [
+            "openai/gpt-4.1-mini",
+            "anthropic/claude-haiku-4.5",
+        ]
+
+    def test_lexgen_judge_models_differ_from_generator_and_each_other(self, monkeypatch):
+        """Both judge slugs differ from the generator default and from each other."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("PICTURE_HOUSE_STYLE_DEFAULT", "style")
+
+        settings = Settings()
+        judges = settings.lexgen_judge_models
+        # Different model families from the generator (google/gemini-2.5-flash-lite)...
+        assert all(slug != settings.openrouter_default_model for slug in judges)
+        # ...and from each other (ensemble requires two distinct judges).
+        assert len(judges) == 2
+        assert judges[0] != judges[1]
+
+    def test_lexgen_judge_max_attempts_default(self, monkeypatch):
+        """lexgen_judge_max_attempts defaults to the documented retry cap (3)."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("PICTURE_HOUSE_STYLE_DEFAULT", "style")
+        monkeypatch.delenv("LEXGEN_JUDGE_MAX_ATTEMPTS", raising=False)
+
+        settings = Settings()
+        assert settings.lexgen_judge_max_attempts == 3
+
+    def test_lexgen_judge_max_tokens_default(self, monkeypatch):
+        """lexgen_judge_max_tokens defaults to the documented per-call cap (1024)."""
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("PICTURE_HOUSE_STYLE_DEFAULT", "style")
+        monkeypatch.delenv("LEXGEN_JUDGE_MAX_TOKENS", raising=False)
+
+        settings = Settings()
+        assert settings.lexgen_judge_max_tokens == 1024
+
+    def test_lexgen_judge_models_exactly_two_distinct_family_slugs(self, monkeypatch):
+        """Exactly two judge slugs; both from distinct families and distinct from the generator.
+
+        Checks prefix (provider token before '/') so a future swap of one slug to a
+        second openai/ or google/ model would be caught even if the full slugs differ.
+        The generator default is google/...; judges must be openai/... and anthropic/...
+        """
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("PICTURE_HOUSE_STYLE_DEFAULT", "style")
+
+        settings = Settings()
+        judges = settings.lexgen_judge_models
+        generator = settings.openrouter_default_model
+
+        assert len(judges) == 2, f"Ensemble requires exactly two judges, got {len(judges)}"
+
+        judge_families = [slug.split("/")[0] for slug in judges]
+        generator_family = generator.split("/")[0]
+
+        # The two judge families must be distinct from each other.
+        assert judge_families[0] != judge_families[1], (
+            f"Both judges share the same provider family '{judge_families[0]}'; "
+            "ensemble must use distinct families"
+        )
+        # Neither judge family may match the generator's family.
+        for family, slug in zip(judge_families, judges):
+            assert family != generator_family, (
+                f"Judge '{slug}' shares the generator family '{generator_family}'; "
+                "judges must come from different model families than the generator"
+            )
+
+
 class TestDatabasePoolWarmMin:
     """Tests for database_pool_warm_min config setting (PERF-07-01)."""
 
