@@ -478,18 +478,18 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                         ? isAdmin
                           ? 'bg-primary text-primary-foreground'
                           : isNewsMini
-                            ? 'bg-white/30 text-white'
+                            ? 'bg-primary/[0.14] text-primary'
                             : 'bg-practice-accent text-primary-foreground'
                         : !disabled
                           ? isAdmin
                             ? 'text-muted-foreground hover:bg-muted'
                             : isNewsMini
-                              ? 'text-white/60 hover:bg-white/15'
+                              ? 'text-fg2 hover:text-fg'
                               : 'text-practice-text-muted hover:bg-practice-accent-soft'
                           : isAdmin
                             ? 'text-muted-foreground'
                             : isNewsMini
-                              ? 'text-white/40'
+                              ? 'text-fg3 opacity-50'
                               : 'text-practice-text-muted'
                     )}
                   >

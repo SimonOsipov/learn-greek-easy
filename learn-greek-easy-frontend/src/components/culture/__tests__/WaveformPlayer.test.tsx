@@ -607,6 +607,18 @@ describe('WaveformPlayer', () => {
       expect(container.className).toContain('bg-bg-2');
       expect(container.className).toContain('border-line');
     });
+
+    it('active news-mini speed pill uses text-primary (not text-white) — legible on light surfaces', () => {
+      // Regression guard for NWSR-05: speed pills moved from photo-overlay (text-white)
+      // to solid bg-bg-2 surface, so active pill must use primary accent token.
+      render(<WaveformPlayer variant="news-mini" />);
+
+      // Default speed is 1x, so the 1x pill is active
+      const activePill = screen.getByRole('radio', { name: '1x speed' });
+      expect(activePill).toHaveAttribute('aria-checked', 'true');
+      expect(activePill.className).toContain('text-primary');
+      expect(activePill.className).not.toContain('text-white');
+    });
   });
 
   describe('barCount Prop', () => {
