@@ -354,12 +354,14 @@ export const SituationDrawer: React.FC = () => {
                 </button>
               ))}
             </div>
+            {/* F10: styled as a small action button (btn btn-sm btn-glass), not a tab cell.
+                Keep in tab-bar row right side (D5); stays disabled with Coming Soon tooltip. */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   type="button"
                   aria-disabled="true"
-                  className="btn-glass cursor-not-allowed opacity-60"
+                  className="btn btn-sm btn-glass cursor-not-allowed opacity-60"
                   onClick={(e) => e.preventDefault()}
                 >
                   {t('situations.drawer.regenerateScenario')}
@@ -397,21 +399,31 @@ export const SituationDrawer: React.FC = () => {
         </SidePanel.Body>
 
         <SidePanel.Footer>
-          <div className="flex w-full items-center justify-between">
-            <div className="flex items-center gap-2 text-sm">
+          {/* F2/F3: left cluster shrinks (flex-1 min-w-0), right cluster stays fully visible
+              (shrink-0). Removes justify-between which was fragile at long RU label widths. */}
+          <div className="flex w-full items-center gap-4">
+            <div className="flex min-w-0 flex-1 items-center gap-2 text-sm">
               {status === 'ready' ? (
-                <Badge tone="green" data-testid="situation-drawer-status-pill">
+                <Badge
+                  tone="green"
+                  className="shrink-0 whitespace-nowrap"
+                  data-testid="situation-drawer-status-pill"
+                >
                   <Check className="mr-1 h-3 w-3" />
                   {t('situations.drawer.footer.statusReady')}
                 </Badge>
               ) : (
-                <Badge tone="amber" data-testid="situation-drawer-status-pill">
+                <Badge
+                  tone="amber"
+                  className="shrink-0 whitespace-nowrap"
+                  data-testid="situation-drawer-status-pill"
+                >
                   <Pencil className="mr-1 h-3 w-3" />
                   {t('situations.drawer.footer.statusDraft')}
                 </Badge>
               )}
               {updatedAt && (
-                <span className="text-muted-foreground">
+                <span className="min-w-0 truncate text-muted-foreground">
                   {t('situations.drawer.footer.autoSavedRelative', {
                     relative: formatDistanceToNow(new Date(updatedAt), {
                       addSuffix: true,
@@ -421,7 +433,7 @@ export const SituationDrawer: React.FC = () => {
                 </span>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex shrink-0 gap-2">
               <Button variant="ghost" onClick={requestCancel} data-testid="situation-drawer-cancel">
                 {t('situations.drawer.footer.cancel')}
               </Button>

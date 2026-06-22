@@ -144,11 +144,12 @@ describe('SituationPicturePromptForm (Option A — drawer RHF)', () => {
       expect(hint.textContent).toBeTruthy();
     });
 
-    it('does not render hints for scene fields', () => {
+    it('renders hints for scene fields (ADMIN2-42 F1 added missing scene hint keys)', () => {
       renderForm();
-      expect(screen.queryByTestId('picture-prompt-hint-scene-en')).toBeNull();
-      expect(screen.queryByTestId('picture-prompt-hint-scene-el')).toBeNull();
-      expect(screen.queryByTestId('picture-prompt-hint-scene-ru')).toBeNull();
+      // F1 fix: scene_en/el/ru hint keys now exist in locale files → hints render.
+      expect(screen.getByTestId('picture-prompt-hint-scene-en')).toBeInTheDocument();
+      expect(screen.getByTestId('picture-prompt-hint-scene-el')).toBeInTheDocument();
+      expect(screen.getByTestId('picture-prompt-hint-scene-ru')).toBeInTheDocument();
     });
   });
 
