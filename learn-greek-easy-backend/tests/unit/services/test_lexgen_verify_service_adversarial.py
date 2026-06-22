@@ -535,16 +535,37 @@ class TestVS06CorrectPatchTarget:
         DOES intercept LexiconService calls from within verify().
 
         When a token is uncertain (lemma == text), verify() calls LexiconService(db).lookup().
-        Patching the verify module's namespace intercepts this and the mock call_count > 0
-        (for sentences with uncertain tokens).
+        We force a deterministic uncertain token via a morphology mock so the lexicon
+        fallback is guaranteed to fire.  Patching the verify module's namespace intercepts
+        this and the mock call_count > 0 confirms interception.
 
         This is the correct patch target used by VS-06 in the AC test suite.
 
-        Generator is mocked (always-failing) to handle any hard-fail path reached via
-        real spaCy — avoids a real LLM call with the MagicMock openrouter.
+        Generator is mocked (always-failing) to handle any hard-fail path reached.
         """
+        from unittest.mock import MagicMock  # noqa: PLC0415 — already imported above
+
+        # Build a morphology mock that returns ONE uncertain token (lemma == text).
+        # "τσιπς" with lemma == text → triggers the LexiconService fallback path.
+        uncertain_token = MagicMock()
+        uncertain_token.text = "τσιπς"
+        uncertain_token.lemma = "τσιπς"  # lemma == text → uncertain → fallback fires
+        uncertain_token.is_punct = False
+        uncertain_token.is_space = False
+        uncertain_token.like_num = False
+
+        punct_token = MagicMock()
+        punct_token.text = "."
+        punct_token.lemma = "."
+        punct_token.is_punct = True
+        punct_token.is_space = False
+        punct_token.like_num = False
+
+        morph_svc = MagicMock()
+        morph_svc.lemmatize_sentence = MagicMock(return_value=[uncertain_token, punct_token])
+
         proposal = _make_proposal(
-            example_greek="Το βιβλίο τσιπς.",  # "τσιπς" likely uncertain → triggers fallback
+            example_greek="τσιπς.",  # sentence content matches the mocked tokens
         )
         svc = _make_service()
 
@@ -556,6 +577,10 @@ class TestVS06CorrectPatchTarget:
                 return_value=_cefr_mock(),
             ),
             patch(
+                "src.services.lexgen_verify_service.get_morphology_service",
+                return_value=morph_svc,
+            ),
+            patch(
                 "src.services.lexgen_verify_service.LexiconService",
             ) as mock_lex_verify_module,
         ):
@@ -565,14 +590,12 @@ class TestVS06CorrectPatchTarget:
 
             await svc.verify(proposal)
 
-        # If any token was uncertain (triggering the LexiconService fallback),
-        # call_count > 0 confirms the verify-module patch DOES intercept.
-        # (call_count may be 0 if spaCy resolves all tokens — that's fine;
-        # the key point is the patch IS wired to the correct intercept point.)
-        # We assert the patch was reachable (no AttributeError from unconfigured mock).
         assert (
-            mock_lex_verify_module.call_count >= 0
-        ), "ADV-06b: verify-module patch is wired correctly — lookup is reachable."
+            mock_lex_verify_module.call_count > 0
+        ), "ADV-06b: verify-module patch must intercept at least one LexiconService construction."
+        assert (
+            mock_instance.lookup.await_count > 0
+        ), "ADV-06b: lookup() must be awaited when the fallback path is exercised."
 
 
 # ---------------------------------------------------------------------------
@@ -745,13 +768,34 @@ class TestLexiconServiceDbError:
     async def test_adv09_lexicon_db_error_propagates_to_caller(self) -> None:
         """ADV-09: LexiconService(db).lookup() raises → exception propagates.
 
-        The verify service must NOT swallow the exception. The caller (API/task runner)
-        should handle or retry.
+        The verify service must NOT swallow the exception.  We force a deterministic
+        uncertain token via a morphology mock so the lexicon fallback is guaranteed
+        to fire and the simulated DB error is always raised.
         """
+        from unittest.mock import MagicMock  # noqa: PLC0415 — already imported above
+
+        # Force an uncertain token: lemma == text → LexiconService.lookup() is called.
+        uncertain_token = MagicMock()
+        uncertain_token.text = "τσιπς"
+        uncertain_token.lemma = "τσιπς"  # lemma == text → fallback fires
+        uncertain_token.is_punct = False
+        uncertain_token.is_space = False
+        uncertain_token.like_num = False
+
+        morph_svc = MagicMock()
+        morph_svc.lemmatize_sentence = MagicMock(return_value=[uncertain_token])
+
+        proposal = _make_proposal(example_greek="τσιπς")
+        svc = _make_service()
+
         with (
             patch(
                 "src.services.lexgen_verify_service.CefrVocabularyService",
                 return_value=_cefr_mock(),
+            ),
+            patch(
+                "src.services.lexgen_verify_service.get_morphology_service",
+                return_value=morph_svc,
             ),
             patch(
                 "src.services.lexgen_verify_service.LexiconService",
@@ -763,22 +807,5 @@ class TestLexiconServiceDbError:
             )
             mock_lex_cls.return_value = mock_lex_instance
 
-            proposal = _make_proposal(
-                example_greek="Το βιβλίο.",  # minimal sentence; target βιβλίο
-            )
-            svc = _make_service()
-
-            # After fix: exception propagates when a token triggers the lexicon fallback.
-            # Note: if spaCy resolves ALL tokens (lemma != text), LexiconService is never
-            # called and no exception is raised (that's correct — the fallback is only
-            # needed for uncertain tokens).  This test verifies the no-swallow guarantee
-            # when the fallback IS triggered.
-            try:
-                outcome = await svc.verify(proposal)
-                # If no uncertain token exists, verify() completes without error — correct.
-                assert outcome is not None
-            except Exception as exc:
-                # If an uncertain token triggered the fallback, the exception propagates.
-                assert "simulated lexicon DB error" in str(
-                    exc
-                ), f"ADV-09: unexpected exception type/message: {exc!r}"
+            with pytest.raises(Exception, match="simulated lexicon DB error"):
+                await svc.verify(proposal)

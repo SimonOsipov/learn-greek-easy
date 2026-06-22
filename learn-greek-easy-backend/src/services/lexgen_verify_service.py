@@ -350,10 +350,13 @@ class LexgenVerifyService:
                 )
 
         # Persistent fail after _MAX_REGENS regenerations — flag and flush.
-        gate_names = [r.gate for r in current_hard_fails]
+        # Collect ALL gate results with severity "fail" or "warn" so warns concurrent
+        # with the terminal hard-fail are not silently dropped.
+        terminal_results = [r for r in current_gate_results if r.severity in ("fail", "warn")]
+        terminal_fields = [_GATE_TO_FIELD.get(r.gate, r.gate) for r in terminal_results]
         existing = list(proposal.flagged_fields) if proposal.flagged_fields else []
         # Reassign (not in-place append) so SQLAlchemy JSONB change detection fires.
-        proposal.flagged_fields = existing + [n for n in gate_names if n not in existing]
+        proposal.flagged_fields = existing + [n for n in terminal_fields if n not in existing]
 
         # Persist the regen count into generated_content JSONB.
         assert proposal.generated_content is not None  # generator always writes this

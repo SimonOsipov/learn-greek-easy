@@ -1,11 +1,8 @@
-"""RED tests for the pure deterministic gate functions (LEXGEN-10-01).
+"""Tests for the pure deterministic gate functions (LEXGEN-10-01).
 
-Authored test-first (RALPH Stage 2.5 / QA Mode A).  The functions in
-``src/core/lexgen_verify.py`` are STUBS that raise ``NotImplementedError``,
-so every test that calls a gate function is RED for the right reason
-(NotImplementedError), NOT a collection error — the import resolves against
-the skeleton which exports the real ``GateResult`` frozen dataclass and the
-function signatures.
+Authored test-first (RALPH Stage 2.5 / QA Mode A); all tests are now GREEN.
+The functions in ``src/core/lexgen_verify.py`` are fully implemented.
+Tests cover the ``GateResult`` frozen dataclass and all gate function contracts.
 
 Module contract (``src/core/lexgen_verify.py``):
   ``GateResult``          — frozen dataclass:

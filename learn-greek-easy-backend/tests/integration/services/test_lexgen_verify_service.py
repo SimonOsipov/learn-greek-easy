@@ -33,14 +33,6 @@ VS-09 contraction-pass:
     "στο" → spaCy lemma "σε ο"; both split parts closed-class & seeded
     → Check E PASSES (contraction split handled end-to-end).
 
-Expected RED failure mode: NotImplementedError
-  Tests call await svc.verify(proposal) WITHOUT catching the exception.
-  They FAIL because verify() raises NotImplementedError immediately.
-  This is the correct RED mode: implementation error, NOT import/collection error.
-
-Seeding MUST succeed for every test; if a seeding/collection error appears,
-fix the scaffold (seeding must work so the ONLY failure is NotImplementedError).
-
 ===========================================================================
 SEAM CONTRACT — pinned by these RED tests:
 1.  LexgenVerifyService(db: AsyncSession, openrouter: OpenRouterService).
@@ -259,8 +251,6 @@ class TestWorkedExamplePass:
           - Target attested: βιβλίο is in the sentence.
           - Gloss subset: "book" ∈ {"book", "volume"}.
 
-        RED: verify() raises NotImplementedError (stub not implemented).
-        GREEN: outcome.status == "PASS".
         """
         await _seed_closed_class_function_words(db_session)
         await _seed_s7_content_words(db_session)
@@ -268,8 +258,6 @@ class TestWorkedExamplePass:
         proposal = await _make_generating_proposal(db_session)
         svc = _make_service(db_session)
 
-        # RED: raises NotImplementedError.
-        # GREEN: returns VerifyOutcome(status="PASS").
         outcome = await svc.verify(proposal)
 
         assert outcome.status == "PASS", (
@@ -410,9 +398,6 @@ class TestGlossNotInWiktWarn:
 
         Check E and target-attested pass (§7 sentence, all words seeded).
 
-        RED: verify() raises NotImplementedError.
-        GREEN: gloss gate warns; "gloss_en" in proposal.flagged_fields;
-               outcome.check_e_regens == 0 (no regen triggered).
         """
         await _seed_closed_class_function_words(db_session)
         await _seed_s7_content_words(db_session)
@@ -425,8 +410,6 @@ class TestGlossNotInWiktWarn:
         )
         svc = _make_service(db_session)
 
-        # RED: raises NotImplementedError.
-        # GREEN: gloss gate warns; "gloss_en" flagged.
         outcome = await svc.verify(proposal)
 
         gloss_gates = [r for r in outcome.gate_results if r.gate == "gloss_subset"]
@@ -524,8 +507,6 @@ class TestUnknownTokenFlagNotFail:
         The verify service records unknown_to_analyzer and continues.
         All other content words are seeded.
 
-        RED: verify() raises NotImplementedError.
-        GREEN: check_e gate passes (unknown token does NOT count as out-of-vocab failure).
         """
         await _seed_closed_class_function_words(db_session)
         await _seed_s7_content_words(db_session)
@@ -538,8 +519,6 @@ class TestUnknownTokenFlagNotFail:
         )
         svc = _make_service(db_session)
 
-        # RED: raises NotImplementedError.
-        # GREEN: check_e gate passes (unknown token does not cause hard fail).
         outcome = await svc.verify(proposal)
 
         check_e_gates = [r for r in outcome.gate_results if r.gate == "check_e"]
@@ -575,8 +554,6 @@ class TestContractionPass:
         Without the split, "σε ο" (space-joined) would not be in the allowed set
         and Check E would false-fail on every contracted sentence.
 
-        RED: verify() raises NotImplementedError.
-        GREEN: check_e gate passes; outcome.status == "PASS".
         """
         await _seed_closed_class_function_words(db_session)  # seeds σε, ο, etc.
         await _seed_s7_content_words(db_session)
@@ -588,8 +565,6 @@ class TestContractionPass:
         )
         svc = _make_service(db_session)
 
-        # RED: raises NotImplementedError.
-        # GREEN: outcome.status == "PASS"; check_e gate passes.
         outcome = await svc.verify(proposal)
 
         assert outcome.status == "PASS", (

@@ -1000,3 +1000,79 @@ class TestAdvEPreExistingFlaggedFieldsPreserved:
             f"ADV-E: 'check_e' must appear exactly once in flagged_fields; "
             f"got count={check_e_count}, full list={proposal.flagged_fields!r}"
         )
+
+
+# ---------------------------------------------------------------------------
+# ADV-F  Terminal flag includes warns: persistent check_e fail + gloss warn
+#         → flagged_fields has "check_e" AND "gloss_en" (gate→field mapped)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+class TestAdvFTerminalFlagIncludesWarn:
+    """ADV-F: persistent hard-fail on check_e AND concurrent gloss warn.
+
+    After 2 failed regens _on_hard_fail must build flagged_fields from ALL gate
+    results with severity in {"fail", "warn"}, mapping each gate name to its
+    data-field name via _GATE_TO_FIELD.  Specifically:
+        - "check_e" gate (fail) → field name "check_e" (identity mapping)
+        - "gloss_subset" gate (warn) → field name "gloss_en" (mapped)
+
+    This is the regression test for the CodeRabbit finding: before the fix,
+    the terminal path used raw gate names only for hard-fails and silently
+    dropped concurrent warns.
+    """
+
+    async def test_advf_terminal_flagged_fields_includes_warn_field_mapped(self) -> None:
+        """ADV-F: proposal with check_e hard-fail (persistent) and gloss_subset warn.
+
+        Setup:
+            - gloss_en="tome" (not in "book; volume") → gloss_subset warn.
+            - failing sentence with βλέπω not in _ALLOWED_FAIL → check_e hard-fail.
+            - Generator always-fails → loop runs 2× → persistent-fail terminal.
+
+        Expected:
+            - outcome.status == "FLAGGED"
+            - "check_e" in proposal.flagged_fields (hard-fail, identity-mapped)
+            - "gloss_en" in proposal.flagged_fields (warn, gloss_subset→gloss_en)
+            - "gloss_subset" NOT in proposal.flagged_fields (raw gate name replaced by field name)
+        """
+        proposal = _make_proposal(
+            gloss_en="tome",  # NOT in "book; volume" → gloss_subset warn
+            example_greek=_FAILING_SENTENCE,
+        )
+        svc = _make_service()
+
+        gen_mock = _make_generator_mock_always_fail(proposal)
+
+        with (
+            patch(_PATCH_GENERATOR, return_value=gen_mock, create=True),
+            patch(_PATCH_CEFR, side_effect=lambda db: _cefr_mock(_ALLOWED_FAIL)),
+            patch(_PATCH_LEXICON, return_value=_lexicon_mock()),
+            patch(_PATCH_MORPHOLOGY, return_value=_morphology_mock_failing()),
+        ):
+            outcome = await svc.verify(proposal)
+
+        assert (
+            outcome.status == "FLAGGED"
+        ), f"ADV-F: persistent fail + gloss warn must produce FLAGGED; got {outcome.status!r}"
+
+        assert (
+            proposal.flagged_fields is not None
+        ), "ADV-F: proposal.flagged_fields must be set after persistent fail"
+
+        assert "check_e" in proposal.flagged_fields, (
+            f"ADV-F: 'check_e' must be in flagged_fields (persistent hard-fail); "
+            f"got {proposal.flagged_fields!r}"
+        )
+
+        assert "gloss_en" in proposal.flagged_fields, (
+            f"ADV-F: 'gloss_en' must be in flagged_fields (gloss_subset warn mapped via "
+            f"_GATE_TO_FIELD); got {proposal.flagged_fields!r}"
+        )
+
+        assert "gloss_subset" not in proposal.flagged_fields, (
+            f"ADV-F: raw gate name 'gloss_subset' must NOT appear in flagged_fields "
+            f"(must be mapped to 'gloss_en'); got {proposal.flagged_fields!r}"
+        )
