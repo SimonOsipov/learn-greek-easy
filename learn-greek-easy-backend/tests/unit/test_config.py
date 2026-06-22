@@ -136,6 +136,39 @@ class TestLexgenJudgeSettings:
         settings = Settings()
         assert settings.lexgen_judge_max_tokens == 1024
 
+    def test_lexgen_judge_models_exactly_two_distinct_family_slugs(self, monkeypatch):
+        """Exactly two judge slugs; both from distinct families and distinct from the generator.
+
+        Checks prefix (provider token before '/') so a future swap of one slug to a
+        second openai/ or google/ model would be caught even if the full slugs differ.
+        The generator default is google/...; judges must be openai/... and anthropic/...
+        """
+        from src.config import Settings
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+        monkeypatch.setenv("PICTURE_HOUSE_STYLE_DEFAULT", "style")
+
+        settings = Settings()
+        judges = settings.lexgen_judge_models
+        generator = settings.openrouter_default_model
+
+        assert len(judges) == 2, f"Ensemble requires exactly two judges, got {len(judges)}"
+
+        judge_families = [slug.split("/")[0] for slug in judges]
+        generator_family = generator.split("/")[0]
+
+        # The two judge families must be distinct from each other.
+        assert judge_families[0] != judge_families[1], (
+            f"Both judges share the same provider family '{judge_families[0]}'; "
+            "ensemble must use distinct families"
+        )
+        # Neither judge family may match the generator's family.
+        for family, slug in zip(judge_families, judges):
+            assert family != generator_family, (
+                f"Judge '{slug}' shares the generator family '{generator_family}'; "
+                "judges must come from different model families than the generator"
+            )
+
 
 class TestDatabasePoolWarmMin:
     """Tests for database_pool_warm_min config setting (PERF-07-01)."""
