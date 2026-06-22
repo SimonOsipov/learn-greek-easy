@@ -72,7 +72,7 @@ export function LexgenProposalDetail({ proposal }: { proposal: LexgenProposalDet
   // back to the raw flat key (e.g. `nominative_singular`). Unknown form keys
   // bypass `t()` entirely (they have no resource key) — flat keys at the UI edge.
   const labelFor = (field: string): string =>
-    field in KNOWN_FIELD_LABEL_KEYS
+    Object.prototype.hasOwnProperty.call(KNOWN_FIELD_LABEL_KEYS, field)
       ? t(KNOWN_FIELD_LABEL_KEYS[field as keyof typeof KNOWN_FIELD_LABEL_KEYS])
       : field;
 

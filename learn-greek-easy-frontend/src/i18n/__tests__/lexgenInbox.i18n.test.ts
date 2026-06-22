@@ -78,15 +78,8 @@ describe('lexgenInbox i18n value guard (en + ru)', () => {
     expect((value as string).trim().length, `ru value for "${key}" is empty`).toBeGreaterThan(0);
   });
 
-  it('ru values are actually translated (not left identical to en)', () => {
-    const untranslated = REFERENCED_KEYS.filter((key) => {
-      const e = resolve(en, key);
-      const r = resolve(ru, key);
-      return typeof e === 'string' && e === r;
-    });
-    expect(
-      untranslated,
-      `These lexgenInbox keys still hold the English string in ru/admin.json:\n${untranslated.join('\n')}`
-    ).toEqual([]);
-  });
+  // NOTE: no strict en !== ru assertion here. Per the project i18n convention,
+  // English strings in ru/admin.json are acceptable as intentional placeholders
+  // for newly added admin v1 sections, so a hard equality ban would false-fail
+  // legitimate future additions (CodeRabbit). Non-emptiness above is the guard.
 });
