@@ -211,29 +211,13 @@ class LexgenJudgeService:
         assert proposal.generated_content is not None  # noqa: S101
 
         content = GeneratedLexContent.model_validate(proposal.generated_content)
+        packet = EvidencePacket.model_validate(proposal.evidence_packet)
 
-        # Guard: evidence_packet may be None for test-seeded proposals or proposals
-        # that skipped evidence assembly. When absent, all judges are treated as
-        # errored (degraded path) — the same outcome as a failed LLM call per
-        # _run_one_judge's broad Exception catch. The proposal still transitions
-        # scored → needs_review so a human reviewer can inspect it.
-        if proposal.evidence_packet is None:
-            judges: list[JudgeResult] = [
-                JudgeResult(
-                    model=slug,
-                    rubric=None,
-                    status="errored",
-                    error="evidence_packet_missing",
-                )
-                for slug in settings.lexgen_judge_models
-            ]
-        else:
-            packet = EvidencePacket.model_validate(proposal.evidence_packet)
-            # Run each configured judge sequentially (exactly two slugs in v1).
-            judges = [
-                await self._run_one_judge(slug, content, packet)
-                for slug in settings.lexgen_judge_models
-            ]
+        # Run each configured judge sequentially (exactly two slugs in v1).
+        judges: list[JudgeResult] = [
+            await self._run_one_judge(slug, content, packet)
+            for slug in settings.lexgen_judge_models
+        ]
         rubric_a = judges[0].rubric if judges else None
         rubric_b = judges[1].rubric if len(judges) > 1 else None
 

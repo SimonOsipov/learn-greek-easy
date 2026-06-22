@@ -469,12 +469,6 @@ class LexgenReviewService:
         generator_svc = LexgenGeneratorService(self.db, openrouter)
         await generator_svc.generate(proposal)
 
-        # If the generator hard-rejected the proposal (e.g. evidence_packet missing or
-        # all retries exhausted), skip the remaining pipeline stages and commit.
-        if proposal.status == WordProposalState.REJECTED:
-            await self.db.commit()
-            return
-
         verify_svc = LexgenVerifyService(self.db, openrouter)
         await verify_svc.verify(proposal)
 
