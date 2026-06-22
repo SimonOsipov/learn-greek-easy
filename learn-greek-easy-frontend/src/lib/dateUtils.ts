@@ -22,7 +22,9 @@ import type { Locale } from 'date-fns';
  * enabling frictionless future consolidation (D3/D11, ADMIN2-42).
  */
 export function getDateLocale(language: string): Locale | undefined {
-  switch (language) {
+  // Normalize region-qualified tags (e.g. 'ru-RU' -> 'ru'), matching the
+  // LanguageContext `.split('-')[0]` convention.
+  switch (language.split('-')[0]) {
     case 'ru':
       return ru;
     case 'el':
