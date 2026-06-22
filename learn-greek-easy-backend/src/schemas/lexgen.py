@@ -352,3 +352,88 @@ class GeneratedLexContent(BaseModel):
     gloss_ru: str = Field(..., min_length=1)
     example_greek: str = Field(..., min_length=1)
     example_translation: str = Field(..., min_length=1)
+
+
+# ---------------------------------------------------------------------------
+# LEXGEN-11-01 — Judge rubric schemas (Stage 5 ensemble judge).
+#
+# The closed-vocabulary content shape each judge scores. Like
+# ``GeneratedLexContent`` (Decision Record §1), the judge speaks ONLY to the
+# four generated content fields — never morphology. ``JudgeBlockingIssue.field``
+# is constrained to that same four-field vocabulary so a judge cannot critique a
+# gender/case/declension field it has no authority over. There is deliberately
+# NO aggregate/overall score field anywhere here: the five dimensions are the
+# only numeric surface, which makes a numeric trust score structurally
+# impossible (Decision Record §3, D8) and is guarded by ``extra="forbid"``.
+# ---------------------------------------------------------------------------
+
+# The five rubric dimension names — the single source of truth for what each
+# judge scores. A tuple so the ordering is deterministic (used to diff two
+# judges' rubrics dimension-by-dimension downstream).
+JUDGE_RUBRIC_DIMENSIONS: tuple[str, ...] = (
+    "naturalness",
+    "sense_fit",
+    "translation_faith_en",
+    "translation_faith_ru",
+    "a2_appropriateness",
+)
+
+# The closed content vocabulary a judge is allowed to raise a blocking issue
+# against — exactly the four ``GeneratedLexContent`` fields. A field outside
+# this set (e.g. a morphology field like ``gender`` or ``case``) is rejected at
+# the boundary, mirroring ``FormBundle._features_keys_in_vocabulary``.
+_JUDGE_CRITIQUEABLE_FIELDS: frozenset[str] = frozenset(
+    {
+        "gloss_en",
+        "gloss_ru",
+        "example_greek",
+        "example_translation",
+    }
+)
+
+
+class JudgeBlockingIssue(BaseModel):
+    """A single blocking issue one judge raises against a content field.
+
+    ``field`` is constrained to the ``_JUDGE_CRITIQUEABLE_FIELDS`` closed
+    vocabulary (the four ``GeneratedLexContent`` fields); any other value —
+    including a morphology field like ``gender`` — raises a ``ValidationError``,
+    the same closed-vocabulary boundary ``FormBundle`` enforces on feature keys.
+    ``extra="forbid"`` blocks any smuggled-in extra key.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    field: str
+    issue: str
+
+    @field_validator("field")
+    @classmethod
+    def _field_in_vocabulary(cls, value: str) -> str:
+        """Reject any blocking-issue field outside the closed content vocabulary."""
+        if value not in _JUDGE_CRITIQUEABLE_FIELDS:
+            raise ValueError(
+                f"Unknown critiqueable field: {value!r}. "
+                f"Allowed fields: {sorted(_JUDGE_CRITIQUEABLE_FIELDS)}."
+            )
+        return value
+
+
+class JudgeRubric(BaseModel):
+    """One judge's structured score for a generated content proposal.
+
+    Five integer dimensions, each bounded to ``[1, 5]`` (``ge=1, le=5``), plus a
+    (possibly empty) list of ``JudgeBlockingIssue``. ``extra="forbid"`` makes the
+    cardinal invariant structural: a judge cannot smuggle in an ``overall_score``
+    or any other un-declared field, so no numeric trust/aggregate score can ever
+    enter the pipeline (Decision Record §3, D8).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    naturalness: int = Field(..., ge=1, le=5)
+    sense_fit: int = Field(..., ge=1, le=5)
+    translation_faith_en: int = Field(..., ge=1, le=5)
+    translation_faith_ru: int = Field(..., ge=1, le=5)
+    a2_appropriateness: int = Field(..., ge=1, le=5)
+    blocking_issues: list[JudgeBlockingIssue] = Field(default_factory=list)
