@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { NewsFilters, NewsGrid, NewsPagination, ScrollToTopButton } from '@/components/news';
+import { NewsReaderSheet } from '@/components/news/NewsReaderSheet';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { track } from '@/lib/analytics';
@@ -47,6 +48,9 @@ export const NewsPage: React.FC = () => {
     greece: number;
     world: number;
   }>({ cyprus: 0, greece: 0, world: 0 });
+
+  // Reader sheet state — which article (if any) is open in the slide-over
+  const [openArticle, setOpenArticle] = useState<NewsItemResponse | null>(null);
 
   // Track if we've already tracked the page view (only track on first successful load)
   const hasTrackedPageView = useRef(false);
@@ -164,6 +168,27 @@ export const NewsPage: React.FC = () => {
     track('news_level_toggled', { level, page: 'news' });
   }, []);
 
+  /** Open the reader slide-over for an article. Fires news_article_opened. */
+  const handleOpenArticle = useCallback(
+    (article: NewsItemResponse) => {
+      setOpenArticle(article);
+      try {
+        const domain = new URL(article.original_article_url).hostname;
+        track('news_article_opened', {
+          item_id: article.id,
+          article_domain: domain,
+          level: newsLevel,
+        });
+      } catch {
+        track('news_article_opened', {
+          item_id: article.id,
+          level: newsLevel,
+        });
+      }
+    },
+    [newsLevel]
+  );
+
   // Initial load
   useEffect(() => {
     fetchNews(1);
@@ -227,7 +252,12 @@ export const NewsPage: React.FC = () => {
       {/* Content: Grid + Pagination */}
       {!isLoading && !error && articles.length > 0 && (
         <>
-          <NewsGrid articles={articles} newsLang={NEWS_LANG} level={newsLevel} />
+          <NewsGrid
+            articles={articles}
+            newsLang={NEWS_LANG}
+            level={newsLevel}
+            onOpen={handleOpenArticle}
+          />
 
           {totalPages > 1 && (
             <NewsPagination
@@ -252,6 +282,17 @@ export const NewsPage: React.FC = () => {
       )}
 
       <ScrollToTopButton />
+
+      {/* Reader slide-over — renders at root of page to avoid z-index stacking issues */}
+      <NewsReaderSheet
+        article={openArticle}
+        open={openArticle !== null}
+        onOpenChange={(o) => {
+          if (!o) setOpenArticle(null);
+        }}
+        level={newsLevel}
+        onLevelChange={handleLevelChange}
+      />
     </div>
   );
 };

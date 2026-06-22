@@ -31,6 +31,8 @@ export interface NewsGridProps {
   /** Number of skeleton cards to show during loading */
   skeletonCount?: number;
   level?: NewsLevel;
+  /** Called when the user activates a card body (wires into the slide-over reader). */
+  onOpen?: (article: NewsItemResponse) => void;
 }
 
 export const NewsGrid: React.FC<NewsGridProps> = ({
@@ -39,6 +41,7 @@ export const NewsGrid: React.FC<NewsGridProps> = ({
   isLoading = false,
   skeletonCount = 8,
   level,
+  onOpen,
 }) => {
   const { t } = useTranslation('common');
 
@@ -76,7 +79,14 @@ export const NewsGrid: React.FC<NewsGridProps> = ({
     >
       {articles.map((article) => (
         <div key={article.id} role="listitem">
-          <NewsCard article={article} newsLang={newsLang} height="tall" page="news" level={level} />
+          <NewsCard
+            article={article}
+            newsLang={newsLang}
+            height="tall"
+            page="news"
+            level={level}
+            onOpen={onOpen}
+          />
         </div>
       ))}
     </div>

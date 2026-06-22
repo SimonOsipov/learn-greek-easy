@@ -156,29 +156,20 @@ export const NewsCard: React.FC<NewsCardProps> = ({
     [article.id, article.original_article_url, level]
   );
 
-  /** Activate the card body: always track the click, then call onOpen or open URL. */
+  /** Activate the card body: open the reader (via onOpen) or fall back to the external URL.
+   *
+   * NOTE: `news_article_clicked` is intentionally NOT fired here — that event is
+   * reserved for actual outbound link clicks (external-link button on the card and
+   * "Open original" CTA in the reader). The reader-open action fires
+   * `news_article_opened` from NewsPage's onOpen handler. */
   const handleCardActivate = useCallback(() => {
-    // Track regardless of whether onOpen is wired — measurement must not go dark in Batch 3.
-    try {
-      const domain = new URL(article.original_article_url).hostname;
-      track('news_article_clicked', {
-        item_id: article.id,
-        article_domain: domain,
-        level: level ?? 'b1',
-      });
-    } catch {
-      track('news_article_clicked', {
-        item_id: article.id,
-        article_domain: 'unknown',
-        level: level ?? 'b1',
-      });
-    }
     if (onOpen) {
       onOpen(article);
     } else {
+      // Fallback when reader is not wired (e.g. dashboard usage): open external URL directly.
       window.open(article.original_article_url, '_blank', 'noopener,noreferrer');
     }
-  }, [onOpen, article, level]);
+  }, [onOpen, article]);
 
   const handleCardKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
