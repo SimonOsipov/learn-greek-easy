@@ -82,6 +82,14 @@ async def list_news_items(
     country: Optional[NewsCountry] = Query(
         None, description="Filter by country: cyprus, greece, or world"
     ),
+    q: Optional[str] = Query(
+        default=None,
+        description=(
+            "Optional search term. Accent- and case-insensitive substring match across "
+            "the item title, body (B1 and A2), and source URL. "
+            "Blank or whitespace-only values are treated as no filter."
+        ),
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> NewsItemListResponse:
     """Get paginated list of news items (public, no auth required).
@@ -92,13 +100,14 @@ async def list_news_items(
         page: Page number (1-indexed)
         page_size: Number of items per page (max 50)
         country: Optional country filter (cyprus, greece, or world)
+        q: Optional search term (accent+case-insensitive substring)
         db: Database session (injected)
 
     Returns:
         NewsItemListResponse with paginated news items
     """
     service = NewsItemService(db)
-    return await service.get_list(page=page, page_size=page_size, country=country)
+    return await service.get_list(page=page, page_size=page_size, country=country, q=q)
 
 
 @router.get(

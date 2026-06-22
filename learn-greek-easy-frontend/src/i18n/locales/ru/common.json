@@ -395,7 +395,12 @@
     "gridLabel": "Новостные статьи",
     "reader": {
       "back": "Назад к новостям",
-      "openOriginal": "Открыть оригинал"
+      "openOriginal": "Открыть оригинал",
+      "description": "Читайте полную статью на греческом"
+    },
+    "search": {
+      "placeholder": "Поиск новостей...",
+      "clear": "Очистить поиск"
     }
   },
   "situations": {

@@ -163,7 +163,7 @@ describe('NewsPage Component', () => {
       render(<NewsPage />);
 
       await waitFor(() => {
-        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, undefined);
+        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, undefined, undefined);
       });
     });
 
@@ -357,7 +357,7 @@ describe('NewsPage Component', () => {
       await user.click(screen.getByTestId('news-pagination-next'));
 
       await waitFor(() => {
-        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(2, 12, undefined);
+        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(2, 12, undefined, undefined);
       });
     });
 
@@ -424,7 +424,7 @@ describe('NewsPage Component', () => {
       await user.click(screen.getByTestId('news-pagination-next'));
 
       await waitFor(() => {
-        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(2, 12, undefined);
+        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(2, 12, undefined, undefined);
       });
 
       // Should still only be called once
@@ -562,6 +562,99 @@ describe('NewsPage Component', () => {
   });
 });
 
+// NWS8-03: Search Query Wiring — AC #1 q param, AC #2 page-1 reset, AC #3 empty→EmptyState, AC #5 cache key, AC #6 no analytics
+describe('Search Query Wiring (NWS8-03)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.scrollTo = vi.fn();
+  });
+
+  it('typing a query wires q param into getNewsItems call', async () => {
+    const user = userEvent.setup();
+    const articles = [createMockNewsItem({ id: 'article-1' })];
+    (adminAPI.getNewsItems as Mock).mockResolvedValue(
+      createPaginatedResponse(articles, 1, 1, 12, { cyprus: 1, greece: 0, world: 0 })
+    );
+
+    render(<NewsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('news-filters')).toBeInTheDocument();
+    });
+
+    const input = screen.getByTestId('news-search-input');
+    await user.type(input, 'κυπριακά');
+
+    await waitFor(() => {
+      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, undefined, 'κυπριακά');
+    });
+  });
+
+  it('changing the query resets to page 1 (AC #2)', async () => {
+    const user = userEvent.setup();
+    const articles = Array.from({ length: 12 }, (_, i) => createMockNewsItem({ id: `a-${i}` }));
+    (adminAPI.getNewsItems as Mock).mockResolvedValue(
+      createPaginatedResponse(articles, 36, 1, 12, { cyprus: 12, greece: 12, world: 12 })
+    );
+
+    render(<NewsPage />);
+
+    await waitFor(() => expect(screen.getByTestId('news-pagination')).toBeInTheDocument());
+
+    // Go to page 2
+    (adminAPI.getNewsItems as Mock).mockResolvedValue(
+      createPaginatedResponse(articles, 36, 2, 12, { cyprus: 12, greece: 12, world: 12 })
+    );
+    await user.click(screen.getByTestId('news-pagination-next'));
+    await waitFor(() =>
+      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(2, 12, undefined, undefined)
+    );
+
+    // Type a query — must reset to page 1
+    const input = screen.getByTestId('news-search-input');
+    await user.type(input, 'ελλάδα');
+
+    await waitFor(() => {
+      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, undefined, 'ελλάδα');
+    });
+  });
+
+  it('empty query result shows the existing EmptyState (AC #3)', async () => {
+    (adminAPI.getNewsItems as Mock).mockResolvedValue(createPaginatedResponse([], 0));
+
+    render(<NewsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('No news articles yet')).toBeInTheDocument();
+    });
+  });
+
+  it('does NOT fire news_search analytics event when typing (F7 — no untraced scope)', async () => {
+    const user = userEvent.setup();
+    const articles = [createMockNewsItem({ id: 'article-1' })];
+    (adminAPI.getNewsItems as Mock).mockResolvedValue(
+      createPaginatedResponse(articles, 1, 1, 12, { cyprus: 1, greece: 0, world: 0 })
+    );
+
+    render(<NewsPage />);
+
+    await waitFor(() => expect(screen.getByTestId('news-filters')).toBeInTheDocument());
+
+    const input = screen.getByTestId('news-search-input');
+    await user.type(input, 'test');
+
+    await waitFor(() => {
+      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, undefined, 'test');
+    });
+
+    // Confirm no news_search event was tracked
+    const searchAnalyticsCalls = vi
+      .mocked(track)
+      .mock.calls.filter(([event]) => event === 'news_search');
+    expect(searchAnalyticsCalls).toHaveLength(0);
+  });
+});
+
 describe('Country Filter Buttons', () => {
   it('renders All/Cyprus/Greece/World filter buttons', async () => {
     const articles = [createMockNewsItem({ id: 'article-1' })];
@@ -598,7 +691,7 @@ describe('Country Filter Buttons', () => {
     await user.click(within(filters).getByRole('button', { name: /Cyprus/ }));
 
     await waitFor(() => {
-      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'cyprus');
+      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'cyprus', undefined);
     });
   });
 
@@ -621,13 +714,13 @@ describe('Country Filter Buttons', () => {
     // Click Cyprus first
     await user.click(within(filters).getByRole('button', { name: /Cyprus/ }));
     await waitFor(() => {
-      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'cyprus');
+      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'cyprus', undefined);
     });
 
     // Then click All
     await user.click(within(filters).getByRole('button', { name: /All/ }));
     await waitFor(() => {
-      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, undefined);
+      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, undefined, undefined);
     });
   });
 
@@ -662,7 +755,7 @@ describe('Country Filter Buttons', () => {
     await user.click(within(filters).getByRole('button', { name: /Greece/ }));
 
     await waitFor(() => {
-      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'greece');
+      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'greece', undefined);
     });
   });
 });

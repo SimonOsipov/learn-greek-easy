@@ -34,7 +34,7 @@ import type { NewsItemResponse } from '@/services/adminAPI';
 import { NewsCard } from '../NewsCard';
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (k: string, fb?: string) => fb ?? k }),
+  useTranslation: () => ({ t: (k: string, fb?: string) => fb ?? k, i18n: { language: 'en' } }),
 }));
 vi.mock('@/lib/analytics', () => ({ track: vi.fn() }));
 vi.mock('@/lib/newsAudioCoordinator', () => ({

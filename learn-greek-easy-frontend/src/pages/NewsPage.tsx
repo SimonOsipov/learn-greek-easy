@@ -43,6 +43,7 @@ export const NewsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [countryFilter, setCountryFilter] = useState<CountryFilter>('all');
   const [newsLevel, setNewsLevel] = useState<NewsLevel>(getPersistedNewsLevel);
+  const [searchQuery, setSearchQuery] = useState('');
   const [countryCounts, setCountryCounts] = useState<{
     cyprus: number;
     greece: number;
@@ -54,6 +55,10 @@ export const NewsPage: React.FC = () => {
 
   // Track if we've already tracked the page view (only track on first successful load)
   const hasTrackedPageView = useRef(false);
+
+  // Stale-response guard — incremented on each fetch; resolved responses from
+  // older requests are discarded if a newer request has already been issued.
+  const latestRequestId = useRef(0);
 
   // Cache for previously fetched country+page results (cleared on unmount)
   const newsCache = useRef<
@@ -74,8 +79,11 @@ export const NewsPage: React.FC = () => {
    * Fetch news articles for a specific page
    */
   const fetchNews = useCallback(
-    async (page: number, country?: NewsCountry) => {
-      const cacheKey = `${country ?? 'all'}:${page}`;
+    async (page: number, country?: NewsCountry, q?: string) => {
+      // Assign a unique ID to this invocation so stale responses can be detected
+      const requestId = ++latestRequestId.current;
+
+      const cacheKey = `${country ?? 'all'}:${q ?? ''}:${page}`;
 
       // Return cached data instantly (no loading spinner, no API call)
       const cached = newsCache.current[cacheKey];
@@ -92,7 +100,11 @@ export const NewsPage: React.FC = () => {
       setError(null);
 
       try {
-        const response = await adminAPI.getNewsItems(page, ITEMS_PER_PAGE, country);
+        const response = await adminAPI.getNewsItems(page, ITEMS_PER_PAGE, country, q || undefined);
+
+        // Discard if a newer request was issued while this one was in flight
+        if (requestId !== latestRequestId.current) return;
+
         setArticles(response.items);
         setTotalItems(response.total);
         setCurrentPage(page);
@@ -113,6 +125,9 @@ export const NewsPage: React.FC = () => {
           hasTrackedPageView.current = true;
         }
       } catch (err) {
+        // Don't update error state if a newer request has already taken over
+        if (requestId !== latestRequestId.current) return;
+
         const errorMessage = err instanceof Error ? err.message : t('news.error.description');
         setError(errorMessage);
         reportAPIError(err, {
@@ -121,7 +136,10 @@ export const NewsPage: React.FC = () => {
           page,
         });
       } finally {
-        setIsLoading(false);
+        // Only clear loading if this is still the latest request
+        if (requestId === latestRequestId.current) {
+          setIsLoading(false);
+        }
       }
     },
     [t]
@@ -137,10 +155,14 @@ export const NewsPage: React.FC = () => {
         to_page: newPage,
         total_pages: totalPages,
       });
-      fetchNews(newPage, countryFilter === 'all' ? undefined : countryFilter);
+      fetchNews(
+        newPage,
+        countryFilter === 'all' ? undefined : countryFilter,
+        searchQuery || undefined
+      );
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
-    [currentPage, totalPages, fetchNews, countryFilter]
+    [currentPage, totalPages, fetchNews, countryFilter, searchQuery]
   );
 
   /**
@@ -150,17 +172,36 @@ export const NewsPage: React.FC = () => {
     (value: string) => {
       const newFilter = value as CountryFilter;
       setCountryFilter(newFilter);
-      fetchNews(1, newFilter === 'all' ? undefined : (newFilter as NewsCountry));
+      fetchNews(
+        1,
+        newFilter === 'all' ? undefined : (newFilter as NewsCountry),
+        searchQuery || undefined
+      );
     },
-    [fetchNews]
+    [fetchNews, searchQuery]
+  );
+
+  /**
+   * Handle search query change — resets to page 1, preserves country + level
+   */
+  const handleSearchChange = useCallback(
+    (q: string) => {
+      setSearchQuery(q);
+      fetchNews(1, countryFilter === 'all' ? undefined : countryFilter, q || undefined);
+    },
+    [fetchNews, countryFilter]
   );
 
   /**
    * Handle retry after error
    */
   const handleRetry = useCallback(() => {
-    fetchNews(currentPage, countryFilter === 'all' ? undefined : countryFilter);
-  }, [fetchNews, currentPage, countryFilter]);
+    fetchNews(
+      currentPage,
+      countryFilter === 'all' ? undefined : countryFilter,
+      searchQuery || undefined
+    );
+  }, [fetchNews, currentPage, countryFilter, searchQuery]);
 
   const handleLevelChange = useCallback((level: NewsLevel) => {
     setPersistedNewsLevel(level);
@@ -214,6 +255,8 @@ export const NewsPage: React.FC = () => {
         newsLevel={newsLevel}
         onLevelChange={handleLevelChange}
         countryCounts={countryCounts}
+        searchValue={searchQuery}
+        onSearchChange={handleSearchChange}
       />
 
       {/* Error State */}

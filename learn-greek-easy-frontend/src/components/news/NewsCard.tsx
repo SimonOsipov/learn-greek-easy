@@ -61,7 +61,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
   eager,
   onOpen,
 }) => {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
 
   const useA2Content = level === 'a2' && article.has_a2_content;
   const audioUrl = useA2Content ? article.audio_a2_url : article.audio_url;
@@ -221,7 +221,10 @@ export const NewsCard: React.FC<NewsCardProps> = ({
   }
 
   // Publication date formatted — UTC-safe helper avoids day-shift in negative-UTC-offset locales.
-  const formattedDate = formatPublicationDate(article.publication_date);
+  const formattedDate = formatPublicationDate(
+    article.publication_date,
+    i18n.language.split('-')[0]
+  );
 
   // Gradient fallback when no image
   const thumbGradient = pickNewsThumb(article.id);

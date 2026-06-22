@@ -222,6 +222,7 @@ class NewsItemService:
         page_size: int = 20,
         country: NewsCountry | None = None,
         published_only: bool = True,
+        q: str | None = None,
     ) -> NewsItemListResponse:
         """Get paginated list of news items.
 
@@ -231,19 +232,23 @@ class NewsItemService:
             country: Optional country filter
             published_only: Exclude drafts (default True, for the public feed).
                 Admin callers pass False to list drafts too.
+            q: Optional search term (accent+case-insensitive substring across
+               title, body, a2-body, and source URL).
 
         Returns:
             NewsItemListResponse with paginated news items and country counts
         """
         skip = (page - 1) * page_size
         rows = await self.repo.get_list(
-            skip=skip, limit=page_size, country=country, published_only=published_only
+            skip=skip, limit=page_size, country=country, published_only=published_only, q=q
         )
-        total = await self.repo.count_all(country=country, published_only=published_only)
+        total = await self.repo.count_all(country=country, published_only=published_only, q=q)
         audio_count = await self.repo.count_with_audio(
             country=country, published_only=published_only
         )
-        country_counts = await self.repo.count_by_country(published_only=published_only)
+        # F2: count_by_country is filtered by q ONLY — not by the selected country —
+        # so country pills show per-country totals within the q-filtered set.
+        country_counts = await self.repo.count_by_country(published_only=published_only, q=q)
         b1_audio_count = await self.repo.count_with_b1_audio(published_only=published_only)
         b1_pending_regen_count = await self.repo.count_b1_pending_regen(
             published_only=published_only

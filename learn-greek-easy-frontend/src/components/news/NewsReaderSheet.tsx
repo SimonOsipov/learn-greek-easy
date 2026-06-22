@@ -19,7 +19,13 @@ import { useTranslation } from 'react-i18next';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetClose, SheetContent } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { tDynamic } from '@/i18n/tDynamic';
 import { track } from '@/lib/analytics';
 import { buildSrcSet, recoverDerivativeError } from '@/lib/imageVariants';
@@ -47,7 +53,7 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
   level,
   onLevelChange,
 }) => {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
 
   // Whether to use A2 content for this article (requires both level=a2 AND content exists)
   const useA2Content = level === 'a2' && (article?.has_a2_content ?? false);
@@ -175,7 +181,10 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
   }
 
   // Publication date formatted — UTC-safe helper avoids day-shift in negative-UTC-offset locales.
-  const formattedDate = formatPublicationDate(article?.publication_date);
+  const formattedDate = formatPublicationDate(
+    article?.publication_date,
+    i18n.language.split('-')[0]
+  );
 
   // Body text respects level
   const bodyText = useA2Content
@@ -212,6 +221,11 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
         // Suppress VisuallyHidden title warning — we provide our own heading in the body
         aria-label={title || t('news.page.title')}
       >
+        {/* Visually-hidden title + description — required by Radix Dialog to suppress
+            DialogTitle/aria-describedby console warnings. No visual change. */}
+        <SheetTitle className="sr-only">{title || t('news.page.title')}</SheetTitle>
+        <SheetDescription className="sr-only">{t('news.reader.description')}</SheetDescription>
+
         {/* ── Sticky header ───────────────────────────────────────────── */}
         <div
           className={cn(

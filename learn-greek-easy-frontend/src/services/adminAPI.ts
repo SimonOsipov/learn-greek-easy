@@ -1418,9 +1418,10 @@ export const adminAPI = {
   getNewsItems: async (
     page = 1,
     pageSize = 10,
-    country?: NewsCountry
+    country?: NewsCountry,
+    q?: string
   ): Promise<NewsItemListResponse> => {
-    const queryString = buildQueryString({ page, page_size: pageSize, country });
+    const queryString = buildQueryString({ page, page_size: pageSize, country, q });
     return api.get<NewsItemListResponse>(`/api/v1/news${queryString}`);
   },
 
