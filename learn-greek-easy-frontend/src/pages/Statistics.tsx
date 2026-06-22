@@ -12,6 +12,8 @@ import { StatsGrid, LevelProgressCard, AchievementsGrid } from '@/components/sta
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Kicker } from '@/features/decks/dx';
+import '@/features/decks/dx/dx.css';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { learnedCount } from '@/lib/progressGlossary';
 import { useAuthStore } from '@/stores/authStore';
@@ -101,8 +103,9 @@ const Statistics: React.FC = () => {
     return (
       <div className="space-y-6 pb-8" data-testid="statistics-page">
         {/* Page Header */}
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground md:text-3xl">{t('page.title')}</h1>
+        <div className="dx-index-head">
+          <Kicker tone="primary">{t('page.kicker')}</Kicker>
+          <h1 className="dx-index-h">{t('page.title')}</h1>
           <p className="mt-2 text-muted-foreground">{t('page.subtitle')}</p>
         </div>
         <StatisticsLoadingSkeleton />
@@ -115,8 +118,9 @@ const Statistics: React.FC = () => {
     return (
       <div className="space-y-6 pb-8" data-testid="statistics-page">
         {/* Page Header */}
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground md:text-3xl">{t('page.title')}</h1>
+        <div className="dx-index-head">
+          <Kicker tone="primary">{t('page.kicker')}</Kicker>
+          <h1 className="dx-index-h">{t('page.title')}</h1>
           <p className="mt-2 text-muted-foreground">{t('page.subtitle')}</p>
         </div>
         <Card>
@@ -137,8 +141,9 @@ const Statistics: React.FC = () => {
   return (
     <div className="space-y-6 pb-8" data-testid="statistics-page">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground md:text-3xl">{t('page.title')}</h1>
+      <div className="dx-index-head">
+        <Kicker tone="primary">{t('page.kicker')}</Kicker>
+        <h1 className="dx-index-h">{t('page.title')}</h1>
         <p className="mt-2 text-muted-foreground">{t('page.subtitle')}</p>
       </div>
 

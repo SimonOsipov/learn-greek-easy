@@ -19,6 +19,8 @@ import { NewsFilters, NewsGrid, NewsPagination, ScrollToTopButton } from '@/comp
 import { NewsReaderSheet } from '@/components/news/NewsReaderSheet';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Kicker } from '@/features/decks/dx';
+import '@/features/decks/dx/dx.css';
 import { track } from '@/lib/analytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { adminAPI, type NewsCountry, type NewsItemResponse } from '@/services/adminAPI';
@@ -238,11 +240,9 @@ export const NewsPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-20 lg:pb-8" data-testid="news-page">
       {/* Page Header */}
-      <div>
-        <h1
-          className="text-2xl font-semibold text-foreground md:text-3xl"
-          data-testid="news-page-title"
-        >
+      <div className="dx-index-head">
+        <Kicker tone="primary">{t('news.page.kicker')}</Kicker>
+        <h1 className="dx-index-h" data-testid="news-page-title">
           {t('news.page.title')}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground md:text-base">{t('news.page.subtitle')}</p>

@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Kicker } from '@/features/decks/dx';
+import '@/features/decks/dx/dx.css';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useLanguage } from '@/hooks/useLanguage';
 import { track } from '@/lib/analytics';
@@ -145,10 +147,9 @@ export const SituationsPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-20 lg:pb-8" data-testid="situations-page">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground md:text-3xl">
-          {t('situations.page.title')}
-        </h1>
+      <div className="dx-index-head">
+        <Kicker tone="primary">{t('situations.page.kicker')}</Kicker>
+        <h1 className="dx-index-h">{t('situations.page.title')}</h1>
         <p className="mt-2 text-sm text-muted-foreground md:text-base">
           {t('situations.page.subtitle')}
         </p>

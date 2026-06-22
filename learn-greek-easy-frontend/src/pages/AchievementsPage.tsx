@@ -10,6 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Kicker } from '@/features/decks/dx';
+import '@/features/decks/dx/dx.css';
 import type { AchievementResponse } from '@/services/xpAPI';
 import {
   useXPStore,
@@ -231,10 +233,9 @@ const AchievementsPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-24 lg:pb-8" data-testid="achievements-page">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground md:text-3xl">
-          {t('page.title', 'Achievements')}
-        </h1>
+      <div className="dx-index-head">
+        <Kicker tone="primary">{t('page.kicker', 'Progress · Milestones & rewards')}</Kicker>
+        <h1 className="dx-index-h">{t('page.title', 'Achievements')}</h1>
         <p className="mt-2 text-muted-foreground">
           {t('page.subtitle', 'Track your learning milestones and earn rewards')}
         </p>
