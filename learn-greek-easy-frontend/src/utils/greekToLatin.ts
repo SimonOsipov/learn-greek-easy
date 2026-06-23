@@ -2,7 +2,6 @@
  * Shared Greek-to-Latin transliteration map.
  *
  * Used by:
- *   - toAsciiLemma (src/utils/nounPayloadBuilder.ts) — lemma IDs
  *   - judge (src/features/practice/pf/judge.ts) — Greeklish leniency leg
  *
  * Do NOT add a second copy of this map. Import from here.
