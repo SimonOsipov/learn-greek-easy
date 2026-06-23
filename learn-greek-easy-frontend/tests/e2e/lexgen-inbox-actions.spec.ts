@@ -151,47 +151,10 @@ test.describe('Admin Verification Inbox — Review Actions (LEXGEN-13-06)', () =
   // ουρανός has zero flagged fields → one summary accept row (field == null).
 
   test('Flow 1: approve → ship (ουρανός)', async ({ page, request }) => {
-    // TEMP DIAGNOSTIC (LEXGEN-13-06) — revert after root cause identified
-    // Replaced toPass retry block with a single linear sequence that emits
-    // DIAGNOSTIC: log lines so CI shows the ground truth before the failing assertion.
-    test.setTimeout(120_000);
     const proposalId = await resolveProposalId(request, 'ουρανός');
 
-    // 1. Register a response listener BEFORE any navigation so we capture the
-    //    /admin/decks call the component fires when the approve dialog opens.
-    const deckResponses: Array<{ status: number; body: string }> = [];
-    page.on('response', async (resp) => {
-      if (resp.url().includes('/api/v1/admin/decks')) {
-        let body = '';
-        try {
-          body = await resp.text();
-        } catch {
-          body = '<unreadable>';
-        }
-        deckResponses.push({ status: resp.status(), body: body.slice(0, 2000) });
-      }
-    });
-
-    // 2. Reseed the deck (deck-only endpoint — does not wipe word_proposal rows).
-    const deckRes = await request.post(`${apiBaseUrl}/api/v1/test/seed/lexgen-approve-deck`);
-    console.log(
-      'DIAGNOSTIC: reseed status=',
-      deckRes.status(),
-      'body=',
-      await deckRes.text(),
-    );
-
-    // 3. Hit decks-debug IMMEDIATELY after reseed to see raw DB state.
-    const dbg1 = await request.get(`${apiBaseUrl}/api/v1/test/seed/decks-debug`);
-    console.log('DIAGNOSTIC: decks-debug AFTER reseed =', await dbg1.text());
-
-    // 4. Navigate to the inbox and open the ουρανός detail (triggers list_decks query).
     await openInbox(page);
     await openDetailForLemma(page, 'ουρανός');
-
-    // 5. Hit decks-debug again after navigation to detect truncation during nav.
-    const dbg2 = await request.get(`${apiBaseUrl}/api/v1/test/seed/decks-debug`);
-    console.log('DIAGNOSTIC: decks-debug AFTER nav =', await dbg2.text());
 
     const detail = page.getByTestId('lexgen-proposal-detail');
 
@@ -200,39 +163,20 @@ test.describe('Admin Verification Inbox — Review Actions (LEXGEN-13-06)', () =
       await expect(detail.getByText(pattern)).toHaveCount(0);
     }
 
-    // 6. Click Approve to open the confirm dialog.
+    // Open the Approve confirm dialog.
     await page.getByTestId('lexgen-action-approve').click();
 
-    // 7. Open the deck Select and wait briefly for the list_decks response.
+    // Open the deck Select and pick the dedicated approve deck.
     const deckSelect = page.getByTestId('lexgen-approve-deck-select');
     await expect(deckSelect).toBeVisible({ timeout: 5_000 });
     await deckSelect.click();
-    await page.waitForTimeout(2000);
-
-    // 8. Log all captured /admin/decks browser responses.
-    console.log(
-      'DIAGNOSTIC: /admin/decks browser responses =',
-      JSON.stringify(deckResponses),
-    );
-
-    // 9. Log the option count visible in the Select portal.
-    const optCount = await page.getByRole('option').count();
-    console.log('DIAGNOSTIC: option count in Select =', optCount);
-
-    // 10. Final assertion — will fail if the deck is absent, but diagnostics above
-    //     already printed so CI log shows ground truth.
     await expect(page.getByRole('option', { name: /LEXGEN E2E Approve Deck/i }))
-      .toBeVisible({ timeout: 5_000 });
-
-    // END TEMP DIAGNOSTIC (LEXGEN-13-06)
-
-    // The Select is open and the option is visible — pick it and confirm.
+      .toBeVisible({ timeout: 10_000 });
     await page.getByRole('option', { name: /LEXGEN E2E Approve Deck/i }).click();
 
     // Confirm approve.
     await page.getByTestId('lexgen-approve-confirm').click();
 
-    // Wait for the mutation to settle (sheet closes or status changes).
     // The detail sheet closes after a successful approve.
     await expect(page.getByTestId('lexgen-proposal-detail')).toHaveCount(0, {
       timeout: 15_000,

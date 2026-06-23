@@ -3342,11 +3342,6 @@ class SeedService:
         # Calculate level from XP
         level = get_level_from_xp(total_xp)
 
-        # Idempotency: delete any pre-existing UserXP row for this user so
-        # concurrent seed/all calls cannot hit ix_user_xp_user_id duplicate-key.
-        await self.db.execute(delete(UserXP).where(UserXP.user_id == user_id))
-        await self.db.flush()
-
         # Create UserXP record
         user_xp = UserXP(
             user_id=user_id,

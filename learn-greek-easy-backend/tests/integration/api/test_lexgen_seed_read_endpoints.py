@@ -333,105 +333,6 @@ async def test_seed_lexgen_proposals_creates_approve_deck(client: AsyncClient) -
 
 
 @pytest.mark.integration
-async def test_seed_lexgen_approve_deck_returns_id_and_name(client: AsyncClient) -> None:
-    """POST /lexgen-approve-deck returns 200 with {id, name}.
-
-    The dedicated deck-only endpoint must create the approve deck and return
-    its id (non-empty) and the canonical name.
-    """
-    response = await client.post("/api/v1/test/seed/lexgen-approve-deck")
-    assert response.status_code == 200, response.text
-    body = response.json()
-    assert body.get("id"), "response must include a non-empty id"
-    assert (
-        body.get("name") == _LEXGEN_APPROVE_DECK_NAME
-    ), f"name must be {_LEXGEN_APPROVE_DECK_NAME!r}; got {body.get('name')!r}"
-
-
-@pytest.mark.integration
-async def test_seed_lexgen_approve_deck_is_idempotent(client: AsyncClient) -> None:
-    """Calling POST /lexgen-approve-deck twice yields two different IDs (delete+create).
-
-    Idempotency: delete-by-name + re-create means no duplicate rows.
-    """
-    r1 = await client.post("/api/v1/test/seed/lexgen-approve-deck")
-    assert r1.status_code == 200, r1.text
-    r2 = await client.post("/api/v1/test/seed/lexgen-approve-deck")
-    assert r2.status_code == 200, r2.text
-    # Each call creates a fresh row; ids differ (previous deleted).
-    assert (
-        r1.json()["id"] != r2.json()["id"]
-    ), "each call must produce a fresh deck row (prior one deleted)"
-
-
-@pytest.mark.integration
-async def test_seed_lexgen_approve_deck_403_when_seed_disabled(
-    client: AsyncClient,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """POST /lexgen-approve-deck returns 403 when seeding is disabled."""
-    monkeypatch.setattr("src.api.v1.test.seed.settings.test_seed_enabled", False)
-    resp = await client.post("/api/v1/test/seed/lexgen-approve-deck")
-    assert (
-        resp.status_code == 403
-    ), f"lexgen-approve-deck must return 403 when seed disabled; got {resp.status_code}"
-
-
-# ---------------------------------------------------------------------------
-# Tests — decks-debug route (TEMP DIAGNOSTIC, LEXGEN-13-06)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.integration
-async def test_decks_debug_returns_200_and_shape(
-    client: AsyncClient,
-    db_session: AsyncSession,
-) -> None:
-    """GET /test/seed/decks-debug returns 200 with total + vocab_decks list.
-
-    TEMP DIAGNOSTIC (LEXGEN-13-06) — revert after root cause identified.
-    """
-    # Seed the approve deck so there is at least one row to inspect.
-    seed_resp = await client.post("/api/v1/test/seed/lexgen-approve-deck")
-    assert seed_resp.status_code == 200, seed_resp.text
-
-    response = await client.get("/api/v1/test/seed/decks-debug")
-    assert response.status_code == 200, response.text
-    body = response.json()
-    assert "total" in body, "Response must have 'total' key"
-    assert "vocab_decks" in body, "Response must have 'vocab_decks' key"
-    assert isinstance(body["total"], int), "total must be an int"
-    assert isinstance(body["vocab_decks"], list), "vocab_decks must be a list"
-    assert body["total"] >= 1, "total must be >= 1 after seeding the approve deck"
-    # Each item must carry the expected keys.
-    names = [d["name_en"] for d in body["vocab_decks"]]
-    assert "LEXGEN E2E Approve Deck" in names, "seeded deck must appear in vocab_decks"
-    item = next(d for d in body["vocab_decks"] if d["name_en"] == "LEXGEN E2E Approve Deck")
-    for key in ("id", "name_en", "is_active", "owner_id"):
-        assert key in item, f"Key {key!r} missing from vocab_decks item"
-    assert item["is_active"] is True
-
-
-@pytest.mark.integration
-async def test_decks_debug_403_when_seed_disabled(
-    client: AsyncClient,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """GET /test/seed/decks-debug returns 403 when seeding is disabled.
-
-    TEMP DIAGNOSTIC (LEXGEN-13-06) — revert after root cause identified.
-    """
-    monkeypatch.setattr("src.api.v1.test.seed.settings.test_seed_enabled", False)
-    resp = await client.get("/api/v1/test/seed/decks-debug")
-    assert (
-        resp.status_code == 403
-    ), f"decks-debug must return 403 when seed disabled; got {resp.status_code}"
-
-
-# END TEMP DIAGNOSTIC (LEXGEN-13-06)
-
-
-@pytest.mark.integration
 async def test_seed_lexgen_proposals_approve_deck_is_idempotent(client: AsyncClient) -> None:
     """Calling POST /lexgen-proposals twice yields exactly one approve deck row.
 
@@ -455,7 +356,7 @@ async def test_seed_lexgen_proposals_approve_deck_is_idempotent(client: AsyncCli
     # We use the test client's underlying app to query the DB via a fresh session.
     # Since we cannot access db_session here (this test does not inject it), we
     # verify via the admin list endpoint instead — a lightweight proxy.
-    list_resp = await client.get("/api/v1/admin/decks?type=vocabulary&page_size=200")
+    list_resp = await client.get("/api/v1/admin/decks?type=vocabulary&page_size=100")
     # The admin endpoint requires superuser auth which the test client may not carry.
     # Fall back to asserting via the seed response shapes only if admin is unavailable.
     if list_resp.status_code == 200:

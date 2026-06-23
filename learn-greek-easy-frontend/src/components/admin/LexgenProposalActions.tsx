@@ -68,11 +68,11 @@ export function LexgenProposalActions({ proposalId, onShipOrReject }: LexgenProp
     approveMutation.isPending || regenerateMutation.isPending || rejectMutation.isPending;
 
   // Eager-load vocabulary decks so the Select is ready when the dialog opens.
-  // page_size: 200 is a practical cap — the production vocabulary deck count is
-  // well under this limit. If it ever exceeds 200, add a search input here.
+  // page_size: 100 is the endpoint's maximum — the production vocabulary deck
+  // count is well under this limit. If it ever exceeds 100, add a search input.
   const { data: deckData } = useQuery({
     queryKey: ['admin', 'decks', 'vocabulary'],
-    queryFn: () => adminAPI.listDecks({ type: 'vocabulary', page_size: 200 }),
+    queryFn: () => adminAPI.listDecks({ type: 'vocabulary', page_size: 100 }),
     staleTime: 5 * 60 * 1000,
   });
   const vocabularyDecks = deckData?.decks ?? [];
