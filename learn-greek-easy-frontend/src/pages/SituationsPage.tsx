@@ -1,11 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, BookOpen, Search, SlidersHorizontal, Volume2, X } from 'lucide-react';
+import {
+  AlertCircle,
+  BookOpen,
+  CheckCircle2,
+  Flame,
+  Gauge,
+  Layers,
+  Search,
+  SlidersHorizontal,
+  X,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
+import { CultureMetricStrip } from '@/components/culture/redesign/CultureMetricStrip';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { SituationCard } from '@/components/situations/SituationCard';
+import { SituationsHero } from '@/components/situations/SituationsHero';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,11 +28,11 @@ import '@/features/decks/dx/dx.css';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useLanguage } from '@/hooks/useLanguage';
 import { track } from '@/lib/analytics';
-import { getDeckBackgroundStyle } from '@/lib/deckBackground';
 import { situationAPI } from '@/services/situationAPI';
 import type { LearnerSituationListItem } from '@/types/situation';
 
 const PAGE_SIZE = 20;
+const COMPREHENSION_ROUTE = '/situations/comprehension';
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -53,7 +66,7 @@ const SituationCardSkeleton: React.FC = () => {
 };
 
 const SituationGridSkeleton: React.FC = () => (
-  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+  <div className="cx-deck-grid">
     {[1, 2, 3, 4, 5, 6].map((i) => (
       <SituationCardSkeleton key={i} />
     ))}
@@ -69,16 +82,6 @@ function getCompletionStatus(
   if (item.exercise_total > 0 && item.exercise_completed === item.exercise_total)
     return 'completed';
   return 'in-progress';
-}
-
-// Token-based accent stripe — mirrors the deck-card recipe to avoid raw
-// Tailwind palette classes. completed → success (emerald), in-progress →
-// primary (brand blue), not-started → fg3 (slate, the documented neutral).
-function getAccentStripeColor(item: LearnerSituationListItem): string {
-  if (item.exercise_total > 0 && item.exercise_completed === item.exercise_total)
-    return 'bg-success';
-  if (item.exercise_completed > 0) return 'bg-primary';
-  return 'bg-fg3';
 }
 
 export const SituationsPage: React.FC = () => {
@@ -104,6 +107,15 @@ export const SituationsPage: React.FC = () => {
         search: debouncedSearch || undefined,
         has_audio: hasAudioFilter || undefined,
       }),
+  });
+
+  // Account-wide comprehension overview — non-critical; metrics fall back to 0
+  // when unavailable. Loaded once (no page/filter dependency).
+  const { data: comprehension } = useQuery({
+    queryKey: ['situations-comprehension'],
+    queryFn: () => situationAPI.getComprehension(),
+    retry: false,
+    staleTime: 60_000,
   });
 
   useEffect(() => {
@@ -135,14 +147,124 @@ export const SituationsPage: React.FC = () => {
     setPage(1);
   };
 
-  // Client-side completion filter applied to server results
-  const filteredItems =
-    data?.items.filter((item) => {
-      if (completionFilter === 'all') return true;
-      return getCompletionStatus(item) === completionFilter;
-    }) ?? [];
+  // Server page items (unaffected by the client-side completion filter) — drive
+  // the hero, what's-new chips, and the list-derived metrics.
+  const pageItems = data?.items ?? [];
+
+  // Client-side completion filter applied to server results — drives the grids.
+  const filteredItems = pageItems.filter((item) => {
+    if (completionFilter === 'all') return true;
+    return getCompletionStatus(item) === completionFilter;
+  });
 
   const activeFilterCount = (hasAudioFilter ? 1 : 0) + (completionFilter !== 'all' ? 1 : 0);
+
+  // ── Resume hero: first in-progress situation, else first item ("start here") ──
+  const inProgress = pageItems.find(
+    (s) => s.exercise_completed > 0 && s.exercise_completed < s.exercise_total
+  );
+  const resumeItem = inProgress ?? pageItems[0];
+  const resumeIsInProgress = !!inProgress;
+  const resumePct =
+    resumeItem && resumeItem.exercise_total > 0
+      ? Math.round((resumeItem.exercise_completed / resumeItem.exercise_total) * 100)
+      : 0;
+  const siblings = resumeItem ? pageItems.filter((s) => s.id !== resumeItem.id).slice(0, 2) : [];
+
+  const resumeStats = resumeItem
+    ? [
+        {
+          label: t('situations.hub.statExercises', 'Exercises'),
+          value: String(resumeItem.exercise_total),
+        },
+        {
+          label: t('situations.hub.statAudio', 'Audio'),
+          value: resumeItem.has_audio
+            ? t('situations.hub.audioYes', 'Yes')
+            : t('situations.hub.audioNo', 'No'),
+        },
+        {
+          label: t('situations.hub.statComplete', 'Complete'),
+          value: `${resumePct}%`,
+        },
+      ]
+    : [];
+
+  const resumeCtas = resumeItem
+    ? [
+        {
+          label: resumeIsInProgress
+            ? t('situations.hub.continue', 'Continue situation')
+            : t('situations.hub.startHere', 'Start here'),
+          to: `/situations/${resumeItem.id}`,
+          primary: true,
+          testId: 'situations-resume-cta',
+        },
+        {
+          label: t('situations.hub.checkComprehension', 'Check comprehension'),
+          to: COMPREHENSION_ROUTE,
+          primary: false,
+          testId: 'situations-comprehension-cta',
+        },
+      ]
+    : [];
+
+  // ── List-derived counts ──────────────────────────────────────────────────
+  // Situations count uses the true server total. Completed is counted over the
+  // loaded page: the list payload exposes no account-wide completed count, so the
+  // figure is only the TRUE total when the whole dataset fits on the current page
+  // (total <= page length). When the dataset spans multiple pages the count is
+  // incomplete, so we mark the metric unwired (UnwiredDot) rather than show a
+  // page-scoped number under an account-wide-looking label.
+  const situationsTotal = data?.total ?? 0;
+  const completedCount = pageItems.filter((s) => getCompletionStatus(s) === 'completed').length;
+  const completedIsComplete = situationsTotal <= pageItems.length;
+  const comprehensionPct = comprehension?.comprehension_percentage ?? 0;
+  const streak = comprehension?.streak ?? 0;
+  const whatsNewCount = comprehension?.whats_new_count ?? 0;
+
+  // ── News-vs-everyday section split (description_source_type) ───────────────
+  const newsItems = filteredItems.filter((s) => s.description_source_type === 'news');
+  const everydayItems = filteredItems.filter((s) => s.description_source_type === 'original');
+  // Items with no source-type signal (e.g. no description) fall into an "other"
+  // bucket so they are never silently dropped from the grid.
+  const otherItems = filteredItems.filter(
+    (s) => s.description_source_type !== 'news' && s.description_source_type !== 'original'
+  );
+  const hasSections = newsItems.length > 0 || everydayItems.length > 0;
+
+  const metrics = [
+    {
+      icon: <Layers size={18} aria-hidden />,
+      label: t('situations.hub.metricSituations', 'Situations'),
+      value: String(situationsTotal),
+      tone: 'primary' as const,
+    },
+    {
+      icon: <CheckCircle2 size={18} aria-hidden />,
+      label: t('situations.hub.metricCompleted', 'Completed'),
+      value: String(completedCount),
+      tone: 'green' as const,
+      // Page-scoped count is only the true account-wide total when the dataset
+      // fits on one page; otherwise flag it as not-yet-wired.
+      unwired: !completedIsComplete,
+      unwiredLabel: t('situations.hub.metricCompletedUnwired', 'Completed count is page-scoped'),
+    },
+    {
+      icon: <Gauge size={18} aria-hidden />,
+      label: t('situations.hub.metricComprehension', 'Comprehension'),
+      value: `${Math.round(comprehensionPct)}`,
+      sub: '%',
+      tone: 'violet' as const,
+    },
+    {
+      icon: <Flame size={18} aria-hidden />,
+      label: t('situations.hub.metricStreak', 'Streak'),
+      value: String(streak),
+      sub: t('situations.hub.days', 'days'),
+      tone: 'amber' as const,
+    },
+  ];
 
   return (
     <div className="space-y-6 pb-20 lg:pb-8" data-testid="situations-page">
@@ -201,22 +323,22 @@ export const SituationsPage: React.FC = () => {
               )}
             </Button>
           )}
-          {!isMobile && data && filteredItems.length !== data.total && (
+          {!isMobile && data && filteredItems.length !== pageItems.length && (
             <span className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
               {t('situations.filter.showing', {
                 count: filteredItems.length,
-                total: data.total,
+                total: pageItems.length,
               })}
             </span>
           )}
         </div>
 
         {/* Row 2: Counter on mobile (below search), only when filtered */}
-        {isMobile && data && filteredItems.length !== data.total && (
+        {isMobile && data && filteredItems.length !== pageItems.length && (
           <span className="block text-sm text-muted-foreground">
             {t('situations.filter.showing', {
               count: filteredItems.length,
-              total: data.total,
+              total: pageItems.length,
             })}
           </span>
         )}
@@ -307,61 +429,172 @@ export const SituationsPage: React.FC = () => {
       {/* Loading State */}
       {isLoading && <SituationGridSkeleton />}
 
-      {/* Card Grid */}
-      {!isLoading && !isError && data && filteredItems.length > 0 && (
+      {/* Loaded content */}
+      {!isLoading && !isError && data && (
         <>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredItems.map((item, index) => (
+          {/* Resume hero */}
+          {resumeItem && (
+            <SituationsHero
+              situation={resumeItem}
+              siblings={siblings}
+              kicker={
+                resumeIsInProgress
+                  ? t('situations.hub.heroKickerResume', 'Continue where you left off')
+                  : t('situations.hub.heroKickerStart', 'Start practising')
+              }
+              stats={resumeStats}
+              ctas={resumeCtas}
+              coverFootPct={resumePct}
+            />
+          )}
+
+          {/* What's-new strip */}
+          {situationsTotal > 0 && (
+            <div className="cx-whatsnew">
+              <span className="cx-whatsnew-l">
+                {t('situations.hub.whatsNewLabel', 'Situations')}
+              </span>
+              <span className="cx-whatsnew-chip">
+                {t('situations.hub.chipSituations', '{{n}} situations', { n: situationsTotal })}
+              </span>
+              {/* Completed chip only when the count covers the whole dataset
+                  (single page) — otherwise it would be a misleading page-scoped figure. */}
+              {completedIsComplete && (
+                <>
+                  <span className="cx-whatsnew-sep" aria-hidden />
+                  <span className="cx-whatsnew-chip">
+                    {t('situations.hub.chipCompleted', '{{n}} completed', { n: completedCount })}
+                  </span>
+                </>
+              )}
+              <span className="cx-whatsnew-sep" aria-hidden />
+              <span className="cx-whatsnew-chip">
+                {t('situations.hub.chipComprehension', '{{n}}% comprehension', {
+                  n: Math.round(comprehensionPct),
+                })}
+              </span>
+              {whatsNewCount > 0 && (
+                <>
+                  <span className="cx-whatsnew-sep" aria-hidden />
+                  <span className="cx-whatsnew-chip">
+                    {t('situations.hub.chipLatest', '{{n}} new this week', { n: whatsNewCount })}
+                  </span>
+                </>
+              )}
               <Link
-                key={item.id}
-                to={`/situations/${item.id}`}
-                className="block"
-                data-testid="situation-item"
-                onClick={() =>
-                  track('situation_card_clicked', {
-                    situation_id: item.id,
-                    has_audio: item.has_audio,
-                    exercise_completed: item.exercise_completed,
-                    exercise_total: item.exercise_total,
-                    position: index,
-                  })
-                }
+                to={COMPREHENSION_ROUTE}
+                className="cx-whatsnew-cta"
+                data-testid="situations-comprehension-chip"
               >
-                <Card
-                  className="relative h-full min-h-[170px] cursor-pointer overflow-hidden transition-shadow hover:shadow-lg"
-                  style={getDeckBackgroundStyle(item.source_image_url ?? undefined)}
-                >
-                  <div className={`h-1 w-full ${getAccentStripeColor(item)}`} />
-                  <CardContent className="flex h-full flex-col gap-2 p-4">
-                    <p className="line-clamp-2 text-lg font-semibold text-foreground">
-                      {item.scenario_el}
-                    </p>
-                    <p className="line-clamp-2 text-sm text-muted-foreground">
-                      {getScenario(item)}
-                    </p>
-                    <div className="mt-auto flex items-center gap-2 pt-2">
-                      {item.has_audio && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
-                          <Volume2 className="h-3 w-3" />
-                          {t('situations.card.audio')}
-                        </span>
-                      )}
-                      <span
-                        className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
-                        data-testid="exercise-badge"
-                      >
-                        <BookOpen className="h-3 w-3" />
-                        {t('situations.card.exercises', {
-                          completed: item.exercise_completed,
-                          total: item.exercise_total,
-                        })}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
+                {t('situations.hub.checkComprehensionArrow', 'Check comprehension →')}
               </Link>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {/* Metric strip */}
+          {situationsTotal > 0 && <CultureMetricStrip metrics={metrics} />}
+
+          {/* Sections / grid */}
+          {filteredItems.length > 0 ? (
+            hasSections ? (
+              <>
+                {/* From the news / Current affairs */}
+                {newsItems.length > 0 && (
+                  <section aria-label={t('situations.hub.sectionNewsTitle', 'From the news')}>
+                    <div className="cx-section-head">
+                      <Kicker tone="cyan">
+                        {t('situations.hub.sectionNewsKicker', 'Current affairs')}
+                      </Kicker>
+                      <h2 className="cx-section-h">
+                        {t('situations.hub.sectionNewsTitle', 'From the news')}
+                        <span className="cx-section-meta">{newsItems.length}</span>
+                      </h2>
+                    </div>
+                    <div className="cx-deck-grid">
+                      {newsItems.map((item, index) => (
+                        <SituationCard
+                          key={item.id}
+                          item={item}
+                          scenario={getScenario(item)}
+                          index={index}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* Everyday & travel — rendered only when original-source situations exist */}
+                {everydayItems.length > 0 && (
+                  <section
+                    aria-label={t('situations.hub.sectionEverydayTitle', 'Everyday & travel')}
+                  >
+                    <div className="cx-section-head">
+                      <Kicker tone="violet">
+                        {t('situations.hub.sectionEverydayKicker', 'Daily life')}
+                      </Kicker>
+                      <h2 className="cx-section-h">
+                        {t('situations.hub.sectionEverydayTitle', 'Everyday & travel')}
+                        <span className="cx-section-meta">{everydayItems.length}</span>
+                      </h2>
+                    </div>
+                    <div className="cx-deck-grid">
+                      {everydayItems.map((item, index) => (
+                        <SituationCard
+                          key={item.id}
+                          item={item}
+                          scenario={getScenario(item)}
+                          index={index}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* Other (no source-type signal) — never silently dropped */}
+                {otherItems.length > 0 && (
+                  <section aria-label={t('situations.hub.sectionOtherTitle', 'More situations')}>
+                    <div className="cx-section-head">
+                      <Kicker tone="primary">
+                        {t('situations.hub.sectionOtherKicker', 'Browse')}
+                      </Kicker>
+                      <h2 className="cx-section-h">
+                        {t('situations.hub.sectionOtherTitle', 'More situations')}
+                        <span className="cx-section-meta">{otherItems.length}</span>
+                      </h2>
+                    </div>
+                    <div className="cx-deck-grid">
+                      {otherItems.map((item, index) => (
+                        <SituationCard
+                          key={item.id}
+                          item={item}
+                          scenario={getScenario(item)}
+                          index={index}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </>
+            ) : (
+              // Fallback: no source-type sectioning available — flat grid.
+              <div className="cx-deck-grid">
+                {filteredItems.map((item, index) => (
+                  <SituationCard
+                    key={item.id}
+                    item={item}
+                    scenario={getScenario(item)}
+                    index={index}
+                  />
+                ))}
+              </div>
+            )
+          ) : (
+            <EmptyState
+              icon={BookOpen}
+              title={t('situations.empty.title')}
+              description={t('situations.empty.description')}
+            />
+          )}
 
           {/* Pagination */}
           {totalPages > 1 && (
@@ -395,15 +628,6 @@ export const SituationsPage: React.FC = () => {
             </div>
           )}
         </>
-      )}
-
-      {/* Empty State */}
-      {!isLoading && !isError && data && filteredItems.length === 0 && (
-        <EmptyState
-          icon={BookOpen}
-          title={t('situations.empty.title')}
-          description={t('situations.empty.description')}
-        />
       )}
     </div>
   );

@@ -31,6 +31,10 @@ vi.mock('@/services/situationAPI', () => ({
   situationAPI: {
     getList: vi.fn(),
     getById: vi.fn(),
+    // SIT-27-05: the hub now fetches the account-wide comprehension overview to
+    // feed the metric strip / what's-new chips. Resolve null here so the metrics
+    // fall back to 0 without throwing inside the (retry:false) query.
+    getComprehension: vi.fn().mockResolvedValue(null),
   },
 }));
 
@@ -118,12 +122,13 @@ async function waitForGrid() {
   });
 }
 
-// Returns the scenario_el texts rendered inside situation-item cards
+// Returns the scenario_el texts rendered inside situation-item cards.
+// SIT-27-05: the rich card renders scenario_el as the <h3> title (the <p> is now
+// the localized scenario_en subtitle), so read the heading.
 function getRenderedItemIds(): string[] {
   return screen.queryAllByTestId('situation-item').map((el) => {
-    // The Link wraps a Card; extract the first <p> (scenario_el)
-    const p = el.querySelector('p');
-    return p?.textContent ?? '';
+    const h = el.querySelector('h3');
+    return h?.textContent ?? '';
   });
 }
 
