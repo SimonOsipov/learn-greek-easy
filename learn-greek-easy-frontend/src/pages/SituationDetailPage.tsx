@@ -184,7 +184,16 @@ export const SituationDetailPage: React.FC = () => {
   const exercises = useMemo(() => exercisesData?.exercises ?? [], [exercisesData]);
   const statusCounts = useMemo(() => calcStatusCounts(exercises), [exercises]);
 
-  if (!id) return <div>Not found</div>;
+  if (!id) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center" data-testid="situation-detail">
+        <p className="mb-4 text-muted-foreground">{t('situations.detail.notFound')}</p>
+        <Button asChild variant="outline">
+          <Link to="/situations">{t('situations.detail.backToList')}</Link>
+        </Button>
+      </div>
+    );
+  }
 
   // Check if error is a 404
   const is404 = isError && (error as { status?: number })?.status === 404;

@@ -12,7 +12,7 @@
 import { act } from 'react';
 
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
 
@@ -497,5 +497,67 @@ describe('useDebounce search delay', () => {
 
     // Second call must include the search term
     expect(situationAPI.getList).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'α' }));
+  });
+});
+
+// ===========================================================================
+// 5. Hub news / everyday section split (SIT-27-05, Core AC 1)
+//    The hub splits the loaded items into "From the news" (source_type='news')
+//    and "Everyday & travel" (source_type='original') sections, keyed off
+//    description_source_type. Items with no source-type signal fall into the
+//    "More situations" bucket and are never dropped.
+// ===========================================================================
+
+describe('Hub news / everyday section split', () => {
+  // Scope a card lookup to the <section> with the given aria-label so we assert
+  // the item landed in the right bucket (not just that it rendered somewhere).
+  function sectionByLabel(label: RegExp) {
+    return screen.getByRole('region', { name: label });
+  }
+
+  it('renders separate news and everyday sections with cards in the right bucket', async () => {
+    const newsItem = createSituationItem({
+      scenario_el: 'Ελληνικά-νέα',
+      description_source_type: 'news',
+    });
+    const everydayItem = createSituationItem({
+      scenario_el: 'Ελληνικά-καθημερινά',
+      description_source_type: 'original',
+    });
+
+    (situationAPI.getList as Mock).mockResolvedValue(makeListResponse([newsItem, everydayItem]));
+
+    renderPage();
+    await waitForGrid();
+
+    // Both section headings present.
+    expect(screen.getByRole('heading', { name: /from the news/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /everyday & travel/i })).toBeInTheDocument();
+
+    // Each card sits under its own section.
+    const newsSection = sectionByLabel(/from the news/i);
+    expect(within(newsSection).getByText(newsItem.scenario_el)).toBeInTheDocument();
+    expect(within(newsSection).queryByText(everydayItem.scenario_el)).not.toBeInTheDocument();
+
+    const everydaySection = sectionByLabel(/everyday & travel/i);
+    expect(within(everydaySection).getByText(everydayItem.scenario_el)).toBeInTheDocument();
+    expect(within(everydaySection).queryByText(newsItem.scenario_el)).not.toBeInTheDocument();
+  });
+
+  it('places source-type-less items in the "More situations" bucket (never dropped)', async () => {
+    const newsItem = createSituationItem({
+      scenario_el: 'Ελληνικά-νέα',
+      description_source_type: 'news',
+    });
+    // No description_source_type → "other" bucket.
+    const orphanItem = createSituationItem({ scenario_el: 'Ελληνικά-ορφανό' });
+
+    (situationAPI.getList as Mock).mockResolvedValue(makeListResponse([newsItem, orphanItem]));
+
+    renderPage();
+    await waitForGrid();
+
+    const otherSection = sectionByLabel(/more situations/i);
+    expect(within(otherSection).getByText(orphanItem.scenario_el)).toBeInTheDocument();
   });
 });
