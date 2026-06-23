@@ -475,12 +475,27 @@
       },
       "hero": {
         "exerciseProgress": "{{completed}}/{{total}} exercises",
-        "sourceAttribution": "Source"
+        "sourceAttribution": "Source",
+        "kicker": "{{domain}} · {{level}}",
+        "statExercises": "Exercises",
+        "statInReview": "In review",
+        "statMastered": "Mastered"
+      },
+      "metric": {
+        "toPractice": "To practice",
+        "inReview": "In review",
+        "mastered": "Mastered",
+        "audio": "Audio",
+        "toPracticeSub": "new",
+        "inReviewSub": "working memory",
+        "masteredSub": "{{pct}}% of set",
+        "audioSub": "with audio"
       },
       "status": {
         "draft": "Draft",
         "ready": "Ready"
       },
+      "aboutSection": "About this situation",
       "about": {
         "a2Section": "A2 Level",
         "b1Section": "B1 Level",
@@ -489,6 +504,44 @@
         "illustrationPlaceholder": "Illustration coming soon"
       },
       "exercises": {
+        "sectionTitle": "Exercises",
+        "actionEyebrow": "Pick what to practice",
+        "yourProgress": "Your progress",
+        "progressBarLabel": "Exercise completion progress",
+        "legendToPractice": "To practice ({{count}})",
+        "legendLearning": "Learning ({{count}})",
+        "legendMastered": "Mastered ({{count}})",
+        "topicFilterGroup": "Filter exercises by topic",
+        "continuePractice": "Continue practice",
+        "startPractice": "Start practice",
+        "searchPlaceholder": "Search exercises...",
+        "clearSearch": "Clear search",
+        "statusFilterGroup": "Filter exercises by status",
+        "filterAll": "All",
+        "filterMastered": "Mastered",
+        "filterReview": "In review",
+        "filterNew": "New",
+        "showing": "Showing {{shown}} of {{total}}",
+        "optionsCount": "{{count}} option",
+        "optionsCount_other": "{{count}} options",
+        "masteryAria": "Mastery: {{filled}} of {{total}}",
+        "previewAria": "Preview exercise {{id}}",
+        "previewTitle": "Exercise preview",
+        "previewSubtitle": "Read-only — practice from the exercise session to record progress.",
+        "correct": "Correct",
+        "appearsIn": "Appears in",
+        "topics": {
+          "all": "All",
+          "Listening": "Listening",
+          "Reading": "Reading",
+          "Dialogue": "Dialogue",
+          "Visual": "Visual",
+          "unknown": "Other"
+        },
+        "noMatches": {
+          "title": "No matching exercises",
+          "description": "Try adjusting your search or filters."
+        },
         "empty": {
           "title": "No exercises yet",
           "description": "Exercises for this situation haven't been created yet."

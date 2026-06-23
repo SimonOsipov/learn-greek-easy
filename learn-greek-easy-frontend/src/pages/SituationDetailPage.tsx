@@ -1,34 +1,38 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft } from 'lucide-react';
+import { BookOpen, ChevronLeft, Headphones, RotateCcw, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 
+import { CultureMetricStrip } from '@/components/culture/redesign/CultureMetricStrip';
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
-import { ExercisePreviewCard } from '@/components/exercises/ExercisePreviewCard';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { KaraokeText } from '@/components/shared/KaraokeText';
-import { ScenePlaceholder } from '@/components/situations/ScenePlaceholder';
-import { SourceCard } from '@/components/situations/SourceCard';
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
+  calcStatusCounts,
+  type ExerciseTopicFilter,
+} from '@/components/situations/exerciseGridHelpers';
+import { ScenePlaceholder } from '@/components/situations/ScenePlaceholder';
+import { SituationActionPanel } from '@/components/situations/SituationActionPanel';
+import { SituationDetailHero } from '@/components/situations/SituationDetailHero';
+import { SituationExerciseGrid } from '@/components/situations/SituationExerciseGrid';
+import { situationToCoverProps } from '@/components/situations/situationToCoverProps';
+import { SourceCard } from '@/components/situations/SourceCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Kicker } from '@/features/decks/dx';
+import '@/features/decks/dx/dx.css';
 import { useAudioTimeMs } from '@/hooks/useAudioTimeMs';
 import { useLanguage } from '@/hooks/useLanguage';
 import { track } from '@/lib/analytics';
 import { buildSrcSet, recoverDerivativeError } from '@/lib/imageVariants';
 import { exerciseAPI } from '@/services/exerciseAPI';
-import type { ExerciseModality, ExerciseQueue, ExerciseQueueItem } from '@/services/exerciseAPI';
+import type { ExerciseQueue } from '@/services/exerciseAPI';
 import { situationAPI } from '@/services/situationAPI';
-import type { LearnerSituationDetailResponse, SituationStatus } from '@/types/situation';
+import { useQuestionLanguageStore } from '@/stores/questionLanguageStore';
+import type { LearnerSituationDetailResponse, SituationStatsResponse } from '@/types/situation';
 
 // Speaker bubble color rotation (4-color, same as admin modal)
 const SPEAKER_BUBBLE_STYLES = [
@@ -54,11 +58,6 @@ const SPEAKER_BUBBLE_STYLES = [
   },
 ];
 
-const STATUS_BADGE_VARIANT: Record<SituationStatus, 'default' | 'outline'> = {
-  ready: 'default',
-  draft: 'outline',
-};
-
 function extractDomain(url: string): string {
   try {
     return new URL(url).hostname.replace(/^www\./, '');
@@ -67,55 +66,16 @@ function extractDomain(url: string): string {
   }
 }
 
-const MODALITY_ORDER: ExerciseModality[] = ['listening', 'reading'];
-
-function groupByModality(
-  exercises: ExerciseQueueItem[]
-): Map<ExerciseModality, ExerciseQueueItem[]> {
-  const groups = new Map<ExerciseModality, ExerciseQueueItem[]>();
-  for (const ex of exercises) {
-    const key = ex.modality ?? 'reading';
-    const list = groups.get(key) ?? [];
-    list.push(ex);
-    groups.set(key, list);
-  }
-  return groups;
-}
-
-function ExercisesByModality({ exercises }: { exercises: ExerciseQueueItem[] }) {
-  const { t } = useTranslation();
-  const groups = groupByModality(exercises);
-
-  return (
-    <Accordion type="multiple" className="w-full">
-      {MODALITY_ORDER.filter((m) => groups.has(m)).map((modality) => {
-        const items = groups.get(modality)!;
-        return (
-          <AccordionItem key={modality} value={modality}>
-            <AccordionTrigger className="hover:no-underline">
-              <div className="flex items-center gap-2">
-                <span>{t(`exercise.modality.${modality}`)}</span>
-                <Badge variant="secondary">{items.length}</Badge>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="space-y-4">
-                {items.map((exercise) => (
-                  <ExercisePreviewCard key={exercise.exercise_id} exercise={exercise} />
-                ))}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        );
-      })}
-    </Accordion>
-  );
-}
-
 export const SituationDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation('common');
   const { currentLanguage } = useLanguage();
+  const { language: questionLanguage, setLanguage: setQuestionLanguage } =
+    useQuestionLanguageStore();
+
+  // Topic filter is owned by the page so the action panel chips and the grid
+  // share a single source of truth (SIT-27-07).
+  const [activeTopic, setActiveTopic] = useState<ExerciseTopicFilter>('all');
 
   // Fetch situation
   const {
@@ -130,7 +90,7 @@ export const SituationDetailPage: React.FC = () => {
     enabled: !!id,
   });
 
-  // Fetch exercise queue
+  // Fetch exercise queue (all exercises, regardless of SM-2 state)
   const {
     data: exercisesData,
     isLoading: exercisesLoading,
@@ -142,8 +102,12 @@ export const SituationDetailPage: React.FC = () => {
     enabled: !!id,
   });
 
-  const exerciseTotal = situation?.exercise_total ?? 0;
-  const exerciseCompleted = situation?.exercise_completed ?? 0;
+  // Fetch per-situation stats for the metric strip (SIT-27-04)
+  const { data: stats } = useQuery<SituationStatsResponse>({
+    queryKey: ['situationStats', id],
+    queryFn: () => situationAPI.getStats(id!),
+    enabled: !!id,
+  });
 
   // PostHog tracking on mount
   const hasTracked = useRef(false);
@@ -178,21 +142,6 @@ export const SituationDetailPage: React.FC = () => {
   const dialogEnabled = !!situation?.dialog?.audio_url;
   const dialogTimeMs = useAudioTimeMs(dialogContainerEl, dialogEnabled);
 
-  // Tab state
-  const [activeTab, setActiveTab] = useState('about');
-  const handleTabChange = useCallback(
-    (value: string) => {
-      setActiveTab(value);
-      if (situation) {
-        track('situation_tab_switched', {
-          tab: value as 'about' | 'exercises',
-          situation_id: situation.id,
-        });
-      }
-    },
-    [situation]
-  );
-
   // PostHog audio play handlers
   const handleB1Play = useCallback(
     (duration: number) => {
@@ -203,7 +152,7 @@ export const SituationDetailPage: React.FC = () => {
         duration_seconds: duration,
       });
     },
-    [situation?.id]
+    [situation?.id] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const handleA2Play = useCallback(
@@ -215,7 +164,7 @@ export const SituationDetailPage: React.FC = () => {
         duration_seconds: duration,
       });
     },
-    [situation?.id]
+    [situation?.id] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const handleDialogPlay = useCallback(
@@ -227,8 +176,13 @@ export const SituationDetailPage: React.FC = () => {
         duration_seconds: duration,
       });
     },
-    [situation?.id]
+    [situation?.id] // eslint-disable-line react-hooks/exhaustive-deps
   );
+
+  // Status counts over the full exercise list (authoritative per-exercise SM-2
+  // status) — drives the action-panel progress bar + legend.
+  const exercises = useMemo(() => exercisesData?.exercises ?? [], [exercisesData]);
+  const statusCounts = useMemo(() => calcStatusCounts(exercises), [exercises]);
 
   if (!id) return <div>Not found</div>;
 
@@ -275,6 +229,30 @@ export const SituationDetailPage: React.FC = () => {
 
   const scenarioTitle = currentLanguage === 'ru' ? situation.scenario_ru : situation.scenario_en;
 
+  // Hero kicker: domain · level (level from the cover adapter's gradient mapping).
+  const coverProps = situationToCoverProps(situation);
+  const heroDomain = situation.domain
+    ? situation.domain.charAt(0).toUpperCase() + situation.domain.slice(1)
+    : t('situations.card.kickerFallback', { level: coverProps.level });
+  const heroKicker = situation.domain
+    ? t('situations.detail.hero.kicker', { domain: heroDomain, level: coverProps.level })
+    : heroDomain;
+
+  // Hero stats use the per-situation stats when available, falling back to the
+  // exercise-derived status counts so the hero is never empty.
+  const totalExercises = situation.exercise_total || exercises.length;
+  const masteredCount = stats?.mastered ?? statusCounts.mastered;
+  const inReviewCount = stats?.in_review ?? statusCounts.review;
+  const toPracticeCount = stats?.to_practice ?? statusCounts.new;
+  const audioCount = stats?.audio ?? 0;
+  const masteredPct = totalExercises > 0 ? Math.round((masteredCount / totalExercises) * 100) : 0;
+
+  const heroStats = [
+    { label: t('situations.detail.hero.statExercises'), value: totalExercises },
+    { label: t('situations.detail.hero.statInReview'), value: inReviewCount },
+    { label: t('situations.detail.hero.statMastered'), value: masteredCount },
+  ];
+
   // Active dialog line (for line-level highlighting)
   const activeLine =
     situation.dialog?.lines.find(
@@ -285,45 +263,28 @@ export const SituationDetailPage: React.FC = () => {
         dialogTimeMs < line.end_time_ms
     ) ?? null;
 
-  const completed = exerciseCompleted;
-  const total = exerciseTotal;
-
   return (
-    <div className="container mx-auto px-4 py-8 pb-20 lg:pb-8" data-testid="situation-detail">
-      {/* Hero Section */}
-      <div
-        className="relative rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 p-6 pb-12"
-        data-testid="situation-detail-hero"
+    <div
+      className="container mx-auto space-y-6 px-4 py-8 pb-20 lg:pb-8"
+      data-testid="situation-detail"
+    >
+      {/* Back link */}
+      <Button
+        asChild
+        variant="ghost"
+        size="sm"
+        className="-ml-2 hover:bg-transparent"
+        data-testid="situation-hero-back-btn"
       >
-        {/* Back button */}
-        <Button
-          asChild
-          variant="ghost"
-          size="sm"
-          className="hover:bg-transparent"
-          data-testid="situation-hero-back-btn"
-        >
-          <Link to="/situations">
-            <ChevronLeft className="mr-1 h-4 w-4" />
-            {t('situations.detail.back')}
-          </Link>
-        </Button>
+        <Link to="/situations">
+          <ChevronLeft className="mr-1 h-4 w-4" />
+          {t('situations.detail.back')}
+        </Link>
+      </Button>
 
-        {/* Badges row */}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Badge variant={STATUS_BADGE_VARIANT[situation.status]}>
-            {t(`situations.detail.status.${situation.status}`)}
-          </Badge>
-          <Badge variant="outline" data-testid="situation-hero-progress">
-            {t('situations.detail.hero.exerciseProgress', { completed, total })}
-          </Badge>
-        </div>
-
-        {/* Title */}
-        <h1 className="mt-4 text-4xl font-bold text-foreground sm:text-5xl">{scenarioTitle}</h1>
-
-        {/* Greek subtitle */}
-        <p className="mt-2 text-lg text-muted-foreground">{situation.scenario_el}</p>
+      {/* Hero */}
+      <div data-testid="situation-detail-hero">
+        <SituationDetailHero situation={situation} kicker={heroKicker} stats={heroStats} />
 
         {/* Source attribution */}
         {situation.source_url && (
@@ -341,213 +302,243 @@ export const SituationDetailPage: React.FC = () => {
         )}
       </div>
 
-      {/* Tabs */}
-      <Tabs
-        value={activeTab}
-        onValueChange={handleTabChange}
-        data-testid="situation-detail-tabs"
-        className="mt-6"
-      >
-        <TabsList className="w-full">
-          <TabsTrigger value="about" className="flex-1" data-testid="situation-tab-about">
-            {t('situations.detail.tabs.about')}
-          </TabsTrigger>
-          <TabsTrigger value="exercises" className="flex-1" data-testid="situation-tab-exercises">
-            {exercisesLoading
-              ? t('situations.detail.tabs.exercises', { count: situation.exercise_total })
-              : t('situations.detail.tabs.exercisesWithCount', {
-                  completed: exerciseCompleted,
-                  total: exerciseTotal,
-                })}
-          </TabsTrigger>
-        </TabsList>
+      {/* Metric strip — To practice / In review / Mastered / Audio (SIT-27-04) */}
+      <CultureMetricStrip
+        metrics={[
+          {
+            icon: <BookOpen className="h-5 w-5" />,
+            label: t('situations.detail.metric.toPractice'),
+            value: toPracticeCount,
+            tone: 'primary',
+            trend: t('situations.detail.metric.toPracticeSub'),
+            trendTone: 'flat',
+          },
+          {
+            icon: <RotateCcw className="h-5 w-5" />,
+            label: t('situations.detail.metric.inReview'),
+            value: inReviewCount,
+            tone: 'amber',
+            trend: t('situations.detail.metric.inReviewSub'),
+            trendTone: 'flat',
+          },
+          {
+            icon: <Trophy className="h-5 w-5" />,
+            label: t('situations.detail.metric.mastered'),
+            value: `${masteredCount}/${totalExercises}`,
+            tone: 'green',
+            trend: t('situations.detail.metric.masteredSub', { pct: masteredPct }),
+            trendTone: 'flat',
+          },
+          {
+            icon: <Headphones className="h-5 w-5" />,
+            label: t('situations.detail.metric.audio'),
+            value: audioCount,
+            tone: 'violet',
+            trend: t('situations.detail.metric.audioSub'),
+            trendTone: 'flat',
+          },
+        ]}
+      />
 
-        {/* About Tab */}
-        <TabsContent value="about" className="mt-6 space-y-8">
-          {/* Image row — always 2-up on lg+, falls back to placeholders */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {situation.source_url ? (
-              <SourceCard
-                sourceUrl={situation.source_url}
-                sourceImageUrl={situation.source_image_url}
-                sourceImageVariants={situation.source_image_variants}
-                sourceTitle={situation.source_title}
-              />
-            ) : (
-              <ScenePlaceholder variant="source" />
-            )}
+      {/* Exercises section: action panel + toolbar + grid (SIT-27-07) */}
+      <section className="space-y-6" data-testid="situation-exercises-section">
+        <div className="cx-section-head">
+          <Kicker tone="primary">{t('situations.detail.exercises.sectionTitle')}</Kicker>
+        </div>
 
-            {situation.picture_url ? (
-              <div className="overflow-hidden rounded-lg border bg-muted/40">
-                <img
-                  src={situation.picture_url}
-                  srcSet={buildSrcSet(situation.picture_variants)}
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                  alt={scenarioTitle}
-                  width={800}
-                  height={450}
-                  className="aspect-video w-full object-cover"
-                  loading="lazy"
-                  onError={recoverDerivativeError}
-                />
-              </div>
-            ) : (
-              <ScenePlaceholder variant="illustration" />
-            )}
+        {exercisesLoading ? (
+          <div className="space-y-4" data-testid="exercises-loading">
+            <Skeleton className="h-40 w-full rounded-2xl" />
+            <Skeleton className="h-32 w-full" />
           </div>
-
-          {/* Descriptions grid */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* A2 Description */}
-            {situation.description?.text_el_a2 && (
-              <section ref={setDescA2ContainerEl} className="flex flex-col">
-                <div className="mb-3 flex items-center gap-2">
-                  <h2 className="text-lg font-semibold">
-                    {t('situations.detail.about.a2Section')}
-                  </h2>
-                  <Badge variant="secondary">A2</Badge>
-                </div>
-                {descA2Enabled ? (
-                  <KaraokeText
-                    wordTimestamps={situation.description.word_timestamps_a2 ?? []}
-                    currentTimeMs={descA2TimeMs}
-                    fallbackText={situation.description.text_el_a2}
-                    className="mb-4 text-base leading-relaxed"
-                  />
-                ) : (
-                  <p className="mb-4 text-base leading-relaxed">
-                    {situation.description.text_el_a2}
-                  </p>
-                )}
-                <div className="mt-auto">
-                  {situation.description.audio_a2_url && (
-                    <WaveformPlayer
-                      audioUrl={situation.description.audio_a2_url}
-                      duration={situation.description.audio_a2_duration_seconds ?? undefined}
-                      variant="culture"
-                      onPlay={handleA2Play}
-                    />
-                  )}
-                </div>
-              </section>
-            )}
-
-            {/* B1 Description */}
-            {situation.description && (
-              <section ref={setDescB1ContainerEl} className="flex flex-col">
-                <div className="mb-3 flex items-center gap-2">
-                  <h2 className="text-lg font-semibold">
-                    {t('situations.detail.about.b1Section')}
-                  </h2>
-                  <Badge variant="outline">B1</Badge>
-                </div>
-                {descB1Enabled ? (
-                  <KaraokeText
-                    wordTimestamps={situation.description.word_timestamps ?? []}
-                    currentTimeMs={descB1TimeMs}
-                    fallbackText={situation.description.text_el}
-                    className="mb-4 text-base leading-relaxed"
-                  />
-                ) : (
-                  <p className="mb-4 text-base leading-relaxed">{situation.description.text_el}</p>
-                )}
-                <div className="mt-auto">
-                  {situation.description.audio_url && (
-                    <WaveformPlayer
-                      audioUrl={situation.description.audio_url}
-                      duration={situation.description.audio_duration_seconds ?? undefined}
-                      variant="culture"
-                      onPlay={handleB1Play}
-                    />
-                  )}
-                </div>
-              </section>
-            )}
+        ) : exercisesError ? (
+          <div className="py-8 text-center">
+            <p className="mb-4 text-muted-foreground">
+              {t('situations.detail.exercises.error.title')}
+            </p>
+            <Button onClick={() => void refetchExercises()}>
+              {t('situations.detail.exercises.error.retry')}
+            </Button>
           </div>
+        ) : exercises.length === 0 ? (
+          <EmptyState
+            title={t('situations.detail.exercises.empty.title')}
+            description={t('situations.detail.exercises.empty.description')}
+          />
+        ) : (
+          <>
+            <SituationActionPanel
+              mastered={statusCounts.mastered}
+              inReview={statusCounts.review}
+              toPractice={statusCounts.new}
+              total={statusCounts.all}
+              topicCounts={exercisesData?.topic_counts}
+              activeTopic={activeTopic}
+              onTopicChange={setActiveTopic}
+            />
+            <SituationExerciseGrid
+              exercises={exercises}
+              activeTopic={activeTopic}
+              language={questionLanguage}
+              onLanguageChange={setQuestionLanguage}
+            />
+          </>
+        )}
+      </section>
 
-          {/* Dialog */}
-          {situation.dialog && (
-            <section className="mb-8">
-              <h2 className="mb-4 text-lg font-semibold">
-                {t('situations.detail.about.dialogSection')}
-              </h2>
-              {situation.dialog.audio_url && (
-                <div ref={setDialogContainerEl} className="mb-4">
-                  <WaveformPlayer
-                    audioUrl={situation.dialog.audio_url}
-                    variant="culture"
-                    onPlay={handleDialogPlay}
-                  />
-                </div>
-              )}
-              <div className="space-y-3">
-                {situation.dialog.lines.map((line) => {
-                  const speaker = situation.dialog!.speakers.find((s) => s.id === line.speaker_id);
-                  const speakerIdx = speaker ? speaker.speaker_index : 0;
-                  const style = SPEAKER_BUBBLE_STYLES[speakerIdx % SPEAKER_BUBBLE_STYLES.length];
-                  const isActive = activeLine?.id === line.id;
-                  const isLeft = speakerIdx % 2 === 0;
+      {/* About this situation — preserved content, restyled section (SIT-27-06) */}
+      <section className="space-y-8" data-testid="situation-about-section">
+        <div className="cx-section-head">
+          <Kicker tone="primary">{t('situations.detail.aboutSection')}</Kicker>
+        </div>
 
-                  return (
-                    <div
-                      key={line.id}
-                      className={`flex ${isLeft ? 'justify-start' : 'justify-end'}`}
-                    >
-                      <div
-                        className={`max-w-[80%] rounded-lg border p-3 transition-all ${style.bg} ${style.border} ${
-                          isActive ? 'ring-2 ring-blue-400 ring-offset-1' : ''
-                        }`}
-                      >
-                        {speaker && (
-                          <p className={`mb-1 text-xs font-semibold ${style.name}`}>
-                            {speaker.character_name}
-                          </p>
-                        )}
-                        {line.word_timestamps?.length ? (
-                          <KaraokeText
-                            wordTimestamps={line.word_timestamps}
-                            currentTimeMs={dialogTimeMs}
-                            fallbackText={line.text}
-                          />
-                        ) : (
-                          <p className="text-sm">{line.text}</p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-        </TabsContent>
-
-        {/* Exercises Tab */}
-        <TabsContent value="exercises" className="mt-6">
-          {exercisesLoading ? (
-            <div className="space-y-4" data-testid="exercises-tab-loading">
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-32 w-full" />
-            </div>
-          ) : exercisesError ? (
-            <div className="py-8 text-center">
-              <p className="mb-4 text-muted-foreground">
-                {t('situations.detail.exercises.error.title')}
-              </p>
-              <Button onClick={() => void refetchExercises()}>
-                {t('situations.detail.exercises.error.retry')}
-              </Button>
-            </div>
-          ) : !exercisesData?.exercises.length ? (
-            <EmptyState
-              title={t('situations.detail.exercises.empty.title')}
-              description={t('situations.detail.exercises.empty.description')}
+        {/* Image row — always 2-up on lg+, falls back to placeholders */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {situation.source_url ? (
+            <SourceCard
+              sourceUrl={situation.source_url}
+              sourceImageUrl={situation.source_image_url}
+              sourceImageVariants={situation.source_image_variants}
+              sourceTitle={situation.source_title}
             />
           ) : (
-            <ExercisesByModality exercises={exercisesData.exercises} />
+            <ScenePlaceholder variant="source" />
           )}
-        </TabsContent>
-      </Tabs>
+
+          {situation.picture_url ? (
+            <div className="overflow-hidden rounded-lg border bg-muted/40">
+              <img
+                src={situation.picture_url}
+                srcSet={buildSrcSet(situation.picture_variants)}
+                sizes="(max-width: 768px) 100vw, 50vw"
+                alt={scenarioTitle}
+                width={800}
+                height={450}
+                className="aspect-video w-full object-cover"
+                loading="lazy"
+                onError={recoverDerivativeError}
+              />
+            </div>
+          ) : (
+            <ScenePlaceholder variant="illustration" />
+          )}
+        </div>
+
+        {/* Descriptions grid */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* A2 Description */}
+          {situation.description?.text_el_a2 && (
+            <div ref={setDescA2ContainerEl} className="flex flex-col">
+              <div className="mb-3 flex items-center gap-2">
+                <h3 className="text-lg font-semibold">{t('situations.detail.about.a2Section')}</h3>
+                <Badge variant="secondary">A2</Badge>
+              </div>
+              {descA2Enabled ? (
+                <KaraokeText
+                  wordTimestamps={situation.description.word_timestamps_a2 ?? []}
+                  currentTimeMs={descA2TimeMs}
+                  fallbackText={situation.description.text_el_a2}
+                  className="mb-4 text-base leading-relaxed"
+                />
+              ) : (
+                <p className="mb-4 text-base leading-relaxed">{situation.description.text_el_a2}</p>
+              )}
+              <div className="mt-auto">
+                {situation.description.audio_a2_url && (
+                  <WaveformPlayer
+                    audioUrl={situation.description.audio_a2_url}
+                    duration={situation.description.audio_a2_duration_seconds ?? undefined}
+                    variant="culture"
+                    onPlay={handleA2Play}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* B1 Description */}
+          {situation.description && (
+            <div ref={setDescB1ContainerEl} className="flex flex-col">
+              <div className="mb-3 flex items-center gap-2">
+                <h3 className="text-lg font-semibold">{t('situations.detail.about.b1Section')}</h3>
+                <Badge variant="outline">B1</Badge>
+              </div>
+              {descB1Enabled ? (
+                <KaraokeText
+                  wordTimestamps={situation.description.word_timestamps ?? []}
+                  currentTimeMs={descB1TimeMs}
+                  fallbackText={situation.description.text_el}
+                  className="mb-4 text-base leading-relaxed"
+                />
+              ) : (
+                <p className="mb-4 text-base leading-relaxed">{situation.description.text_el}</p>
+              )}
+              <div className="mt-auto">
+                {situation.description.audio_url && (
+                  <WaveformPlayer
+                    audioUrl={situation.description.audio_url}
+                    duration={situation.description.audio_duration_seconds ?? undefined}
+                    variant="culture"
+                    onPlay={handleB1Play}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Dialog */}
+        {situation.dialog && (
+          <div>
+            <h3 className="mb-4 text-lg font-semibold">
+              {t('situations.detail.about.dialogSection')}
+            </h3>
+            {situation.dialog.audio_url && (
+              <div ref={setDialogContainerEl} className="mb-4">
+                <WaveformPlayer
+                  audioUrl={situation.dialog.audio_url}
+                  variant="culture"
+                  onPlay={handleDialogPlay}
+                />
+              </div>
+            )}
+            <div className="space-y-3">
+              {situation.dialog.lines.map((line) => {
+                const speaker = situation.dialog!.speakers.find((s) => s.id === line.speaker_id);
+                const speakerIdx = speaker ? speaker.speaker_index : 0;
+                const style = SPEAKER_BUBBLE_STYLES[speakerIdx % SPEAKER_BUBBLE_STYLES.length];
+                const isActive = activeLine?.id === line.id;
+                const isLeft = speakerIdx % 2 === 0;
+
+                return (
+                  <div key={line.id} className={`flex ${isLeft ? 'justify-start' : 'justify-end'}`}>
+                    <div
+                      className={`max-w-[80%] rounded-lg border p-3 transition-all ${style.bg} ${style.border} ${
+                        isActive ? 'ring-2 ring-blue-400 ring-offset-1' : ''
+                      }`}
+                    >
+                      {speaker && (
+                        <p className={`mb-1 text-xs font-semibold ${style.name}`}>
+                          {speaker.character_name}
+                        </p>
+                      )}
+                      {line.word_timestamps?.length ? (
+                        <KaraokeText
+                          wordTimestamps={line.word_timestamps}
+                          currentTimeMs={dialogTimeMs}
+                          fallbackText={line.text}
+                        />
+                      ) : (
+                        <p className="text-sm">{line.text}</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 };
