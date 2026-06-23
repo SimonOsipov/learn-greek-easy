@@ -1157,7 +1157,14 @@ class ProposalAttempt(Base):
     """
 
     __tablename__ = "proposal_attempt"
-    __table_args__ = (Index("ix_proposal_attempt_proposal_id", "proposal_id"),)
+    __table_args__ = (
+        Index("ix_proposal_attempt_proposal_id", "proposal_id"),
+        UniqueConstraint(
+            "proposal_id",
+            "attempt_no",
+            name="uq_proposal_attempt_proposal_id_attempt_no",
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(
         primary_key=True,

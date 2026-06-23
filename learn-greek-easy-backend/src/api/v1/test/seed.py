@@ -557,24 +557,27 @@ async def seed_lexgen_proposals(
     """
     start_time = perf_counter()
 
-    # Dedicated approve deck — idempotent: delete by name then re-create so a
-    # repeated seed/lexgen-proposals call always yields exactly one deck row with
-    # this name and a known id. This makes the approve flow in LEXGEN-13-06 E2E
-    # self-contained: no cross-seed dependency on seed/admin-cards.
+    # Dedicated approve deck — get-or-create: reuse the existing row if present so
+    # repeated seed/lexgen-proposals calls yield exactly one deck row (no delete
+    # window, naturally idempotent). This makes the approve flow in LEXGEN-13-06
+    # E2E self-contained: no cross-seed dependency on seed/admin-cards.
     _LEXGEN_APPROVE_DECK_NAME = "LEXGEN E2E Approve Deck"
-    await db.execute(delete(Deck).where(Deck.name_en == _LEXGEN_APPROVE_DECK_NAME))
-    await db.flush()
-    approve_deck = Deck(
-        name_en=_LEXGEN_APPROVE_DECK_NAME,
-        name_el="LEXGEN E2E Approve Deck",
-        name_ru="LEXGEN E2E Approve Deck",
-        description_en="Dedicated E2E approve-flow deck for LEXGEN-13-06 — not for production.",
-        level=DeckLevel.A1,
-        is_active=True,
-        is_premium=False,
+    existing_deck_result = await db.execute(
+        select(Deck).where(Deck.name_en == _LEXGEN_APPROVE_DECK_NAME)
     )
-    db.add(approve_deck)
-    await db.flush()  # populate approve_deck.id before the proposal flush
+    approve_deck = existing_deck_result.scalar_one_or_none()
+    if approve_deck is None:
+        approve_deck = Deck(
+            name_en=_LEXGEN_APPROVE_DECK_NAME,
+            name_el="LEXGEN E2E Approve Deck",
+            name_ru="LEXGEN E2E Approve Deck",
+            description_en="Dedicated E2E approve-flow deck for LEXGEN-13-06 — not for production.",
+            level=DeckLevel.A1,
+            is_active=True,
+            is_premium=False,
+        )
+        db.add(approve_deck)
+        await db.flush()  # populate approve_deck.id before the proposal flush
 
     # Determinism: wipe the table first so counts are exact.
     await db.execute(delete(WordProposal))

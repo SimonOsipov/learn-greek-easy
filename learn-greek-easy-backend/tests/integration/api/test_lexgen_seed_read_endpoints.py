@@ -26,9 +26,11 @@ from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import (
+    Deck,
     ProposalAttempt,
     ReviewAction,
     WordProposal,
@@ -333,11 +335,14 @@ async def test_seed_lexgen_proposals_creates_approve_deck(client: AsyncClient) -
 
 
 @pytest.mark.integration
-async def test_seed_lexgen_proposals_approve_deck_is_idempotent(client: AsyncClient) -> None:
+async def test_seed_lexgen_proposals_approve_deck_is_idempotent(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
     """Calling POST /lexgen-proposals twice yields exactly one approve deck row.
 
-    Idempotency: delete-by-name + re-create means the second call does not
-    accumulate a second deck with the same name.
+    Idempotency: get-or-create means the second call reuses the existing deck
+    (same id returned both times) and does not accumulate a second row.
     """
     # Call seed twice.
     r1 = await client.post(SEED_URL)
@@ -345,23 +350,17 @@ async def test_seed_lexgen_proposals_approve_deck_is_idempotent(client: AsyncCli
     r2 = await client.post(SEED_URL)
     assert r2.status_code == 200, r2.text
 
-    # The IDs returned by both calls differ (new row each time) — that is fine;
-    # what matters is the name is unique (only one row in the DB after two calls).
+    # The IDs returned by both calls must be the same — the second call reuses
+    # the existing row rather than creating a fresh one.
     id1 = r1.json()["results"]["approve_deck"]["id"]
     id2 = r2.json()["results"]["approve_deck"]["id"]
-    # The second call replaces the first; the ids differ.
-    assert id1 != id2, "each seed call creates a fresh deck row (prior one deleted)"
+    assert id1 == id2, "get-or-create must return the same deck id on repeated calls"
 
-    # Only one deck row with this name should exist after two calls.
-    # We use the test client's underlying app to query the DB via a fresh session.
-    # Since we cannot access db_session here (this test does not inject it), we
-    # verify via the admin list endpoint instead — a lightweight proxy.
-    list_resp = await client.get("/api/v1/admin/decks?type=vocabulary&page_size=100")
-    # The admin endpoint requires superuser auth which the test client may not carry.
-    # Fall back to asserting via the seed response shapes only if admin is unavailable.
-    if list_resp.status_code == 200:
-        decks_json = list_resp.json().get("decks", [])
-        matching = [d for d in decks_json if d.get("name_en") == _LEXGEN_APPROVE_DECK_NAME]
-        assert (
-            len(matching) == 1
-        ), f"expected exactly 1 deck named {_LEXGEN_APPROVE_DECK_NAME!r}; found {len(matching)}"
+    # Confirm exactly one row in the DB — unconditional, no admin-auth dependency.
+    count_result = await db_session.execute(
+        select(func.count()).select_from(Deck).where(Deck.name_en == _LEXGEN_APPROVE_DECK_NAME)
+    )
+    row_count = count_result.scalar_one()
+    assert (
+        row_count == 1
+    ), f"expected exactly 1 deck named {_LEXGEN_APPROVE_DECK_NAME!r}; found {row_count}"

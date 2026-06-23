@@ -238,6 +238,11 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "proposal_id",
+            "attempt_no",
+            name="uq_proposal_attempt_proposal_id_attempt_no",
+        ),
     )
     op.create_index(
         "ix_proposal_attempt_proposal_id",
