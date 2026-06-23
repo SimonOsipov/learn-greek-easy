@@ -43,7 +43,6 @@ import i18n from '@/i18n';
 // ============================================
 
 vi.mock('@/services/adminAPI', () => ({
-  GENERATE_WORD_ENTRY_STREAM_URL: '/api/v1/admin/word-entries/generate/stream',
   adminAPI: {
     listWordEntries: vi.fn(),
     listCultureQuestions: vi.fn(),

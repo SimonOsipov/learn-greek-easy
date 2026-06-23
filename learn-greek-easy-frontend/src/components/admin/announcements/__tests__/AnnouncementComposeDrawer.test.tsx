@@ -17,7 +17,6 @@ vi.mock('@/stores/adminAnnouncementStore', () => ({
 }));
 
 vi.mock('@/services/adminAPI', () => ({
-  GENERATE_WORD_ENTRY_STREAM_URL: '/api/v1/admin/word-entries/generate/stream',
   adminAPI: {
     createAnnouncement: vi.fn(),
   },

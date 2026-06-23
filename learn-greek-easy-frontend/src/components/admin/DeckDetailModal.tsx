@@ -66,7 +66,7 @@ import type {
 import { CardCreateModal } from './CardCreateModal';
 import { CardDeleteDialog } from './CardDeleteDialog';
 import { CardEditModal } from './CardEditModal';
-import { GenerateNounDialog } from './GenerateNounDialog';
+import { LexgenSubmitDialog } from './LexgenSubmitDialog';
 import { WordEntryCards } from './WordEntryCards';
 import { WordEntryContent } from './WordEntryContent';
 
@@ -1190,15 +1190,9 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
       )}
 
       {isVocabulary && deck && (
-        <GenerateNounDialog
+        <LexgenSubmitDialog
           open={generateNounDialogOpen}
           onOpenChange={setGenerateNounDialogOpen}
-          deckId={deck.id}
-          deckName={deckName}
-          onWordLinked={() => {
-            fetchItems();
-            onItemDeleted?.();
-          }}
         />
       )}
     </>

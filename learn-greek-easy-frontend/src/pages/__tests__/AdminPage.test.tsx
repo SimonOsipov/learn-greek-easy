@@ -179,7 +179,6 @@ vi.mock('@/stores/adminChangelogStore', () => ({
 // ---------------------------------------------------------------------------
 
 vi.mock('@/services/adminAPI', () => ({
-  GENERATE_WORD_ENTRY_STREAM_URL: '/api/v1/admin/word-entries/generate/stream',
   adminAPI: {
     getContentStats: vi.fn().mockResolvedValue({
       total_decks: 0,
