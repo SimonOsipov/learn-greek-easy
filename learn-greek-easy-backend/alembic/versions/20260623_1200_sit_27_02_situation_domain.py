@@ -32,7 +32,17 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column("situations", sa.Column("domain", sa.Text(), nullable=True))
+    op.add_column(
+        "situations",
+        sa.Column(
+            "domain",
+            sa.Text(),
+            nullable=True,
+            comment=(
+                "Human-facing topic label (e.g. news, everyday, travel) " "for the hub card kicker"
+            ),
+        ),
+    )
 
 
 def downgrade() -> None:
