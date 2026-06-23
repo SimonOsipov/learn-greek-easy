@@ -16,7 +16,6 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from src.db.models import DeckLevel, DialogStatus
 from src.schemas.exercise_payload import ExercisesPayload
-from src.schemas.nlp import DuplicateCheckResult, GeneratedNounData, VerificationSummary
 
 # ============================================================================
 # Admin Stats Schemas
@@ -274,101 +273,6 @@ class GenerateCardsResponse(BaseModel):
     card_type: str = Field(..., description="Type of card that was generated")
     created: int = Field(..., ge=0, description="Number of new cards created")
     updated: int = Field(..., ge=0, description="Number of existing cards updated")
-
-
-# ============================================================================
-# Word Entry Generation Pipeline Schemas
-# ============================================================================
-
-
-class GenerateWordEntryRequest(BaseModel):
-    """Request to run the noun generation pipeline (progressive stages)."""
-
-    word: str = Field(..., min_length=1, max_length=50, description="Greek word (any form)")
-    deck_id: UUID = Field(..., description="Target V2 vocabulary deck UUID")
-    # Optional fields for from_stage=generation (suggestion swap)
-    lemma: str | None = Field(None, description="Pre-resolved lemma for partial re-generation")
-    gender: str | None = Field(None, description="Pre-resolved gender")
-    article: str | None = Field(None, description="Pre-resolved article")
-    translation_lookup: "TranslationLookupStageResult | None" = Field(
-        None, description="Cached translation data"
-    )
-
-
-class NormalizationStageResult(BaseModel):
-    """Normalization result with confidence tier for frontend display."""
-
-    input_word: str = Field(..., description="Original word submitted")
-    lemma: str = Field(..., description="Normalized lemma (dictionary form)")
-    gender: str | None = Field(None, description='Gender: "masculine"/"feminine"/"neuter"/None')
-    article: str | None = Field(None, description='Article: "ο"/"η"/"το"/None')
-    pos: str = Field(..., description="Universal POS tag (NOUN, VERB, ADJ, etc.)")
-    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score 0.0-1.0")
-    confidence_tier: Literal["high", "medium", "low"] = Field(
-        ..., description="Display tier derived from confidence score"
-    )
-    strategy: str | None = Field(
-        None,
-        description='Normalization strategy used: "lexicon", "direct", "spellcheck", or "article_prefix"',
-    )
-    corrected_from: str | None = Field(
-        None, description="Original misspelled form if spellcheck corrected the input"
-    )
-    corrected_to: str | None = Field(
-        None, description="Spellcheck-corrected form (before lemmatization), null if no correction"
-    )
-
-
-class SuggestionItem(BaseModel):
-    """Alternative normalization suggestion for the frontend to display."""
-
-    lemma: str = Field(..., description="Suggested lemma (dictionary form)")
-    pos: str = Field(..., description="Universal POS tag")
-    gender: str | None = Field(None, description="Gender if detected")
-    article: str | None = Field(None, description="Article if detected")
-    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score")
-    confidence_tier: Literal["high", "medium", "low"] = Field(..., description="Display tier")
-    strategy: str = Field(
-        ..., description='Strategy: "lexicon", "direct", "spellcheck", or "article_prefix"'
-    )
-
-
-class TranslationSourceInfo(BaseModel):
-    """Translation data from a single language lookup."""
-
-    translations: list[str] = Field(..., description="Individual translation strings")
-    combined_text: str = Field(..., description="Comma-joined translation text for LLM prompt")
-    source: Literal["dictionary", "pivot", "none"] = Field(
-        ..., description="Where translations came from"
-    )
-    sense_count: int = Field(..., ge=0, description="Number of dictionary senses found")
-
-
-class TranslationLookupStageResult(BaseModel):
-    """Stage 2.5 result: bilingual translation lookup."""
-
-    en: TranslationSourceInfo | None = None
-    ru: TranslationSourceInfo | None = None
-
-
-class GenerateWordEntryResponse(BaseModel):
-    """Progressive response envelope for the noun generation pipeline."""
-
-    stage: str = Field(..., description="Last completed pipeline stage")
-    normalization: NormalizationStageResult | None = None
-    suggestions: list[SuggestionItem] = Field(
-        default_factory=list,
-        description="Alternative normalization suggestions (max 3, confidence >= 0.40)",
-    )
-    duplicate_check: DuplicateCheckResult | None = None
-    translation_lookup: TranslationLookupStageResult | None = None
-    generation: GeneratedNounData | None = None  # NGEN-08-04
-    verification: VerificationSummary | None = None  # VRES-01
-    persist: None = None  # NGEN-08-06
-
-
-# Resolve forward references (GenerateWordEntryRequest references TranslationLookupStageResult)
-GenerateWordEntryRequest.model_rebuild()
 
 
 # ========================
@@ -678,3 +582,28 @@ class LexgenRejectRequest(BaseModel):
     """Request body for POST …/{proposal_id}/reject."""
 
     reason: str = Field(..., description="Human-readable rejection reason stored on the proposal")
+
+
+# ============================================================================
+# LEXGEN-14-02 Submit Endpoint Schemas
+# ============================================================================
+
+
+class LexgenSubmitRequest(BaseModel):
+    """Request body for POST /lexgen/proposals — submit a lemma for pipeline processing."""
+
+    lemma: str = Field(..., min_length=1, max_length=100, description="Greek lemma to process")
+    pos: str = Field("noun", description="Part of speech (default: noun)")
+
+
+class LexgenSubmitResponse(BaseModel):
+    """Response body for POST /lexgen/proposals.
+
+    Both attested (needs_review) and rejected (never-invent) lemmas return 201
+    with this body — the status field distinguishes the two outcomes.
+    No HTTP error is raised for semantic rejections (Decisions §3).
+    """
+
+    id: UUID
+    status: Literal["needs_review", "rejected"]
+    rejection_reason: str | None = None
