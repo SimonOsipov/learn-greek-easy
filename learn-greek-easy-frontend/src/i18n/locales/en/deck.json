@@ -162,6 +162,7 @@
     }
   },
   "myDecks": {
+    "kicker": "Collection · Personal decks",
     "title": "My Decks",
     "empty": {
       "title": "You haven't created any decks yet",

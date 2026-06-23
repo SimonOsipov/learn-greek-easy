@@ -12,6 +12,8 @@ import { CardSkeleton } from '@/components/feedback';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Kicker } from '@/features/decks/dx';
+import '@/features/decks/dx/dx.css';
 import { reportAPIError } from '@/lib/errorReporting';
 import { deckAPI, type DeckResponse } from '@/services/deckAPI';
 import type { Deck, DeckProgress } from '@/types/deck';
@@ -111,11 +113,9 @@ export const MyDecksPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-8">
       {/* Page Header */}
-      <div>
-        <h1
-          className="text-2xl font-semibold text-foreground md:text-3xl"
-          data-testid="my-decks-title"
-        >
+      <div className="dx-index-head">
+        <Kicker tone="primary">{t('myDecks.kicker')}</Kicker>
+        <h1 className="dx-index-h" data-testid="my-decks-title">
           {t('myDecks.title')}
         </h1>
       </div>

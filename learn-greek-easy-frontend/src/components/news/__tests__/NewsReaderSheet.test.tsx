@@ -84,6 +84,8 @@ const createArticle = (overrides: Partial<NewsItemResponse> = {}): NewsItemRespo
     audio_a2_generated_at: null,
     audio_file_size_bytes: null,
     audio_a2_file_size_bytes: null,
+    word_timestamps: null,
+    word_timestamps_a2: null,
     country: 'greece',
     has_a2_content: true,
     alt_text: null,
@@ -514,6 +516,62 @@ describe('NewsReaderSheet — audio coordinator', () => {
   it('reader player shows speed control', () => {
     renderReader({ level: 'b1' });
     expect(screen.getByTestId('waveform-speed-pills')).toBeInTheDocument();
+  });
+});
+
+describe('NewsReaderSheet — karaoke word highlighting', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders KaraokeText word spans when B1 word_timestamps are present', () => {
+    const article = createArticle({
+      word_timestamps: [
+        { word: 'Πρώτη', start_ms: 0, end_ms: 300 },
+        { word: 'είδηση', start_ms: 300, end_ms: 700 },
+      ],
+    });
+    renderReader({ level: 'b1', article });
+
+    // Words render as individual karaoke spans, not a single body paragraph.
+    expect(screen.getByText('Πρώτη')).toBeInTheDocument();
+    expect(screen.getByText('είδηση')).toBeInTheDocument();
+    // The plain full-sentence body element is no longer rendered.
+    expect(screen.queryByText('B1 Ελληνική περιγραφή για ανάγνωση.')).not.toBeInTheDocument();
+  });
+
+  it('uses A2 word_timestamps when level=a2', () => {
+    const article = createArticle({
+      word_timestamps_a2: [
+        { word: 'Καλημέρα', start_ms: 0, end_ms: 400 },
+        { word: 'κόσμε', start_ms: 400, end_ms: 800 },
+      ],
+    });
+    renderReader({ level: 'a2', article });
+
+    expect(screen.getByText('Καλημέρα')).toBeInTheDocument();
+    expect(screen.getByText('κόσμε')).toBeInTheDocument();
+  });
+
+  it('falls back to a plain body paragraph when word_timestamps are absent', () => {
+    renderReader({ level: 'b1' }); // default fixture has null timestamps
+    const bodyEl = screen.getByText('B1 Ελληνική περιγραφή για ανάγνωση.');
+    expect(bodyEl).toBeInTheDocument();
+    // Plain fallback keeps lang="el" for Greek text rendering.
+    expect(bodyEl.closest('[lang="el"]')).not.toBeNull();
+  });
+
+  it('does not render karaoke spans when audio is missing even if timestamps exist', () => {
+    const article = createArticle({
+      audio_url: null,
+      audio_a2_url: null,
+      word_timestamps: [{ word: 'Πρώτη', start_ms: 0, end_ms: 300 }],
+    });
+    renderReader({ level: 'b1', article });
+
+    // No audio → karaoke disabled → plain body paragraph, no word spans.
+    expect(screen.getByText('B1 Ελληνική περιγραφή για ανάγνωση.')).toBeInTheDocument();
+    expect(screen.queryByText('Πρώτη')).not.toBeInTheDocument();
   });
 });
 

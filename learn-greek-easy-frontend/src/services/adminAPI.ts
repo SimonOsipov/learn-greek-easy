@@ -43,6 +43,7 @@ import type {
   SituationResponse,
   SituationStatus,
   SituationUpdatePayload,
+  WordTimestamp,
 } from '@/types/situation';
 
 import { api, buildQueryString, postFormData } from './api';
@@ -614,6 +615,9 @@ export interface NewsItemResponse {
   audio_a2_duration_seconds: number | null;
   audio_a2_generated_at: string | null;
   audio_a2_file_size_bytes: number | null;
+  /** Per-word audio alignment for karaoke highlighting in the reader (null until audio generated). */
+  word_timestamps?: WordTimestamp[] | null;
+  word_timestamps_a2?: WordTimestamp[] | null;
   has_a2_content: boolean;
   alt_text: string | null;
   photo_credit: string | null;

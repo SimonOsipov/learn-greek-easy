@@ -346,6 +346,7 @@
   },
   "news": {
     "page": {
+      "kicker": "Reading practice · A2–B1",
       "title": "Greek News",
       "subtitle": "Practice reading with real news articles"
     },
@@ -394,6 +395,7 @@
   },
   "situations": {
     "page": {
+      "kicker": "Practice · Real-life Greek",
       "title": "Situations",
       "subtitle": "Practice real-life Greek conversations"
     },
