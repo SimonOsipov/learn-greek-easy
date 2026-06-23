@@ -9,6 +9,35 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 | `TEST_SEED_ENABLED` | `false` | Enable seeding endpoints |
 | `TEST_SEED_SECRET` | (none) | Optional secret for `X-Test-Seed-Secret` header |
 | `SEED_ON_DEPLOY` | `false` | Auto-seed on startup (local dev only) |
+| `LEXGEN_E2E_FAKE_LLM` | `false` | Inject deterministic fake OpenRouter for LEXGEN E2E tests (see below) |
+
+### `LEXGEN_E2E_FAKE_LLM` — deterministic fake for LEXGEN review-action E2E
+
+When `LEXGEN_E2E_FAKE_LLM=true` AND the backend is NOT in production, the LEXGEN
+review service (`lexgen_review_service._get_openrouter()`) injects a
+`FakeOpenRouter` instead of the real `OpenRouterService`.  This allows the
+`lexgen-inbox-actions.spec.ts` E2E suite to run the genuine `edit` + `regenerate`
+chain (generator→verify→reconcile→judge) without a live OpenRouter API key.
+
+**Safety**: the flag defaults to `false` and is double-guarded by
+`not settings.is_production` — the fake **cannot** activate in production even if
+the env-var accidentally leaks.
+
+**What the fake does**: returns canned `GeneratedLexContent` (4-key, no morphology)
+and identical `JudgeRubric` (5 dimensions × 4, no blocking issues) for both judge
+slugs → `disagreed=False` → binary routing → `SCORED → NEEDS_REVIEW`.
+
+**Lemma map (FakeOpenRouter canned payloads):**
+
+| Lemma | gloss_en | gloss_ru | example_greek | example_translation |
+|-------|----------|----------|---------------|---------------------|
+| βιβλίο | book | книга | Βιβλίο. | Book. |
+| δρόμος | road | дорога | Δρόμος. | Road. |
+| (any other) | placeholder | заглушка | `<Lemma>.` | Placeholder. |
+
+**Set in CI**: `LEXGEN_E2E_FAKE_LLM: "true"` is wired into both `Start backend server`
+steps in `.github/workflows/test.yml` (the Playwright E2E job and the shard E2E job).
+Do NOT set this in the production deployment workflow (`deploy-production.yml`).
 
 ## API Endpoints
 
@@ -35,6 +64,22 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 | `/api/v1/test/seed/changelog` | POST | Create 12 changelog entries |
 | `/api/v1/test/seed/announcements` | POST | Create 4 announcement campaigns |
 | `/api/v1/test/seed/situations` | POST | Create 3 situations with descriptions |
+| `/api/v1/test/seed/lexgen-proposals` | POST | Seed LEXGEN verification-inbox proposals (idempotent, wipes word_proposal first) |
+| `/api/v1/test/seed/lexgen-proposals/clear` | POST | Clear only word_proposal rows |
+
+### LEXGEN Test-Only Read Endpoints (LEXGEN-13-06)
+
+These GET routes expose DB state for the 4 E2E action flows. The admin
+`GET /api/v1/admin/lexgen/proposals/{id}` returns 404 for non-`needs_review`
+proposals, so these are the only way to assert shipped/rejected state from Playwright.
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/test/seed/lexgen-proposals/{id}/review-log` | GET | `word_proposal_review_log` rows for the proposal (ordered by created_at ASC) |
+| `/api/v1/test/seed/lexgen-proposals/{id}/attempts` | GET | `proposal_attempt` snapshots (score-free; ordered by attempt_no ASC) |
+| `/api/v1/test/seed/lexgen-proposals/{id}/state` | GET | `{status, rejection_reason, shipped_word_entry_id, word_entry_exists, flagged_fields}` |
+
+All three are gated by `verify_seed_access` (TEST_SEED_ENABLED + not production).
 
 ### User & Account Endpoints
 

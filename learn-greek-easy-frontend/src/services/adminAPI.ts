@@ -942,6 +942,15 @@ export interface LexgenProposalDetailResponse {
   content: LexgenProposalContentField[];
 }
 
+/**
+ * Response from POST …/{id}/approve — shipped WordEntry identifiers.
+ * Mirrors the backend `LexgenApproveResponse` schema (LEXGEN-13-03).
+ */
+export interface LexgenApproveResponse {
+  id: string;
+  lemma: string;
+}
+
 // ============================================
 // Admin API Methods
 // ============================================
@@ -1028,6 +1037,64 @@ export const adminAPI = {
    */
   getLexgenProposal: async (id: string): Promise<LexgenProposalDetailResponse> => {
     return api.get<LexgenProposalDetailResponse>(`/api/v1/admin/lexgen/proposals/${id}`);
+  },
+
+  /**
+   * Approve a needs_review LEXGEN proposal and ship it as a WordEntry.
+   *
+   * Requires a target vocabulary deck ID. On success the proposal transitions
+   * to `shipped` and is removed from the review queue. Returns the created
+   * WordEntry identifiers. 409 on illegal transition, 422 on missing content.
+   * Requires superuser authentication.
+   */
+  approveLexgenProposal: async (
+    proposalId: string,
+    deckId: string
+  ): Promise<LexgenApproveResponse> => {
+    return api.post<LexgenApproveResponse>(`/api/v1/admin/lexgen/proposals/${proposalId}/approve`, {
+      deck_id: deckId,
+    });
+  },
+
+  /**
+   * Apply field edits to a needs_review LEXGEN proposal and re-score via judge.
+   *
+   * Accepts a flat field→value map. The proposal remains `needs_review` after
+   * edit (binary routing — D-RESCORE-INPLACE). Returns the refreshed score-free
+   * detail. 409 on illegal transition.
+   */
+  editLexgenProposal: async (
+    proposalId: string,
+    fieldEdits: Record<string, string | null>
+  ): Promise<LexgenProposalDetailResponse> => {
+    return api.patch<LexgenProposalDetailResponse>(`/api/v1/admin/lexgen/proposals/${proposalId}`, {
+      field_edits: fieldEdits,
+    });
+  },
+
+  /**
+   * Regenerate a needs_review LEXGEN proposal (re-runs the full pipeline).
+   *
+   * Snapshots the prior attempt into ProposalAttempt, then re-runs generator /
+   * verify / reconcile / judge. Returns the refreshed score-free detail. 409
+   * on illegal transition. Requires superuser authentication.
+   */
+  regenerateLexgenProposal: async (proposalId: string): Promise<LexgenProposalDetailResponse> => {
+    return api.post<LexgenProposalDetailResponse>(
+      `/api/v1/admin/lexgen/proposals/${proposalId}/regenerate`,
+      {}
+    );
+  },
+
+  /**
+   * Reject a needs_review LEXGEN proposal.
+   *
+   * Stores the rejection reason and transitions the proposal to `rejected`.
+   * Returns 204 No Content. 409 on illegal transition.
+   * Requires superuser authentication.
+   */
+  rejectLexgenProposal: async (proposalId: string, reason: string): Promise<void> => {
+    return api.post<void>(`/api/v1/admin/lexgen/proposals/${proposalId}/reject`, { reason });
   },
 
   /**

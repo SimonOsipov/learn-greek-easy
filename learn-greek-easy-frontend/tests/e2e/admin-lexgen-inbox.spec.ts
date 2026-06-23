@@ -1,12 +1,13 @@
 // learn-greek-easy-frontend/tests/e2e/admin-lexgen-inbox.spec.ts
 //
-// LEXGEN-12-05: E2E acceptance spec for the Verification Inbox (read-only slice).
+// LEXGEN-12-05: E2E acceptance spec for the Verification Inbox.
 //
 // Covers the two critical flows from the story (LEXGEN-12 § E2E Test Flows):
 //   1. Admin opens the queue → priority-ordered `needs_review` proposals → opens a
 //      proposal → sees per-field values + provenance + flagged markers, with
-//      NO numeric scores anywhere (anti-anchoring, Decision Record §3) and NO
-//      action controls (read-only slice; actions are LEXGEN-13).
+//      NO numeric scores anywhere (anti-anchoring, Decision Record §3).
+//      NOTE: LEXGEN-13 added review-action buttons to the detail panel;
+//      the no-actions assertion was removed in LEXGEN-13-06.
 //   2. Empty queue (cleared in beforeAll) shows the empty state, no errors.
 //
 // ─────────────────────────────────────────────────────────────────────────────
@@ -170,7 +171,7 @@ test.describe('Admin Verification Inbox — populated (LEXGEN-12-05)', () => {
 
   // ── flow-1: open detail (read-only, provenance, flagged, NO SCORES) ──────────
 
-  test('opening the first (most-flagged) proposal shows provenance + flagged markers, no scores, no actions', async ({
+  test('opening the first (most-flagged) proposal shows provenance + flagged markers, no scores', async ({
     page,
   }) => {
     await openInbox(page);
@@ -201,12 +202,9 @@ test.describe('Admin Verification Inbox — populated (LEXGEN-12-05)', () => {
     // appear in the detail panel.
     await assertNoScoresIn(detail, judgeScoreDigits);
 
-    // ── Read-only slice: NO action controls (approve/edit/regenerate/reject). ──
-    // The Sheet's own close button (an "X" / "Close") does not match these words.
-    await expect(
-      detail.getByRole('button', { name: /approve|edit|regenerate|reject/i }),
-      'detail must be read-only — no review-action buttons (those are LEXGEN-13)'
-    ).toHaveCount(0);
+    // NOTE: LEXGEN-13 added review-action buttons (Approve/Edit/Regenerate/Reject)
+    // to the detail panel. The assertion that the panel is read-only / has no
+    // action controls was removed — the inbox is no longer read-only.
   });
 
   // ── pagination (graceful): controls only render when total > one page ────────

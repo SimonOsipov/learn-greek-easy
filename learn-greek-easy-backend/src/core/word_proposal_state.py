@@ -18,13 +18,17 @@ from src.db.models import WordProposalState
 if TYPE_CHECKING:
     from src.db.models import WordProposal
 
-# The 10 legal lifecycle edges (and NO others). Terminal states (rejected,
+# The 11 legal lifecycle edges (and NO others). Terminal states (rejected,
 # shipped) are represented by omission and resolve via .get(..., frozenset()).
 #
 # Decision Record §3: the scored → {needs_review | rejected | auto_approved}
 # fan-out is STATE-DRIVEN only. There is no numeric trust-score pre-calibration
 # gating which target is legal — every target below is permitted at the state
 # level, and trust_score is read nowhere in this module.
+#
+# LEXGEN-13-02 D-REGEN-EDGE-MANDATORY: needs_review → generating is added so
+# the reviewer "regenerate" action can restart the pipeline without leaving the
+# proposal in an intermediate state.
 ALLOWED_TRANSITIONS: dict[WordProposalState, frozenset[WordProposalState]] = {
     WordProposalState.PENDING: frozenset({WordProposalState.GENERATING}),
     WordProposalState.GENERATING: frozenset({WordProposalState.SCORED, WordProposalState.REJECTED}),
@@ -37,6 +41,7 @@ ALLOWED_TRANSITIONS: dict[WordProposalState, frozenset[WordProposalState]] = {
     ),
     WordProposalState.NEEDS_REVIEW: frozenset(
         {
+            WordProposalState.GENERATING,  # D-REGEN-EDGE-MANDATORY (LEXGEN-13-02)
             WordProposalState.SCORED,
             WordProposalState.SHIPPED,
             WordProposalState.REJECTED,

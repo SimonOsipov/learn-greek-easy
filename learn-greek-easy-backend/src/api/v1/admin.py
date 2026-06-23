@@ -42,6 +42,7 @@ from src.core.exceptions import (
     ElevenLabsNotConfiguredError,
     ElevenLabsNoVoicesError,
     ElevenLabsRateLimitError,
+    IllegalProposalTransition,
     NotFoundException,
     NounGenerationError,
     OpenRouterError,
@@ -107,11 +108,15 @@ from src.schemas.admin import (
     GenerateCardsResponse,
     GenerateWordEntryRequest,
     GenerateWordEntryResponse,
+    LexgenApproveRequest,
+    LexgenApproveResponse,
+    LexgenEditRequest,
     LexgenProposalContentField,
     LexgenProposalDetailResponse,
     LexgenProposalField,
     LexgenProposalListItem,
     LexgenProposalListResponse,
+    LexgenRejectRequest,
     ListeningDialogCreateFromJSON,
     ListeningDialogDetail,
     ListeningDialogListItem,
@@ -213,6 +218,7 @@ from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.gamification import ReconcileMode
 from src.services.gamification.reconciler import GamificationReconciler
 from src.services.lemma_normalization_service import detect_article, get_lemma_normalization_service
+from src.services.lexgen_review_service import LexgenReviewService
 from src.services.lexicon_service import LexiconEntry, LexiconService
 from src.services.local_verification_service import get_local_verification_service
 from src.services.news_item_service import NewsItemService
@@ -1331,6 +1337,227 @@ async def get_lexgen_proposal(
         fields=fields,
         content=content,
     )
+
+
+def _build_lexgen_detail_response(proposal: WordProposal) -> LexgenProposalDetailResponse:
+    """Build a score-free LexgenProposalDetailResponse from a WordProposal.
+
+    Whitelists only value/source/flagged per field — never judge_scores,
+    trust_score, or confidence (anti-anchoring, Decision Record §3).
+
+    Shared by the GET detail, edit, and regenerate endpoints so the projection
+    logic is always consistent.
+    """
+    flagged_fields = proposal.flagged_fields or []
+
+    recon_fields = (proposal.reconciliation_log or {}).get("fields") or {}
+    fields = [
+        LexgenProposalField(
+            field=name,
+            value=entry.get("value"),
+            source=entry.get("source"),
+            flagged=name in flagged_fields,
+        )
+        for name, entry in recon_fields.items()
+    ]
+
+    generated_content = proposal.generated_content or {}
+    content = [
+        LexgenProposalContentField(
+            field=key,
+            value=generated_content.get(key),
+            source="lexgen_generator",
+            flagged=key in flagged_fields,
+        )
+        for key in _LEXGEN_CONTENT_KEYS
+    ]
+
+    return LexgenProposalDetailResponse(
+        id=proposal.id,
+        lemma=proposal.lemma_input,
+        pos=proposal.pos,
+        status=proposal.status.value,
+        created_at=proposal.created_at,
+        fields=fields,
+        content=content,
+    )
+
+
+async def _get_needs_review_proposal(proposal_id: UUID, db: AsyncSession) -> WordProposal:
+    """Fetch a WordProposal filtered to needs_review status.
+
+    Raises NotFoundException (→ 404) when the id is unknown OR the row's
+    status is not needs_review (D-DETAIL-404 — action endpoints only serve
+    the review queue).
+    """
+    result = await db.execute(
+        select(WordProposal).where(
+            WordProposal.id == proposal_id,
+            WordProposal.status == WordProposalState.NEEDS_REVIEW,
+        )
+    )
+    proposal = result.scalar_one_or_none()
+    if not proposal:
+        raise NotFoundException(
+            resource="Proposal",
+            detail=f"Proposal with ID '{proposal_id}' not found in the review queue",
+        )
+    return proposal
+
+
+@router.post(
+    "/lexgen/proposals/{proposal_id}/approve",
+    response_model=LexgenApproveResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Approve a LEXGEN proposal and ship it as a WordEntry",
+    responses={
+        200: {"description": "Proposal shipped; returns the created word-entry identifiers"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Proposal not found or not in the review queue"},
+        409: {"description": "Illegal proposal state transition"},
+        422: {"description": "Proposal missing required content fields"},
+    },
+)
+async def approve_lexgen_proposal(
+    proposal_id: UUID,
+    body: LexgenApproveRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> LexgenApproveResponse:
+    """Approve a needs_review proposal: build WordEntry, ship, write log.
+
+    AC-1: Requires deck_id (body field). 404 when proposal is not needs_review.
+    Validate deck exists before calling the service. Map ValidationException → 422,
+    IllegalProposalTransition → 409.
+    """
+    proposal = await _get_needs_review_proposal(proposal_id, db)
+
+    # Validate deck exists before calling the service (404 on missing deck).
+    deck_result = await db.execute(select(Deck).where(Deck.id == body.deck_id))
+    deck = deck_result.scalar_one_or_none()
+    if not deck:
+        raise NotFoundException(
+            resource="Deck",
+            detail=f"Deck with ID '{body.deck_id}' not found",
+        )
+
+    svc = LexgenReviewService(db)
+    try:
+        await svc.approve(proposal, deck_id=body.deck_id, reviewer_id=current_user.id)
+    except IllegalProposalTransition as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+
+    # Fetch the shipped WordEntry to return its identifiers.
+    entry_result = await db.execute(
+        select(WordEntry).where(WordEntry.id == proposal.shipped_word_entry_id)
+    )
+    word_entry = entry_result.scalar_one()
+    return LexgenApproveResponse(id=word_entry.id, lemma=word_entry.lemma)
+
+
+@router.patch(
+    "/lexgen/proposals/{proposal_id}",
+    response_model=LexgenProposalDetailResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Apply field edits to a LEXGEN proposal (re-scores via judge)",
+    responses={
+        200: {"description": "Refreshed score-free proposal detail"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Proposal not found or not in the review queue"},
+        409: {"description": "Illegal proposal state transition"},
+    },
+)
+async def edit_lexgen_proposal(
+    proposal_id: UUID,
+    body: LexgenEditRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> LexgenProposalDetailResponse:
+    """Apply field edits to a needs_review proposal and re-score via judge.
+
+    AC-2: Returns refreshed LexgenProposalDetailResponse; status remains
+    needs_review (binary routing never reaches auto_approved/shipped); no
+    score keys in the response.
+    """
+    proposal = await _get_needs_review_proposal(proposal_id, db)
+
+    svc = LexgenReviewService(db)
+    try:
+        await svc.edit(proposal, field_edits=body.field_edits, reviewer_id=current_user.id)
+    except IllegalProposalTransition as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+
+    # Refresh proposal state from DB after service commit.
+    await db.refresh(proposal)
+    return _build_lexgen_detail_response(proposal)
+
+
+@router.post(
+    "/lexgen/proposals/{proposal_id}/regenerate",
+    response_model=LexgenProposalDetailResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Regenerate a LEXGEN proposal (re-runs the full pipeline)",
+    responses={
+        200: {"description": "Refreshed score-free proposal detail after re-run"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Proposal not found or not in the review queue"},
+        409: {"description": "Illegal proposal state transition"},
+    },
+)
+async def regenerate_lexgen_proposal(
+    proposal_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> LexgenProposalDetailResponse:
+    """Regenerate a needs_review proposal: snapshot prior attempt, re-run pipeline.
+
+    AC-3: Snapshots prior attempt into ProposalAttempt, re-runs generator /
+    verify / reconcile / judge chain, returns refreshed score-free detail.
+    """
+    proposal = await _get_needs_review_proposal(proposal_id, db)
+
+    svc = LexgenReviewService(db)
+    try:
+        await svc.regenerate(proposal, reviewer_id=current_user.id)
+    except IllegalProposalTransition as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+
+    await db.refresh(proposal)
+    return _build_lexgen_detail_response(proposal)
+
+
+@router.post(
+    "/lexgen/proposals/{proposal_id}/reject",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Reject a LEXGEN proposal",
+    responses={
+        204: {"description": "Proposal rejected; no response body"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Proposal not found or not in the review queue"},
+        409: {"description": "Illegal proposal state transition"},
+    },
+)
+async def reject_lexgen_proposal(
+    proposal_id: UUID,
+    body: LexgenRejectRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> None:
+    """Reject a needs_review proposal: set reason, transition→rejected, write logs.
+
+    AC-4: Returns 204 No Content; stores rejection_reason on the proposal row.
+    """
+    proposal = await _get_needs_review_proposal(proposal_id, db)
+
+    svc = LexgenReviewService(db)
+    try:
+        await svc.reject(proposal, rejection_reason=body.reason, reviewer_id=current_user.id)
+    except IllegalProposalTransition as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
 
 
 @router.get(

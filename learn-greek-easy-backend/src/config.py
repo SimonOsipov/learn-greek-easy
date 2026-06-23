@@ -357,6 +357,16 @@ class Settings(BaseSettings):
         default=False,
         description="Enable E2E test database seeding endpoints and functionality",
     )
+    lexgen_e2e_fake_llm: bool = Field(
+        default=False,
+        description=(
+            "Inject a deterministic FakeOpenRouter into the LEXGEN review pipeline "
+            "(edit + regenerate) so E2E tests can run the real chain without a live "
+            "OpenRouter key. DEFAULT FALSE — the fake NEVER activates in production "
+            "(double-guarded by `not is_production` at the injection point). Set "
+            "LEXGEN_E2E_FAKE_LLM=true in the E2E backend env only."
+        ),
+    )
     test_seed_secret: Optional[str] = Field(
         default=None,
         description="Optional secret for additional seed endpoint protection (X-Test-Seed-Secret header)",

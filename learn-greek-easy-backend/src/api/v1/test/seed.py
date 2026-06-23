@@ -12,12 +12,12 @@ Security layers:
 
 from datetime import datetime, timedelta, timezone
 from time import perf_counter
-from typing import Optional
-from uuid import uuid4
+from typing import Any, Optional
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
@@ -32,12 +32,17 @@ from src.db.models import (
     CardErrorCardType,
     CardErrorReport,
     CardErrorStatus,
+    Deck,
+    DeckLevel,
     Feedback,
     FeedbackCategory,
     FeedbackStatus,
     NewsItem,
+    ProposalAttempt,
+    WordEntry,
     WordProposal,
     WordProposalOrigin,
+    WordProposalReviewLog,
     WordProposalState,
 )
 from src.repositories.user import UserRepository, UserSettingsRepository
@@ -552,6 +557,28 @@ async def seed_lexgen_proposals(
     """
     start_time = perf_counter()
 
+    # Dedicated approve deck — get-or-create: reuse the existing row if present so
+    # repeated seed/lexgen-proposals calls yield exactly one deck row (no delete
+    # window, naturally idempotent). This makes the approve flow in LEXGEN-13-06
+    # E2E self-contained: no cross-seed dependency on seed/admin-cards.
+    _LEXGEN_APPROVE_DECK_NAME = "LEXGEN E2E Approve Deck"
+    existing_deck_result = await db.execute(
+        select(Deck).where(Deck.name_en == _LEXGEN_APPROVE_DECK_NAME)
+    )
+    approve_deck = existing_deck_result.scalar_one_or_none()
+    if approve_deck is None:
+        approve_deck = Deck(
+            name_en=_LEXGEN_APPROVE_DECK_NAME,
+            name_el="LEXGEN E2E Approve Deck",
+            name_ru="LEXGEN E2E Approve Deck",
+            description_en="Dedicated E2E approve-flow deck for LEXGEN-13-06 — not for production.",
+            level=DeckLevel.A1,
+            is_active=True,
+            is_premium=False,
+        )
+        db.add(approve_deck)
+        await db.flush()  # populate approve_deck.id before the proposal flush
+
     # Determinism: wipe the table first so counts are exact.
     await db.execute(delete(WordProposal))
     await db.flush()
@@ -662,40 +689,116 @@ async def seed_lexgen_proposals(
     most_flagged.created_at = base_ts
     proposals.append(most_flagged)
 
+    def _evidence_packet(lemma: str, gender: str, gloss_en: str) -> dict[str, Any]:
+        """Build a schema-valid EvidencePacket dict for LEXGEN E2E flows.
+
+        Returns a JSON-serializable dict (suitable for JSONB storage) that
+        round-trips through ``EvidencePacket.model_validate()`` — required by
+        the generator and judge stage services.  Mirrors ``_make_biblio_packet``
+        in tests/integration/services/test_lexgen_review_service.py.
+
+        ``gloss_en`` MUST equal the canned payload's ``gloss_en`` in
+        ``lexgen_fake_openrouter.FakeOpenRouter`` so ``check_gloss_subset``
+        in the verify stage PASSES.
+        """
+        from src.schemas.lexgen import (  # noqa: PLC0415
+            EvidencePacket,
+            EvidencePacketSources,
+            FrequencySource,
+            GreekLexiconSource,
+            RulesSource,
+            WiktionarySource,
+        )
+
+        packet = EvidencePacket(
+            lemma_input=lemma,
+            normalized_lemma=lemma,
+            pos="noun",
+            sources=EvidencePacketSources(
+                wiktionary=WiktionarySource(
+                    present=True,
+                    gender=gender,
+                    forms=[],
+                    pronunciation=None,
+                    glosses_en=gloss_en,
+                    genders=None,
+                ),
+                greek_lexicon=GreekLexiconSource(
+                    present=False,
+                    forms=[],
+                    attested_lemma=False,
+                    attested_surface_form=False,
+                    resolved_lemma=None,
+                ),
+                frequency=FrequencySource(present=False, rank=None, band=None),
+                rules=RulesSource(present=False),
+            ),
+        )
+        return packet.model_dump(mode="json")
+
     # (c) Three intermediate needs_review rows (1-2 flags each), created LATER so
     # they sort after the most-flagged row.
-    intermediate_specs = [
-        (
-            "βιβλίο",
-            ["gender"],
-            {"gender": _recon_field("neuter", "wiktionary")},
-            ("book", "книга", "Το βιβλίο είναι στο τραπέζι.", "The book is on the table."),
+    #
+    # βιβλίο (Flow 3 — regenerate) and δρόμος (Flow 2 — edit) carry additional
+    # fields so the LEXGEN E2E chain can run with the FakeOpenRouter injected:
+    #   - evidence_packet: schema-valid EvidencePacket (required by generator/judge)
+    #   - generated_fields: prior morphological output (edit logs pipeline_value=old)
+    #   - generated_content: prior RAG output (snapshot in ProposalAttempt)
+    #   - reconciliation_log: reconciler output (snapshot in ProposalAttempt)
+    #   - retry_attempts: βιβλίο=2 so AC-4 can assert the snapshot preserves it
+
+    # βιβλίο — regenerate flow (offset=1 → created_at base+1min, sorts 2nd)
+    biblio_row = WordProposal(
+        lemma_input="βιβλίο",
+        pos="noun",
+        origin=WordProposalOrigin.ADMIN,
+        status=WordProposalState.NEEDS_REVIEW,
+        flagged_fields=["gender"],
+        reconciliation_log=_recon_log(
+            "noun", "βιβλίο", {"gender": _recon_field("neuter", "wiktionary")}
         ),
-        (
-            "ποτάμι",
-            ["example_translation", "gloss_ru"],
-            {"gender": _recon_field("neuter", "triantafyllidis")},
-            ("river", "река", "Το ποτάμι κυλάει αργά.", "The river flows slowly."),
+        generated_content=_generated_content("book", "книга", "Βιβλίο.", "Book."),
+        generated_fields={"gender": "neuter"},
+        evidence_packet=_evidence_packet("βιβλίο", "neuter", "book"),
+        retry_attempts=2,
+    )
+    biblio_row.created_at = base_ts + timedelta(minutes=1)
+    proposals.append(biblio_row)
+
+    # ποτάμι — untouched intermediate row (offset=2)
+    potami_row = WordProposal(
+        lemma_input="ποτάμι",
+        pos="noun",
+        origin=WordProposalOrigin.ADMIN,
+        status=WordProposalState.NEEDS_REVIEW,
+        flagged_fields=["example_translation", "gloss_ru"],
+        reconciliation_log=_recon_log(
+            "noun", "ποτάμι", {"gender": _recon_field("neuter", "triantafyllidis")}
         ),
-        (
-            "δρόμος",
-            ["gender"],
-            {"gender": _recon_field("masculine", "wiktionary")},
-            ("road", "дорога", "Ο δρόμος είναι μακρύς.", "The road is long."),
+        generated_content=_generated_content(
+            "river", "река", "Το ποτάμι κυλάει αργά.", "The river flows slowly."
         ),
-    ]
-    for offset, (lemma, flagged, recon_fields, content) in enumerate(intermediate_specs, start=1):
-        row = WordProposal(
-            lemma_input=lemma,
-            pos="noun",
-            origin=WordProposalOrigin.ADMIN,
-            status=WordProposalState.NEEDS_REVIEW,
-            flagged_fields=flagged,
-            reconciliation_log=_recon_log("noun", lemma, recon_fields),
-            generated_content=_generated_content(*content),
-        )
-        row.created_at = base_ts + timedelta(minutes=offset)
-        proposals.append(row)
+    )
+    potami_row.created_at = base_ts + timedelta(minutes=2)
+    proposals.append(potami_row)
+
+    # δρόμος — edit flow (offset=3 → created_at base+3min, sorts last among intermediates)
+    dromos_row = WordProposal(
+        lemma_input="δρόμος",
+        pos="noun",
+        origin=WordProposalOrigin.ADMIN,
+        status=WordProposalState.NEEDS_REVIEW,
+        flagged_fields=["gender"],
+        reconciliation_log=_recon_log(
+            "noun", "δρόμος", {"gender": _recon_field("masculine", "wiktionary")}
+        ),
+        generated_content=_generated_content("road", "дорога", "Δρόμος.", "Road."),
+        generated_fields={"gender": "masculine"},
+        evidence_packet=_evidence_packet("δρόμος", "masculine", "road"),
+        retry_attempts=0,
+    )
+    dromos_row.created_at = base_ts + timedelta(minutes=3)
+    proposals.append(dromos_row)
 
     # (b) Zero-flagged needs_review — still renders detail (recon + content), but
     # carries an empty flagged_fields list. Created last among needs_review rows.
@@ -758,7 +861,51 @@ async def seed_lexgen_proposals(
             "needs_review_created": needs_review_created,
             "non_review_created": non_review_created,
             "judge_score_digits": _LEXGEN_JUDGE_SENTINELS,
+            "approve_deck": {
+                "id": str(approve_deck.id),
+                "name": _LEXGEN_APPROVE_DECK_NAME,
+            },
         },
+    )
+
+
+class _ProposalListItem(BaseModel):
+    """Minimal proposal shape for E2E lemma→id resolution (LEXGEN-13-06)."""
+
+    id: str
+    lemma: str
+    status: str
+
+
+class _ProposalListResponse(BaseModel):
+    proposals: list[_ProposalListItem]
+
+
+@router.get(
+    "/lexgen-proposals",
+    response_model=_ProposalListResponse,
+    summary="[TEST ONLY] List seeded proposals for E2E lemma→id resolution",
+    description="Returns all word_proposal rows as [{id, lemma, status}]. "
+    "Gated by TEST_SEED_ENABLED. Never in production. "
+    "Use instead of the admin list endpoint (which requires superuser auth "
+    "that Playwright's raw request context does not carry).",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def list_lexgen_proposals_for_test(
+    db: AsyncSession = Depends(get_db),
+) -> _ProposalListResponse:
+    """Return all word_proposal rows for E2E lemma→id resolution."""
+    result = await db.execute(select(WordProposal).order_by(WordProposal.created_at.asc()))
+    proposals = result.scalars().all()
+    return _ProposalListResponse(
+        proposals=[
+            _ProposalListItem(
+                id=str(p.id),
+                lemma=p.lemma_input,
+                status=(p.status.value if hasattr(p.status, "value") else str(p.status)),
+            )
+            for p in proposals
+        ]
     )
 
 
@@ -794,6 +941,179 @@ async def clear_lexgen_proposals(
         timestamp=datetime.now(timezone.utc),
         duration_ms=duration_ms,
         results={"cleared": True, "table": "word_proposal"},
+    )
+
+
+# ---------------------------------------------------------------------------
+# LEXGEN test-only read endpoints (LEXGEN-13-06 D2)
+# ---------------------------------------------------------------------------
+# These three GET routes expose structured DB state for the 4 E2E action flows.
+# All are gated by verify_seed_access (TEST_SEED_ENABLED + not production) and
+# NEVER surfaced in the production deployment.
+#
+# Why they exist:
+#   - The admin GET /lexgen/proposals/{id} (admin:1293) returns 404 when status
+#     != needs_review, so it cannot read a shipped/rejected proposal post-action.
+#   - These routes are the ONLY way to assert final DB state from Playwright.
+# ---------------------------------------------------------------------------
+
+
+class _ReviewLogRow(BaseModel):
+    """One word_proposal_review_log row, shape for E2E assertions."""
+
+    action: str
+    field: str | None
+    pipeline_value: str | None
+    edited_value: str | None
+    human_decision: str | None
+    reviewer_id: str | None
+    created_at: datetime
+
+
+class _ReviewLogResponse(BaseModel):
+    rows: list[_ReviewLogRow]
+
+
+class _AttemptRow(BaseModel):
+    """One proposal_attempt row (score-free), shape for E2E assertions."""
+
+    attempt_no: int
+    generated_content: dict | None
+    generated_fields: dict | None
+    flagged_fields: list | None
+    retry_attempts: int | None
+    superseded_at: datetime | None
+    created_at: datetime
+
+
+class _AttemptsResponse(BaseModel):
+    attempts: list[_AttemptRow]
+
+
+class _ProposalStateResponse(BaseModel):
+    """Current status + shipped FK for post-action assertions."""
+
+    status: str
+    rejection_reason: str | None
+    shipped_word_entry_id: str | None
+    word_entry_exists: bool
+    flagged_fields: list
+
+
+@router.get(
+    "/lexgen-proposals/{proposal_id}/review-log",
+    response_model=_ReviewLogResponse,
+    summary="[TEST ONLY] Read review-log rows for a proposal",
+    description="Returns all word_proposal_review_log rows for the given proposal, "
+    "ordered by created_at ASC. Gated by TEST_SEED_ENABLED. Never in prod.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def get_lexgen_proposal_review_log(
+    proposal_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> _ReviewLogResponse:
+    """Return all review-log rows for the given proposal (E2E assertions)."""
+    result = await db.execute(
+        select(WordProposalReviewLog)
+        .where(WordProposalReviewLog.proposal_id == proposal_id)
+        .order_by(WordProposalReviewLog.created_at.asc(), WordProposalReviewLog.id.asc())
+    )
+    rows = result.scalars().all()
+    return _ReviewLogResponse(
+        rows=[
+            _ReviewLogRow(
+                action=row.action.value if hasattr(row.action, "value") else str(row.action),
+                field=row.field,
+                pipeline_value=row.pipeline_value,
+                edited_value=row.edited_value,
+                human_decision=(
+                    row.human_decision.value
+                    if row.human_decision is not None and hasattr(row.human_decision, "value")
+                    else (str(row.human_decision) if row.human_decision is not None else None)
+                ),
+                reviewer_id=str(row.reviewer_id) if row.reviewer_id is not None else None,
+                created_at=row.created_at,
+            )
+            for row in rows
+        ]
+    )
+
+
+@router.get(
+    "/lexgen-proposals/{proposal_id}/attempts",
+    response_model=_AttemptsResponse,
+    summary="[TEST ONLY] Read proposal_attempt rows for a proposal",
+    description="Returns all proposal_attempt rows for the given proposal, "
+    "ordered by attempt_no ASC. Score-free (judge_scores omitted). "
+    "Gated by TEST_SEED_ENABLED. Never in prod.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def get_lexgen_proposal_attempts(
+    proposal_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> _AttemptsResponse:
+    """Return all attempt snapshots for the given proposal (E2E assertions)."""
+    result = await db.execute(
+        select(ProposalAttempt)
+        .where(ProposalAttempt.proposal_id == proposal_id)
+        .order_by(ProposalAttempt.attempt_no.asc())
+    )
+    attempts = result.scalars().all()
+    return _AttemptsResponse(
+        attempts=[
+            _AttemptRow(
+                attempt_no=a.attempt_no,
+                generated_content=a.generated_content,
+                generated_fields=a.generated_fields,
+                flagged_fields=a.flagged_fields,
+                retry_attempts=a.retry_attempts,
+                superseded_at=a.superseded_at,
+                created_at=a.created_at,
+            )
+            for a in attempts
+        ]
+    )
+
+
+@router.get(
+    "/lexgen-proposals/{proposal_id}/state",
+    response_model=_ProposalStateResponse,
+    summary="[TEST ONLY] Read proposal status + shipped FK for post-action assertion",
+    description="Returns status, rejection_reason, shipped_word_entry_id, "
+    "word_entry_exists (bool), and flagged_fields. The admin detail endpoint "
+    "returns 404 on non-needs_review proposals; this route is the only way to "
+    "read shipped/rejected state from E2E. Gated by TEST_SEED_ENABLED. Never in prod.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def get_lexgen_proposal_state(
+    proposal_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> _ProposalStateResponse:
+    """Return current proposal status + shipped-entry existence (E2E assertions)."""
+    result = await db.execute(select(WordProposal).where(WordProposal.id == proposal_id))
+    proposal = result.scalar_one_or_none()
+    if proposal is None:
+        raise HTTPException(status_code=404, detail=f"Proposal {proposal_id} not found")
+
+    word_entry_exists = False
+    if proposal.shipped_word_entry_id is not None:
+        entry_result = await db.execute(
+            select(WordEntry).where(WordEntry.id == proposal.shipped_word_entry_id)
+        )
+        word_entry_exists = entry_result.scalar_one_or_none() is not None
+
+    return _ProposalStateResponse(
+        status=(
+            proposal.status.value if hasattr(proposal.status, "value") else str(proposal.status)
+        ),
+        rejection_reason=proposal.rejection_reason,
+        shipped_word_entry_id=(
+            str(proposal.shipped_word_entry_id)
+            if proposal.shipped_word_entry_id is not None
+            else None
+        ),
+        word_entry_exists=word_entry_exists,
+        flagged_fields=list(proposal.flagged_fields or []),
     )
 
 

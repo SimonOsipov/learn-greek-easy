@@ -109,9 +109,13 @@ class TestLegalTransitions:
 
 @pytest.mark.unit
 class TestAllowedTransitionsEdgeSet:
-    """ALLOWED_TRANSITIONS must contain exactly the 10 story edges."""
+    """ALLOWED_TRANSITIONS must contain exactly the 11 story edges.
 
-    def test_all_ten_legal_edges_present(self):
+    LEXGEN-13-02 added the needs_review → generating edge (D-REGEN-EDGE-MANDATORY)
+    to support the reviewer "regenerate" action that restarts the pipeline.
+    """
+
+    def test_all_eleven_legal_edges_present(self):
         expected_edges = {
             (WordProposalState.PENDING, WordProposalState.GENERATING),
             (WordProposalState.GENERATING, WordProposalState.SCORED),
@@ -119,6 +123,7 @@ class TestAllowedTransitionsEdgeSet:
             (WordProposalState.SCORED, WordProposalState.AUTO_APPROVED),
             (WordProposalState.SCORED, WordProposalState.NEEDS_REVIEW),
             (WordProposalState.SCORED, WordProposalState.REJECTED),
+            (WordProposalState.NEEDS_REVIEW, WordProposalState.GENERATING),  # LEXGEN-13-02
             (WordProposalState.NEEDS_REVIEW, WordProposalState.SCORED),
             (WordProposalState.NEEDS_REVIEW, WordProposalState.SHIPPED),
             (WordProposalState.NEEDS_REVIEW, WordProposalState.REJECTED),
@@ -407,3 +412,76 @@ class TestAllowedTransitionsImmutability:
                 raise AssertionError("frozenset should not have .add()")
             except AttributeError:
                 pass  # Expected: frozensets have no .add()
+
+
+# ---------------------------------------------------------------------------
+# LEXGEN-13-02 RED tests: needs_review → generating edge (D-REGEN-EDGE-MANDATORY)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestNeedsReviewToGeneratingEdge:
+    """The needs_review → generating edge must be added exactly once (LEXGEN-13-02).
+
+    These tests are RED until the executor adds
+        WordProposalState.GENERATING
+    to the ALLOWED_TRANSITIONS[WordProposalState.NEEDS_REVIEW] frozenset in
+    src/core/word_proposal_state.py.
+
+    Expected RED failure reason:
+        IllegalProposalTransition raised when transition(proposal, GENERATING)
+        is called from NEEDS_REVIEW — the edge does not yet exist.
+    """
+
+    def test_needs_review_to_generating_is_now_allowed(self):
+        """needs_review → generating must SUCCEED after the guard is updated.
+
+        This is the primary RED signal for LEXGEN-13-02. Before the executor
+        adds the edge, transition() raises IllegalProposalTransition.
+        After: status mutates to GENERATING, no exception.
+        """
+        p = _p(WordProposalState.NEEDS_REVIEW)
+        # Must NOT raise — the regenerate action needs this edge.
+        transition(p, WordProposalState.GENERATING)
+        assert p.status == WordProposalState.GENERATING, (
+            "needs_review → generating must succeed (D-REGEN-EDGE-MANDATORY); "
+            f"got status {p.status!r}"
+        )
+
+    def test_needs_review_to_generating_status_mutated(self):
+        """Confirm status is exactly GENERATING after the transition (not just no-raise)."""
+        p = _p(WordProposalState.NEEDS_REVIEW)
+        transition(p, WordProposalState.GENERATING)
+        assert p.status is WordProposalState.GENERATING
+
+    def test_needs_review_to_pending_still_raises(self):
+        """needs_review → pending must still raise (this edge was never legal).
+
+        Adding the generating edge must not accidentally open other illegal
+        edges out of needs_review.
+        """
+        p = _p(WordProposalState.NEEDS_REVIEW)
+        with pytest.raises(IllegalProposalTransition):
+            transition(p, WordProposalState.PENDING)
+
+    def test_needs_review_to_auto_approved_still_raises(self):
+        """needs_review → auto_approved must still raise (never legal).
+
+        Binary routing (Decision Record §3) means needs_review never directly
+        reaches auto_approved — only scored can go to auto_approved.
+        """
+        p = _p(WordProposalState.NEEDS_REVIEW)
+        with pytest.raises(IllegalProposalTransition):
+            transition(p, WordProposalState.AUTO_APPROVED)
+
+    def test_needs_review_to_generating_then_scored_chain(self):
+        """After the new edge: needs_review → generating → scored must be a valid 2-hop.
+
+        This mirrors the regenerate chain: the proposal returns to GENERATING
+        so the pipeline can re-run (generating → scored via reconciler).
+        """
+        p = _p(WordProposalState.NEEDS_REVIEW)
+        transition(p, WordProposalState.GENERATING)
+        assert p.status == WordProposalState.GENERATING
+        transition(p, WordProposalState.SCORED)
+        assert p.status == WordProposalState.SCORED

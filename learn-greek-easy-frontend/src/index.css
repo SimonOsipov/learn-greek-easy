@@ -669,7 +669,8 @@
     font-size: 11px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: hsl(var(--fg-3));
+    /* --fg-2 (not --fg-3) so 11px label text clears WCAG AA 4.5:1 on --bg in light mode */
+    color: hsl(var(--fg-2));
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -915,7 +916,8 @@
     font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: hsl(var(--fg-3));
+    /* --fg-2 (not --fg-3) so 11px label text clears WCAG AA 4.5:1 on --bg in light mode */
+    color: hsl(var(--fg-2));
     margin-bottom: 10px;
   }
   .kicker-dot {

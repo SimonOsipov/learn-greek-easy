@@ -1,11 +1,12 @@
 // src/pages/admin/LexgenInboxView.tsx
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { formatDistanceToNow } from 'date-fns';
 import { ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { LexgenProposalActions } from '@/components/admin/LexgenProposalActions';
 import { LexgenProposalDetail } from '@/components/admin/LexgenProposalDetail';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,7 +19,11 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useLexgenProposal, useLexgenProposals } from '@/hooks/useLexgenProposals';
+import {
+  useEditProposalField,
+  useLexgenProposal,
+  useLexgenProposals,
+} from '@/hooks/useLexgenProposals';
 import { track } from '@/lib/analytics';
 import { getDateLocale } from '@/lib/dateUtils';
 import type { LexgenProposalListItem } from '@/services/adminAPI';
@@ -48,6 +53,8 @@ export default function LexgenInboxView({ onSelectProposal }: LexgenInboxViewPro
   const { t, i18n } = useTranslation('admin');
   const [page, setPage] = useState(1);
   const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null);
+  // Incremented on each proposal selection to reset any open inline edits in FieldRow.
+  const [fieldResetKey, setFieldResetKey] = useState(0);
 
   const { data, isLoading, isError } = useLexgenProposals({ page, page_size: PAGE_SIZE });
 
@@ -56,6 +63,11 @@ export default function LexgenInboxView({ onSelectProposal }: LexgenInboxViewPro
     isLoading: isDetailLoading,
     isError: isDetailError,
   } = useLexgenProposal(selectedProposalId);
+
+  // Edit mutation — keyed on the selected proposal so the hook re-mounts when
+  // the selection changes. Null-safe: skip is handled by the disabled guard on
+  // the Edit buttons (FieldRow only shows onSaveField when detail is loaded).
+  const editMutation = useEditProposalField(selectedProposalId ?? '');
 
   // Fire the open event once on mount (ref guard for StrictMode double-invoke).
   const openedRef = useRef(false);
@@ -79,6 +91,7 @@ export default function LexgenInboxView({ onSelectProposal }: LexgenInboxViewPro
 
   const handleRowActivate = (item: LexgenProposalListItem) => {
     setSelectedProposalId(item.id);
+    setFieldResetKey((k) => k + 1);
     onSelectProposal?.(item.id);
     // Fire once per open, using the LIST row's data (anti-anchoring: no score).
     track('lexgen_proposal_viewed', {
@@ -89,8 +102,25 @@ export default function LexgenInboxView({ onSelectProposal }: LexgenInboxViewPro
   };
 
   const handleDetailOpenChange = (open: boolean) => {
-    if (!open) setSelectedProposalId(null);
+    if (!open) {
+      setSelectedProposalId(null);
+      setFieldResetKey((k) => k + 1);
+    }
   };
+
+  /** Closes the sheet after a successful approve or reject. */
+  const handleShipOrReject = useCallback(() => {
+    setSelectedProposalId(null);
+    setFieldResetKey((k) => k + 1);
+  }, []);
+
+  /** Fires the edit mutation for a single field; stays open on success. */
+  const handleSaveField = useCallback(
+    async (fieldKey: string, value: string | null): Promise<void> => {
+      await editMutation.mutateAsync({ fieldKey, value });
+    },
+    [editMutation]
+  );
 
   if (isLoading) {
     return (
@@ -229,7 +259,14 @@ export default function LexgenInboxView({ onSelectProposal }: LexgenInboxViewPro
             </div>
           )}
           {detail && !isDetailLoading && !isDetailError && (
-            <LexgenProposalDetail proposal={detail} />
+            <>
+              <LexgenProposalDetail
+                proposal={detail}
+                onSaveField={handleSaveField}
+                resetKey={fieldResetKey}
+              />
+              <LexgenProposalActions proposalId={detail.id} onShipOrReject={handleShipOrReject} />
+            </>
           )}
         </SheetContent>
       </Sheet>
