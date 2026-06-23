@@ -3,7 +3,8 @@ import type { SituationCreatePayload } from '@/types/situation';
 export const SITUATION_JSON_PLACEHOLDER = `{
   "scenario_el": "Παραγγελία καφέ σε καφενείο",
   "scenario_en": "Ordering coffee at a kafeneio",
-  "scenario_ru": "Заказ кофе в кафенейо"
+  "scenario_ru": "Заказ кофе в кафенейо",
+  "domain": "everyday"
 }`;
 
 export const SITUATION_REQUIRED_FIELDS = ['scenario_el', 'scenario_en', 'scenario_ru'] as const;
@@ -42,12 +43,16 @@ export function validateSituationJson(raw: string): SituationValidationResult {
     return { valid: false, error: { messageKey: 'situations.validation.missingFields' } };
   }
 
-  return {
-    valid: true,
-    data: {
-      scenario_el: (parsed.scenario_el as string).trim(),
-      scenario_en: (parsed.scenario_en as string).trim(),
-      scenario_ru: (parsed.scenario_ru as string).trim(),
-    },
+  // SIT-27-02: domain is optional. When a non-empty string is provided, trim
+  // and include it; otherwise omit it from the payload (set-only, no null).
+  const data: SituationCreatePayload = {
+    scenario_el: (parsed.scenario_el as string).trim(),
+    scenario_en: (parsed.scenario_en as string).trim(),
+    scenario_ru: (parsed.scenario_ru as string).trim(),
   };
+  if (typeof parsed.domain === 'string' && parsed.domain.trim()) {
+    data.domain = parsed.domain.trim();
+  }
+
+  return { valid: true, data };
 }

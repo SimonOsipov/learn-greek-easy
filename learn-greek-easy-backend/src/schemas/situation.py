@@ -26,6 +26,8 @@ class SituationCreate(BaseModel):
     scenario_el: str = Field(min_length=1, max_length=500)
     scenario_en: str = Field(min_length=1, max_length=500)
     scenario_ru: str = Field(min_length=1, max_length=500)
+    # SIT-27-02: optional human-facing topic label for the hub card kicker.
+    domain: Optional[str] = Field(default=None, max_length=100)
 
 
 class SituationUpdate(BaseModel):
@@ -35,6 +37,9 @@ class SituationUpdate(BaseModel):
     title_el: Optional[str] = Field(default=None, min_length=1, max_length=500)
     scenario_en: Optional[str] = Field(default=None, min_length=1, max_length=500)
     scenario_ru: Optional[str] = Field(default=None, min_length=1, max_length=500)
+    # SIT-27-02: set-only (no clear-to-null) — check_at_least_one_field rejects
+    # an explicit null for any field present in model_fields_set.
+    domain: Optional[str] = Field(default=None, min_length=1, max_length=100)
 
     @model_validator(mode="after")
     def check_at_least_one_field(self) -> "SituationUpdate":
@@ -138,6 +143,8 @@ class SituationResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     levels: list[str] = []
+    # SIT-27-02: human-facing topic label for the hub card kicker (nullable).
+    domain: str | None = None
 
 
 class DialogNested(BaseModel):

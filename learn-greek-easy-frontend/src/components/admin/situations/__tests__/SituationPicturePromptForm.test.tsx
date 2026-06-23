@@ -49,6 +49,7 @@ function makeDefaultValues(
     scenario_el: '',
     scenario_en: '',
     scenario_ru: '',
+    domain: '',
     description: { text_el: '', text_el_a2: '', text_en: '' },
     picture: {
       scene_en: 'A sunny beach',

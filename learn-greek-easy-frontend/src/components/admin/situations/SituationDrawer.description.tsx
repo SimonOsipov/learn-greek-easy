@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Field } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import { Kicker } from '@/components/ui/kicker';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -282,6 +283,14 @@ export function SituationDrawerDescription({ situation }: Props) {
             data-testid="situation-drawer-description-en-text"
             {...register('description.text_en')}
           />
+        </Field>
+
+        {/* SIT-27-02: human-facing topic label for the hub card kicker. */}
+        <Field
+          label={t('situations.drawer.description.domainLabel')}
+          hint={t('situations.drawer.description.domainHint')}
+        >
+          <Input data-testid="situation-drawer-domain-input" {...register('domain')} />
         </Field>
 
         {/* Hidden audio elements — always rendered so refs are stable */}

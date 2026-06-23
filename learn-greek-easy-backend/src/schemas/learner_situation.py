@@ -41,6 +41,12 @@ class LearnerSituationListItem(BaseModel):
     exercise_total: int
     exercise_completed: int
     source_image_url: str | None = None
+    # SIT-27-02: human-facing topic label for the hub card kicker (nullable).
+    domain: str | None = None
+    # SIT-27-02: news-vs-everyday section discriminator, sourced from
+    # SituationDescription.source_type ("news" | "original"); null when the
+    # situation has no description.
+    description_source_type: str | None = None
 
 
 class LearnerSituationListResponse(BaseModel):
@@ -62,6 +68,8 @@ class LearnerSituationDetailResponse(BaseModel):
     dialog: LearnerDialogNested | None = None
     exercise_total: int
     exercise_completed: int
+    # SIT-27-02: human-facing topic label for the hub card kicker (nullable).
+    domain: str | None = None
     source_url: str | None = None
     source_image_url: str | None = None
     picture_url: str | None = None

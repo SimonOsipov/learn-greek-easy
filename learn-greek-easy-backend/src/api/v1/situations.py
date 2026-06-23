@@ -140,6 +140,10 @@ async def list_situations(
                 if situation.source_image_s3_key
                 else None
             ),
+            domain=situation.domain,
+            description_source_type=(
+                situation.description.source_type.value if situation.description else None
+            ),
         )
         for situation, exercise_total, exercise_completed in rows
     ]
@@ -264,6 +268,7 @@ async def get_situation(
         dialog=dialog_nested,
         exercise_total=exercise_total,
         exercise_completed=exercise_completed,
+        domain=situation.domain,
         source_url=situation.source_url,
         source_image_url=source_image_url,
         picture_url=picture_url,

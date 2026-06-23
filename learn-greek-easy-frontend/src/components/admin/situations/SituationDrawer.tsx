@@ -38,6 +38,8 @@ export interface SituationDrawerFormData {
   scenario_el: string;
   scenario_en: string;
   scenario_ru: string;
+  // SIT-27-02: human-facing topic label for the hub card kicker.
+  domain: string;
   description: {
     text_el: string;
     text_el_a2: string;
@@ -58,6 +60,7 @@ function toDefaults(
     scenario_el: string;
     scenario_en: string;
     scenario_ru: string;
+    domain?: string | null;
     description?: { text_el: string; text_el_a2: string | null; text_en: string | null } | null;
     picture?: {
       scene_en: string | null;
@@ -71,6 +74,7 @@ function toDefaults(
     scenario_el: detail?.scenario_el ?? '',
     scenario_en: detail?.scenario_en ?? '',
     scenario_ru: detail?.scenario_ru ?? '',
+    domain: detail?.domain ?? '',
     description: {
       text_el: detail?.description?.text_el ?? '',
       text_el_a2: detail?.description?.text_el_a2 ?? '',
@@ -163,6 +167,10 @@ export const SituationDrawer: React.FC = () => {
     if (dirty.scenario_el) situationPayload.scenario_el = data.scenario_el;
     if (dirty.scenario_en) situationPayload.scenario_en = data.scenario_en;
     if (dirty.scenario_ru) situationPayload.scenario_ru = data.scenario_ru;
+    // SIT-27-02: domain is set-only (no clear-to-null). Only send a dirty,
+    // non-empty value; an emptied field is omitted so the backend set-only
+    // validator never receives a null/empty for domain.
+    if (dirty.domain && data.domain.trim()) situationPayload.domain = data.domain.trim();
 
     const descDirty = dirty.description ?? {};
     const descPayload: DescriptionUpdatePayload = {};

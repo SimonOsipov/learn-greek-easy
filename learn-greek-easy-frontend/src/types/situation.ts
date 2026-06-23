@@ -126,6 +126,8 @@ export interface SituationResponse {
   updated_at: string;
   // Fields added in ADMIN2-26 (PR 1 backend)
   levels: string[];
+  /** SIT-27-02: human-facing topic label for the hub card kicker (nullable). */
+  domain?: string | null;
 }
 
 // --- Linked news summary (from SAR2-26-17a backend) ---
@@ -153,6 +155,8 @@ export interface SituationCreatePayload {
   scenario_el: string;
   scenario_en: string;
   scenario_ru: string;
+  /** SIT-27-02: optional human-facing topic label for the hub card kicker. */
+  domain?: string;
 }
 
 // --- Update payload ---
@@ -161,6 +165,8 @@ export interface SituationUpdatePayload {
   scenario_el?: string;
   scenario_en?: string;
   scenario_ru?: string;
+  /** SIT-27-02: set-only (no clear-to-null); omit when empty. */
+  domain?: string;
 }
 
 // --- List response (matches SituationListResponse) ---
@@ -204,6 +210,10 @@ export interface LearnerSituationListItem {
   exercise_total: number;
   exercise_completed: number;
   source_image_url: string | null;
+  /** SIT-27-02: human-facing topic label for the hub card kicker (nullable). */
+  domain?: string | null;
+  /** SIT-27-02: news-vs-everyday section discriminator from SituationDescription.source_type. */
+  description_source_type?: 'news' | 'original' | null;
 }
 
 export interface LearnerSituationListResponse {
@@ -227,6 +237,8 @@ export interface LearnerSituationDetailResponse {
   source_image_url: string | null;
   picture_url: string | null;
   source_title: string | null;
+  /** SIT-27-02: human-facing topic label for the hub card kicker (nullable). */
+  domain?: string | null;
   /** WebP derivative URLs for picture_url, keyed by pixel-width (PERF-10). */
   picture_variants: Record<number, string> | null;
   /** WebP derivative URLs for source_image_url, keyed by pixel-width (PERF-10). */
