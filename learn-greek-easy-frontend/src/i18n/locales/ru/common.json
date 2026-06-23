@@ -428,7 +428,40 @@
     },
     "card": {
       "audio": "Аудио",
-      "exercises": "{{completed}}/{{total}}"
+      "exercises": "{{completed}}/{{total}}",
+      "statusComplete": "Завершено",
+      "statusStart": "Начать",
+      "kickerFallback": "Ситуация · {{level}}"
+    },
+    "hub": {
+      "heroKickerResume": "Продолжите с того места, где остановились",
+      "heroKickerStart": "Начать практику",
+      "statExercises": "Упражнения",
+      "statAudio": "Аудио",
+      "statComplete": "Завершено",
+      "audioYes": "Да",
+      "audioNo": "Нет",
+      "continue": "Продолжить ситуацию",
+      "startHere": "Начать здесь",
+      "checkComprehension": "Проверить понимание",
+      "checkComprehensionArrow": "Проверить понимание →",
+      "whatsNewLabel": "Ситуации",
+      "chipSituations": "{{n}} ситуаций",
+      "chipCompleted": "{{n}} завершено",
+      "chipComprehension": "{{n}}% понимания",
+      "chipLatest": "{{n}} новых на этой неделе",
+      "metricSituations": "Ситуации",
+      "metricCompleted": "Завершено",
+      "metricCompletedUnwired": "Счётчик завершённых ограничен текущей страницей",
+      "metricComprehension": "Понимание",
+      "metricStreak": "Серия",
+      "days": "дн.",
+      "sectionNewsKicker": "Текущие события",
+      "sectionNewsTitle": "Из новостей",
+      "sectionEverydayKicker": "Повседневная жизнь",
+      "sectionEverydayTitle": "Повседневное и путешествия",
+      "sectionOtherKicker": "Обзор",
+      "sectionOtherTitle": "Другие ситуации"
     },
     "empty": {
       "title": "Ситуации не найдены",
@@ -453,12 +486,27 @@
       },
       "hero": {
         "exerciseProgress": "{{completed}}/{{total}} упражнений",
-        "sourceAttribution": "Источник"
+        "sourceAttribution": "Источник",
+        "kicker": "{{domain}} · {{level}}",
+        "statExercises": "Упражнения",
+        "statInReview": "На повторении",
+        "statMastered": "Освоено"
+      },
+      "metric": {
+        "toPractice": "К практике",
+        "inReview": "На повторении",
+        "mastered": "Освоено",
+        "audio": "Аудио",
+        "toPracticeSub": "новые",
+        "inReviewSub": "рабочая память",
+        "masteredSub": "{{pct}}% набора",
+        "audioSub": "с аудио"
       },
       "status": {
         "draft": "Черновик",
         "ready": "Готово"
       },
+      "aboutSection": "Об этой ситуации",
       "about": {
         "a2Section": "Уровень A2",
         "b1Section": "Уровень B1",
@@ -467,6 +515,45 @@
         "illustrationPlaceholder": "Иллюстрация скоро появится"
       },
       "exercises": {
+        "sectionTitle": "Упражнения",
+        "actionEyebrow": "Выберите, что практиковать",
+        "yourProgress": "Ваш прогресс",
+        "progressBarLabel": "Прогресс выполнения упражнений",
+        "legendToPractice": "К практике ({{count}})",
+        "legendLearning": "Изучается ({{count}})",
+        "legendMastered": "Освоено ({{count}})",
+        "topicFilterGroup": "Фильтр упражнений по теме",
+        "continuePractice": "Продолжить практику",
+        "startPractice": "Начать практику",
+        "searchPlaceholder": "Поиск упражнений...",
+        "clearSearch": "Очистить поиск",
+        "statusFilterGroup": "Фильтр упражнений по статусу",
+        "filterAll": "Все",
+        "filterMastered": "Освоено",
+        "filterReview": "На повторении",
+        "filterNew": "Новые",
+        "showing": "Показано {{shown}} из {{total}}",
+        "optionsCount": "{{count}} вариант",
+        "optionsCount_few": "{{count}} варианта",
+        "optionsCount_many": "{{count}} вариантов",
+        "masteryAria": "Освоение: {{filled}} из {{total}}",
+        "previewAria": "Предпросмотр упражнения {{id}}",
+        "previewTitle": "Предпросмотр упражнения",
+        "previewSubtitle": "Только просмотр — практикуйтесь в сессии, чтобы записать прогресс.",
+        "correct": "Правильно",
+        "appearsIn": "Встречается в",
+        "topics": {
+          "all": "Все",
+          "Listening": "Аудирование",
+          "Reading": "Чтение",
+          "Dialogue": "Диалог",
+          "Visual": "Визуальные",
+          "unknown": "Другое"
+        },
+        "noMatches": {
+          "title": "Нет подходящих упражнений",
+          "description": "Попробуйте изменить поиск или фильтры."
+        },
         "empty": {
           "title": "Упражнений пока нет",
           "description": "Упражнения для этой ситуации ещё не созданы."
@@ -476,6 +563,50 @@
           "retry": "Попробовать снова"
         }
       }
+    },
+    "comprehension": {
+      "kicker": "Ваш прогресс",
+      "title": "Понимание",
+      "subtitle": "Насколько хорошо вы понимаете свои ситуации — и что практиковать дальше.",
+      "breadcrumbHub": "Ситуации",
+      "breadcrumb": "Понимание",
+      "donutLabel": "понято",
+      "verdictNotReady": "Только начало",
+      "verdictGettingThere": "На пути",
+      "verdictReady": "Уверенно",
+      "verdictThoroughlyPrepared": "Свободно",
+      "heroKicker": "Что это значит",
+      "heroTitle": "Вы понимаете около {{pct}}% своих ситуаций",
+      "heroDesc": "Понимание — это взвешенная оценка того, насколько каждое упражнение продвинулось в повторении. Практикуйте темы ниже, чтобы повысить его.",
+      "statSessions": "Недавние повторения",
+      "statStreak": "Дней подряд",
+      "statWhatsNew": "Новое за неделю",
+      "ctaPractice": "Практиковать упражнения",
+      "metricComprehension": "Понимание",
+      "metricConfident": "Уверенно в",
+      "metricConfidentSub": "/ {{total}} тем",
+      "metricStreak": "Серия",
+      "metricWhatsNew": "Новое за неделю",
+      "days": "дн.",
+      "nudgeWeak": "{{topic}} — сейчас ваша самая слабая тема. Несколько повторений здесь дадут наибольший эффект.",
+      "nudgeStrong": "Уверенный прогресс по всем темам. Поддержите серию быстрым повторением.",
+      "topicsEyebrow": "По темам",
+      "topicsTitle": "Понимание по темам",
+      "topicsMeta": "красные полосы — ниже 40%",
+      "topicListening": "Аудирование",
+      "topicReading": "Чтение",
+      "topicDialogue": "Диалог",
+      "topicVisual": "Изображения",
+      "topicAccuracy": "Точность: {{pct}}%",
+      "noAttempts": "Пока нет попыток",
+      "topicCta": "Практиковать «{{topic}}» — уверенность {{pct}}%",
+      "recentEyebrow": "Недавняя практика",
+      "recentTitle": "Последние {{n}} повторений",
+      "recentEmpty": "Повторений пока нет. Попрактикуйте ситуацию, чтобы начать развивать понимание.",
+      "sessionQuality": "качество {{quality}}/5",
+      "tagStrong": "Сильно",
+      "tagReview": "Повторить",
+      "error": "Не удалось загрузить ваше понимание. Попробуйте через мгновение."
     }
   },
   "notifications": {

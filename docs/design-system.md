@@ -551,3 +551,42 @@ The following palettes are **not ported** to mobile and must not be added to `le
 **(a) Template screens + `constants/theme.ts` Colors:** The SDK-56 Expo template ships `ThemedText`, `ThemedView`, and a `constants/theme.ts` `Colors` object using raw hex. These are still active and pending migration in MOB-03+. Do not remove them in MOB-02.
 
 **(b) Font parity deferred:** `global.css` maps `--font-display`, `--font-serif`, `--font-mono`, and `--font-rounded`, but the corresponding font files are not yet bundled via `expo-font`. Type renders with system fallbacks until a later story loads them explicitly.
+
+---
+
+## Design system delta — SIT-27-01 (Situations Experience Redesign primitives)
+
+**PR:** `SIT-27: Situations Experience CD-Aligned Redesign`
+
+### New CSS classes (code-owned, `src/index.css`)
+
+No new tokens introduced. All new rules use existing tokens (`--danger`, `--warning`, `--success`, `--primary`, `--fg`, `--fg-2`, `--fg-3`, `--fg/0.x`, `--bg-2`, `--card`, `--line`).
+
+| Class | Role |
+|---|---|
+| `.cx-cat-bar[data-tone='danger'] > span` | Explicit danger tone rule for comprehension cat-bars — symmetry with `warning`/`success` siblings. No `.dark` block needed: `--danger` is a per-theme token; `hsl(var(--danger))` auto-adapts. Comprehension bars set `data-tone='danger'` when confidence < 40%. |
+| `.cx-q-card` | Exercise q-card container (situation detail exercise grid) — card surface, 12px radius, hover border/shadow. |
+| `.cx-q-card-head` | Header row: exercise `#id` (`.cx-q-card-id`) + status dot. |
+| `.cx-q-card-scene` | Image placeholder area for picture exercises (16:7 aspect ratio). |
+| `.cx-q-card-prompt` | Serif question text (EL/EN/RU, via prompt-language store). |
+| `.cx-q-card-meta` | Mono meta row: topic · options count. |
+| `.cx-q-card-foot` | Footer row (pip strip + action button), separated by a hairline. |
+| `.cx-pips` / `.cx-pip` | Mastery pip strip — 0–4 filled dots derived from `ExerciseRecord.status`/`repetitions`. Empty = `--fg/0.12`; filled = `--primary` (review) / `--success` (mastered) / `--warning` (learning). |
+| `.cx-ex-toolbar` | Exercise toolbar container (flex, wrapping): search + filter chips + segmented language toggle + count. |
+| `.cx-ex-toolbar-count` | "Showing X of Y" count (right-aligned, mono, `--fg-3`). |
+| `.cx-segmented` / `.cx-segmented-btn` | Segmented control for EL/EN/RU language toggle + topic filter chips. Active state: `--card` bg + subtle shadow. |
+| `.cx-action-panel` | Action panel wrapper (progress + legend + topic chips + Practice CTA). |
+| `.cx-action-legend` / `.cx-action-legend-item` / `.cx-action-legend-dot` | Legend row: coloured dot + label for To-practice / In-review / Mastered. |
+
+### Cover stack routing — Situations
+
+`CultureHero` and `DxCover` require `Pick<Deck, 'id' | 'level' | 'category' | 'coverImageUrl' | 'coverImageVariants'>`. A `Situation` has `source_image_url`/`source_image_variants` and no deck `level`/`category`. SIT-27-01 adds `src/components/situations/situationToCoverProps.ts`, a pure adapter that:
+
+- Maps `source_image_url → coverImageUrl` (null → undefined)
+- Maps `source_image_variants → coverImageVariants` (tolerates undefined on list items)
+- Synthesises `level`/`category` from `Situation.domain` via a deterministic table (e.g. `news → B1/culture`, `everyday → A2/phrases`) with a stable `B1/culture` fallback
+
+The adapter imports `DeckLevel`/`DeckCategory` from `@/types/deck` (A1–B2 only) — **not** from `@/types/situation` (which incorrectly includes C1/C2 and would produce undefined gradient stops in `deckGradient`).
+
+**Situations cover gradient → `deckGradient`** (via the adapter and `DxCover`/`CultureHero`).
+**Flat thumbnail → `--sit-thumb-*`** (legacy `.sit-card` thumbnails — unchanged, not migrated).

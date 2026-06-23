@@ -2986,6 +2986,11 @@ class Situation(Base, TimestampMixin):
     levels: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, server_default=text("'[]'::jsonb")
     )
+    domain: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Human-facing topic label (e.g. news, everyday, travel) for the hub card kicker",
+    )
 
     def __repr__(self) -> str:
         return f"<Situation id={self.id} status={self.status}>"

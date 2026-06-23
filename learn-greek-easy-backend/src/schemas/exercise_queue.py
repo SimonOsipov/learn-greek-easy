@@ -24,6 +24,9 @@ class ExerciseQueueItem(BaseModel):
     exercise_type: ExerciseType
     modality: ExerciseModality | None = None
     audio_level: DeckLevel | None = None
+    # SIT-27-03: learner-facing topic ("Listening" | "Reading" | "Dialogue" | "Visual"),
+    # derived from (source_type, modality) via core.exercise_topic.derive_exercise_topic.
+    topic: str | None = None
 
     # SM-2 state
     status: CardStatus = Field(default=CardStatus.NEW)
@@ -59,6 +62,18 @@ class ExerciseQueue(BaseModel):
     )
     total_in_queue: int = Field(..., ge=0, description="Total exercises in this queue")
     exercises: list[ExerciseQueueItem] = Field(default_factory=list)
+    # SIT-27-03: per-topic counts for the detail toolbar filter chips. All four
+    # canonical topics ("Listening", "Reading", "Dialogue", "Visual") are always
+    # present (0 when no exercises of that topic). Defaults to all-zero so other
+    # callers of this schema (e.g. the study-queue endpoint) need not populate it.
+    topic_counts: dict[str, int] = Field(
+        default_factory=lambda: {
+            "Listening": 0,
+            "Reading": 0,
+            "Dialogue": 0,
+            "Visual": 0,
+        }
+    )
 
 
 class ExerciseReviewRequest(BaseModel):

@@ -417,7 +417,40 @@
     },
     "card": {
       "audio": "Audio",
-      "exercises": "{{completed}}/{{total}}"
+      "exercises": "{{completed}}/{{total}}",
+      "statusComplete": "Complete",
+      "statusStart": "Start",
+      "kickerFallback": "Situation · {{level}}"
+    },
+    "hub": {
+      "heroKickerResume": "Continue where you left off",
+      "heroKickerStart": "Start practising",
+      "statExercises": "Exercises",
+      "statAudio": "Audio",
+      "statComplete": "Complete",
+      "audioYes": "Yes",
+      "audioNo": "No",
+      "continue": "Continue situation",
+      "startHere": "Start here",
+      "checkComprehension": "Check comprehension",
+      "checkComprehensionArrow": "Check comprehension →",
+      "whatsNewLabel": "Situations",
+      "chipSituations": "{{n}} situations",
+      "chipCompleted": "{{n}} completed",
+      "chipComprehension": "{{n}}% comprehension",
+      "chipLatest": "{{n}} new this week",
+      "metricSituations": "Situations",
+      "metricCompleted": "Completed",
+      "metricCompletedUnwired": "Completed count is page-scoped",
+      "metricComprehension": "Comprehension",
+      "metricStreak": "Streak",
+      "days": "days",
+      "sectionNewsKicker": "Current affairs",
+      "sectionNewsTitle": "From the news",
+      "sectionEverydayKicker": "Daily life",
+      "sectionEverydayTitle": "Everyday & travel",
+      "sectionOtherKicker": "Browse",
+      "sectionOtherTitle": "More situations"
     },
     "empty": {
       "title": "No situations found",
@@ -442,12 +475,27 @@
       },
       "hero": {
         "exerciseProgress": "{{completed}}/{{total}} exercises",
-        "sourceAttribution": "Source"
+        "sourceAttribution": "Source",
+        "kicker": "{{domain}} · {{level}}",
+        "statExercises": "Exercises",
+        "statInReview": "In review",
+        "statMastered": "Mastered"
+      },
+      "metric": {
+        "toPractice": "To practice",
+        "inReview": "In review",
+        "mastered": "Mastered",
+        "audio": "Audio",
+        "toPracticeSub": "new",
+        "inReviewSub": "working memory",
+        "masteredSub": "{{pct}}% of set",
+        "audioSub": "with audio"
       },
       "status": {
         "draft": "Draft",
         "ready": "Ready"
       },
+      "aboutSection": "About this situation",
       "about": {
         "a2Section": "A2 Level",
         "b1Section": "B1 Level",
@@ -456,6 +504,44 @@
         "illustrationPlaceholder": "Illustration coming soon"
       },
       "exercises": {
+        "sectionTitle": "Exercises",
+        "actionEyebrow": "Pick what to practice",
+        "yourProgress": "Your progress",
+        "progressBarLabel": "Exercise completion progress",
+        "legendToPractice": "To practice ({{count}})",
+        "legendLearning": "Learning ({{count}})",
+        "legendMastered": "Mastered ({{count}})",
+        "topicFilterGroup": "Filter exercises by topic",
+        "continuePractice": "Continue practice",
+        "startPractice": "Start practice",
+        "searchPlaceholder": "Search exercises...",
+        "clearSearch": "Clear search",
+        "statusFilterGroup": "Filter exercises by status",
+        "filterAll": "All",
+        "filterMastered": "Mastered",
+        "filterReview": "In review",
+        "filterNew": "New",
+        "showing": "Showing {{shown}} of {{total}}",
+        "optionsCount": "{{count}} option",
+        "optionsCount_other": "{{count}} options",
+        "masteryAria": "Mastery: {{filled}} of {{total}}",
+        "previewAria": "Preview exercise {{id}}",
+        "previewTitle": "Exercise preview",
+        "previewSubtitle": "Read-only — practice from the exercise session to record progress.",
+        "correct": "Correct",
+        "appearsIn": "Appears in",
+        "topics": {
+          "all": "All",
+          "Listening": "Listening",
+          "Reading": "Reading",
+          "Dialogue": "Dialogue",
+          "Visual": "Visual",
+          "unknown": "Other"
+        },
+        "noMatches": {
+          "title": "No matching exercises",
+          "description": "Try adjusting your search or filters."
+        },
         "empty": {
           "title": "No exercises yet",
           "description": "Exercises for this situation haven't been created yet."
@@ -465,6 +551,50 @@
           "retry": "Try again"
         }
       }
+    },
+    "comprehension": {
+      "kicker": "Your progress",
+      "title": "Comprehension",
+      "subtitle": "How well you understand your situations — and where to practise next.",
+      "breadcrumbHub": "Situations",
+      "breadcrumb": "Comprehension",
+      "donutLabel": "understood",
+      "verdictNotReady": "Just starting",
+      "verdictGettingThere": "Getting there",
+      "verdictReady": "Confident",
+      "verdictThoroughlyPrepared": "Fluent",
+      "heroKicker": "What this means",
+      "heroTitle": "You understand about {{pct}}% of your situations",
+      "heroDesc": "Comprehension is a weighted blend of how far each exercise has progressed through review. Keep practising the topics below to raise it.",
+      "statSessions": "Recent reviews",
+      "statStreak": "Day streak",
+      "statWhatsNew": "New this week",
+      "ctaPractice": "Practise exercises",
+      "metricComprehension": "Comprehension",
+      "metricConfident": "Confident in",
+      "metricConfidentSub": "/ {{total}} topics",
+      "metricStreak": "Streak",
+      "metricWhatsNew": "New this week",
+      "days": "days",
+      "nudgeWeak": "{{topic}} is your weakest topic right now — a few reviews there will move the needle most.",
+      "nudgeStrong": "Solid progress across every topic. Keep your streak alive with a quick review.",
+      "topicsEyebrow": "By topic",
+      "topicsTitle": "Comprehension by topic",
+      "topicsMeta": "red bars are below 40%",
+      "topicListening": "Listening",
+      "topicReading": "Reading",
+      "topicDialogue": "Dialogue",
+      "topicVisual": "Visual",
+      "topicAccuracy": "Accuracy: {{pct}}%",
+      "noAttempts": "No attempts yet",
+      "topicCta": "Practise {{topic}} — {{pct}}% confident",
+      "recentEyebrow": "Recent practice",
+      "recentTitle": "Last {{n}} reviews",
+      "recentEmpty": "No reviews yet. Practise a situation to start building comprehension.",
+      "sessionQuality": "quality {{quality}}/5",
+      "tagStrong": "Strong",
+      "tagReview": "Review",
+      "error": "We couldn't load your comprehension just now. Try again in a moment."
     }
   },
   "notifications": {

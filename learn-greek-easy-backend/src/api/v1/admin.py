@@ -4491,6 +4491,7 @@ async def create_situation(
             scenario_el=data.scenario_el,
             scenario_en=data.scenario_en,
             scenario_ru=data.scenario_ru,
+            domain=data.domain,
         )
         db.add(situation)
         await db.commit()

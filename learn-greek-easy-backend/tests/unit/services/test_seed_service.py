@@ -1964,8 +1964,9 @@ class TestSeedSituationsProdContent:
 
         assert result["success"] is True
         assert result["count"] == 6  # 3 didactic + 3 prod-exported
-        # 4 didactic exercises (2 each for coffee shop + bus) + 3 prod exercises
-        assert result["exercises_created"] == 7
+        # 4 listening exercises (2 each for coffee shop + bus) + 1 reading exercise
+        # (supermarket, SIT-27 comprehension Reading-topic signal) + 3 prod exercises
+        assert result["exercises_created"] == 8
 
         from src.db.models import DescriptionStatus, SituationDescription
 

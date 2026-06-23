@@ -18,6 +18,12 @@ export type CardStatus = 'new' | 'learning' | 'review' | 'mastered';
 
 export type DeckLevel = 'A1' | 'A2' | 'B1' | 'B2';
 
+/** SIT-27-03: learner-facing exercise topic taxonomy. */
+export type ExerciseTopic = 'Listening' | 'Reading' | 'Dialogue' | 'Visual';
+
+/** SIT-27-03: per-topic exercise counts; all four topics always present. */
+export type TopicCounts = Record<ExerciseTopic, number>;
+
 export interface ExerciseItemPayload {
   item_index: number;
   payload: Record<string, unknown>;
@@ -29,6 +35,8 @@ export interface ExerciseQueueItem {
   exercise_type: ExerciseType;
   modality: ExerciseModality | null;
   audio_level: DeckLevel | null;
+  /** SIT-27-03: derived topic for filter chips; null when not yet derived. Optional for back-compat with callers that don't surface it. */
+  topic?: ExerciseTopic | null;
   status: CardStatus;
   is_new: boolean;
   is_early_practice: boolean;
@@ -52,6 +60,8 @@ export interface ExerciseQueue {
   total_early_practice: number;
   total_in_queue: number;
   exercises: ExerciseQueueItem[];
+  /** SIT-27-03: per-topic counts for the detail toolbar filter chips. Optional for back-compat with callers that don't surface it. */
+  topic_counts?: TopicCounts;
 }
 
 export interface ExerciseReviewRequest {

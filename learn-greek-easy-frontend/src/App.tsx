@@ -113,6 +113,11 @@ const SituationsPage = lazyWithRetry(() =>
 const SituationDetailPage = lazyWithRetry(() =>
   import('@/pages/SituationDetailPage').then((m) => ({ default: m.SituationDetailPage }))
 );
+const SituationsComprehensionPage = lazyWithRetry(() =>
+  import('@/pages/SituationsComprehensionPage').then((m) => ({
+    default: m.SituationsComprehensionPage,
+  }))
+);
 const ExercisePreSessionPage = lazyWithRetry(() =>
   import('@/pages/ExercisePreSessionPage').then((m) => ({ default: m.ExercisePreSessionPage }))
 );
@@ -298,6 +303,9 @@ function AppContent() {
                 {/* Situations page */}
                 <Route path="/situations" element={<AppLayout />}>
                   <Route index element={<SituationsPage />} />
+                  {/* Static "comprehension" path must precede the ":id" dynamic
+                      route so it is never captured as a situation id. */}
+                  <Route path="comprehension" element={<SituationsComprehensionPage />} />
                   <Route path=":id" element={<SituationDetailPage />} />
                 </Route>
                 {/* Exercise practice - pre-session inside AppLayout */}

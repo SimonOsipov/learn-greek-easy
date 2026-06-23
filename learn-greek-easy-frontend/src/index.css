@@ -4086,6 +4086,12 @@ html.theme-transition *::after {
 .cx-cat-bar[data-tone='success'] > span {
   background: hsl(var(--success));
 }
+/* SIT-27-01: explicit danger tone rule for symmetry with warning/success;
+   the base default is already danger but components set data-tone='danger'
+   the same way they set 'warning'/'success' — one rule, token-only (no .dark block). */
+.cx-cat-bar[data-tone='danger'] > span {
+  background: hsl(var(--danger));
+}
 
 /* Right-aligned % + accuracy */
 .cx-cat-meta {
@@ -4387,6 +4393,214 @@ html.theme-transition *::after {
 .cx-modal-alsoin-chip:hover {
   background: hsl(var(--fg) / 0.1);
   color: hsl(var(--fg));
+}
+
+/* ── SIT-27-01: Exercise q-card, mastery-pip, exercise-toolbar, segmented ── */
+
+/* Q-card: exercise card anatomy (situation detail exercise grid) */
+.cx-q-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--fg) / 0.09);
+  border-radius: 12px;
+  transition:
+    border-color 120ms,
+    box-shadow 120ms;
+}
+
+.cx-q-card:hover {
+  border-color: hsl(var(--primary) / 0.3);
+  box-shadow: 0 2px 12px -4px hsl(var(--primary) / 0.12);
+}
+
+/* Q-card header: #id + status dot */
+.cx-q-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cx-q-card-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: hsl(var(--fg-3));
+  letter-spacing: 0.05em;
+}
+
+/* Q-card scene: image placeholder area */
+.cx-q-card-scene {
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  border-radius: 8px;
+  overflow: hidden;
+  background: hsl(var(--bg-2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Q-card prompt (EL/EN/RU question text) */
+.cx-q-card-prompt {
+  font-family: 'Noto Serif', 'Georgia', serif;
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: hsl(var(--fg));
+  margin: 0;
+}
+
+/* Q-card meta row: topic · options count */
+.cx-q-card-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(var(--fg-3));
+  letter-spacing: 0.03em;
+}
+
+.cx-q-card-meta-sep {
+  color: hsl(var(--fg) / 0.2);
+}
+
+/* Q-card footer: pip row + action */
+.cx-q-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid hsl(var(--fg) / 0.06);
+}
+
+/* Mastery pips (0–4 filled dots representing SM-2 status) */
+.cx-pips {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cx-pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: hsl(var(--fg) / 0.12);
+  transition: background 200ms;
+  flex-shrink: 0;
+}
+
+.cx-pip[data-filled='true'] {
+  background: hsl(var(--primary));
+}
+
+/* Mastery pip tone variants */
+.cx-pip[data-tone='mastered'][data-filled='true'] {
+  background: hsl(var(--success));
+}
+
+.cx-pip[data-tone='review'][data-filled='true'] {
+  background: hsl(var(--primary));
+}
+
+.cx-pip[data-tone='learning'][data-filled='true'] {
+  background: hsl(var(--warning));
+}
+
+/* Exercise toolbar (above the exercise grid) */
+.cx-ex-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cx-ex-toolbar-count {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: hsl(var(--fg-3));
+  white-space: nowrap;
+}
+
+/* Segmented control (EL/EN/RU language toggle + topic filters) */
+.cx-segmented {
+  display: inline-flex;
+  align-items: center;
+  background: hsl(var(--bg-2));
+  border: 1px solid hsl(var(--fg) / 0.08);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.cx-segmented-btn {
+  padding: 5px 11px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: hsl(var(--fg-3));
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition:
+    background 120ms,
+    color 120ms;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.cx-segmented-btn:hover {
+  color: hsl(var(--fg));
+  background: hsl(var(--fg) / 0.05);
+}
+
+.cx-segmented-btn.is-active {
+  background: hsl(var(--card));
+  color: hsl(var(--fg));
+  box-shadow: 0 1px 3px hsl(var(--fg) / 0.08);
+}
+
+/* Exercise action panel (progress + legend + topic chips + CTA) */
+.cx-action-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 20px;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--fg) / 0.09);
+  border-radius: 14px;
+}
+
+.cx-action-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.cx-action-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: hsl(var(--fg-2));
+}
+
+.cx-action-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 /* Accessibility: Respect user's motion preferences */

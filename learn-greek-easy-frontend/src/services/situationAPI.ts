@@ -1,6 +1,8 @@
 import type {
   LearnerSituationDetailResponse,
   LearnerSituationListResponse,
+  SituationComprehensionResponse,
+  SituationStatsResponse,
 } from '@/types/situation';
 
 import { api, buildQueryString } from './api';
@@ -25,5 +27,15 @@ export const situationAPI = {
 
   getById: async (id: string): Promise<LearnerSituationDetailResponse> => {
     return api.get<LearnerSituationDetailResponse>(`/api/v1/situations/${id}`);
+  },
+
+  // SIT-27-04: per-situation exercise counts for the detail metric strip.
+  getStats: async (id: string): Promise<SituationStatsResponse> => {
+    return api.get<SituationStatsResponse>(`/api/v1/situations/${id}/stats`);
+  },
+
+  // SIT-27-04: account-wide comprehension overview.
+  getComprehension: async (): Promise<SituationComprehensionResponse> => {
+    return api.get<SituationComprehensionResponse>('/api/v1/situations/comprehension');
   },
 };

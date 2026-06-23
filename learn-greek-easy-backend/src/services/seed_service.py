@@ -44,6 +44,7 @@ from src.db.models import (
     Exercise,
     ExerciseModality,
     ExerciseRecord,
+    ExerciseReview,
     ExerciseSourceType,
     ExerciseStatus,
     ExerciseType,
@@ -4249,6 +4250,11 @@ class SeedService:
         created_situations = []
         exercises_created = 0
         exercise_records_created = 0
+        exercise_reviews_created = 0
+
+        # SIT-27-02: human-facing domain label per ORIGINAL situation, by index
+        # (coffee / bus / supermarket). Drives the hub card kicker.
+        original_domains = ["Food & drink", "Transport", "Shopping"]
 
         for sit_index, sit_data in enumerate(self.SITUATIONS):
             situation = Situation(
@@ -4256,6 +4262,7 @@ class SeedService:
                 scenario_en=sit_data["scenario_en"],
                 scenario_ru=sit_data["scenario_ru"],
                 status=SituationStatus.READY,
+                domain=(original_domains[sit_index] if sit_index < len(original_domains) else None),
             )
             self.db.add(situation)
             await self.db.flush()
@@ -4296,7 +4303,51 @@ class SeedService:
                     sit_exercises.append(ex)
                     exercises_created += 1
 
-            # First situation only: create 1 ExerciseRecord for the learner
+            # Supermarket (index 2): one DESCRIPTION + READING exercise so the
+            # comprehension overview has a "Reading"-topic signal distinct from the
+            # coffee/bus "Listening" exercises (topic derives from source+modality).
+            if sit_index == 2:
+                de = DescriptionExercise(
+                    description_id=description.id,
+                    exercise_type=ExerciseType.SELECT_CORRECT_ANSWER,
+                    audio_level=DeckLevel.A2,
+                    modality=ExerciseModality.READING,
+                    status=ExerciseStatus.APPROVED,
+                    question_en="What does Nikos pay with at the till?",
+                )
+                self.db.add(de)
+                await self.db.flush()
+                self.db.add(
+                    DescriptionExerciseItem(
+                        description_exercise_id=de.id,
+                        item_index=0,
+                        payload={
+                            "prompt": {
+                                "el": "Με τι πληρώνει ο Νίκος στο ταμείο;",
+                                "en": "What does Nikos pay with at the till?",
+                                "ru": "Чем Никос платит на кассе?",
+                            },
+                            "options": [
+                                {"el": "Με κάρτα", "en": "By card", "ru": "Картой"},
+                                {"el": "Με μετρητά", "en": "In cash", "ru": "Наличными"},
+                                {"el": "Με επιταγή", "en": "By cheque", "ru": "Чеком"},
+                                {"el": "Με τηλέφωνο", "en": "By phone", "ru": "Телефоном"},
+                            ],
+                            "correct_answer_index": 0,
+                        },
+                    )
+                )
+                ex = Exercise(
+                    source_type=ExerciseSourceType.DESCRIPTION,
+                    description_exercise_id=de.id,
+                )
+                self.db.add(ex)
+                await self.db.flush()
+                sit_exercises.append(ex)
+                exercises_created += 1
+
+            # First situation only: create 1 ExerciseRecord for the learner.
+            # Coffee keeps exactly ONE non-NEW record → exercise_completed stays 1/2.
             if sit_index == 0 and learner_id is not None and sit_exercises:
                 er = ExerciseRecord(
                     user_id=learner_id,
@@ -4310,6 +4361,38 @@ class SeedService:
                 self.db.add(er)
                 await self.db.flush()
                 exercise_records_created += 1
+
+                # Reviews across recent days → Listening-topic accuracy, recent
+                # sessions, and a multi-day exercise streak for the comprehension
+                # overview. Quality stays in the SM-2 0–5 range; score ≤ max_score.
+                exercise_reviews_created += await self._seed_exercise_reviews(
+                    record=er,
+                    user_id=learner_id,
+                    samples=[(4, 4, 5), (3, 4, 3), (4, 4, 4)],
+                )
+
+            # Supermarket (index 2): a MASTERED record + reviews on the Reading
+            # exercise gives the "Reading" topic real confidence + accuracy. This
+            # makes supermarket 1/1 complete (its only exercise has a non-NEW record).
+            if sit_index == 2 and learner_id is not None and sit_exercises:
+                er = ExerciseRecord(
+                    user_id=learner_id,
+                    exercise_id=sit_exercises[0].id,
+                    status=CardStatus.MASTERED,
+                    easiness_factor=2.6,
+                    interval=21,
+                    repetitions=4,
+                    next_review_date=date.today() + timedelta(days=21),
+                )
+                self.db.add(er)
+                await self.db.flush()
+                exercise_records_created += 1
+
+                exercise_reviews_created += await self._seed_exercise_reviews(
+                    record=er,
+                    user_id=learner_id,
+                    samples=[(5, 5, 5), (4, 5, 4)],
+                )
 
             # First situation (coffee shop) gets a SituationPicture row
             picture_id: str | None = None
@@ -4356,6 +4439,8 @@ class SeedService:
                 scenario_en=prod_data["scenario_en"],
                 scenario_ru=prod_data["scenario_ru"],
                 status=SituationStatus.READY,
+                # SIT-27-02: news-sourced situations carry a "News" domain label.
+                domain="News",
             )
             self.db.add(situation)
             await self.db.flush()
@@ -4425,7 +4510,44 @@ class SeedService:
             "count": len(created_situations),
             "exercises_created": exercises_created,
             "exercise_records_created": exercise_records_created,
+            "exercise_reviews_created": exercise_reviews_created,
         }
+
+    async def _seed_exercise_reviews(
+        self,
+        record: ExerciseRecord,
+        user_id: UUID,
+        samples: list[tuple[int, int, int]],
+    ) -> int:
+        """Append immutable ExerciseReview audit rows to a record (newest-first).
+
+        Each sample is ``(score, max_score, quality)``. ``reviewed_at`` is spaced
+        one day apart starting today and walking backwards, so the rows seed a
+        multi-day exercise streak and per-topic review accuracy for the situations
+        comprehension overview. SM-2 before/after fields are placeholder-consistent
+        (we are not replaying the real SM-2 algorithm here).
+
+        Returns the number of reviews created.
+        """
+        now = datetime.now(tz=timezone.utc)
+        for day_offset, (score, max_score, quality) in enumerate(samples):
+            review = ExerciseReview(
+                exercise_record_id=record.id,
+                user_id=user_id,
+                quality=quality,
+                score=score,
+                max_score=max_score,
+                easiness_factor_before=record.easiness_factor,
+                easiness_factor_after=record.easiness_factor,
+                interval_before=record.interval,
+                interval_after=record.interval,
+                repetitions_before=record.repetitions,
+                repetitions_after=record.repetitions,
+                reviewed_at=now - timedelta(days=day_offset),
+            )
+            self.db.add(review)
+        await self.db.flush()
+        return len(samples)
 
     # =====================
     # Full Seed Orchestration

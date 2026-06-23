@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from src.core.dependencies import get_current_user
 from src.core.exceptions import NotFoundException
+from src.core.exercise_topic import ExerciseTopic, derive_exercise_topic
 from src.db.dependencies import get_db
 from src.db.models import (
     CardStatus,
@@ -30,9 +31,12 @@ from src.schemas.learner_situation import (
     LearnerSituationDetailResponse,
     LearnerSituationListItem,
     LearnerSituationListResponse,
+    SituationComprehensionResponse,
+    SituationStatsResponse,
 )
 from src.services.exercise_sm2_service import ExerciseSM2Service
 from src.services.s3_service import IMAGE_PRESIGN_EXPIRY_SECONDS, get_s3_service
+from src.services.situation_comprehension_service import SituationComprehensionService
 
 router = APIRouter(
     responses={
@@ -140,6 +144,10 @@ async def list_situations(
                 if situation.source_image_s3_key
                 else None
             ),
+            domain=situation.domain,
+            description_source_type=(
+                situation.description.source_type.value if situation.description else None
+            ),
         )
         for situation, exercise_total, exercise_completed in rows
     ]
@@ -150,6 +158,20 @@ async def list_situations(
         page=page,
         page_size=page_size,
     )
+
+
+@router.get("/comprehension", response_model=SituationComprehensionResponse)
+async def get_situation_comprehension(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SituationComprehensionResponse:
+    """Account-wide situations comprehension overview (SIT-27-04).
+
+    NOTE: declared BEFORE the ``/{situation_id}`` path-param route so FastAPI
+    matches the literal ``/comprehension`` instead of treating it as a situation id.
+    """
+    service = SituationComprehensionService(db)
+    return await service.get_overview(user_id=current_user.id)
 
 
 @router.get("/{situation_id}", response_model=LearnerSituationDetailResponse)
@@ -264,6 +286,7 @@ async def get_situation(
         dialog=dialog_nested,
         exercise_total=exercise_total,
         exercise_completed=exercise_completed,
+        domain=situation.domain,
         source_url=situation.source_url,
         source_image_url=source_image_url,
         picture_url=picture_url,
@@ -367,10 +390,44 @@ async def get_situation_exercises(
             if item.exercise_id in enrichment_map:
                 _apply_enrichment(item, enrichment_map[item.exercise_id])
 
+    # SIT-27-03: derive the learner-facing topic per item (after enrichment, so
+    # description-source items carry their modality) and tally per-topic counts.
+    # All four canonical topics are always present in the counts map.
+    topic_counts: dict[str, int] = {t.value: 0 for t in ExerciseTopic}
+    for item in items:
+        topic = derive_exercise_topic(item.source_type, item.modality)
+        item.topic = topic.value
+        topic_counts[topic.value] += 1
+
     return ExerciseQueue(
         total_due=total_due,
         total_new=total_new,
         total_early_practice=0,
         total_in_queue=len(items),
         exercises=items,
+        topic_counts=topic_counts,
     )
+
+
+@router.get("/{situation_id}/stats", response_model=SituationStatsResponse)
+async def get_situation_stats(
+    situation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SituationStatsResponse:
+    """Per-situation exercise counts for the detail metric strip (SIT-27-04).
+
+    Returns to_practice / in_review / mastered / audio counts. 404 when the
+    situation is missing or not READY (mirrors get_situation / get_situation_exercises).
+    """
+    sit_result = await db.execute(
+        select(Situation).where(
+            Situation.id == situation_id,
+            Situation.status == SituationStatus.READY,
+        )
+    )
+    if sit_result.scalar_one_or_none() is None:
+        raise NotFoundException("Situation not found")
+
+    service = SituationComprehensionService(db)
+    return await service.get_per_situation_stats(situation_id=situation_id, user_id=current_user.id)

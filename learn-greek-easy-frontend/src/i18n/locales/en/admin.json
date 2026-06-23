@@ -1792,6 +1792,8 @@
         "regenerate": "Regenerate",
         "referenceLabel": "Reference — English",
         "referenceHint": "Internal only · keeps translators aligned",
+        "domainLabel": "Domain",
+        "domainHint": "Human-facing topic label shown on the hub card (e.g. news, everyday, travel)",
         "playAria": "Play {{level}} narration",
         "pauseAria": "Pause {{level}} narration"
       },
