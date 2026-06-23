@@ -19,10 +19,10 @@ export function DeclensionTable({ cases }: DeclensionTableProps) {
           <tr className="border-b text-left font-medium">
             <th className="pb-1 pr-2" />
             <th scope="col" className="pb-1 pr-2">
-              {t('generateNoun.generation.singular')}
+              {t('declensionTable.singular')}
             </th>
             <th scope="col" className="pb-1">
-              {t('generateNoun.generation.plural')}
+              {t('declensionTable.plural')}
             </th>
           </tr>
         </thead>
@@ -32,7 +32,7 @@ export function DeclensionTable({ cases }: DeclensionTableProps) {
               <th scope="row" className="py-1 pr-2 font-medium">
                 {tDynamic(
                   t,
-                  `generateNoun.generation.case${caseKey.charAt(0).toUpperCase() + caseKey.slice(1)}`
+                  `declensionTable.case${caseKey.charAt(0).toUpperCase() + caseKey.slice(1)}`
                 )}
               </th>
               <td className="py-1 pr-2">{cases.singular[caseKey]}</td>

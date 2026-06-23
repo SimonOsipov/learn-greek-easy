@@ -12,10 +12,6 @@ from src.services.card_error_service import CardErrorService
 from src.services.card_generator_service import CardGeneratorService
 from src.services.changelog_service import ChangelogService
 from src.services.checkout_service import CheckoutService
-from src.services.cross_ai_verification_service import (
-    CrossAIVerificationService,
-    get_cross_ai_verification_service,
-)
 from src.services.culture_deck_service import CultureDeckService
 from src.services.culture_question_service import CultureQuestionService
 from src.services.duplicate_detection_service import DuplicateDetectionService
@@ -28,18 +24,10 @@ from src.services.lemma_normalization_service import (
     get_lemma_normalization_service,
 )
 from src.services.lexicon_service import LexiconEntry, LexiconService
-from src.services.local_verification_service import (
-    LocalVerificationService,
-    get_local_verification_service,
-)
 from src.services.mock_exam_service import MockExamService
 from src.services.morphology_service import MorphologyService, get_morphology_service
 from src.services.news_item_service import NewsItemService
 from src.services.notification_service import NotificationService
-from src.services.noun_data_generation_service import (
-    NounDataGenerationService,
-    get_noun_data_generation_service,
-)
 from src.services.openrouter_service import OpenRouterService, get_openrouter_service
 from src.services.s3_service import S3Service, get_s3_service
 from src.services.seed_service import SeedService
@@ -53,7 +41,6 @@ from src.services.user_deletion_service import DeletionResult, UserDeletionServi
 from src.services.user_progress_reset_service import UserProgressResetService
 from src.services.webhook_service import WebhookService
 from src.services.wiktionary_morphology_service import WiktionaryMorphologyService
-from src.services.wiktionary_verification_service import WiktionaryVerificationService
 from src.services.xp_service import XPService
 
 __all__ = [
@@ -65,7 +52,6 @@ __all__ = [
     "CardGeneratorService",
     "ChangelogService",
     "CheckoutService",
-    "CrossAIVerificationService",
     "CultureDeckService",
     "CultureQuestionService",
     "DeletionResult",
@@ -76,12 +62,10 @@ __all__ = [
     "LemmaNormalizationService",
     "LexiconEntry",
     "LexiconService",
-    "LocalVerificationService",
     "MockExamService",
     "MorphologyService",
     "NewsItemService",
     "NotificationService",
-    "NounDataGenerationService",
     "OpenRouterService",
     "S3Service",
     "SeedService",
@@ -93,15 +77,11 @@ __all__ = [
     "UserProgressResetService",
     "WebhookService",
     "WiktionaryMorphologyService",
-    "WiktionaryVerificationService",
     "XPService",
-    "get_cross_ai_verification_service",
     "band_for_rank",
     "get_email_service",
     "get_lemma_normalization_service",
-    "get_local_verification_service",
     "get_morphology_service",
-    "get_noun_data_generation_service",
     "get_openrouter_service",
     "get_s3_service",
     "get_spellcheck_service",

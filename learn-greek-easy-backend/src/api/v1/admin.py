@@ -44,10 +44,7 @@ from src.core.exceptions import (
     ElevenLabsRateLimitError,
     IllegalProposalTransition,
     NotFoundException,
-    NounGenerationError,
-    OpenRouterError,
 )
-from src.core.lexgen_forms import bundles_to_flat
 from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import (
@@ -85,7 +82,6 @@ from src.db.models import (
     SituationStatus,
     User,
     UserXP,
-    WiktionaryMorphology,
     WordEntry,
     WordOrderExercise,
     WordProposal,
@@ -106,8 +102,6 @@ from src.schemas.admin import (
     DialogSpeakerDetail,
     GenerateCardsRequest,
     GenerateCardsResponse,
-    GenerateWordEntryRequest,
-    GenerateWordEntryResponse,
     LexgenApproveRequest,
     LexgenApproveResponse,
     LexgenEditRequest,
@@ -117,11 +111,12 @@ from src.schemas.admin import (
     LexgenProposalListItem,
     LexgenProposalListResponse,
     LexgenRejectRequest,
+    LexgenSubmitRequest,
+    LexgenSubmitResponse,
     ListeningDialogCreateFromJSON,
     ListeningDialogDetail,
     ListeningDialogListItem,
     ListeningDialogListResponse,
-    NormalizationStageResult,
     PendingQuestionItem,
     PendingQuestionsResponse,
     QuestionApproveRequest,
@@ -129,9 +124,6 @@ from src.schemas.admin import (
     ReconcileDiffResponse,
     ReverseLookupItem,
     ReverseLookupResponse,
-    SuggestionItem,
-    TranslationLookupStageResult,
-    TranslationSourceInfo,
     UnifiedDeckItem,
     WordEntryInlineUpdate,
 )
@@ -163,14 +155,12 @@ from src.schemas.feedback import (
     AdminFeedbackUpdate,
     AuthorBriefResponse,
 )
-from src.schemas.lexgen import FormBundle
 from src.schemas.news_item import (
     NewsItemCreate,
     NewsItemListResponse,
     NewsItemResponse,
     NewsItemUpdate,
 )
-from src.schemas.nlp import GeneratedNounData, NormalizedLemma, VerificationSummary
 from src.schemas.situation import (
     AdminExerciseListItem,
     AdminExerciseListResponse,
@@ -205,7 +195,6 @@ from src.services.audio_generation_service import DialogInput, get_audio_generat
 from src.services.card_error_admin_service import CardErrorAdminService
 from src.services.card_generator_service import CardGeneratorService
 from src.services.changelog_service import ChangelogService
-from src.services.cross_ai_verification_service import get_cross_ai_verification_service
 from src.services.description_audio_service import (
     DescriptionAudioError,
     _versioned_description_key,
@@ -213,16 +202,12 @@ from src.services.description_audio_service import (
     load_description_text,
     persist_description_audio,
 )
-from src.services.duplicate_detection_service import DuplicateDetectionService
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.gamification import ReconcileMode
 from src.services.gamification.reconciler import GamificationReconciler
-from src.services.lemma_normalization_service import detect_article, get_lemma_normalization_service
+from src.services.lexgen_pipeline_service import LexgenPipelineService
 from src.services.lexgen_review_service import LexgenReviewService
-from src.services.lexicon_service import LexiconEntry, LexiconService
-from src.services.local_verification_service import get_local_verification_service
 from src.services.news_item_service import NewsItemService
-from src.services.noun_data_generation_service import get_noun_data_generation_service
 from src.services.openrouter_service import get_openrouter_service
 from src.services.picture_prompt import get_default_picture_style_en
 from src.services.reverse_lookup_service import ReverseLookupService
@@ -240,10 +225,6 @@ from src.services.situation_picture_service import (
     persist_picture_generation,
     upload_picture_to_s3,
 )
-from src.services.translation_service import TranslationLookupService
-from src.services.verification_tier import compute_combined_tier_v2
-from src.services.wiktionary_morphology_service import WiktionaryMorphologyService
-from src.services.wiktionary_verification_service import WiktionaryVerificationService
 from src.services.word_entry_response import word_entry_to_response
 from src.tasks import create_announcement_notifications_task, invalidate_cache_task
 from src.tasks.description_audio import generate_description_audio_task
@@ -1558,6 +1539,45 @@ async def reject_lexgen_proposal(
         await svc.reject(proposal, rejection_reason=body.reason, reviewer_id=current_user.id)
     except IllegalProposalTransition as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+
+
+@router.post(
+    "/lexgen/proposals",
+    response_model=LexgenSubmitResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Submit a lemma through the LEXGEN pipeline",
+    responses={
+        201: {"description": "Proposal created; status field indicates needs_review or rejected"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        409: {"description": "Illegal proposal state transition (defensive only)"},
+    },
+)
+async def submit_lexgen_proposal(
+    body: LexgenSubmitRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> LexgenSubmitResponse:
+    """Run the full LEXGEN pipeline for a lemma and return a proposal.
+
+    Both attested and never-invent lemmas return 201 with a LexgenSubmitResponse body.
+    The ``status`` field distinguishes the two outcomes (never-invent → "rejected",
+    attested → "needs_review"). Semantic rejections are NOT surfaced as HTTP errors
+    (Decisions §3 / never-invent is a 2xx rejection, not a 4xx).
+    """
+    svc = LexgenPipelineService(db)
+    try:
+        proposal, outcome = await svc.run_for_lemma(
+            body.lemma, pos=body.pos, requested_by=current_user.id
+        )
+    except IllegalProposalTransition as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+    return LexgenSubmitResponse(
+        id=proposal.id,
+        status=proposal.status.value,
+        rejection_reason=proposal.rejection_reason if outcome == "rejected" else None,
+    )
 
 
 @router.get(
@@ -3409,728 +3429,6 @@ async def generate_word_entry_cards(
         card_type=request.card_type,
         created=created,
         updated=updated,
-    )
-
-
-def _confidence_tier(confidence: float) -> Literal["high", "medium", "low"]:
-    """Map raw confidence score to a display tier."""
-    if confidence >= 0.8:
-        return "high"
-    if confidence >= 0.5:
-        return "medium"
-    return "low"
-
-
-_SPACY_GENDER_MAP = {"Masc": "masculine", "Fem": "feminine", "Neut": "neuter"}
-_GENDER_TO_ARTICLE = {"masculine": "ο", "feminine": "η", "neuter": "το"}
-_APP_GENDER_TO_LEXICON: dict[str, str] = {v: k for k, v in _SPACY_GENDER_MAP.items()}
-_ARTICLE_GENDER_OVERRIDE: dict[str, str] = {"ο": "masculine", "η": "feminine", "το": "neuter"}
-
-
-def _extract_gender_article(
-    morph_features: dict[str, str],
-) -> tuple[str | None, str | None]:
-    """Extract gender and article from spaCy morphology features."""
-    gender_raw = morph_features.get("Gender")
-    gender = _SPACY_GENDER_MAP.get(gender_raw) if gender_raw else None
-    article = _GENDER_TO_ARTICLE.get(gender) if gender else None
-    return gender, article
-
-
-async def _run_generation_stage(
-    normalized_lemma: NormalizedLemma,
-    translation_lookup: TranslationLookupStageResult | None,
-) -> GeneratedNounData:
-    """Run LLM noun data generation, passing TDICT pre-filled translations."""
-    pre_filled_en = (
-        translation_lookup.en.combined_text
-        if translation_lookup and translation_lookup.en and translation_lookup.en.source != "none"
-        else None
-    )
-    pre_filled_ru = (
-        translation_lookup.ru.combined_text
-        if translation_lookup and translation_lookup.ru and translation_lookup.ru.source != "none"
-        else None
-    )
-
-    try:
-        gen_svc = get_noun_data_generation_service()
-        return await gen_svc.generate(
-            normalized_lemma,
-            pre_filled_en=pre_filled_en,
-            pre_filled_ru=pre_filled_ru,
-        )
-    except NounGenerationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Noun generation failed: {exc.detail}",
-        ) from exc
-    except OpenRouterError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"LLM provider error: {exc}",
-        ) from exc
-
-
-def _get_morphology_source(
-    has_lexicon: bool, has_wiktionary: bool
-) -> Literal["lexicon", "wiktionary", "both", "llm"]:
-    """Determine morphology_source from available data sources."""
-    if has_lexicon and has_wiktionary:
-        return "both"
-    if has_lexicon:
-        return "lexicon"
-    if has_wiktionary:
-        return "wiktionary"
-    return "llm"
-
-
-async def _fetch_wiktionary_entry(
-    lemma: str, generated_gender: str | None
-) -> WiktionaryMorphology | None:
-    """Fetch wiktionary morphology entry with gender-filtered lookup and fallback."""
-    try:
-        factory = get_session_factory()
-        async with factory.begin() as _db:
-            wikt_svc = WiktionaryMorphologyService(_db)
-            entry = None
-            if generated_gender:
-                entry = await wikt_svc.get_entry(lemma, gender=generated_gender)
-            if entry is None:
-                entry = await wikt_svc.get_entry(lemma, gender=None)
-            return entry
-    except Exception as exc:
-        logger.warning(f"Wiktionary lookup failed for '{lemma}': {exc}")
-        return None
-
-
-async def _run_verification_stage(
-    generated_data: GeneratedNounData,
-    normalized_lemma: NormalizedLemma,
-    lexicon_svc: LexiconService | None,
-    lemma: str,
-    secondary_data: GeneratedNounData | None = None,
-    translation_lookup: TranslationLookupStageResult | None = None,
-) -> VerificationSummary:
-    """Run local + wiktionary + cross-AI verification and compute combined tier."""
-    local_svc = get_local_verification_service()
-    cross_svc = get_cross_ai_verification_service()
-
-    # Step 1: Lexicon declensions
-    lex_gender = (
-        _APP_GENDER_TO_LEXICON.get(normalized_lemma.gender) if normalized_lemma.gender else None
-    )
-    if lexicon_svc is not None:
-        lexicon_declensions = await lexicon_svc.get_declensions(
-            lemma, pos="NOUN", gender=lex_gender
-        )
-    else:
-        factory = get_session_factory()
-        async with factory.begin() as _db:
-            _lex_svc = LexiconService(_db)
-            lexicon_declensions = await _lex_svc.get_declensions(
-                lemma, pos="NOUN", gender=lex_gender
-            )
-
-    # Step 2: Wiktionary entry (gender-filtered with fallback)
-    # Use normalized_lemma.gender (from NLP pipeline) not generated_data.grammar_data.gender
-    # (which is under verification and may be wrong, causing a spurious miss).
-    wiktionary_entry = await _fetch_wiktionary_entry(lemma, normalized_lemma.gender)
-
-    # morphology_source determination
-    has_lexicon = bool(lexicon_declensions)
-    has_wiktionary = bool(wiktionary_entry)
-    morphology_source = _get_morphology_source(has_lexicon, has_wiktionary)
-
-    # Step 3: Run local (L1) verification (sync service, wrapped in executor)
-    loop = asyncio.get_running_loop()
-    try:
-        local_result = await loop.run_in_executor(
-            None,
-            lambda: local_svc.verify(
-                generated_data,
-                tdict_translations=translation_lookup,
-                lexicon_declensions=lexicon_declensions,
-            ),
-        )
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail="Local verification pipeline failed") from exc
-
-    # Step 4: Run Wiktionary (L2) verification (soft failure)
-    wiktionary_result = None
-    if wiktionary_entry is not None:
-        try:
-            wiktionary_result = await loop.run_in_executor(
-                None,
-                lambda: WiktionaryVerificationService().verify(
-                    generated_data,
-                    wiktionary_forms=bundles_to_flat(
-                        [FormBundle.model_validate(b) for b in wiktionary_entry.forms]
-                    ),
-                    wiktionary_gender=wiktionary_entry.gender,
-                    wiktionary_pronunciation=wiktionary_entry.pronunciation,
-                    wiktionary_glosses=wiktionary_entry.glosses_en,
-                ),
-            )
-        except Exception as exc:
-            logger.warning(f"Wiktionary verification failed for '{lemma}': {exc}")
-
-    # Step 5: Cross-AI verification (unchanged)
-    if secondary_data is not None:
-        cross_result = cross_svc.compare(generated_data, secondary_data)
-    else:
-        cross_result = cross_svc.primary_only_result(
-            generated_data, error="Secondary generation failed or skipped"
-        )
-
-    # Step 6: Combined tier using v2 (considers L1 + L2)
-    l2_tier = wiktionary_result.tier if wiktionary_result is not None else None
-    cross_ai_agreement = (
-        cross_result.overall_agreement
-        if cross_result.error is None and cross_result.overall_agreement is not None
-        else None
-    )
-    combined_tier = compute_combined_tier_v2(local_result.tier, l2_tier, cross_ai_agreement)
-
-    return VerificationSummary(
-        local=local_result,
-        wiktionary_local=wiktionary_result,
-        cross_ai=cross_result,
-        morphology_source=morphology_source,
-        combined_tier=combined_tier,
-    )
-
-
-async def _run_generation_with_secondary(
-    normalized_lemma: NormalizedLemma,
-    translation_lookup: TranslationLookupStageResult | None,
-) -> tuple[GeneratedNounData, GeneratedNounData | None]:
-    """Run primary generation and cross-AI secondary LLM call concurrently.
-
-    Returns (generated_data, secondary_data). Raises on primary failure; secondary
-    failure is soft — returns None for secondary_data and logs a warning.
-    """
-    cross_svc = get_cross_ai_verification_service()
-    gen_coro = _run_generation_stage(
-        normalized_lemma=normalized_lemma,
-        translation_lookup=translation_lookup,
-    )
-    cross_coro = cross_svc.generate_secondary(normalized_lemma)
-
-    results = await asyncio.gather(gen_coro, cross_coro, return_exceptions=True)
-    generated_data_or_exc, secondary_data_or_exc = results
-
-    # Primary generation failure is a hard error — re-raise
-    if isinstance(generated_data_or_exc, BaseException):
-        raise generated_data_or_exc
-    generated_data: GeneratedNounData = generated_data_or_exc
-
-    # Cross-AI secondary failure is soft — proceed without
-    secondary_data: GeneratedNounData | None = None
-    if isinstance(secondary_data_or_exc, BaseException):
-        logger.warning("Cross-AI secondary generation failed: %s", secondary_data_or_exc)
-    else:
-        secondary_data = secondary_data_or_exc
-
-    return generated_data, secondary_data
-
-
-def _build_translation_lookup_stage_result(
-    bilingual: dict[str, Any],
-) -> TranslationLookupStageResult:
-    """Build TranslationLookupStageResult from lookup_bilingual() result."""
-
-    def _to_info(result: Any) -> TranslationSourceInfo:
-        return TranslationSourceInfo(
-            translations=[e.translation for e in result.translations],
-            combined_text=result.combined_text,
-            source=result.source,
-            sense_count=len(result.translations),
-        )
-
-    return TranslationLookupStageResult(
-        en=_to_info(bilingual["en"]),
-        ru=_to_info(bilingual["ru"]),
-    )
-
-
-@router.post(
-    "/word-entries/generate",
-    response_model=GenerateWordEntryResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Run noun generation pipeline (progressive stages)",
-)
-async def generate_word_entry(  # noqa: C901
-    request: GenerateWordEntryRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-) -> GenerateWordEntryResponse:
-    """Run the noun generation pipeline for a Greek word.
-
-    Currently executes only the normalization stage.
-    Future subtasks will add duplicate check, generation,
-    verification, and persistence stages.
-    """
-    # Validate deck exists and is active
-    result = await db.execute(select(Deck).where(Deck.id == request.deck_id))
-    deck = result.scalar_one_or_none()
-    if deck is None or not deck.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Active deck with ID '{request.deck_id}' not found",
-        )
-
-    # Stage 0.5: Lexicon lookup (async DB query)
-    detected_art, bare_word = detect_article(request.word)
-    lexicon_svc = LexiconService(db)
-
-    lexicon_entry: LexiconEntry | None = None
-    lexicon_entries: list[LexiconEntry] | None = None
-
-    if detected_art is None:
-        # Bare word — fetch all gender variants for suggestions
-        lexicon_entries = await lexicon_svc.lookup_all_genders(bare_word, pos="NOUN")
-    else:
-        # Article specified — map to lexicon-level gender code and do targeted lookup
-        art_gender = _ARTICLE_GENDER_OVERRIDE.get(detected_art)
-        lex_gender_rest = _APP_GENDER_TO_LEXICON.get(art_gender) if art_gender else None
-        if lex_gender_rest:
-            lexicon_entry = await lexicon_svc.lookup(bare_word, pos="NOUN", gender=lex_gender_rest)
-        else:
-            lexicon_entry = await lexicon_svc.lookup(bare_word, pos="NOUN")
-
-    # Stage 1: Normalization (synchronous -- CPU-bound NLP)
-    svc = get_lemma_normalization_service()
-    try:
-        smart_result = svc.normalize_smart(
-            request.word,
-            expected_pos="NOUN",
-            lexicon_entry=lexicon_entry,
-            lexicon_entries=lexicon_entries,
-        )
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        ) from exc
-
-    primary = smart_result.primary
-    primary_gender, primary_article = _extract_gender_article(primary.morphology.morph_features)
-
-    # Article-based gender override: when user provided a nominative singular article,
-    # use it as ground-truth gender (overrides spaCy's morphological analysis)
-    if smart_result.detected_article in _ARTICLE_GENDER_OVERRIDE:
-        primary_gender = _ARTICLE_GENDER_OVERRIDE[smart_result.detected_article]
-        primary_article = smart_result.detected_article
-
-    suggestions = [
-        SuggestionItem(
-            lemma=s.morphology.lemma,
-            pos=s.morphology.pos,
-            gender=_extract_gender_article(s.morphology.morph_features)[0],
-            article=_extract_gender_article(s.morphology.morph_features)[1],
-            confidence=s.confidence,
-            confidence_tier=_confidence_tier(s.confidence),
-            strategy=s.strategy,
-        )
-        for s in smart_result.suggestions
-    ]
-
-    # Stage 2: Duplicate check
-    dup_svc = DuplicateDetectionService(db)
-    dup_result = await dup_svc.check(
-        lemma=primary.morphology.lemma,
-        part_of_speech=PartOfSpeech.NOUN,
-        gender=primary_gender,
-    )
-    if dup_result.is_duplicate:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "error": "Duplicate word entry found",
-                "duplicate_check": dup_result.model_dump(mode="json"),
-            },
-        )
-
-    # Stage 2.5: Translation lookup
-    translation_lookup: TranslationLookupStageResult | None = None
-    try:
-        tl_svc = TranslationLookupService(db)
-        tl_bilingual = await tl_svc.lookup_bilingual(
-            lemma=primary.morphology.lemma,
-            pos="NOUN",
-        )
-        translation_lookup = _build_translation_lookup_stage_result(tl_bilingual)
-    except Exception as e:
-        logger.warning(f"Translation lookup failed (non-blocking): {e}")
-
-    # Stage 3: Generation
-    normalized_lemma = NormalizedLemma(
-        input_word=primary.input_form,
-        lemma=primary.morphology.lemma,
-        gender=primary_gender,
-        article=primary_article,
-        pos=primary.morphology.pos,
-        confidence=primary.confidence,
-    )
-
-    # Stage 3 + Cross-AI LLM (concurrent)
-    generated_data, secondary_data = await _run_generation_with_secondary(
-        normalized_lemma=normalized_lemma,
-        translation_lookup=translation_lookup,
-    )
-
-    # Stage 4: Verification (local + cross-AI comparison)
-    verification_summary: VerificationSummary | None = None
-    if generated_data is not None:
-        verification_summary = await _run_verification_stage(
-            generated_data=generated_data,
-            normalized_lemma=normalized_lemma,
-            lexicon_svc=lexicon_svc,
-            lemma=primary.morphology.lemma,
-            secondary_data=secondary_data,
-            translation_lookup=translation_lookup,
-        )
-
-    last_stage = (
-        "verification"
-        if verification_summary
-        else (
-            "generation"
-            if generated_data
-            else ("translation_lookup" if translation_lookup else "duplicate_check")
-        )
-    )
-
-    return GenerateWordEntryResponse(
-        stage=last_stage,
-        normalization=NormalizationStageResult(
-            input_word=primary.input_form,
-            lemma=primary.morphology.lemma,
-            gender=primary_gender,
-            article=primary_article,
-            pos=primary.morphology.pos,
-            confidence=primary.confidence,
-            confidence_tier=_confidence_tier(primary.confidence),
-            strategy=primary.strategy,
-            corrected_from=primary.corrected_from,
-            corrected_to=primary.corrected_to,
-        ),
-        suggestions=suggestions,
-        duplicate_check=dup_result,
-        translation_lookup=translation_lookup,
-        generation=generated_data,
-        verification=verification_summary,
-    )
-
-
-async def _sse_generation_and_verification(
-    normalized_lemma: NormalizedLemma,
-    translation_lookup: TranslationLookupStageResult | None,
-    lemma: str,
-) -> AsyncGenerator[str, None]:
-    """Emit SSE events for stages 3 (generation) and 4 (verification)."""
-    yield format_sse_event({"message": "Generating with AI..."}, event="generation_started")
-    try:
-        generated_data, secondary_data = await _run_generation_with_secondary(
-            normalized_lemma=normalized_lemma,
-            translation_lookup=translation_lookup,
-        )
-        yield format_sse_event(generated_data, event="generation_complete")
-    except HTTPException as exc:
-        yield format_sse_event(
-            {"error": exc.detail, "status_code": exc.status_code},
-            event="generation_failed",
-        )
-        yield format_sse_event(
-            {"error": exc.detail, "stage": "generation"},
-            event="pipeline_failed",
-        )
-        return
-
-    yield format_sse_event({"message": "Running verification..."}, event="verification_started")
-    verification_summary: VerificationSummary | None = None
-    try:
-        verification_summary = await _run_verification_stage(
-            generated_data=generated_data,
-            normalized_lemma=normalized_lemma,
-            lexicon_svc=None,
-            lemma=lemma,
-            secondary_data=secondary_data,
-            translation_lookup=translation_lookup,
-        )
-        yield format_sse_event(verification_summary, event="verification_complete")
-    except Exception as exc:
-        logger.warning("Verification failed (non-fatal): %s", exc)
-        yield format_sse_event({"error": str(exc)}, event="verification_failed")
-
-    last_stage = "verification" if verification_summary else "generation"
-    yield format_sse_event({"stage": last_stage}, event="pipeline_complete")
-
-
-def _build_normalization_sse_event(
-    smart_result: Any,
-) -> tuple[str, str | None, str | None]:
-    """Extract gender/article from smart result and return (sse_event_str, gender, article)."""
-    primary = smart_result.primary
-    primary_gender, primary_article = _extract_gender_article(primary.morphology.morph_features)
-
-    if smart_result.detected_article in _ARTICLE_GENDER_OVERRIDE:
-        primary_gender = _ARTICLE_GENDER_OVERRIDE[smart_result.detected_article]
-        primary_article = smart_result.detected_article
-
-    suggestions = [
-        SuggestionItem(
-            lemma=s.morphology.lemma,
-            pos=s.morphology.pos,
-            gender=_extract_gender_article(s.morphology.morph_features)[0],
-            article=_extract_gender_article(s.morphology.morph_features)[1],
-            confidence=s.confidence,
-            confidence_tier=_confidence_tier(s.confidence),
-            strategy=s.strategy,
-        )
-        for s in smart_result.suggestions
-    ]
-    event_str = format_sse_event(
-        {
-            "normalization": NormalizationStageResult(
-                input_word=primary.input_form,
-                lemma=primary.morphology.lemma,
-                gender=primary_gender,
-                article=primary_article,
-                pos=primary.morphology.pos,
-                confidence=primary.confidence,
-                confidence_tier=_confidence_tier(primary.confidence),
-                strategy=primary.strategy,
-                corrected_from=primary.corrected_from,
-                corrected_to=primary.corrected_to,
-            ).model_dump(),
-            "suggestions": [s.model_dump() for s in suggestions],
-        },
-        event="normalization_complete",
-    )
-    return event_str, primary_gender, primary_article
-
-
-async def _generate_word_entry_sse_pipeline(  # noqa: C901
-    request: GenerateWordEntryRequest,
-    from_stage: str | None = None,
-) -> AsyncGenerator[str, None]:
-    """Async generator that emits SSE events for each noun generation pipeline stage."""
-    yield format_sse_event("", event="connected")
-
-    # Validate from_stage param
-    if from_stage is not None and from_stage != "generation":
-        yield format_sse_error(
-            "invalid_param", f"Invalid from_stage: '{from_stage}'. Only 'generation' is supported."
-        )
-        return
-
-    if from_stage == "generation":
-        if not request.lemma:
-            yield format_sse_error(
-                "missing_field", "'lemma' is required when from_stage=generation"
-            )
-            return
-
-        # Validate deck (active + V2)
-        factory = get_session_factory()
-        async with factory.begin() as _db:
-            result = await _db.execute(select(Deck).where(Deck.id == request.deck_id))
-            deck = result.scalar_one_or_none()
-
-        if deck is None or not deck.is_active:
-            yield format_sse_event(
-                {
-                    "error": f"Active deck with ID '{request.deck_id}' not found",
-                    "stage": "validation",
-                },
-                event="pipeline_failed",
-            )
-            return
-
-        # Build NormalizedLemma from pre-resolved fields in the request
-        normalized_lemma = NormalizedLemma(
-            input_word=request.word,
-            lemma=request.lemma,
-            gender=request.gender,
-            article=request.article,
-            pos="NOUN",
-            confidence=1.0,
-        )
-        async for event in _sse_generation_and_verification(
-            normalized_lemma=normalized_lemma,
-            translation_lookup=request.translation_lookup,
-            lemma=request.lemma,
-        ):
-            yield event
-        return
-
-    # Validate deck (active + V2) and lexicon lookup — share one session
-    detected_art_sse, bare_word = detect_article(request.word)
-    factory = get_session_factory()
-    lexicon_entry_sse: LexiconEntry | None = None
-    lexicon_entries_sse: list[LexiconEntry] | None = None
-    async with factory.begin() as _db:
-        result = await _db.execute(select(Deck).where(Deck.id == request.deck_id))
-        deck = result.scalar_one_or_none()
-        if deck is not None and deck.is_active:
-            lexicon_svc_inner = LexiconService(_db)
-            try:
-                if detected_art_sse is None:
-                    lexicon_entries_sse = await lexicon_svc_inner.lookup_all_genders(
-                        bare_word, pos="NOUN"
-                    )
-                else:
-                    art_gender_sse = _ARTICLE_GENDER_OVERRIDE.get(detected_art_sse)
-                    lex_gender_sse = (
-                        _APP_GENDER_TO_LEXICON.get(art_gender_sse) if art_gender_sse else None
-                    )
-                    if lex_gender_sse:
-                        lexicon_entry_sse = await lexicon_svc_inner.lookup(
-                            bare_word, pos="NOUN", gender=lex_gender_sse
-                        )
-                    else:
-                        lexicon_entry_sse = await lexicon_svc_inner.lookup(bare_word, pos="NOUN")
-            except Exception:
-                lexicon_entry_sse = None
-                lexicon_entries_sse = None
-
-    if deck is None or not deck.is_active:
-        yield format_sse_event(
-            {"error": f"Active deck with ID '{request.deck_id}' not found", "stage": "validation"},
-            event="pipeline_failed",
-        )
-        return
-
-    # Stage 1: Normalization
-    svc = get_lemma_normalization_service()
-    try:
-        smart_result = svc.normalize_smart(
-            request.word,
-            expected_pos="NOUN",
-            lexicon_entry=lexicon_entry_sse,
-            lexicon_entries=lexicon_entries_sse,
-        )
-    except ValueError as exc:
-        yield format_sse_event(
-            {"error": str(exc), "stage": "normalization"},
-            event="pipeline_failed",
-        )
-        return
-
-    norm_event, primary_gender, primary_article = _build_normalization_sse_event(smart_result)
-    yield norm_event
-    primary = smart_result.primary
-
-    # Stage 2: Duplicate check
-    dup_result = None
-    dup_exc = None
-    try:
-        async with factory.begin() as _db:
-            dup_svc = DuplicateDetectionService(_db)
-            dup_result = await dup_svc.check(
-                lemma=primary.morphology.lemma,
-                part_of_speech=PartOfSpeech.NOUN,
-                gender=primary_gender,
-            )
-    except Exception as exc:
-        dup_exc = exc
-        logger.warning("Duplicate check failed: %s", exc)
-
-    if dup_exc is not None:
-        yield format_sse_event(
-            {"error": str(dup_exc), "stage": "duplicate_check"},
-            event="duplicates_checked",
-        )
-    elif dup_result is not None:
-        yield format_sse_event(dup_result, event="duplicates_checked")
-        if dup_result.is_duplicate:
-            yield format_sse_event(
-                {
-                    "error": "Duplicate word entry found",
-                    "stage": "duplicate_check",
-                    "existing_entry": (
-                        dup_result.existing_entry.model_dump(mode="json")
-                        if dup_result.existing_entry
-                        else None
-                    ),
-                },
-                event="pipeline_stopped",
-            )
-            return
-
-    # Stage 2.5: Translation lookup (non-fatal)
-    translation_lookup: TranslationLookupStageResult | None = None
-    try:
-        async with factory.begin() as _db:
-            tl_svc = TranslationLookupService(_db)
-            tl_bilingual = await tl_svc.lookup_bilingual(
-                lemma=primary.morphology.lemma,
-                pos="NOUN",
-            )
-        translation_lookup = _build_translation_lookup_stage_result(tl_bilingual)
-        yield format_sse_event(
-            {"data": translation_lookup.model_dump()}, event="translations_found"
-        )
-    except Exception as exc:
-        logger.opt(exception=True).warning("Translation lookup failed (non-blocking): {}", exc)
-        yield format_sse_event({"data": None}, event="translations_found")
-
-    # Build NormalizedLemma and run stages 3+4 via sub-generator
-    normalized_lemma = NormalizedLemma(
-        input_word=primary.input_form,
-        lemma=primary.morphology.lemma,
-        gender=primary_gender,
-        article=primary_article,
-        pos=primary.morphology.pos,
-        confidence=primary.confidence,
-    )
-    async for event in _sse_generation_and_verification(
-        normalized_lemma=normalized_lemma,
-        translation_lookup=translation_lookup,
-        lemma=primary.morphology.lemma,
-    ):
-        yield event
-
-
-@router.post(
-    "/word-entries/generate/stream",
-    summary="Run noun generation pipeline as SSE stream",
-    response_class=StreamingResponse,
-)
-async def generate_word_entry_stream(
-    request: GenerateWordEntryRequest,
-    sse_auth: SSEAuthResult = Depends(get_sse_auth),
-    from_stage: str | None = Query(
-        None, description="Pipeline stage to start from. Only 'generation' is supported."
-    ),
-) -> StreamingResponse:
-    """Stream noun generation pipeline stages as SSE events.
-
-    Returns events in sequence:
-    connected → normalization_complete → duplicates_checked → translations_found
-    → generation_started → generation_complete → verification_started
-    → verification_complete → pipeline_complete
-
-    On failure: pipeline_failed (normalization/generation) or verification_failed (non-fatal).
-    The existing sync endpoint POST /generate remains unchanged.
-    """
-    if not sse_auth.is_authenticated:
-        return _sse_single_error(
-            sse_auth.error_code or "auth_required",
-            sse_auth.error_message or "Authentication required",
-        )
-
-    assert sse_auth.user is not None
-    if not sse_auth.user.is_superuser:
-        return _sse_single_error("forbidden", "Superuser privileges required")
-
-    return create_sse_response(
-        sse_stream(
-            _generate_word_entry_sse_pipeline(request, from_stage=from_stage),
-            heartbeat_interval=15,
-        )
     )
 
 

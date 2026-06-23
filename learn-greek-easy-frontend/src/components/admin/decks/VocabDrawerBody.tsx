@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { CardDeleteDialog } from '@/components/admin/CardDeleteDialog';
-import { GenerateNounDialog } from '@/components/admin/GenerateNounDialog';
+import { LexgenSubmitDialog } from '@/components/admin/LexgenSubmitDialog';
 import { ChangelogPagination } from '@/components/changelog/ChangelogPagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -314,15 +314,7 @@ export function VocabDrawerBody({ deck }: VocabDrawerBodyProps) {
       />
 
       {/* ── Add word dialog ── */}
-      <GenerateNounDialog
-        open={addWordOpen}
-        onOpenChange={setAddWordOpen}
-        deckId={deck.id}
-        deckName={typeof deck.name === 'string' ? deck.name : (deck.name_en ?? '')}
-        onWordLinked={() => {
-          queryClient.invalidateQueries({ queryKey: ['deck-vocab', deck.id] });
-        }}
-      />
+      <LexgenSubmitDialog open={addWordOpen} onOpenChange={setAddWordOpen} />
     </div>
   );
 }

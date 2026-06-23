@@ -1470,127 +1470,26 @@
     "discardConfirm": "Отменить",
     "discardCancel": "Продолжить редактирование"
   },
-  "generateNoun": {
-    "title": "Сгенерировать существительное",
-    "deckLabel": "Колода",
-    "inputPlaceholder": "Введите слово на греческом, английском или русском",
-    "invalidGreek": "Пожалуйста, введите корректное греческое слово",
-    "tooLong": "Слово слишком длинное (максимум 50 символов)",
-    "createButton": "Создать",
-    "creatingButton": "Создание...",
+  "declensionTable": {
+    "singular": "Единственное число",
+    "plural": "Множественное число",
+    "caseNominative": "Именительный",
+    "caseGenitive": "Родительный",
+    "caseAccusative": "Винительный",
+    "caseVocative": "Звательный"
+  },
+  "lexgenSubmit": {
+    "title": "Отправить слово на проверку",
+    "lemmaLabel": "Лемма (греческий)",
+    "lemmaPlaceholder": "напр. βιβλίο",
+    "submit": "Отправить",
+    "submitting": "Отправка...",
     "cancel": "Отмена",
-    "close": "Закрыть",
-    "successMocked": "Генерация существительного поставлена в очередь (мок). Полный пайплайн будет в NGEN-08-02.",
-    "normalizationResult": "Результат",
-    "lemmaLabel": "Лемма",
-    "genderLabel": "Род",
-    "genderUnknown": "Неизвестен",
-    "posLabel": "Часть речи",
-    "confidenceLabel": "Уверенность",
-    "confidence": {
-      "high": "Высокая",
-      "medium": "Средняя",
-      "low": "Низкая"
-    },
-    "lowConfidenceWarning": "Низкая уверенность — результат может быть ненадёжным. Вы всё равно можете продолжить.",
-    "startOverButton": "Начать заново",
-    "errorGeneric": "Что-то пошло не так. Попробуйте ещё раз.",
-    "accentCorrected": "Ударение исправлено: {{from}} → {{to}}",
-    "suggestionsTitle": "Возможно, вы имели в виду",
-    "useSuggestion": "Выбрать",
-    "noDuplicates": "Дубликатов не найдено",
-    "duplicateFound": "Уже существует в колоде \"{{deckName}}\"",
-    "duplicateTranslation": "Перевод: {{translation}}",
-    "duplicateWarning": "Вы можете продолжить — слово будет добавлено в текущую колоду",
-    "linkToDeck": "Связать с колодой",
-    "alreadyInDeck": "Это слово уже есть в колоде",
-    "linkSuccess": "Слово успешно связано с колодой",
-    "existsInDecks": "Это слово есть в {{count}} колоде(ах)",
-    "generation": {
-      "examples": "Примеры предложений",
-      "singular": "Единственное число",
-      "plural": "Множественное число",
-      "caseNominative": "Именительный",
-      "caseGenitive": "Родительный",
-      "caseAccusative": "Винительный",
-      "caseVocative": "Звательный"
-    },
-    "swapConfirmTitle": "Сменить вариант?",
-    "swapConfirmDescription": "Результаты генерации будут заменены для нового варианта. Нормализация и переводы будут сохранены.",
-    "swapConfirmAction": "Сменить и перегенерировать",
-    "generatingWithAI": "Генерация с помощью ИИ...",
-    "runningVerification": "Запуск верификации...",
-    "verification": {
-      "combinedTier": "Уровень верификации",
-      "tierAutoApprove": "Автоодобрение",
-      "tierQuickReview": "Нужна быстрая проверка",
-      "tierManualReview": "Требуется ручная проверка",
-      "localVerification": "Локальная верификация",
-      "crossAiVerification": "Кросс-AI верификация",
-      "agreementScore": "Согласованность: {{percentage}}%",
-      "crossAiUnavailable": "Кросс-AI верификация недоступна",
-      "notAvailable": "Н/Д",
-      "noComparisons": "Сравнения недоступны",
-      "comparisonHeaders": {
-        "field": "Поле",
-        "primary": "Основной",
-        "secondary": "Вторичный",
-        "match": "Совпадение",
-        "mismatch": "Несоответствие",
-        "decision": "Решение"
-      },
-      "headers": {
-        "local": "Локальная",
-        "wiktionary": "Викисловарь",
-        "crossAi": "Кросс-AI"
-      },
-      "wiktionary": {
-        "noData": "Нет данных Викисловаря"
-      },
-      "morphologySource": {
-        "wiktionary": "Викисловарь",
-        "both": "Лексикон + Викисловарь"
-      },
-      "resolvedTooltip": "Решено администратором — используется значение {{source}}",
-      "sourceLabels": {
-        "local": "Локальный",
-        "wiktionary": "Викисловарь",
-        "primary": "Основной",
-        "secondary": "Вторичный"
-      }
-    },
-    "approve": {
-      "button": "Подтвердить и сохранить",
-      "saving": "Сохранение...",
-      "successToast": "Словарная запись успешно сохранена",
-      "errorToast": "Не удалось сохранить словарную запись"
-    },
-    "audio": {
-      "generating": "Генерация аудио... {{completed}}/{{total}} частей готово"
-    },
-    "editable": {
-      "examplesTitle": "Примеры",
-      "exampleGreek": "Греческий",
-      "exampleEnglish": "Английский",
-      "exampleRussian": "Русский"
-    },
-    "pill": {
-      "editTooltip": "Нажмите для редактирования",
-      "resolvedBy": "Разрешено: {{source}}"
-    },
-    "reverseLookup": {
-      "title": "Вы хотели найти одно из этих греческих слов?",
-      "loading": "Поиск...",
-      "noResults": "Греческие слова для «{{query}}» не найдены",
-      "useSelected": "Использовать",
-      "cancel": "Отмена",
-      "bestMatch": "Лучшее совпадение",
-      "inferredGender": "Род определён по окончанию слова",
-      "columnLemma": "Лемма",
-      "columnPos": "Часть речи",
-      "columnTranslation": "Перевод",
-      "mixedScript": "Ввод содержит символы из нескольких алфавитов. Введите только греческий текст или перевод одним алфавитом."
-    }
+    "successTitle": "Отправлено на проверку",
+    "successDescription": "Слово поставлено в очередь. Откройте Инбокс проверки, чтобы рассмотреть его.",
+    "rejectedTitle": "Слово отклонено",
+    "rejectedFallback": "Источники не найдены — слово не может быть сгенерировано.",
+    "errorTitle": "Ошибка отправки. Попробуйте ещё раз."
   },
   "wordEntry": {
     "unlinkConfirm": "Удалить это слово из колоды? Запись о слове не будет удалена.",

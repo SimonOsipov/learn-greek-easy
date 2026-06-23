@@ -48,15 +48,9 @@ vi.mock('@/components/admin/CardDeleteDialog', () => ({
     ) : null,
 }));
 
-vi.mock('@/components/admin/GenerateNounDialog', () => ({
-  GenerateNounDialog: ({
-    open,
-  }: {
-    open: boolean;
-    onOpenChange: (v: boolean) => void;
-    deckId: string;
-    deckName: string;
-  }) => (open ? <div data-testid="generate-noun-dialog" /> : null),
+vi.mock('@/components/admin/LexgenSubmitDialog', () => ({
+  LexgenSubmitDialog: ({ open }: { open: boolean; onOpenChange: (v: boolean) => void }) =>
+    open ? <div data-testid="lexgen-submit-dialog" /> : null,
 }));
 
 // Import after vi.mock so we get the mocked version.
@@ -402,9 +396,9 @@ describe('VocabDrawerBody', () => {
     expect(screen.getByTestId('word-list-empty')).toHaveTextContent('No words match your filters.');
   });
 
-  // ── 10. "Add word" button opens GenerateNounDialog ─────────────────────────
+  // ── 10. "Add word" button opens LexgenSubmitDialog ──────────────────────────
 
-  it('"Add word" button opens GenerateNounDialog', async () => {
+  it('"Add word" button opens LexgenSubmitDialog', async () => {
     const user = userEvent.setup();
     (adminAPI.listWordEntries as Mock).mockResolvedValue(makeResponse([]));
 
@@ -414,12 +408,12 @@ describe('VocabDrawerBody', () => {
       expect(screen.getByTestId('word-list-add-word')).toBeInTheDocument();
     });
 
-    expect(screen.queryByTestId('generate-noun-dialog')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('lexgen-submit-dialog')).not.toBeInTheDocument();
 
     await user.click(screen.getByTestId('word-list-add-word'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('generate-noun-dialog')).toBeInTheDocument();
+      expect(screen.getByTestId('lexgen-submit-dialog')).toBeInTheDocument();
     });
   });
 

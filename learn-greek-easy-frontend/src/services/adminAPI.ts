@@ -655,133 +655,7 @@ export interface ListWordEntriesParams {
 }
 
 // ============================================
-// Word Entry Generation Pipeline Types
-// ============================================
-
-export type ConfidenceTier = 'high' | 'medium' | 'low';
-
-export interface DuplicateCheckMatchedDeck {
-  deck_id: string;
-  deck_name: string;
-}
-
-export interface DuplicateCheckStageResult {
-  is_duplicate: boolean;
-  existing_entry: WordEntrySnapshot | null;
-  matched_decks: DuplicateCheckMatchedDeck[];
-}
-
-export interface NormalizationStageResult {
-  input_word: string;
-  lemma: string;
-  gender: string | null;
-  article: string | null;
-  pos: string;
-  confidence: number;
-  confidence_tier: ConfidenceTier;
-  strategy: string | null;
-  corrected_from: string | null;
-  corrected_to: string | null;
-}
-
-export interface SuggestionItem {
-  lemma: string;
-  pos: string;
-  gender: string | null;
-  article: string | null;
-  confidence: number;
-  confidence_tier: ConfidenceTier;
-  strategy: string;
-}
-
-export interface WordEntrySnapshot {
-  id: string;
-  lemma: string;
-  part_of_speech: string;
-  translation_en: string;
-  translation_ru: string | null;
-  pronunciation: string | null;
-}
-
-export interface DuplicateCheckResult {
-  is_duplicate: boolean;
-  existing_entry: WordEntrySnapshot | null;
-  matched_deck_id: string | null;
-  matched_deck_name: string | null;
-}
-
-// ============================================
-// Verification Pipeline Types
-// ============================================
-
-export type CombinedTier = 'auto_approve' | 'quick_review' | 'manual_review';
-export type MorphologySource = 'lexicon' | 'wiktionary' | 'both' | 'llm';
-export type CheckStatus = 'pass' | 'fail' | 'warn';
-export type FieldStatus = 'pass' | 'fail' | 'warn' | 'skipped';
-
-export interface CheckResult {
-  check_name: string;
-  status: CheckStatus;
-  message: string | null;
-  reference_value: string | null;
-  reference_source: string | null;
-}
-
-export interface FieldVerificationResult {
-  field_path: string;
-  status: FieldStatus;
-  checks: CheckResult[];
-}
-
-export interface LocalVerificationResult {
-  fields: FieldVerificationResult[];
-  tier: CombinedTier;
-  stages_skipped: string[];
-  summary: string;
-}
-
-export interface FieldComparisonResult {
-  field_path: string;
-  primary_value: string;
-  secondary_value: string;
-  agrees: boolean;
-  weight: number;
-}
-
-export interface CrossAIVerificationResult {
-  comparisons: FieldComparisonResult[];
-  overall_agreement: number | null;
-  secondary_model: string;
-  secondary_generation: Record<string, unknown> | null;
-  error: string | null;
-}
-
-export interface VerificationSummary {
-  local: LocalVerificationResult | null;
-  wiktionary_local: LocalVerificationResult | null;
-  cross_ai: CrossAIVerificationResult | null;
-  combined_tier: CombinedTier;
-  morphology_source: MorphologySource;
-}
-
-// ============================================
-// Translation Lookup Types
-// ============================================
-
-export interface TranslationSourceInfo {
-  translations: string[];
-  combined_text: string;
-  source: 'dictionary' | 'pivot' | 'none';
-  sense_count: number;
-}
-
-export interface TranslationLookupStageResult {
-  en: TranslationSourceInfo | null;
-  ru: TranslationSourceInfo | null;
-}
-
-// ============================================
-// Generation Types
+// Generation Types (used by DeclensionTable)
 // ============================================
 
 export interface GeneratedNounCaseSet {
@@ -800,52 +674,6 @@ export interface GeneratedNounGrammar {
   gender: 'masculine' | 'feminine' | 'neuter';
   declension_group: string;
   cases: GeneratedNounCases;
-}
-
-export interface GeneratedExample {
-  id: number;
-  greek: string;
-  english: string;
-  russian: string;
-}
-
-export interface GeneratedNounData {
-  lemma: string;
-  part_of_speech: 'noun';
-  translation_en: string;
-  translation_en_plural: string | null;
-  translation_ru: string;
-  translation_ru_plural: string | null;
-  pronunciation: string;
-  grammar_data: GeneratedNounGrammar;
-  examples: GeneratedExample[];
-}
-
-export interface GenerateWordEntryResponse {
-  stage: string;
-  normalization: NormalizationStageResult | null;
-  suggestions: SuggestionItem[];
-  duplicate_check: DuplicateCheckStageResult | null;
-  translation_lookup: TranslationLookupStageResult | null;
-  generation: GeneratedNounData | null;
-  verification: VerificationSummary | null;
-  persist: null;
-}
-
-export interface ReverseLookupItem {
-  lemma: string;
-  pos: string;
-  gender: string | null;
-  article: string | null;
-  translations: string[];
-  score: number;
-  inferred_gender: boolean;
-}
-
-export interface ReverseLookupResponse {
-  query: string;
-  language: string;
-  results: ReverseLookupItem[];
 }
 
 // ============================================
@@ -952,6 +780,26 @@ export interface LexgenApproveResponse {
 }
 
 // ============================================
+// LEXGEN Submit (LEXGEN-14-04)
+// ============================================
+
+export interface LexgenSubmitRequest {
+  lemma: string;
+  pos?: string;
+}
+
+/**
+ * Response from POST /api/v1/admin/lexgen/proposals.
+ * status "needs_review" → queued for inbox review.
+ * status "rejected" → hard never-invent rejection; rejection_reason is set.
+ */
+export interface LexgenSubmitResponse {
+  id: string;
+  status: 'needs_review' | 'rejected';
+  rejection_reason: string | null;
+}
+
+// ============================================
 // Admin API Methods
 // ============================================
 
@@ -959,8 +807,6 @@ const GRAMMAR_TOTAL_BY_POS: Record<string, number> = {
   ...GRAMMAR_FIELD_COUNTS,
   phrase: 0,
 };
-
-export const GENERATE_WORD_ENTRY_STREAM_URL = '/api/v1/admin/word-entries/generate/stream';
 
 export const adminAPI = {
   /**
@@ -1095,6 +941,21 @@ export const adminAPI = {
    */
   rejectLexgenProposal: async (proposalId: string, reason: string): Promise<void> => {
     return api.post<void>(`/api/v1/admin/lexgen/proposals/${proposalId}/reject`, { reason });
+  },
+
+  /**
+   * Submit a lemma for the LEXGEN pipeline (LEXGEN-14-04).
+   *
+   * Enqueues a new word proposal through the full assembly → generate → verify
+   * → reconcile → judge pipeline. Returns 201 with status "needs_review" on
+   * success or "rejected" when the never-invent gate fires (no evidence found).
+   * Requires superuser authentication.
+   */
+  submitLexgenProposal: async (
+    lemma: string,
+    pos: string = 'noun'
+  ): Promise<LexgenSubmitResponse> => {
+    return api.post<LexgenSubmitResponse>('/api/v1/admin/lexgen/proposals', { lemma, pos });
   },
 
   /**
@@ -1852,12 +1713,6 @@ export const adminAPI = {
     return api.delete<void>(`/api/v1/admin/card-errors/${id}`);
   },
 
-  generateWordEntry: async (word: string, deckId: string): Promise<GenerateWordEntryResponse> =>
-    api.post<GenerateWordEntryResponse>('/api/v1/admin/word-entries/generate', {
-      word,
-      deck_id: deckId,
-    }),
-
   /**
    * Link a word entry to a deck (share it)
    *
@@ -1895,11 +1750,6 @@ export const adminAPI = {
    */
   deleteWordEntry: async (wordEntryId: string): Promise<void> => {
     return api.delete<void>(`/api/v1/admin/word-entries/${wordEntryId}`);
-  },
-
-  reverseLookup: async (query: string, lang: 'en' | 'ru'): Promise<ReverseLookupResponse> => {
-    const queryString = buildQueryString({ q: query, lang });
-    return api.get<ReverseLookupResponse>(`/api/v1/admin/reverse-lookup${queryString}`);
   },
 
   // ============================================

@@ -39,6 +39,7 @@ from src.db.models import (
     FeedbackStatus,
     NewsItem,
     ProposalAttempt,
+    WiktionaryMorphology,
     WordEntry,
     WordProposal,
     WordProposalOrigin,
@@ -941,6 +942,141 @@ async def clear_lexgen_proposals(
         timestamp=datetime.now(timezone.utc),
         duration_ms=duration_ms,
         results={"cleared": True, "table": "word_proposal"},
+    )
+
+
+# ---------------------------------------------------------------------------
+# LEXGEN-14-05 submit-flow seed endpoint
+# ---------------------------------------------------------------------------
+# Seeds a minimal WiktionaryMorphology row for βιβλίο so a FRESH call to
+# EvidenceAssemblyService.assemble_evidence("βιβλίο", "noun") finds
+# wiktionary.present=True → the never-invent gate passes.  Then invokes
+# LexgenPipelineService.run_for_lemma() for two lemmas:
+#   • βιβλίο  → attested  → full pipeline → needs_review
+#   • ξψζ     → absent    → never-invent gate → rejected
+# Both proposals land in word_proposal (assertable via the state read endpoint).
+# The pipeline uses FakeOpenRouter when LEXGEN_E2E_FAKE_LLM=true (set in CI).
+#
+# Idempotent within a run: wipes all word_proposal rows first (like
+# /seed/lexgen-proposals), then inserts fresh reference data + runs the
+# pipeline. Re-running yields exactly one proposal per lemma.
+# ---------------------------------------------------------------------------
+
+
+class _LexgenSubmitFlowsResult(BaseModel):
+    """Results for the two LEXGEN submit-flow E2E assertions."""
+
+    attested_proposal_id: str
+    """ID of the βιβλίο proposal — status must be needs_review."""
+
+    rejected_proposal_id: str
+    """ID of the ξψζ proposal — status must be rejected."""
+
+    attested_lemma: str
+    rejected_lemma: str
+
+
+@router.post(
+    "/lexgen-submit-flows",
+    response_model=SeedResultResponse,
+    summary="[TEST ONLY] Seed LEXGEN submit-flow proposals via the pipeline",
+    description=(
+        "Seeds a WiktionaryMorphology row for βιβλίο, then calls "
+        "LexgenPipelineService.run_for_lemma() for two lemmas: "
+        "βιβλίο (attested → needs_review) and ξψζ (absent → rejected). "
+        "Returns proposal IDs for E2E assertions. "
+        "Idempotent — deletes all word_proposal rows first. "
+        "Requires LEXGEN_E2E_FAKE_LLM=true in the backend env so the "
+        "pipeline uses FakeOpenRouter instead of a live LLM call."
+    ),
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_lexgen_submit_flows(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Run the LEXGEN pipeline for two test lemmas and return their proposal IDs.
+
+    Flow 1 (attested):
+        Seed a WiktionaryMorphology row for βιβλίο (gloss_en="book", gender="neuter")
+        → run_for_lemma("βιβλίο") → needs_review.
+        FakeOpenRouter gloss_en="book" matches the seeded glosses_en → verify PASSES.
+
+    Flow 2 (never-invent):
+        ξψζ is absent from all references → run_for_lemma("ξψζ") → rejected.
+        No LLM is called on the never-invent path.
+
+    Returns:
+        SeedResultResponse with attested_proposal_id, rejected_proposal_id,
+        attested_lemma, rejected_lemma so the E2E spec can assert state via
+        GET /api/v1/test/seed/lexgen-proposals/{id}/state.
+    """
+    from src.services.lexgen_pipeline_service import LexgenPipelineService  # noqa: PLC0415
+
+    start_time = perf_counter()
+
+    _ATTESTED_LEMMA = "βιβλίο"
+    _REJECTED_LEMMA = "ξψζ"
+
+    # Wipe all existing word_proposal rows for determinism.
+    await db.execute(delete(WordProposal))
+    await db.flush()
+
+    # Seed minimal WiktionaryMorphology row for βιβλίο.
+    # glosses_en="book" matches FakeOpenRouter._GENERATOR_PAYLOADS["βιβλίο"]["gloss_en"]
+    # so check_gloss_subset in the verify stage passes.
+    # Delete any prior reference row first (idempotent).
+    await db.execute(
+        delete(WiktionaryMorphology).where(
+            WiktionaryMorphology.lemma == _ATTESTED_LEMMA,
+            WiktionaryMorphology.pos == "noun",
+        )
+    )
+    await db.flush()
+
+    ref_row = WiktionaryMorphology(
+        lemma=_ATTESTED_LEMMA,
+        pos="noun",
+        gender="neuter",
+        forms=[],
+        glosses_en="book",
+    )
+    db.add(ref_row)
+    await db.flush()
+
+    # Run the pipeline for βιβλίο (attested path).
+    svc = LexgenPipelineService(db)
+    attested_proposal, attested_outcome = await svc.run_for_lemma(
+        _ATTESTED_LEMMA,
+        pos="noun",
+        requested_by=None,
+    )
+    # Commit after attested so the rejected run starts fresh.
+    await db.commit()
+
+    # Run the pipeline for ξψζ (never-invent path).
+    rejected_proposal, rejected_outcome = await svc.run_for_lemma(
+        _REJECTED_LEMMA,
+        pos="noun",
+        requested_by=None,
+    )
+    await db.commit()
+
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    return SeedResultResponse(
+        success=True,
+        operation="lexgen-submit-flows",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results={
+            "attested_proposal_id": str(attested_proposal.id),
+            "attested_lemma": _ATTESTED_LEMMA,
+            "attested_outcome": attested_outcome,
+            "rejected_proposal_id": str(rejected_proposal.id),
+            "rejected_lemma": _REJECTED_LEMMA,
+            "rejected_outcome": rejected_outcome,
+            "reference_row_seeded": True,
+        },
     )
 
 

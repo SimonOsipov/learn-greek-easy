@@ -40,7 +40,6 @@ import type { UnifiedDeckItem } from '@/services/adminAPI';
 
 // adminAPI — the module under test for toast wiring
 vi.mock('@/services/adminAPI', () => ({
-  GENERATE_WORD_ENTRY_STREAM_URL: '/api/v1/admin/word-entries/generate/stream',
   adminAPI: {
     getContentStats: vi.fn().mockResolvedValue({
       total_decks: 1,
