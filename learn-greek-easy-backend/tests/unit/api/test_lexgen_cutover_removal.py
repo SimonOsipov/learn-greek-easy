@@ -351,16 +351,11 @@ def test_old_generate_route_decorators_removed_from_admin_py() -> None:
 
     violations: list[str] = []
     for path_str in _OLD_PATH_STRINGS:
-        if path_str in source:
-            # Find the line number for a useful failure message.
-            for lineno, line in enumerate(source.splitlines(), start=1):
-                if path_str in line and "@router" not in line and "router.post" not in line:
-                    # Skip lines that are comments or inside string literals unrelated
-                    # to a decorator — we only care about decorator-context appearances.
-                    pass
-                if path_str in line:
-                    violations.append(f"  line {lineno}: route path {path_str} still present")
-                    break
+        for lineno, line in enumerate(source.splitlines(), start=1):
+            # Only flag if the path appears in a likely decorator context
+            if path_str in line and ("@router" in line or "router.post" in line):
+                violations.append(f"  line {lineno}: route path {path_str} still present")
+                break
 
     assert not violations, (
         "Old generate_word_entry route path strings are still present in admin.py "

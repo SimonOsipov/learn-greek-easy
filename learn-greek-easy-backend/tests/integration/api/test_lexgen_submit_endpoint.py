@@ -436,23 +436,24 @@ class TestKeptEndpointsUnaffected:
         client: AsyncClient,
         superuser_auth_headers: dict,
     ):
-        """POST /word-entries/{id}/generate-cards → NOT 405 (route is registered).
+        """POST /word-entries/{id}/generate-cards → 422 (route is registered, invalid UUID).
 
-        A 404 from the word_entry lookup (word entry not found) is the expected
-        response when probing with a random UUID.  405 would indicate the route
-        was accidentally removed.
+        Probing with "not-a-uuid" rather than a random valid UUID ensures the
+        response is a 422 validation error (FastAPI rejects the path param) when
+        the route IS registered.  A 404 or 405 would indicate the route was
+        accidentally removed, since an unregistered path returns 404/405 regardless
+        of the path-param value.
         """
-        from uuid import uuid4  # noqa: PLC0415
-
-        url = KEPT_CARDS_URL_TEMPLATE.format(word_entry_id=str(uuid4()))
+        url = KEPT_CARDS_URL_TEMPLATE.format(word_entry_id="not-a-uuid")
         response = await client.post(
             url,
             json={"card_type": "meaning"},
             headers=superuser_auth_headers,
         )
-        assert response.status_code != 405, (
-            f"Generate-cards route {url} returned 405 (Method Not Allowed) — "
-            "route was accidentally removed. It must remain registered post-cutover."
+        assert response.status_code not in (404, 405), (
+            f"Generate-cards route {url} returned {response.status_code} — "
+            "route registration is ambiguous/possibly removed. "
+            "Expected 422 (invalid UUID path param) when the route is registered."
         )
 
     @pytest.mark.asyncio
@@ -461,20 +462,19 @@ class TestKeptEndpointsUnaffected:
         client: AsyncClient,
         superuser_auth_headers: dict,
     ):
-        """POST /word-entries/{id}/generate-audio/stream → NOT 405 (route registered).
+        """POST /word-entries/{id}/generate-audio/stream → 422 (route registered, invalid UUID).
 
-        The audio stream uses SSE auth (not standard Bearer), so we expect a
-        non-2xx response when hitting it without the proper SSE token.  Any
-        non-405 response confirms the route is still registered.
+        Probing with "not-a-uuid" ensures a registered route returns 422 (path-param
+        validation failure).  A 404 or 405 would indicate the route was accidentally
+        removed or is unreachable.
         """
-        from uuid import uuid4  # noqa: PLC0415
-
-        url = KEPT_AUDIO_URL_TEMPLATE.format(word_entry_id=str(uuid4()))
+        url = KEPT_AUDIO_URL_TEMPLATE.format(word_entry_id="not-a-uuid")
         response = await client.post(
             url,
             headers=superuser_auth_headers,
         )
-        assert response.status_code != 405, (
-            f"Audio-stream route {url} returned 405 (Method Not Allowed) — "
-            "route was accidentally removed. It must remain registered post-cutover."
+        assert response.status_code not in (404, 405), (
+            f"Audio-stream route {url} returned {response.status_code} — "
+            "route registration is ambiguous/possibly removed. "
+            "Expected 422 (invalid UUID path param) when the route is registered."
         )

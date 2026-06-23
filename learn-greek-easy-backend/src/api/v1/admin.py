@@ -1571,7 +1571,7 @@ async def submit_lexgen_proposal(
             body.lemma, pos=body.pos, requested_by=current_user.id
         )
     except IllegalProposalTransition as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
     return LexgenSubmitResponse(
         id=proposal.id,
