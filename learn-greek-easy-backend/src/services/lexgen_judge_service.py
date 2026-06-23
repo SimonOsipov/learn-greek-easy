@@ -210,7 +210,12 @@ class LexgenJudgeService:
         # LLM call, if it is missing (mirrors LexgenVerifyService).
         assert proposal.generated_content is not None  # noqa: S101
 
-        content = GeneratedLexContent.model_validate(proposal.generated_content)
+        # generated_content may carry the sanctioned verify metadata key
+        # `check_e_regens` (LEXGEN-10 Check-E regen count written by
+        # LexgenVerifyService).  Strip it so the morphology-leakage guard
+        # (extra="forbid") still rejects any *other* unexpected key.
+        raw_content = {k: v for k, v in proposal.generated_content.items() if k != "check_e_regens"}
+        content = GeneratedLexContent.model_validate(raw_content)
         packet = EvidencePacket.model_validate(proposal.evidence_packet)
 
         # Run each configured judge sequentially (exactly two slugs in v1).

@@ -741,3 +741,78 @@ class TestHighestScoringFullAgreementStillNeedsReview:
         assert proposal.trust_score is None, (
             f"AC-9: trust_score must remain None (INERT in v1); " f"got {proposal.trust_score!r}"
         )
+
+
+# ---------------------------------------------------------------------------
+# REGRESSION: judge() must tolerate the sanctioned `check_e_regens` metadata
+# key written by LexgenVerifyService (LEXGEN-10 Check-E regen count), while
+# the morphology-leakage guard (extra="forbid") must STILL reject any other
+# unexpected key.
+# ---------------------------------------------------------------------------
+
+
+class TestJudgeToleratesCheckERegenKey:
+    """Regression for the verify↔judge contract (LEXGEN-10 writes check_e_regens).
+
+    LexgenVerifyService intentionally persists the Check-E regeneration count
+    into generated_content as check_e_regens.  GeneratedLexContent has
+    extra="forbid" so it would previously reject that key with ValidationError.
+
+    The fix strips only the single sanctioned key before validation, leaving
+    the morphology-leakage guard intact for all other unexpected keys.
+    """
+
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_judge_tolerates_check_e_regens_key_in_generated_content(
+        self, mock_openrouter: AsyncMock
+    ) -> None:
+        """REGRESSION (Fix 1): proposal whose generated_content carries check_e_regens
+        must NOT raise ValidationError — judge() must succeed and reach NEEDS_REVIEW.
+
+        Mirrors the real pipeline path where Check E regenerated at least once
+        before the proposal reached the judge stage.
+        """
+        mock_openrouter.complete.side_effect = [
+            _rubric_response(_PERFECT_RUBRIC_DICT),
+            _rubric_response(_PERFECT_RUBRIC_DICT),
+        ]
+        # Simulate generated_content written by the verify stage after Check-E regen.
+        content_with_regen_key = {
+            **_make_generated_content_dict(),
+            "check_e_regens": 2,  # sanctioned LEXGEN-10 verify metadata key
+        }
+        proposal = _make_proposal(generated_content=content_with_regen_key)
+        svc = _make_service(mock_openrouter)
+
+        # Must NOT raise ValidationError despite check_e_regens being present.
+        outcome = await svc.judge(proposal)
+
+        assert proposal.status == WordProposalState.NEEDS_REVIEW, (
+            "REGRESSION: judge() must reach NEEDS_REVIEW when generated_content "
+            f"carries check_e_regens; got {proposal.status!r}"
+        )
+        assert (
+            outcome.routed_to == WordProposalState.NEEDS_REVIEW
+        ), f"REGRESSION: routed_to must be NEEDS_REVIEW; got {outcome.routed_to!r}"
+
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_judge_still_rejects_disallowed_morphology_key_in_generated_content(
+        self, mock_openrouter: AsyncMock
+    ) -> None:
+        """REGRESSION guard: the extra="forbid" morphology-leakage guard must remain
+        intact — a generated_content with a DISALLOWED key (e.g. 'gender') must
+        still raise ValidationError, proving the guard is not weakened.
+        """
+        from pydantic import ValidationError  # noqa: PLC0415
+
+        content_with_leakage = {
+            **_make_generated_content_dict(),
+            "gender": "neuter",  # morphology key — NOT sanctioned
+        }
+        proposal = _make_proposal(generated_content=content_with_leakage)
+        svc = _make_service(mock_openrouter)
+
+        with pytest.raises(ValidationError):
+            await svc.judge(proposal)

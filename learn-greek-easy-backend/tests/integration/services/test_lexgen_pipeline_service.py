@@ -63,13 +63,13 @@ even a mismatch only flags, never hard-fails the pipeline).
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import (
     FrequencyRank,
+    User,
     WiktionaryMorphology,
     WordProposalState,
 )
@@ -157,6 +157,7 @@ def _get_pipeline_service(db_session: AsyncSession):
 async def test_run_for_lemma_attested_routes_to_needs_review(
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
+    test_user: User,
 ) -> None:
     """Attested lemma runs through the full chain and lands NEEDS_REVIEW.
 
@@ -176,7 +177,7 @@ async def test_run_for_lemma_attested_routes_to_needs_review(
 
     svc = _get_pipeline_service(db_session)
     with _patch_normalize(lemma):
-        result = await svc.run_for_lemma(lemma, requested_by=uuid4())
+        result = await svc.run_for_lemma(lemma, requested_by=test_user.id)
 
     proposal, outcome = result
 
@@ -201,6 +202,7 @@ async def test_run_for_lemma_attested_routes_to_needs_review(
 async def test_run_for_lemma_never_invent_rejects_without_generation(
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
+    test_user: User,
 ) -> None:
     """Lemma absent from all references → REJECTED; LexgenGeneratorService.generate NOT called.
 
@@ -220,7 +222,7 @@ async def test_run_for_lemma_never_invent_rejects_without_generation(
 
     svc = _get_pipeline_service(db_session)
     with _patch_normalize(lemma):
-        result = await svc.run_for_lemma(lemma, requested_by=uuid4())
+        result = await svc.run_for_lemma(lemma, requested_by=test_user.id)
 
     proposal, outcome = result
 
@@ -291,6 +293,7 @@ async def test_run_for_lemma_never_auto_approves(
 async def test_run_for_lemma_chain_order_matches_state_machine(
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
+    test_user: User,
 ) -> None:
     """All pipeline stages ran in order: generated_content, generated_fields,
     reconciliation_log, and judge_scores are all non-null, confirming every
@@ -312,7 +315,7 @@ async def test_run_for_lemma_chain_order_matches_state_machine(
 
     # Must NOT raise IllegalProposalTransition.
     with _patch_normalize(lemma):
-        result = await svc.run_for_lemma(lemma, requested_by=uuid4())
+        result = await svc.run_for_lemma(lemma, requested_by=test_user.id)
 
     proposal, outcome = result
 
@@ -387,6 +390,7 @@ async def test_run_for_lemma_default_pos_is_noun(
 async def test_run_for_lemma_mid_chain_generate_reject_skips_reconcile_judge(
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
+    test_user: User,
 ) -> None:
     """Attested lemma but generator exhausts 3 retries → REJECTED, reconcile/judge not called.
 
@@ -444,7 +448,7 @@ async def test_run_for_lemma_mid_chain_generate_reject_skips_reconcile_judge(
             judge_spy,
         ),
     ):
-        result = await svc.run_for_lemma(lemma, requested_by=uuid4())
+        result = await svc.run_for_lemma(lemma, requested_by=test_user.id)
 
     proposal, outcome = result
 
