@@ -20,11 +20,15 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.logging import bind_log_context, get_logger
 from src.db.models import WordProposalOrigin, WordProposalState
 
 if TYPE_CHECKING:
     from src.db.models import WordProposal
     from src.services.openrouter_service import OpenRouterService
+
+
+logger = get_logger(__name__)
 
 
 def _get_openrouter() -> "OpenRouterService":
@@ -99,6 +103,8 @@ class LexgenPipelineService:
         """
         from src.services.evidence_assembly_service import EvidenceAssemblyService  # noqa: PLC0415
 
+        logger.info("lexgen.pipeline.start", lemma=lemma_input, pos=pos)
+
         # Step 1: assemble evidence and create the proposal.
         # Returns a WordProposal at GENERATING (attested) or REJECTED (never-invent).
         # The proposal is flushed but not committed.
@@ -110,10 +116,23 @@ class LexgenPipelineService:
             requested_by=requested_by,
         )
 
+        # Bind proposal_id so every downstream stage log — here and inside the
+        # generator/verify/reconcile/judge services — is traceable end-to-end in
+        # Sentry Logs (LEXGEN-15).
+        bind_log_context(proposal_id=str(proposal.id))
+
         # Step 2: never-invent gate — short-circuit before any LLM call.
         if proposal.status == WordProposalState.REJECTED:
+            logger.warning(
+                "lexgen.pipeline.rejected",
+                stage="assemble",
+                reason="never_invent",
+                rejection_reason=proposal.rejection_reason,
+            )
             await self.db.commit()
             return (proposal, "rejected")
+
+        logger.info("lexgen.pipeline.assembled", stage="assemble", status=proposal.status.value)
 
         # Step 3: attested path — run the chain exactly as regenerate() does,
         # but WITHOUT the attempt-snapshot / reject-log / needs_review→generating
@@ -130,17 +149,28 @@ class LexgenPipelineService:
         # The generator can exhaust retries and transition GENERATING→REJECTED.
         # Commit and return early if that happened (no reconcile/judge on rejected).
         if proposal.status == WordProposalState.REJECTED:
+            logger.warning(
+                "lexgen.pipeline.rejected",
+                stage="generate",
+                reason="retries_exhausted",
+                rejection_reason=proposal.rejection_reason,
+            )
             await self.db.commit()
             return (proposal, "rejected")
 
+        logger.info("lexgen.pipeline.generated", stage="generate", status=proposal.status.value)
+
         await LexgenVerifyService(self.db, openrouter).verify(proposal)
         # verify() returns a VerifyOutcome and never transitions status — no branch needed.
+        logger.info("lexgen.pipeline.verified", stage="verify")
 
         await LexgenReconcilerService(self.db).reconcile(proposal)
         # reconcile() transitions GENERATING→SCORED.
+        logger.info("lexgen.pipeline.reconciled", stage="reconcile", status=proposal.status.value)
 
         await LexgenJudgeService(self.db, openrouter).judge(proposal)
         # judge() transitions SCORED→NEEDS_REVIEW.
 
         await self.db.commit()
+        logger.info("lexgen.pipeline.queued", stage="judge", status=proposal.status.value)
         return (proposal, "queued")

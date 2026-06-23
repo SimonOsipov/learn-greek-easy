@@ -513,3 +513,51 @@ async def test_run_for_lemma_requested_by_none_routes_to_needs_review(
         f"proposal.requested_by must be None when called with None; "
         f"got {proposal.requested_by!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Test 6 (LEXGEN-15): pipeline emits structured per-stage loguru logs
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+async def test_run_for_lemma_emits_structured_stage_logs(
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+    test_user: User,
+) -> None:
+    """LEXGEN-15: each pipeline stage emits a structured loguru log carrying
+    ``proposal_id`` + ``stage`` so a single proposal is traceable end-to-end in
+    Sentry Logs. No PostHog (admin-only flow → not product analytics).
+    """
+    from loguru import logger
+
+    lemma = "βιβλίο_log_trace_test"
+    await _seed_wiktionary_row(db_session, lemma=lemma, gender="neuter", glosses_en="book")
+    monkeypatch.setattr(
+        "src.services.lexgen_pipeline_service._get_openrouter",
+        lambda: FakeOpenRouter(),
+    )
+
+    captured: list[dict] = []
+    sink_id = logger.add(lambda m: captured.append(m.record), level="INFO")
+    try:
+        svc = _get_pipeline_service(db_session)
+        with _patch_normalize(lemma):
+            await svc.run_for_lemma(lemma, requested_by=test_user.id)
+    finally:
+        logger.remove(sink_id)
+
+    stage_logs = [r for r in captured if "stage" in r["extra"]]
+    stages = {r["extra"]["stage"] for r in stage_logs}
+    assert {
+        "assemble",
+        "generate",
+        "verify",
+        "reconcile",
+        "judge",
+    } <= stages, f"all five pipeline stages must emit a structured log; got stages={stages!r}"
+    # proposal_id is bound on every stage log (end-to-end traceability).
+    assert stage_logs and all(
+        r["extra"].get("proposal_id") for r in stage_logs
+    ), "every stage log must carry a non-empty proposal_id"
