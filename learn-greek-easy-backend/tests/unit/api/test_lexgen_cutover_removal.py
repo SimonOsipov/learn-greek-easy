@@ -37,6 +37,28 @@ test_lexgen_submit_endpoint.py):
         connection (it does not; the DB engine is lazily instantiated).
         RED now; GREEN after the route handlers are removed.
 
+QA Mode-B additions (LEXGEN-14-02/14-03 adversarial coverage):
+
+  B11  test_wiktionary_morphology_service_importable_and_pipeline_uses_it
+        WiktionaryMorphologyService imports cleanly AND evidence_assembly_service
+        (the new-pipeline's front door) imports it at the module level — protects
+        the trickiest KEPT-vs-orphan call.  GREEN now AND after cutover.
+
+  B12  test_wiktionary_morphology_model_importable
+        WiktionaryMorphology ORM model (db/models.py) imports cleanly —
+        guards the DB model that WiktionaryMorphologyService queries.
+        GREEN now AND after cutover.
+
+  B13  test_pipeline_service_imports_only_new_lexgen_services
+        AST-parse src/services/lexgen_pipeline_service.py and assert it contains
+        no import of the 5 removed consensus modules.  Prevents any silent
+        re-coupling to old-flow code.  GREEN now AND after cutover.
+
+  B14  test_submit_endpoint_schema_is_not_4xx_for_never_invent_body
+        Validates the LexgenSubmitResponse schema accepts status="rejected" —
+        proving the schema itself cannot force a 4xx encoding for semantic
+        rejections (Decisions §3 invariant).  DB-free, schema-only.
+
 Run locally:
     cd learn-greek-easy-backend && \\
     poetry run pytest tests/unit/api/test_lexgen_cutover_removal.py -v
@@ -347,3 +369,155 @@ def test_old_generate_route_decorators_removed_from_admin_py() -> None:
         + "\n\nExpected GREEN after: executor removes @router.post('/word-entries/generate') "
         "and @router.post('/word-entries/generate/stream') decorators + handler functions."
     )
+
+
+# ---------------------------------------------------------------------------
+# QA Mode-B additions — B11–B14
+# Adversarial / edge / KEPT-definition guards added by QA after cutover.
+# All DB-free; all GREEN now AND after the cutover (pure regression guards).
+# ---------------------------------------------------------------------------
+
+_EVIDENCE_ASSEMBLY_PY = _BACKEND_ROOT / "src" / "services" / "evidence_assembly_service.py"
+_PIPELINE_SVC_PY = _BACKEND_ROOT / "src" / "services" / "lexgen_pipeline_service.py"
+
+
+@pytest.mark.unit
+def test_wiktionary_morphology_service_importable_and_pipeline_uses_it() -> None:
+    """B11: WiktionaryMorphologyService is importable AND used by the new pipeline.
+
+    Guards the trickiest KEPT-vs-orphan call identified in the architecture
+    findings (§F4 / §Technical Notes):
+      - The *definition* (wiktionary_morphology_service.py) must survive.
+      - The *new pipeline* front-door (evidence_assembly_service.py) must still
+        import and instantiate it — so the removal of old wiktionary_verification_service
+        did NOT silently strand the entire Wiktionary data layer.
+
+    Verified two ways:
+      1. Import succeeds at Python level.
+      2. The evidence_assembly_service.py source contains an import of
+         WiktionaryMorphologyService (AST + string guard).
+    """
+    # 1 — Python import succeeds.
+    from src.services.wiktionary_morphology_service import (  # noqa: PLC0415
+        WiktionaryMorphologyService,
+    )
+
+    assert WiktionaryMorphologyService is not None, (
+        "WiktionaryMorphologyService class must be importable from "
+        "src.services.wiktionary_morphology_service"
+    )
+    assert hasattr(
+        WiktionaryMorphologyService, "__init__"
+    ), "WiktionaryMorphologyService must be a class with __init__"
+
+    # 2 — evidence_assembly_service.py imports it (AST + belt-and-suspenders string check).
+    assert (
+        _EVIDENCE_ASSEMBLY_PY.exists()
+    ), f"evidence_assembly_service.py not found at {_EVIDENCE_ASSEMBLY_PY}"
+    source = _EVIDENCE_ASSEMBLY_PY.read_text(encoding="utf-8")
+
+    # Belt-and-suspenders: plain string search.
+    assert "WiktionaryMorphologyService" in source, (
+        "evidence_assembly_service.py (the new pipeline front door) no longer "
+        "references WiktionaryMorphologyService — the Wiktionary data layer may "
+        "have been accidentally severed during the cutover cleanup.\n"
+        f"File: {_EVIDENCE_ASSEMBLY_PY}"
+    )
+
+    # AST check: at least one ImportFrom node imports WiktionaryMorphologyService.
+    all_imports = _collect_all_imports(source)
+    wikt_import_found = any("wiktionary_morphology_service" in module for _, module in all_imports)
+    assert wikt_import_found, (
+        "evidence_assembly_service.py has no top-level import of "
+        "wiktionary_morphology_service — WiktionaryMorphologyService is "
+        "referenced in the source but not imported at module level, which "
+        "would cause a NameError at runtime.\n"
+        f"File: {_EVIDENCE_ASSEMBLY_PY}\n"
+        f"Imports found: {[m for _, m in all_imports]}"
+    )
+
+
+@pytest.mark.unit
+def test_wiktionary_morphology_model_importable() -> None:
+    """B12: WiktionaryMorphology ORM model (db/models.py) imports cleanly.
+
+    Protects the DB model that WiktionaryMorphologyService queries.  The
+    model definition must not be confused with the deleted wiktionary_verification_service.
+    """
+    from src.db.models import WiktionaryMorphology  # noqa: PLC0415
+
+    assert (
+        WiktionaryMorphology is not None
+    ), "WiktionaryMorphology ORM model must be importable from src.db.models"
+    # Spot-check it's an ORM class (has a __tablename__).
+    assert hasattr(
+        WiktionaryMorphology, "__tablename__"
+    ), "WiktionaryMorphology must be a SQLAlchemy ORM model (has __tablename__)"
+
+
+@pytest.mark.unit
+def test_pipeline_service_imports_only_new_lexgen_services() -> None:
+    """B13: lexgen_pipeline_service.py contains no import of the 5 removed modules.
+
+    Prevents silent re-coupling: if anyone adds an import of the deleted
+    consensus services inside the new orchestrator, this fails immediately.
+    """
+    assert _PIPELINE_SVC_PY.exists(), f"lexgen_pipeline_service.py not found at {_PIPELINE_SVC_PY}"
+    source = _PIPELINE_SVC_PY.read_text(encoding="utf-8")
+    all_imports = _collect_all_imports(source)
+
+    violations: list[str] = []
+    for lineno, module in all_imports:
+        for fragment in _FORBIDDEN_FRAGMENTS:
+            if fragment in module:
+                violations.append(
+                    f"  line {lineno}: '{module}' matches forbidden fragment '{fragment}'"
+                )
+
+    assert not violations, (
+        "lexgen_pipeline_service.py imports a removed consensus module — "
+        "the new orchestrator must not re-couple to old-flow code:\n" + "\n".join(violations)
+    )
+
+
+@pytest.mark.unit
+def test_submit_endpoint_schema_rejects_disallowed_status_values() -> None:
+    """B14: LexgenSubmitResponse schema allows only 'needs_review' or 'rejected'.
+
+    Validates the schema invariant for Decisions §3: the submit endpoint
+    returns a 2xx body (never raises 4xx for semantic rejections), and the
+    status field is strictly typed to the two allowed values.
+
+    This is a DB-free schema-layer guard: if someone accidentally adds
+    'auto_approved' or other status to the Literal, this test does NOT fail
+    (that would be a new allowed value, not a type violation).  What it DOES
+    catch is the converse: the schema must accept both "needs_review" AND
+    "rejected" without a ValidationError — proving that never-invent rejections
+    can be expressed in the response body.
+    """
+    import uuid  # noqa: PLC0415
+
+    from src.schemas.admin import LexgenSubmitResponse  # noqa: PLC0415
+
+    fake_id = uuid.uuid4()
+
+    # needs_review round-trip.
+    r1 = LexgenSubmitResponse(id=fake_id, status="needs_review", rejection_reason=None)
+    assert r1.status == "needs_review"
+    assert r1.rejection_reason is None
+
+    # rejected round-trip — this is the never-invent path (Decisions §3).
+    r2 = LexgenSubmitResponse(
+        id=fake_id,
+        status="rejected",
+        rejection_reason="never_invent: lemma absent from all references",
+    )
+    assert r2.status == "rejected"
+    assert r2.rejection_reason is not None
+    assert "never_invent" in r2.rejection_reason
+
+    # Sanity: the schema must NOT accept a forbidden value like 'auto_approved'.
+    import pydantic  # noqa: PLC0415
+
+    with pytest.raises((pydantic.ValidationError, ValueError)):
+        LexgenSubmitResponse(id=fake_id, status="auto_approved", rejection_reason=None)
