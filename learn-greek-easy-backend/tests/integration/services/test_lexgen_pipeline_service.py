@@ -365,3 +365,147 @@ async def test_run_for_lemma_default_pos_is_noun(
     assert proposal.pos == "noun", f"Default pos must be 'noun'; got {proposal.pos!r}"
     # Sanity: the never-invent path should fire (no reference rows).
     assert outcome == "rejected", f"Expected 'rejected' (no refs seeded); got {outcome!r}"
+
+
+# ---------------------------------------------------------------------------
+# QA Mode B — Adversarial / edge / boundary coverage (LEXGEN-14-01)
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Edge 1: generate→REJECTED mid-chain — generator exhausts retries on attested lemma.
+#
+# This is the second exit path (line 133-134 in lexgen_pipeline_service.py) that
+# none of the five AC tests exercise. It verifies:
+#   - The pipeline returns ("rejected") when an attested lemma's generator fails.
+#   - reconcile() and judge() are NOT called (would raise IllegalProposalTransition
+#     on a REJECTED proposal if they were).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+async def test_run_for_lemma_mid_chain_generate_reject_skips_reconcile_judge(
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Attested lemma but generator exhausts 3 retries → REJECTED, reconcile/judge not called.
+
+    This covers the second early-return path (lexgen_pipeline_service.py:132-134).
+    If reconcile or judge were invoked on the REJECTED proposal they would raise
+    IllegalProposalTransition (REJECTED has no outgoing edges) — so their mere
+    absence proves correctness.
+    """
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch as std_patch
+
+    lemma = "τράπεζα_midchain_reject_test"
+
+    # Seed reference so the never-invent gate passes (lemma is attested).
+    await _seed_wiktionary_row(db_session, lemma=lemma, gender="feminine", glosses_en="bank")
+
+    # Make the generator always reject (simulates 3 consecutive ValidationErrors).
+    # We use a real async function that transitions the proposal to REJECTED,
+    # mirroring what the real generator does after _MAX_ATTEMPTS failures.
+    async def _fake_generate_exhausted(proposal):  # noqa: ANN001
+        from src.core.word_proposal_state import transition as wps_transition
+        from src.db.models import WordProposalState as WPS
+
+        proposal.retry_attempts = 3
+        proposal.rejection_reason = "generation_invalid_after_retries: fake exhaustion"
+        wps_transition(proposal, WPS.REJECTED)
+        await db_session.flush()
+
+    monkeypatch.setattr(
+        "src.services.lexgen_pipeline_service._get_openrouter",
+        lambda: FakeOpenRouter(),
+    )
+
+    reconcile_spy = AsyncMock(
+        side_effect=AssertionError("reconcile() must NOT be called when generator rejects")
+    )
+    judge_spy = AsyncMock(
+        side_effect=AssertionError("judge() must NOT be called when generator rejects")
+    )
+
+    svc = _get_pipeline_service(db_session)
+
+    with (
+        _patch_normalize(lemma),
+        std_patch(
+            "src.services.lexgen_generator_service.LexgenGeneratorService.generate",
+            _fake_generate_exhausted,
+        ),
+        std_patch(
+            "src.services.lexgen_reconciler_service.LexgenReconcilerService.reconcile",
+            reconcile_spy,
+        ),
+        std_patch(
+            "src.services.lexgen_judge_service.LexgenJudgeService.judge",
+            judge_spy,
+        ),
+    ):
+        result = await svc.run_for_lemma(lemma, requested_by=uuid4())
+
+    proposal, outcome = result
+
+    assert (
+        outcome == "rejected"
+    ), f"Expected 'rejected' when generator exhausts retries; got {outcome!r}"
+    assert (
+        proposal.status == WordProposalState.REJECTED
+    ), f"Proposal must be REJECTED after generator exhaustion; got {proposal.status!r}"
+    assert proposal.rejection_reason is not None
+    assert "generation_invalid_after_retries" in proposal.rejection_reason
+    # Reconcile and judge spies would have raised AssertionError if called.
+    reconcile_spy.assert_not_awaited()
+    judge_spy.assert_not_awaited()
+
+
+# ---------------------------------------------------------------------------
+# Edge 2: requested_by=None (admin/system trigger) on attested lemma.
+#
+# The AC tests always pass a UUID for requested_by. This edge verifies that
+# None is accepted and the full attested pipeline still completes correctly —
+# the pipeline signature declares `requested_by: UUID | None`.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+async def test_run_for_lemma_requested_by_none_routes_to_needs_review(
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """requested_by=None (system/admin call) on attested lemma → NEEDS_REVIEW.
+
+    The pipeline signature declares UUID | None. Callers like batch generation
+    may pass None. This test confirms the None branch does not cause an error
+    or change the outcome for an attested lemma.
+    """
+    lemma = "ποτάμι_system_trigger_test"
+
+    await _seed_wiktionary_row(db_session, lemma=lemma, gender="neuter", glosses_en="river")
+
+    monkeypatch.setattr(
+        "src.services.lexgen_pipeline_service._get_openrouter",
+        lambda: FakeOpenRouter(),
+    )
+
+    svc = _get_pipeline_service(db_session)
+    with _patch_normalize(lemma):
+        result = await svc.run_for_lemma(lemma, requested_by=None)
+
+    proposal, outcome = result
+
+    assert (
+        outcome == "queued"
+    ), f"requested_by=None attested path must return 'queued'; got {outcome!r}"
+    assert (
+        proposal.status == WordProposalState.NEEDS_REVIEW
+    ), f"requested_by=None attested path must end at NEEDS_REVIEW; got {proposal.status!r}"
+    assert proposal.judge_scores is not None, "judge_scores must be non-null"
+    assert proposal.reconciliation_log is not None, "reconciliation_log must be non-null"
+    # requested_by should be None on the persisted proposal.
+    assert proposal.requested_by is None, (
+        f"proposal.requested_by must be None when called with None; "
+        f"got {proposal.requested_by!r}"
+    )
