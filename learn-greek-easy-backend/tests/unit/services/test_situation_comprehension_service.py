@@ -714,3 +714,163 @@ class TestRecentSessions:
         assert (
             overview.recent_sessions == [] or len(overview.recent_sessions) == 0
         ), "recent_sessions must be empty list when user has no reviews"
+
+
+# ===========================================================================
+# Adversarial / edge cases (Mode B additions — SIT-27-04)
+# ===========================================================================
+
+
+@pytest.mark.unit
+class TestAdversarialEdgeCases:
+    """Adversarial and boundary tests added in QA Mode B (SIT-27-04).
+
+    These supplement the AC-derived tests above with cases that are most likely
+    to expose regressions: pure-learning weight, zero-score accuracy, and the
+    7-day what's-new boundary.
+    """
+
+    @pytest.mark.asyncio
+    async def test_comprehension_pct_pure_learning_exercises(
+        self,
+        db_session: AsyncSession,
+        test_user,
+    ) -> None:
+        """GIVEN all exercises are LEARNING (none MASTERED)
+        WHEN  fetch overview
+        THEN  comprehension_percentage == WEIGHT_LEARNING * 100 (== 25.0)
+              and verdict is "not_ready" (25 < 40)
+
+        Validates the weight dict path when MASTERED weight (1.0) never fires.
+        A pure-LEARNING portfolio should produce 25%, verdict "not_ready".
+        """
+        situation = await SituationFactory.create(session=db_session, ready=True)
+        desc = await SituationDescriptionFactory.create(
+            session=db_session, situation_id=situation.id
+        )
+        de = await DescriptionExerciseFactory.create(
+            session=db_session, description_id=desc.id, approved=True
+        )
+        de.modality = ExerciseModality.READING
+        await DescriptionExerciseItemFactory.create(
+            session=db_session, description_exercise_id=de.id
+        )
+        ex = await ExerciseFactory.create(
+            session=db_session,
+            description_exercise_id=de.id,
+            source_type=ExerciseSourceType.DESCRIPTION,
+        )
+        await ExerciseRecordFactory.create(
+            session=db_session,
+            user_id=test_user.id,
+            exercise_id=ex.id,
+            status=CardStatus.LEARNING,
+        )
+        await db_session.flush()
+
+        service = _get_service(db_session)
+        overview = await service.get_overview(user_id=test_user.id)
+
+        expected_pct = _W_LEARNING * 100  # 25.0
+        assert abs(overview.comprehension_percentage - expected_pct) < 0.1, (
+            f"Expected {expected_pct}% for pure-LEARNING portfolio, "
+            f"got {overview.comprehension_percentage}"
+        )
+        assert overview.verdict == "not_ready", (
+            f"25% comprehension should yield 'not_ready' (threshold 40), "
+            f"got {overview.verdict!r}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_accuracy_is_zero_not_null_when_score_zero(
+        self,
+        db_session: AsyncSession,
+        test_user,
+    ) -> None:
+        """GIVEN a topic with ExerciseReviews where score=0 (user got everything wrong)
+        WHEN  fetch overview
+        THEN  accuracy == 0.0 (not None — null means "no attempts", not "zero score")
+
+        Distinguishes the two null-accuracy cases:
+          None    = no ExerciseReview rows at all (no attempts yet)
+          0.0     = reviews exist but score was 0 every time
+
+        If accuracy is None here, the impl incorrectly treats 0/N as no-attempts.
+        """
+        situation = await SituationFactory.create(session=db_session, ready=True)
+        desc = await SituationDescriptionFactory.create(
+            session=db_session, situation_id=situation.id
+        )
+        de = await DescriptionExerciseFactory.create(
+            session=db_session, description_id=desc.id, approved=True
+        )
+        de.modality = ExerciseModality.READING
+        await DescriptionExerciseItemFactory.create(
+            session=db_session, description_exercise_id=de.id
+        )
+        ex = await ExerciseFactory.create(
+            session=db_session,
+            description_exercise_id=de.id,
+            source_type=ExerciseSourceType.DESCRIPTION,
+        )
+        record = await ExerciseRecordFactory.create(
+            session=db_session,
+            user_id=test_user.id,
+            exercise_id=ex.id,
+            status=CardStatus.REVIEW,
+        )
+        # Explicitly 0-score review — user attempted but got nothing right.
+        await ExerciseReviewFactory.create(
+            session=db_session,
+            user_id=test_user.id,
+            exercise_record_id=record.id,
+            score=0,
+            max_score=5,
+        )
+        await db_session.flush()
+
+        service = _get_service(db_session)
+        overview = await service.get_overview(user_id=test_user.id)
+
+        reading_confidence = next(
+            (tc for tc in overview.topic_confidence if tc.topic == "Reading"), None
+        )
+        assert reading_confidence is not None, "Reading topic must appear in topic_confidence"
+        assert reading_confidence.accuracy is not None, (
+            "accuracy must NOT be None when reviews exist (even at 0 score). "
+            "None means 'no attempts yet', not 'zero score'."
+        )
+        assert reading_confidence.accuracy == 0.0, (
+            f"accuracy must be 0.0 when score=0 and max_score=5. "
+            f"Got {reading_confidence.accuracy!r}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_whats_new_count_includes_situation_at_7_day_boundary(
+        self,
+        db_session: AsyncSession,
+        test_user,
+    ) -> None:
+        """GIVEN a READY situation created exactly 7 days ago (at the boundary)
+        WHEN  fetch overview
+        THEN  whats_new_count >= 1 (inclusive boundary: created_at >= now - 7d)
+
+        The cutoff uses >= (not >), so a situation created exactly 7 days ago
+        must be counted. A situation created 8 days ago must NOT be counted.
+        """
+        now = datetime.now(tz=timezone.utc)
+        # Exactly at the boundary — should be included.
+        at_boundary = await SituationFactory.create(session=db_session, ready=True)
+        at_boundary.created_at = now - timedelta(days=7)
+        # One day outside — should NOT be included.
+        outside = await SituationFactory.create(session=db_session, ready=True)
+        outside.created_at = now - timedelta(days=8)
+        await db_session.flush()
+
+        service = _get_service(db_session)
+        overview = await service.get_overview(user_id=test_user.id)
+
+        assert overview.whats_new_count >= 1, (
+            f"Expected whats_new_count >= 1 (situation at exactly 7-day boundary "
+            f"must be included). Got {overview.whats_new_count}."
+        )
