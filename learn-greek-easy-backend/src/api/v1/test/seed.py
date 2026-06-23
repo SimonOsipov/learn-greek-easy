@@ -523,6 +523,52 @@ async def clear_news_items(
 _LEXGEN_JUDGE_SENTINELS = [717273, 818283, 919293]
 
 
+class _ApproveDeckResponse(BaseModel):
+    """Response for the deck-only seed endpoint."""
+
+    id: str
+    name: str
+
+
+@router.post(
+    "/lexgen-approve-deck",
+    response_model=_ApproveDeckResponse,
+    summary="[TEST ONLY] Idempotently (re)create the LEXGEN E2E Approve Deck",
+    description="Deletes any existing Deck row named 'LEXGEN E2E Approve Deck' then "
+    "creates a fresh one (is_active=True, level=A1, owner_id=None). "
+    "Safe to call concurrently — only touches this one named deck. "
+    "Called by the E2E approve flow immediately before navigating to the inbox "
+    "to ensure the deck is present when the component's useQuery fires, "
+    "even if a concurrent seed/all call wiped the decks table. "
+    "Gated by TEST_SEED_ENABLED. Never in production.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_lexgen_approve_deck(
+    db: AsyncSession = Depends(get_db),
+) -> _ApproveDeckResponse:
+    """Idempotently recreate the dedicated LEXGEN E2E Approve Deck.
+
+    Deletes the deck by name and re-inserts it so exactly one row with the
+    canonical name exists after the call. Returns {id, name}.
+    """
+    _LEXGEN_APPROVE_DECK_NAME = "LEXGEN E2E Approve Deck"
+    await db.execute(delete(Deck).where(Deck.name_en == _LEXGEN_APPROVE_DECK_NAME))
+    await db.flush()
+    approve_deck = Deck(
+        name_en=_LEXGEN_APPROVE_DECK_NAME,
+        name_el="LEXGEN E2E Approve Deck",
+        name_ru="LEXGEN E2E Approve Deck",
+        description_en="Dedicated E2E approve-flow deck for LEXGEN-13-06 — not for production.",
+        level=DeckLevel.A1,
+        is_active=True,
+        is_premium=False,
+    )
+    db.add(approve_deck)
+    await db.flush()
+    await db.commit()
+    return _ApproveDeckResponse(id=str(approve_deck.id), name=_LEXGEN_APPROVE_DECK_NAME)
+
+
 @router.post(
     "/lexgen-proposals",
     response_model=SeedResultResponse,

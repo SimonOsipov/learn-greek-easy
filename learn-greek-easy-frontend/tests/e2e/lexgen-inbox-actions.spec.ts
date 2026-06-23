@@ -153,6 +153,14 @@ test.describe('Admin Verification Inbox — Review Actions (LEXGEN-13-06)', () =
   test('Flow 1: approve → ship (ουρανός)', async ({ page, request }) => {
     const proposalId = await resolveProposalId(request, 'ουρανός');
 
+    // Re-seed the approve deck immediately before navigating so the deck is
+    // present when the component's useQuery fires — even if a concurrent
+    // seed/all call wiped the decks table between beforeAll and this point.
+    const deckRes = await request.post(`${apiBaseUrl}/api/v1/test/seed/lexgen-approve-deck`);
+    expect(deckRes.ok(), 'POST /seed/lexgen-approve-deck must succeed').toBeTruthy();
+    const deckBody = await deckRes.json();
+    expect(deckBody?.id, 'lexgen-approve-deck must return a deck id').toBeTruthy();
+
     await openInbox(page);
     await openDetailForLemma(page, 'ουρανός');
 

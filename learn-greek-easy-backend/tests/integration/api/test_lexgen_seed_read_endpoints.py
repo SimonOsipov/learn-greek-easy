@@ -333,6 +333,51 @@ async def test_seed_lexgen_proposals_creates_approve_deck(client: AsyncClient) -
 
 
 @pytest.mark.integration
+async def test_seed_lexgen_approve_deck_returns_id_and_name(client: AsyncClient) -> None:
+    """POST /lexgen-approve-deck returns 200 with {id, name}.
+
+    The dedicated deck-only endpoint must create the approve deck and return
+    its id (non-empty) and the canonical name.
+    """
+    response = await client.post("/api/v1/test/seed/lexgen-approve-deck")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body.get("id"), "response must include a non-empty id"
+    assert (
+        body.get("name") == _LEXGEN_APPROVE_DECK_NAME
+    ), f"name must be {_LEXGEN_APPROVE_DECK_NAME!r}; got {body.get('name')!r}"
+
+
+@pytest.mark.integration
+async def test_seed_lexgen_approve_deck_is_idempotent(client: AsyncClient) -> None:
+    """Calling POST /lexgen-approve-deck twice yields two different IDs (delete+create).
+
+    Idempotency: delete-by-name + re-create means no duplicate rows.
+    """
+    r1 = await client.post("/api/v1/test/seed/lexgen-approve-deck")
+    assert r1.status_code == 200, r1.text
+    r2 = await client.post("/api/v1/test/seed/lexgen-approve-deck")
+    assert r2.status_code == 200, r2.text
+    # Each call creates a fresh row; ids differ (previous deleted).
+    assert (
+        r1.json()["id"] != r2.json()["id"]
+    ), "each call must produce a fresh deck row (prior one deleted)"
+
+
+@pytest.mark.integration
+async def test_seed_lexgen_approve_deck_403_when_seed_disabled(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """POST /lexgen-approve-deck returns 403 when seeding is disabled."""
+    monkeypatch.setattr("src.api.v1.test.seed.settings.test_seed_enabled", False)
+    resp = await client.post("/api/v1/test/seed/lexgen-approve-deck")
+    assert (
+        resp.status_code == 403
+    ), f"lexgen-approve-deck must return 403 when seed disabled; got {resp.status_code}"
+
+
+@pytest.mark.integration
 async def test_seed_lexgen_proposals_approve_deck_is_idempotent(client: AsyncClient) -> None:
     """Calling POST /lexgen-proposals twice yields exactly one approve deck row.
 
