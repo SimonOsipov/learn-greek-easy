@@ -410,7 +410,7 @@ async def test_run_for_lemma_mid_chain_generate_reject_skips_reconcile_judge(
     # Make the generator always reject (simulates 3 consecutive ValidationErrors).
     # We use a real async function that transitions the proposal to REJECTED,
     # mirroring what the real generator does after _MAX_ATTEMPTS failures.
-    async def _fake_generate_exhausted(proposal):  # noqa: ANN001
+    async def _fake_generate_exhausted(self, proposal):  # noqa: ANN001
         from src.core.word_proposal_state import transition as wps_transition
         from src.db.models import WordProposalState as WPS
 
