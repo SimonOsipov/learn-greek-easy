@@ -118,21 +118,17 @@ async function openDetailForLemma(page: Page, lemma: string): Promise<void> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// beforeAll: seed admin-cards deck + lexgen proposals
+// beforeAll: seed lexgen proposals (includes the dedicated approve deck)
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('Admin Verification Inbox — Review Actions (LEXGEN-13-06)', () => {
   const apiBaseUrl = getApiBaseUrl();
 
   test.beforeAll(async ({ request }) => {
-    // Seed the "E2E Vocabulary Cards Test Deck" so it appears in the approve flow's
-    // deck Select. /seed/all does NOT create this deck (it creates only the 4 CEFR
-    // decks), so we call /seed/admin-cards explicitly (D4).
-    const cardsRes = await request.post(`${apiBaseUrl}/api/v1/test/seed/admin-cards`);
-    expect(cardsRes.ok(), 'POST /seed/admin-cards must succeed').toBeTruthy();
-
     // Seed the 4 lexgen proposals (θάλασσα, βιβλίο, ποτάμι, δρόμος, ουρανός + 2
-    // non-review rows). Idempotent — deletes all word_proposal rows first.
+    // non-review rows) AND the dedicated "LEXGEN E2E Approve Deck". Idempotent —
+    // deletes all word_proposal rows and the named deck first, then re-creates both.
+    // No dependency on /seed/admin-cards.
     const proposalsRes = await request.post(`${apiBaseUrl}/api/v1/test/seed/lexgen-proposals`);
     expect(proposalsRes.ok(), 'POST /seed/lexgen-proposals must succeed').toBeTruthy();
     const proposalsBody = await proposalsRes.json();
@@ -140,6 +136,10 @@ test.describe('Admin Verification Inbox — Review Actions (LEXGEN-13-06)', () =
       proposalsBody?.results?.needs_review_created,
       'seed must create needs_review proposals',
     ).toBeGreaterThan(0);
+    expect(
+      proposalsBody?.results?.approve_deck?.id,
+      'seed must create and return the dedicated approve deck',
+    ).toBeTruthy();
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -172,9 +172,11 @@ test.describe('Admin Verification Inbox — Review Actions (LEXGEN-13-06)', () =
     await expect(deckSelect).toBeVisible({ timeout: 5_000 });
     await deckSelect.click();
 
-    // Pick the "E2E Vocabulary Cards Test Deck" option from the portal.
+    // Pick the dedicated "LEXGEN E2E Approve Deck" option from the portal.
+    // This deck is created by seed/lexgen-proposals (self-contained — no
+    // dependency on seed/admin-cards).
     await page
-      .getByRole('option', { name: /E2E Vocabulary Cards Test Deck/i })
+      .getByRole('option', { name: /LEXGEN E2E Approve Deck/i })
       .click();
 
     // Confirm approve.
