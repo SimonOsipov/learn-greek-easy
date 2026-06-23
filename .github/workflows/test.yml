@@ -351,6 +351,7 @@ jobs:
           PICTURE_HOUSE_STYLE_DEFAULT: "test_house_style_default"
           REDIS_URL: redis://localhost:6379/0
           TEST_SEED_ENABLED: "true"
+          LEXGEN_E2E_FAKE_LLM: "true"
           TESTING: "true"
           JWT_SECRET_KEY: "test-secret-key-for-ci-must-be-32-characters-long"
           CORS_ORIGINS: '["http://localhost:5173","http://localhost:3000"]'
@@ -565,6 +566,7 @@ jobs:
           PICTURE_HOUSE_STYLE_DEFAULT: "test_house_style_default"
           REDIS_URL: redis://localhost:6379/0
           TEST_SEED_ENABLED: "true"
+          LEXGEN_E2E_FAKE_LLM: "true"
           TESTING: "true"
           JWT_SECRET_KEY: "test-secret-key-for-ci-must-be-32-characters-long"
           CORS_ORIGINS: '["http://localhost:5173","http://localhost:3000"]'

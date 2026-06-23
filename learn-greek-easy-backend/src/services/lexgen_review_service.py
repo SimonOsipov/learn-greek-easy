@@ -544,12 +544,31 @@ class LexgenReviewService:
 
 
 def _get_openrouter() -> "OpenRouterService":
-    """Return an OpenRouterService instance.
+    """Return an OpenRouterService (or the test-only FakeOpenRouter).
 
     Constructed lazily so tests can patch downstream service methods without
     needing a real API key.  In production ``OPENROUTER_API_KEY`` is required
     but the key is only accessed when the LLM call is actually made.
+
+    FAKE INJECTION (LEXGEN-13-06)
+    -----------------------------
+    When BOTH conditions hold the deterministic FakeOpenRouter is returned
+    instead of the real service:
+      1. ``settings.lexgen_e2e_fake_llm is True``
+      2. ``not settings.is_production``
+
+    This makes it structurally impossible for the fake to activate in
+    production even if the env-var leaks.  The fake covers BOTH callers
+    (edit's judge call at line 387 and regenerate's generator/verify/judge
+    calls at line 462) because both obtain their client via this function.
     """
+    from src.config import settings  # noqa: PLC0415
+
+    if settings.lexgen_e2e_fake_llm and not settings.is_production:
+        from src.services.lexgen_fake_openrouter import FakeOpenRouter  # noqa: PLC0415
+
+        return FakeOpenRouter()  # type: ignore[return-value]
+
     from src.services.openrouter_service import OpenRouterService  # noqa: PLC0415
 
     return OpenRouterService()
