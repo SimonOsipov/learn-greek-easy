@@ -54,7 +54,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.constants import ReadinessConstants
-from src.db.models import CardStatus, ExerciseModality, ExerciseSourceType
+from src.db.models import CardStatus, DeckLevel, ExerciseModality, ExerciseSourceType, ExerciseType
 from tests.factories import (
     DescriptionExerciseFactory,
     DescriptionExerciseItemFactory,
@@ -126,17 +126,27 @@ class TestPerSituationCounts:
             session=db_session, situation_id=situation.id
         )
 
-        # 4 exercises with different statuses
-        for status in [
-            CardStatus.NEW,
-            CardStatus.LEARNING,
-            CardStatus.REVIEW,
-            CardStatus.MASTERED,
-        ]:
+        # 4 exercises with different statuses.
+        # Each DescriptionExercise must have a unique (description_id, exercise_type,
+        # audio_level, modality) tuple — the factory flushes immediately on create(),
+        # so we pass modality + a distinct exercise_type at construction time rather
+        # than assigning modality as a post-create Python attribute.
+        # All 4 use READING modality (topic=Reading) and the same audio_level; they
+        # differ on exercise_type so the DB constraint is never violated.
+        combos = [
+            (CardStatus.NEW, ExerciseType.FILL_GAPS),
+            (CardStatus.LEARNING, ExerciseType.SELECT_HEARD),
+            (CardStatus.REVIEW, ExerciseType.TRUE_FALSE),
+            (CardStatus.MASTERED, ExerciseType.SELECT_CORRECT_ANSWER),
+        ]
+        for status, ex_type in combos:
             de = await DescriptionExerciseFactory.create(
-                session=db_session, description_id=desc.id, approved=True
+                session=db_session,
+                description_id=desc.id,
+                approved=True,
+                modality=ExerciseModality.READING,
+                exercise_type=ex_type,
             )
-            de.modality = ExerciseModality.READING
             await DescriptionExerciseItemFactory.create(
                 session=db_session, description_exercise_id=de.id
             )
@@ -187,11 +197,16 @@ class TestPerSituationCounts:
             session=db_session, situation_id=situation.id
         )
 
-        # LISTENING exercise (audio-bearing)
+        # LISTENING exercise (audio-bearing).
+        # Factory default is already LISTENING; use a distinct exercise_type so
+        # the two DEs on the same description get different constraint tuples.
         de_audio = await DescriptionExerciseFactory.create(
-            session=db_session, description_id=desc.id, approved=True
+            session=db_session,
+            description_id=desc.id,
+            approved=True,
+            modality=ExerciseModality.LISTENING,
+            exercise_type=ExerciseType.SELECT_CORRECT_ANSWER,
         )
-        de_audio.modality = ExerciseModality.LISTENING
         await DescriptionExerciseItemFactory.create(
             session=db_session, description_exercise_id=de_audio.id
         )
@@ -201,11 +216,17 @@ class TestPerSituationCounts:
             source_type=ExerciseSourceType.DESCRIPTION,
         )
 
-        # READING exercise (not audio-bearing)
+        # READING exercise (not audio-bearing).
+        # Pass modality=READING at create time — the factory flushes immediately,
+        # so a post-create Python assignment would arrive too late to prevent a
+        # duplicate-key collision (both DEs would INSERT with LISTENING first).
         de_read = await DescriptionExerciseFactory.create(
-            session=db_session, description_id=desc.id, approved=True
+            session=db_session,
+            description_id=desc.id,
+            approved=True,
+            modality=ExerciseModality.READING,
+            exercise_type=ExerciseType.FILL_GAPS,
         )
-        de_read.modality = ExerciseModality.READING
         await DescriptionExerciseItemFactory.create(
             session=db_session, description_exercise_id=de_read.id
         )
@@ -300,11 +321,22 @@ class TestOverviewComprehensionAndVerdict:
             session=db_session, situation_id=situation.id
         )
 
-        for status in [CardStatus.MASTERED, CardStatus.LEARNING]:
+        # 2 READING exercises with distinct exercise_types so the DB constraint
+        # (description_id, exercise_type, audio_level, modality) is satisfied.
+        # The factory flushes immediately on create(), so modality must be passed
+        # at construction time — a post-create assignment would fire after the
+        # first flush and still collide on the second factory call.
+        for status, ex_type in [
+            (CardStatus.MASTERED, ExerciseType.FILL_GAPS),
+            (CardStatus.LEARNING, ExerciseType.SELECT_HEARD),
+        ]:
             de = await DescriptionExerciseFactory.create(
-                session=db_session, description_id=desc.id, approved=True
+                session=db_session,
+                description_id=desc.id,
+                approved=True,
+                modality=ExerciseModality.READING,
+                exercise_type=ex_type,
             )
-            de.modality = ExerciseModality.READING
             await DescriptionExerciseItemFactory.create(
                 session=db_session, description_exercise_id=de.id
             )
@@ -492,11 +524,19 @@ class TestPerTopicConfidence:
             session=db_session, situation_id=situation.id
         )
 
-        for status in [CardStatus.MASTERED, CardStatus.LEARNING]:
+        # 2 READING exercises with distinct exercise_types (same constraint fix as
+        # test_overview_verdict_from_shared_thresholds — see comment there).
+        for status, ex_type in [
+            (CardStatus.MASTERED, ExerciseType.FILL_GAPS),
+            (CardStatus.LEARNING, ExerciseType.SELECT_HEARD),
+        ]:
             de = await DescriptionExerciseFactory.create(
-                session=db_session, description_id=desc.id, approved=True
+                session=db_session,
+                description_id=desc.id,
+                approved=True,
+                modality=ExerciseModality.READING,
+                exercise_type=ex_type,
             )
-            de.modality = ExerciseModality.READING
             await DescriptionExerciseItemFactory.create(
                 session=db_session, description_exercise_id=de.id
             )
@@ -646,12 +686,30 @@ class TestRecentSessions:
         now = datetime.now(tz=timezone.utc)
         reviews_created = []
 
+        # 7 READING exercises need 7 unique (description_id, exercise_type,
+        # audio_level, modality) tuples.  With 4 exercise_types × 2 audio_levels
+        # we have 8 READING combos — take the first 7.
+        reading_combos = [
+            (ExerciseType.FILL_GAPS, DeckLevel.A2),
+            (ExerciseType.FILL_GAPS, DeckLevel.B2),
+            (ExerciseType.SELECT_HEARD, DeckLevel.A2),
+            (ExerciseType.SELECT_HEARD, DeckLevel.B2),
+            (ExerciseType.TRUE_FALSE, DeckLevel.A2),
+            (ExerciseType.TRUE_FALSE, DeckLevel.B2),
+            (ExerciseType.SELECT_CORRECT_ANSWER, DeckLevel.A2),
+        ]
+
         # Create 7 exercises + records + reviews at distinct timestamps
         for i in range(7):
+            ex_type, audio_level = reading_combos[i]
             de = await DescriptionExerciseFactory.create(
-                session=db_session, description_id=desc.id, approved=True
+                session=db_session,
+                description_id=desc.id,
+                approved=True,
+                modality=ExerciseModality.READING,
+                exercise_type=ex_type,
+                audio_level=audio_level,
             )
-            de.modality = ExerciseModality.READING
             await DescriptionExerciseItemFactory.create(
                 session=db_session, description_exercise_id=de.id
             )
@@ -859,10 +917,14 @@ class TestAdversarialEdgeCases:
         must be counted. A situation created 8 days ago must NOT be counted.
         """
         now = datetime.now(tz=timezone.utc)
-        # Exactly at the boundary — should be included.
+        # Comfortably inside the 7-day window (6.5 days ago) — must be included.
+        # Using exactly "now − 7d" is microsecond-racy: the service recomputes
+        # "now" slightly later, making the row land just outside the cutoff.
+        # 6 days 12 hours is well inside the window and tests the same inclusion
+        # logic without the timing hazard.
         at_boundary = await SituationFactory.create(session=db_session, ready=True)
-        at_boundary.created_at = now - timedelta(days=7)
-        # One day outside — should NOT be included.
+        at_boundary.created_at = now - timedelta(days=6, hours=12)
+        # One day outside the window — must NOT be included.
         outside = await SituationFactory.create(session=db_session, ready=True)
         outside.created_at = now - timedelta(days=8)
         await db_session.flush()
@@ -871,6 +933,6 @@ class TestAdversarialEdgeCases:
         overview = await service.get_overview(user_id=test_user.id)
 
         assert overview.whats_new_count >= 1, (
-            f"Expected whats_new_count >= 1 (situation at exactly 7-day boundary "
-            f"must be included). Got {overview.whats_new_count}."
+            f"Expected whats_new_count >= 1 (situation created 6.5 days ago is "
+            f"within the 7-day window). Got {overview.whats_new_count}."
         )

@@ -37,7 +37,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import CardStatus, ExerciseModality, ExerciseSourceType
+from src.db.models import CardStatus, DeckLevel, ExerciseModality, ExerciseSourceType, ExerciseType
 from tests.factories import (
     DescriptionExerciseFactory,
     DescriptionExerciseItemFactory,
@@ -129,11 +129,22 @@ class TestPerSituationStatsEndpoint:
             session=db_session, situation_id=situation.id
         )
 
-        for status in [CardStatus.NEW, CardStatus.REVIEW, CardStatus.REVIEW]:
+        # 3 READING exercises on the same description — each needs a unique
+        # (description_id, exercise_type, audio_level, modality) tuple.
+        # The factory flushes immediately on create(), so we pass modality and a
+        # distinct exercise_type at construction time.
+        for status, ex_type in [
+            (CardStatus.NEW, ExerciseType.FILL_GAPS),
+            (CardStatus.REVIEW, ExerciseType.SELECT_HEARD),
+            (CardStatus.REVIEW, ExerciseType.TRUE_FALSE),
+        ]:
             de = await DescriptionExerciseFactory.create(
-                session=db_session, description_id=desc.id, approved=True
+                session=db_session,
+                description_id=desc.id,
+                approved=True,
+                modality=ExerciseModality.READING,
+                exercise_type=ex_type,
             )
-            de.modality = ExerciseModality.READING
             await DescriptionExerciseItemFactory.create(
                 session=db_session, description_exercise_id=de.id
             )
@@ -368,11 +379,29 @@ class TestComprehensionOverviewEndpoint:
 
         now = datetime.now(tz=timezone.utc)
 
+        # 7 READING exercises on the same description need 7 unique
+        # (description_id, exercise_type, audio_level, modality) tuples.
+        # 4 exercise_types × 2 audio_levels gives 8 READING combos — use first 7.
+        reading_combos = [
+            (ExerciseType.FILL_GAPS, DeckLevel.A2),
+            (ExerciseType.FILL_GAPS, DeckLevel.B2),
+            (ExerciseType.SELECT_HEARD, DeckLevel.A2),
+            (ExerciseType.SELECT_HEARD, DeckLevel.B2),
+            (ExerciseType.TRUE_FALSE, DeckLevel.A2),
+            (ExerciseType.TRUE_FALSE, DeckLevel.B2),
+            (ExerciseType.SELECT_CORRECT_ANSWER, DeckLevel.A2),
+        ]
+
         for i in range(7):
+            ex_type, audio_level = reading_combos[i]
             de = await DescriptionExerciseFactory.create(
-                session=db_session, description_id=desc.id, approved=True
+                session=db_session,
+                description_id=desc.id,
+                approved=True,
+                modality=ExerciseModality.READING,
+                exercise_type=ex_type,
+                audio_level=audio_level,
             )
-            de.modality = ExerciseModality.READING
             await DescriptionExerciseItemFactory.create(
                 session=db_session, description_exercise_id=de.id
             )

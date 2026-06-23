@@ -55,7 +55,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import ExerciseModality, ExerciseSourceType
+from src.db.models import ExerciseModality, ExerciseSourceType, ExerciseType
 from tests.factories import (
     DescriptionExerciseFactory,
     DescriptionExerciseItemFactory,
@@ -209,12 +209,19 @@ class TestExercisesApiTopicCounts:
             session=db_session, situation_id=situation.id
         )
 
-        # Create 2 READING exercises
-        for _ in range(2):
+        # Create 2 READING exercises with distinct exercise_types.
+        # The factory flushes immediately on create(), so modality must be passed
+        # at construction time — a post-create attribute assignment would land after
+        # the flush and the second DE would INSERT with the factory-default LISTENING,
+        # colliding with the first on the uq_desc_exercise_type_level_modality constraint.
+        for ex_type in [ExerciseType.FILL_GAPS, ExerciseType.SELECT_HEARD]:
             de = await DescriptionExerciseFactory.create(
-                session=db_session, description_id=desc.id, approved=True
+                session=db_session,
+                description_id=desc.id,
+                approved=True,
+                modality=ExerciseModality.READING,
+                exercise_type=ex_type,
             )
-            de.modality = ExerciseModality.READING
             await DescriptionExerciseItemFactory.create(
                 session=db_session, description_exercise_id=de.id
             )
@@ -224,11 +231,15 @@ class TestExercisesApiTopicCounts:
                 source_type=ExerciseSourceType.DESCRIPTION,
             )
 
-        # Create 1 LISTENING exercise
+        # Create 1 LISTENING exercise with a distinct exercise_type from the two
+        # READING ones above — (SELECT_CORRECT_ANSWER, B2, LISTENING) is unique.
         de_listen = await DescriptionExerciseFactory.create(
-            session=db_session, description_id=desc.id, approved=True
+            session=db_session,
+            description_id=desc.id,
+            approved=True,
+            modality=ExerciseModality.LISTENING,
+            exercise_type=ExerciseType.SELECT_CORRECT_ANSWER,
         )
-        de_listen.modality = ExerciseModality.LISTENING
         await DescriptionExerciseItemFactory.create(
             session=db_session, description_exercise_id=de_listen.id
         )
@@ -314,16 +325,21 @@ class TestExercisesApiTopicCounts:
             session=db_session, situation_id=situation.id
         )
 
-        # Seed 3 description exercises (mix of modalities)
-        for modality in [
-            ExerciseModality.LISTENING,
-            ExerciseModality.READING,
-            ExerciseModality.LISTENING,
+        # Seed 3 description exercises (mix of modalities).
+        # Each must have a unique (description_id, exercise_type, audio_level, modality)
+        # tuple — pass both modality and a distinct exercise_type at creation time.
+        for modality, ex_type in [
+            (ExerciseModality.LISTENING, ExerciseType.FILL_GAPS),
+            (ExerciseModality.READING, ExerciseType.SELECT_HEARD),
+            (ExerciseModality.LISTENING, ExerciseType.SELECT_CORRECT_ANSWER),
         ]:
             de = await DescriptionExerciseFactory.create(
-                session=db_session, description_id=desc.id, approved=True
+                session=db_session,
+                description_id=desc.id,
+                approved=True,
+                modality=modality,
+                exercise_type=ex_type,
             )
-            de.modality = modality
             await DescriptionExerciseItemFactory.create(
                 session=db_session, description_exercise_id=de.id
             )
