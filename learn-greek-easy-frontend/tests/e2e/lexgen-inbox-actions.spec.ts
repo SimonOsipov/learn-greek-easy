@@ -79,9 +79,16 @@ async function openInbox(page: Page): Promise<void> {
 }
 
 /**
- * Resolve a proposal ID by calling the admin list endpoint and finding the
- * item whose lemma matches. Uses a fresh API request (not a page navigation)
+ * Resolve a proposal ID by calling the test-only seed list endpoint and finding
+ * the item whose lemma matches. Uses a fresh API request (not a page navigation)
  * so it works even when the proposal detail sheet is open.
+ *
+ * Uses GET /api/v1/test/seed/lexgen-proposals instead of the admin endpoint
+ * because the admin endpoint is gated by get_current_superuser and Playwright's
+ * raw request context does not carry the admin JWT (only cookies, not the
+ * localStorage-backed Authorization header the app's axios attaches). The seed
+ * endpoint uses verify_seed_access (TEST_SEED_ENABLED gate), which requires no
+ * auth header — matching the pattern used by the existing read endpoints.
  */
 async function resolveProposalId(
   request: APIRequestContext,
@@ -89,12 +96,12 @@ async function resolveProposalId(
 ): Promise<string> {
   const apiBaseUrl = getApiBaseUrl();
   const res = await request.get(
-    `${apiBaseUrl}/api/v1/admin/lexgen/proposals?page_size=20`,
+    `${apiBaseUrl}/api/v1/test/seed/lexgen-proposals`,
   );
-  expect(res.ok(), `admin list endpoint must succeed for lemma=${lemma}`).toBeTruthy();
+  expect(res.ok(), `test seed list endpoint must succeed for lemma=${lemma}`).toBeTruthy();
   const body = await res.json();
-  const item = (body.items ?? []).find((i: { lemma: string }) => i.lemma === lemma);
-  expect(item, `proposal with lemma="${lemma}" must exist in the inbox`).toBeTruthy();
+  const item = (body.proposals ?? []).find((i: { lemma: string }) => i.lemma === lemma);
+  expect(item, `proposal with lemma="${lemma}" must exist in the seeded proposals`).toBeTruthy();
   return item.id as string;
 }
 

@@ -841,6 +841,46 @@ async def seed_lexgen_proposals(
     )
 
 
+class _ProposalListItem(BaseModel):
+    """Minimal proposal shape for E2E lemma→id resolution (LEXGEN-13-06)."""
+
+    id: str
+    lemma: str
+    status: str
+
+
+class _ProposalListResponse(BaseModel):
+    proposals: list[_ProposalListItem]
+
+
+@router.get(
+    "/lexgen-proposals",
+    response_model=_ProposalListResponse,
+    summary="[TEST ONLY] List seeded proposals for E2E lemma→id resolution",
+    description="Returns all word_proposal rows as [{id, lemma, status}]. "
+    "Gated by TEST_SEED_ENABLED. Never in production. "
+    "Use instead of the admin list endpoint (which requires superuser auth "
+    "that Playwright's raw request context does not carry).",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def list_lexgen_proposals_for_test(
+    db: AsyncSession = Depends(get_db),
+) -> _ProposalListResponse:
+    """Return all word_proposal rows for E2E lemma→id resolution."""
+    result = await db.execute(select(WordProposal).order_by(WordProposal.created_at.asc()))
+    proposals = result.scalars().all()
+    return _ProposalListResponse(
+        proposals=[
+            _ProposalListItem(
+                id=str(p.id),
+                lemma=p.lemma_input,
+                status=(p.status.value if hasattr(p.status, "value") else str(p.status)),
+            )
+            for p in proposals
+        ]
+    )
+
+
 @router.post(
     "/lexgen-proposals/clear",
     response_model=SeedResultResponse,

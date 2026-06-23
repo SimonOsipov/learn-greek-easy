@@ -20,9 +20,38 @@ import type { LexgenProposalListResponse } from '@/services/adminAPI';
 
 const mockUseLexgenProposals = vi.fn();
 const mockUseLexgenProposal = vi.fn();
+const mockUseApproveProposal = vi.fn();
+const mockUseEditProposalField = vi.fn();
+const mockUseRegenerateProposal = vi.fn();
+const mockUseRejectProposal = vi.fn();
+
+// Default mutation-like return shape: all mutation hooks that LexgenInboxView
+// (and the LexgenProposalActions stub below) consume. Each must expose at
+// minimum { mutate, mutateAsync, isPending }.
+const defaultMutation = () => ({
+  mutate: vi.fn(),
+  mutateAsync: vi.fn(),
+  isPending: false,
+  isError: false,
+  isSuccess: false,
+  reset: vi.fn(),
+});
+
 vi.mock('@/hooks/useLexgenProposals', () => ({
   useLexgenProposals: (...args: unknown[]) => mockUseLexgenProposals(...args),
   useLexgenProposal: (...args: unknown[]) => mockUseLexgenProposal(...args),
+  useApproveProposal: (...args: unknown[]) => mockUseApproveProposal(...args),
+  useEditProposalField: (...args: unknown[]) => mockUseEditProposalField(...args),
+  useRegenerateProposal: (...args: unknown[]) => mockUseRegenerateProposal(...args),
+  useRejectProposal: (...args: unknown[]) => mockUseRejectProposal(...args),
+}));
+
+// LexgenProposalActions is independently tested in its own suite. Stub it here
+// so the inbox tests do not need a QueryClientProvider for the deck-list useQuery
+// call inside LexgenProposalActions. The stub preserves the sentinel testid used
+// nowhere in the inbox tests, keeping the mock transparent.
+vi.mock('@/components/admin/LexgenProposalActions', () => ({
+  LexgenProposalActions: () => <div data-testid="lexgen-proposal-actions-stub" />,
 }));
 
 const mockTrack = vi.fn();
@@ -62,10 +91,22 @@ function loaded(data: Partial<LexgenProposalListResponse>) {
 beforeEach(() => {
   mockUseLexgenProposals.mockReset();
   mockUseLexgenProposal.mockReset();
+  mockUseApproveProposal.mockReset();
+  mockUseEditProposalField.mockReset();
+  mockUseRegenerateProposal.mockReset();
+  mockUseRejectProposal.mockReset();
   mockTrack.mockReset();
+
   // Detail panel hook: idle by default (no proposal selected). Individual
   // tests that exercise the detail panel override this.
   mockUseLexgenProposal.mockReturnValue({ data: undefined, isLoading: false, isError: false });
+
+  // Mutation hooks: return a stable mutation-like object. LexgenInboxView calls
+  // useEditProposalField unconditionally (keyed on selectedProposalId ?? '').
+  mockUseApproveProposal.mockReturnValue(defaultMutation());
+  mockUseEditProposalField.mockReturnValue(defaultMutation());
+  mockUseRegenerateProposal.mockReturnValue(defaultMutation());
+  mockUseRejectProposal.mockReturnValue(defaultMutation());
 });
 
 // ---------------------------------------------------------------------------

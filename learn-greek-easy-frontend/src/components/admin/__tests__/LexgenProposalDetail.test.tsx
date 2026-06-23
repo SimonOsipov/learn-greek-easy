@@ -347,7 +347,10 @@ describe('LexgenProposalDetail — adversarial (12-03)', () => {
     const proposal = makeProposal();
     renderWithProviders(<LexgenProposalDetail proposal={proposal} />);
 
-    // EN locale read-only note from lexgenInbox.detail.readOnlyNote.
-    expect(screen.getByText(/Read-only/i)).toBeInTheDocument();
+    // EN locale note from lexgenInbox.detail.readOnlyNote.
+    // Value updated in LEXGEN-13-04 to "Review and take action using the controls below."
+    expect(
+      screen.getByText(/Review and take action using the controls below/i)
+    ).toBeInTheDocument();
   });
 });

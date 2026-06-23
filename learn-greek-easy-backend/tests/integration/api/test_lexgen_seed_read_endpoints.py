@@ -1,6 +1,7 @@
-"""Thin integration tests for the 3 test-only LEXGEN seed read endpoints (LEXGEN-13-06 D2).
+"""Thin integration tests for the LEXGEN seed read endpoints (LEXGEN-13-06 D2).
 
 Covers:
+  GET /api/v1/test/seed/lexgen-proposals          (list for lemma→id resolution)
   GET /api/v1/test/seed/lexgen-proposals/{id}/review-log
   GET /api/v1/test/seed/lexgen-proposals/{id}/attempts
   GET /api/v1/test/seed/lexgen-proposals/{id}/state
@@ -246,3 +247,57 @@ async def test_read_endpoints_403_when_seed_disabled(
         assert (
             resp.status_code == 403
         ), f"Path {path!r} must return 403 when seed disabled; got {resp.status_code}"
+
+
+# ---------------------------------------------------------------------------
+# Tests — list endpoint (LEXGEN-13-06: E2E lemma→id resolution)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+async def test_list_proposals_returns_200_and_seeded_row(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    """GET /lexgen-proposals returns 200 + the seeded proposal in the list."""
+    proposal = await _seed_proposal_with_log_and_attempt(db_session)
+    response = await client.get(BASE_URL)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert "proposals" in body, "Response must have a 'proposals' key"
+    assert isinstance(body["proposals"], list)
+    # The seeded proposal must appear in the list.
+    ids = [p["id"] for p in body["proposals"]]
+    assert str(proposal.id) in ids, "Seeded proposal must appear in the list"
+    # Each item must have id, lemma, status.
+    item = next(p for p in body["proposals"] if p["id"] == str(proposal.id))
+    assert item["lemma"] == "βιβλίο"
+    assert item["status"] == "needs_review"
+    for key in ("id", "lemma", "status"):
+        assert key in item, f"Key {key!r} missing from list item"
+
+
+@pytest.mark.integration
+async def test_list_proposals_empty_when_no_rows(client: AsyncClient) -> None:
+    """GET /lexgen-proposals returns 200 with an empty list when no proposals exist."""
+    # The db_session fixture rolls back between tests; this test just verifies
+    # the endpoint works with zero rows (it may see rows from concurrent tests,
+    # but must at minimum return a valid shape).
+    response = await client.get(BASE_URL)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert "proposals" in body
+    assert isinstance(body["proposals"], list)
+
+
+@pytest.mark.integration
+async def test_list_proposals_403_when_seed_disabled(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GET /lexgen-proposals returns 403 when seeding is disabled."""
+    monkeypatch.setattr("src.api.v1.test.seed.settings.test_seed_enabled", False)
+    resp = await client.get(BASE_URL)
+    assert (
+        resp.status_code == 403
+    ), f"List endpoint must return 403 when seed disabled; got {resp.status_code}"
