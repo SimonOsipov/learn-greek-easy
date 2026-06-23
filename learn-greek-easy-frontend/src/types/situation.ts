@@ -345,3 +345,42 @@ export interface AdminExerciseStatsResponse {
   missing_audio: number;
   distinct_types: number;
 }
+
+// --- SIT-27-04: comprehension / stats ---
+
+/** SIT-27-03: learner-facing exercise topic taxonomy. */
+export type ExerciseTopic = 'Listening' | 'Reading' | 'Dialogue' | 'Visual';
+
+/** Per-situation exercise counts for the detail metric strip (GET /situations/{id}/stats). */
+export interface SituationStatsResponse {
+  to_practice: number;
+  in_review: number;
+  mastered: number;
+  audio: number;
+}
+
+/** Per-topic confidence bar in the comprehension overview. */
+export interface TopicConfidence {
+  topic: ExerciseTopic;
+  confidence_percentage: number;
+  /** Review accuracy 0-100; null when no attempts yet. */
+  accuracy: number | null;
+}
+
+/** A single recent exercise review entry. */
+export interface RecentSession {
+  reviewed_at: string;
+  score: number;
+  max_score: number;
+  quality: number;
+}
+
+/** Account-wide situations comprehension overview (GET /situations/comprehension). */
+export interface SituationComprehensionResponse {
+  comprehension_percentage: number;
+  verdict: string;
+  topic_confidence: TopicConfidence[];
+  streak: number;
+  recent_sessions: RecentSession[];
+  whats_new_count: number;
+}
