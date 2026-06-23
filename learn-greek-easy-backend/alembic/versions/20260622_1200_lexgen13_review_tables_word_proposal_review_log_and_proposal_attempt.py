@@ -104,7 +104,7 @@ def upgrade() -> None:
             "action",
             review_action_enum,
             nullable=False,
-            comment="Action the reviewer took: approve | edit | regenerate | reject",
+            comment="Action the reviewer took on this field: approve | edit | regenerate | reject",
         ),
         sa.Column(
             "field",
@@ -205,7 +205,7 @@ def upgrade() -> None:
             "judge_scores",
             postgresql.JSONB(astext_type=sa.Text()),
             nullable=True,
-            comment="Per-field judge scores snapshot (JSONB, NOT numeric — LEXGEN-11 D8)",
+            comment="Per-field judge scores snapshot (JSONB, NOT a numeric aggregate — LEXGEN-11 D8)",
         ),
         sa.Column(
             "flagged_fields",
