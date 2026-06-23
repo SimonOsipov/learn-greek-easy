@@ -151,44 +151,82 @@ test.describe('Admin Verification Inbox — Review Actions (LEXGEN-13-06)', () =
   // ουρανός has zero flagged fields → one summary accept row (field == null).
 
   test('Flow 1: approve → ship (ουρανός)', async ({ page, request }) => {
-    test.setTimeout(150_000); // toPass retries need headroom beyond the 60s default
+    // TEMP DIAGNOSTIC (LEXGEN-13-06) — revert after root cause identified
+    // Replaced toPass retry block with a single linear sequence that emits
+    // DIAGNOSTIC: log lines so CI shows the ground truth before the failing assertion.
+    test.setTimeout(120_000);
     const proposalId = await resolveProposalId(request, 'ουρανός');
 
-    // Retry block: re-seed the deck, navigate fresh (resets React Query cache so
-    // the deck useQuery re-fires), re-open the detail and approve dialog, then
-    // confirm the deck option is present. This tolerates concurrent seed/all
-    // truncations of the shared decks table in multi-shard CI.
-    await expect(async () => {
-      const deckRes = await request.post(`${apiBaseUrl}/api/v1/test/seed/lexgen-approve-deck`);
-      expect(deckRes.ok(), 'POST /seed/lexgen-approve-deck must succeed').toBeTruthy();
-
-      await openInbox(page);
-      await openDetailForLemma(page, 'ουρανός');
-
-      const detail = page.getByTestId('lexgen-proposal-detail');
-
-      // Anti-anchoring: no score language in the detail panel.
-      for (const pattern of FORBIDDEN_SCORE_PATTERNS) {
-        await expect(detail.getByText(pattern)).toHaveCount(0);
+    // 1. Register a response listener BEFORE any navigation so we capture the
+    //    /admin/decks call the component fires when the approve dialog opens.
+    const deckResponses: Array<{ status: number; body: string }> = [];
+    page.on('response', async (resp) => {
+      if (resp.url().includes('/api/v1/admin/decks')) {
+        let body = '';
+        try {
+          body = await resp.text();
+        } catch {
+          body = '<unreadable>';
+        }
+        deckResponses.push({ status: resp.status(), body: body.slice(0, 2000) });
       }
+    });
 
-      // Click Approve to open the confirm dialog.
-      await page.getByTestId('lexgen-action-approve').click();
+    // 2. Reseed the deck (deck-only endpoint — does not wipe word_proposal rows).
+    const deckRes = await request.post(`${apiBaseUrl}/api/v1/test/seed/lexgen-approve-deck`);
+    console.log(
+      'DIAGNOSTIC: reseed status=',
+      deckRes.status(),
+      'body=',
+      await deckRes.text(),
+    );
 
-      // Select the vocabulary deck in the AlertDialog.
-      // The SelectTrigger opens a portal; click it then pick the deck by text.
-      const deckSelect = page.getByTestId('lexgen-approve-deck-select');
-      await expect(deckSelect).toBeVisible({ timeout: 5_000 });
-      await deckSelect.click();
+    // 3. Hit decks-debug IMMEDIATELY after reseed to see raw DB state.
+    const dbg1 = await request.get(`${apiBaseUrl}/api/v1/test/seed/decks-debug`);
+    console.log('DIAGNOSTIC: decks-debug AFTER reseed =', await dbg1.text());
 
-      // Confirm the deck option is visible — this is what fails when the decks
-      // table has been truncated by a concurrent seed/all call.
-      await expect(page.getByRole('option', { name: /LEXGEN E2E Approve Deck/i }))
-        .toBeVisible({ timeout: 3_000 });
-    }).toPass({ timeout: 120_000, intervals: [1_000, 2_000, 3_000] });
+    // 4. Navigate to the inbox and open the ουρανός detail (triggers list_decks query).
+    await openInbox(page);
+    await openDetailForLemma(page, 'ουρανός');
+
+    // 5. Hit decks-debug again after navigation to detect truncation during nav.
+    const dbg2 = await request.get(`${apiBaseUrl}/api/v1/test/seed/decks-debug`);
+    console.log('DIAGNOSTIC: decks-debug AFTER nav =', await dbg2.text());
+
+    const detail = page.getByTestId('lexgen-proposal-detail');
+
+    // Anti-anchoring: no score language in the detail panel.
+    for (const pattern of FORBIDDEN_SCORE_PATTERNS) {
+      await expect(detail.getByText(pattern)).toHaveCount(0);
+    }
+
+    // 6. Click Approve to open the confirm dialog.
+    await page.getByTestId('lexgen-action-approve').click();
+
+    // 7. Open the deck Select and wait briefly for the list_decks response.
+    const deckSelect = page.getByTestId('lexgen-approve-deck-select');
+    await expect(deckSelect).toBeVisible({ timeout: 5_000 });
+    await deckSelect.click();
+    await page.waitForTimeout(2000);
+
+    // 8. Log all captured /admin/decks browser responses.
+    console.log(
+      'DIAGNOSTIC: /admin/decks browser responses =',
+      JSON.stringify(deckResponses),
+    );
+
+    // 9. Log the option count visible in the Select portal.
+    const optCount = await page.getByRole('option').count();
+    console.log('DIAGNOSTIC: option count in Select =', optCount);
+
+    // 10. Final assertion — will fail if the deck is absent, but diagnostics above
+    //     already printed so CI log shows ground truth.
+    await expect(page.getByRole('option', { name: /LEXGEN E2E Approve Deck/i }))
+      .toBeVisible({ timeout: 5_000 });
+
+    // END TEMP DIAGNOSTIC (LEXGEN-13-06)
 
     // The Select is open and the option is visible — pick it and confirm.
-    // This runs exactly once, after toPass establishes a clean window.
     await page.getByRole('option', { name: /LEXGEN E2E Approve Deck/i }).click();
 
     // Confirm approve.

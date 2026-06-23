@@ -530,6 +530,73 @@ class _ApproveDeckResponse(BaseModel):
     name: str
 
 
+# TEMP DIAGNOSTIC (LEXGEN-13-06) — revert after
+class _DeckDebugItem(BaseModel):
+    """One decks-table row shape for the debug endpoint."""
+
+    id: str
+    name_en: str
+    is_active: bool
+    owner_id: str | None
+
+
+class _DecksDebugResponse(BaseModel):
+    """Raw decks-table state for E2E diagnostic (LEXGEN-13-06)."""
+
+    total: int
+    vocab_decks: list[_DeckDebugItem]
+
+
+@router.get(
+    "/decks-debug",
+    response_model=_DecksDebugResponse,
+    summary="[TEMP DIAGNOSTIC] Raw decks-table state (LEXGEN-13-06)",
+    description="Returns total row count and up to 50 rows from the decks table "
+    "(id, name_en, is_active, owner_id), bypassing list_decks filtering. "
+    "For diagnosing why /admin/decks returns an empty array in CI. "
+    "Gated by TEST_SEED_ENABLED. Never in production. "
+    "TEMP — revert after LEXGEN-13-06 root cause is identified.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def decks_debug(
+    db: AsyncSession = Depends(get_db),
+) -> _DecksDebugResponse:
+    """Return raw decks-table state for E2E diagnostic (LEXGEN-13-06).
+
+    Bypasses all list_decks filtering (is_active, type, pagination) so we can
+    see exactly what's in the table at the moment the approve flow queries it.
+    """
+    # COUNT(*)
+    from sqlalchemy import func as sa_func  # noqa: PLC0415
+
+    count_result = await db.execute(select(sa_func.count()).select_from(Deck))
+    total = count_result.scalar_one()
+
+    # Up to 50 rows — enough to see all test decks even under concurrent seeding
+    rows_result = await db.execute(
+        select(Deck.id, Deck.name_en, Deck.is_active, Deck.owner_id)
+        .order_by(Deck.name_en.asc())
+        .limit(50)
+    )
+    rows = rows_result.all()
+
+    return _DecksDebugResponse(
+        total=total,
+        vocab_decks=[
+            _DeckDebugItem(
+                id=str(r.id),
+                name_en=r.name_en,
+                is_active=r.is_active,
+                owner_id=str(r.owner_id) if r.owner_id is not None else None,
+            )
+            for r in rows
+        ],
+    )
+
+
+# END TEMP DIAGNOSTIC (LEXGEN-13-06)
+
+
 @router.post(
     "/lexgen-approve-deck",
     response_model=_ApproveDeckResponse,
