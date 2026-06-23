@@ -1,7 +1,8 @@
 """Unit tests for situation-related Pydantic schemas.
 
-Covers PictureUpdate (trio validation, empty-body, style_en independence)
-and PictureNested (new scene/style field exposure, backward-compat).
+Covers PictureUpdate (trio validation, empty-body, style_en independence),
+PictureNested (new scene/style field exposure, backward-compat), and
+SIT-27-02 domain field on SituationCreate / SituationUpdate.
 """
 
 from datetime import datetime, timezone
@@ -11,7 +12,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.db.models import PictureStatus
-from src.schemas.situation import PictureNested, PictureUpdate
+from src.schemas.situation import PictureNested, PictureUpdate, SituationCreate, SituationUpdate
 
 TRIO_ERROR = "scene_en, scene_el and scene_ru must all be provided or all omitted"
 EMPTY_BODY_ERROR = "At least one field must be provided for update"
@@ -143,3 +144,36 @@ def test_picture_nested_exposes_scene_and_style_columns():
     assert model_legacy.scene_el is None
     assert model_legacy.scene_ru is None
     assert model_legacy.style_en is None
+
+
+# ---------------------------------------------------------------------------
+# SIT-27-02: SituationCreate / SituationUpdate domain field (adversarial)
+# ---------------------------------------------------------------------------
+
+
+def test_situation_create_domain_round_trips():
+    """SIT-27-02 AC adversarial: SituationCreate accepts and preserves domain.
+
+    Verifies that the new optional field round-trips correctly through the
+    Pydantic create schema — guards against future refactors that silently
+    drop the field.
+    """
+    model = SituationCreate(
+        scenario_el="Στον καφέ",
+        scenario_en="At the coffee shop",
+        scenario_ru="В кофейне",
+        domain="everyday",
+    )
+    assert model.domain == "everyday"
+
+
+def test_situation_update_explicit_null_domain_rejected():
+    """SIT-27-02 AC adversarial: SituationUpdate rejects domain=null explicitly.
+
+    The domain field is set-only on update (no clear-to-null path).
+    Passing domain=None with an explicit value in the payload must raise a
+    ValidationError — guards against accidental null-clear of the label.
+    """
+    with pytest.raises(ValidationError) as exc_info:
+        SituationUpdate(domain=None)
+    assert "cannot be null" in str(exc_info.value)
