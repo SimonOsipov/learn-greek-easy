@@ -293,8 +293,8 @@
   },
   "announcements": {
     "title": "Announcements",
-    "kicker": "Admin · Announcements",
-    "sub": "Send notifications and updates to active learners.",
+    "kicker": "System · Announcements",
+    "sub": "In-app notifications sent to learners.",
     "breadcrumb": {
       "dashboard": "Admin",
       "current": "Announcements"
