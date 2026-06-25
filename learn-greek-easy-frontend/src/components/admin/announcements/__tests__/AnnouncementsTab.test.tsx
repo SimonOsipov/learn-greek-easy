@@ -528,11 +528,19 @@ describe('AnnouncementsTab', () => {
       },
     ];
 
-    /** Extract visible row ids in DOM order, excluding trash-button testids. */
+    /**
+     * Extract visible row ids in DOM order, excluding the per-row action-button
+     * testids (`announcement-row-details-*` and `announcement-row-trash-*`).
+     */
     function getRowIds() {
       return screen
         .getAllByTestId(/^announcement-row-/)
-        .filter((el) => !el.getAttribute('data-testid')!.startsWith('announcement-row-trash-'))
+        .filter((el) => {
+          const id = el.getAttribute('data-testid')!;
+          return (
+            !id.startsWith('announcement-row-details-') && !id.startsWith('announcement-row-trash-')
+          );
+        })
         .map((el) => el.getAttribute('data-testid')!.replace('announcement-row-', ''));
     }
 

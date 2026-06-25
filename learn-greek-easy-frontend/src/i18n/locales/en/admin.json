@@ -339,7 +339,8 @@
       "showing": "Showing {{shown}} of {{total}}"
     },
     "detail": {
-      "close": "Close"
+      "close": "Close",
+      "button": "Details"
     },
     "delete": {
       "button": "Delete",

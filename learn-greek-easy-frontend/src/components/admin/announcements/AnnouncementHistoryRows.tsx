@@ -10,7 +10,7 @@
 
 import React from 'react';
 
-import { ChevronLeft, ChevronRight, ExternalLink, Megaphone, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Megaphone, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -261,9 +261,23 @@ export const AnnouncementHistoryRows: React.FC<AnnouncementHistoryRowsProps> = (
                     size="icon"
                     onClick={(e) => {
                       e.stopPropagation();
+                      onOpenDetails(item.id);
+                    }}
+                    title={t('announcements.detail.button')}
+                    aria-label={t('announcements.detail.button')}
+                    data-testid={`announcement-row-details-${item.id}`}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
                       onRequestDelete(item.id);
                     }}
                     title={t('announcements.delete.button')}
+                    aria-label={t('announcements.delete.button')}
                     data-testid={`announcement-row-trash-${item.id}`}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />

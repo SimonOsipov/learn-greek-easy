@@ -198,6 +198,56 @@ describe('AnnouncementHistoryRows', () => {
     expect(onOpenDetails).toHaveBeenCalledWith('row-id-42');
   });
 
+  // ── Details (pencil) action ───────────────────────────────────────────────
+
+  it('renders a Details (pencil) action and a Delete (trash) action per row', () => {
+    const item = makeAnnouncement({ id: 'two-actions' });
+    render(<AnnouncementHistoryRows {...defaultProps} announcements={[item]} />);
+
+    expect(screen.getByTestId('announcement-row-details-two-actions')).toBeInTheDocument();
+    expect(screen.getByTestId('announcement-row-trash-two-actions')).toBeInTheDocument();
+  });
+
+  it('calls onOpenDetails (once) and NOT onRequestDelete when the pencil is clicked', async () => {
+    const user = userEvent.setup();
+    const onOpenDetails = vi.fn();
+    const onRequestDelete = vi.fn();
+    const item = makeAnnouncement({ id: 'pencil-id-9' });
+    render(
+      <AnnouncementHistoryRows
+        {...defaultProps}
+        announcements={[item]}
+        onOpenDetails={onOpenDetails}
+        onRequestDelete={onRequestDelete}
+      />
+    );
+
+    await user.click(screen.getByTestId('announcement-row-details-pencil-id-9'));
+
+    // stopPropagation means the row-click handler does NOT also fire — exactly once.
+    expect(onOpenDetails).toHaveBeenCalledTimes(1);
+    expect(onOpenDetails).toHaveBeenCalledWith('pencil-id-9');
+    expect(onRequestDelete).not.toHaveBeenCalled();
+  });
+
+  it('still opens details when the row itself is clicked (row-click redundancy kept)', async () => {
+    const user = userEvent.setup();
+    const onOpenDetails = vi.fn();
+    const item = makeAnnouncement({ id: 'row-click-id' });
+    render(
+      <AnnouncementHistoryRows
+        {...defaultProps}
+        announcements={[item]}
+        onOpenDetails={onOpenDetails}
+      />
+    );
+
+    await user.click(screen.getByTestId('announcement-row-row-click-id'));
+
+    expect(onOpenDetails).toHaveBeenCalledTimes(1);
+    expect(onOpenDetails).toHaveBeenCalledWith('row-click-id');
+  });
+
   // ── Trash icon stops propagation ──────────────────────────────────────────
 
   it('calls onRequestDelete and NOT onOpenDetails when trash icon is clicked', async () => {
