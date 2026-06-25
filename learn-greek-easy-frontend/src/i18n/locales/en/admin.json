@@ -335,6 +335,9 @@
       "empty": "No announcements yet",
       "emptyHint": "Create your first announcement above"
     },
+    "footer": {
+      "showing": "Showing {{shown}} of {{total}}"
+    },
     "detail": {
       "close": "Close"
     },
@@ -403,11 +406,11 @@
         }
       },
       "history": {
-        "colDate": "Date",
+        "colDate": "Sent",
         "colTitle": "Title",
         "colReach": "Reach",
         "colRead": "Read",
-        "colRate": "Rate",
+        "colRate": "Read rate",
         "linkAttached": "link attached"
       }
     },

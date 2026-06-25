@@ -1690,6 +1690,67 @@
      All colors via hsl(var(--token)); gated state via [aria-disabled="true"] only.
      ========================================================================== */
 
+  /* ── Contained list panel (ADMIN2-43 / AC-A, D11) ───────────────────────── */
+  /* Tab-scoped surface for the Announcements list. Re-skins the rows inside it
+     into flush table rows; the global .va-panel / .an-row used by other tabs
+     stay untouched (everything below is scoped under .an-panel). */
+  .an-panel {
+    background: hsl(var(--bg-2));
+    border: 1px solid hsl(var(--fg) / 0.08);
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  /* Inside the panel, the table rows lose their card skin and become flush
+     rows with a hairline divider + subtle hover (prototype an-row values). */
+  .an-panel .an-table {
+    gap: 0;
+  }
+  .an-panel .an-row {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    border-bottom: 1px solid hsl(var(--fg) / 0.04);
+    transition: background 0.12s;
+  }
+  .an-panel .an-row:hover {
+    transform: none;
+    box-shadow: none;
+    background: hsl(var(--primary) / 0.04);
+  }
+  .an-panel .an-row:last-child {
+    border-bottom: none;
+  }
+
+  /* Uppercase column-header row. Same grid template as .an-row (declared
+     directly here, NOT by also adding .an-row, so querySelectorAll('.an-row')
+     stays a clean data-row count — ADMIN2-43 lock). */
+  .an-panel .an-row-head {
+    display: grid;
+    grid-template-columns: 120px minmax(280px, 1.8fr) 90px 90px 180px 80px;
+    gap: 14px;
+    align-items: center;
+    padding: 10px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    color: hsl(var(--fg-3));
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: hsl(var(--fg) / 0.02);
+    border-top: 1px solid hsl(var(--fg) / 0.06);
+    border-bottom: 1px solid hsl(var(--fg) / 0.06);
+  }
+
+  /* Persistent list footer (Showing X of Y · pager) inside the panel. */
+  .an-panel-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    border-top: 1px solid hsl(var(--fg) / 0.06);
+  }
+
   /* ── History table ──────────────────────────────────────────────────────── */
   .an-table {
     display: flex;

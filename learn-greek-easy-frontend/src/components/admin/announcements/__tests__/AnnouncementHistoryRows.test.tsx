@@ -75,8 +75,37 @@ describe('AnnouncementHistoryRows', () => {
     render(<AnnouncementHistoryRows {...defaultProps} announcements={items} />);
 
     const rows = document.querySelectorAll('.an-row');
-    // 3 data rows (card-per-item; no table header row)
+    // 3 data rows; the column-header row has class `.an-row-head` (NOT `.an-row`),
+    // so it is excluded from this count.
     expect(rows).toHaveLength(3);
+  });
+
+  it('renders a single column-header row (.an-row-head, not .an-row)', () => {
+    const items = [
+      makeAnnouncement({ id: 'a1', title: 'First' }),
+      makeAnnouncement({ id: 'a2', title: 'Second' }),
+    ];
+    render(<AnnouncementHistoryRows {...defaultProps} announcements={items} />);
+
+    const headers = document.querySelectorAll('.an-row-head');
+    expect(headers).toHaveLength(1);
+    // The header row must NOT also carry .an-row (keeps the row-count selector clean).
+    expect(headers[0]).not.toHaveClass('an-row');
+    // Header labels are present.
+    expect(screen.getByText('Sent')).toBeInTheDocument();
+    expect(screen.getByText('Title')).toBeInTheDocument();
+    expect(screen.getByText('Reach')).toBeInTheDocument();
+    expect(screen.getByText('Read')).toBeInTheDocument();
+    expect(screen.getByText('Read rate')).toBeInTheDocument();
+  });
+
+  it('right-aligns the numeric column headers (Reach / Read / Read rate)', () => {
+    render(<AnnouncementHistoryRows {...defaultProps} />);
+
+    // The last three header cells are right-aligned to match their numeric columns.
+    expect(screen.getByText('Reach')).toHaveStyle({ textAlign: 'right' });
+    expect(screen.getByText('Read')).toHaveStyle({ textAlign: 'right' });
+    expect(screen.getByText('Read rate')).toHaveStyle({ textAlign: 'right' });
   });
 
   it('renders title text in each row', () => {
@@ -213,11 +242,26 @@ describe('AnnouncementHistoryRows', () => {
 
   // ── Pagination ────────────────────────────────────────────────────────────
 
-  it('does not render pagination when totalPages is 1', () => {
-    render(<AnnouncementHistoryRows {...defaultProps} totalPages={1} page={1} />);
+  it('renders the persistent footer at a single page', () => {
+    // AC-A: the footer is persistent — it renders even with a single page,
+    // showing "Showing X of Y" + the pager (Previous / Page N of M / Next).
+    render(
+      <AnnouncementHistoryRows
+        {...defaultProps}
+        announcements={[makeAnnouncement()]}
+        total={1}
+        totalPages={1}
+        page={1}
+      />
+    );
 
-    expect(screen.queryByTestId('pagination-previous')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('pagination-next')).not.toBeInTheDocument();
+    expect(screen.getByTestId('pagination-previous')).toBeInTheDocument();
+    expect(screen.getByTestId('pagination-next')).toBeInTheDocument();
+    expect(screen.getByText('Showing 1 of 1')).toBeInTheDocument();
+    expect(screen.getByText('Page 1 of 1')).toBeInTheDocument();
+    // Both pager buttons are disabled at a single page.
+    expect(screen.getByTestId('pagination-previous')).toBeDisabled();
+    expect(screen.getByTestId('pagination-next')).toBeDisabled();
   });
 
   it('calls onPageChange(page-1) when Previous is clicked', async () => {

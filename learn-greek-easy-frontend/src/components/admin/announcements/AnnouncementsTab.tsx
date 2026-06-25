@@ -40,6 +40,7 @@ export const AnnouncementsTab: React.FC = () => {
     announcements,
     page,
     totalPages,
+    total,
     isLoading,
     fetchAnnouncements,
     deleteAnnouncement,
@@ -122,13 +123,14 @@ export const AnnouncementsTab: React.FC = () => {
         onSortChange={setSort}
       />
 
-      {/* ── History rows ─────────────────────────────────────────────────── */}
-      <div className="va-panel">
+      {/* ── History rows (contained panel — ADMIN2-43 / AC-A) ────────────── */}
+      <div className="va-panel an-panel">
         <AnnouncementHistoryRows
           announcements={displayedAnnouncements}
           isLoading={isLoading}
           page={page}
           totalPages={totalPages}
+          total={total}
           onPageChange={(p) => setPage(p)}
           onOpenDetails={(id) =>
             setSearchParams((prev) => {

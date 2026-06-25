@@ -10,7 +10,7 @@
 
 import React from 'react';
 
-import { ExternalLink, Megaphone, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Megaphone, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -69,6 +69,9 @@ export interface AnnouncementHistoryRowsProps {
   onRequestDelete: (id: string) => void;
   searchQuery?: string;
   onClearSearch?: () => void;
+  /** Grand total of announcements (for "Showing X of Y"). Defaults to the
+   *  number of rows currently rendered when omitted. */
+  total?: number;
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -101,6 +104,24 @@ const SkeletonRows: React.FC = () => (
   </>
 );
 
+/**
+ * Column-header row for the contained list panel.
+ *
+ * Locked to `.an-row-head` ONLY (never also `.an-row`) so that
+ * `querySelectorAll('.an-row')` stays a clean count of data/skeleton rows.
+ * `.an-panel .an-row-head` declares its own grid template in index.css.
+ */
+const ColumnHeader: React.FC<{ t: (key: string) => string }> = ({ t }) => (
+  <div className="an-row-head" aria-hidden="true">
+    <div>{t('announcements.v2.history.colDate')}</div>
+    <div>{t('announcements.v2.history.colTitle')}</div>
+    <div style={{ textAlign: 'right' }}>{t('announcements.v2.history.colReach')}</div>
+    <div style={{ textAlign: 'right' }}>{t('announcements.v2.history.colRead')}</div>
+    <div style={{ textAlign: 'right' }}>{t('announcements.v2.history.colRate')}</div>
+    <div />
+  </div>
+);
+
 /** Empty-state illustration + helper text. */
 const EmptyState: React.FC<{ t: (key: string) => string }> = ({ t }) => (
   <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -124,8 +145,12 @@ export const AnnouncementHistoryRows: React.FC<AnnouncementHistoryRowsProps> = (
   onRequestDelete,
   searchQuery,
   onClearSearch,
+  total,
 }) => {
   const { t, i18n } = useTranslation('admin');
+
+  const shown = announcements.length;
+  const grandTotal = total ?? shown;
 
   const handlePrevious = () => {
     if (page > 1) onPageChange(page - 1);
@@ -163,7 +188,10 @@ export const AnnouncementHistoryRows: React.FC<AnnouncementHistoryRowsProps> = (
 
   return (
     <div>
-      {/* ── Card list (card-per-item, no table header) ── */}
+      {/* ── Column-header row (contained panel, ADMIN2-43) ── */}
+      <ColumnHeader t={t} />
+
+      {/* ── Flush table rows inside the contained panel ── */}
       <div className="an-table">
         {/* Loading skeletons */}
         {isLoading ? (
@@ -247,34 +275,39 @@ export const AnnouncementHistoryRows: React.FC<AnnouncementHistoryRowsProps> = (
         )}
       </div>
 
-      {/* ── Pagination ── */}
-      {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            {t('pagination.pageOf', { page, totalPages })}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePrevious}
-              disabled={page <= 1 || isLoading}
-              data-testid="pagination-previous"
-            >
-              {t('pagination.previous')}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNext}
-              disabled={page >= totalPages || isLoading}
-              data-testid="pagination-next"
-            >
-              {t('pagination.next')}
-            </Button>
-          </div>
+      {/* ── Persistent footer (renders even at a single page, ADMIN2-43 / AC-A) ── */}
+      <div className="an-panel-foot">
+        <span className="text-sm text-muted-foreground">
+          {t('announcements.footer.showing', { shown, total: grandTotal })}
+        </span>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrevious}
+            disabled={page <= 1 || isLoading}
+            aria-label={t('pagination.previous')}
+            data-testid="pagination-previous"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            {t('pagination.previous')}
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            {t('pagination.pageOf', { page, totalPages: Math.max(totalPages, 1) })}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleNext}
+            disabled={page >= totalPages || isLoading}
+            aria-label={t('pagination.next')}
+            data-testid="pagination-next"
+          >
+            {t('pagination.next')}
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
-      )}
+      </div>
     </div>
   );
 };
