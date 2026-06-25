@@ -149,8 +149,15 @@ test.describe('Admin Announcements Drawer (ANND-10)', () => {
     await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('announcements-tab')).toBeVisible({ timeout: 10_000 });
 
-    // Wait for at least one announcement row
-    const firstRow = page.locator('[data-testid^="announcement-row-"]').first();
+    // Wait for at least one announcement row.
+    // Exclude the per-row action buttons (`announcement-row-trash-<id>` and
+    // `announcement-row-details-<id>`) which share the `announcement-row-`
+    // prefix — without `:not(...)` each row would match three elements.
+    const firstRow = page
+      .locator(
+        '[data-testid^="announcement-row-"]:not([data-testid*="trash"]):not([data-testid*="details"])'
+      )
+      .first();
     await expect(firstRow).toBeVisible({ timeout: 10_000 });
 
     // Extract the UUID from the testid suffix
@@ -216,11 +223,11 @@ test.describe('Admin Announcements Drawer (ANND-10)', () => {
     await expect(page.getByTestId('announcements-tab')).toBeVisible({ timeout: 10_000 });
 
     // Wait for at least one row before capturing count.
-    // Exclude the per-row trash button (`announcement-row-trash-<id>`) which
-    // shares the `announcement-row-` prefix — without `:not(...)` each row
-    // would count twice.
+    // Exclude the per-row action buttons (`announcement-row-trash-<id>` and
+    // `announcement-row-details-<id>`) which share the `announcement-row-`
+    // prefix — without `:not(...)` each row would count three times.
     const rows = page.locator(
-      '[data-testid^="announcement-row-"]:not([data-testid*="trash"])'
+      '[data-testid^="announcement-row-"]:not([data-testid*="trash"]):not([data-testid*="details"])'
     );
     await expect(rows.first()).toBeVisible({ timeout: 10_000 });
 
@@ -256,8 +263,14 @@ test.describe('Admin Announcements Drawer (ANND-10)', () => {
     await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('announcements-tab')).toBeVisible({ timeout: 10_000 });
 
-    // Open the details drawer by clicking the first row
-    const firstRow = page.locator('[data-testid^="announcement-row-"]').first();
+    // Open the details drawer by clicking the first row.
+    // Exclude per-row action buttons (`...-trash-`/`...-details-`) that share
+    // the `announcement-row-` prefix so `.first()` resolves to the row itself.
+    const firstRow = page
+      .locator(
+        '[data-testid^="announcement-row-"]:not([data-testid*="trash"]):not([data-testid*="details"])'
+      )
+      .first();
     await expect(firstRow).toBeVisible({ timeout: 10_000 });
     await firstRow.locator('.an-title-col').click();
 
@@ -290,8 +303,14 @@ test.describe('Admin Announcements Drawer (ANND-10)', () => {
     await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('announcements-tab')).toBeVisible({ timeout: 10_000 });
 
-    // Open details drawer
-    const firstRow = page.locator('[data-testid^="announcement-row-"]').first();
+    // Open details drawer.
+    // Exclude per-row action buttons (`...-trash-`/`...-details-`) that share
+    // the `announcement-row-` prefix so `.first()` resolves to the row itself.
+    const firstRow = page
+      .locator(
+        '[data-testid^="announcement-row-"]:not([data-testid*="trash"]):not([data-testid*="details"])'
+      )
+      .first();
     await expect(firstRow).toBeVisible({ timeout: 10_000 });
     await firstRow.locator('.an-title-col').click();
 
@@ -301,10 +320,12 @@ test.describe('Admin Announcements Drawer (ANND-10)', () => {
     // Wait for announcement body to load (message block appears when loaded)
     await expect(detailsDrawer.locator('.an-detail-msg')).toBeVisible({ timeout: 10_000 });
 
-    // Removed sections must be absent (scoped to the details drawer)
+    // Removed sections must be absent (scoped to the details drawer).
+    // NOTE: the breadcrumb (`.drawer-breadcrumb`) is intentionally KEPT and
+    // redesigned by ADMIN2-43 (43-04), so it is NOT asserted absent here —
+    // the vitest test (AnnouncementDetailsDrawer.test.tsx) asserts it present.
     await expect(detailsDrawer.locator('.an-progress-row')).toHaveCount(0);
     await expect(detailsDrawer.locator('.an-timeline')).toHaveCount(0);
-    await expect(detailsDrawer.locator('.drawer-bcrumb')).toHaveCount(0);
     await expect(detailsDrawer.getByTestId('announcement-details-resend-button')).toHaveCount(0);
 
     // Exactly 2 reach stat tiles
