@@ -139,6 +139,15 @@ describe('AnnouncementDetailsDrawer', () => {
     expect(skeletons.length).toBeGreaterThan(0);
   });
 
+  it('skeleton renders exactly 2 .an-stat tiles, matching the real 2-tile reach view (D9)', () => {
+    setupStore(buildStoreState({ isLoadingDetail: true }));
+
+    render(<AnnouncementDetailsDrawer {...defaultProps} />);
+
+    const statTiles = document.querySelectorAll('.an-detail-stats .an-stat');
+    expect(statTiles).toHaveLength(2);
+  });
+
   it('does not render announcement body content while loading', () => {
     setupStore(buildStoreState({ isLoadingDetail: true }));
 
@@ -238,6 +247,47 @@ describe('AnnouncementDetailsDrawer', () => {
     expect(wrapper!.querySelector('.drawer-meta')).toBeNull();
   });
 
+  // ── Breadcrumb + "% read" badge (AC-E / D13/D14) ──────────────────────────
+
+  it('breadcrumb reads "Announcements · sent {date}" (AC-E / D14)', () => {
+    const ann = makeAnnouncement();
+    setupStore(buildStoreState({ selectedAnnouncement: ann }));
+    render(<AnnouncementDetailsDrawer {...defaultProps} />);
+
+    const breadcrumb = document.querySelector('.drawer-breadcrumb');
+    expect(breadcrumb).not.toBeNull();
+    expect(breadcrumb!.textContent).toMatch(/^Announcements · sent /);
+    // Must NOT use the old "Announcement History" copy
+    expect(breadcrumb!.textContent).not.toContain('History');
+  });
+
+  // supersedes ADMIN2-33-02 absence guard (AC-E/D13): the "% read" badge is now required
+  it('renders a "{pct}% read" header badge with blue tone when readPct >= 20 (AC-E / D13)', () => {
+    // 80 / 200 = 40% → >= 20 → blue
+    const ann = makeAnnouncement({ read_count: 80, total_recipients: 200 });
+    setupStore(buildStoreState({ selectedAnnouncement: ann }));
+    render(<AnnouncementDetailsDrawer {...defaultProps} />);
+
+    const badge = screen.getByText('40% read');
+    expect(badge).toBeInTheDocument();
+    expect(badge.classList.contains('b-blue')).toBe(true);
+    // It lives inside the header row, next to Delivered
+    const headRow = document.querySelector('.drawer-head-row');
+    expect(headRow!.contains(badge)).toBe(true);
+    expect(headRow!.textContent).toContain('Delivered');
+  });
+
+  it('renders a "{pct}% read" header badge with gray tone when readPct < 20 (AC-E / D13)', () => {
+    // 10 / 200 = 5% → < 20 → gray
+    const ann = makeAnnouncement({ read_count: 10, total_recipients: 200 });
+    setupStore(buildStoreState({ selectedAnnouncement: ann }));
+    render(<AnnouncementDetailsDrawer {...defaultProps} />);
+
+    const badge = screen.getByText('5% read');
+    expect(badge).toBeInTheDocument();
+    expect(badge.classList.contains('b-gray')).toBe(true);
+  });
+
   // ── Footer button classlists + icons (ANDD-04) ────────────────────────────
 
   it('renders Delete button with destructive variant and no icon', () => {
@@ -299,20 +349,6 @@ describe('AnnouncementDetailsDrawer', () => {
       setupStore(buildStoreState({ selectedAnnouncement: ann }));
       render(<AnnouncementDetailsDrawer {...defaultProps} />);
       expect(document.querySelector('.drawer-bcrumb')).toBeNull();
-    });
-
-    // ADMIN2-33-02 regression guard: the "33% read" pill must not reappear
-    it('read percentage pill is absent from the header (ADMIN2-33-02)', () => {
-      const ann = makeAnnouncement({ read_count: 80, total_recipients: 200 });
-      setupStore(buildStoreState({ selectedAnnouncement: ann }));
-      render(<AnnouncementDetailsDrawer {...defaultProps} />);
-
-      // The removed <Badge> rendered text like "40% read" — assert it is gone
-      expect(screen.queryByText(/% .*read/i)).toBeNull();
-      // Also verify no badge with a "% " prefix exists anywhere in the header
-      const headRow = document.querySelector('.drawer-head-row');
-      expect(headRow).not.toBeNull();
-      expect(headRow!.textContent).not.toMatch(/\d+%/);
     });
 
     // ADMIN2-33-02 regression guard: Delivered badge must still render inline

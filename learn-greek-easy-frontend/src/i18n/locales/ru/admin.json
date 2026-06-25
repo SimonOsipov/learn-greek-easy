@@ -372,7 +372,9 @@
         "recipients": "получателей",
         "readBy": "Прочитано",
         "unread": "непрочитано",
-        "announcementLabel": "Объявление"
+        "announcementLabel": "Объявление",
+        "breadcrumb": "Объявления",
+        "readBadge": "{{pct}}% прочитано"
       },
       "preview": {
         "label": "Предпросмотр уведомления",

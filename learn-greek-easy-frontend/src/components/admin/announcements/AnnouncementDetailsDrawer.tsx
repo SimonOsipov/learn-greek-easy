@@ -53,11 +53,14 @@ function DetailSkeleton() {
         <Skeleton className="mb-2 h-3 w-16" />
         <Skeleton className="h-32 w-full" />
       </div>
-      {/* Stat tiles skeleton */}
+      {/* Stat tiles skeleton — 2 tiles (Sent to / Read by) to match the real 2-tile reach view (D9) */}
       <div className="an-detail-stats">
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-20 w-full" />
+        <div className="an-stat">
+          <Skeleton className="h-20 w-full" />
+        </div>
+        <div className="an-stat">
+          <Skeleton className="h-20 w-full" />
+        </div>
       </div>
       {/* Progress bar skeleton */}
       <div>
@@ -124,13 +127,18 @@ export function AnnouncementDetailsDrawer({
         <SidePanel.Header>
           <div className="drawer-head-content">
             <div className="drawer-breadcrumb">
-              {t('announcements.history.title')}
+              {t('announcements.v2.details.breadcrumb')}
               {announcement ? ` · ${t('announcements.v2.details.sent')} ${sentDate}` : ''}
             </div>
             <div className="drawer-head-row">
               <h2 className="drawer-title">{announcement ? announcement.title : ''}</h2>
               {announcement && (
-                <Badge tone="green">{t('announcements.v2.details.delivered')}</Badge>
+                <>
+                  <Badge tone="green">{t('announcements.v2.details.delivered')}</Badge>
+                  <Badge tone={readPct >= 20 ? 'blue' : 'gray'}>
+                    {t('announcements.v2.details.readBadge', { pct: readPct })}
+                  </Badge>
+                </>
               )}
             </div>
           </div>

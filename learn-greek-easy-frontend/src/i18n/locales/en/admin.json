@@ -360,7 +360,9 @@
         "recipients": "recipients",
         "readBy": "Read by",
         "unread": "unread",
-        "announcementLabel": "Announcement"
+        "announcementLabel": "Announcement",
+        "breadcrumb": "Announcements",
+        "readBadge": "{{pct}}% read"
       },
       "preview": {
         "label": "Notification preview",
