@@ -34,7 +34,7 @@ import { useAdminAnnouncementStore } from '@/stores/adminAnnouncementStore';
 import { useAdminTabCountsStore } from '@/stores/adminTabCountsStore';
 
 import { AnnouncementCreateForm, useAnnouncementCreateForm } from './AnnouncementCreateForm';
-import { AnnouncementJsonInput } from './AnnouncementJsonInput';
+import { AnnouncementJsonView } from './AnnouncementJsonView';
 import { AnnouncementNotificationPreview } from './AnnouncementNotificationPreview';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -61,11 +61,10 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
   const [tab, setTab] = useState<'form' | 'json'>('form');
   const [showPreview, setShowPreview] = useState(true);
 
-  // ── Reset key for JSON input ─────────────────────────────────────────────
-  const [formKey, setFormKey] = useState(0);
-
-  // ── Dirty-state refs ─────────────────────────────────────────────────────
-  const jsonDirtyRef = useRef(false);
+  // ── Dirty-state ref ──────────────────────────────────────────────────────
+  // JSON mode is now a read-only serialized view of the live form values
+  // (ADMIN2-43-06, D15) — it has no editable state, so only the form can be
+  // dirty.
   const formDirtyRef = useRef(false);
 
   // Track form dirty via react-hook-form
@@ -73,22 +72,18 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
     formDirtyRef.current = form.formState.isDirty;
   }, [form.formState.isDirty]);
 
-  // ── Pending state for ConfirmDialogs ─────────────────────────────────────
-  const [pendingMode, setPendingMode] = useState<'form' | 'json' | null>(null);
+  // ── Pending state for the close-guard ConfirmDialog ──────────────────────
   const [pendingClose, setPendingClose] = useState(false);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  const isDirty = useCallback(() => jsonDirtyRef.current || formDirtyRef.current, []);
+  const isDirty = useCallback(() => formDirtyRef.current, []);
 
   /** Reset all ephemeral state after successful close or submit */
   const resetAndClose = useCallback(() => {
     form.reset();
     setTab('form');
-    setFormKey((k) => k + 1);
-    jsonDirtyRef.current = false;
     formDirtyRef.current = false;
-    setPendingMode(null);
     setPendingClose(false);
     onClose();
   }, [form, onClose]);
@@ -112,27 +107,15 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
   );
 
   // ── Tab switch ────────────────────────────────────────────────────────────
+  // JSON mode is a read-only serialized view of the live form values (D15), so
+  // switching tabs in either direction is non-destructive — no confirm needed.
+  // The old mode-switch ConfirmDialog only ever guarded the now-removed JSON
+  // paste path; it is unreachable with a read-only view and was removed
+  // (ADMIN2-43-06). The dirty close/URL guards below still apply.
 
   const handleTabSwitch = (newTab: 'form' | 'json') => {
     if (newTab === tab) return;
-    const activeTabDirty = tab === 'json' ? jsonDirtyRef.current : formDirtyRef.current;
-    if (activeTabDirty) {
-      setPendingMode(newTab);
-    } else {
-      setTab(newTab);
-      setFormKey((k) => k + 1);
-    }
-  };
-
-  const handleConfirmModeSwitch = () => {
-    if (pendingMode) {
-      setTab(pendingMode);
-      setFormKey((k) => k + 1);
-      jsonDirtyRef.current = false;
-      formDirtyRef.current = false;
-      form.reset();
-      setPendingMode(null);
-    }
+    setTab(newTab);
   };
 
   // ── URL-transition dirty guard ────────────────────────────────────────────
@@ -161,11 +144,6 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
       setPendingClose(true);
     }
   }, [searchParams, isDirty, setSearchParams]);
-
-  // ── JSON dirty callback ───────────────────────────────────────────────────
-  const onJsonDirty = useCallback((dirty: boolean) => {
-    jsonDirtyRef.current = dirty;
-  }, []);
 
   // ── Submit ────────────────────────────────────────────────────────────────
   const onSubmit = form.handleSubmit(async (values) => {
@@ -373,11 +351,10 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
                   </div>
                 </>
               ) : (
-                <AnnouncementJsonInput
-                  key={formKey}
-                  onPreview={() => {}}
-                  resetKey={formKey}
-                  onDirtyChange={onJsonDirty}
+                <AnnouncementJsonView
+                  title={title ?? ''}
+                  message={message ?? ''}
+                  linkUrl={linkUrl ?? ''}
                 />
               )}
             </div>
@@ -463,18 +440,6 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
           </div>
         </SidePanel.Footer>
       </SidePanel>
-
-      {/* Mode-switch confirm dialog */}
-      <ConfirmDialog
-        open={pendingMode !== null}
-        onOpenChange={(o) => {
-          if (!o) setPendingMode(null);
-        }}
-        title={t('announcements.create.switchModeConfirmTitle')}
-        description={t('announcements.create.switchModeConfirm')}
-        onConfirm={handleConfirmModeSwitch}
-        onCancel={() => setPendingMode(null)}
-      />
 
       {/* Close guard confirm dialog */}
       <ConfirmDialog

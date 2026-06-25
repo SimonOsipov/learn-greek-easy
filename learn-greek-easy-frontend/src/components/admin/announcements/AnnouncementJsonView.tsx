@@ -1,18 +1,23 @@
-// STUB — ADMIN2-43-06 Mode A; executor replaces with real impl
-//
-// Assumed prop signature (written against by the RED tests):
-//
-//   interface AnnouncementJsonViewProps {
-//     title: string;
-//     message: string;
-//     linkUrl: string;
-//   }
-//
-// The real component must:
-// - Render a monospaced, readOnly shadcn <Textarea>
-// - Its value is JSON.stringify({ title, message, link_url }, null, 2)
-//   where link_url is always emitted (empty string when linkUrl is blank)
-// - No Preview button; no parse/validate path
+// src/components/admin/announcements/AnnouncementJsonView.tsx
+
+/**
+ * AnnouncementJsonView
+ *
+ * Read-only "Raw payload" view (CD "sent verbatim") — replaces the old
+ * paste/validate AnnouncementJsonInput (ADMIN2-43-06, D8/D15).
+ *
+ * Renders a monospaced, readOnly Textarea whose value is the serialized
+ * payload of the live compose-form values:
+ *   JSON.stringify({ title, message, link_url }, null, 2)
+ *
+ * Locked convention (prototype.jsx:108 — `link_url: link`, `link` defaults to
+ * ""): `link_url` is ALWAYS emitted — an empty string when blank, never
+ * omitted, never null. No Preview button; no parse/validate/submit path.
+ */
+
+import { useTranslation } from 'react-i18next';
+
+import { Textarea } from '@/components/ui/textarea';
 
 interface AnnouncementJsonViewProps {
   title: string;
@@ -20,9 +25,23 @@ interface AnnouncementJsonViewProps {
   linkUrl: string;
 }
 
-export function AnnouncementJsonView(_props: AnnouncementJsonViewProps) {
-  // Stub: renders an empty, non-readOnly textarea with no value.
-  // - Specs 1/2/4 fail: JSON.parse("") throws — textarea has no serialized payload.
-  // - Spec 3 fails: textarea lacks the readOnly attribute.
-  return <textarea data-testid="announcement-json-view-textarea" />;
+export function AnnouncementJsonView({ title, message, linkUrl }: AnnouncementJsonViewProps) {
+  const { t } = useTranslation('admin');
+
+  const payload = JSON.stringify({ title, message, link_url: linkUrl }, null, 2);
+
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-foreground">
+        {t('announcements.create.jsonRawLabel')}
+      </label>
+      <Textarea
+        value={payload}
+        readOnly
+        className="min-h-[280px] font-mono text-sm"
+        data-testid="announcement-json-view-textarea"
+      />
+      <p className="text-sm text-muted-foreground">{t('announcements.create.jsonRawHint')}</p>
+    </div>
+  );
 }

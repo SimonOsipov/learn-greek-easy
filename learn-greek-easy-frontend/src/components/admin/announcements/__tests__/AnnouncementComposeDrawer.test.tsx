@@ -114,14 +114,41 @@ describe('AnnouncementComposeDrawer', () => {
 
   // ── JSON mode render ──────────────────────────────────────────────────────
 
-  it('renders JSON textarea when JSON tab is selected', async () => {
+  it('renders the read-only Raw payload view when JSON tab is selected', async () => {
     const user = userEvent.setup();
     renderDrawer();
 
     await user.click(screen.getByTestId('announcement-compose-tab-json'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('announcement-json-textarea')).toBeInTheDocument();
+      expect(screen.getByTestId('announcement-json-view-textarea')).toBeInTheDocument();
+    });
+    // Read-only view (ADMIN2-43-06, D15) — no Preview/validate button
+    expect(screen.getByTestId('announcement-json-view-textarea')).toHaveAttribute('readonly');
+  });
+
+  it('JSON Raw payload reflects the live form values', async () => {
+    const user = userEvent.setup();
+    renderDrawer();
+
+    // Type into the form, then switch to JSON — no "Switch mode?" dialog, the
+    // read-only payload mirrors the typed values (ADMIN2-43-06, D15).
+    await user.type(screen.getByTestId('announcement-title-input'), 'Live Title');
+    await user.type(screen.getByTestId('announcement-message-input'), 'Live Body');
+
+    await user.click(screen.getByTestId('announcement-compose-tab-json'));
+
+    const textarea = (await screen.findByTestId(
+      'announcement-json-view-textarea'
+    )) as HTMLTextAreaElement;
+
+    expect(screen.queryByText('Switch mode?')).not.toBeInTheDocument();
+
+    const parsed = JSON.parse(textarea.value) as Record<string, unknown>;
+    expect(parsed).toStrictEqual({
+      title: 'Live Title',
+      message: 'Live Body',
+      link_url: '',
     });
   });
 
@@ -209,42 +236,46 @@ describe('AnnouncementComposeDrawer', () => {
     expect(screen.getByTestId('announcement-compose-send-button')).toBeDisabled();
   });
 
-  // ── Mode-switch dirty guard ───────────────────────────────────────────────
+  // ── Mode switch (read-only JSON — non-destructive, no confirm) ────────────
+  // ADMIN2-43-06/D15: JSON mode is a read-only view of the live form values, so
+  // switching tabs never wipes the form and never raises the old "Switch mode?"
+  // confirm (that guard only protected the now-removed JSON paste path).
 
-  it('shows ConfirmDialog when switching to JSON tab with dirty form', async () => {
+  it('switches to JSON tab with a dirty form WITHOUT a "Switch mode?" confirm', async () => {
     const user = userEvent.setup();
     renderDrawer();
 
     // Make form dirty
     await user.type(screen.getByTestId('announcement-title-input'), 'Some text');
 
-    // Click JSON tab
+    // Click JSON tab — switches immediately, no confirm dialog
     await user.click(screen.getByTestId('announcement-compose-tab-json'));
 
     await waitFor(() => {
-      expect(screen.getByText('Switch mode?')).toBeInTheDocument();
+      expect(screen.getByTestId('announcement-json-view-textarea')).toBeInTheDocument();
     });
+    expect(screen.queryByText('Switch mode?')).not.toBeInTheDocument();
+    expect(screen.getByTestId('announcement-compose-tab-json')).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
   });
 
-  it('stays on Form tab when Cancel is clicked in mode-switch dialog', async () => {
+  it('switching JSON → form preserves the typed form values (no wipe)', async () => {
     const user = userEvent.setup();
     renderDrawer();
 
-    await user.type(screen.getByTestId('announcement-title-input'), 'Some text');
+    await user.type(screen.getByTestId('announcement-title-input'), 'Persisted Title');
+
+    // Form → JSON, then back to Form
     await user.click(screen.getByTestId('announcement-compose-tab-json'));
-
-    await waitFor(() => screen.getByText('Switch mode?'));
-
-    // Click Cancel in the dialog
-    await user.click(screen.getByRole('button', { name: /cancel/i }));
+    await screen.findByTestId('announcement-json-view-textarea');
+    await user.click(screen.getByTestId('announcement-compose-tab-form'));
 
     await waitFor(() => {
-      // JSON tab should NOT be active
-      const jsonTab = screen.getByTestId('announcement-compose-tab-json');
-      expect(jsonTab).not.toHaveAttribute('aria-selected', 'true');
-      // Form inputs still present
-      expect(screen.getByTestId('announcement-title-input')).toBeInTheDocument();
+      expect(screen.getByTestId('announcement-title-input')).toHaveValue('Persisted Title');
     });
+    expect(screen.queryByText('Switch mode?')).not.toBeInTheDocument();
   });
 
   // ── Close dirty guard ─────────────────────────────────────────────────────
