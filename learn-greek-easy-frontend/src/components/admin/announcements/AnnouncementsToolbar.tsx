@@ -70,10 +70,11 @@ export const AnnouncementsToolbar: React.FC<AnnouncementsToolbarProps> = ({
         )}
       </div>
 
-      {/* Sort select */}
+      {/* Sort select — trigger restyled to CD's glass-button look (D3); all four
+          options + the a11y label are retained, so sort stays fully functional. */}
       <Select value={sort} onValueChange={(v) => onSortChange(v as SortKey)}>
         <SelectTrigger
-          className="w-[180px]"
+          className="w-[180px] border-line-2 bg-glass backdrop-blur-md transition-colors hover:bg-card"
           data-testid="announcements-toolbar-sort"
           aria-label={t('announcements.toolbar.sortLabel')}
         >

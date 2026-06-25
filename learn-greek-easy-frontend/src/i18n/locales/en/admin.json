@@ -293,20 +293,14 @@
   },
   "announcements": {
     "title": "Announcements",
-    "kicker": "Admin · Announcements",
-    "sub": "Send notifications and updates to active learners.",
+    "kicker": "System · Announcements",
+    "sub": "In-app notifications sent to learners.",
     "breadcrumb": {
       "dashboard": "Admin",
       "current": "Announcements"
     },
     "actions": {
       "new": "New announcement"
-    },
-    "stats": {
-      "total": "Total Announcements",
-      "avgReadRate": "Avg read rate",
-      "allTime": "All time",
-      "acrossAll": "Across all announcements"
     },
     "create": {
       "titleLabel": "Title",
@@ -320,17 +314,8 @@
       "preview": "Preview",
       "success": "Announcement sent successfully",
       "error": "Failed to send announcement",
-      "jsonHint": "Paste a JSON object with title, message, and optional link_url.",
-      "jsonPlaceholder": "{\n  \"title\": \"Your announcement title\",\n  \"message\": \"Your announcement message\",\n  \"link_url\": \"https://example.com (optional)\"\n}",
-      "switchModeConfirmTitle": "Switch mode?",
-      "switchModeConfirm": "Your current input will be cleared. Continue?",
-      "jsonInvalidJson": "Invalid JSON. Please check your syntax.",
-      "jsonTitleRequired": "Title is required.",
-      "jsonTitleTooLong": "Title must be 100 characters or less.",
-      "jsonMessageRequired": "Message is required.",
-      "jsonMessageTooLong": "Message must be 500 characters or less.",
-      "jsonInvalidUrl": "Link URL must be a valid URL.",
-      "jsonUrlTooLong": "Link URL must be 500 characters or less.",
+      "jsonRawLabel": "Raw payload",
+      "jsonRawHint": "For testing — sent verbatim to the notifications service",
       "formTab": "Form",
       "jsonTab": "JSON",
       "unsavedTitle": "Discard changes?",
@@ -341,8 +326,12 @@
       "empty": "No announcements yet",
       "emptyHint": "Create your first announcement above"
     },
+    "footer": {
+      "showing": "Showing {{shown}} of {{total}}"
+    },
     "detail": {
-      "close": "Close"
+      "close": "Close",
+      "button": "Details"
     },
     "delete": {
       "button": "Delete",
@@ -362,7 +351,9 @@
         "recipients": "recipients",
         "readBy": "Read by",
         "unread": "unread",
-        "announcementLabel": "Announcement"
+        "announcementLabel": "Announcement",
+        "breadcrumb": "Announcements",
+        "readBadge": "{{pct}}% read"
       },
       "preview": {
         "label": "Notification preview",
@@ -382,8 +373,8 @@
         "breadcrumb": "Announcements · New",
         "title": "Compose announcement",
         "draftBadge": "Draft",
-        "helper": "Fill in the details below to create your announcement.",
-        "showPreview": "Show preview",
+        "helper": "Will be delivered as an in-app notification",
+        "showPreview": "Preview",
         "hidePreview": "Hide preview",
         "audience": {
           "label": "Audience",
@@ -397,8 +388,8 @@
           "scheduleLater": "Schedule for later"
         },
         "footer": {
-          "ready": "Ready to send",
-          "needsTitleAndMessage": "Needs title and message",
+          "ready": "Ready",
+          "needsTitleAndMessage": "Needs title & message",
           "helperPrefix": "Sending to",
           "helperBold": "all active learners",
           "helperSuffix": "· immediate",
@@ -409,11 +400,11 @@
         }
       },
       "history": {
-        "colDate": "Date",
+        "colDate": "Sent",
         "colTitle": "Title",
         "colReach": "Reach",
         "colRead": "Read",
-        "colRate": "Rate",
+        "colRate": "Read rate",
         "linkAttached": "link attached"
       }
     },

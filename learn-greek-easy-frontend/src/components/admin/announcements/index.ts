@@ -11,7 +11,7 @@ export {
   truncateMessage,
   type AnnouncementHistoryRowsProps,
 } from './AnnouncementHistoryRows';
-export { AnnouncementJsonInput } from './AnnouncementJsonInput';
+export { AnnouncementJsonView } from './AnnouncementJsonView';
 export { AnnouncementsTab } from './AnnouncementsTab';
 export { AnnouncementNotificationPreview } from './AnnouncementNotificationPreview';
 export { AnnouncementComposeDrawer } from './AnnouncementComposeDrawer';

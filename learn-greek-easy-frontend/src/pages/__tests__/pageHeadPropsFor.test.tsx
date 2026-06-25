@@ -68,8 +68,8 @@ const STRINGS: Record<string, string> = {
   'changelog.actions.newEntry': 'New entry',
   // announcements
   'announcements.title': 'Announcements',
-  'announcements.kicker': 'Admin · Announcements',
-  'announcements.sub': 'Send notifications and updates to active learners.',
+  'announcements.kicker': 'System · Announcements',
+  'announcements.sub': 'In-app notifications sent to learners.',
   'announcements.breadcrumb.dashboard': 'Admin',
   'announcements.breadcrumb.current': 'Announcements',
   'announcements.actions.new': 'New announcement',

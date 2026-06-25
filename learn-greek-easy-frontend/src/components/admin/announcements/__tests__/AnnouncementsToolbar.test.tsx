@@ -107,6 +107,26 @@ describe('AnnouncementsToolbar', () => {
     expect(onQueryChange).toHaveBeenCalledWith('');
   });
 
+  it('sort trigger keeps its a11y label (stays a functional control, not decorative)', () => {
+    render(
+      <AnnouncementsToolbar query="" onQueryChange={vi.fn()} sort="newest" onSortChange={vi.fn()} />
+    );
+
+    // The trigger carries the i18n'd Sort label — proves the 4-option Select is
+    // retained as a functional control (D3), not reduced to a decorative button.
+    expect(screen.getByTestId('announcements-toolbar-sort')).toHaveAttribute('aria-label', 'Sort');
+  });
+
+  it('sort trigger is restyled to the CD glass-button look (token-based)', () => {
+    render(
+      <AnnouncementsToolbar query="" onQueryChange={vi.fn()} sort="newest" onSortChange={vi.fn()} />
+    );
+
+    const trigger = screen.getByTestId('announcements-toolbar-sort');
+    expect(trigger).toHaveClass('bg-glass');
+    expect(trigger).toHaveClass('border-line-2');
+  });
+
   it('toolbar does not render visible SegControl group labels', () => {
     const { container } = render(
       <AnnouncementsToolbar query="" onQueryChange={vi.fn()} sort="newest" onSortChange={vi.fn()} />

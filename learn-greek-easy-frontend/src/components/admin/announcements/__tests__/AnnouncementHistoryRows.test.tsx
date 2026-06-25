@@ -75,8 +75,37 @@ describe('AnnouncementHistoryRows', () => {
     render(<AnnouncementHistoryRows {...defaultProps} announcements={items} />);
 
     const rows = document.querySelectorAll('.an-row');
-    // 3 data rows (card-per-item; no table header row)
+    // 3 data rows; the column-header row has class `.an-row-head` (NOT `.an-row`),
+    // so it is excluded from this count.
     expect(rows).toHaveLength(3);
+  });
+
+  it('renders a single column-header row (.an-row-head, not .an-row)', () => {
+    const items = [
+      makeAnnouncement({ id: 'a1', title: 'First' }),
+      makeAnnouncement({ id: 'a2', title: 'Second' }),
+    ];
+    render(<AnnouncementHistoryRows {...defaultProps} announcements={items} />);
+
+    const headers = document.querySelectorAll('.an-row-head');
+    expect(headers).toHaveLength(1);
+    // The header row must NOT also carry .an-row (keeps the row-count selector clean).
+    expect(headers[0]).not.toHaveClass('an-row');
+    // Header labels are present.
+    expect(screen.getByText('Sent')).toBeInTheDocument();
+    expect(screen.getByText('Title')).toBeInTheDocument();
+    expect(screen.getByText('Reach')).toBeInTheDocument();
+    expect(screen.getByText('Read')).toBeInTheDocument();
+    expect(screen.getByText('Read rate')).toBeInTheDocument();
+  });
+
+  it('right-aligns the numeric column headers (Reach / Read / Read rate)', () => {
+    render(<AnnouncementHistoryRows {...defaultProps} />);
+
+    // The last three header cells are right-aligned to match their numeric columns.
+    expect(screen.getByText('Reach')).toHaveStyle({ textAlign: 'right' });
+    expect(screen.getByText('Read')).toHaveStyle({ textAlign: 'right' });
+    expect(screen.getByText('Read rate')).toHaveStyle({ textAlign: 'right' });
   });
 
   it('renders title text in each row', () => {
@@ -169,6 +198,56 @@ describe('AnnouncementHistoryRows', () => {
     expect(onOpenDetails).toHaveBeenCalledWith('row-id-42');
   });
 
+  // ── Details (pencil) action ───────────────────────────────────────────────
+
+  it('renders a Details (pencil) action and a Delete (trash) action per row', () => {
+    const item = makeAnnouncement({ id: 'two-actions' });
+    render(<AnnouncementHistoryRows {...defaultProps} announcements={[item]} />);
+
+    expect(screen.getByTestId('announcement-row-details-two-actions')).toBeInTheDocument();
+    expect(screen.getByTestId('announcement-row-trash-two-actions')).toBeInTheDocument();
+  });
+
+  it('calls onOpenDetails (once) and NOT onRequestDelete when the pencil is clicked', async () => {
+    const user = userEvent.setup();
+    const onOpenDetails = vi.fn();
+    const onRequestDelete = vi.fn();
+    const item = makeAnnouncement({ id: 'pencil-id-9' });
+    render(
+      <AnnouncementHistoryRows
+        {...defaultProps}
+        announcements={[item]}
+        onOpenDetails={onOpenDetails}
+        onRequestDelete={onRequestDelete}
+      />
+    );
+
+    await user.click(screen.getByTestId('announcement-row-details-pencil-id-9'));
+
+    // stopPropagation means the row-click handler does NOT also fire — exactly once.
+    expect(onOpenDetails).toHaveBeenCalledTimes(1);
+    expect(onOpenDetails).toHaveBeenCalledWith('pencil-id-9');
+    expect(onRequestDelete).not.toHaveBeenCalled();
+  });
+
+  it('still opens details when the row itself is clicked (row-click redundancy kept)', async () => {
+    const user = userEvent.setup();
+    const onOpenDetails = vi.fn();
+    const item = makeAnnouncement({ id: 'row-click-id' });
+    render(
+      <AnnouncementHistoryRows
+        {...defaultProps}
+        announcements={[item]}
+        onOpenDetails={onOpenDetails}
+      />
+    );
+
+    await user.click(screen.getByTestId('announcement-row-row-click-id'));
+
+    expect(onOpenDetails).toHaveBeenCalledTimes(1);
+    expect(onOpenDetails).toHaveBeenCalledWith('row-click-id');
+  });
+
   // ── Trash icon stops propagation ──────────────────────────────────────────
 
   it('calls onRequestDelete and NOT onOpenDetails when trash icon is clicked', async () => {
@@ -213,11 +292,26 @@ describe('AnnouncementHistoryRows', () => {
 
   // ── Pagination ────────────────────────────────────────────────────────────
 
-  it('does not render pagination when totalPages is 1', () => {
-    render(<AnnouncementHistoryRows {...defaultProps} totalPages={1} page={1} />);
+  it('renders the persistent footer at a single page', () => {
+    // AC-A: the footer is persistent — it renders even with a single page,
+    // showing "Showing X of Y" + the pager (Previous / Page N of M / Next).
+    render(
+      <AnnouncementHistoryRows
+        {...defaultProps}
+        announcements={[makeAnnouncement()]}
+        total={1}
+        totalPages={1}
+        page={1}
+      />
+    );
 
-    expect(screen.queryByTestId('pagination-previous')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('pagination-next')).not.toBeInTheDocument();
+    expect(screen.getByTestId('pagination-previous')).toBeInTheDocument();
+    expect(screen.getByTestId('pagination-next')).toBeInTheDocument();
+    expect(screen.getByText('Showing 1 of 1')).toBeInTheDocument();
+    expect(screen.getByText('Page 1 of 1')).toBeInTheDocument();
+    // Both pager buttons are disabled at a single page.
+    expect(screen.getByTestId('pagination-previous')).toBeDisabled();
+    expect(screen.getByTestId('pagination-next')).toBeDisabled();
   });
 
   it('calls onPageChange(page-1) when Previous is clicked', async () => {
