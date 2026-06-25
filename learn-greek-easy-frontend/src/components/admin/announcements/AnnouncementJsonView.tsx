@@ -17,6 +17,7 @@
 
 import { useTranslation } from 'react-i18next';
 
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
 interface AnnouncementJsonViewProps {
@@ -32,10 +33,9 @@ export function AnnouncementJsonView({ title, message, linkUrl }: AnnouncementJs
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-foreground">
-        {t('announcements.create.jsonRawLabel')}
-      </label>
+      <Label htmlFor="announcement-json-view">{t('announcements.create.jsonRawLabel')}</Label>
       <Textarea
+        id="announcement-json-view"
         value={payload}
         readOnly
         className="min-h-[280px] font-mono text-sm"
