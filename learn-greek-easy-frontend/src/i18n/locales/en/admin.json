@@ -302,12 +302,6 @@
     "actions": {
       "new": "New announcement"
     },
-    "stats": {
-      "total": "Total Announcements",
-      "avgReadRate": "Avg read rate",
-      "allTime": "All time",
-      "acrossAll": "Across all announcements"
-    },
     "create": {
       "titleLabel": "Title",
       "titlePlaceholder": "Enter announcement title",

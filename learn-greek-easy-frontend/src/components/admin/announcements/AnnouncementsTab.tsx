@@ -4,8 +4,9 @@
  * AnnouncementsTab — ANND-07 rewrite
  *
  * Integration choke point for ADMIN2-04.
- * Renders PageHead + 4-up StatCard grid + AnnouncementHistoryRows +
+ * Renders AnnouncementsToolbar + AnnouncementHistoryRows +
  * AnnouncementComposeDrawer + AnnouncementDetailsDrawer.
+ * (The stat cards were removed in ADMIN2-43 — Claude Design alignment.)
  *
  * V1 modal imports (SummaryCard, AnnouncementCreateModal,
  * AnnouncementPreviewModal, AnnouncementDetailModal, AnnouncementHistoryTable)
@@ -16,21 +17,16 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-import { Megaphone } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
-import { StatCard } from '@/components/ui/stat-card';
 import { useAdminAnnouncementStore } from '@/stores/adminAnnouncementStore';
 
 import { AnnouncementComposeDrawer } from './AnnouncementComposeDrawer';
 import { AnnouncementDetailsDrawer } from './AnnouncementDetailsDrawer';
 import { AnnouncementHistoryRows } from './AnnouncementHistoryRows';
-import {
-  ANNOUNCEMENTS_CLIENT_FETCH_PAGE_SIZE,
-  AVG_READ_RATE_HEALTHY_THRESHOLD,
-} from './announcementsConstants';
+import { ANNOUNCEMENTS_CLIENT_FETCH_PAGE_SIZE } from './announcementsConstants';
 import { AnnouncementsToolbar, type SortKey } from './AnnouncementsToolbar';
 
 /**
@@ -42,7 +38,6 @@ export const AnnouncementsTab: React.FC = () => {
   // ── Store ─────────────────────────────────────────────────────────────────
   const {
     announcements,
-    total,
     page,
     totalPages,
     isLoading,
@@ -116,37 +111,9 @@ export const AnnouncementsTab: React.FC = () => {
     });
   }, [announcements, query, sort]);
 
-  // ── Derived stats ─────────────────────────────────────────────────────────
-  const totalCount = total;
-
-  const totalReadCount = announcements.reduce((sum, a) => sum + (a.read_count ?? 0), 0);
-  const totalRecipients = announcements.reduce((sum, a) => sum + (a.total_recipients ?? 0), 0);
-  const avgReadRate =
-    totalRecipients > 0 ? Math.round((totalReadCount / totalRecipients) * 100) : 0;
-
-  const readRateTone = avgReadRate >= AVG_READ_RATE_HEALTHY_THRESHOLD ? 'green' : 'amber';
-
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6" data-testid="announcements-tab">
-      {/* ── 2-up StatCard grid ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <StatCard
-          title={t('announcements.stats.total')}
-          n={totalCount}
-          icon={<Megaphone />}
-          tone="blue"
-          footerLabel={t('announcements.stats.allTime')}
-        />
-        <StatCard
-          title={t('announcements.stats.avgReadRate')}
-          n={`${avgReadRate}%`}
-          icon={<Megaphone />}
-          tone={readRateTone}
-          footerLabel={t('announcements.stats.acrossAll')}
-        />
-      </div>
-
       {/* ── Toolbar (sits on page canvas, no panel background) ──────────── */}
       <AnnouncementsToolbar
         query={query}

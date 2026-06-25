@@ -311,8 +311,8 @@ test.describe('Admin Announcements Drawer (ANND-10)', () => {
     await expect(detailsDrawer.locator('.an-stat')).toHaveCount(2);
   });
 
-  // ── 11. List page renders exactly 2 StatCards ──────────────────────────────
-  test('ANND-E2E-11: list page renders exactly 2 StatCards (Total + Avg Read Rate)', async ({
+  // ── 11. List page renders no StatCards (removed in ADMIN2-43) ──────────────
+  test('ANND-E2E-11: list page renders no StatCards — header → tabs → list panel', async ({
     page,
   }) => {
     await page.goto('/admin?tab=announcements');
@@ -320,15 +320,10 @@ test.describe('Admin Announcements Drawer (ANND-10)', () => {
     const tab = page.getByTestId('announcements-tab');
     await expect(tab).toBeVisible({ timeout: 10_000 });
 
-    // Exactly 2 StatCards rendered inside the announcements tab
-    await expect(tab.locator('.stat-card')).toHaveCount(2);
+    // ADMIN2-43 (Claude Design alignment) removed both stat cards — none remain.
+    await expect(tab.locator('.stat-card')).toHaveCount(0);
 
-    // The 2 remaining stat card headings should be present (locale-agnostic match)
-    await expect(tab.getByText(/Всего объявлений|Total Announcements/i)).toBeVisible({ timeout: 5_000 });
-    await expect(tab.getByText(/Средний процент прочтений|Avg read rate/i)).toBeVisible({ timeout: 5_000 });
-
-    // The removed stat cards must NOT be present (locale-agnostic)
-    await expect(tab.getByText(/People Reached|Охват пользователей/i)).toHaveCount(0);
-    await expect(tab.getByText(/With Link|Со ссылкой/i)).toHaveCount(0);
+    // The list panel (history rows container) still renders directly below the toolbar.
+    await expect(page.getByTestId('announcement-search-input')).toBeVisible({ timeout: 5_000 });
   });
 });

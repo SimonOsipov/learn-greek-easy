@@ -88,11 +88,6 @@ vi.mock('react-i18next', () => ({
         'announcements.title': 'Announcements',
         'announcements.kicker': 'Admin',
         'announcements.actions.new': 'New announcement',
-        // StatCards
-        'announcements.stats.total': 'Total Announcements',
-        'announcements.stats.avgReadRate': 'Avg. Read Rate',
-        'announcements.stats.allTime': 'All time',
-        'announcements.stats.acrossAll': 'Across all',
         // HistoryRows
         'announcements.v2.history.colDate': 'Date',
         'announcements.v2.history.colTitle': 'Title',
@@ -262,18 +257,8 @@ describe('AnnouncementsTab', () => {
   });
 
   // Note: PageHead (title H1) is now owned by AdminPage (ADMIN2-HEAD).
-  // AnnouncementsTab renders stat cards, history rows, compose/detail drawers.
-
-  it('renders 2 StatCards', () => {
-    setupStore(buildStoreState());
-    renderTab();
-    // Only 2 stat cards remain after ADMIN2-20: Total Announcements + Avg. Read Rate
-    expect(screen.getByText('Total Announcements')).toBeInTheDocument();
-    expect(screen.getByText('Avg. Read Rate')).toBeInTheDocument();
-    // People Reached and With Link were removed
-    expect(screen.queryByText('People Reached')).not.toBeInTheDocument();
-    expect(screen.queryByText('With Link')).not.toBeInTheDocument();
-  });
+  // The stat cards were removed in ADMIN2-43 (Claude Design alignment) — the tab
+  // now renders the toolbar, history rows, and the compose/detail drawers directly.
 
   it('renders AnnouncementHistoryRows (empty state text visible)', () => {
     setupStore(buildStoreState());
@@ -657,67 +642,5 @@ describe('AnnouncementsTab', () => {
 
   it.skip('axe: details drawer has no accessibility violations', async () => {
     // Requires @axe-core/react wiring — deferred to ADMIN2-12 visual coverage pass
-  });
-
-  // ── avg read rate tone ────────────────────────────────────────────────────
-
-  describe('avg read rate tone', () => {
-    /**
-     * The avg read rate StatCard gets className `tone-amber` or `tone-green`
-     * depending on whether avgReadRate >= AVG_READ_RATE_HEALTHY_THRESHOLD (20).
-     * We locate it by its unique title text, then check the parent .stat-card wrapper.
-     */
-    function getAvgReadRateCard() {
-      // The StatCard title is rendered inside .stat-label — walk up to .stat-card
-      const titleEl = screen.getByText('Avg. Read Rate');
-      return titleEl.closest('.stat-card') as HTMLElement;
-    }
-
-    it('read=2 / total=20 (10%) → avg read rate tone is amber', () => {
-      setupStore(
-        buildStoreState({
-          announcements: [
-            {
-              ...sampleAnnouncements[0],
-              read_count: 2,
-              total_recipients: 20,
-            },
-          ],
-          total: 1,
-        })
-      );
-      renderTab();
-      const card = getAvgReadRateCard();
-      expect(card).toHaveClass('tone-amber');
-      expect(card).not.toHaveClass('tone-green');
-    });
-
-    it('read=5 / total=20 (25%) → avg read rate tone is green', () => {
-      setupStore(
-        buildStoreState({
-          announcements: [
-            {
-              ...sampleAnnouncements[0],
-              read_count: 5,
-              total_recipients: 20,
-            },
-          ],
-          total: 1,
-        })
-      );
-      renderTab();
-      const card = getAvgReadRateCard();
-      expect(card).toHaveClass('tone-green');
-      expect(card).not.toHaveClass('tone-amber');
-    });
-
-    it('read=0 / total=0 → tone is amber and no NaN in DOM', () => {
-      // buildStoreState defaults announcements=[] → totalRecipients=0 → avgReadRate=0
-      setupStore(buildStoreState({ announcements: [], total: 0 }));
-      const { container } = renderTab();
-      const card = getAvgReadRateCard();
-      expect(card).toHaveClass('tone-amber');
-      expect(container.textContent).not.toContain('NaN');
-    });
   });
 });
