@@ -204,12 +204,19 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
 
         {/* ── Header ───────────────────────────────────────────────────── */}
         <SidePanel.Header>
-          <div className="drawer-breadcrumb">{t('announcements.v2.compose.breadcrumb')}</div>
-          <div className="drawer-head-row">
+          {/* Single stacked column (`.drawer-head-content`) is the lone child of the
+              `space-between` `.drawer-head`, so it sits left and the close button sits
+              right. Dropping breadcrumb/title/meta directly into `.drawer-head` (as
+              before) made flexbox spread them across three columns. Matches the
+              NewsEditDrawer convention and the prototype's single `<div>` wrapper. */}
+          <div className="drawer-head-content">
+            <div className="drawer-breadcrumb">{t('announcements.v2.compose.breadcrumb')}</div>
             <h2 className="drawer-title">{t('announcements.v2.compose.title')}</h2>
-            <Badge tone="gray">{t('announcements.v2.compose.draftBadge')}</Badge>
+            <div className="drawer-meta flex flex-wrap items-center gap-2">
+              <Badge tone="gray">{t('announcements.v2.compose.draftBadge')}</Badge>
+              <span className="drawer-helper">{t('announcements.v2.compose.helper')}</span>
+            </div>
           </div>
-          <p className="drawer-helper">{t('announcements.v2.compose.helper')}</p>
         </SidePanel.Header>
 
         {/* ── Tabs row ─────────────────────────────────────────────────── */}
