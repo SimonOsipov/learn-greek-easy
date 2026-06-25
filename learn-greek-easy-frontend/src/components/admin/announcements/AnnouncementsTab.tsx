@@ -115,16 +115,21 @@ export const AnnouncementsTab: React.FC = () => {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6" data-testid="announcements-tab">
-      {/* ── Toolbar (sits on page canvas, no panel background) ──────────── */}
-      <AnnouncementsToolbar
-        query={query}
-        onQueryChange={setQuery}
-        sort={sort}
-        onSortChange={setSort}
-      />
-
-      {/* ── History rows (contained panel — ADMIN2-43 / AC-A) ────────────── */}
+      {/* ── Contained panel: toolbar → column-header → rows → footer ────────
+           Matches prototype `<section class="va-panel"><div class="news-toolbar">…`
+           The toolbar is always visible inside the panel — even on search-no-match,
+           the Rows component's early-return only replaces the table + footer area. */}
       <div className="va-panel an-panel">
+        {/* Toolbar row — first child of the panel, separated by a hairline */}
+        <div className="an-panel-toolbar">
+          <AnnouncementsToolbar
+            query={query}
+            onQueryChange={setQuery}
+            sort={sort}
+            onSortChange={setSort}
+          />
+        </div>
+
         <AnnouncementHistoryRows
           announcements={displayedAnnouncements}
           isLoading={isLoading}
