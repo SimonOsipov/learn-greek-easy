@@ -382,8 +382,8 @@
         "breadcrumb": "Announcements · New",
         "title": "Compose announcement",
         "draftBadge": "Draft",
-        "helper": "Fill in the details below to create your announcement.",
-        "showPreview": "Show preview",
+        "helper": "Will be delivered as an in-app notification",
+        "showPreview": "Preview",
         "hidePreview": "Hide preview",
         "audience": {
           "label": "Audience",
@@ -397,8 +397,8 @@
           "scheduleLater": "Schedule for later"
         },
         "footer": {
-          "ready": "Ready to send",
-          "needsTitleAndMessage": "Needs title and message",
+          "ready": "Ready",
+          "needsTitleAndMessage": "Needs title & message",
           "helperPrefix": "Sending to",
           "helperBold": "all active learners",
           "helperSuffix": "· immediate",

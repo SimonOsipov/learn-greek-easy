@@ -1378,6 +1378,34 @@
     height: 11px;
   }
 
+  /* ── Compose-drawer chrome (ADMIN2-43-05) ──────────────────────────────
+     App-invented wrapper classes used only in AnnouncementComposeDrawer.tsx.
+     Values derived from the sibling drawer chrome above (all hsl(var(--token))). */
+  .drawer-helper {
+    font-size: 13px;
+    color: hsl(var(--fg-3));
+    line-height: 1.45;
+    margin-top: 2px;
+  }
+  .drawer-tabs-inner {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+  }
+  .drawer-preview-toggle {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .drawer-foot-helper {
+    font-size: 12px;
+    color: hsl(var(--fg-3));
+  }
+
   /* ── Placeholder box — used by drawer tab bodies not yet implemented ── */
   .placeholder-box {
     display: flex;
