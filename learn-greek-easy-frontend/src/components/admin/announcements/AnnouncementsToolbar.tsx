@@ -43,9 +43,11 @@ export const AnnouncementsToolbar: React.FC<AnnouncementsToolbarProps> = ({
   const { t } = useTranslation('admin');
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-      {/* Search input with prefix icon and clear button */}
-      <div className="relative min-w-[240px] flex-1 sm:max-w-md">
+    <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      {/* Search input with prefix icon and clear button — fills the row (flex-1,
+          no max-width cap) so the sort control is pushed to the right edge,
+          mirroring the prototype's `.news-search { flex: 1 }` + right-aligned sort. */}
+      <div className="relative min-w-[240px] flex-1">
         <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           value={query}

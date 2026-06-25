@@ -1722,7 +1722,12 @@
   /* Tab-scoped surface for the Announcements list. Re-skins the rows inside it
      into flush table rows; the global .va-panel / .an-row used by other tabs
      stay untouched (everything below is scoped under .an-panel). */
-  .an-panel {
+  /* Compound selector: the panel element is `.va-panel.an-panel`, and the global
+     `.va-panel { background: transparent }` (declared later in this file) would
+     otherwise win the cascade and strip the card background. Matching both classes
+     (specificity 0,2,0) keeps the announcements panel on its --bg-2 card surface,
+     mirroring the prototype's `.va-panel { background: hsl(var(--bg-2)) }`. */
+  .va-panel.an-panel {
     background: hsl(var(--bg-2));
     border: 1px solid hsl(var(--fg) / 0.08);
     border-radius: 18px;
@@ -1987,6 +1992,14 @@
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 6px;
+  }
+  /* When the preview pane is open the form column is narrow (~300px); the 2-col
+     audience grid then wraps longer labels (e.g. Russian "Подписчики Premium",
+     "Неактивные 30+ дней") onto two lines, leaving ragged pill heights. Collapse
+     to a single column in that case so labels stay on one line and pill heights
+     stay uniform. The wide (preview-hidden) layout keeps the prototype 2-col grid. */
+  .an-compose-grid[data-preview='1'] .ann-aud-grid {
+    grid-template-columns: 1fr;
   }
   .ann-aud-btn {
     display: flex;
