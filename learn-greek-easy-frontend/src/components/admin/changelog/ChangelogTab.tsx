@@ -148,13 +148,13 @@ export function ChangelogTab() {
   // ── Tag SegControl options (with per-tag counts) ─────────────────────────
   const tagOptions: SegOption<'all' | ChangelogTag>[] = [
     { value: 'all', label: t('admin:changelog.filter.all') },
-    ...CHANGELOG_TAG_OPTIONS.filter((tag) => filteredBySearch.some((e) => e.tag === tag)).map(
-      (tag) => ({
-        value: tag as 'all' | ChangelogTag,
-        label: tDynamic(t, CHANGELOG_TAG_CONFIG[tag].labelKey),
-        count: filteredBySearch.filter((e) => e.tag === tag).length,
-      })
-    ),
+    ...CHANGELOG_TAG_OPTIONS.filter(
+      (tag) => filteredBySearch.some((e) => e.tag === tag) || tag === selectedTag
+    ).map((tag) => ({
+      value: tag as 'all' | ChangelogTag,
+      label: tDynamic(t, CHANGELOG_TAG_CONFIG[tag].labelKey),
+      count: filteredBySearch.filter((e) => e.tag === tag).length,
+    })),
   ];
 
   // ── Render ────────────────────────────────────────────────────────────────

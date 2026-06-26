@@ -88,7 +88,7 @@ export function ChangelogTimeline({
               const tagConfig = CHANGELOG_TAG_CONFIG[entry.tag];
               const tone = TONE_BY_TAG[entry.tag];
               const isMissingRu = !entry.title_ru.trim() || !entry.content_ru.trim();
-              const postedDate = format(new Date(entry.created_at), 'MMM d, yyyy', {
+              const postedDate = format(new Date(entry.created_at), 'PP', {
                 locale: dateLocale,
               });
 
@@ -144,7 +144,7 @@ export function ChangelogTimeline({
                           type="button"
                           className="icon-btn icon-btn-sm"
                           onClick={() => onEdit(entry.id)}
-                          aria-label={`Edit ${entry.title_en}`}
+                          aria-label={`Edit ${title}`}
                           data-testid={`timeline-edit-${entry.id}`}
                         >
                           <Pencil />
@@ -153,7 +153,7 @@ export function ChangelogTimeline({
                           type="button"
                           className="icon-btn icon-btn-sm danger"
                           onClick={() => onDelete(entry.id)}
-                          aria-label={`Delete ${entry.title_en}`}
+                          aria-label={`Delete ${title}`}
                           data-testid={`timeline-delete-${entry.id}`}
                         >
                           <Trash2 />

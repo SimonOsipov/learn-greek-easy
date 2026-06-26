@@ -322,6 +322,32 @@ describe('ChangelogTab', () => {
         '1'
       );
     });
+
+    it('keeps selected tag visible in SegControl even when search excludes all its entries (FIX 1 — CodeRabbit)', async () => {
+      // Scenario: user selects "Bug Fix", then types a search that matches only
+      // "new_feature" entries. The Bug Fix pill should stay in the SegControl
+      // (with count 0) so the user can see why there are no results and deselect.
+      const user = userEvent.setup();
+      mockItems = [
+        makeEntry({ id: '1', tag: 'new_feature', title_en: 'alpha feature' }),
+        makeEntry({ id: '2', tag: 'bug_fix', title_en: 'beta fix' }),
+      ];
+      renderWithRouter();
+
+      // Select Bug Fix tag
+      await user.click(screen.getByText('Bug Fix'));
+
+      // Now type a search that matches only 'alpha' (new_feature entry, not bug_fix)
+      await user.type(screen.getByTestId('changelog-search-input'), 'alpha');
+
+      // Bug Fix pill must still be in the DOM (count will be 0, but pill stays)
+      expect(screen.getByText('Bug Fix')).toBeInTheDocument();
+
+      // Timeline shows 0 entries (bug_fix entries don't match the search)
+      expect(screen.getByTestId('changelog-timeline-mock').getAttribute('data-entry-count')).toBe(
+        '0'
+      );
+    });
   });
 
   // ── Filter pipeline (AC #7) — filtering before grouping is implicit ─────────
