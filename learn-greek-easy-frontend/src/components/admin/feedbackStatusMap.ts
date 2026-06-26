@@ -79,7 +79,7 @@ export const STATUS_TONE: Record<HandoffStatus, BadgeTone> = {
 /** Badge tone for each feedback category (used in AdminFeedbackCard). */
 export const CATEGORY_TONE: Record<FeedbackCategory, BadgeTone> = {
   bug_incorrect_data: 'red',
-  feature_request: 'violet',
+  feature_request: 'blue',
 };
 
 // ── Exhaustiveness helper ──────────────────────────────────────────────────────

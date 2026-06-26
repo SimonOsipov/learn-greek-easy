@@ -12,18 +12,19 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { format, formatDistanceToNow } from 'date-fns';
 import { el } from 'date-fns/locale/el';
 import { ru } from 'date-fns/locale/ru';
-import { Copy } from 'lucide-react';
+import { Check, Copy, Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
+import { AdminAvatar } from '@/components/ui/admin-avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { tDynamic } from '@/i18n/tDynamic';
+import { initialsOf } from '@/lib/userUtils';
 import { useAdminFeedbackStore } from '@/stores/adminFeedbackStore';
 
 import {
@@ -172,16 +173,24 @@ function ReplyTab({ feedbackId, onClose, onRequestDelete, form }: ReplyTabProps)
   return (
     <>
       <SidePanel.Body>
-        {/* User submission summary */}
-        <div className="fb-user-card">
-          <p className="fb-user-card-title">{feedback.title}</p>
-          {feedback.description && <p className="fb-user-card-desc">{feedback.description}</p>}
-          <p className="fb-user-card-meta">
-            {feedback.author?.full_name ?? t('feedback.v2.type.anonymous')} ·{' '}
-            {format(new Date(feedback.created_at), 'PP', {
-              locale: getDateLocale(i18n.language),
-            })}
-          </p>
+        {/* Original submission — CD chat bubble (.fb-thread / .fb-msg) */}
+        <div className="fb-thread fb-thread-compact">
+          <div className="fb-msg fb-msg-user">
+            <AdminAvatar initials={initialsOf(feedback.author?.full_name)} size="sm" />
+            <div className="fb-msg-body">
+              <div className="fb-msg-meta">
+                <span className="fb-msg-who">
+                  {feedback.author?.full_name ?? t('feedback.v2.type.anonymous')}
+                </span>
+                <span className="fb-msg-when">
+                  {format(new Date(feedback.created_at), 'PP', {
+                    locale: getDateLocale(i18n.language),
+                  })}
+                </span>
+              </div>
+              <p className="fb-msg-text">{feedback.description || feedback.title}</p>
+            </div>
+          </div>
         </div>
 
         <form id="reply-form" onSubmit={form.handleSubmit(handleSave)} noValidate>
@@ -220,20 +229,31 @@ function ReplyTab({ feedbackId, onClose, onRequestDelete, form }: ReplyTabProps)
       <SidePanel.Footer>
         {/* Left: Delete (destructive) */}
         <div className="drawer-foot-left">
-          <Button type="button" variant="destructive" onClick={() => onRequestDelete(feedback.id)}>
+          <button
+            type="button"
+            className="btn btn-glass btn-sm danger-text"
+            onClick={() => onRequestDelete(feedback.id)}
+          >
+            <Trash2 className="size-4" aria-hidden="true" />
             {t('feedback.delete.button')}
-          </Button>
+          </button>
         </div>
 
         {/* Right: safe actions */}
         <div className="drawer-foot-right">
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
             {t('feedback.v2.reply.cancel')}
-          </Button>
+          </button>
 
-          <Button type="submit" form="reply-form" disabled={isSubmitting || !responseValue.trim()}>
+          <button
+            type="submit"
+            form="reply-form"
+            className="btn btn-primary btn-sm"
+            disabled={isSubmitting || !responseValue.trim()}
+          >
+            <Check className="size-4" aria-hidden="true" />
             {isSubmitting ? t('feedback.v2.drawer.saving') : t('feedback.v2.reply.save')}
-          </Button>
+          </button>
         </div>
       </SidePanel.Footer>
     </>
@@ -426,7 +446,7 @@ export function FeedbackDrawer({
             <MetaTab feedbackId={feedbackId} />
           </SidePanel.Body>
           <SidePanel.Footer>
-            <button type="button" onClick={onClose}>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
               {t('feedback.v2.reply.cancel')}
             </button>
           </SidePanel.Footer>

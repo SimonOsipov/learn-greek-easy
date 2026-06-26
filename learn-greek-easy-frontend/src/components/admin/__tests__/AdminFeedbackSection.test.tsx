@@ -1,8 +1,9 @@
 // src/components/admin/__tests__/AdminFeedbackSection.test.tsx
 //
-// Vitest + RTL tests for AdminFeedbackSection (FBDR-10).
-// Covers: stat cards, seg-control filters (status × type AND-combined),
-// vote-desc sort, debounced search, URL deep-link mounting, decorative buttons.
+// Vitest + RTL tests for AdminFeedbackSection (ADMIN2-45).
+// Covers: seg-control filters (status × type AND-combined),
+// vote-desc sort, debounced search, URL deep-link mounting.
+// Stat cards removed (ADMIN2-45 — CD panel has no stat tiles).
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -27,13 +28,6 @@ vi.mock('react-i18next', () => ({
         'feedback.v2.pageHead.title': 'User feedback',
         'feedback.v2.pageHead.sub': 'Review, respond, and track community feedback',
         comingSoon: 'Coming soon',
-        // stat cards
-        'feedback.v2.statCards.total.label': 'Total feedback',
-        'feedback.v2.statCards.total.sub': '0 new · 0 responded',
-        'feedback.v2.statCards.awaiting.label': 'Awaiting response',
-        'feedback.v2.statCards.awaiting.sub': 'oldest {{distance}}',
-        'feedback.v2.statCards.communityVotes.label': 'Community votes',
-        'feedback.v2.statCards.communityVotes.sub': 'upvotes on this page',
         // filters
         'feedback.v2.filters.status.label': 'Status',
         'feedback.v2.filters.status.all': 'All',
@@ -219,34 +213,6 @@ function renderSection(initialEntries: string[] = ['/admin?tab=feedback']) {
 describe('AdminFeedbackSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  // ── StatCards ──────────────────────────────────────────────────────────────
-
-  describe('StatCards', () => {
-    it('renders Total feedback, Awaiting response, and Community votes stat cards', () => {
-      buildMockState([makeFeedback()]);
-
-      renderSection();
-
-      expect(screen.getByText('Total feedback')).toBeInTheDocument();
-      expect(screen.getByText('Awaiting response')).toBeInTheDocument();
-      expect(screen.getByText('Community votes')).toBeInTheDocument();
-    });
-
-    it('shows page-scoped vote sum in Community votes card', () => {
-      const items = [
-        makeFeedback({ vote_count: 5 }),
-        makeFeedback({ vote_count: 8 }),
-        makeFeedback({ vote_count: 3 }),
-      ];
-      buildMockState(items, { total: 3 });
-
-      renderSection();
-
-      // Total votes = 16; StatCard renders `n` as a number
-      expect(screen.getByText('16')).toBeInTheDocument();
-    });
   });
 
   // ── Status SegControl ──────────────────────────────────────────────────────

@@ -37,9 +37,9 @@ test.describe('Admin Feedback Drawer (FBDR-11)', () => {
   // ── Test 1: Golden path ──────────────────────────────────────────────────────
 
   test('golden path: open drawer, switch tabs, type + canned chip + save', async ({ page }) => {
-    // AC #1 — 3 stat cards visible (stat-grid exists with content)
-    const statGrid = page.locator('.stat-grid');
-    await expect(statGrid).toBeVisible({ timeout: 10_000 });
+    // AC #1 — contained CD panel visible (.fb-panel; stat cards removed in ADMIN2-45)
+    const panel = page.locator('.fb-panel');
+    await expect(panel).toBeVisible({ timeout: 10_000 });
 
     // Wait for at least one feedback card to be loaded (seeded data required)
     const firstCard = page.locator('[data-testid="admin-feedback-card"]').first();

@@ -2359,30 +2359,64 @@
   .fb-card {
     display: grid;
     grid-template-columns: 56px 1fr auto;
-    gap: 12px;
-    padding: 16px;
-    background: hsl(var(--card));
-    border: 1px solid hsl(var(--fg) / 0.08);
-    border-radius: var(--radius);
+    gap: 16px;
+    padding: 16px 18px;
+    background: hsl(var(--bg-2));
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 14px;
     transition:
       transform 0.15s,
-      box-shadow 0.15s;
+      box-shadow 0.15s,
+      border-color 0.15s;
   }
   .fb-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-2);
+    border-color: hsl(var(--primary) / 0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 22px -10px hsl(var(--primary) / 0.22);
   }
   .fb-card-left {
     display: flex;
     flex-direction: column;
     align-items: center;
+    padding-top: 6px;
+  }
+  /* CD bordered vote pill */
+  .fb-likes {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     gap: 2px;
+    padding: 8px 10px;
+    background: hsl(var(--fg) / 0.04);
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 10px;
+    min-width: 44px;
+  }
+  .fb-card-arrow {
+    color: hsl(var(--fg-3));
+    font-size: 12px;
+    line-height: 1;
   }
   .fb-card-main {
     min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 8px;
+  }
+  .fb-card-title {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+  }
+  .fb-card-body {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: hsl(var(--fg-2));
   }
   .fb-card-clickable {
     display: contents;
@@ -2392,9 +2426,9 @@
     margin-top: 8px;
     padding: 10px 12px;
     border-left: 3px solid hsl(var(--primary));
-    background: hsl(var(--muted));
+    background: hsl(var(--primary) / 0.06);
     color: hsl(var(--fg-2));
-    border-radius: 0 var(--radius) var(--radius) 0;
+    border-radius: 0 8px 8px 0;
   }
   .fb-card-reply-label {
     display: block;
@@ -2407,6 +2441,54 @@
     color: hsl(var(--fg-3));
     font-size: 13px;
     margin-top: 8px;
+  }
+
+  /* Drawer original-message chat bubble (CD .fb-thread / .fb-msg) */
+  .fb-thread {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .fb-thread-compact {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px dashed hsl(var(--fg) / 0.08);
+  }
+  .fb-msg {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 12px;
+  }
+  .fb-msg-body {
+    padding: 12px 14px;
+    background: hsl(var(--bg-2));
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 12px;
+  }
+  .fb-msg-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+  .fb-msg-who {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    color: hsl(var(--fg));
+  }
+  .fb-msg-when {
+    color: hsl(var(--fg-3));
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+  .fb-msg-text {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: hsl(var(--fg));
   }
 
   /* Actions — absolute-positioned sibling; hidden at rest, visible on hover / focus-within */
@@ -2433,10 +2515,48 @@
   }
   .fb-vote-count {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 15px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 700;
     color: hsl(var(--fg));
     font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Feedback contained panel (ADMIN2-45 / AC-A) ── */
+  /* Tab-local surface wrapping the feedback toolbar + card list + pager footer.
+     Mirrors the .cl-panel approach: bg-2 card skin + hairline border so the
+     panel floats above the page canvas. The global .va-panel { background:
+     transparent } rule is untouched — this uses its own selector. */
+  .fb-panel {
+    background: hsl(var(--bg-2));
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  /* Card list inside .fb-panel — flex-col, 12px gap, with panel padding. */
+  .fb-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 20px;
+  }
+
+  /* Persistent panel footer (Showing N–M of total · pager). Used by the
+     Feedback tab and reusable by any va-panel that needs an inline pager row. */
+  .va-panel-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 24px;
+    border-top: 1px solid hsl(var(--fg) / 0.06);
+  }
+
+  /* Pager button group — Previous · page indicator · Next. */
+  .va-pager {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   /* Status picker grid (renamed fb-status-grid → admin-status-grid, CER-48) */

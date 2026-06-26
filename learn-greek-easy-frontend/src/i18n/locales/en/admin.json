@@ -636,8 +636,8 @@
       "dashboard": "Admin",
       "current": "Feedback"
     },
-    "kicker": "Admin · Feedback",
-    "title": "Feedback",
+    "kicker": "Reviews · Feedback",
+    "title": "User feedback",
     "sub": "Review, respond, and track community feedback.",
     "stats": {
       "total": "Total Feedback",
@@ -776,20 +776,6 @@
         "bug": "Bug",
         "feature": "Feature request",
         "anonymous": "Anonymous"
-      },
-      "statCards": {
-        "total": {
-          "label": "Total feedback",
-          "sub": "{{newCount}} new · {{respondedCount}} responded"
-        },
-        "awaiting": {
-          "label": "Awaiting response",
-          "sub": "oldest {{distance}}"
-        },
-        "communityVotes": {
-          "label": "Community votes",
-          "sub": "upvotes on this page"
-        }
       },
       "filters": {
         "status": {

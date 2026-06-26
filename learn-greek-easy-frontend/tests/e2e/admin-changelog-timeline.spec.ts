@@ -304,22 +304,17 @@ test.describe('Admin Changelog Timeline — ADMIN2-21 extension (CLTT-E2E-01..07
     await expect(ruTab).toBeVisible({ timeout: 5_000 });
     await expect(enTab).toBeVisible({ timeout: 5_000 });
 
-    // The RU tab button must carry aria-selected="true" (or the is-active class)
-    // when the drawer opens — NOT the EN tab.
-    const ruTabSelected = await ruTab.getAttribute('aria-selected');
-    const enTabSelected = await enTab.getAttribute('aria-selected');
-    // At least one of the tabs signals active state via aria-selected or a class.
-    // Prefer aria-selected when available; fall back to class inspection.
-    if (ruTabSelected !== null || enTabSelected !== null) {
-      expect(ruTabSelected).toBe('true');
-      expect(enTabSelected).not.toBe('true');
-    } else {
-      // Fall back: RU tab has is-active/active class, EN tab does not
-      const ruClass = (await ruTab.getAttribute('class')) ?? '';
-      const enClass = (await enTab.getAttribute('class')) ?? '';
-      expect(ruClass).toMatch(/is-active|active|selected/i);
-      expect(enClass).not.toMatch(/is-active|active|selected/i);
-    }
+    // The RU tab button must carry aria-selected="true" when the drawer opens —
+    // NOT the EN tab. Use auto-retrying toHaveAttribute rather than a one-shot
+    // getAttribute()+toBe(): the tab's aria-selected reflects the store `lang`,
+    // which settles right after openEdit(uiLang) (and after i18n's async language
+    // switch feeds uiLang). A single read could land during the open transition
+    // and observe the pre-settle value — the intermittent CLTT-E2E-09 CI flake.
+    // toHaveAttribute polls until the rendered state settles. (The tab always
+    // renders aria-selected={lang==='ru'}, so the old class-name fallback was
+    // dead code.)
+    await expect(ruTab).toHaveAttribute('aria-selected', 'true');
+    await expect(enTab).toHaveAttribute('aria-selected', 'false');
 
     // ── 5. The RU content input is visible (form renders only the active lang) ─
     // The drawer renders only the active language's fields, so when RU is active

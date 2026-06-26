@@ -54,8 +54,8 @@ const STRINGS: Record<string, string> = {
   'cardErrors.breadcrumb.dashboard': 'Admin',
   'cardErrors.breadcrumb.current': 'Card errors',
   // feedback
-  'feedback.title': 'Feedback',
-  'feedback.kicker': 'Admin · Feedback',
+  'feedback.title': 'User feedback',
+  'feedback.kicker': 'Reviews · Feedback',
   'feedback.sub': 'Review, respond, and track community feedback.',
   'feedback.breadcrumb.dashboard': 'Admin',
   'feedback.breadcrumb.current': 'Feedback',
@@ -216,7 +216,7 @@ describe('pageHeadPropsFor — situations branch', () => {
 describe('pageHeadPropsFor — feedback branch', () => {
   it('returns feedback shape without actions', () => {
     const r = pageHeadPropsFor('feedback', mockT);
-    expect(r.title).toBe('Feedback');
+    expect(r.title).toBe('User feedback');
     expect(r.actions).toBeUndefined();
     expect(r.breadcrumb![1].label).toBe('Feedback');
   });
