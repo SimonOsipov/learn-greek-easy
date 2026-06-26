@@ -2392,9 +2392,9 @@
     margin-top: 8px;
     padding: 10px 12px;
     border-left: 3px solid hsl(var(--primary));
-    background: hsl(var(--muted));
+    background: hsl(var(--primary) / 0.06);
     color: hsl(var(--fg-2));
-    border-radius: 0 var(--radius) var(--radius) 0;
+    border-radius: 0 8px 8px 0;
   }
   .fb-card-reply-label {
     display: block;
@@ -2437,6 +2437,44 @@
     font-weight: 600;
     color: hsl(var(--fg));
     font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Feedback contained panel (ADMIN2-45 / AC-A) ── */
+  /* Tab-local surface wrapping the feedback toolbar + card list + pager footer.
+     Mirrors the .cl-panel approach: bg-2 card skin + hairline border so the
+     panel floats above the page canvas. The global .va-panel { background:
+     transparent } rule is untouched — this uses its own selector. */
+  .fb-panel {
+    background: hsl(var(--bg-2));
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  /* Card list inside .fb-panel — flex-col, 12px gap, with panel padding. */
+  .fb-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 20px;
+  }
+
+  /* Persistent panel footer (Showing N–M of total · pager). Used by the
+     Feedback tab and reusable by any va-panel that needs an inline pager row. */
+  .va-panel-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 24px;
+    border-top: 1px solid hsl(var(--fg) / 0.06);
+  }
+
+  /* Pager button group — Previous · page indicator · Next. */
+  .va-pager {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   /* Status picker grid (renamed fb-status-grid → admin-status-grid, CER-48) */
