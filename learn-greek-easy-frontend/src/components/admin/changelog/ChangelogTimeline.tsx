@@ -144,7 +144,7 @@ export function ChangelogTimeline({
                           type="button"
                           className="icon-btn icon-btn-sm"
                           onClick={() => onEdit(entry.id)}
-                          aria-label={`Edit ${title}`}
+                          aria-label={`${t('actions.edit')} ${title}`}
                           data-testid={`timeline-edit-${entry.id}`}
                         >
                           <Pencil />
@@ -153,7 +153,7 @@ export function ChangelogTimeline({
                           type="button"
                           className="icon-btn icon-btn-sm danger"
                           onClick={() => onDelete(entry.id)}
-                          aria-label={`Delete ${title}`}
+                          aria-label={`${t('actions.delete')} ${title}`}
                           data-testid={`timeline-delete-${entry.id}`}
                         >
                           <Trash2 />
