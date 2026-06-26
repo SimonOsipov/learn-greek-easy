@@ -29,7 +29,8 @@ import { ChangelogTimeline } from './ChangelogTimeline';
  * ChangelogTab
  */
 export function ChangelogTab() {
-  const { t } = useTranslation(['admin', 'changelog']);
+  const { t, i18n } = useTranslation(['admin', 'changelog']);
+  const uiLang = i18n.language.startsWith('ru') ? 'ru' : 'en';
 
   // ── Store ─────────────────────────────────────────────────────────────────
   const {
@@ -77,7 +78,7 @@ export function ChangelogTab() {
     if (editId) {
       if (items.some((e) => e.id === editId)) {
         appliedDeepLinkRef.current = true;
-        openEdit(editId);
+        openEdit(editId, uiLang);
         if (langParam === 'en' || langParam === 'ru') {
           setLang(langParam);
         }
@@ -87,13 +88,13 @@ export function ChangelogTab() {
       }
     } else if (composeFlag === '1') {
       appliedDeepLinkRef.current = true;
-      openCompose();
+      openCompose(uiLang);
     } else {
       // No relevant params — mark applied
       appliedDeepLinkRef.current = true;
     }
     // Malformed values: no URL rewrite, no toast, no console.error
-  }, [searchParams, items, isLoading, openEdit, openCompose, setLang]);
+  }, [searchParams, items, isLoading, openEdit, openCompose, setLang, uiLang]);
 
   // Effect 2 — store → URL (sync out)
   // Watches mode, openEntryId, lang; keeps URL in sync with drawer state.
@@ -192,7 +193,7 @@ export function ChangelogTab() {
         {/* Timeline */}
         <ChangelogTimeline
           entries={filtered}
-          onEdit={(id) => openEdit(id)}
+          onEdit={(id) => openEdit(id, uiLang)}
           onDelete={(id) => setDeleteCandidate(items.find((e) => e.id === id) ?? null)}
         />
       </div>

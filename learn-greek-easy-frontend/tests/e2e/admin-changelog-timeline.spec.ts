@@ -271,6 +271,86 @@ test.describe('Admin Changelog Timeline — ADMIN2-21 extension (CLTT-E2E-01..07
     });
   });
 
+  test('CLTT-E2E-09: RU admin — editor opens on RU tab by default and edit reflects in list', async ({
+    page,
+  }) => {
+    // ── 1. Set UI language to RU before navigating ───────────────────────────
+    await page.goto('https://greeklish.eu/');
+    await page.evaluate(() => localStorage.setItem('i18nextLng', 'ru'));
+
+    await navigateToAdminTab(page, 'changelog');
+    await expect(page.getByTestId('changelog-tab')).toBeVisible({ timeout: 15_000 });
+
+    // ── 2. Need at least one entry to open ───────────────────────────────────
+    const entryCount = await page.locator('.cl-entry').count();
+    if (entryCount === 0) {
+      // No entries — skip (seed-dependent)
+      await page.evaluate(() => localStorage.removeItem('i18nextLng'));
+      test.skip();
+      return;
+    }
+
+    // ── 3. Open the first edit button ────────────────────────────────────────
+    const firstEditBtn = page.locator('[data-testid^="timeline-edit-"]').first();
+    await firstEditBtn.click();
+
+    const drawer = page.getByTestId('changelog-editor-drawer');
+    await expect(drawer).toBeVisible({ timeout: 5_000 });
+
+    // ── 4. Core assertion: RU tab MUST be active by default (guards the fix) ─
+    // Pre-fix: the EN tab was active; post-fix: the RU tab must be active.
+    const ruTab = drawer.getByTestId('changelog-editor-tab-ru');
+    const enTab = drawer.getByTestId('changelog-editor-tab-en');
+    await expect(ruTab).toBeVisible({ timeout: 5_000 });
+    await expect(enTab).toBeVisible({ timeout: 5_000 });
+
+    // The RU tab button must carry aria-selected="true" (or the is-active class)
+    // when the drawer opens — NOT the EN tab.
+    const ruTabSelected = await ruTab.getAttribute('aria-selected');
+    const enTabSelected = await enTab.getAttribute('aria-selected');
+    // At least one of the tabs signals active state via aria-selected or a class.
+    // Prefer aria-selected when available; fall back to class inspection.
+    if (ruTabSelected !== null || enTabSelected !== null) {
+      expect(ruTabSelected).toBe('true');
+      expect(enTabSelected).not.toBe('true');
+    } else {
+      // Fall back: RU tab has is-active/active class, EN tab does not
+      const ruClass = (await ruTab.getAttribute('class')) ?? '';
+      const enClass = (await enTab.getAttribute('class')) ?? '';
+      expect(ruClass).toMatch(/is-active|active|selected/i);
+      expect(enClass).not.toMatch(/is-active|active|selected/i);
+    }
+
+    // ── 5. The RU content input is visible (form renders only the active lang) ─
+    // The drawer renders only the active language's fields, so when RU is active
+    // only changelog-editor-content-ru is in the DOM.
+    const ruContent = drawer.getByTestId('changelog-editor-content-ru');
+    await expect(ruContent).toBeVisible({ timeout: 3_000 });
+
+    // ── 6. Append a unique marker to RU content → Save → verify in list ──────
+    const marker = `__E2E_RU_EDIT_${Date.now()}__`;
+    await ruContent.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(` ${marker}`);
+
+    // Save
+    const saveBtn = page.getByTestId('changelog-editor-footer-submit');
+    await expect(saveBtn).toBeVisible();
+    await saveBtn.click();
+
+    // Wait for success toast (or drawer to close)
+    await expect(drawer).toBeHidden({ timeout: 10_000 });
+
+    // ── 7. The edited entry's list row now shows the RU marker ───────────────
+    // The list renders content in the UI language (RU), so the marker must appear.
+    await expect(page.locator('.cl-entry-content').filter({ hasText: marker }).first()).toBeVisible({
+      timeout: 5_000,
+    });
+
+    // ── 8. Restore locale to avoid leaking RU into sibling tests ─────────────
+    await page.evaluate(() => localStorage.removeItem('i18nextLng'));
+  });
+
   test('CLTT-E2E-07: footer button order — Delete < Cancel < Save in DOM', async ({ page }) => {
     await navigateToAdminTab(page, 'changelog');
     await expect(page.getByTestId('changelog-tab')).toBeVisible({ timeout: 15_000 });

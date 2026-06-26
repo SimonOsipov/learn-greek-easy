@@ -375,12 +375,14 @@ describe('ChangelogTab', () => {
 
   // ── Deep-link ?edit=<valid-id>&lang=ru (AC #8) ──────────────────────────────
   describe('Deep-link ?edit=<valid-id>&lang=ru', () => {
-    it('calls openEdit with the id when item exists', async () => {
+    it('calls openEdit with the id and uiLang when item exists', async () => {
       mockItems = [makeEntry({ id: 'abc-123' })];
       mockIsLoading = false;
       renderWithRouter('?edit=abc-123&lang=ru');
       await act(async () => {});
-      expect(mockOpenEdit).toHaveBeenCalledWith('abc-123');
+      // uiLang is 'en' because the mock i18n.language is 'en';
+      // the explicit ?lang=ru param still fires setLang('ru') after openEdit.
+      expect(mockOpenEdit).toHaveBeenCalledWith('abc-123', 'en');
     });
 
     it('calls setLang(ru) when lang=ru is valid', async () => {
@@ -391,12 +393,13 @@ describe('ChangelogTab', () => {
       expect(mockSetLang).toHaveBeenCalledWith('ru');
     });
 
-    it('opens drawer in RU — ?edit=<valid-id>&lang=ru activates both openEdit and setLang("ru")', async () => {
+    it('opens drawer in RU — ?edit=<valid-id>&lang=ru activates both openEdit(id,uiLang) and setLang("ru")', async () => {
       mockItems = [makeEntry({ id: 'deep-ru-1' })];
       mockIsLoading = false;
       renderWithRouter('?edit=deep-ru-1&lang=ru');
       await act(async () => {});
-      expect(mockOpenEdit).toHaveBeenCalledWith('deep-ru-1');
+      // openEdit receives the uiLang ('en' from mock); setLang then overrides to 'ru' from the ?lang= param.
+      expect(mockOpenEdit).toHaveBeenCalledWith('deep-ru-1', 'en');
       expect(mockSetLang).toHaveBeenCalledWith('ru');
     });
   });
@@ -605,7 +608,8 @@ describe('ChangelogTab', () => {
       mockItems = [makeEntry({ id: 'resolved-id' })];
       renderWithRouter('?edit=resolved-id');
       await act(async () => {});
-      expect(mockOpenEdit).toHaveBeenCalledWith('resolved-id');
+      // uiLang is 'en' because the mock i18n.language is 'en'
+      expect(mockOpenEdit).toHaveBeenCalledWith('resolved-id', 'en');
     });
   });
 
