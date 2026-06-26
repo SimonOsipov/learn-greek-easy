@@ -2378,13 +2378,45 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    padding-top: 6px;
+  }
+  /* CD bordered vote pill */
+  .fb-likes {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     gap: 2px;
+    padding: 8px 10px;
+    background: hsl(var(--fg) / 0.04);
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 10px;
+    min-width: 44px;
+  }
+  .fb-card-arrow {
+    color: hsl(var(--fg-3));
+    font-size: 12px;
+    line-height: 1;
   }
   .fb-card-main {
     min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 8px;
+  }
+  .fb-card-title {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+  }
+  .fb-card-body {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: hsl(var(--fg-2));
   }
   .fb-card-clickable {
     display: contents;
@@ -2483,8 +2515,8 @@
   }
   .fb-vote-count {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 15px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 700;
     color: hsl(var(--fg));
     font-variant-numeric: tabular-nums;
   }

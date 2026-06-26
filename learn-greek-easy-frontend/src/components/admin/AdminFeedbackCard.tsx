@@ -97,12 +97,14 @@ export const AdminFeedbackCard: React.FC<AdminFeedbackCardProps> = ({
           title: feedback.title,
         })}
       >
-        {/* Left rail — vote arrow + count */}
+        {/* Left rail — CD bordered vote pill (.fb-likes) */}
         <div className="fb-card-left" aria-hidden>
-          <span className="fb-card-arrow" aria-hidden>
-            ▲
-          </span>
-          <span className="fb-vote-count">{feedback.vote_count}</span>
+          <div className="fb-likes">
+            <span className="fb-card-arrow" aria-hidden>
+              ▲
+            </span>
+            <span className="fb-vote-count">{feedback.vote_count}</span>
+          </div>
         </div>
 
         {/* Main body */}
