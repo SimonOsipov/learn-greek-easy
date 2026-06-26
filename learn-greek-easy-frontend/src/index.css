@@ -2926,6 +2926,48 @@
     margin-right: 8px;
   }
 
+  /* ── Changelog lang-tab pill buttons (ADMIN2-44 / CD segmented control) ── */
+  .dk-langtab {
+    background: transparent;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: hsl(var(--fg-2));
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .dk-langtab:hover {
+    color: hsl(var(--fg));
+  }
+  .dk-langtab.is-active {
+    background: hsl(var(--bg-2));
+    color: hsl(var(--fg));
+    box-shadow: 0 1px 2px hsl(0 0% 0% / 0.15);
+  }
+
+  /* ── Dimmed helper text (ADMIN2-44) ── */
+  .va-dim {
+    color: hsl(var(--fg-3));
+    font-size: 13px;
+  }
+
+  /* ── Danger text modifier for glass buttons (ADMIN2-44) ── */
+  .btn.danger-text {
+    color: hsl(var(--danger));
+  }
+  .btn.danger-text:hover {
+    color: hsl(var(--danger));
+  }
+
+  /* ── Changelog error regions (ADMIN2-44) ── */
+  .cl-json-error,
+  .cl-submit-error {
+    color: hsl(var(--danger));
+    font-size: 13px;
+  }
+
   /* ── Changelog tag buttons (ADMIN2 / CLTE-02) ── */
   .cl-tag-grid {
     display: grid;

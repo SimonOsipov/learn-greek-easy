@@ -17,10 +17,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { Check, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Textarea } from '@/components/ui/textarea';
@@ -341,13 +341,13 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
 
         <div className="drawer-tabs-spacer" />
 
-        {/* Right: EN / RU language tabs */}
-        <div className="drawer-tab-group" role="tablist">
+        {/* Right: EN / RU language pill control */}
+        <div className="cl-langtabs" role="tablist">
           <button
             type="button"
             role="tab"
             aria-selected={lang === 'en'}
-            className={cn('drawer-tab', lang === 'en' && 'is-active')}
+            className={cn('dk-langtab', lang === 'en' && 'is-active')}
             onClick={() => setLang('en')}
             data-testid="changelog-editor-tab-en"
           >
@@ -357,7 +357,7 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
             type="button"
             role="tab"
             aria-selected={lang === 'ru'}
-            className={cn('drawer-tab', lang === 'ru' && 'is-active')}
+            className={cn('dk-langtab', lang === 'ru' && 'is-active')}
             onClick={() => setLang('ru')}
             data-testid="changelog-editor-tab-ru"
           >
@@ -525,13 +525,15 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
         <div data-testid="changelog-drawer-footer" className="cl-drawer-footer">
           <div className="drawer-foot-left">
             {entry && (
-              <Button
-                variant="destructive"
+              <button
+                type="button"
+                className="btn btn-glass btn-sm danger-text"
                 onClick={() => setDeleteDialogOpen(true)}
                 data-testid="changelog-editor-footer-delete"
               >
+                <Trash2 className="size-3.5" aria-hidden="true" />
                 {t('admin:changelog.delete.confirm')}
-              </Button>
+              </button>
             )}
           </div>
           <div className="drawer-foot-right">
@@ -544,20 +546,24 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
                 {submitError}
               </p>
             )}
-            <Button
-              variant="outline"
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
               onClick={onClose}
               data-testid="changelog-editor-footer-cancel"
             >
               {t('admin:changelog.edit.cancel')}
-            </Button>
-            <Button
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
               onClick={handleSubmit}
               disabled={!enReady || isSaving}
               data-testid="changelog-editor-footer-submit"
             >
+              <Check className="size-3.5" aria-hidden="true" />
               {entry ? t('admin:changelog.edit.save') : t('admin:changelog.editor.publish')}
-            </Button>
+            </button>
           </div>
         </div>
       </SidePanel.Footer>

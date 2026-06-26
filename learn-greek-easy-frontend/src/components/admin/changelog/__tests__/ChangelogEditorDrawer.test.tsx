@@ -422,14 +422,36 @@ describe('ChangelogEditorDrawer', () => {
     );
   });
 
-  // ── Cancel button uses variant="outline" ──────────────────────────────────
+  // ── Footer button classes (ADMIN2-44-05: .btn composition) ──────────────
 
-  it('Cancel button has outline variant (not ghost)', () => {
+  it('Cancel button has .btn .btn-ghost .btn-sm classes', () => {
     render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
     const cancelBtn = screen.getByTestId('changelog-editor-footer-cancel');
-    // The Button component applies class names based on variant; check the element
-    // does NOT have ghost-related class
-    expect(cancelBtn.className).not.toContain('ghost');
+    expect(cancelBtn).toHaveClass('btn', 'btn-ghost', 'btn-sm');
+  });
+
+  it('Save/Publish button has .btn .btn-primary .btn-sm classes', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+    const submitBtn = screen.getByTestId('changelog-editor-footer-submit');
+    expect(submitBtn).toHaveClass('btn', 'btn-primary', 'btn-sm');
+  });
+
+  it('Delete button (edit mode) has .btn .btn-glass .btn-sm .danger-text classes', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
+    const deleteBtn = screen.getByTestId('changelog-editor-footer-delete');
+    expect(deleteBtn).toHaveClass('btn', 'btn-glass', 'btn-sm', 'danger-text');
+  });
+
+  it('Save/Publish button contains a Check icon (svg)', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+    const submitBtn = screen.getByTestId('changelog-editor-footer-submit');
+    expect(submitBtn.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('Delete button contains a Trash2 icon (svg)', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
+    const deleteBtn = screen.getByTestId('changelog-editor-footer-delete');
+    expect(deleteBtn.querySelector('svg')).toBeInTheDocument();
   });
 
   // ── Field labels — htmlFor matches input id ────────────────────────────────
@@ -1091,21 +1113,43 @@ describe('ChangelogEditorDrawer', () => {
     expect(screen.getByTestId('changelog-drawer-meta')).toBeInTheDocument();
   });
 
-  // ── CLLP-10: Drawer-tabs row structure ───────────────────────────────────
+  // ── CLLP-10 / ADMIN2-44-05: Drawer-tabs row structure ────────────────────
+  // Left side: .drawer-tab-group with Form/JSON .drawer-tab buttons.
+  // Right side: .cl-langtabs with EN/RU .dk-langtab pill buttons.
 
-  it('drawer-tabs row: exactly 2 .drawer-tab-group siblings separated by exactly one .drawer-tabs-spacer', () => {
+  it('drawer-tabs row: exactly 1 .drawer-tab-group (Form/JSON), 1 .cl-langtabs (EN/RU), and 1 .drawer-tabs-spacer between them', () => {
     render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
 
-    // Drawer renders in a Radix Portal — query from document, not container
     const tabGroups = document.querySelectorAll('.drawer-tab-group');
-    expect(tabGroups).toHaveLength(2);
+    expect(tabGroups).toHaveLength(1);
+
+    const langTabs = document.querySelectorAll('.cl-langtabs');
+    expect(langTabs).toHaveLength(1);
 
     const spacers = document.querySelectorAll('.drawer-tabs-spacer');
     expect(spacers).toHaveLength(1);
 
-    // Spacer sits between the two groups
+    // Spacer sits between the form/json group and the lang pill group
     expect(tabGroups[0].nextElementSibling?.classList.contains('drawer-tabs-spacer')).toBe(true);
-    expect(tabGroups[1].previousElementSibling).toBe(spacers[0]);
+    expect(langTabs[0].previousElementSibling).toBe(spacers[0]);
+  });
+
+  it('EN/RU tabs use .dk-langtab class (CD pill style, not .drawer-tab)', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+    const enTab = screen.getByTestId('changelog-editor-tab-en');
+    const ruTab = screen.getByTestId('changelog-editor-tab-ru');
+    expect(enTab).toHaveClass('dk-langtab');
+    expect(ruTab).toHaveClass('dk-langtab');
+    expect(enTab).not.toHaveClass('drawer-tab');
+    expect(ruTab).not.toHaveClass('drawer-tab');
+  });
+
+  it('Form/JSON tabs still use .drawer-tab class (unchanged)', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+    const formTab = screen.getByTestId('changelog-editor-tab-form');
+    const jsonTab = screen.getByTestId('changelog-editor-tab-json');
+    expect(formTab).toHaveClass('drawer-tab');
+    expect(jsonTab).toHaveClass('drawer-tab');
   });
 
   // ── CLLP-10: A11y dialog accessible name ─────────────────────────────────
