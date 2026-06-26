@@ -4,21 +4,19 @@
  * ChangelogTab — CLTE-08 rewrite
  *
  * Integration choke point for ADMIN2-06.
- * Renders PageHead + 4-up StatCard grid + ChangelogTimeline +
+ * Renders PageHead + toolbar + panel/timeline +
  * ChangelogEditorDrawer + ChangelogDeleteDialog.
  *
  */
 
 import { useEffect, useRef, useState } from 'react';
 
-import { format } from 'date-fns';
-import { Calendar, Clock, FileText, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { Input } from '@/components/ui/input';
 import { SegControl, type SegOption } from '@/components/ui/seg-control';
-import { StatCard } from '@/components/ui/stat-card';
 import { tDynamic } from '@/i18n/tDynamic';
 import { useAdminChangelogStore } from '@/stores/adminChangelogStore';
 import { CHANGELOG_TAG_CONFIG, CHANGELOG_TAG_OPTIONS } from '@/types/changelog';
@@ -29,23 +27,6 @@ import { ChangelogEditorDrawer } from './ChangelogEditorDrawer';
 import { ChangelogTimeline } from './ChangelogTimeline';
 
 /**
- * Compute average days between consecutive entries in the last 10 (sorted desc).
- * Returns null when there are fewer than 2 entries.
- */
-function computeAvgCadenceDays(items: ChangelogEntryAdmin[]): number | null {
-  if (items.length < 2) return null;
-  const sorted = [...items].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 10);
-  if (sorted.length < 2) return null;
-  let totalMs = 0;
-  for (let i = 0; i < sorted.length - 1; i++) {
-    totalMs +=
-      new Date(sorted[i].created_at).getTime() - new Date(sorted[i + 1].created_at).getTime();
-  }
-  const avgMs = totalMs / (sorted.length - 1);
-  return Math.round(avgMs / (1000 * 60 * 60 * 24));
-}
-
-/**
  * ChangelogTab
  */
 export function ChangelogTab() {
@@ -54,7 +35,6 @@ export function ChangelogTab() {
   // ── Store ─────────────────────────────────────────────────────────────────
   const {
     items,
-    total,
     isLoading,
     fetchList,
     openCompose,
@@ -153,12 +133,6 @@ export function ChangelogTab() {
     }
   }, [mode, openEntryId, lang, setSearchParams]);
 
-  // ── Derived stats ─────────────────────────────────────────────────────────
-  const sortedDesc = [...items].sort((a, b) => b.created_at.localeCompare(a.created_at));
-  const mostRecent = sortedDesc[0] ?? null;
-
-  const cadenceDays = computeAvgCadenceDays(items);
-
   // ── Filter pipeline ───────────────────────────────────────────────────────
   const filteredBySearch = items.filter(
     (e) =>
@@ -186,45 +160,6 @@ export function ChangelogTab() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6" data-testid="changelog-tab">
-      {/* ── 4-up StatCard grid ───────────────────────────────────────────── */}
-      <div className="stat-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          title={t('admin:changelog.stats.total')}
-          n={total || items.length}
-          icon={<FileText />}
-          tone="blue"
-          footerLabel={t('admin:changelog.stats.footer.allTime')}
-        />
-        <StatCard
-          title={t('admin:changelog.stats.mostRecent')}
-          n={mostRecent ? format(new Date(mostRecent.created_at), 'MMM d') : '—'}
-          sub={
-            mostRecent
-              ? mostRecent.title_en.length > 32
-                ? mostRecent.title_en.slice(0, 32) + '…'
-                : mostRecent.title_en
-              : ''
-          }
-          icon={<Calendar />}
-          tone="violet"
-          barsTestId="sparkline-recent"
-          footerLabel={t('admin:changelog.stats.footer.lastPublished')}
-        />
-        <StatCard
-          title={t('admin:changelog.stats.cadence')}
-          n={cadenceDays !== null ? `${cadenceDays}d` : '—'}
-          sub={
-            cadenceDays !== null
-              ? t('admin:changelog.stats.cadenceSub')
-              : t('admin:changelog.stats.cadenceSubMinimal')
-          }
-          icon={<Clock />}
-          tone="cyan"
-          barsTestId="sparkline-cadence"
-          footerLabel={t('admin:changelog.stats.footer.lastTenEntries')}
-        />
-      </div>
-
       {/* ── Toolbar (sits on page canvas, no panel background) ──────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <div className="relative min-w-[240px] flex-1 sm:max-w-md">

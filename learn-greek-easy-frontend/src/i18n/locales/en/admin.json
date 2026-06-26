@@ -1058,18 +1058,6 @@
       "dashboard": "Admin",
       "current": "Changelog"
     },
-    "stats": {
-      "total": "Total entries",
-      "mostRecent": "Most recent",
-      "cadence": "Avg cadence",
-      "cadenceSub": "between entries",
-      "cadenceSubMinimal": "need ≥ 2 entries",
-      "footer": {
-        "allTime": "all-time",
-        "lastPublished": "last published",
-        "lastTenEntries": "last 10 entries"
-      }
-    },
     "title": "Changelog",
     "addNew": "Add New",
     "editDescription": "Edit changelog entry as JSON",

@@ -111,23 +111,29 @@ test.describe('Admin Changelog Timeline — ADMIN2-21 extension (CLTT-E2E-01..07
     expect(exportCount).toBe(0);
   });
 
-  test('CLTT-E2E-01: list renders ALL entries (KPI total === .cl-entry count)', async ({
+  test('CLTT-E2E-01: list renders ALL entries (API total === .cl-entry count)', async ({
     page,
   }) => {
+    // Intercept the admin list API to get the authoritative total count.
+    const listResponsePromise = page.waitForResponse(
+      (r) => /\/api\/v1\/admin\/changelog(\?|$)/.test(r.url()) && r.request().method() === 'GET',
+      { timeout: 20_000 }
+    );
+
     await navigateToAdminTab(page, 'changelog');
+    const listResponse = await listResponsePromise;
+    const body = await listResponse.json();
+    const apiTotal: number = body.total ?? 0;
+    expect(apiTotal).toBeGreaterThan(0);
+
     await expect(page.getByTestId('changelog-tab')).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('.cl-entry').first()).toBeVisible({ timeout: 10_000 });
 
-    // KPI total lives in the first StatCard's .stat-n (the "Total" card)
-    const totalText = await page.locator('.stat-card').first().locator('.stat-n').textContent();
-    const kpiTotal = parseInt((totalText || '0').replace(/\D/g, ''), 10);
-    expect(kpiTotal).toBeGreaterThan(0);
-
-    // Rendered row count must match the KPI total. If the backend rejects the
+    // Rendered row count must match the API total. If the backend rejects the
     // store's pageSize (the prod bug fixed in PR #505), the list would be empty
     // and this assertion would fail — that's the regression guard.
     const renderedCount = await page.locator('.cl-entry').count();
-    expect(renderedCount).toBe(kpiTotal);
+    expect(renderedCount).toBe(apiTotal);
   });
 
   test('CLTT-E2E-03: row content matches active UI locale (EN → title_en, RU → title_ru)', async ({

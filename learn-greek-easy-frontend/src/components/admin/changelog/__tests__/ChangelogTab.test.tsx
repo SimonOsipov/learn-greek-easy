@@ -1,10 +1,7 @@
 /**
- * ChangelogTab Component Tests — CLTE-08 / ADMIN2-21 trim
+ * ChangelogTab Component Tests — CLTE-08 / ADMIN2-21 trim / ADMIN2-44
  *
  * Covers:
- * - 3 StatCards (Missing RU card removed in CLTT-01)
- * - Missing RU card absent
- * - No sparkline rendered
  * - Search filter (no debounce, case-insensitive, EN+RU)
  * - Tag SegControl shows only present tags with counts
  * - Deep-link: ?edit=<valid-id>&lang=ru opens drawer
@@ -70,14 +67,6 @@ vi.mock('react-i18next', () => ({
         'admin:changelog.title': 'Changelog',
         'admin:changelog.subtitle': 'Manage and publish product updates for your users.',
         'admin:changelog.actions.newEntry': 'New entry',
-        'admin:changelog.stats.total': 'Total entries',
-        'admin:changelog.stats.mostRecent': 'Most recent',
-        'admin:changelog.stats.cadence': 'Avg cadence',
-        'admin:changelog.stats.cadenceSub': 'between entries',
-        'admin:changelog.stats.cadenceSubMinimal': 'need ≥ 2 entries',
-        'admin:changelog.stats.footer.allTime': 'all-time',
-        'admin:changelog.stats.footer.lastPublished': 'last published',
-        'admin:changelog.stats.footer.lastTenEntries': 'last 10 entries',
         'admin:changelog.search.entriesPlaceholder': 'Search entries…',
         'admin:changelog.search.clearAriaLabel': 'Clear search',
         'admin:shell.breadcrumb.dashboard': 'Dashboard',
@@ -217,90 +206,6 @@ describe('ChangelogTab', () => {
     it('renders changelog-tab test ID', () => {
       renderWithRouter();
       expect(screen.getByTestId('changelog-tab')).toBeInTheDocument();
-    });
-  });
-
-  // ── StatCards (3-card grid after CLTT-01 trim) ───────────────────────────────
-  describe('StatCards', () => {
-    it('renders exactly 3 StatCards', () => {
-      renderWithRouter();
-      const cards = document.querySelectorAll('.stat-card');
-      expect(cards.length).toBe(3);
-    });
-
-    it('Total card has tone-blue class', () => {
-      renderWithRouter();
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      expect(cards[0].classList).toContain('tone-blue');
-    });
-
-    it('Most recent card has tone-violet class', () => {
-      renderWithRouter();
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      expect(cards[1].classList).toContain('tone-violet');
-    });
-
-    it('Avg cadence card has tone-cyan class', () => {
-      renderWithRouter();
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      expect(cards[2].classList).toContain('tone-cyan');
-    });
-
-    it('Missing RU card is absent', () => {
-      renderWithRouter();
-      // The 4th card was the missing-RU card — no longer rendered
-      const cards = document.querySelectorAll('.stat-card');
-      expect(cards.length).toBeLessThan(4);
-      // Also verify no testid references to missing-ru-card
-      expect(screen.queryByTestId('missing-ru-card')).not.toBeInTheDocument();
-    });
-  });
-
-  // ── No sparkline (CLTT-01 trim) ──────────────────────────────────────────────
-  describe('No sparkline rendered', () => {
-    it('sparkline-total is NOT rendered', () => {
-      renderWithRouter();
-      expect(screen.queryByTestId('sparkline-total')).not.toBeInTheDocument();
-    });
-
-    it('sparkline-missing-ru is NOT rendered', () => {
-      renderWithRouter();
-      expect(screen.queryByTestId('sparkline-missing-ru')).not.toBeInTheDocument();
-    });
-
-    it('no sparkline-* testid is rendered at all', () => {
-      renderWithRouter();
-      // querySelectorAll is not scoped to testids, use queryBy pattern
-      const sparklines = document.querySelectorAll('[data-testid^="sparkline-"]');
-      expect(sparklines.length).toBe(0);
-    });
-  });
-
-  // ── Avg cadence (AC #4) ─────────────────────────────────────────────────────
-  describe('Avg cadence', () => {
-    it('renders — when fewer than 2 entries', () => {
-      mockItems = [makeEntry({ id: '1' })];
-      renderWithRouter();
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      expect(cards[2].querySelector('.stat-n')?.textContent).toBe('—');
-    });
-
-    it('renders — when no entries', () => {
-      mockItems = [];
-      renderWithRouter();
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      expect(cards[2].querySelector('.stat-n')?.textContent).toBe('—');
-    });
-
-    it('computes avg days between 2 entries', () => {
-      mockItems = [
-        makeEntry({ id: '1', created_at: '2024-03-20T00:00:00Z' }),
-        makeEntry({ id: '2', created_at: '2024-03-10T00:00:00Z' }),
-      ];
-      renderWithRouter();
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      // 10 days apart
-      expect(cards[2].querySelector('.stat-n')?.textContent).toBe('10d');
     });
   });
 
