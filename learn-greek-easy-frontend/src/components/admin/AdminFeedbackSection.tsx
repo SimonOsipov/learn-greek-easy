@@ -1,38 +1,20 @@
 // src/components/admin/AdminFeedbackSection.tsx
 //
-// FBDR-09 re-skin: PageHead chrome + StatCard grid + SegControl filters +
-// FeedbackDrawer mount + URL deep-link via useSearchParams.
-//
-// Removed: SummaryCard, Select dropdowns, AdminFeedbackResponseDialog usage.
-// The AdminFeedbackResponseDialog file stays on disk — deferred to ADMIN2-12.
+// ADMIN2-45 re-skin: contained .fb-panel + CD toolbar/search + .fb-list +
+// .va-panel-foot pager. Stat cards, dead-code computations, and the shadcn
+// Input / Button (pager) removed. FeedbackDrawer mount + URL deep-link
+// via useSearchParams preserved from v2.
 
 import React, { useEffect, useRef, useState } from 'react';
 
-import { formatDistanceToNow } from 'date-fns';
-import { el } from 'date-fns/locale/el';
-import { ru } from 'date-fns/locale/ru';
-import {
-  AlertCircle,
-  Bell,
-  ChevronLeft,
-  ChevronRight,
-  MessageSquare,
-  RefreshCw,
-  Search,
-  ThumbsUp,
-  X,
-} from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, RefreshCw, Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { SegControl } from '@/components/ui/seg-control';
 import { Skeleton } from '@/components/ui/skeleton';
-import { StatCard } from '@/components/ui/stat-card';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminFeedbackStore } from '@/stores/adminFeedbackStore';
 import type { AdminFeedbackItem } from '@/types/feedback';
@@ -108,31 +90,18 @@ function matchSearch(item: AdminFeedbackItem, query: string): boolean {
 // ── AdminFeedbackSection ───────────────────────────────────────────────────────
 
 /**
- * Admin Feedback Section — FBDR-09 re-skin.
+ * Admin Feedback Section — ADMIN2-45 re-skin.
  *
- * Renders:
- *  - PageHead with breadcrumb, Kicker, title, sub, decorative action buttons
- *  - 3-up StatCard grid (Total / Awaiting / Community votes) — page-scoped
- *  - SegControl × 2 (Status 7-opts, Type 4-opts) + debounced search Input
- *  - AdminFeedbackCard list with client-side sort (vote_count desc) + filter
+ * Renders inside a contained .fb-panel:
+ *  - CD .news-toolbar (search + 2 SegControls)
+ *  - AdminFeedbackCard list (.fb-list) with client-side sort + filter
+ *  - .va-panel-foot pager with .btn.btn-glass.btn-sm buttons
  *  - FeedbackDrawer mount host (URL deep-linked via useSearchParams)
  *  - ConfirmDialog for delete (preserved from v1)
- *  - Pagination footer (preserved from v1)
  */
 export const AdminFeedbackSection: React.FC = () => {
-  const { t, i18n } = useTranslation('admin');
+  const { t } = useTranslation('admin');
   const { toast } = useToast();
-
-  const getDateLocale = () => {
-    switch (i18n.language) {
-      case 'el':
-        return el;
-      case 'ru':
-        return ru;
-      default:
-        return undefined;
-    }
-  };
 
   // ── Store ─────────────────────────────────────────────────────────────────
   const {
@@ -322,21 +291,6 @@ export const AdminFeedbackSection: React.FC = () => {
     ? afterType.filter((f) => matchSearch(f, debouncedSearch))
     : afterType;
 
-  // ── Page-scoped stat math ─────────────────────────────────────────────────
-  const newCount = feedbackList.filter((f) => f.status === 'new').length;
-  const respondedCount = feedbackList.filter(
-    (f) => f.admin_response !== null && f.admin_response !== ''
-  ).length;
-  const awaitingCount = Math.max(0, feedbackList.length - respondedCount);
-  const pageVotesSum = feedbackList.reduce((acc, f) => acc + (f.vote_count ?? 0), 0);
-
-  const oldestAwaitingAt = feedbackList
-    .filter((f) => !f.admin_response || f.admin_response === '')
-    .reduce<Date | undefined>((min, f) => {
-      const d = new Date(f.created_at);
-      return !min || d < min ? d : min;
-    }, undefined);
-
   // ── Filter active check ───────────────────────────────────────────────────
   const hasActiveFilters = statusSeg !== 'all' || typeSeg !== 'all' || debouncedSearch !== '';
 
@@ -366,202 +320,182 @@ export const AdminFeedbackSection: React.FC = () => {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      {/* ── 3-up StatCard grid ─────────────────────────────────────────────── */}
-      <div className="stat-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          title={t('feedback.v2.statCards.total.label')}
-          n={total}
-          sub={t('feedback.v2.statCards.total.sub', { newCount, respondedCount })}
-          icon={<MessageSquare />}
-          tone="blue"
-        />
-        <StatCard
-          title={t('feedback.v2.statCards.awaiting.label')}
-          n={awaitingCount}
-          sub={
-            awaitingCount > 0 && oldestAwaitingAt
-              ? t('feedback.v2.statCards.awaiting.sub', {
-                  distance: formatDistanceToNow(oldestAwaitingAt, {
-                    addSuffix: true,
-                    locale: getDateLocale(),
-                  }),
-                })
-              : undefined
-          }
-          icon={<Bell />}
-          tone={awaitingCount > 0 ? 'amber' : 'green'}
-        />
-        <StatCard
-          title={t('feedback.v2.statCards.communityVotes.label')}
-          n={pageVotesSum}
-          sub={t('feedback.v2.statCards.communityVotes.sub')}
-          icon={<ThumbsUp />}
-          tone="violet"
-        />
-      </div>
+      {/* ── Contained panel ────────────────────────────────────────────────── */}
+      <div className="fb-panel">
+        {/* ── CD toolbar (search + SegControls) ────────────────────────────── */}
+        <div className="news-toolbar">
+          {/* CD .news-search: icon + input + optional clear button */}
+          <div className="news-search">
+            <Search className="search-icon" aria-hidden />
+            <input
+              type="text"
+              placeholder={t('feedback.v2.filters.search.placeholder')}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setSearchInput('');
+              }}
+              data-testid="feedback-search-input"
+            />
+            {searchInput && (
+              <button
+                type="button"
+                className="icon-btn icon-btn-sm clear-btn"
+                onClick={() => setSearchInput('')}
+                aria-label={t('feedback.v2.filters.search.clearAriaLabel')}
+              >
+                <X />
+              </button>
+            )}
+          </div>
 
-      {/* ── Filters row ────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="relative min-w-[240px] flex-1 sm:max-w-md">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder={t('feedback.v2.filters.search.placeholder')}
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') setSearchInput('');
-            }}
-            className="pl-8 pr-8"
-            data-testid="feedback-search-input"
+          <SegControl
+            options={STATUS_OPTIONS}
+            value={statusSeg}
+            onChange={setStatusSeg}
+            ariaLabel={t('feedback.v2.filters.status.label')}
           />
-          {searchInput && (
+
+          <SegControl
+            options={TYPE_OPTIONS}
+            value={typeSeg}
+            onChange={setTypeSeg}
+            ariaLabel={t('feedback.v2.filters.type.label')}
+          />
+
+          {hasActiveFilters && (
             <button
               type="button"
-              className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
-              onClick={() => setSearchInput('')}
-              aria-label={t('feedback.v2.filters.search.clearAriaLabel')}
+              className="btn btn-ghost btn-sm"
+              onClick={handleClearFilters}
+              data-testid="clear-filters-button"
             >
-              <X className="h-4 w-4" />
+              {t('feedback.v2.filters.clear')}
             </button>
           )}
         </div>
 
-        <SegControl
-          options={STATUS_OPTIONS}
-          value={statusSeg}
-          onChange={setStatusSeg}
-          ariaLabel={t('feedback.v2.filters.status.label')}
-        />
+        {/* ── Loading State ─────────────────────────────────────────────────── */}
+        {isLoading && (
+          <div className="fb-list">
+            {[1, 2, 3].map((i) => (
+              <article key={i} className="fb-card" aria-hidden>
+                <div className="fb-card-left">
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-5 w-8" />
+                </div>
+                <div className="fb-card-main">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-5 w-16" />
+                    <Skeleton className="h-5 w-16" />
+                    <Skeleton className="h-5 w-48" />
+                  </div>
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+                <div>
+                  <Skeleton className="h-8 w-8" />
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
 
-        <SegControl
-          options={TYPE_OPTIONS}
-          value={typeSeg}
-          onChange={setTypeSeg}
-          ariaLabel={t('feedback.v2.filters.type.label')}
-        />
+        {/* ── Error State ────────────────────────────────────────────────────── */}
+        {error && !isLoading && (
+          <div className="p-5">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>{t('feedback.errors.loadingTitle')}</AlertTitle>
+              <AlertDescription className="mt-2">
+                <p className="mb-3">{error}</p>
+                <button
+                  type="button"
+                  className="btn btn-glass btn-sm"
+                  onClick={() => fetchFeedbackList()}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  {t('actions.retry')}
+                </button>
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
 
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClearFilters}
-            data-testid="clear-filters-button"
-          >
-            {t('feedback.v2.filters.clear')}
-          </Button>
+        {/* ── Feedback List ──────────────────────────────────────────────────── */}
+        {!isLoading && !error && (
+          <>
+            {visible.length === 0 ? (
+              <div
+                className="placeholder-box mx-5 my-5 flex-col gap-3 py-12"
+                data-testid="feedback-empty"
+              >
+                <Search className="h-10 w-10 text-muted-foreground" aria-hidden />
+                <h3 className="text-base font-semibold">
+                  {hasActiveFilters
+                    ? t('feedback.v2.emptyStates.noMatchHeading')
+                    : t('feedback.v2.emptyStates.noFeedbackHeading')}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {hasActiveFilters
+                    ? t('feedback.v2.emptyStates.noMatchBody')
+                    : t('feedback.v2.emptyStates.noFeedbackBody')}
+                </p>
+              </div>
+            ) : (
+              <div className="fb-list">
+                {visible.map((feedback) => (
+                  <AdminFeedbackCard
+                    key={feedback.id}
+                    feedback={feedback}
+                    onRespond={handleCardRespond}
+                    onDelete={(id) => {
+                      const item = feedbackList.find((x) => x.id === id);
+                      if (item) setDeleteTarget(item);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* ── Panel footer pager ────────────────────────────────────────── */}
+            {total > 0 && (
+              <div className="va-panel-foot">
+                <span className="va-dim">
+                  {t('pagination.showing', {
+                    from: (page - 1) * pageSize + 1,
+                    to: Math.min(page * pageSize, total),
+                    total,
+                  })}
+                </span>
+                <div className="va-pager">
+                  <button
+                    type="button"
+                    className="btn btn-glass btn-sm"
+                    onClick={handlePreviousPage}
+                    disabled={page === 1}
+                    data-testid="feedback-pagination-prev"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    {t('pagination.previous')}
+                  </button>
+                  <span className="va-dim">{t('pagination.pageOf', { page, totalPages })}</span>
+                  <button
+                    type="button"
+                    className="btn btn-glass btn-sm"
+                    onClick={handleNextPage}
+                    disabled={page >= totalPages}
+                    data-testid="feedback-pagination-next"
+                  >
+                    {t('pagination.next')}
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
-
-      {/* ── Loading State ──────────────────────────────────────────────────── */}
-      {isLoading && (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <Skeleton className="h-5 w-48" />
-                    <Skeleton className="h-4 w-32" />
-                  </div>
-                  <Skeleton className="h-9 w-24" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-16 w-full" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* ── Error State ────────────────────────────────────────────────────── */}
-      {error && !isLoading && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{t('feedback.errors.loadingTitle')}</AlertTitle>
-          <AlertDescription className="mt-2">
-            <p className="mb-3">{error}</p>
-            <Button variant="outline" size="sm" onClick={() => fetchFeedbackList()}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              {t('actions.retry')}
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* ── Feedback List ──────────────────────────────────────────────────── */}
-      {!isLoading && !error && (
-        <>
-          {visible.length === 0 ? (
-            <div className="placeholder-box flex-col gap-3 py-12" data-testid="feedback-empty">
-              <Search className="h-10 w-10 text-muted-foreground" aria-hidden />
-              <h3 className="text-base font-semibold">
-                {hasActiveFilters
-                  ? t('feedback.v2.emptyStates.noMatchHeading')
-                  : t('feedback.v2.emptyStates.noFeedbackHeading')}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {hasActiveFilters
-                  ? t('feedback.v2.emptyStates.noMatchBody')
-                  : t('feedback.v2.emptyStates.noFeedbackBody')}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {visible.map((feedback) => (
-                <AdminFeedbackCard
-                  key={feedback.id}
-                  feedback={feedback}
-                  onRespond={handleCardRespond}
-                  onDelete={(id) => {
-                    const item = feedbackList.find((x) => x.id === id);
-                    if (item) setDeleteTarget(item);
-                  }}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* ── Pagination ───────────────────────────────────────────────── */}
-          {total > 0 && (
-            <div className="mt-4 flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                {t('pagination.showing', {
-                  from: (page - 1) * pageSize + 1,
-                  to: Math.min(page * pageSize, total),
-                  total,
-                })}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePreviousPage}
-                  disabled={page === 1}
-                  data-testid="feedback-pagination-prev"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  {t('pagination.previous')}
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  {t('pagination.pageOf', { page, totalPages })}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleNextPage}
-                  disabled={page >= totalPages}
-                  data-testid="feedback-pagination-next"
-                >
-                  {t('pagination.next')}
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </>
-      )}
 
       {/* ── FeedbackDrawer mount host ──────────────────────────────────────── */}
       {openFeedbackId !== null && (
