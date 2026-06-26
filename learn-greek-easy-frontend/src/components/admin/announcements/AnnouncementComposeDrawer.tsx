@@ -25,7 +25,6 @@ import { useSearchParams } from 'react-router-dom';
 
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
@@ -389,39 +388,42 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
 
         {/* ── Footer ───────────────────────────────────────────────────── */}
         <SidePanel.Footer>
-          {/* Left: status badge + helper */}
+          {/* Left: readiness status badge. The verbose "sending to … · immediately"
+              helper was dropped — it never fit on one row beside the badge + 3
+              buttons in the ≤720px half-drawer (worst case RU), and the same
+              audience/schedule is already surfaced in the body's Audience +
+              Schedule sections and the preview pane. */}
           <div className="drawer-foot-left">
             <Badge tone={isReady ? 'green' : 'gray'}>
               {isReady
                 ? t('announcements.v2.compose.footer.ready')
                 : t('announcements.v2.compose.footer.needsTitleAndMessage')}
             </Badge>
-            <span className="drawer-foot-helper">
-              {t('announcements.v2.compose.footer.helperPrefix')}{' '}
-              <strong>{t('announcements.v2.compose.footer.helperBold')}</strong>{' '}
-              {t('announcements.v2.compose.footer.helperSuffix')}
-            </span>
           </div>
 
-          {/* Right: action buttons */}
+          {/* Right: action buttons — design-system `.btn` classes (`btn-sm`) to
+              match the CD prototype exactly: ghost Cancel, glass Save-draft,
+              primary Send-now with a bell. Raw <button>s (not the shadcn
+              <Button>) so the compact 32px `btn-sm` sizing + gradient/glow
+              primary render pixel-for-pixel like the prototype. */}
           <div className="drawer-foot-right">
             {/* Cancel */}
-            <Button
+            <button
               type="button"
-              variant="ghost"
+              className="btn btn-ghost btn-sm disabled:cursor-not-allowed disabled:opacity-50"
               onClick={requestClose}
               disabled={isSubmitting}
               data-testid="announcement-compose-cancel-button"
             >
               {t('announcements.v2.compose.footer.cancel')}
-            </Button>
+            </button>
 
             {/* Save draft — gated Coming-soon */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  className="btn-glass cursor-not-allowed opacity-60"
+                  className="btn btn-glass btn-sm cursor-not-allowed opacity-60"
                   aria-disabled="true"
                   onClick={(e) => e.preventDefault()}
                 >
@@ -432,18 +434,19 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
             </Tooltip>
 
             {/* Send now */}
-            <Button
+            <button
               type="button"
-              variant="default"
+              className="btn btn-primary btn-sm disabled:cursor-not-allowed disabled:opacity-50"
               aria-disabled={!sendEnabled}
               disabled={!sendEnabled}
               onClick={sendEnabled ? onSubmit : undefined}
               data-testid="announcement-compose-send-button"
             >
+              <Bell className="size-4" aria-hidden="true" />
               {isSubmitting
                 ? t('announcements.v2.compose.footer.sending')
                 : t('announcements.v2.compose.footer.sendNow')}
-            </Button>
+            </button>
           </div>
         </SidePanel.Footer>
       </SidePanel>
