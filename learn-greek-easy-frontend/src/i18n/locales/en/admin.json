@@ -1052,8 +1052,8 @@
     }
   },
   "changelog": {
-    "kicker": "Changelog",
-    "sub": "Manage and publish product updates for your users.",
+    "kicker": "System · Changelog",
+    "sub": "Public release notes — visible to learners in the in-app changelog.",
     "breadcrumb": {
       "dashboard": "Admin",
       "current": "Changelog"
