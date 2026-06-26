@@ -1512,6 +1512,91 @@
     font-style: italic;
   }
 
+  /* ── Changelog rail-rows inside .cl-panel (ADMIN2-44) ── */
+  /* Inside the contained panel, entries switch from .admin-card elevated cards
+     to flat 28px-rail rows. Scoped under .cl-panel so legacy admin-card usage
+     on other surfaces is unaffected. */
+  .cl-panel .cl-entry {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 12px;
+    padding: 14px 18px 16px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    border-bottom: 1px solid hsl(var(--fg) / 0.04);
+    transition: background 0.12s;
+  }
+  .cl-panel .cl-entry:last-child {
+    border-bottom: none;
+  }
+  .cl-panel .cl-entry:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  .cl-panel .cl-entry-body {
+    background: transparent;
+  }
+  .cl-panel .cl-entry:hover .cl-entry-body {
+    background: hsl(var(--bg) / 0.5);
+    border-radius: 8px;
+  }
+
+  /* Left rail column: vertical connector line + dot */
+  .cl-entry-rail {
+    position: relative;
+    width: 28px;
+    display: flex;
+    justify-content: center;
+    padding-top: 6px;
+  }
+  .cl-entry-rail::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1px;
+    background: hsl(var(--fg) / 0.1);
+  }
+  .cl-panel .cl-month:last-child .cl-entry:last-child .cl-entry-rail::before {
+    bottom: auto;
+    height: 20px;
+  }
+
+  /* Colored dot on top of the rail line */
+  .cl-entry-dot {
+    position: relative;
+    z-index: 1;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: hsl(var(--fg-3));
+    box-shadow: 0 0 0 3px hsl(var(--bg-2));
+    flex-shrink: 0;
+  }
+  .cl-entry-dot.tone-green {
+    background: hsl(var(--success));
+  }
+  .cl-entry-dot.tone-amber {
+    background: hsl(var(--warning));
+  }
+  .cl-entry-dot.tone-blue {
+    background: hsl(var(--primary));
+  }
+  .cl-entry-dot.tone-cyan {
+    background: hsl(var(--accent-2));
+  }
+  .cl-entry-dot.tone-violet {
+    background: hsl(var(--accent));
+  }
+  .cl-entry-dot.tone-red {
+    background: hsl(var(--danger));
+  }
+
   /* ── Drawer field (ADMIN2) ── */
   .dr-fields {
     display: flex;
@@ -2703,6 +2788,72 @@
     flex-shrink: 0;
   }
 
+  /* ── Changelog contained panel (ADMIN2-44 / AC-A) ── */
+  /* Tab-local surface that wraps the changelog toolbar + timeline. Mirrors the
+     .an-panel approach: bg-2 card skin + hairline border so the panel floats
+     above the page canvas. The global .va-panel { background: transparent }
+     rule stays untouched — this panel uses its own selector. */
+  .cl-panel {
+    background: hsl(var(--bg-2));
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  /* Toolbar row (search + SegControl filter) at the top of .cl-panel. */
+  .news-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid hsl(var(--fg) / 0.06);
+  }
+
+  /* CD search field: positioned wrapper + icon + input + clear btn.
+     Input inherits focus-ring from the outer wrapper via :focus-within. */
+  .news-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 220px;
+    flex: 1;
+  }
+  .news-search .search-icon {
+    position: absolute;
+    left: 10px;
+    pointer-events: none;
+    color: hsl(var(--fg-3));
+    width: 14px;
+    height: 14px;
+  }
+  .news-search input {
+    width: 100%;
+    height: 34px;
+    padding: 0 34px 0 32px;
+    background: hsl(var(--bg));
+    border: 1px solid hsl(var(--fg) / 0.1);
+    border-radius: 10px;
+    font-size: 13px;
+    color: hsl(var(--fg));
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .news-search input::placeholder {
+    color: hsl(var(--fg-3));
+  }
+  .news-search input:focus {
+    border-color: hsl(var(--primary) / 0.5);
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.12);
+  }
+  .news-search .clear-btn {
+    position: absolute;
+    right: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   /* ── Changelog timeline wrapper + month groups (ADMIN2 / CLTE-02) ── */
   .cl-timeline {
     display: flex;
@@ -2772,6 +2923,48 @@
     background: hsl(var(--fg) / 0.06);
     border-radius: 8px;
     margin-right: 8px;
+  }
+
+  /* ── Changelog lang-tab pill buttons (ADMIN2-44 / CD segmented control) ── */
+  .dk-langtab {
+    background: transparent;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: hsl(var(--fg-2));
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .dk-langtab:hover {
+    color: hsl(var(--fg));
+  }
+  .dk-langtab.is-active {
+    background: hsl(var(--bg-2));
+    color: hsl(var(--fg));
+    box-shadow: 0 1px 2px hsl(0 0% 0% / 0.15);
+  }
+
+  /* ── Dimmed helper text (ADMIN2-44) ── */
+  .va-dim {
+    color: hsl(var(--fg-3));
+    font-size: 13px;
+  }
+
+  /* ── Danger text modifier for glass buttons (ADMIN2-44) ── */
+  .btn.danger-text {
+    color: hsl(var(--danger));
+  }
+  .btn.danger-text:hover {
+    color: hsl(var(--danger));
+  }
+
+  /* ── Changelog error regions (ADMIN2-44) ── */
+  .cl-json-error,
+  .cl-submit-error {
+    color: hsl(var(--danger));
+    font-size: 13px;
   }
 
   /* ── Changelog tag buttons (ADMIN2 / CLTE-02) ── */
@@ -2927,25 +3120,6 @@
     padding-top: 10px;
     border-top: 1px dashed hsl(var(--fg) / 0.08);
     font-size: 11px;
-  }
-
-  /* ── Changelog drawer header metadata strip (ADMIN2-21 / CLTT-17) ── */
-  .cl-drawer-id-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 11.5px;
-    margin-top: 4px;
-  }
-  .cl-drawer-id-row button {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    color: inherit;
-    padding: 2px;
-  }
-  .cl-drawer-id-row button:hover {
-    color: hsl(var(--fg));
   }
 
   /* ── News Card Surface (NADM-16) ───────────────────────── */

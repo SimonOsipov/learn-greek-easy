@@ -1052,23 +1052,11 @@
     }
   },
   "changelog": {
-    "kicker": "Changelog",
-    "sub": "Manage and publish product updates for your users.",
+    "kicker": "System · Changelog",
+    "sub": "Public release notes — visible to learners in the in-app changelog.",
     "breadcrumb": {
       "dashboard": "Admin",
       "current": "Changelog"
-    },
-    "stats": {
-      "total": "Total entries",
-      "mostRecent": "Most recent",
-      "cadence": "Avg cadence",
-      "cadenceSub": "between entries",
-      "cadenceSubMinimal": "need ≥ 2 entries",
-      "footer": {
-        "allTime": "all-time",
-        "lastPublished": "last published",
-        "lastTenEntries": "last 10 entries"
-      }
     },
     "title": "Changelog",
     "addNew": "Add New",
@@ -1161,12 +1149,8 @@
       "titlePlaceholder": "Short, descriptive title",
       "contentPlaceholder": "Markdown supported. What changed, why, and any user impact.",
       "needsEnHelper": "Add EN title and content to enable saving.",
-      "metaId": "ID",
-      "metaCreated": "Created",
-      "metaUpdated": "Updated",
-      "idCopied": "Entry ID copied",
-      "metaIdCopyAria": "Copy entry ID",
-      "metaLinkCopyAria": "Copy link to entry"
+      "bcrumbNew": "Changelog · New entry",
+      "bcrumbEdit": "Changelog · Edit entry"
     }
   },
   "vocabularyCard": {

@@ -3,13 +3,15 @@
  *
  * Covers:
  * 1. Month grouping — correct month headers, correct row counts
- * 2. Version pill — hidden for null/empty, shown for truthy version
+ * 2. Version pill — hidden for null/empty, shown for truthy version (cl-entry-v class)
  * 3. Missing RU badge — shown when title_ru or content_ru is empty
  * 4. Sort order — entries rendered desc by created_at regardless of input order
  * 5. Click handlers — row click fires onEdit; Edit icon fires onEdit; Delete icon fires onDelete
- * 6. English locale — month headers stay English even when i18n language is 'ru'
+ * 6. Locale-aware month headers — RU lang renders Russian month names (ADMIN2-44)
  * 7. Locale-aware title/body rendering (CLTT-05)
  * 8. Body truncation
+ * 9. Rail-row structure — .cl-entry-rail, .cl-entry-dot with tone class (ADMIN2-44)
+ * 10. title_ru shown as .cl-entry-title-ru when EN lang + title_ru present (ADMIN2-44)
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -171,11 +173,11 @@ describe('ChangelogTimeline — version pill', () => {
     expect(pill.textContent).not.toBe('vv1.2.0');
   });
 
-  // ── CLLP-10: version pill uses cl-preview-v class (renamed from cl-version-pill) ──
-  it('version pill element has class cl-preview-v', () => {
+  // ── ADMIN2-44: version pill uses cl-entry-v class (CD-aligned, not cl-preview-v) ──
+  it('version pill element has class cl-entry-v', () => {
     renderTimeline([makeEntry({ id: 'v-class', version: '3.1.0' })]);
 
-    expect(screen.getByTestId('version-pill').classList.contains('cl-preview-v')).toBe(true);
+    expect(screen.getByTestId('version-pill').classList.contains('cl-entry-v')).toBe(true);
   });
 });
 
@@ -261,7 +263,7 @@ describe('ChangelogTimeline — click handlers', () => {
     const onDelete = vi.fn();
     const { container } = renderTimeline([APRIL_ENTRY_1], onEdit, onDelete);
 
-    // Click the article element directly (the TimelineEntry root with role="button")
+    // Click the article root (role="button")
     const article = container.querySelector('article.cl-entry');
     expect(article).not.toBeNull();
     fireEvent.click(article!);
@@ -297,29 +299,46 @@ describe('ChangelogTimeline — click handlers', () => {
   });
 });
 
-describe('ChangelogTimeline — English locale', () => {
-  beforeEach(() => {
-    mockI18nLanguage.value = 'ru';
-  });
-
+describe('ChangelogTimeline — locale-aware month headers (ADMIN2-44)', () => {
   afterEach(() => {
     mockI18nLanguage.value = 'en';
   });
 
-  it('renders month headers in English even when i18n language is ru', () => {
-    const { container } = renderTimeline([APRIL_ENTRY_1, MARCH_ENTRY]);
+  it('renders month headers in English when i18n.language is en', () => {
+    mockI18nLanguage.value = 'en';
+    renderTimeline([APRIL_ENTRY_1, MARCH_ENTRY]);
 
-    // date-fns format with 'MMMM yyyy' uses system locale NOT i18n.language
-    // Result should be English month names regardless of i18n.language
     expect(screen.getByText('April 2026')).toBeInTheDocument();
     expect(screen.getByText('March 2026')).toBeInTheDocument();
+  });
 
-    // Month label elements (.cl-month-label) should NOT contain Russian month names
+  it('renders month headers in Russian when i18n.language is ru (ADMIN2-44)', () => {
+    mockI18nLanguage.value = 'ru';
+    const { container } = renderTimeline([APRIL_ENTRY_1, MARCH_ENTRY]);
+
+    // Grouping key is 'yyyy-MM' (stable); display label is localized.
+    // date-fns Russian locale renders genitive forms: 'апреля 2026', 'марта 2026'.
     const monthLabels = container.querySelectorAll('.cl-month-label');
-    const monthLabelTexts = Array.from(monthLabels).map((el) => el.textContent ?? '');
-    // None of the month labels should contain Russian month names
-    expect(monthLabelTexts.some((t) => /апрель|Апрель/i.test(t))).toBe(false);
-    expect(monthLabelTexts.some((t) => /март|Март/i.test(t))).toBe(false);
+    const monthLabelTexts = Array.from(monthLabels).map(
+      (el) => el.textContent?.toLowerCase() ?? ''
+    );
+    // "April" in Russian genitive = "апреля"
+    expect(monthLabelTexts.some((t) => t.includes('апрел'))).toBe(true);
+    // "March" in Russian genitive = "марта"
+    expect(monthLabelTexts.some((t) => t.includes('март'))).toBe(true);
+    // Should NOT contain English month names
+    expect(monthLabelTexts.some((t) => t.includes('april'))).toBe(false);
+    expect(monthLabelTexts.some((t) => t.includes('march'))).toBe(false);
+  });
+
+  it('grouping stays intact regardless of locale (both April entries in same month group)', () => {
+    mockI18nLanguage.value = 'ru';
+    const { container } = renderTimeline([MARCH_ENTRY, APRIL_ENTRY_2, APRIL_ENTRY_1]);
+
+    const months = container.querySelectorAll('.cl-month');
+    expect(months).toHaveLength(2);
+    // April group (first) should still have 2 entries
+    expect(months[0].querySelectorAll('.cl-entry')).toHaveLength(2);
   });
 });
 
@@ -364,18 +383,29 @@ describe('ChangelogTimeline — locale-aware title/body (CLTT-05)', () => {
     expect(contentEl?.textContent).toContain('Апрельская функция первая тело');
   });
 
-  it('subtitle prop passed to TimelineEntry is undefined regardless of lang', () => {
-    // ChangelogTimeline explicitly passes subtitle={undefined}
-    // TimelineEntry renders subtitle in .cl-entry-title-ru when present.
-    // Since subtitle is undefined, this element should be absent.
+  it('.cl-entry-title-ru renders title_ru when lang is EN and title_ru is non-empty (ADMIN2-44)', () => {
+    // ADMIN2-44 CD alignment: show Russian subtitle under the EN title when
+    // the entry has title_ru populated and the active language is EN.
     mockI18nLanguage.value = 'en';
     const { container } = renderTimeline([APRIL_ENTRY_1]);
-    expect(container.querySelector('.cl-entry-title-ru')).toBeNull();
+    const ruEl = container.querySelector('.cl-entry-title-ru');
+    expect(ruEl).not.toBeNull();
+    expect(ruEl?.textContent).toBe('Апрельская функция первая');
+  });
 
-    // Also test with RU lang
+  it('.cl-entry-title-ru is absent when lang is RU (the main h3 already shows Russian)', () => {
+    // When the active locale is RU the h3 already renders the Russian title;
+    // showing it again in the subtitle would duplicate it.
     mockI18nLanguage.value = 'ru';
-    const { container: containerRu } = renderTimeline([APRIL_ENTRY_1]);
-    expect(containerRu.querySelector('.cl-entry-title-ru')).toBeNull();
+    const { container } = renderTimeline([APRIL_ENTRY_1]);
+    expect(container.querySelector('.cl-entry-title-ru')).toBeNull();
+  });
+
+  it('.cl-entry-title-ru is absent when title_ru is empty (nothing to show)', () => {
+    mockI18nLanguage.value = 'en';
+    const entry = makeEntry({ id: 'no-ru', title_ru: '', content_ru: 'some ru content' });
+    const { container } = renderTimeline([entry]);
+    expect(container.querySelector('.cl-entry-title-ru')).toBeNull();
   });
 });
 
@@ -409,5 +439,58 @@ describe('ChangelogTimeline — body truncation', () => {
     const contentEl = container.querySelector('.cl-entry-content');
     expect(contentEl?.textContent).toHaveLength(240);
     expect(contentEl?.textContent?.endsWith('…')).toBe(false);
+  });
+});
+
+describe('ChangelogTimeline — rail-row structure (ADMIN2-44)', () => {
+  beforeEach(() => {
+    mockI18nLanguage.value = 'en';
+  });
+
+  it('renders .cl-entry-rail in each entry', () => {
+    const { container } = renderTimeline([APRIL_ENTRY_1, MARCH_ENTRY]);
+
+    const rails = container.querySelectorAll('.cl-entry-rail');
+    expect(rails).toHaveLength(2);
+  });
+
+  it('renders .cl-entry-dot inside .cl-entry-rail', () => {
+    const { container } = renderTimeline([APRIL_ENTRY_1]);
+
+    const rail = container.querySelector('.cl-entry-rail');
+    expect(rail?.querySelector('.cl-entry-dot')).not.toBeNull();
+  });
+
+  it('new_feature entry dot has tone-green class', () => {
+    const { container } = renderTimeline([makeEntry({ id: 'tone-green', tag: 'new_feature' })]);
+    expect(container.querySelector('.cl-entry-dot.tone-green')).not.toBeNull();
+  });
+
+  it('bug_fix entry dot has tone-amber class', () => {
+    const { container } = renderTimeline([makeEntry({ id: 'tone-amber', tag: 'bug_fix' })]);
+    expect(container.querySelector('.cl-entry-dot.tone-amber')).not.toBeNull();
+  });
+
+  it('announcement entry dot has tone-blue class', () => {
+    const { container } = renderTimeline([makeEntry({ id: 'tone-blue', tag: 'announcement' })]);
+    expect(container.querySelector('.cl-entry-dot.tone-blue')).not.toBeNull();
+  });
+
+  it('edit icon-btn has class icon-btn-sm', () => {
+    const { container } = renderTimeline([APRIL_ENTRY_1]);
+    const editBtn = container.querySelector('[data-testid="timeline-edit-april-1"]');
+    expect(editBtn?.classList.contains('icon-btn-sm')).toBe(true);
+  });
+
+  it('delete icon-btn has class icon-btn-sm danger', () => {
+    const { container } = renderTimeline([APRIL_ENTRY_1]);
+    const deleteBtn = container.querySelector('[data-testid="timeline-delete-april-1"]');
+    expect(deleteBtn?.classList.contains('icon-btn-sm')).toBe(true);
+    expect(deleteBtn?.classList.contains('danger')).toBe(true);
+  });
+
+  it('no .admin-card class on entry elements', () => {
+    const { container } = renderTimeline([APRIL_ENTRY_1]);
+    expect(container.querySelector('.admin-card')).toBeNull();
   });
 });

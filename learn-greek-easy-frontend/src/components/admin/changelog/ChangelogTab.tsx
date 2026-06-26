@@ -4,21 +4,18 @@
  * ChangelogTab — CLTE-08 rewrite
  *
  * Integration choke point for ADMIN2-06.
- * Renders PageHead + 4-up StatCard grid + ChangelogTimeline +
+ * Renders PageHead + toolbar + panel/timeline +
  * ChangelogEditorDrawer + ChangelogDeleteDialog.
  *
  */
 
 import { useEffect, useRef, useState } from 'react';
 
-import { format } from 'date-fns';
-import { Calendar, Clock, FileText, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
-import { Input } from '@/components/ui/input';
 import { SegControl, type SegOption } from '@/components/ui/seg-control';
-import { StatCard } from '@/components/ui/stat-card';
 import { tDynamic } from '@/i18n/tDynamic';
 import { useAdminChangelogStore } from '@/stores/adminChangelogStore';
 import { CHANGELOG_TAG_CONFIG, CHANGELOG_TAG_OPTIONS } from '@/types/changelog';
@@ -29,32 +26,15 @@ import { ChangelogEditorDrawer } from './ChangelogEditorDrawer';
 import { ChangelogTimeline } from './ChangelogTimeline';
 
 /**
- * Compute average days between consecutive entries in the last 10 (sorted desc).
- * Returns null when there are fewer than 2 entries.
- */
-function computeAvgCadenceDays(items: ChangelogEntryAdmin[]): number | null {
-  if (items.length < 2) return null;
-  const sorted = [...items].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 10);
-  if (sorted.length < 2) return null;
-  let totalMs = 0;
-  for (let i = 0; i < sorted.length - 1; i++) {
-    totalMs +=
-      new Date(sorted[i].created_at).getTime() - new Date(sorted[i + 1].created_at).getTime();
-  }
-  const avgMs = totalMs / (sorted.length - 1);
-  return Math.round(avgMs / (1000 * 60 * 60 * 24));
-}
-
-/**
  * ChangelogTab
  */
 export function ChangelogTab() {
-  const { t } = useTranslation(['admin', 'changelog']);
+  const { t, i18n } = useTranslation(['admin', 'changelog']);
+  const uiLang = i18n.language.startsWith('ru') ? 'ru' : 'en';
 
   // ── Store ─────────────────────────────────────────────────────────────────
   const {
     items,
-    total,
     isLoading,
     fetchList,
     openCompose,
@@ -98,7 +78,7 @@ export function ChangelogTab() {
     if (editId) {
       if (items.some((e) => e.id === editId)) {
         appliedDeepLinkRef.current = true;
-        openEdit(editId);
+        openEdit(editId, uiLang);
         if (langParam === 'en' || langParam === 'ru') {
           setLang(langParam);
         }
@@ -108,13 +88,13 @@ export function ChangelogTab() {
       }
     } else if (composeFlag === '1') {
       appliedDeepLinkRef.current = true;
-      openCompose();
+      openCompose(uiLang);
     } else {
       // No relevant params — mark applied
       appliedDeepLinkRef.current = true;
     }
     // Malformed values: no URL rewrite, no toast, no console.error
-  }, [searchParams, items, isLoading, openEdit, openCompose, setLang]);
+  }, [searchParams, items, isLoading, openEdit, openCompose, setLang, uiLang]);
 
   // Effect 2 — store → URL (sync out)
   // Watches mode, openEntryId, lang; keeps URL in sync with drawer state.
@@ -153,12 +133,6 @@ export function ChangelogTab() {
     }
   }, [mode, openEntryId, lang, setSearchParams]);
 
-  // ── Derived stats ─────────────────────────────────────────────────────────
-  const sortedDesc = [...items].sort((a, b) => b.created_at.localeCompare(a.created_at));
-  const mostRecent = sortedDesc[0] ?? null;
-
-  const cadenceDays = computeAvgCadenceDays(items);
-
   // ── Filter pipeline ───────────────────────────────────────────────────────
   const filteredBySearch = items.filter(
     (e) =>
@@ -172,92 +146,54 @@ export function ChangelogTab() {
       ? filteredBySearch
       : filteredBySearch.filter((e) => e.tag === selectedTag);
 
-  // ── Tag SegControl options ────────────────────────────────────────────────
+  // ── Tag SegControl options (with per-tag counts) ─────────────────────────
   const tagOptions: SegOption<'all' | ChangelogTag>[] = [
     { value: 'all', label: t('admin:changelog.filter.all') },
-    ...CHANGELOG_TAG_OPTIONS.filter((tag) => filteredBySearch.some((e) => e.tag === tag)).map(
-      (tag) => ({
-        value: tag as 'all' | ChangelogTag,
-        label: tDynamic(t, CHANGELOG_TAG_CONFIG[tag].labelKey),
-      })
-    ),
+    ...CHANGELOG_TAG_OPTIONS.filter(
+      (tag) => filteredBySearch.some((e) => e.tag === tag) || tag === selectedTag
+    ).map((tag) => ({
+      value: tag as 'all' | ChangelogTag,
+      label: tDynamic(t, CHANGELOG_TAG_CONFIG[tag].labelKey),
+      count: filteredBySearch.filter((e) => e.tag === tag).length,
+    })),
   ];
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6" data-testid="changelog-tab">
-      {/* ── 4-up StatCard grid ───────────────────────────────────────────── */}
-      <div className="stat-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          title={t('admin:changelog.stats.total')}
-          n={total || items.length}
-          icon={<FileText />}
-          tone="blue"
-          footerLabel={t('admin:changelog.stats.footer.allTime')}
-        />
-        <StatCard
-          title={t('admin:changelog.stats.mostRecent')}
-          n={mostRecent ? format(new Date(mostRecent.created_at), 'MMM d') : '—'}
-          sub={
-            mostRecent
-              ? mostRecent.title_en.length > 32
-                ? mostRecent.title_en.slice(0, 32) + '…'
-                : mostRecent.title_en
-              : ''
-          }
-          icon={<Calendar />}
-          tone="violet"
-          barsTestId="sparkline-recent"
-          footerLabel={t('admin:changelog.stats.footer.lastPublished')}
-        />
-        <StatCard
-          title={t('admin:changelog.stats.cadence')}
-          n={cadenceDays !== null ? `${cadenceDays}d` : '—'}
-          sub={
-            cadenceDays !== null
-              ? t('admin:changelog.stats.cadenceSub')
-              : t('admin:changelog.stats.cadenceSubMinimal')
-          }
-          icon={<Clock />}
-          tone="cyan"
-          barsTestId="sparkline-cadence"
-          footerLabel={t('admin:changelog.stats.footer.lastTenEntries')}
-        />
-      </div>
-
-      {/* ── Toolbar (sits on page canvas, no panel background) ──────────── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="relative min-w-[240px] flex-1 sm:max-w-md">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') setSearch('');
-            }}
-            placeholder={t('admin:changelog.search.entriesPlaceholder')}
-            className="pl-8 pr-8"
-            data-testid="changelog-search-input"
-          />
-          {search && (
-            <button
-              type="button"
-              aria-label={t('admin:changelog.search.clearAriaLabel')}
-              onClick={() => setSearch('')}
-              className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+      {/* ── Contained panel: toolbar + timeline ──────────────────────────── */}
+      <div className="cl-panel">
+        {/* Toolbar row: search + tag filter */}
+        <div className="news-toolbar">
+          <div className="news-search">
+            <Search className="search-icon" aria-hidden="true" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setSearch('');
+              }}
+              placeholder={t('admin:changelog.search.entriesPlaceholder')}
+              data-testid="changelog-search-input"
+            />
+            {search && (
+              <button
+                type="button"
+                aria-label={t('admin:changelog.search.clearAriaLabel')}
+                onClick={() => setSearch('')}
+                className="icon-btn icon-btn-sm clear-btn"
+              >
+                <X />
+              </button>
+            )}
+          </div>
+          <SegControl options={tagOptions} value={selectedTag} onChange={setSelectedTag} />
         </div>
-        <SegControl options={tagOptions} value={selectedTag} onChange={setSelectedTag} />
-      </div>
 
-      {/* ── Panel: timeline ──────────────────────────────────────────────── */}
-      <div className="va-panel">
+        {/* Timeline */}
         <ChangelogTimeline
           entries={filtered}
-          onEdit={(id) => openEdit(id)}
+          onEdit={(id) => openEdit(id, uiLang)}
           onDelete={(id) => setDeleteCandidate(items.find((e) => e.id === id) ?? null)}
         />
       </div>

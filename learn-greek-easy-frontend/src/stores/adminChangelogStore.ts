@@ -50,8 +50,8 @@ interface AdminChangelogState {
   setPage: (page: number) => void;
   clearError: () => void;
   reset: () => void;
-  openCompose: () => void;
-  openEdit: (id: string) => void;
+  openCompose: (lang?: 'en' | 'ru') => void;
+  openEdit: (id: string, lang?: 'en' | 'ru') => void;
   closeDrawer: () => void;
   setLang: (l: 'en' | 'ru') => void;
   setPanelMode: (m: 'form' | 'json') => void;
@@ -183,12 +183,12 @@ export const useAdminChangelogStore = create<AdminChangelogState>()(
         set(INITIAL_STATE);
       },
 
-      openCompose: () => {
-        set({ mode: 'compose', openEntryId: null, lang: 'en', panelMode: 'form' });
+      openCompose: (lang?: 'en' | 'ru') => {
+        set({ mode: 'compose', openEntryId: null, lang: lang ?? 'en', panelMode: 'form' });
       },
 
-      openEdit: (id: string) => {
-        set({ mode: 'edit', openEntryId: id, lang: 'en', panelMode: 'form' });
+      openEdit: (id: string, lang?: 'en' | 'ru') => {
+        set({ mode: 'edit', openEntryId: id, lang: lang ?? 'en', panelMode: 'form' });
       },
 
       closeDrawer: () => {

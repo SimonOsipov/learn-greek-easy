@@ -17,11 +17,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { Copy, Link as LinkIcon } from 'lucide-react';
+import { Check, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Textarea } from '@/components/ui/textarea';
@@ -294,56 +293,22 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <SidePanel.Header>
         <div className="drawer-head-content">
-          <div className="drawer-head-row">
-            <h2 className="drawer-title">{title}</h2>
+          <div className="drawer-bcrumb">
+            {entry
+              ? `${t('admin:changelog.editor.bcrumbEdit')} · ${t('admin:changelog.editor.posted', { date: formatDate(entry.created_at) })}`
+              : t('admin:changelog.editor.bcrumbNew')}
           </div>
-          {entry && (
-            <div
-              className="cl-drawer-id-row va-dim font-mono"
-              data-testid="changelog-editor-meta-row"
-            >
-              <span>
-                {t('admin:changelog.editor.metaId')}:&nbsp;
-                <code>{entry.id.slice(0, 8)}…</code>
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(entry.id);
-                  toast({ title: t('admin:changelog.editor.idCopied') });
-                }}
-                data-testid="changelog-editor-copy-id"
-                aria-label={t('admin:changelog.editor.metaIdCopyAria')}
-              >
-                <Copy className="size-3.5" aria-hidden="true" />
-              </button>
-              <span>
-                {t('admin:changelog.editor.metaCreated')}:&nbsp;
-                {formatDate(entry.created_at)}
-              </span>
-              {entry.updated_at !== entry.created_at && (
-                <span>
-                  {t('admin:changelog.editor.metaUpdated')}:&nbsp;
-                  {formatDate(entry.updated_at)}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  const url = `${window.location.origin}/admin?tab=changelog&edit=${entry.id}&lang=${lang}`;
-                  navigator.clipboard.writeText(url);
-                  toast({
-                    title: t('changelog:linkCopied'),
-                    description: t('changelog:linkCopiedMessage'),
-                  });
-                }}
-                data-testid="changelog-editor-copy-link"
-                aria-label={t('admin:changelog.editor.metaLinkCopyAria')}
-              >
-                <LinkIcon className="size-3.5" aria-hidden="true" />
-              </button>
-            </div>
-          )}
+          <h2 className="drawer-title">{title}</h2>
+          <div className="drawer-meta" data-testid="changelog-drawer-meta">
+            <Badge tone={TAG_TONE[form.tag]}>
+              {tDynamic(t, CHANGELOG_TAG_CONFIG[form.tag].labelKey)}
+            </Badge>
+            {form.version && (
+              <Badge tone="gray" data-testid="changelog-drawer-meta-version">
+                {form.version}
+              </Badge>
+            )}
+          </div>
         </div>
         <SidePanel.CloseButton data-testid="changelog-editor-close-button" position="right" />
       </SidePanel.Header>
@@ -376,13 +341,13 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
 
         <div className="drawer-tabs-spacer" />
 
-        {/* Right: EN / RU language tabs */}
-        <div className="drawer-tab-group" role="tablist">
+        {/* Right: EN / RU language pill control */}
+        <div className="cl-langtabs" role="tablist">
           <button
             type="button"
             role="tab"
             aria-selected={lang === 'en'}
-            className={cn('drawer-tab', lang === 'en' && 'is-active')}
+            className={cn('dk-langtab', lang === 'en' && 'is-active')}
             onClick={() => setLang('en')}
             data-testid="changelog-editor-tab-en"
           >
@@ -392,7 +357,7 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
             type="button"
             role="tab"
             aria-selected={lang === 'ru'}
-            className={cn('drawer-tab', lang === 'ru' && 'is-active')}
+            className={cn('dk-langtab', lang === 'ru' && 'is-active')}
             onClick={() => setLang('ru')}
             data-testid="changelog-editor-tab-ru"
           >
@@ -560,13 +525,15 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
         <div data-testid="changelog-drawer-footer" className="cl-drawer-footer">
           <div className="drawer-foot-left">
             {entry && (
-              <Button
-                variant="destructive"
+              <button
+                type="button"
+                className="btn btn-glass btn-sm danger-text"
                 onClick={() => setDeleteDialogOpen(true)}
                 data-testid="changelog-editor-footer-delete"
               >
+                <Trash2 className="size-3.5" aria-hidden="true" />
                 {t('admin:changelog.delete.confirm')}
-              </Button>
+              </button>
             )}
           </div>
           <div className="drawer-foot-right">
@@ -579,20 +546,24 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
                 {submitError}
               </p>
             )}
-            <Button
-              variant="outline"
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
               onClick={onClose}
               data-testid="changelog-editor-footer-cancel"
             >
               {t('admin:changelog.edit.cancel')}
-            </Button>
-            <Button
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
               onClick={handleSubmit}
               disabled={!enReady || isSaving}
               data-testid="changelog-editor-footer-submit"
             >
+              <Check className="size-3.5" aria-hidden="true" />
               {entry ? t('admin:changelog.edit.save') : t('admin:changelog.editor.publish')}
-            </Button>
+            </button>
           </div>
         </div>
       </SidePanel.Footer>

@@ -88,11 +88,29 @@ describe('adminChangelogStore — drawer state + pageSize (CLTE-03)', () => {
       expect(useAdminChangelogStore.getState().openEntryId).toBeNull();
     });
 
-    it('should set lang to "en"', () => {
+    it('should set lang to "en" (no-arg default)', () => {
       useAdminChangelogStore.setState({ lang: 'ru' });
 
       act(() => {
         useAdminChangelogStore.getState().openCompose();
+      });
+
+      expect(useAdminChangelogStore.getState().lang).toBe('en');
+    });
+
+    it('should set lang to "ru" when explicitly passed', () => {
+      act(() => {
+        useAdminChangelogStore.getState().openCompose('ru');
+      });
+
+      expect(useAdminChangelogStore.getState().lang).toBe('ru');
+    });
+
+    it('should set lang to "en" when explicitly passed', () => {
+      useAdminChangelogStore.setState({ lang: 'ru' });
+
+      act(() => {
+        useAdminChangelogStore.getState().openCompose('en');
       });
 
       expect(useAdminChangelogStore.getState().lang).toBe('en');
@@ -108,7 +126,7 @@ describe('adminChangelogStore — drawer state + pageSize (CLTE-03)', () => {
       expect(useAdminChangelogStore.getState().panelMode).toBe('form');
     });
 
-    it('should set all four fields together', () => {
+    it('should set all four fields together (no-arg defaults lang to "en")', () => {
       useAdminChangelogStore.setState({
         openEntryId: 'existing-id',
         mode: 'edit',
@@ -124,6 +142,25 @@ describe('adminChangelogStore — drawer state + pageSize (CLTE-03)', () => {
       expect(state.mode).toBe('compose');
       expect(state.openEntryId).toBeNull();
       expect(state.lang).toBe('en');
+      expect(state.panelMode).toBe('form');
+    });
+
+    it('should set all four fields together with explicit "ru" lang', () => {
+      useAdminChangelogStore.setState({
+        openEntryId: 'existing-id',
+        mode: 'edit',
+        lang: 'en',
+        panelMode: 'json',
+      });
+
+      act(() => {
+        useAdminChangelogStore.getState().openCompose('ru');
+      });
+
+      const state = useAdminChangelogStore.getState();
+      expect(state.mode).toBe('compose');
+      expect(state.openEntryId).toBeNull();
+      expect(state.lang).toBe('ru');
       expect(state.panelMode).toBe('form');
     });
   });
@@ -145,11 +182,29 @@ describe('adminChangelogStore — drawer state + pageSize (CLTE-03)', () => {
       expect(useAdminChangelogStore.getState().openEntryId).toBe('entry-456');
     });
 
-    it('should set lang to "en"', () => {
+    it('should set lang to "en" (no-arg default)', () => {
       useAdminChangelogStore.setState({ lang: 'ru' });
 
       act(() => {
         useAdminChangelogStore.getState().openEdit('entry-789');
+      });
+
+      expect(useAdminChangelogStore.getState().lang).toBe('en');
+    });
+
+    it('should set lang to "ru" when explicitly passed', () => {
+      act(() => {
+        useAdminChangelogStore.getState().openEdit('entry-789', 'ru');
+      });
+
+      expect(useAdminChangelogStore.getState().lang).toBe('ru');
+    });
+
+    it('should set lang to "en" when explicitly passed', () => {
+      useAdminChangelogStore.setState({ lang: 'ru' });
+
+      act(() => {
+        useAdminChangelogStore.getState().openEdit('entry-789', 'en');
       });
 
       expect(useAdminChangelogStore.getState().lang).toBe('en');
@@ -165,7 +220,7 @@ describe('adminChangelogStore — drawer state + pageSize (CLTE-03)', () => {
       expect(useAdminChangelogStore.getState().panelMode).toBe('form');
     });
 
-    it('should set all four fields together', () => {
+    it('should set all four fields together (no-arg defaults lang to "en")', () => {
       act(() => {
         useAdminChangelogStore.getState().openEdit('entry-abc');
       });
@@ -174,6 +229,18 @@ describe('adminChangelogStore — drawer state + pageSize (CLTE-03)', () => {
       expect(state.mode).toBe('edit');
       expect(state.openEntryId).toBe('entry-abc');
       expect(state.lang).toBe('en');
+      expect(state.panelMode).toBe('form');
+    });
+
+    it('should set all four fields together with explicit "ru" lang', () => {
+      act(() => {
+        useAdminChangelogStore.getState().openEdit('entry-abc', 'ru');
+      });
+
+      const state = useAdminChangelogStore.getState();
+      expect(state.mode).toBe('edit');
+      expect(state.openEntryId).toBe('entry-abc');
+      expect(state.lang).toBe('ru');
       expect(state.panelMode).toBe('form');
     });
   });

@@ -964,7 +964,7 @@ const AdminPage: React.FC = () => {
       onCreateDeck: handleOpenCreateModal,
       onNewsNew: () => setNewsCreateOpen(true),
       onSituationsNew: () => setSituationsCreateOpen(true),
-      onChangelogNew: openCompose,
+      onChangelogNew: () => openCompose(i18n.language.startsWith('ru') ? 'ru' : 'en'),
       onAnnouncementsNew: () =>
         setSearchParams((prev) => {
           prev.set('compose', '1');
@@ -972,7 +972,7 @@ const AdminPage: React.FC = () => {
         }),
       onExerciseNew: openExerciseCompose,
     }),
-    [handleOpenCreateModal, openCompose, openExerciseCompose, setSearchParams]
+    [handleOpenCreateModal, i18n.language, openCompose, openExerciseCompose, setSearchParams]
   );
 
   const pageCounts: PageHeadCounts = useMemo(

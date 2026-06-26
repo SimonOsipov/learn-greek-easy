@@ -111,23 +111,29 @@ test.describe('Admin Changelog Timeline — ADMIN2-21 extension (CLTT-E2E-01..07
     expect(exportCount).toBe(0);
   });
 
-  test('CLTT-E2E-01: list renders ALL entries (KPI total === .cl-entry count)', async ({
+  test('CLTT-E2E-01: list renders ALL entries (API total === .cl-entry count)', async ({
     page,
   }) => {
+    // Intercept the admin list API to get the authoritative total count.
+    const listResponsePromise = page.waitForResponse(
+      (r) => /\/api\/v1\/admin\/changelog(\?|$)/.test(r.url()) && r.request().method() === 'GET',
+      { timeout: 20_000 }
+    );
+
     await navigateToAdminTab(page, 'changelog');
+    const listResponse = await listResponsePromise;
+    const body = await listResponse.json();
+    const apiTotal: number = body.total ?? 0;
+    expect(apiTotal).toBeGreaterThan(0);
+
     await expect(page.getByTestId('changelog-tab')).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('.cl-entry').first()).toBeVisible({ timeout: 10_000 });
 
-    // KPI total lives in the first StatCard's .stat-n (the "Total" card)
-    const totalText = await page.locator('.stat-card').first().locator('.stat-n').textContent();
-    const kpiTotal = parseInt((totalText || '0').replace(/\D/g, ''), 10);
-    expect(kpiTotal).toBeGreaterThan(0);
-
-    // Rendered row count must match the KPI total. If the backend rejects the
+    // Rendered row count must match the API total. If the backend rejects the
     // store's pageSize (the prod bug fixed in PR #505), the list would be empty
     // and this assertion would fail — that's the regression guard.
     const renderedCount = await page.locator('.cl-entry').count();
-    expect(renderedCount).toBe(kpiTotal);
+    expect(renderedCount).toBe(apiTotal);
   });
 
   test('CLTT-E2E-03: row content matches active UI locale (EN → title_en, RU → title_ru)', async ({
@@ -263,6 +269,86 @@ test.describe('Admin Changelog Timeline — ADMIN2-21 extension (CLTT-E2E-01..07
     await page.evaluate(() => {
       localStorage.removeItem('i18nextLng');
     });
+  });
+
+  test('CLTT-E2E-09: RU admin — editor opens on RU tab by default and edit reflects in list', async ({
+    page,
+  }) => {
+    // ── 1. Set UI language to RU before navigating ───────────────────────────
+    await page.goto('https://greeklish.eu/');
+    await page.evaluate(() => localStorage.setItem('i18nextLng', 'ru'));
+
+    await navigateToAdminTab(page, 'changelog');
+    await expect(page.getByTestId('changelog-tab')).toBeVisible({ timeout: 15_000 });
+
+    // ── 2. Need at least one entry to open ───────────────────────────────────
+    const entryCount = await page.locator('.cl-entry').count();
+    if (entryCount === 0) {
+      // No entries — skip (seed-dependent)
+      await page.evaluate(() => localStorage.removeItem('i18nextLng'));
+      test.skip();
+      return;
+    }
+
+    // ── 3. Open the first edit button ────────────────────────────────────────
+    const firstEditBtn = page.locator('[data-testid^="timeline-edit-"]').first();
+    await firstEditBtn.click();
+
+    const drawer = page.getByTestId('changelog-editor-drawer');
+    await expect(drawer).toBeVisible({ timeout: 5_000 });
+
+    // ── 4. Core assertion: RU tab MUST be active by default (guards the fix) ─
+    // Pre-fix: the EN tab was active; post-fix: the RU tab must be active.
+    const ruTab = drawer.getByTestId('changelog-editor-tab-ru');
+    const enTab = drawer.getByTestId('changelog-editor-tab-en');
+    await expect(ruTab).toBeVisible({ timeout: 5_000 });
+    await expect(enTab).toBeVisible({ timeout: 5_000 });
+
+    // The RU tab button must carry aria-selected="true" (or the is-active class)
+    // when the drawer opens — NOT the EN tab.
+    const ruTabSelected = await ruTab.getAttribute('aria-selected');
+    const enTabSelected = await enTab.getAttribute('aria-selected');
+    // At least one of the tabs signals active state via aria-selected or a class.
+    // Prefer aria-selected when available; fall back to class inspection.
+    if (ruTabSelected !== null || enTabSelected !== null) {
+      expect(ruTabSelected).toBe('true');
+      expect(enTabSelected).not.toBe('true');
+    } else {
+      // Fall back: RU tab has is-active/active class, EN tab does not
+      const ruClass = (await ruTab.getAttribute('class')) ?? '';
+      const enClass = (await enTab.getAttribute('class')) ?? '';
+      expect(ruClass).toMatch(/is-active|active|selected/i);
+      expect(enClass).not.toMatch(/is-active|active|selected/i);
+    }
+
+    // ── 5. The RU content input is visible (form renders only the active lang) ─
+    // The drawer renders only the active language's fields, so when RU is active
+    // only changelog-editor-content-ru is in the DOM.
+    const ruContent = drawer.getByTestId('changelog-editor-content-ru');
+    await expect(ruContent).toBeVisible({ timeout: 3_000 });
+
+    // ── 6. Append a unique marker to RU content → Save → verify in list ──────
+    const marker = `__E2E_RU_EDIT_${Date.now()}__`;
+    await ruContent.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(` ${marker}`);
+
+    // Save
+    const saveBtn = page.getByTestId('changelog-editor-footer-submit');
+    await expect(saveBtn).toBeVisible();
+    await saveBtn.click();
+
+    // Wait for success toast (or drawer to close)
+    await expect(drawer).toBeHidden({ timeout: 10_000 });
+
+    // ── 7. The edited entry's list row now shows the RU marker ───────────────
+    // The list renders content in the UI language (RU), so the marker must appear.
+    await expect(page.locator('.cl-entry-content').filter({ hasText: marker }).first()).toBeVisible({
+      timeout: 5_000,
+    });
+
+    // ── 8. Restore locale to avoid leaking RU into sibling tests ─────────────
+    await page.evaluate(() => localStorage.removeItem('i18nextLng'));
   });
 
   test('CLTT-E2E-07: footer button order — Delete < Cancel < Save in DOM', async ({ page }) => {

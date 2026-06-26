@@ -1,10 +1,7 @@
 /**
- * ChangelogTab Component Tests — CLTE-08 / ADMIN2-21 trim
+ * ChangelogTab Component Tests — CLTE-08 / ADMIN2-21 trim / ADMIN2-44
  *
  * Covers:
- * - 3 StatCards (Missing RU card removed in CLTT-01)
- * - Missing RU card absent
- * - No sparkline rendered
  * - Search filter (no debounce, case-insensitive, EN+RU)
  * - Tag SegControl shows only present tags with counts
  * - Deep-link: ?edit=<valid-id>&lang=ru opens drawer
@@ -70,14 +67,6 @@ vi.mock('react-i18next', () => ({
         'admin:changelog.title': 'Changelog',
         'admin:changelog.subtitle': 'Manage and publish product updates for your users.',
         'admin:changelog.actions.newEntry': 'New entry',
-        'admin:changelog.stats.total': 'Total entries',
-        'admin:changelog.stats.mostRecent': 'Most recent',
-        'admin:changelog.stats.cadence': 'Avg cadence',
-        'admin:changelog.stats.cadenceSub': 'between entries',
-        'admin:changelog.stats.cadenceSubMinimal': 'need ≥ 2 entries',
-        'admin:changelog.stats.footer.allTime': 'all-time',
-        'admin:changelog.stats.footer.lastPublished': 'last published',
-        'admin:changelog.stats.footer.lastTenEntries': 'last 10 entries',
         'admin:changelog.search.entriesPlaceholder': 'Search entries…',
         'admin:changelog.search.clearAriaLabel': 'Clear search',
         'admin:shell.breadcrumb.dashboard': 'Dashboard',
@@ -220,90 +209,6 @@ describe('ChangelogTab', () => {
     });
   });
 
-  // ── StatCards (3-card grid after CLTT-01 trim) ───────────────────────────────
-  describe('StatCards', () => {
-    it('renders exactly 3 StatCards', () => {
-      renderWithRouter();
-      const cards = document.querySelectorAll('.stat-card');
-      expect(cards.length).toBe(3);
-    });
-
-    it('Total card has tone-blue class', () => {
-      renderWithRouter();
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      expect(cards[0].classList).toContain('tone-blue');
-    });
-
-    it('Most recent card has tone-violet class', () => {
-      renderWithRouter();
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      expect(cards[1].classList).toContain('tone-violet');
-    });
-
-    it('Avg cadence card has tone-cyan class', () => {
-      renderWithRouter();
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      expect(cards[2].classList).toContain('tone-cyan');
-    });
-
-    it('Missing RU card is absent', () => {
-      renderWithRouter();
-      // The 4th card was the missing-RU card — no longer rendered
-      const cards = document.querySelectorAll('.stat-card');
-      expect(cards.length).toBeLessThan(4);
-      // Also verify no testid references to missing-ru-card
-      expect(screen.queryByTestId('missing-ru-card')).not.toBeInTheDocument();
-    });
-  });
-
-  // ── No sparkline (CLTT-01 trim) ──────────────────────────────────────────────
-  describe('No sparkline rendered', () => {
-    it('sparkline-total is NOT rendered', () => {
-      renderWithRouter();
-      expect(screen.queryByTestId('sparkline-total')).not.toBeInTheDocument();
-    });
-
-    it('sparkline-missing-ru is NOT rendered', () => {
-      renderWithRouter();
-      expect(screen.queryByTestId('sparkline-missing-ru')).not.toBeInTheDocument();
-    });
-
-    it('no sparkline-* testid is rendered at all', () => {
-      renderWithRouter();
-      // querySelectorAll is not scoped to testids, use queryBy pattern
-      const sparklines = document.querySelectorAll('[data-testid^="sparkline-"]');
-      expect(sparklines.length).toBe(0);
-    });
-  });
-
-  // ── Avg cadence (AC #4) ─────────────────────────────────────────────────────
-  describe('Avg cadence', () => {
-    it('renders — when fewer than 2 entries', () => {
-      mockItems = [makeEntry({ id: '1' })];
-      renderWithRouter();
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      expect(cards[2].querySelector('.stat-n')?.textContent).toBe('—');
-    });
-
-    it('renders — when no entries', () => {
-      mockItems = [];
-      renderWithRouter();
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      expect(cards[2].querySelector('.stat-n')?.textContent).toBe('—');
-    });
-
-    it('computes avg days between 2 entries', () => {
-      mockItems = [
-        makeEntry({ id: '1', created_at: '2024-03-20T00:00:00Z' }),
-        makeEntry({ id: '2', created_at: '2024-03-10T00:00:00Z' }),
-      ];
-      renderWithRouter();
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      // 10 days apart
-      expect(cards[2].querySelector('.stat-n')?.textContent).toBe('10d');
-    });
-  });
-
   // ── Search filter (AC #5) ───────────────────────────────────────────────────
   describe('Search filter', () => {
     beforeEach(() => {
@@ -389,7 +294,7 @@ describe('ChangelogTab', () => {
       expect(screen.queryByText('Announcement')).not.toBeInTheDocument();
     });
 
-    it('renders a pill per tag present in data without count badges', () => {
+    it('renders a pill per tag present in data with count badges (ADMIN2-44)', () => {
       mockItems = [
         makeEntry({ id: '1', tag: 'new_feature' }),
         makeEntry({ id: '2', tag: 'new_feature' }),
@@ -397,9 +302,11 @@ describe('ChangelogTab', () => {
       ];
       renderWithRouter();
       const nfBtn = screen.getByText('New Feature').closest('button');
-      expect(nfBtn?.querySelector('.cl-tag-n')).toBeNull();
+      expect(nfBtn?.querySelector('.cl-tag-n')).not.toBeNull();
+      expect(nfBtn?.querySelector('.cl-tag-n')?.textContent).toBe('2');
       const bfBtn = screen.getByText('Bug Fix').closest('button');
-      expect(bfBtn?.querySelector('.cl-tag-n')).toBeNull();
+      expect(bfBtn?.querySelector('.cl-tag-n')).not.toBeNull();
+      expect(bfBtn?.querySelector('.cl-tag-n')?.textContent).toBe('1');
     });
 
     it('filters timeline by selected tag', async () => {
@@ -413,6 +320,32 @@ describe('ChangelogTab', () => {
       // Only 1 entry matches bug_fix
       expect(screen.getByTestId('changelog-timeline-mock').getAttribute('data-entry-count')).toBe(
         '1'
+      );
+    });
+
+    it('keeps selected tag visible in SegControl even when search excludes all its entries (FIX 1 — CodeRabbit)', async () => {
+      // Scenario: user selects "Bug Fix", then types a search that matches only
+      // "new_feature" entries. The Bug Fix pill should stay in the SegControl
+      // (with count 0) so the user can see why there are no results and deselect.
+      const user = userEvent.setup();
+      mockItems = [
+        makeEntry({ id: '1', tag: 'new_feature', title_en: 'alpha feature' }),
+        makeEntry({ id: '2', tag: 'bug_fix', title_en: 'beta fix' }),
+      ];
+      renderWithRouter();
+
+      // Select Bug Fix tag
+      await user.click(screen.getByText('Bug Fix'));
+
+      // Now type a search that matches only 'alpha' (new_feature entry, not bug_fix)
+      await user.type(screen.getByTestId('changelog-search-input'), 'alpha');
+
+      // Bug Fix pill must still be in the DOM (count will be 0, but pill stays)
+      expect(screen.getByText('Bug Fix')).toBeInTheDocument();
+
+      // Timeline shows 0 entries (bug_fix entries don't match the search)
+      expect(screen.getByTestId('changelog-timeline-mock').getAttribute('data-entry-count')).toBe(
+        '0'
       );
     });
   });
@@ -442,12 +375,14 @@ describe('ChangelogTab', () => {
 
   // ── Deep-link ?edit=<valid-id>&lang=ru (AC #8) ──────────────────────────────
   describe('Deep-link ?edit=<valid-id>&lang=ru', () => {
-    it('calls openEdit with the id when item exists', async () => {
+    it('calls openEdit with the id and uiLang when item exists', async () => {
       mockItems = [makeEntry({ id: 'abc-123' })];
       mockIsLoading = false;
       renderWithRouter('?edit=abc-123&lang=ru');
       await act(async () => {});
-      expect(mockOpenEdit).toHaveBeenCalledWith('abc-123');
+      // uiLang is 'en' because the mock i18n.language is 'en';
+      // the explicit ?lang=ru param still fires setLang('ru') after openEdit.
+      expect(mockOpenEdit).toHaveBeenCalledWith('abc-123', 'en');
     });
 
     it('calls setLang(ru) when lang=ru is valid', async () => {
@@ -458,12 +393,13 @@ describe('ChangelogTab', () => {
       expect(mockSetLang).toHaveBeenCalledWith('ru');
     });
 
-    it('opens drawer in RU — ?edit=<valid-id>&lang=ru activates both openEdit and setLang("ru")', async () => {
+    it('opens drawer in RU — ?edit=<valid-id>&lang=ru activates both openEdit(id,uiLang) and setLang("ru")', async () => {
       mockItems = [makeEntry({ id: 'deep-ru-1' })];
       mockIsLoading = false;
       renderWithRouter('?edit=deep-ru-1&lang=ru');
       await act(async () => {});
-      expect(mockOpenEdit).toHaveBeenCalledWith('deep-ru-1');
+      // openEdit receives the uiLang ('en' from mock); setLang then overrides to 'ru' from the ?lang= param.
+      expect(mockOpenEdit).toHaveBeenCalledWith('deep-ru-1', 'en');
       expect(mockSetLang).toHaveBeenCalledWith('ru');
     });
   });
@@ -557,9 +493,9 @@ describe('ChangelogTab', () => {
     });
   });
 
-  // ── Tag SegControl renders without count badges (TBR2-25-04) ────────────────
+  // ── Tag SegControl count badges (ADMIN2-44) ──────────────────────────────
   describe('Tag SegControl count-badge format', () => {
-    it('renders filter pills without count badges', () => {
+    it('All pill has no count badge; tag pills show per-tag counts (ADMIN2-44)', () => {
       mockItems = [
         makeEntry({ id: '1', tag: 'new_feature' }),
         makeEntry({ id: '2', tag: 'bug_fix' }),
@@ -568,7 +504,11 @@ describe('ChangelogTab', () => {
       renderWithRouter();
       const allBtn = screen.getByText('All').closest('button');
       expect(allBtn).toBeInTheDocument();
+      // "All" pill has no count badge
       expect(allBtn?.querySelector('.cl-tag-n')).toBeNull();
+      // new_feature pill shows count=2
+      const nfBtn = screen.getByText('New Feature').closest('button');
+      expect(nfBtn?.querySelector('.cl-tag-n')?.textContent).toBe('2');
     });
   });
 
@@ -636,18 +576,17 @@ describe('ChangelogTab', () => {
     });
   });
 
-  // ── .va-panel wrapper ──────────────────────────────────────────────────────
-  // Toolbar lives outside .va-panel so it sits on page canvas (matches
-  // Exercises tab styling and avoids the rounded-corner clip on the search input).
-  describe('.va-panel wrapper', () => {
-    it('.va-panel wraps the timeline but NOT the search toolbar', () => {
+  // ── .cl-panel wrapper (ADMIN2-44) ─────────────────────────────────────────
+  // Toolbar + timeline both live inside .cl-panel (the contained panel).
+  describe('.cl-panel wrapper', () => {
+    it('.cl-panel wraps both the toolbar (search) and the timeline', () => {
       mockItems = [makeEntry({ id: '1' })];
       renderWithRouter();
 
-      const panel = document.querySelector('.va-panel');
+      const panel = document.querySelector('.cl-panel');
       expect(panel).not.toBeNull();
       expect(panel!.contains(screen.getByTestId('changelog-timeline-mock'))).toBe(true);
-      expect(panel!.contains(screen.getByTestId('changelog-search-input'))).toBe(false);
+      expect(panel!.contains(screen.getByTestId('changelog-search-input'))).toBe(true);
     });
   });
 
@@ -669,7 +608,8 @@ describe('ChangelogTab', () => {
       mockItems = [makeEntry({ id: 'resolved-id' })];
       renderWithRouter('?edit=resolved-id');
       await act(async () => {});
-      expect(mockOpenEdit).toHaveBeenCalledWith('resolved-id');
+      // uiLang is 'en' because the mock i18n.language is 'en'
+      expect(mockOpenEdit).toHaveBeenCalledWith('resolved-id', 'en');
     });
   });
 
