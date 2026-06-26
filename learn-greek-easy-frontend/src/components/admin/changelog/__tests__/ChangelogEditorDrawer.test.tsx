@@ -463,63 +463,79 @@ describe('ChangelogEditorDrawer', () => {
     expect(contentLabel).not.toBeNull();
   });
 
-  // ── Metadata strip (CLTT-07) ─────────────────────────────────────────────
+  // ── Header bcrumb (ADMIN2-44-04) ─────────────────────────────────────────
 
-  it('renders metadata strip in EDIT mode', () => {
-    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
-    expect(screen.getByTestId('changelog-editor-meta-row')).toBeInTheDocument();
-  });
-
-  it('does NOT render metadata strip in COMPOSE mode', () => {
+  it('renders bcrumb with "Changelog · New entry" text in compose mode', () => {
     render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
-    expect(screen.queryByTestId('changelog-editor-meta-row')).not.toBeInTheDocument();
+    const bcrumb = document.querySelector('.drawer-bcrumb');
+    expect(bcrumb).not.toBeNull();
+    expect(bcrumb?.textContent).toContain('Changelog · New entry');
   });
 
-  // ── Copy-id button (CLTT-07) ─────────────────────────────────────────────
-
-  it('copy-id button calls navigator.clipboard.writeText with entry.id and fires a toast', async () => {
-    const user = userEvent.setup();
-    const mockWriteText = vi.fn().mockResolvedValue(undefined);
-    // happy-dom does not allow setting navigator.clipboard via Object.assign
-    // because it only has a getter. Use Object.defineProperty instead.
-    Object.defineProperty(navigator, 'clipboard', {
-      value: { writeText: mockWriteText },
-      configurable: true,
-      writable: true,
-    });
-
-    const entry = makeEntry({ id: 'test-entry-id-abc' });
-    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={entry} />);
-
-    await user.click(screen.getByTestId('changelog-editor-copy-id'));
-
-    expect(mockWriteText).toHaveBeenCalledWith('test-entry-id-abc');
-    expect(mockToast).toHaveBeenCalled();
+  it('renders bcrumb with "Changelog · Edit entry" text in edit mode', () => {
+    render(
+      <ChangelogEditorDrawer
+        open={true}
+        onClose={vi.fn()}
+        entry={makeEntry({ created_at: '2026-01-15T00:00:00Z' })}
+      />
+    );
+    const bcrumb = document.querySelector('.drawer-bcrumb');
+    expect(bcrumb?.textContent).toContain('Changelog · Edit entry');
   });
 
-  // ── Copy-link button (CLTT-07) ────────────────────────────────────────────
+  it('bcrumb in edit mode contains the posted date (year)', () => {
+    render(
+      <ChangelogEditorDrawer
+        open={true}
+        onClose={vi.fn()}
+        entry={makeEntry({ created_at: '2026-01-15T00:00:00Z' })}
+      />
+    );
+    const bcrumb = document.querySelector('.drawer-bcrumb');
+    expect(bcrumb?.textContent).toMatch(/2026/);
+  });
 
-  it('copy-link button calls navigator.clipboard.writeText with a URL containing tab=changelog&edit=<id>&lang=<lang>', async () => {
-    const user = userEvent.setup();
-    const mockWriteText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'clipboard', {
-      value: { writeText: mockWriteText },
-      configurable: true,
-      writable: true,
-    });
+  // ── Header meta row (ADMIN2-44-04) ───────────────────────────────────────
 
-    mockStoreState.lang = 'en';
-    const entry = makeEntry({ id: 'link-entry-xyz' });
-    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={entry} />);
+  it('renders drawer-meta with tag badge in BOTH compose and edit mode', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+    expect(screen.getByTestId('changelog-drawer-meta')).toBeInTheDocument();
+  });
 
-    await user.click(screen.getByTestId('changelog-editor-copy-link'));
+  it('drawer-meta shows the tag label badge', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+    const meta = screen.getByTestId('changelog-drawer-meta');
+    // Default tag is new_feature → label "New Feature"
+    expect(meta.textContent).toContain('New Feature');
+  });
 
-    expect(mockWriteText).toHaveBeenCalledTimes(1);
-    const writtenUrl: string = mockWriteText.mock.calls[0][0];
-    expect(writtenUrl).toContain('tab=changelog');
-    expect(writtenUrl).toContain('edit=link-entry-xyz');
-    expect(writtenUrl).toContain('lang=en');
-    expect(mockToast).toHaveBeenCalled();
+  it('drawer-meta hides version badge when version is empty', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+    expect(screen.queryByTestId('changelog-drawer-meta-version')).not.toBeInTheDocument();
+  });
+
+  it('drawer-meta shows version badge when version is set', () => {
+    render(
+      <ChangelogEditorDrawer
+        open={true}
+        onClose={vi.fn()}
+        entry={makeEntry({ version: '1.4.2' })}
+      />
+    );
+    expect(screen.getByTestId('changelog-drawer-meta-version')).toHaveTextContent('1.4.2');
+  });
+
+  // ── Copy-id / copy-link buttons removed (ADMIN2-44-04) ───────────────────
+
+  it('does NOT render copy-id button', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
+    expect(screen.queryByTestId('changelog-editor-copy-id')).not.toBeInTheDocument();
+  });
+
+  it('does NOT render copy-link button', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
+    expect(screen.queryByTestId('changelog-editor-copy-link')).not.toBeInTheDocument();
   });
 
   // ── Close paths ───────────────────────────────────────────────────────────
@@ -1054,13 +1070,12 @@ describe('ChangelogEditorDrawer', () => {
     expect(screen.getByTestId('changelog-editor-title-en')).toHaveValue('Entry B title');
   });
 
-  // ── Header meta row ──────────────────────────────────────────────────────
-  // The redundant header subtitle (tag badge + "Posted <date>") was removed:
-  // the tag is editable via the form pills / preview, and the post date is
-  // already shown in the "Created:" id-meta row below. Compose vs edit mode is
-  // still covered by the id-meta-row presence assertions elsewhere.
+  // ── Header meta row (ADMIN2-44-04 CD-alignment) ─────────────────────────
+  // The CD-aligned header now includes a .drawer-meta row showing the tag
+  // badge and optional version badge. Previously this was absent; now it is
+  // intentionally present in both compose and edit mode.
 
-  it('header subtitle (drawer-meta) is not rendered (deduplicated)', () => {
+  it('header meta row (changelog-drawer-meta) is rendered in edit mode', () => {
     render(
       <ChangelogEditorDrawer
         open={true}
@@ -1073,7 +1088,7 @@ describe('ChangelogEditorDrawer', () => {
       />
     );
 
-    expect(screen.queryByTestId('changelog-drawer-meta')).toBeNull();
+    expect(screen.getByTestId('changelog-drawer-meta')).toBeInTheDocument();
   });
 
   // ── CLLP-10: Drawer-tabs row structure ───────────────────────────────────
