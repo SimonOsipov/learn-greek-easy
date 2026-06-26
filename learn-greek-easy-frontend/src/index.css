@@ -1512,6 +1512,91 @@
     font-style: italic;
   }
 
+  /* ── Changelog rail-rows inside .cl-panel (ADMIN2-44) ── */
+  /* Inside the contained panel, entries switch from .admin-card elevated cards
+     to flat 28px-rail rows. Scoped under .cl-panel so legacy admin-card usage
+     on other surfaces is unaffected. */
+  .cl-panel .cl-entry {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 12px;
+    padding: 14px 18px 16px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    border-bottom: 1px solid hsl(var(--fg) / 0.04);
+    transition: background 0.12s;
+  }
+  .cl-panel .cl-entry:last-child {
+    border-bottom: none;
+  }
+  .cl-panel .cl-entry:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  .cl-panel .cl-entry-body {
+    background: transparent;
+  }
+  .cl-panel .cl-entry:hover .cl-entry-body {
+    background: hsl(var(--bg) / 0.5);
+    border-radius: 8px;
+  }
+
+  /* Left rail column: vertical connector line + dot */
+  .cl-entry-rail {
+    position: relative;
+    width: 28px;
+    display: flex;
+    justify-content: center;
+    padding-top: 6px;
+  }
+  .cl-entry-rail::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1px;
+    background: hsl(var(--fg) / 0.1);
+  }
+  .cl-panel .cl-month:last-child .cl-entry:last-child .cl-entry-rail::before {
+    bottom: auto;
+    height: 20px;
+  }
+
+  /* Colored dot on top of the rail line */
+  .cl-entry-dot {
+    position: relative;
+    z-index: 1;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: hsl(var(--fg-3));
+    box-shadow: 0 0 0 3px hsl(var(--bg-2));
+    flex-shrink: 0;
+  }
+  .cl-entry-dot.tone-green {
+    background: hsl(var(--success));
+  }
+  .cl-entry-dot.tone-amber {
+    background: hsl(var(--warning));
+  }
+  .cl-entry-dot.tone-blue {
+    background: hsl(var(--primary));
+  }
+  .cl-entry-dot.tone-cyan {
+    background: hsl(var(--accent-2));
+  }
+  .cl-entry-dot.tone-violet {
+    background: hsl(var(--accent));
+  }
+  .cl-entry-dot.tone-red {
+    background: hsl(var(--danger));
+  }
+
   /* ── Drawer field (ADMIN2) ── */
   .dr-fields {
     display: flex;
