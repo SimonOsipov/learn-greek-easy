@@ -330,6 +330,7 @@ export const AdminFeedbackSection: React.FC = () => {
             <input
               type="text"
               placeholder={t('feedback.v2.filters.search.placeholder')}
+              aria-label={t('feedback.v2.filters.search.placeholder')}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => {
