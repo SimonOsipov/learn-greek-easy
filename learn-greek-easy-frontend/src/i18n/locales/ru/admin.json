@@ -791,20 +791,6 @@
         "feature": "Запрос функции",
         "anonymous": "Аноним"
       },
-      "statCards": {
-        "total": {
-          "label": "Всего отзывов",
-          "sub": "{{newCount}} новых · {{respondedCount}} с ответом"
-        },
-        "awaiting": {
-          "label": "Ожидают ответа",
-          "sub": "самый старый — {{distance}}"
-        },
-        "communityVotes": {
-          "label": "Голоса сообщества",
-          "sub": "голосов на этой странице"
-        }
-      },
       "filters": {
         "status": {
           "label": "Статус",

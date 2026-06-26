@@ -777,20 +777,6 @@
         "feature": "Feature request",
         "anonymous": "Anonymous"
       },
-      "statCards": {
-        "total": {
-          "label": "Total feedback",
-          "sub": "{{newCount}} new · {{respondedCount}} responded"
-        },
-        "awaiting": {
-          "label": "Awaiting response",
-          "sub": "oldest {{distance}}"
-        },
-        "communityVotes": {
-          "label": "Community votes",
-          "sub": "upvotes on this page"
-        }
-      },
       "filters": {
         "status": {
           "label": "Status",

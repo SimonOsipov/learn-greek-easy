@@ -31,13 +31,6 @@ vi.mock('react-i18next', () => ({
         'feedback.v2.pageHead.title': 'User feedback',
         'feedback.v2.pageHead.sub': 'Review, respond, and track community feedback',
         comingSoon: 'Coming soon',
-        // v2 stat cards
-        'feedback.v2.statCards.total.label': 'Total feedback',
-        'feedback.v2.statCards.total.sub': '0 new · 0 responded',
-        'feedback.v2.statCards.awaiting.label': 'Awaiting response',
-        'feedback.v2.statCards.awaiting.sub': 'oldest {{distance}}',
-        'feedback.v2.statCards.communityVotes.label': 'Community votes',
-        'feedback.v2.statCards.communityVotes.sub': 'upvotes on this page',
         // v2 filters
         'feedback.v2.filters.status.all': 'All',
         'feedback.v2.filters.status.open': 'Open',
