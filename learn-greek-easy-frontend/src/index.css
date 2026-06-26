@@ -1417,10 +1417,6 @@
     font-size: 13px;
     font-weight: 500;
   }
-  .drawer-foot-helper {
-    font-size: 12px;
-    color: hsl(var(--fg-3));
-  }
 
   /* ── Placeholder box — used by drawer tab bodies not yet implemented ── */
   .placeholder-box {

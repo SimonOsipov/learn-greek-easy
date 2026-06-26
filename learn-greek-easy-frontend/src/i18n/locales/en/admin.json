@@ -390,9 +390,6 @@
         "footer": {
           "ready": "Ready",
           "needsTitleAndMessage": "Needs title & message",
-          "helperPrefix": "Sending to",
-          "helperBold": "all active learners",
-          "helperSuffix": "· immediate",
           "cancel": "Cancel",
           "saveDraft": "Save draft",
           "sendNow": "Send now",

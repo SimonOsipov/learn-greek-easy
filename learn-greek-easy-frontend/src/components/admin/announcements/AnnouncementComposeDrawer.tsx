@@ -388,18 +388,17 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
 
         {/* ── Footer ───────────────────────────────────────────────────── */}
         <SidePanel.Footer>
-          {/* Left: status badge + helper */}
+          {/* Left: readiness status badge. The verbose "sending to … · immediately"
+              helper was dropped — it never fit on one row beside the badge + 3
+              buttons in the ≤720px half-drawer (worst case RU), and the same
+              audience/schedule is already surfaced in the body's Audience +
+              Schedule sections and the preview pane. */}
           <div className="drawer-foot-left">
             <Badge tone={isReady ? 'green' : 'gray'}>
               {isReady
                 ? t('announcements.v2.compose.footer.ready')
                 : t('announcements.v2.compose.footer.needsTitleAndMessage')}
             </Badge>
-            <span className="drawer-foot-helper">
-              {t('announcements.v2.compose.footer.helperPrefix')}{' '}
-              <strong>{t('announcements.v2.compose.footer.helperBold')}</strong>{' '}
-              {t('announcements.v2.compose.footer.helperSuffix')}
-            </span>
           </div>
 
           {/* Right: action buttons — design-system `.btn` classes (`btn-sm`) to
