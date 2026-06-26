@@ -294,7 +294,7 @@ describe('ChangelogTab', () => {
       expect(screen.queryByText('Announcement')).not.toBeInTheDocument();
     });
 
-    it('renders a pill per tag present in data without count badges', () => {
+    it('renders a pill per tag present in data with count badges (ADMIN2-44)', () => {
       mockItems = [
         makeEntry({ id: '1', tag: 'new_feature' }),
         makeEntry({ id: '2', tag: 'new_feature' }),
@@ -302,9 +302,11 @@ describe('ChangelogTab', () => {
       ];
       renderWithRouter();
       const nfBtn = screen.getByText('New Feature').closest('button');
-      expect(nfBtn?.querySelector('.cl-tag-n')).toBeNull();
+      expect(nfBtn?.querySelector('.cl-tag-n')).not.toBeNull();
+      expect(nfBtn?.querySelector('.cl-tag-n')?.textContent).toBe('2');
       const bfBtn = screen.getByText('Bug Fix').closest('button');
-      expect(bfBtn?.querySelector('.cl-tag-n')).toBeNull();
+      expect(bfBtn?.querySelector('.cl-tag-n')).not.toBeNull();
+      expect(bfBtn?.querySelector('.cl-tag-n')?.textContent).toBe('1');
     });
 
     it('filters timeline by selected tag', async () => {
@@ -462,9 +464,9 @@ describe('ChangelogTab', () => {
     });
   });
 
-  // ── Tag SegControl renders without count badges (TBR2-25-04) ────────────────
+  // ── Tag SegControl count badges (ADMIN2-44) ──────────────────────────────
   describe('Tag SegControl count-badge format', () => {
-    it('renders filter pills without count badges', () => {
+    it('All pill has no count badge; tag pills show per-tag counts (ADMIN2-44)', () => {
       mockItems = [
         makeEntry({ id: '1', tag: 'new_feature' }),
         makeEntry({ id: '2', tag: 'bug_fix' }),
@@ -473,7 +475,11 @@ describe('ChangelogTab', () => {
       renderWithRouter();
       const allBtn = screen.getByText('All').closest('button');
       expect(allBtn).toBeInTheDocument();
+      // "All" pill has no count badge
       expect(allBtn?.querySelector('.cl-tag-n')).toBeNull();
+      // new_feature pill shows count=2
+      const nfBtn = screen.getByText('New Feature').closest('button');
+      expect(nfBtn?.querySelector('.cl-tag-n')?.textContent).toBe('2');
     });
   });
 
@@ -541,18 +547,17 @@ describe('ChangelogTab', () => {
     });
   });
 
-  // ── .va-panel wrapper ──────────────────────────────────────────────────────
-  // Toolbar lives outside .va-panel so it sits on page canvas (matches
-  // Exercises tab styling and avoids the rounded-corner clip on the search input).
-  describe('.va-panel wrapper', () => {
-    it('.va-panel wraps the timeline but NOT the search toolbar', () => {
+  // ── .cl-panel wrapper (ADMIN2-44) ─────────────────────────────────────────
+  // Toolbar + timeline both live inside .cl-panel (the contained panel).
+  describe('.cl-panel wrapper', () => {
+    it('.cl-panel wraps both the toolbar (search) and the timeline', () => {
       mockItems = [makeEntry({ id: '1' })];
       renderWithRouter();
 
-      const panel = document.querySelector('.va-panel');
+      const panel = document.querySelector('.cl-panel');
       expect(panel).not.toBeNull();
       expect(panel!.contains(screen.getByTestId('changelog-timeline-mock'))).toBe(true);
-      expect(panel!.contains(screen.getByTestId('changelog-search-input'))).toBe(false);
+      expect(panel!.contains(screen.getByTestId('changelog-search-input'))).toBe(true);
     });
   });
 

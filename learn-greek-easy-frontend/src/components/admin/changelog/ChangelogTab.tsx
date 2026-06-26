@@ -15,7 +15,6 @@ import { Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
-import { Input } from '@/components/ui/input';
 import { SegControl, type SegOption } from '@/components/ui/seg-control';
 import { tDynamic } from '@/i18n/tDynamic';
 import { useAdminChangelogStore } from '@/stores/adminChangelogStore';
@@ -146,13 +145,14 @@ export function ChangelogTab() {
       ? filteredBySearch
       : filteredBySearch.filter((e) => e.tag === selectedTag);
 
-  // ── Tag SegControl options ────────────────────────────────────────────────
+  // ── Tag SegControl options (with per-tag counts) ─────────────────────────
   const tagOptions: SegOption<'all' | ChangelogTag>[] = [
     { value: 'all', label: t('admin:changelog.filter.all') },
     ...CHANGELOG_TAG_OPTIONS.filter((tag) => filteredBySearch.some((e) => e.tag === tag)).map(
       (tag) => ({
         value: tag as 'all' | ChangelogTag,
         label: tDynamic(t, CHANGELOG_TAG_CONFIG[tag].labelKey),
+        count: filteredBySearch.filter((e) => e.tag === tag).length,
       })
     ),
   ];
@@ -160,36 +160,36 @@ export function ChangelogTab() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6" data-testid="changelog-tab">
-      {/* ── Toolbar (sits on page canvas, no panel background) ──────────── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="relative min-w-[240px] flex-1 sm:max-w-md">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') setSearch('');
-            }}
-            placeholder={t('admin:changelog.search.entriesPlaceholder')}
-            className="pl-8 pr-8"
-            data-testid="changelog-search-input"
-          />
-          {search && (
-            <button
-              type="button"
-              aria-label={t('admin:changelog.search.clearAriaLabel')}
-              onClick={() => setSearch('')}
-              className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+      {/* ── Contained panel: toolbar + timeline ──────────────────────────── */}
+      <div className="cl-panel">
+        {/* Toolbar row: search + tag filter */}
+        <div className="news-toolbar">
+          <div className="news-search">
+            <Search className="search-icon" aria-hidden="true" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setSearch('');
+              }}
+              placeholder={t('admin:changelog.search.entriesPlaceholder')}
+              data-testid="changelog-search-input"
+            />
+            {search && (
+              <button
+                type="button"
+                aria-label={t('admin:changelog.search.clearAriaLabel')}
+                onClick={() => setSearch('')}
+                className="icon-btn icon-btn-sm clear-btn"
+              >
+                <X />
+              </button>
+            )}
+          </div>
+          <SegControl options={tagOptions} value={selectedTag} onChange={setSelectedTag} />
         </div>
-        <SegControl options={tagOptions} value={selectedTag} onChange={setSelectedTag} />
-      </div>
 
-      {/* ── Panel: timeline ──────────────────────────────────────────────── */}
-      <div className="va-panel">
+        {/* Timeline */}
         <ChangelogTimeline
           entries={filtered}
           onEdit={(id) => openEdit(id)}

@@ -2703,6 +2703,73 @@
     flex-shrink: 0;
   }
 
+  /* ── Changelog contained panel (ADMIN2-44 / AC-A) ── */
+  /* Tab-local surface that wraps the changelog toolbar + timeline. Mirrors the
+     .an-panel approach: bg-2 card skin + hairline border so the panel floats
+     above the page canvas. The global .va-panel { background: transparent }
+     rule stays untouched — this panel uses its own selector. */
+  .cl-panel {
+    background: hsl(var(--bg-2));
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  /* Toolbar row (search + SegControl filter) at the top of .cl-panel. */
+  .news-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid hsl(var(--fg) / 0.06);
+  }
+
+  /* CD search field: positioned wrapper + icon + input + clear btn.
+     Input inherits focus-ring from the outer wrapper via :focus-within. */
+  .news-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 220px;
+    flex: 1;
+    max-width: 360px;
+  }
+  .news-search .search-icon {
+    position: absolute;
+    left: 10px;
+    pointer-events: none;
+    color: hsl(var(--fg-3));
+    width: 14px;
+    height: 14px;
+  }
+  .news-search input {
+    width: 100%;
+    height: 34px;
+    padding: 0 34px 0 32px;
+    background: hsl(var(--bg));
+    border: 1px solid hsl(var(--fg) / 0.1);
+    border-radius: 10px;
+    font-size: 13px;
+    color: hsl(var(--fg));
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .news-search input::placeholder {
+    color: hsl(var(--fg-3));
+  }
+  .news-search input:focus {
+    border-color: hsl(var(--primary) / 0.5);
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.12);
+  }
+  .news-search .clear-btn {
+    position: absolute;
+    right: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   /* ── Changelog timeline wrapper + month groups (ADMIN2 / CLTE-02) ── */
   .cl-timeline {
     display: flex;
