@@ -270,6 +270,7 @@ Reach for these *before* composing new ones.
 | `.fb-list` | Flex-col card list inside `.fb-panel` — `gap: 12px`, `padding: 16px 20px`. Replaces the loose `space-y-4` wrapper. |
 | `.va-panel-foot` | Persistent panel footer (ADMIN2-45) — `border-top`, `padding: 16px 24px`, flex `space-between`. Holds "Showing N–M of total" on the left and `.va-pager` on the right. Reusable across any contained admin panel. |
 | `.va-pager` | Pager button group inside `.va-panel-foot` — flex row, `gap: 8px`. Houses `.btn.btn-glass.btn-sm` Previous / Next buttons around a `.va-dim` page indicator. |
+| `.fb-thread` / `.fb-msg` family | **Feedback drawer original-message chat bubble** (ADMIN2-45). `.fb-thread`(+`.fb-thread-compact` = dashed-underline separator) wraps `.fb-msg` (grid `36px 1fr` = avatar + body). `.fb-msg-body` is the bubble (`bg-2` + `1px hsl(var(--fg)/0.06)` border + `radius 12px`); `.fb-msg-meta`/`.fb-msg-who`/`.fb-msg-when`(mono)/`.fb-msg-text` are the author row + body. Replaces the unstyled plain-text submission summary. |
 | `.cl-*` family | Admin changelog card list + editor chrome (each entry is a white `.admin-card`; month head, tag-button tones, translation pills, preview card). The legacy timeline rail/dot has been removed — category colour is conveyed by the in-card `Badge`. Tag-button tones via `data-tone` on `.cl-tag-btn`: green=`--success`, amber=`--warning`, blue=`--primary`, cyan=`--accent-2`, violet=`--accent`, red=`--danger`. Token-only; no new tokens introduced. |
 
 ### Admin row-action reveal convention (Mechanism A, ADMIN2-36)

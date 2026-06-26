@@ -2359,18 +2359,20 @@
   .fb-card {
     display: grid;
     grid-template-columns: 56px 1fr auto;
-    gap: 12px;
-    padding: 16px;
-    background: hsl(var(--card));
-    border: 1px solid hsl(var(--fg) / 0.08);
-    border-radius: var(--radius);
+    gap: 16px;
+    padding: 16px 18px;
+    background: hsl(var(--bg-2));
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 14px;
     transition:
       transform 0.15s,
-      box-shadow 0.15s;
+      box-shadow 0.15s,
+      border-color 0.15s;
   }
   .fb-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-2);
+    border-color: hsl(var(--primary) / 0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 22px -10px hsl(var(--primary) / 0.22);
   }
   .fb-card-left {
     display: flex;
@@ -2407,6 +2409,54 @@
     color: hsl(var(--fg-3));
     font-size: 13px;
     margin-top: 8px;
+  }
+
+  /* Drawer original-message chat bubble (CD .fb-thread / .fb-msg) */
+  .fb-thread {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .fb-thread-compact {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px dashed hsl(var(--fg) / 0.08);
+  }
+  .fb-msg {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 12px;
+  }
+  .fb-msg-body {
+    padding: 12px 14px;
+    background: hsl(var(--bg-2));
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 12px;
+  }
+  .fb-msg-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+  .fb-msg-who {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    color: hsl(var(--fg));
+  }
+  .fb-msg-when {
+    color: hsl(var(--fg-3));
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+  .fb-msg-text {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: hsl(var(--fg));
   }
 
   /* Actions — absolute-positioned sibling; hidden at rest, visible on hover / focus-within */
