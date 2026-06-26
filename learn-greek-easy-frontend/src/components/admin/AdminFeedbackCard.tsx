@@ -10,7 +10,6 @@ import { useTranslation } from 'react-i18next';
 
 import { AdminAvatar } from '@/components/ui/admin-avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { initialsOf } from '@/lib/userUtils';
 import type { AdminFeedbackItem } from '@/types/feedback';
 
@@ -156,10 +155,9 @@ export const AdminFeedbackCard: React.FC<AdminFeedbackCardProps> = ({
         onClick={(e) => e.stopPropagation()}
         style={{ position: 'absolute', top: '12px', right: '12px' }}
       >
-        <Button
+        <button
           type="button"
-          variant="ghost"
-          size="icon"
+          className="icon-btn icon-btn-sm"
           data-testid={`edit-feedback-${feedback.id}`}
           aria-label={t('feedback.editAction')}
           onClick={(e) => {
@@ -167,23 +165,21 @@ export const AdminFeedbackCard: React.FC<AdminFeedbackCardProps> = ({
             onRespond(feedback.id);
           }}
         >
-          <Pencil className="h-4 w-4" />
-        </Button>
+          <Pencil />
+        </button>
         {onDelete ? (
-          <Button
+          <button
             type="button"
-            variant="ghost"
-            size="icon"
+            className="icon-btn icon-btn-sm danger"
             data-testid={`delete-feedback-${feedback.id}`}
             aria-label={t('feedback.deleteAction')}
-            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={(e) => {
               e.stopPropagation();
               onDelete(feedback.id);
             }}
           >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+            <Trash2 />
+          </button>
         ) : null}
       </div>
     </article>
