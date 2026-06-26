@@ -11,12 +11,11 @@
 
 import { useEffect } from 'react';
 
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -155,9 +154,9 @@ export function AnnouncementDetailsDrawer({
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
-                <Button type="button" variant="outline" onClick={onClose}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
                   {t('announcements.detail.close')}
-                </Button>
+                </button>
               </div>
             ) : announcement ? (
               <>
@@ -221,30 +220,31 @@ export function AnnouncementDetailsDrawer({
         <SidePanel.Footer>
           {/* Left: Delete (destructive) */}
           <div className="drawer-foot-left">
-            <Button
+            <button
               type="button"
-              variant="destructive"
+              className="btn btn-glass btn-sm danger-text"
               onClick={() => {
                 if (announcementId) onRequestDelete(announcementId);
               }}
               disabled={!announcement || isLoadingDetail}
               data-testid="announcement-details-delete-button"
             >
+              <Trash2 className="size-3.5" aria-hidden="true" />
               {t('announcements.delete.button')}
-            </Button>
+            </button>
           </div>
 
           {/* Right: action buttons */}
           <div className="drawer-foot-right">
             {/* Close — primary */}
-            <Button
+            <button
               type="button"
-              variant="default"
+              className="btn btn-primary btn-sm"
               onClick={onClose}
               data-testid="announcement-details-close-button"
             >
               {t('announcements.detail.close')}
-            </Button>
+            </button>
           </div>
         </SidePanel.Footer>
       </SidePanel>

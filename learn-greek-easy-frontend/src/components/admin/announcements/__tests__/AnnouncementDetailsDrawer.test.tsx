@@ -290,16 +290,17 @@ describe('AnnouncementDetailsDrawer', () => {
 
   // ── Footer button classlists + icons (ANDD-04) ────────────────────────────
 
-  it('renders Delete button with destructive variant and no icon', () => {
+  it('renders Delete button with CD .btn classes and a Trash2 svg icon', () => {
     const state = buildStoreState({ selectedAnnouncement: makeAnnouncement() });
     setupStore(state);
     render(<AnnouncementDetailsDrawer {...defaultProps} />);
 
     const deleteBtn = screen.getByTestId('announcement-details-delete-button');
-    // Destructive variant applies bg-destructive (shadcn button.tsx)
-    expect(deleteBtn.classList.contains('bg-destructive')).toBe(true);
-    // Trash2 icon is gone — no svg child
-    expect(deleteBtn.querySelector('svg')).toBeNull();
+    // CD .btn system — not shadcn destructive variant
+    expect(deleteBtn).toHaveClass('btn', 'btn-glass', 'btn-sm', 'danger-text');
+    expect(deleteBtn.classList.contains('bg-destructive')).toBe(false);
+    // Trash2 icon is present as an svg child
+    expect(deleteBtn.querySelector('svg')).not.toBeNull();
   });
 
   it('Delete button accessible name matches the testid-located element', () => {
