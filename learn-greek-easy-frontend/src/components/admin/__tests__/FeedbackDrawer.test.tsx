@@ -626,17 +626,18 @@ describe('FeedbackDrawer', () => {
       expect(onRequestDelete).toHaveBeenCalledWith(feedback.id);
     });
 
-    it('Delete button uses destructive variant and has no icon', () => {
+    it('Delete button uses CD .btn danger-text classes and renders a Trash2 icon', () => {
       const feedback = makeFeedback();
       mockStoreWith(feedback);
 
       renderDrawer(feedback.id, 'reply');
 
       const deleteBtn = screen.getByRole('button', { name: /Delete/i });
-      // Destructive variant applies bg-destructive (shadcn button.tsx)
-      expect(deleteBtn.classList.contains('bg-destructive')).toBe(true);
-      // Trash2 icon is gone — no svg child
-      expect(deleteBtn.querySelector('svg')).toBeNull();
+      // CD migration: .btn .btn-glass .btn-sm .danger-text
+      expect(deleteBtn.classList.contains('btn')).toBe(true);
+      expect(deleteBtn.classList.contains('danger-text')).toBe(true);
+      // Trash2 icon renders as an svg child
+      expect(deleteBtn.querySelector('svg')).not.toBeNull();
     });
   });
 

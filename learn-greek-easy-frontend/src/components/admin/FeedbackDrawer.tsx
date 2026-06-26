@@ -12,13 +12,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { format, formatDistanceToNow } from 'date-fns';
 import { el } from 'date-fns/locale/el';
 import { ru } from 'date-fns/locale/ru';
-import { Copy } from 'lucide-react';
+import { Check, Copy, Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Textarea } from '@/components/ui/textarea';
@@ -220,20 +219,31 @@ function ReplyTab({ feedbackId, onClose, onRequestDelete, form }: ReplyTabProps)
       <SidePanel.Footer>
         {/* Left: Delete (destructive) */}
         <div className="drawer-foot-left">
-          <Button type="button" variant="destructive" onClick={() => onRequestDelete(feedback.id)}>
+          <button
+            type="button"
+            className="btn btn-glass btn-sm danger-text"
+            onClick={() => onRequestDelete(feedback.id)}
+          >
+            <Trash2 className="size-4" aria-hidden="true" />
             {t('feedback.delete.button')}
-          </Button>
+          </button>
         </div>
 
         {/* Right: safe actions */}
         <div className="drawer-foot-right">
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
             {t('feedback.v2.reply.cancel')}
-          </Button>
+          </button>
 
-          <Button type="submit" form="reply-form" disabled={isSubmitting || !responseValue.trim()}>
+          <button
+            type="submit"
+            form="reply-form"
+            className="btn btn-primary btn-sm"
+            disabled={isSubmitting || !responseValue.trim()}
+          >
+            <Check className="size-4" aria-hidden="true" />
             {isSubmitting ? t('feedback.v2.drawer.saving') : t('feedback.v2.reply.save')}
-          </Button>
+          </button>
         </div>
       </SidePanel.Footer>
     </>
@@ -426,7 +436,7 @@ export function FeedbackDrawer({
             <MetaTab feedbackId={feedbackId} />
           </SidePanel.Body>
           <SidePanel.Footer>
-            <button type="button" onClick={onClose}>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
               {t('feedback.v2.reply.cancel')}
             </button>
           </SidePanel.Footer>
