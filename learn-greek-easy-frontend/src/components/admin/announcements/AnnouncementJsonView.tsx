@@ -41,7 +41,6 @@ export function AnnouncementJsonView({ title, message, linkUrl }: AnnouncementJs
         className="min-h-[280px] font-mono text-sm"
         data-testid="announcement-json-view-textarea"
       />
-      <p className="text-sm text-muted-foreground">{t('announcements.create.jsonRawHint')}</p>
     </div>
   );
 }

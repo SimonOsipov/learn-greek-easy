@@ -152,16 +152,22 @@ describe('AnnouncementComposeDrawer', () => {
     });
   });
 
-  it('shows "Preview not available in JSON mode" when preview is toggled in JSON mode', async () => {
+  it('omits the preview pane in JSON mode — only the raw payload field is shown', async () => {
     const user = userEvent.setup();
     renderDrawer();
 
-    // Switch to JSON tab (preview defaults to visible)
+    // Preview defaults to visible; it renders in form mode.
+    expect(screen.getByText('Notification preview')).toBeInTheDocument();
+
+    // Switch to JSON tab — the preview pane (and its old "not available"
+    // placeholder) is dropped entirely, leaving the raw payload field full-width.
     await user.click(screen.getByTestId('announcement-compose-tab-json'));
 
     await waitFor(() => {
-      expect(screen.getByText('Preview not available in JSON mode')).toBeInTheDocument();
+      expect(screen.getByTestId('announcement-json-view-textarea')).toBeInTheDocument();
     });
+    expect(screen.queryByText('Notification preview')).not.toBeInTheDocument();
+    expect(screen.queryByText('Preview not available in JSON mode')).not.toBeInTheDocument();
   });
 
   // ── Form ownership / live preview ─────────────────────────────────────────

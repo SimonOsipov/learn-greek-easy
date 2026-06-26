@@ -315,7 +315,6 @@
       "success": "Announcement sent successfully",
       "error": "Failed to send announcement",
       "jsonRawLabel": "Raw payload",
-      "jsonRawHint": "For testing — sent verbatim to the notifications service",
       "formTab": "Form",
       "jsonTab": "JSON",
       "unsavedTitle": "Discard changes?",
@@ -359,7 +358,6 @@
         "label": "Notification preview",
         "titlePlaceholder": "Your announcement title",
         "messagePlaceholder": "The body of your message will appear here. Keep it short and friendly — learners get a lot of notifications.",
-        "notAvailableInJsonMode": "Preview not available in JSON mode",
         "meta": {
           "audienceLabel": "Audience",
           "audienceValue": "All active learners",

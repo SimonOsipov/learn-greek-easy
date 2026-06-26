@@ -365,22 +365,16 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
               )}
             </div>
 
-            {/* Right column: preview (form mode only) */}
-            {showPreview && (
+            {/* Right column: live notification preview — form mode only. In JSON
+                mode there is nothing to preview, so the pane (and its grid column)
+                is omitted entirely, leaving the raw-payload field full-width. */}
+            {showPreview && tab === 'form' && (
               <div className="an-compose-preview">
-                {tab === 'form' ? (
-                  <AnnouncementNotificationPreview
-                    title={title ?? ''}
-                    message={message ?? ''}
-                    linkUrl={linkUrl ?? ''}
-                  />
-                ) : (
-                  <div className="an-preview">
-                    <p className="text-sm text-muted-foreground">
-                      {t('announcements.v2.preview.notAvailableInJsonMode')}
-                    </p>
-                  </div>
-                )}
+                <AnnouncementNotificationPreview
+                  title={title ?? ''}
+                  message={message ?? ''}
+                  linkUrl={linkUrl ?? ''}
+                />
               </div>
             )}
           </div>
