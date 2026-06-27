@@ -37,7 +37,7 @@ sentry-sdk = { version = "^2.48", extras = ["fastapi", "sqlalchemy"] }
 loguru = "^0.7.3"
 authlib = "^1.6.12"
 pgvector = "^0.4.0"
-anthropic = ">=0.76,<0.112"
+anthropic = ">=0.76,<0.113"
 mutagen = "^1.47"
 stripe = ">=14,<16"
 wordfreq = "^3.1.1"
