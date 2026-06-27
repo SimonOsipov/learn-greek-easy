@@ -79,7 +79,7 @@ jobs:
       mobile: ${{ steps.filter.outputs.mobile }}
     steps:
       - name: Filter changed paths
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         id: filter
         with:
           # 'every' = a file must match ALL patterns in a filter to count.
