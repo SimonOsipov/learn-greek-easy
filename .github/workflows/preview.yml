@@ -234,7 +234,7 @@ jobs:
           default-branch: main
 
       - name: Add Artifact Link
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: coverage-artifact-link
           message: |
