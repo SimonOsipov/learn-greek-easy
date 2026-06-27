@@ -395,37 +395,35 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
           {/* Pagination */}
           {!isLoading && !error && deckList && deckList.total > 0 && (
             <div className="mt-4 flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
+              <span className="va-dim">
                 {t('pagination.showing', {
                   from: (page - 1) * pageSize + 1,
                   to: Math.min(page * pageSize, deckList.total),
                   total: deckList.total,
                 })}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
+              </span>
+              <div className="va-pager">
+                <button
+                  type="button"
+                  className="btn btn-glass btn-sm"
                   onClick={handlePreviousPage}
                   disabled={page === 1}
                   data-testid="pagination-prev"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   {t('pagination.previous')}
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  {t('pagination.pageOf', { page, totalPages })}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
+                </button>
+                <span className="va-dim">{t('pagination.pageOf', { page, totalPages })}</span>
+                <button
+                  type="button"
+                  className="btn btn-glass btn-sm"
                   onClick={handleNextPage}
                   disabled={page >= totalPages}
                   data-testid="pagination-next"
                 >
                   {t('pagination.next')}
                   <ChevronRight className="h-4 w-4" />
-                </Button>
+                </button>
               </div>
             </div>
           )}
