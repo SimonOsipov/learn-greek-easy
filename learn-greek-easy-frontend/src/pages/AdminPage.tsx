@@ -36,7 +36,6 @@ import {
 } from '@/components/admin';
 import { DeckDrawer } from '@/components/admin/decks/DeckDrawer';
 import { DeckList } from '@/components/admin/decks/DeckList';
-import { DeckStats } from '@/components/admin/decks/DeckStats';
 import { PageHead, type PageHeadProps } from '@/components/admin/shell/page-head';
 import { SectionTabs, type SectionTabItem } from '@/components/admin/shell/section-tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -555,14 +554,15 @@ export function pageHeadPropsFor(
           cardTotal: _counts.cardTotal,
         }),
         actions: (
-          <Button
-            variant="default"
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
             onClick={_handlers.onCreateDeck}
             data-testid="create-deck-button"
           >
-            <Plus className="size-4" aria-hidden="true" />
+            <Plus className="size-4" aria-hidden />
             {t('decks.actions.createDeck')}
-          </Button>
+          </button>
         ),
         titleTestId: 'admin-title' as const,
         subTestId: 'admin-subtitle' as const,
@@ -1041,19 +1041,6 @@ const AdminPage: React.FC = () => {
       {/* Decks Tab Content */}
       {activeTab === 'decks' && (
         <>
-          {/* Deck Stats 4-up grid */}
-          <DeckStats
-            totalDecks={stats?.total_decks ?? 0}
-            totalCards={stats?.total_cards ?? 0}
-            vocabularyCount={stats?.total_vocabulary_decks ?? 0}
-            totalVocabularyCards={stats?.total_vocabulary_cards ?? 0}
-            cultureCount={stats?.total_culture_decks ?? 0}
-            totalCultureQuestions={stats?.total_culture_questions ?? 0}
-            avgCardsPerDeck={
-              stats && stats.total_decks > 0 ? Math.round(stats.total_cards / stats.total_decks) : 0
-            }
-          />
-
           {/* All Decks List with Search and Pagination */}
           <section aria-label={t('decks.title')}>
             <AllDecksList

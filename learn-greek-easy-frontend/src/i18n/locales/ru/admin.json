@@ -2039,16 +2039,6 @@
     "questionCount_few": "{{count}} вопроса",
     "questionCount_many": "{{count}} вопросов",
     "questionCount_other": "{{count}} вопросов",
-    "stats": {
-      "totalDecks": "Всего колод",
-      "vocabulary": "Словарные",
-      "culture": "Культурные",
-      "avgCardsPerDeck": "Карточек / колода",
-      "totalCardsSub": "{{totalCards}} карточек во всех колодах",
-      "vocabularySub": "{{totalVocabularyCards}} слов · A1–B2",
-      "cultureSub": "{{totalCultureQuestions}} вопросов · {{cultureCount}} активных",
-      "avgCardsPerDeckSub": "+0 к прошлому месяцу"
-    },
     "row": {
       "typeVocabulary": "словарный",
       "typeCulture": "культура",

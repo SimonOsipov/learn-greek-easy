@@ -2023,16 +2023,6 @@
     "wordCount_other": "{{count}} words",
     "questionCount_one": "{{count}} question",
     "questionCount_other": "{{count}} questions",
-    "stats": {
-      "totalDecks": "Total decks",
-      "vocabulary": "Vocabulary",
-      "culture": "Culture",
-      "avgCardsPerDeck": "Avg cards / deck",
-      "totalCardsSub": "{{totalCards}} cards across all decks",
-      "vocabularySub": "{{totalVocabularyCards}} words · A1–B2",
-      "cultureSub": "{{totalCultureQuestions}} questions · {{cultureCount}} active",
-      "avgCardsPerDeckSub": "+0 vs last month"
-    },
     "row": {
       "typeVocabulary": "vocabulary",
       "typeCulture": "culture",
