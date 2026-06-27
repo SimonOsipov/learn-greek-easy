@@ -49,6 +49,7 @@
   },
   "deckCreate": {
     "title": "Создать колоду",
+    "subtitle": "Создайте новую словарную или культурную колоду",
     "typeLabel": "Тип колоды",
     "typeVocabulary": "Словарь",
     "typeCulture": "Культура",

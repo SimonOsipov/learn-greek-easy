@@ -49,6 +49,7 @@
   },
   "deckCreate": {
     "title": "Create Deck",
+    "subtitle": "Create a new vocabulary or culture deck",
     "typeLabel": "Deck Type",
     "typeVocabulary": "Vocabulary",
     "typeCulture": "Culture",

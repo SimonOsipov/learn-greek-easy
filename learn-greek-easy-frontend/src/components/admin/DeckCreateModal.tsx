@@ -114,7 +114,7 @@ export const DeckCreateModal: React.FC<DeckCreateModalProps> = ({
         <div className="cd-modal-head">
           <DialogHeader>
             <DialogTitle>{t('deckCreate.title')}</DialogTitle>
-            <DialogDescription>{t('sections.allDecksDescription')}</DialogDescription>
+            <DialogDescription>{t('deckCreate.subtitle')}</DialogDescription>
           </DialogHeader>
         </div>
 
