@@ -425,7 +425,7 @@ jobs:
           fi
 
       - name: Post Health Check Comment
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: health-check-report
           message: ${{ steps.comment.outputs.body }}
@@ -972,7 +972,7 @@ jobs:
           fi
 
       - name: Post K6 Comment
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: k6-performance-report
           message: ${{ steps.comment.outputs.body }}
@@ -1116,7 +1116,7 @@ jobs:
           fi
 
       - name: Post Accessibility Comment
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: accessibility-report
           message: ${{ steps.comment.outputs.body }}
@@ -1358,7 +1358,7 @@ jobs:
           fi
 
       - name: Post Lighthouse Comment
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: lighthouse-report
           message: ${{ steps.comment.outputs.body }}
