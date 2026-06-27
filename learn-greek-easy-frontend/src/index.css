@@ -1217,9 +1217,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
     font-family: 'Inter Tight', sans-serif;
     font-weight: 700;
     font-size: 12px;
@@ -3071,6 +3071,82 @@
     font-size: 15px;
     font-weight: 600;
     color: hsl(var(--fg));
+  }
+
+  /* ── Decks list grid (ADMIN2-47, AC E) — CD .va-list / .va-row ── */
+  .va-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .va-list-head,
+  .va-row {
+    display: grid;
+    grid-template-columns: minmax(280px, 2.4fr) 100px 1.2fr 1fr 100px 70px;
+    gap: 16px;
+    align-items: center;
+    padding: 12px 24px;
+  }
+  .va-list-head {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: hsl(var(--fg-3));
+    border-bottom: 1px solid hsl(var(--line));
+  }
+  .va-row {
+    border-bottom: 1px solid hsl(var(--line));
+  }
+  .va-list .va-row:last-child {
+    border-bottom: none;
+  }
+  .va-row-clickable {
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .va-row-clickable:hover {
+    background: hsl(var(--primary) / 0.04);
+  }
+  .va-cell-deck {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+  .va-owner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: hsl(var(--fg-2));
+    min-width: 0;
+  }
+  .va-cards-n {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: hsl(var(--fg-2));
+    text-align: right;
+  }
+  .va-row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+  }
+  /* D6 minimal inactive affordance (CD has no status column) */
+  .deck-inactive-tag {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 5px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: hsl(var(--fg) / 0.06);
+    color: hsl(var(--fg-3));
   }
 
   /* ── Changelog lang-tab pill buttons (ADMIN2-44 / CD segmented control) ── */

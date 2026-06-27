@@ -44,10 +44,10 @@ describe('DeckList', () => {
     expect(screen.getByTestId('deck-list')).toBeInTheDocument();
   });
 
-  it('renders 6 table header columns', () => {
+  it('renders 6 header columns in the grid header', () => {
     render(<DeckList decks={[makeDeck('x')]} isLoading={false} {...defaultProps} />);
-    const headers = screen.getAllByRole('columnheader');
-    expect(headers).toHaveLength(6);
+    const head = screen.getByTestId('deck-list-head');
+    expect(head.children).toHaveLength(6);
   });
 
   it('renders empty state when decks is empty and not loading', () => {
