@@ -50,7 +50,7 @@ blis = {version = "^1.3.3", python = ">=3.13,<3.15"}
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.3,<10.0"
-pytest-asyncio = "^0.23.0"
+pytest-asyncio = ">=1.0,<2.0"
 pytest-cov = "^5.0.0"
 pytest-mock = "^3.14.0"
 faker = ">=26,<41"
@@ -180,7 +180,12 @@ python_functions = ["test_*"]
 
 # Async mode - automatically discover and run async tests
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
+# pytest-asyncio >=1.0 (pytest 9 compat): the test suite uses a session-scoped
+# DB engine (session_db_engine), so fixtures AND tests must share one session
+# event loop or asyncpg connections cross loops / ScopeMismatch. Both scopes are
+# set to "session" to match (replicates the pre-0.24 single-loop behavior).
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 
 # Output configuration
 addopts = [
