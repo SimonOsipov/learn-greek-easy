@@ -445,6 +445,11 @@ async def list_decks(
         description="Filter by type: 'vocabulary' or 'culture'",
         regex="^(vocabulary|culture)$",
     ),
+    scope: Optional[str] = Query(
+        None,
+        description="Filter by ownership scope: 'global' (system, owner_id IS NULL) or 'user' (owner-owned, owner_id IS NOT NULL)",
+        regex="^(all|global|user)$",
+    ),
 ) -> AdminDeckListResponse:
     """List all decks with search and pagination.
 
@@ -458,6 +463,7 @@ async def list_decks(
         page_size: Number of items per page (max 100)
         search: Optional search term for deck name (case-insensitive)
         type: Optional filter by deck type ('vocabulary' or 'culture')
+        scope: Optional ownership scope filter ('global' = system decks, 'user' = owner-created, None/'all' = no filter)
 
     Returns:
         AdminDeckListResponse with paginated deck list
@@ -515,6 +521,13 @@ async def list_decks(
                 | Deck.name_ru.ilike(f"%{search}%")
             )
 
+        # Apply scope filter (server-side ownership filter — D5)
+        # None / 'all' → no filter; 'global' → system decks only; 'user' → owner-created only
+        if scope == "global":
+            vocab_query = vocab_query.where(Deck.owner_id.is_(None))
+        elif scope == "user":
+            vocab_query = vocab_query.where(Deck.owner_id.is_not(None))
+
         # Get total count for vocabulary
         vocab_count_query = select(func.count()).select_from(vocab_query.subquery())
         vocab_count_result = await db.execute(vocab_count_query)
@@ -557,7 +570,9 @@ async def list_decks(
     # ========================================
     # Culture Decks Query
     # ========================================
-    if type is None or type == "culture":
+    # CultureDeck has no owner_id column — all culture decks are always global.
+    # Skip this branch entirely when scope=='user' (no culture deck can be user-owned).
+    if (type is None or type == "culture") and scope != "user":
         # Count questions per culture deck
         culture_question_count_subquery = (
             select(

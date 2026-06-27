@@ -18,6 +18,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  X,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -40,7 +41,7 @@ import { PageHead, type PageHeadProps } from '@/components/admin/shell/page-head
 import { SectionTabs, type SectionTabItem } from '@/components/admin/shell/section-tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Kicker } from '@/components/ui/kicker';
 import { SegControl } from '@/components/ui/seg-control';
@@ -163,20 +164,6 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-// ---------------------------------------------------------------------------
-// Status filter type + pure helper — exported for unit tests (ADMIN2-35-03)
-// ---------------------------------------------------------------------------
-
-export type StatusFilter = 'all' | 'active' | 'deactivated';
-
-export function computeDisplayDecks(
-  decks: UnifiedDeckItem[],
-  statusFilter: StatusFilter
-): UnifiedDeckItem[] {
-  if (statusFilter === 'all') return decks;
-  return decks.filter((d) => (statusFilter === 'active' ? d.is_active : !d.is_active));
-}
-
 /**
  * All Decks List Component
  */
@@ -198,19 +185,11 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchInput, setSearchInput] = useState('');
-    const [statusFilter, setStatusFilter] = useState<StatusFilter>(() => {
-      const stored = localStorage.getItem('admin.deckList.statusFilter');
-      return stored === 'active' || stored === 'deactivated' ? stored : 'all';
-    });
+    const [scopeFilter, setScopeFilter] = useState<'all' | 'global' | 'user'>('all');
     const [page, setPage] = useState(1);
     const pageSize = 10;
 
     const debouncedSearch = useDebounce(searchInput, 300);
-
-    const handleStatusFilterChange = (value: StatusFilter) => {
-      setStatusFilter(value);
-      localStorage.setItem('admin.deckList.statusFilter', value);
-    };
 
     // Seam for DKDR-06: writes ?edit=<id> to URL so the drawer can mount.
     const onOpenDrawer = (deck: UnifiedDeckItem) => {
@@ -234,6 +213,7 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
           page_size: number;
           search?: string;
           type?: 'vocabulary' | 'culture';
+          scope?: 'global' | 'user';
         } = {
           page,
           page_size: pageSize,
@@ -245,6 +225,9 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
         if (typeFilter !== 'all') {
           params.type = typeFilter;
         }
+        if (scopeFilter !== 'all') {
+          params.scope = scopeFilter;
+        }
 
         const data = await adminAPI.listDecks(params);
         setDeckList(data);
@@ -254,7 +237,7 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
       } finally {
         setIsLoading(false);
       }
-    }, [page, debouncedSearch, typeFilter, t]);
+    }, [page, debouncedSearch, typeFilter, scopeFilter, t]);
 
     const handleDeleteConfirm = async () => {
       if (!deckToDelete) return;
@@ -300,7 +283,7 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
     // Reset to page 1 when search or filter changes
     useEffect(() => {
       setPage(1);
-    }, [debouncedSearch, typeFilter]);
+    }, [debouncedSearch, typeFilter, scopeFilter]);
 
     const totalPages = deckList ? Math.ceil(deckList.total / pageSize) : 0;
 
@@ -316,52 +299,65 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
       }
     };
 
-    const displayDecks = computeDisplayDecks(deckList?.decks ?? [], statusFilter);
-
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle data-testid="all-decks-title">{t('sections.allDecks')}</CardTitle>
-          <CardDescription data-testid="all-decks-description">
-            {t('sections.allDecksDescription')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Search and Filter Controls */}
-          <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
-            <div className="relative min-w-[240px] flex-1 sm:max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder={t('search.placeholder')}
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-9"
-                data-testid="deck-search-input"
-              />
-            </div>
-            <SegControl
-              options={[
-                { value: 'all', label: t('decks.filters.type.all') },
-                { value: 'vocabulary', label: t('decks.filters.type.vocab') },
-                { value: 'culture', label: t('decks.filters.type.culture') },
-              ]}
-              value={typeFilter}
-              onChange={(value: 'all' | 'vocabulary' | 'culture') => onTypeFilterChange(value)}
-              ariaLabel={t('decks.filters.type.label')}
+      <div className="dk-panel">
+        {/* Panel title — single head, preserves e2e testid */}
+        <div className="va-panel-head" data-testid="all-decks-title">
+          {t('sections.allDecks')}
+        </div>
+
+        {/* Toolbar: search + type seg + scope seg */}
+        <div className="news-toolbar">
+          {/* Search input — full-width, min 280px, with clear button */}
+          <div className="relative min-w-[280px] flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder={t('search.placeholder')}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="pl-9 pr-8"
+              data-testid="deck-search-input"
             />
-            <SegControl
-              options={[
-                { value: 'all', label: t('decks.filters.status.all') },
-                { value: 'active', label: t('decks.filters.status.active') },
-                { value: 'deactivated', label: t('decks.filters.status.deactivated') },
-              ]}
-              value={statusFilter}
-              onChange={handleStatusFilterChange}
-              ariaLabel={t('decks.filters.status.label')}
-            />
+            {searchInput && (
+              <button
+                type="button"
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                onClick={() => setSearchInput('')}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
+          {/* Type filter — server-side, kept as-is */}
+          <SegControl
+            options={[
+              { value: 'all', label: t('decks.filters.type.all') },
+              { value: 'vocabulary', label: t('decks.filters.type.vocab') },
+              { value: 'culture', label: t('decks.filters.type.culture') },
+            ]}
+            value={typeFilter}
+            onChange={(value: 'all' | 'vocabulary' | 'culture') => onTypeFilterChange(value)}
+            ariaLabel={t('decks.filters.type.label')}
+          />
+
+          {/* Scope filter — server-side D5 */}
+          <SegControl
+            options={[
+              { value: 'all', label: t('decks.filters.scope.all') },
+              { value: 'global', label: t('decks.filters.scope.global') },
+              { value: 'user', label: t('decks.filters.scope.user') },
+            ]}
+            value={scopeFilter}
+            onChange={(value: 'all' | 'global' | 'user') => setScopeFilter(value)}
+            ariaLabel={t('decks.filters.scope.label')}
+          />
+        </div>
+
+        {/* Content area */}
+        <div className="p-5">
           {/* Error State */}
           {error && !isLoading && (
             <Alert variant="destructive">
@@ -385,7 +381,7 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
           {/* Deck List — loading + empty states owned by DeckList */}
           {!error && (
             <DeckList
-              decks={displayDecks}
+              decks={deckList?.decks ?? []}
               isLoading={isLoading}
               locale={locale}
               onOpenDrawer={onOpenDrawer}
@@ -442,8 +438,8 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
             onConfirm={handleDeleteConfirm}
             isDeleting={isDeleting}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 );

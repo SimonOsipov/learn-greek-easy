@@ -3054,6 +3054,25 @@
     margin-right: 8px;
   }
 
+  /* ── Decks tab contained panel (ADMIN2-47) ── */
+  /* Grey bg surface matching .fb-panel / .cl-panel / .va-panel.an-panel pattern. */
+  .dk-panel {
+    background: hsl(var(--bg-2));
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  /* Panel title strip — typography only, no bottom border.
+     The .news-toolbar bottom border below it serves as the single separator. */
+  .va-panel-head {
+    padding: 16px 20px 12px;
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: hsl(var(--fg));
+  }
+
   /* ── Changelog lang-tab pill buttons (ADMIN2-44 / CD segmented control) ── */
   .dk-langtab {
     background: transparent;

@@ -2012,11 +2012,11 @@
         "vocab": "Vocab",
         "culture": "Culture"
       },
-      "status": {
-        "label": "Filter by status",
+      "scope": {
+        "label": "Filter by scope",
         "all": "All",
-        "active": "Active",
-        "deactivated": "Deactivated"
+        "global": "Global",
+        "user": "User"
       }
     },
     "wordCount_one": "{{count}} word",
