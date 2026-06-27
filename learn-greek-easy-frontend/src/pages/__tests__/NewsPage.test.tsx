@@ -141,7 +141,7 @@ describe('NewsPage Component', () => {
 
       expect(screen.getByTestId('news-page-title')).toBeInTheDocument();
       expect(screen.getByText('Greek News')).toBeInTheDocument();
-      expect(screen.getByText('Practice reading with real news articles')).toBeInTheDocument();
+      expect(screen.getByText('Practice reading with real articles')).toBeInTheDocument();
     });
 
     it('should render difficulty label alongside the level toggle', async () => {

@@ -19,7 +19,6 @@ import { NewsFilters, NewsGrid, NewsPagination, ScrollToTopButton } from '@/comp
 import { NewsReaderSheet } from '@/components/news/NewsReaderSheet';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Kicker } from '@/features/decks/dx';
 import '@/features/decks/dx/dx.css';
 import { track } from '@/lib/analytics';
 import { reportAPIError } from '@/lib/errorReporting';
@@ -241,11 +240,16 @@ export const NewsPage: React.FC = () => {
     <div className="space-y-6 pb-20 lg:pb-8" data-testid="news-page">
       {/* Page Header */}
       <div className="dx-index-head">
-        <Kicker tone="primary">{t('news.page.kicker')}</Kicker>
-        <h1 className="dx-index-h" data-testid="news-page-title">
+        <span className="inline-flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-fg3 before:h-2 before:w-2 before:rounded-full before:bg-primary before:shadow-[0_0_0_4px_hsl(var(--primary)/0.18)] before:content-['']">
+          {t('news.page.kicker')}
+        </span>
+        <h1
+          className="m-0 font-display text-[clamp(34px,4vw,50px)] font-bold leading-[1.02] tracking-[-0.04em]"
+          data-testid="news-page-title"
+        >
           {t('news.page.title')}
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground md:text-base">{t('news.page.subtitle')}</p>
+        <p className="mt-2 text-[16px] text-fg2">{t('news.page.subtitle')}</p>
       </div>
 
       {/* Country Filters + Difficulty Toggle */}
