@@ -256,7 +256,7 @@ describe('NewsPage Component', () => {
 
       // Filtered-empty state must be shown when a search is active and returns no results
       // (not yet implemented → this assertion fails RED)
-      expect(screen.getByTestId('news-empty-filtered')).toBeInTheDocument();
+      expect(await screen.findByTestId('news-empty-filtered')).toBeInTheDocument();
       // Truly-empty copy must NOT be present when a search filter is active
       expect(screen.queryByText('No news articles yet')).not.toBeInTheDocument();
     });
@@ -291,7 +291,7 @@ describe('NewsPage Component', () => {
 
       // Filtered-empty state must be shown when a country filter is active and returns no results
       // (not yet implemented → this assertion fails RED)
-      expect(screen.getByTestId('news-empty-filtered')).toBeInTheDocument();
+      expect(await screen.findByTestId('news-empty-filtered')).toBeInTheDocument();
       // Truly-empty copy must NOT be present when a country filter is active
       expect(screen.queryByText('No news articles yet')).not.toBeInTheDocument();
     });
