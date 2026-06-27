@@ -3149,6 +3149,203 @@
     color: hsl(var(--fg-3));
   }
 
+  /* ── Create-deck modal (ADMIN2-47, AC H) — CD .aw-modal/.cd-modal + .aw-btn system ── */
+  .aw-modal {
+    /* generic CD modal shell — bg/border/radius/shadow (lexgen.css parity) */
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--line));
+    border-radius: 12px;
+    box-shadow: var(--shadow-3);
+  }
+  .cd-modal {
+    /* create-deck variant: width + internal rhythm */
+    width: 100%;
+    max-width: 540px;
+    padding: 0; /* header/body/footer own their padding */
+  }
+  .cd-modal-head {
+    padding: 20px 24px 0;
+  }
+  .cd-modal-body {
+    padding: 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .cd-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 24px;
+    border-top: 1px solid hsl(var(--line));
+  }
+
+  /* deck type cards */
+  .cd-type {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .cd-type-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 14px;
+    border: 1px solid hsl(var(--line));
+    border-radius: 10px;
+    background: hsl(var(--bg));
+    cursor: pointer;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    color: hsl(var(--fg));
+    transition: all 0.15s;
+  }
+  .cd-type-card:hover {
+    border-color: hsl(var(--primary) / 0.4);
+  }
+  .cd-type-card.is-active {
+    border-color: hsl(var(--primary));
+    background: hsl(var(--primary) / 0.06);
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.5);
+  }
+  .cd-type-card svg {
+    width: 18px;
+    height: 18px;
+    color: hsl(var(--fg-2));
+  }
+  .cd-type-card.is-active svg {
+    color: hsl(var(--primary));
+  }
+
+  /* labeled field row */
+  .cd-langrow {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .cd-langrow > label {
+    font-size: 12px;
+    font-weight: 600;
+    color: hsl(var(--fg-2));
+  }
+  .cd-req {
+    color: hsl(var(--danger));
+    margin-left: 2px;
+  }
+
+  /* lang tab strip — per-tab buttons reuse .dk-langtab */
+  .cd-langtabs {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    background: hsl(var(--fg) / 0.04);
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 8px;
+    align-self: flex-start;
+  }
+
+  /* cover field */
+  .cd-cover {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .cd-cover-preview {
+    height: 96px;
+    width: auto;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+  .cd-cover-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .cd-cover-err {
+    font-size: 12px;
+    color: hsl(var(--danger));
+  }
+
+  /* CEFR segmented control (vocab) */
+  .dk-cefr {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    background: hsl(var(--fg) / 0.04);
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 8px;
+  }
+  .dk-cefr-btn {
+    background: transparent;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: hsl(var(--fg-2));
+    cursor: pointer;
+  }
+  .dk-cefr-btn:hover {
+    color: hsl(var(--fg));
+  }
+  .dk-cefr-btn.is-active {
+    background: hsl(var(--bg-2));
+    color: hsl(var(--fg));
+    box-shadow: 0 1px 2px hsl(0 0% 0% / 0.15);
+  }
+
+  /* .aw-btn system — SEPARATE from .btn (do NOT cross) */
+  .aw-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 38px;
+    padding: 0 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.18s;
+    white-space: nowrap;
+  }
+  .aw-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .aw-btn-outline {
+    background: transparent;
+    border-color: hsl(var(--line));
+    color: hsl(var(--fg-2));
+  }
+  .aw-btn-outline:hover:not(:disabled) {
+    background: hsl(var(--fg) / 0.04);
+    color: hsl(var(--fg));
+  }
+  .aw-btn-primary {
+    background: linear-gradient(180deg, hsl(var(--primary-2)), hsl(var(--primary)));
+    color: hsl(var(--primary-foreground));
+    box-shadow: 0 8px 20px -6px hsl(var(--primary) / 0.5);
+  }
+  .aw-btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+  .aw-spin {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid hsl(var(--primary-foreground) / 0.4);
+    border-top-color: hsl(var(--primary-foreground));
+    animation: aw-spin 0.6s linear infinite;
+  }
+  @keyframes aw-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
   /* ── Changelog lang-tab pill buttons (ADMIN2-44 / CD segmented control) ── */
   .dk-langtab {
     background: transparent;

@@ -57,9 +57,11 @@ import { adminAPI } from '@/services/adminAPI';
 import type {
   ContentStatsResponse,
   CultureDeckCreatePayload,
+  CultureDeckCreateResponse,
   DeckListResponse,
   UnifiedDeckItem,
   VocabularyDeckCreatePayload,
+  VocabularyDeckCreateResponse,
 } from '@/services/adminAPI';
 import { useAdminChangelogStore } from '@/stores/adminChangelogStore';
 import { useAdminExercisesStore } from '@/stores/adminExercisesStore';
@@ -865,12 +867,22 @@ const AdminPage: React.FC = () => {
   };
 
   /**
-   * Handle creating a new deck
+   * Handle creating a new deck (ADMIN2-47 D3: create-then-upload cover pattern).
+   *
+   * JSON create is unchanged; if a coverFile is provided, it is uploaded after the
+   * deck is created using the returned id. Partial failure (deck created, cover upload
+   * fails) KEEPS the deck and surfaces a soft warning — never loses the created deck.
    */
-  const handleCreateDeck = async (type: DeckType, data: DeckCreateFormData) => {
+  const handleCreateDeck = async (
+    type: DeckType,
+    data: DeckCreateFormData,
+    coverFile?: File | null
+  ) => {
     setIsCreating(true);
 
     try {
+      let createdId: string;
+
       if (type === 'vocabulary') {
         // VocabularyDeckCreateForm produces trilingual data: name_el, name_en, name_ru, etc.
         // API expects single name field (use name_en as primary)
@@ -896,7 +908,8 @@ const AdminPage: React.FC = () => {
           is_premium: vocabularyData.is_premium,
           is_system_deck: true,
         };
-        await adminAPI.createVocabularyDeck(payload);
+        const res: VocabularyDeckCreateResponse = await adminAPI.createVocabularyDeck(payload);
+        createdId = res.id;
       } else {
         // CultureDeckCreateForm produces trilingual data: name_el, name_en, name_ru, etc.
         // API expects same flat format
@@ -918,7 +931,25 @@ const AdminPage: React.FC = () => {
           category: cultureData.category,
           is_premium: cultureData.is_premium,
         };
-        await adminAPI.createCultureDeck(payload);
+        const res: CultureDeckCreateResponse = await adminAPI.createCultureDeck(payload);
+        createdId = res.id;
+      }
+
+      // Post-create cover upload (deck already exists — never lose it on upload failure)
+      if (coverFile) {
+        try {
+          if (type === 'vocabulary') {
+            await adminAPI.uploadDeckCoverImage(createdId, coverFile);
+          } else {
+            await adminAPI.uploadCultureDeckCoverImage(createdId, coverFile);
+          }
+        } catch {
+          // Soft warning — deck was created successfully; only the cover upload failed
+          toast({
+            title: t('deckEdit.imageUploadError'),
+            variant: 'destructive',
+          });
+        }
       }
 
       // Show success toast
