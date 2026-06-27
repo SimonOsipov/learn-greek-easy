@@ -19,6 +19,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import DeckWordEntry, PartOfSpeech, Visibility, WordEntry
+from tests.factories.auth import UserFactory
 from tests.factories.content import DeckFactory
 from tests.factories.culture import CultureDeckFactory, CultureQuestionFactory
 
@@ -1276,3 +1277,392 @@ class TestAdminDecks:
         culture_data = next((d for d in data["decks"] if d["id"] == str(culture_deck.id)), None)
         assert culture_data is not None
         assert culture_data["item_count"] == 5
+
+    # =========================================================================
+    # Scope Filter Tests (ADMIN2-47-02 — RED until scope param is implemented)
+    # Mirrors test_filter_type_invalid_returns_422 and the type/search filter
+    # pattern above.  Tests 3 and 10 are pre-green guards (scope ignored by
+    # FastAPI pre-impl returns the same "all" behaviour those tests assert).
+    # Tests 1, 2, 4, 5, 6, 7, 8, 9 fail RED for the right assertion reason.
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_scope_global_returns_only_unowned_vocab(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """scope=global: only vocab with owner_id IS NULL (+ culture); user-owned vocab absent."""
+        user = await UserFactory.create(session=db_session)
+        user_deck = await DeckFactory.create(
+            session=db_session,
+            name_en="Scope Global User Vocab",
+            is_active=True,
+            owner_id=user.id,
+        )
+        global_deck = await DeckFactory.create(
+            session=db_session,
+            name_en="Scope Global System Vocab",
+            is_active=True,
+            owner_id=None,
+        )
+
+        response = await client.get(
+            "/api/v1/admin/decks?scope=global",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        deck_ids = [d["id"] for d in data["decks"]]
+        assert str(global_deck.id) in deck_ids
+        assert str(user_deck.id) not in deck_ids
+        for deck in data["decks"]:
+            if deck["type"] == "vocabulary":
+                assert deck["owner_id"] is None
+
+    @pytest.mark.asyncio
+    async def test_scope_user_returns_only_owned_vocab(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """scope=user: only vocab with owner_id IS NOT NULL; global vocab and culture absent."""
+        user = await UserFactory.create(session=db_session)
+        user_deck = await DeckFactory.create(
+            session=db_session,
+            name_en="Scope User Owned Vocab",
+            is_active=True,
+            owner_id=user.id,
+        )
+        global_deck = await DeckFactory.create(
+            session=db_session,
+            name_en="Scope User Global Vocab",
+            is_active=True,
+            owner_id=None,
+        )
+
+        response = await client.get(
+            "/api/v1/admin/decks?scope=user",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        deck_ids = [d["id"] for d in data["decks"]]
+        assert str(user_deck.id) in deck_ids
+        assert str(global_deck.id) not in deck_ids
+        for deck in data["decks"]:
+            assert deck["type"] == "vocabulary"
+            assert deck["owner_id"] is not None
+
+    @pytest.mark.asyncio
+    async def test_scope_all_returns_both_and_omitted_equals_all(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """scope=all and omitted: both return global + user-owned + culture (no filter applied)."""
+        user = await UserFactory.create(session=db_session)
+        user_deck = await DeckFactory.create(
+            session=db_session,
+            name_en="Scope All User Deck",
+            is_active=True,
+            owner_id=user.id,
+        )
+        global_deck = await DeckFactory.create(
+            session=db_session,
+            name_en="Scope All Global Deck",
+            is_active=True,
+            owner_id=None,
+        )
+        culture_deck = await CultureDeckFactory.create(
+            session=db_session,
+            name_en="Scope All Culture Deck",
+            is_active=True,
+        )
+
+        response_all = await client.get(
+            "/api/v1/admin/decks?scope=all",
+            headers=superuser_auth_headers,
+        )
+        response_omit = await client.get(
+            "/api/v1/admin/decks",
+            headers=superuser_auth_headers,
+        )
+
+        for response in (response_all, response_omit):
+            assert response.status_code == 200
+            ids = [d["id"] for d in response.json()["decks"]]
+            assert str(user_deck.id) in ids
+            assert str(global_deck.id) in ids
+            assert str(culture_deck.id) in ids
+
+    @pytest.mark.asyncio
+    async def test_scope_global_includes_culture_decks(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """scope=global: culture decks (always global) are included alongside global vocab."""
+        global_vocab = await DeckFactory.create(
+            session=db_session,
+            name_en="Global Incl Culture Vocab",
+            is_active=True,
+            owner_id=None,
+        )
+        culture_deck = await CultureDeckFactory.create(
+            session=db_session,
+            name_en="Global Incl Culture Deck",
+            is_active=True,
+        )
+
+        response = await client.get(
+            "/api/v1/admin/decks?scope=global",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        deck_ids = [d["id"] for d in data["decks"]]
+        assert str(global_vocab.id) in deck_ids
+        assert str(culture_deck.id) in deck_ids
+
+    @pytest.mark.asyncio
+    async def test_scope_user_excludes_culture_decks(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """scope=user: culture decks absent (CultureDeck has no owner_id); only user vocab."""
+        user = await UserFactory.create(session=db_session)
+        user_deck = await DeckFactory.create(
+            session=db_session,
+            name_en="User Excl Culture Vocab",
+            is_active=True,
+            owner_id=user.id,
+        )
+        culture_deck = await CultureDeckFactory.create(
+            session=db_session,
+            name_en="User Excl Culture Deck",
+            is_active=True,
+        )
+
+        response = await client.get(
+            "/api/v1/admin/decks?scope=user",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        deck_ids = [d["id"] for d in data["decks"]]
+        assert str(user_deck.id) in deck_ids
+        assert str(culture_deck.id) not in deck_ids
+        for deck in data["decks"]:
+            assert deck["type"] != "culture"
+
+    @pytest.mark.asyncio
+    async def test_scope_pagination_total_reflects_scope(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """scope=global&page_size=2: total==3 (not 6), pages disjoint, no user-owned leakage.
+
+        Regression guard against the removed client-side status filter that only
+        filtered the current page window — scope must be applied before the COUNT
+        query and before the Python pagination slice.
+        """
+        user = await UserFactory.create(session=db_session)
+        global_decks = []
+        for i in range(3):
+            d = await DeckFactory.create(
+                session=db_session,
+                name_en=f"ScopePag Global {i}",
+                is_active=True,
+                owner_id=None,
+            )
+            global_decks.append(d)
+        for i in range(3):
+            await DeckFactory.create(
+                session=db_session,
+                name_en=f"ScopePag User {i}",
+                is_active=True,
+                owner_id=user.id,
+            )
+
+        response_p1 = await client.get(
+            "/api/v1/admin/decks?scope=global&page_size=2&page=1&search=ScopePag",
+            headers=superuser_auth_headers,
+        )
+        response_p2 = await client.get(
+            "/api/v1/admin/decks?scope=global&page_size=2&page=2&search=ScopePag",
+            headers=superuser_auth_headers,
+        )
+
+        assert response_p1.status_code == 200
+        assert response_p2.status_code == 200
+        data_p1 = response_p1.json()
+        data_p2 = response_p2.json()
+
+        # total must equal scoped count (3 global), not unscoped (6)
+        assert data_p1["total"] == 3
+        assert data_p2["total"] == 3
+
+        # page 1: 2 results; page 2: 1 remaining
+        assert len(data_p1["decks"]) == 2
+        assert len(data_p2["decks"]) == 1
+
+        # all returned decks must be global vocab (owner_id None, no culture)
+        for deck in data_p1["decks"] + data_p2["decks"]:
+            assert deck["type"] == "vocabulary"
+            assert deck["owner_id"] is None
+
+        # pages disjoint — no row appears on both pages
+        p1_ids = {d["id"] for d in data_p1["decks"]}
+        p2_ids = {d["id"] for d in data_p2["decks"]}
+        assert p1_ids.isdisjoint(p2_ids)
+
+        # union of both pages == exactly the 3 global decks (completeness)
+        assert p1_ids | p2_ids == {str(d.id) for d in global_decks}
+
+    @pytest.mark.asyncio
+    async def test_scope_composes_with_type(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """scope composes with type: type=culture&scope=user→empty; type=vocabulary&scope=global→only global vocab."""
+        user = await UserFactory.create(session=db_session)
+        user_vocab = await DeckFactory.create(
+            session=db_session,
+            name_en="Compose Type User Vocab",
+            is_active=True,
+            owner_id=user.id,
+        )
+        global_vocab = await DeckFactory.create(
+            session=db_session,
+            name_en="Compose Type Global Vocab",
+            is_active=True,
+            owner_id=None,
+        )
+        culture_deck = await CultureDeckFactory.create(
+            session=db_session,
+            name_en="Compose Type Culture Deck",
+            is_active=True,
+        )
+
+        # type=culture + scope=user → no culture deck is user-owned → empty result
+        response_cu = await client.get(
+            "/api/v1/admin/decks?type=culture&scope=user",
+            headers=superuser_auth_headers,
+        )
+        assert response_cu.status_code == 200
+        data_cu = response_cu.json()
+        assert data_cu["total"] == 0
+        assert data_cu["decks"] == []
+
+        # type=vocabulary + scope=global → only global vocab; user vocab and culture absent
+        response_vg = await client.get(
+            "/api/v1/admin/decks?type=vocabulary&scope=global",
+            headers=superuser_auth_headers,
+        )
+        assert response_vg.status_code == 200
+        data_vg = response_vg.json()
+        vg_ids = [d["id"] for d in data_vg["decks"]]
+        assert str(global_vocab.id) in vg_ids
+        assert str(user_vocab.id) not in vg_ids
+        assert str(culture_deck.id) not in vg_ids
+
+    @pytest.mark.asyncio
+    async def test_scope_composes_with_search(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """search=AlphaScope&scope=global → only global AlphaScope deck; user AlphaScope absent."""
+        user = await UserFactory.create(session=db_session)
+        global_alpha = await DeckFactory.create(
+            session=db_session,
+            name_en="AlphaScope Global Deck",
+            is_active=True,
+            owner_id=None,
+        )
+        user_alpha = await DeckFactory.create(
+            session=db_session,
+            name_en="AlphaScope User Deck",
+            is_active=True,
+            owner_id=user.id,
+        )
+        _global_beta = await DeckFactory.create(
+            session=db_session,
+            name_en="BetaScope Global Deck",
+            is_active=True,
+            owner_id=None,
+        )
+
+        response = await client.get(
+            "/api/v1/admin/decks?search=AlphaScope&scope=global",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        deck_ids = [d["id"] for d in data["decks"]]
+        assert str(global_alpha.id) in deck_ids
+        assert str(user_alpha.id) not in deck_ids
+        # BetaScope does not match the search term regardless of scope
+        assert str(_global_beta.id) not in deck_ids
+
+    @pytest.mark.asyncio
+    async def test_scope_invalid_returns_422(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """scope=banana → 422 (mirrors test_filter_type_invalid_returns_422)."""
+        response = await client.get(
+            "/api/v1/admin/decks?scope=banana",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_scope_explicit_all_no_422(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """scope=all → 200; regex must include 'all' so it is not rejected like 'banana'."""
+        vocab_deck = await DeckFactory.create(
+            session=db_session,
+            name_en="ExplicitAll Vocab Deck",
+            is_active=True,
+            owner_id=None,
+        )
+        culture_deck = await CultureDeckFactory.create(
+            session=db_session,
+            name_en="ExplicitAll Culture Deck",
+            is_active=True,
+        )
+
+        response = await client.get(
+            "/api/v1/admin/decks?scope=all",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        deck_ids = [d["id"] for d in data["decks"]]
+        assert str(vocab_deck.id) in deck_ids
+        assert str(culture_deck.id) in deck_ids
