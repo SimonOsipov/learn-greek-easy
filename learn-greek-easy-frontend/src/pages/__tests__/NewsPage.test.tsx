@@ -141,7 +141,7 @@ describe('NewsPage Component', () => {
 
       expect(screen.getByTestId('news-page-title')).toBeInTheDocument();
       expect(screen.getByText('Greek News')).toBeInTheDocument();
-      expect(screen.getByText('Practice reading with real news articles')).toBeInTheDocument();
+      expect(screen.getByText('Practice reading with real articles')).toBeInTheDocument();
     });
 
     it('should render difficulty label alongside the level toggle', async () => {
@@ -149,7 +149,7 @@ describe('NewsPage Component', () => {
 
       render(<NewsPage />);
 
-      expect(screen.getByText('Difficulty:')).toBeInTheDocument();
+      expect(screen.getByText('Level:')).toBeInTheDocument();
       expect(screen.getByTestId('news-filters')).toBeInTheDocument();
     });
   });
@@ -214,6 +214,8 @@ describe('NewsPage Component', () => {
       expect(
         screen.getByText('Check back later for new content to practice with')
       ).toBeInTheDocument();
+      // Guard (ADMIN2-46-06): truly-empty initial load must NOT show the filtered-empty state
+      expect(screen.queryByTestId('news-empty-filtered')).not.toBeInTheDocument();
     });
 
     it('should not show pagination when no articles', async () => {
@@ -226,6 +228,72 @@ describe('NewsPage Component', () => {
       });
 
       expect(screen.queryByTestId('news-pagination')).not.toBeInTheDocument();
+    });
+  });
+
+  // ADMIN2-46-06: Filtered Empty State — lock the isFiltered branch before implementation
+  describe('Filtered Empty State (ADMIN2-46-06)', () => {
+    it('(RED #1) filtered-empty via search query: shows filtered copy, hides truly-empty copy', async () => {
+      const user = userEvent.setup();
+      // Mock all API calls to return empty; the search call will also return empty
+      (adminAPI.getNewsItems as Mock).mockResolvedValue(createPaginatedResponse([], 0));
+
+      render(<NewsPage />);
+
+      // Wait for the filter bar to mount
+      await waitFor(() => {
+        expect(screen.getByTestId('news-filters')).toBeInTheDocument();
+      });
+
+      // Type a search query so isFiltered becomes true (searchQuery.trim().length > 0)
+      const input = screen.getByTestId('news-search-input');
+      await user.type(input, 'κυπριακά');
+
+      // Wait for the debounced API call to fire with the query param
+      await waitFor(() => {
+        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, undefined, 'κυπριακά');
+      });
+
+      // Filtered-empty state must be shown when a search is active and returns no results
+      // (not yet implemented → this assertion fails RED)
+      expect(await screen.findByTestId('news-empty-filtered')).toBeInTheDocument();
+      // Truly-empty copy must NOT be present when a search filter is active
+      expect(screen.queryByText('No news articles yet')).not.toBeInTheDocument();
+    });
+
+    it('(RED #2) filtered-empty via country pill: shows filtered copy, hides truly-empty copy', async () => {
+      const user = userEvent.setup();
+      const articles = [createMockNewsItem({ id: 'article-1', country: 'cyprus' })];
+      // Initial load: 1 Cyprus article; clicking Greece returns 0 articles
+      (adminAPI.getNewsItems as Mock)
+        .mockResolvedValueOnce(
+          createPaginatedResponse(articles, 1, 1, 12, { cyprus: 1, greece: 0, world: 0 })
+        )
+        .mockResolvedValueOnce(
+          createPaginatedResponse([], 0, 1, 12, { cyprus: 0, greece: 0, world: 0 })
+        );
+
+      render(<NewsPage />);
+
+      // Wait for the initial articles grid to appear
+      await waitFor(() => {
+        expect(screen.getByTestId('news-grid')).toBeInTheDocument();
+      });
+
+      // Click the Greece filter — no articles for Greece → returns empty
+      const filters = screen.getByTestId('news-filters');
+      await user.click(within(filters).getByRole('button', { name: /Greece/ }));
+
+      // Wait for the filtered API call (countryFilter !== 'all' → isFiltered = true)
+      await waitFor(() => {
+        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'greece', undefined);
+      });
+
+      // Filtered-empty state must be shown when a country filter is active and returns no results
+      // (not yet implemented → this assertion fails RED)
+      expect(await screen.findByTestId('news-empty-filtered')).toBeInTheDocument();
+      // Truly-empty copy must NOT be present when a country filter is active
+      expect(screen.queryByText('No news articles yet')).not.toBeInTheDocument();
     });
   });
 

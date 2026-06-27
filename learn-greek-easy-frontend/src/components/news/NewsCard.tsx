@@ -254,8 +254,8 @@ export const NewsCard: React.FC<NewsCardProps> = ({
           />
         )}
 
-        {/* Bottom scrim — landing-header-bg is theme-invariant navy, safe over any photo */}
-        <div className="absolute inset-0 bg-gradient-to-t from-landing-header-bg/[0.78] via-landing-header-bg/30 to-transparent" />
+        {/* Bottom scrim — 2-stop dark-navy gradient matching CD spec */}
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_30%,hsl(222_47%_8%/0.78)_100%)]" />
 
         {/* Country badge — top-left, on-photo modifier */}
         {article.country && COUNTRY_CONFIG[article.country as NewsCountry] && (
@@ -309,18 +309,22 @@ export const NewsCard: React.FC<NewsCardProps> = ({
           <div className="flex items-center gap-[6px]">
             <span
               className={cn(
-                'font-mono text-[11px] font-bold leading-none',
-                'rounded-[6px] px-[6px] py-[3px]',
-                level === 'a2' ? 'bg-white/90 text-primary' : 'bg-white/[0.16] text-white/80'
+                'font-mono text-[11px] font-bold leading-none tracking-[0.04em]',
+                'rounded-[6px] px-[7px] py-[2px]',
+                level === 'a2'
+                  ? 'border border-transparent bg-white/[0.92] text-primary'
+                  : 'border border-white/[0.24] bg-white/[0.16] text-white/[0.82]'
               )}
             >
               {t('news.level.a2')}
             </span>
             <span
               className={cn(
-                'font-mono text-[11px] font-bold leading-none',
-                'rounded-[6px] px-[6px] py-[3px]',
-                level === 'b1' ? 'bg-white/90 text-primary' : 'bg-white/[0.16] text-white/80'
+                'font-mono text-[11px] font-bold leading-none tracking-[0.04em]',
+                'rounded-[6px] px-[7px] py-[2px]',
+                level === 'b1'
+                  ? 'border border-transparent bg-white/[0.92] text-primary'
+                  : 'border border-white/[0.24] bg-white/[0.16] text-white/[0.82]'
               )}
             >
               {t('news.level.b1')}
@@ -333,7 +337,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
             className={cn(
               'flex min-h-[calc(1.28em*3)] items-end',
               'font-display text-[17px] font-semibold leading-[1.28]',
-              'line-clamp-3 text-landing-header-fg'
+              'line-clamp-3 tracking-[-0.01em] text-white'
             )}
           >
             {title}
@@ -392,7 +396,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         {/* Footer — source hostname ↔ formatted publication date */}
         <div className="mt-auto flex items-center justify-between gap-2.5 pt-1">
           <span className="truncate font-mono text-[11.5px] text-fg3">{sourceHostname}</span>
-          <span className="flex-shrink-0 font-mono text-[11.5px] text-fg3">{formattedDate}</span>
+          <span className="flex-shrink-0 font-mono text-[12px] text-fg3">{formattedDate}</span>
         </div>
       </div>
     </>

@@ -119,7 +119,7 @@ export const NewsPagination: React.FC<NewsPaginationProps> = ({
     >
       {/* Showing text */}
       <p
-        className="text-center text-sm text-muted-foreground sm:text-left"
+        className="text-center text-sm text-fg2 sm:text-left"
         data-testid="news-pagination-showing"
       >
         {t('news.pagination.showing', { from, to, total: totalItems })}
@@ -135,6 +135,7 @@ export const NewsPagination: React.FC<NewsPaginationProps> = ({
           disabled={currentPage === 1 || isLoading}
           data-testid="news-pagination-prev"
           aria-label={t('news.pagination.previous')}
+          className="border-line bg-bg"
         >
           <ChevronLeft className="h-4 w-4" />
           <span className="sr-only sm:not-sr-only">{t('news.pagination.previous')}</span>
@@ -144,11 +145,7 @@ export const NewsPagination: React.FC<NewsPaginationProps> = ({
         {totalPages > 1 &&
           pageNumbers.map((page, index) =>
             page === 'ellipsis' ? (
-              <span
-                key={`ellipsis-${index}`}
-                className="px-2 text-sm text-muted-foreground"
-                aria-hidden="true"
-              >
+              <span key={`ellipsis-${index}`} className="px-2 text-sm text-fg2" aria-hidden="true">
                 ...
               </span>
             ) : (
@@ -161,7 +158,11 @@ export const NewsPagination: React.FC<NewsPaginationProps> = ({
                 data-testid={`news-pagination-page-${page}`}
                 aria-label={`Page ${page}`}
                 aria-current={page === currentPage ? 'page' : undefined}
-                className={cn('min-w-[36px]', page === currentPage && 'pointer-events-none')}
+                className={cn(
+                  'min-w-[36px]',
+                  page !== currentPage && 'border-line bg-bg',
+                  page === currentPage && 'pointer-events-none'
+                )}
               >
                 {page}
               </Button>
@@ -176,6 +177,7 @@ export const NewsPagination: React.FC<NewsPaginationProps> = ({
           disabled={currentPage >= totalPages || isLoading}
           data-testid="news-pagination-next"
           aria-label={t('news.pagination.next')}
+          className="border-line bg-bg"
         >
           <span className="sr-only sm:not-sr-only">{t('news.pagination.next')}</span>
           <ChevronRight className="h-4 w-4" />
@@ -192,12 +194,13 @@ export const NewsPagination: React.FC<NewsPaginationProps> = ({
           disabled={currentPage === 1 || isLoading}
           data-testid="news-pagination-prev-mobile"
           aria-label={t('news.pagination.previous')}
+          className="border-line bg-bg"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
 
         {/* Page X of Y text */}
-        <span className="text-sm text-muted-foreground">
+        <span className="text-sm text-fg2">
           {t('news.pagination.page', { current: currentPage, total: totalPages })}
         </span>
 
@@ -209,6 +212,7 @@ export const NewsPagination: React.FC<NewsPaginationProps> = ({
           disabled={currentPage >= totalPages || isLoading}
           data-testid="news-pagination-next-mobile"
           aria-label={t('news.pagination.next')}
+          className="border-line bg-bg"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>

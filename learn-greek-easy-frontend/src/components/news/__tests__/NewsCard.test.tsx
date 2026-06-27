@@ -436,7 +436,7 @@ describe('NewsCard footer: hostname + date (AC-3)', () => {
     const article = createMockArticle({ publication_date: '2026-01-27' });
     render(<NewsCard article={article} newsLang="el" />);
     // Date formatted by toLocaleDateString — check it contains the year
-    const dateElements = document.querySelectorAll('.font-mono.text-\\[11\\.5px\\]');
+    const dateElements = document.querySelectorAll('.font-mono.text-\\[12px\\]');
     // At least one element should contain year 2026
     const hasDate = Array.from(dateElements).some((el) => el.textContent?.includes('2026'));
     expect(hasDate).toBe(true);

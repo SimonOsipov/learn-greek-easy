@@ -348,11 +348,15 @@
     "page": {
       "kicker": "Reading practice · A2–B1",
       "title": "Greek News",
-      "subtitle": "Practice reading with real news articles"
+      "subtitle": "Practice reading with real articles"
     },
     "empty": {
       "title": "No news articles yet",
-      "description": "Check back later for new content to practice with"
+      "description": "Check back later for new content to practice with",
+      "filtered": {
+        "title": "No articles found",
+        "body": "Try changing the filters or your search."
+      }
     },
     "error": {
       "title": "Unable to load news",
@@ -375,7 +379,7 @@
       "a2": "A2",
       "b1": "B1",
       "label": "Content level",
-      "difficulty": "Difficulty:",
+      "difficulty": "Level:",
       "hint": {
         "a2": "Easier",
         "b1": "Harder"
@@ -386,10 +390,11 @@
     "reader": {
       "back": "Back to news",
       "openOriginal": "Open original",
-      "description": "Read the full article in Greek"
+      "description": "Read the full article in Greek",
+      "close": "Close"
     },
     "search": {
-      "placeholder": "Search news...",
+      "placeholder": "Search articles…",
       "clear": "Clear search"
     }
   },

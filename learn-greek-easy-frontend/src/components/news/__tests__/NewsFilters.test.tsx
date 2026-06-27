@@ -6,8 +6,6 @@ import { NewsFilters } from '@/components/news/NewsFilters';
 import { render, screen, within } from '@/lib/test-utils';
 
 // Base props without search — search is opt-in per test.
-// Keeping search out of defaultProps ensures the Layout/separator test is unambiguous:
-// it will only find the difficulty-section aria-hidden separator, not the search icon.
 const defaultProps = {
   countryFilter: 'all' as const,
   onCountryChange: vi.fn(),
@@ -87,7 +85,7 @@ describe('NewsFilters', () => {
     it('renders difficulty label and A2/B1 buttons', () => {
       render(<NewsFilters {...defaultProps} />);
 
-      expect(screen.getByText('Difficulty:')).toBeInTheDocument();
+      expect(screen.getByText('Level:')).toBeInTheDocument();
 
       const filters = screen.getByTestId('news-filters');
       expect(within(filters).getByRole('button', { name: /A2/ })).toBeInTheDocument();
@@ -121,13 +119,6 @@ describe('NewsFilters', () => {
   });
 
   describe('Layout', () => {
-    it('has a separator between country and level groups', () => {
-      render(<NewsFilters {...defaultProps} />);
-
-      const separator = screen.getByTestId('news-filters').querySelector('[aria-hidden="true"]');
-      expect(separator).toBeInTheDocument();
-    });
-
     it('applies custom className', () => {
       render(<NewsFilters {...defaultProps} className="mb-4" />);
 

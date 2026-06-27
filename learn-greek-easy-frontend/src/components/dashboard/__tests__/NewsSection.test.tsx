@@ -138,7 +138,7 @@ describe('NewsSection Component', () => {
       render(<NewsSection />);
 
       await waitFor(() => {
-        expect(screen.getByText('Difficulty:')).toBeInTheDocument();
+        expect(screen.getByText('Level:')).toBeInTheDocument();
       });
     });
 
