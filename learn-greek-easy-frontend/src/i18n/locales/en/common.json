@@ -375,7 +375,7 @@
       "a2": "A2",
       "b1": "B1",
       "label": "Content level",
-      "difficulty": "Difficulty:",
+      "difficulty": "Level:",
       "hint": {
         "a2": "Easier",
         "b1": "Harder"
@@ -389,7 +389,7 @@
       "description": "Read the full article in Greek"
     },
     "search": {
-      "placeholder": "Search news...",
+      "placeholder": "Search articles…",
       "clear": "Clear search"
     }
   },

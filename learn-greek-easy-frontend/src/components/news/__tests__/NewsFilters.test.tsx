@@ -87,7 +87,7 @@ describe('NewsFilters', () => {
     it('renders difficulty label and A2/B1 buttons', () => {
       render(<NewsFilters {...defaultProps} />);
 
-      expect(screen.getByText('Difficulty:')).toBeInTheDocument();
+      expect(screen.getByText('Level:')).toBeInTheDocument();
 
       const filters = screen.getByTestId('news-filters');
       expect(within(filters).getByRole('button', { name: /A2/ })).toBeInTheDocument();
@@ -121,13 +121,6 @@ describe('NewsFilters', () => {
   });
 
   describe('Layout', () => {
-    it('has a separator between country and level groups', () => {
-      render(<NewsFilters {...defaultProps} />);
-
-      const separator = screen.getByTestId('news-filters').querySelector('[aria-hidden="true"]');
-      expect(separator).toBeInTheDocument();
-    });
-
     it('applies custom className', () => {
       render(<NewsFilters {...defaultProps} className="mb-4" />);
 

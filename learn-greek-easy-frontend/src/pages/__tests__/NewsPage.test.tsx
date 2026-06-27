@@ -149,7 +149,7 @@ describe('NewsPage Component', () => {
 
       render(<NewsPage />);
 
-      expect(screen.getByText('Difficulty:')).toBeInTheDocument();
+      expect(screen.getByText('Level:')).toBeInTheDocument();
       expect(screen.getByTestId('news-filters')).toBeInTheDocument();
     });
   });
