@@ -81,6 +81,7 @@ export const SecuritySection: React.FC = () => {
       toast({
         title: t('security.changePassword.success'),
         description: t('security.changePassword.successDescription'),
+        variant: 'success',
       });
 
       setPasswordDialogOpen(false);

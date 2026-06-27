@@ -50,6 +50,7 @@ export function NewsItemCreateModal({ open, onOpenChange }: NewsItemCreateModalP
       await createNewsItem(validation.data);
       toast({
         title: t('news.create.success'),
+        variant: 'success',
       });
       handleOpenChange(false);
     } catch (err) {

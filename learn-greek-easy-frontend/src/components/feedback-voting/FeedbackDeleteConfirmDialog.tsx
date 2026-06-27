@@ -30,6 +30,7 @@ export const FeedbackDeleteConfirmDialog: React.FC<FeedbackDeleteConfirmDialogPr
       toast({
         title: t('delete.success.title'),
         description: t('delete.success.message'),
+        variant: 'success',
       });
       onOpenChange(false);
     } catch {

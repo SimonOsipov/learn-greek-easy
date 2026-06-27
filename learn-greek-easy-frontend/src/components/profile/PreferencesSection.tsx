@@ -48,6 +48,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
         toast({
           title: t('preferences.success'),
           description: t('preferences.successDescription'),
+          variant: 'success',
         });
       } catch (error) {
         toast({

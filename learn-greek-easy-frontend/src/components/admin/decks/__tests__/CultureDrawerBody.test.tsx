@@ -174,11 +174,17 @@ function makeQueryClient() {
 
 interface RenderOptions {
   initialUrl?: string;
+  addOpen?: boolean;
+  onAddOpenChange?: (v: boolean) => void;
 }
 
 function renderBody(
   deck: UnifiedDeckItem = makeCultureDeck(),
-  { initialUrl = `/admin?edit=${DECK_ID}` }: RenderOptions = {}
+  {
+    initialUrl = `/admin?edit=${DECK_ID}`,
+    addOpen = false,
+    onAddOpenChange = vi.fn(),
+  }: RenderOptions = {}
 ) {
   const queryClient = makeQueryClient();
 
@@ -203,7 +209,7 @@ function renderBody(
           path="*"
           element={
             <>
-              <CultureDrawerBody deck={deck} />
+              <CultureDrawerBody deck={deck} addOpen={addOpen} onAddOpenChange={onAddOpenChange} />
               <CaptureSearch />
             </>
           }
@@ -372,22 +378,14 @@ describe('CultureDrawerBody', () => {
     expect(getSearch()).not.toContain('item=q-trash');
   });
 
-  // ── 8. "Add question" opens Dialog with CultureCardForm ───────────────────
+  // ── 8. addOpen=true opens Dialog with CultureCardForm ──────────────────────
+  // Note: the "Add question" button is now in DeckDrawer's tab row (lifted state).
+  // The body accepts addOpen/onAddOpenChange props and wires them to its dialog.
 
-  it('"Add question" button opens a Dialog containing CultureCardForm with correct props', async () => {
-    const user = userEvent.setup();
+  it('addOpen=true renders Dialog containing CultureCardForm with correct props', async () => {
     (adminAPI.listCultureQuestions as Mock).mockResolvedValue(makeResponse([]));
 
-    renderBody();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('question-list-add-question')).toBeInTheDocument();
-    });
-
-    // Dialog should not be open yet
-    expect(screen.queryByTestId('culture-card-form')).not.toBeInTheDocument();
-
-    await user.click(screen.getByTestId('question-list-add-question'));
+    renderBody(makeCultureDeck(), { addOpen: true });
 
     await waitFor(() => {
       expect(screen.getByTestId('culture-card-form')).toBeInTheDocument();
@@ -398,6 +396,21 @@ describe('CultureDrawerBody', () => {
 
     // deckId is passed
     expect(screen.getByTestId('culture-card-form-deck-id')).toHaveTextContent(DECK_ID);
+  });
+
+  it('addOpen=false hides the Dialog / CultureCardForm', async () => {
+    (adminAPI.listCultureQuestions as Mock).mockResolvedValue(makeResponse([]));
+
+    renderBody(); // addOpen defaults to false
+
+    await waitFor(() => {
+      expect(screen.getByTestId('question-list-toolbar')).toBeInTheDocument();
+    });
+
+    // Dialog / form must not be present when addOpen=false
+    expect(screen.queryByTestId('culture-card-form')).not.toBeInTheDocument();
+    // Add button is in DeckDrawer, not in body
+    expect(screen.queryByTestId('question-list-add-question')).not.toBeInTheDocument();
   });
 
   // ── 9. Empty filtered state shows correct copy ────────────────────────────
@@ -457,8 +470,9 @@ describe('CultureDrawerBody', () => {
   });
 
   // ── 11. Stable testids present ────────────────────────────────────────────
+  // Note: question-list-add-question is now in DeckDrawer's tab row, not here.
 
-  it('stable testids rendered: question-list-toolbar, question-list-search, question-row', async () => {
+  it('stable testids rendered: question-list-toolbar, question-list-search, question-row (no add-question in body)', async () => {
     (adminAPI.listCultureQuestions as Mock).mockResolvedValue(makeResponse([makeExamQuestion()]));
 
     renderBody();
@@ -468,5 +482,8 @@ describe('CultureDrawerBody', () => {
       expect(screen.getByTestId('question-list-search')).toBeInTheDocument();
       expect(screen.getByTestId('question-row')).toBeInTheDocument();
     });
+
+    // Add button is in DeckDrawer's tab row, not in the body
+    expect(screen.queryByTestId('question-list-add-question')).not.toBeInTheDocument();
   });
 });

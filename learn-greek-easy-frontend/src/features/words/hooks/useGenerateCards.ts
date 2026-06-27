@@ -22,6 +22,7 @@ export function useGenerateCards() {
           created: data.created,
           updated: data.updated,
         }),
+        variant: 'success',
       });
       queryClient.invalidateQueries({ queryKey: ['wordEntryCards', wordEntryId] });
     },

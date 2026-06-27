@@ -82,6 +82,10 @@ export function DeckDrawer() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // ── Add-item dialog state (lifted from VocabDrawerBody/CultureDrawerBody) ──
+
+  const [addItemOpen, setAddItemOpen] = useState(false);
+
   const stripCloseParams = useCallback(() => {
     setSearchParams((prev) => {
       const params = new URLSearchParams(prev);
@@ -104,10 +108,11 @@ export function DeckDrawer() {
     closeGuardRef.current = guard;
   }, []);
 
-  // Clear guard when drawer closes
+  // Clear guard and add-item dialog when drawer closes
   useEffect(() => {
     if (!open) {
       closeGuardRef.current = null;
+      setAddItemOpen(false);
     }
   }, [open]);
 
@@ -126,7 +131,7 @@ export function DeckDrawer() {
       stripCloseParams();
       void queryClient.invalidateQueries({ queryKey: ['admin', 'decks'] });
       void useAdminTabCountsStore.getState().fetchCounts();
-      toast({ title: t('toast.deckDeactivated') });
+      toast({ title: t('toast.deckDeactivated'), variant: 'success' });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : t('errors.saveFailed');
       toast({
@@ -147,6 +152,7 @@ export function DeckDrawer() {
   };
 
   const handleTabChange = (value: string) => {
+    setAddItemOpen(false);
     setSearchParams((prev) => {
       const params = new URLSearchParams(prev);
       params.set('subtab', value);
@@ -331,6 +337,18 @@ export function DeckDrawer() {
                     {t('decks.drawer.tabs.settings')}
                   </button>
                 </div>
+
+                {/* Add word/question button — right-aligned in the tab row, hidden on settings tab */}
+                {resolvedTab !== 'settings' && (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    data-testid={isCulture ? 'question-list-add-question' : 'word-list-add-word'}
+                    onClick={() => setAddItemOpen(true)}
+                  >
+                    {isCulture ? t('decks.addQuestion') : t('decks.addWord')}
+                  </button>
+                )}
               </SidePanel.Tabs>
             )}
 
@@ -342,7 +360,11 @@ export function DeckDrawer() {
                   {itemId ? (
                     <VocabWordDetail deck={deck} itemId={itemId} />
                   ) : (
-                    <VocabDrawerBody deck={deck} />
+                    <VocabDrawerBody
+                      deck={deck}
+                      addOpen={addItemOpen}
+                      onAddOpenChange={setAddItemOpen}
+                    />
                   )}
                 </>
               )}
@@ -353,7 +375,11 @@ export function DeckDrawer() {
                   {itemId ? (
                     <CultureQuestionDetail deck={deck} itemId={itemId} />
                   ) : (
-                    <CultureDrawerBody deck={deck} />
+                    <CultureDrawerBody
+                      deck={deck}
+                      addOpen={addItemOpen}
+                      onAddOpenChange={setAddItemOpen}
+                    />
                   )}
                 </>
               )}

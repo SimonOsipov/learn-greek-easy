@@ -27,7 +27,7 @@ export function useUpdateWordEntry(options?: UseUpdateWordEntryOptions) {
     mutationFn: ({ wordEntryId, payload }: UpdateWordEntryParams) =>
       wordEntryAPI.updateInline(wordEntryId, payload),
     onSuccess: (data, { wordEntryId }) => {
-      toast({ title: t('wordEntryEdit.success') });
+      toast({ title: t('wordEntryEdit.success'), variant: 'success' });
       queryClient.setQueryData(['wordEntry', wordEntryId], data);
       options?.onSuccess?.(data);
     },

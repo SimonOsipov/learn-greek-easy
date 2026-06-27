@@ -46,7 +46,7 @@ export function SituationCreateModal({ open, onOpenChange }: SituationCreateModa
     }
     try {
       await createSituation(validation.data);
-      toast({ title: t('situations.create.success') });
+      toast({ title: t('situations.create.success'), variant: 'success' });
       handleOpenChange(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : t('situations.create.error');

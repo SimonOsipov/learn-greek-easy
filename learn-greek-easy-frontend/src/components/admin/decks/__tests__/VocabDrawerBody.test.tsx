@@ -125,13 +125,19 @@ function makeQueryClient() {
   });
 }
 
-interface RenderOptions {
+interface RenderBodyOptions {
   initialUrl?: string;
+  addOpen?: boolean;
+  onAddOpenChange?: (v: boolean) => void;
 }
 
 function renderBody(
   deck: UnifiedDeckItem = makeVocabDeck(),
-  { initialUrl = '/admin?edit=deck-vocab-1' }: RenderOptions = {}
+  {
+    initialUrl = '/admin?edit=deck-vocab-1',
+    addOpen = false,
+    onAddOpenChange = vi.fn(),
+  }: RenderBodyOptions = {}
 ) {
   const queryClient = makeQueryClient();
 
@@ -156,7 +162,7 @@ function renderBody(
           path="*"
           element={
             <>
-              <VocabDrawerBody deck={deck} />
+              <VocabDrawerBody deck={deck} addOpen={addOpen} onAddOpenChange={onAddOpenChange} />
               <CaptureSearch />
             </>
           }
@@ -396,21 +402,20 @@ describe('VocabDrawerBody', () => {
     expect(screen.getByTestId('word-list-empty')).toHaveTextContent('No words match your filters.');
   });
 
-  // ── 10. "Add word" button opens LexgenSubmitDialog ──────────────────────────
+  // ── 10. addOpen=true shows LexgenSubmitDialog; addOpen=false hides it ──────
 
-  it('"Add word" button opens LexgenSubmitDialog', async () => {
-    const user = userEvent.setup();
+  it('addOpen=true renders LexgenSubmitDialog; addOpen=false hides it', async () => {
     (adminAPI.listWordEntries as Mock).mockResolvedValue(makeResponse([]));
 
+    // addOpen=false (default) → dialog absent
     renderBody();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('word-list-add-word')).toBeInTheDocument();
-    });
-
     expect(screen.queryByTestId('lexgen-submit-dialog')).not.toBeInTheDocument();
+  });
 
-    await user.click(screen.getByTestId('word-list-add-word'));
+  it('addOpen=true renders LexgenSubmitDialog', async () => {
+    (adminAPI.listWordEntries as Mock).mockResolvedValue(makeResponse([]));
+
+    renderBody(makeVocabDeck(), { addOpen: true });
 
     await waitFor(() => {
       expect(screen.getByTestId('lexgen-submit-dialog')).toBeInTheDocument();
@@ -418,8 +423,9 @@ describe('VocabDrawerBody', () => {
   });
 
   // ── 11. testids present ────────────────────────────────────────────────────
+  // Note: word-list-add-word is now in the DeckDrawer tab row, not in this body.
 
-  it('stable testids are rendered: word-list-toolbar, word-list-search, word-row', async () => {
+  it('stable testids are rendered: word-list-toolbar, word-list-search, word-row (no add-word in body)', async () => {
     const card = makeCard();
     (adminAPI.listWordEntries as Mock).mockResolvedValue(makeResponse([card]));
 
@@ -430,6 +436,9 @@ describe('VocabDrawerBody', () => {
       expect(screen.getByTestId('word-list-search')).toBeInTheDocument();
       expect(screen.getByTestId('word-row')).toBeInTheDocument();
     });
+
+    // Add button is now in DeckDrawer's tab row, not in the body
+    expect(screen.queryByTestId('word-list-add-word')).not.toBeInTheDocument();
   });
 
   // ── 12. Greek word renders with lang="el" ──────────────────────────────────

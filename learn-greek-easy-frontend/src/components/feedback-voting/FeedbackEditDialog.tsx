@@ -91,6 +91,7 @@ export const FeedbackEditDialog: React.FC<FeedbackEditDialogProps> = ({
       toast({
         title: t('edit.success.title'),
         description: t('edit.success.message'),
+        variant: 'success',
       });
       onOpenChange(false);
     } catch {

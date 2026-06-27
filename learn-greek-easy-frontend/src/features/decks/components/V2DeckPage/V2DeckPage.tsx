@@ -101,7 +101,7 @@ export const V2DeckPage: React.FC<V2DeckPageProps> = ({ deckId }) => {
   const handleDeleteConfirm = async () => {
     try {
       await deckAPI.deleteMyDeck(selectedDeck.id);
-      toast({ title: t('myDecks.deleteSuccess') });
+      toast({ title: t('myDecks.deleteSuccess'), variant: 'success' });
       // The deck no longer exists — return to the library.
       navigate('/my-decks');
     } catch (err) {

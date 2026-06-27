@@ -224,7 +224,7 @@ export const SituationDrawer: React.FC = () => {
       if (hasPictureChanges) {
         await adminAPI.updateSituationPicture(selectedSituation.id, picPayload);
       }
-      toast({ title: t('situations.drawer.save.success') });
+      toast({ title: t('situations.drawer.save.success'), variant: 'success' });
       await fetchSituations();
       closeAndClearUrl();
     } catch (e) {
@@ -257,7 +257,7 @@ export const SituationDrawer: React.FC = () => {
         }
       }
       await adminAPI.updateSituationStatus(selectedSituation.id, 'ready');
-      toast({ title: t('situations.drawer.footer.publishSuccess') });
+      toast({ title: t('situations.drawer.footer.publishSuccess'), variant: 'success' });
       await fetchSituations();
       closeAndClearUrl();
     } catch (e) {

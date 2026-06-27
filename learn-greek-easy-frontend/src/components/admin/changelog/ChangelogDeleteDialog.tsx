@@ -53,6 +53,7 @@ export const ChangelogDeleteDialog: React.FC<ChangelogDeleteDialogProps> = ({
       await deleteEntry(entry.id);
       toast({
         title: t('changelog.delete.success'),
+        variant: 'success',
       });
       onOpenChange(false);
     } catch (error) {

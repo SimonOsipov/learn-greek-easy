@@ -44,6 +44,7 @@ export const LogoutDialog: React.FC<LogoutDialogProps> = ({ trigger }) => {
       toast({
         title: t('logout.success.title'),
         description: t('logout.success.description'),
+        variant: 'success',
       });
     } finally {
       setIsLoggingOut(false);

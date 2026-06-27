@@ -25,6 +25,7 @@ export function useSubscriptionActions() {
       toast({
         title: t('changePlan.success.title', 'Plan updated'),
         description: t('changePlan.success.description', 'Your billing cycle has been updated.'),
+        variant: 'success',
       });
       setIsChangingPlan(false);
       return result;
@@ -53,6 +54,7 @@ export function useSubscriptionActions() {
           'cancel.success.description',
           "You'll retain premium access until your current billing period ends."
         ),
+        variant: 'success',
       });
       setIsCanceling(false);
       return result;
@@ -84,6 +86,7 @@ export function useSubscriptionActions() {
           'reactivate.success.description',
           'Your premium subscription has been reactivated.'
         ),
+        variant: 'success',
       });
       setIsReactivating(false);
       return result;

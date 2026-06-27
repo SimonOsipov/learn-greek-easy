@@ -222,6 +222,7 @@ describe('UserDeckEditModal', () => {
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
           title: 'Deck created successfully',
+          variant: 'success',
         });
       });
     });
@@ -366,6 +367,7 @@ describe('UserDeckEditModal', () => {
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
           title: 'Deck updated successfully',
+          variant: 'success',
         });
       });
     });

@@ -65,7 +65,7 @@ export function useApproveProposal(proposalId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['lexgen-proposals'] });
       void queryClient.invalidateQueries({ queryKey: ['lexgen-proposal', proposalId] });
-      toast({ title: t('lexgenInbox.action.shipped') });
+      toast({ title: t('lexgenInbox.action.shipped'), variant: 'success' });
     },
     onError: () => {
       toast({
@@ -96,7 +96,7 @@ export function useEditProposalField(proposalId: string) {
       adminAPI.editLexgenProposal(proposalId, { [fieldKey]: value }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['lexgen-proposal', proposalId] });
-      toast({ title: t('lexgenInbox.action.saved') });
+      toast({ title: t('lexgenInbox.action.saved'), variant: 'success' });
     },
     onError: () => {
       toast({
@@ -122,7 +122,7 @@ export function useRegenerateProposal(proposalId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['lexgen-proposals'] });
       void queryClient.invalidateQueries({ queryKey: ['lexgen-proposal', proposalId] });
-      toast({ title: t('lexgenInbox.action.regenerated') });
+      toast({ title: t('lexgenInbox.action.regenerated'), variant: 'success' });
     },
     onError: () => {
       toast({
@@ -148,7 +148,7 @@ export function useRejectProposal(proposalId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['lexgen-proposals'] });
       void queryClient.invalidateQueries({ queryKey: ['lexgen-proposal', proposalId] });
-      toast({ title: t('lexgenInbox.action.rejected') });
+      toast({ title: t('lexgenInbox.action.rejected'), variant: 'success' });
     },
     onError: () => {
       toast({

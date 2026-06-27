@@ -1020,4 +1020,86 @@ describe('DeckDrawer', () => {
     // The drawer did NOT close — edit= is still in the URL (guard blocked it).
     expect(capturedSearch).toContain('edit=deck-vocab-1');
   });
+
+  // ── B1. Tab-row Add button — vocab deck ────────────────────────────────────
+  // The Add word button lives in the SidePanel.Tabs row (not inside VocabDrawerBody).
+  // It is visible on the words tab but absent on the settings tab and in detail view.
+
+  it('vocab deck shows word-list-add-word button on the words tab', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
+
+    renderDrawer('/admin?tab=decks&edit=deck-vocab-1');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    // Default tab for vocab is 'words' — Add word button must be in the tab row.
+    expect(screen.getByTestId('word-list-add-word')).toBeInTheDocument();
+    // Add question button must NOT appear for a vocab deck.
+    expect(screen.queryByTestId('question-list-add-question')).not.toBeInTheDocument();
+  });
+
+  it('vocab deck hides word-list-add-word button on the settings tab', async () => {
+    const user = userEvent.setup();
+
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
+
+    renderDrawer('/admin?tab=decks&edit=deck-vocab-1');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tab-settings')).toBeInTheDocument();
+    });
+
+    // Switch to settings tab
+    await user.click(screen.getByTestId('deck-drawer-tab-settings'));
+
+    // Add word button must be hidden on the settings tab.
+    await waitFor(() => {
+      expect(screen.queryByTestId('word-list-add-word')).not.toBeInTheDocument();
+    });
+  });
+
+  it('vocab deck hides word-list-add-word button in detail view (?item=)', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeVocabDeck());
+
+    // ?item= causes the tab row (and Add button) to be hidden.
+    renderDrawer('/admin?tab=decks&edit=deck-vocab-1&item=word-99');
+
+    await waitFor(() => {
+      // The skeleton or detail view renders — tabs row is hidden.
+      expect(screen.getByTestId('deck-drawer')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('word-list-add-word')).not.toBeInTheDocument();
+  });
+
+  // ── B2. Tab-row Add button — culture deck ──────────────────────────────────
+
+  it('culture deck shows question-list-add-question button on the questions tab', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeCultureDeck());
+
+    renderDrawer('/admin?tab=decks&edit=deck-culture-1');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer-tabs')).toBeInTheDocument();
+    });
+
+    // Default tab for culture is 'questions' — Add question button must be in the tab row.
+    expect(screen.getByTestId('question-list-add-question')).toBeInTheDocument();
+    // Add word button must NOT appear for a culture deck.
+    expect(screen.queryByTestId('word-list-add-word')).not.toBeInTheDocument();
+  });
+
+  it('culture deck hides question-list-add-question button in detail view (?item=)', async () => {
+    (adminAPI.getDeck as Mock).mockResolvedValue(makeCultureDeck());
+
+    renderDrawer('/admin?tab=decks&edit=deck-culture-1&item=question-5');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-drawer')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('question-list-add-question')).not.toBeInTheDocument();
+  });
 });

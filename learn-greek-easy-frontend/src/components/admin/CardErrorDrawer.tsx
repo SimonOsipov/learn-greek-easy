@@ -282,6 +282,7 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
       toast({
         title: t('cardErrors.detail.updateSuccess'),
         description: t('cardErrors.detail.updateSuccessMessage'),
+        variant: 'success',
       });
 
       onUpdate(updatedReport);
@@ -338,7 +339,7 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
       await deleteError(report.id);
       setDeleteConfirmOpen(false);
       onOpenChange(false);
-      toast({ title: t('cardErrors.drawer.foot.deleteSuccess') });
+      toast({ title: t('cardErrors.drawer.foot.deleteSuccess'), variant: 'success' });
     } catch (error) {
       setDeleteConfirmOpen(false);
       toast({

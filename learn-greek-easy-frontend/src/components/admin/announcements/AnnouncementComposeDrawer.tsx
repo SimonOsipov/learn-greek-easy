@@ -152,7 +152,7 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
         message: values.message,
         link_url: values.linkUrl || undefined,
       });
-      toast({ title: t('announcements.create.success') });
+      toast({ title: t('announcements.create.success'), variant: 'success' });
       void useAdminTabCountsStore.getState().fetchCounts();
       await fetchAnnouncements(); // await before close — avoid stale list
       setSearchParams(

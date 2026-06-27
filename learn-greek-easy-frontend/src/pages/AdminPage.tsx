@@ -256,6 +256,7 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
         void useAdminTabCountsStore.getState().fetchCounts();
         toast({
           title: t('toast.deckDeactivated'),
+          variant: 'success',
         });
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : t('errors.saveFailed');
@@ -955,6 +956,7 @@ const AdminPage: React.FC = () => {
       // Show success toast
       toast({
         title: t('toast.deckCreated'),
+        variant: 'success',
       });
 
       // Close modal and refresh deck list

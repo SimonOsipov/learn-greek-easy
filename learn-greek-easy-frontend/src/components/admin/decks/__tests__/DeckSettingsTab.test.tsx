@@ -33,6 +33,12 @@ vi.mock('@/services/adminAPI', () => ({
   },
 }));
 
+// Mock use-toast so success/error toast calls are assertable.
+const mockToast = vi.fn();
+vi.mock('@/hooks/use-toast', () => ({
+  toast: (args: unknown) => mockToast(args),
+}));
+
 import { adminAPI } from '@/services/adminAPI';
 
 // The test renders DeckSettingsTab standalone (not inside DeckDrawer), so we
@@ -692,5 +698,56 @@ describe('DeckSettingsTab', () => {
     await waitFor(() => {
       expect(onSaved).toHaveBeenCalledTimes(1);
     });
+  });
+
+  // ── 13. Save toasts — ADMIN2-47-07 ──────────────────────────────────────────
+  // handleSave wraps the API call in try/catch:
+  //   success → toast({ title: t('deckEdit.saveSuccess'), variant: 'success' })
+  //   failure → toast({ title: t('errors.saveFailed'), variant: 'destructive' })
+
+  it('fires a success toast after a successful vocab deck save', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    (adminAPI.updateVocabularyDeck as Mock).mockResolvedValue({});
+
+    renderTab(makeVocabDeck({ name_en: 'Original', name_ru: 'Original RU' }));
+
+    // Dirty the form
+    const nameInput = screen.getByTestId('deck-edit-name-en');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Updated');
+
+    const form = screen.getByTestId('vocabulary-deck-edit-form');
+    await act(async () => {
+      form.dispatchEvent(new Event('submit', { bubbles: true }));
+    });
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'success' }));
+    });
+    // Must NOT fire a destructive toast on success.
+    expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
+  });
+
+  it('fires a destructive toast when vocab deck save fails', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    (adminAPI.updateVocabularyDeck as Mock).mockRejectedValue(new Error('API error'));
+
+    renderTab(makeVocabDeck({ name_en: 'Original', name_ru: 'Original RU' }));
+
+    // Dirty the form
+    const nameInput = screen.getByTestId('deck-edit-name-en');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Updated');
+
+    const form = screen.getByTestId('vocabulary-deck-edit-form');
+    await act(async () => {
+      form.dispatchEvent(new Event('submit', { bubbles: true }));
+    });
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
+    });
+    // Must NOT fire a success toast on failure.
+    expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'success' }));
   });
 });

@@ -80,6 +80,7 @@ export const FeedbackSubmitDialog: React.FC<FeedbackSubmitDialogProps> = ({
       toast({
         title: t('submit.success.title'),
         description: t('submit.success.message'),
+        variant: 'success',
       });
       form.reset();
       onOpenChange(false);

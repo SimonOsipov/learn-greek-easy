@@ -132,6 +132,7 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
       toast({
         title: t('personalInfo.success'),
         description: t('personalInfo.successDescription'),
+        variant: 'success',
       });
       reset(data); // Reset form with new values to clear isDirty
     } catch (error) {
@@ -153,6 +154,7 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
       await refreshPendingEmailState();
       toast({
         title: t('personalInfo.emailChangeSent'),
+        variant: 'success',
       });
       setIsEmailFormOpen(false);
       resetEmailForm();
@@ -225,6 +227,7 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
       toast({
         title: t('personalInfo.avatarSuccess'),
         description: t('personalInfo.avatarSuccessDescription'),
+        variant: 'success',
       });
     } catch (error) {
       log.error('Avatar upload failed:', { error });
@@ -254,6 +257,7 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
       toast({
         title: t('personalInfo.avatarRemoved'),
         description: t('personalInfo.avatarRemovedDescription'),
+        variant: 'success',
       });
     } catch (error) {
       log.error('Avatar removal failed:', { error });

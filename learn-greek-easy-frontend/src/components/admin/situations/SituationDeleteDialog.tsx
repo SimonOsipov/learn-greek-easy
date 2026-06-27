@@ -30,7 +30,7 @@ export function SituationDeleteDialog({
     if (!situation) return;
     try {
       await deleteSituation(situation.id);
-      toast({ title: t('situations.delete.success') });
+      toast({ title: t('situations.delete.success'), variant: 'success' });
       onOpenChange(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : t('situations.delete.error');

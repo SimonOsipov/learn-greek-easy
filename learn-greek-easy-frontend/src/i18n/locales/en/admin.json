@@ -44,7 +44,8 @@
     "imageUploading": "Uploading...",
     "imageUploadError": "Upload failed. Please try again.",
     "removeImage": "Remove Image",
-    "imageRemoveError": "Failed to remove image. Please try again."
+    "imageRemoveError": "Failed to remove image. Please try again.",
+    "saveSuccess": "Deck saved"
   },
   "deckCreate": {
     "title": "Create Deck",
@@ -1011,7 +1012,8 @@
     "discardTitle": "Discard Changes?",
     "discardMessage": "You have unsaved changes that will be lost.",
     "keepEditing": "Keep Editing",
-    "discard": "Discard"
+    "discard": "Discard",
+    "error": "Failed to create question. Please try again."
   },
   "cardEdit": {
     "title": "Edit Card",

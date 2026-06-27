@@ -318,11 +318,13 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
         await adminAPI.deleteWordEntry(itemToDelete.id);
         toast({
           title: t('cardDelete.successWordEntry'),
+          variant: 'success',
         });
       } else {
         await adminAPI.deleteCultureQuestion(itemToDelete.id);
         toast({
           title: t('cardDelete.successQuestion'),
+          variant: 'success',
         });
       }
 
@@ -384,7 +386,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
       if (failed > 0) {
         toast({ title: t('wordList.bulkDeleteError'), variant: 'destructive' });
       } else {
-        toast({ title: t('wordList.bulkDeleteSuccess', { count }) });
+        toast({ title: t('wordList.bulkDeleteSuccess', { count }), variant: 'success' });
       }
       await fetchItems();
       onItemDeleted?.();

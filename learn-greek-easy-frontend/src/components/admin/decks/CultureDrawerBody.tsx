@@ -16,9 +16,9 @@ import { CardDeleteDialog } from '@/components/admin/CardDeleteDialog';
 import { CultureCardForm } from '@/components/admin/CultureCardForm';
 import { ChangelogPagination } from '@/components/changelog/ChangelogPagination';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { toast } from '@/hooks/use-toast';
 import { getCultureCompletion } from '@/lib/deckCompletion';
 import {
   adminAPI,
@@ -33,6 +33,8 @@ import { CompletionPill } from './CompletionPill';
 
 export interface CultureDrawerBodyProps {
   deck: UnifiedDeckItem;
+  addOpen: boolean;
+  onAddOpenChange: (open: boolean) => void;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -51,7 +53,7 @@ function resolveQuestionText(question_text: Record<string, string>): string {
 
 // ── CultureDrawerBody ─────────────────────────────────────────────────────────
 
-export function CultureDrawerBody({ deck }: CultureDrawerBodyProps) {
+export function CultureDrawerBody({ deck, addOpen, onAddOpenChange }: CultureDrawerBodyProps) {
   const { t } = useTranslation('admin');
   const [, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
@@ -60,7 +62,6 @@ export function CultureDrawerBody({ deck }: CultureDrawerBodyProps) {
 
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState('');
-  const [showAddDialog, setShowAddDialog] = useState(false);
   const [questionToDelete, setQuestionToDelete] = useState<AdminCultureQuestion | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -113,12 +114,19 @@ export function CultureDrawerBody({ deck }: CultureDrawerBodyProps) {
       try {
         await adminAPI.createCultureQuestion(data);
         await queryClient.invalidateQueries({ queryKey: ['deck-culture', deck.id] });
-        setShowAddDialog(false);
+        onAddOpenChange(false);
+        toast({
+          title: t('cardCreate.successTitle'),
+          description: t('cardCreate.successMessage'),
+          variant: 'success',
+        });
+      } catch {
+        toast({ title: t('cardCreate.error'), variant: 'destructive' });
       } finally {
         setIsCreating(false);
       }
     },
-    [deck.id, queryClient]
+    [deck.id, queryClient, onAddOpenChange, t]
   );
 
   // ── Delete flow ────────────────────────────────────────────────────────────
@@ -130,10 +138,13 @@ export function CultureDrawerBody({ deck }: CultureDrawerBodyProps) {
       await adminAPI.deleteCultureQuestion(questionToDelete.id);
       queryClient.invalidateQueries({ queryKey: ['deck-culture', deck.id] });
       setQuestionToDelete(null);
+      toast({ title: t('cardDelete.successQuestion'), variant: 'success' });
+    } catch {
+      toast({ title: t('cardDelete.error'), variant: 'destructive' });
     } finally {
       setIsDeleting(false);
     }
-  }, [questionToDelete, deck.id, queryClient]);
+  }, [questionToDelete, deck.id, queryClient, t]);
 
   // ── Derived state ──────────────────────────────────────────────────────────
 
@@ -165,17 +176,6 @@ export function CultureDrawerBody({ deck }: CultureDrawerBodyProps) {
         >
           Sort
         </button>
-
-        {/* Add question — right-aligned */}
-        <div className="ml-auto">
-          <Button
-            size="sm"
-            onClick={() => setShowAddDialog(true)}
-            data-testid="question-list-add-question"
-          >
-            {t('decks.addQuestion')}
-          </Button>
-        </div>
       </div>
 
       {/* ── Empty state ── */}
@@ -294,8 +294,8 @@ export function CultureDrawerBody({ deck }: CultureDrawerBodyProps) {
         isDeleting={isDeleting}
       />
 
-      {/* ── Add question dialog ── */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+      {/* ── Add question dialog (open state lifted to DeckDrawer) ── */}
+      <Dialog open={addOpen} onOpenChange={onAddOpenChange}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('decks.addQuestion')}</DialogTitle>

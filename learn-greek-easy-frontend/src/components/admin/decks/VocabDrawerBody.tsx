@@ -16,9 +16,9 @@ import { CardDeleteDialog } from '@/components/admin/CardDeleteDialog';
 import { LexgenSubmitDialog } from '@/components/admin/LexgenSubmitDialog';
 import { ChangelogPagination } from '@/components/changelog/ChangelogPagination';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SegControl } from '@/components/ui/seg-control';
+import { toast } from '@/hooks/use-toast';
 import { getWordCompletion } from '@/lib/deckCompletion';
 import {
   adminAPI,
@@ -35,6 +35,8 @@ type PosFilter = 'all' | 'noun' | 'verb' | 'adjective' | 'adverb';
 
 export interface VocabDrawerBodyProps {
   deck: UnifiedDeckItem;
+  addOpen: boolean;
+  onAddOpenChange: (open: boolean) => void;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -49,7 +51,7 @@ const GENDER_SYMBOLS: Record<string, string> = {
 
 // ── VocabDrawerBody ───────────────────────────────────────────────────────────
 
-export function VocabDrawerBody({ deck }: VocabDrawerBodyProps) {
+export function VocabDrawerBody({ deck, addOpen, onAddOpenChange }: VocabDrawerBodyProps) {
   const { t } = useTranslation('admin');
   const [, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
@@ -61,7 +63,6 @@ export function VocabDrawerBody({ deck }: VocabDrawerBodyProps) {
   const [posFilter, setPosFilter] = useState<PosFilter>('all');
   const [cardToDelete, setCardToDelete] = useState<AdminVocabularyCard | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [addWordOpen, setAddWordOpen] = useState(false);
 
   const [debouncedSearch, setDebouncedSearch] = useState(searchInput);
   useEffect(() => {
@@ -118,10 +119,13 @@ export function VocabDrawerBody({ deck }: VocabDrawerBodyProps) {
       await adminAPI.deleteWordEntry(cardToDelete.id);
       queryClient.invalidateQueries({ queryKey: ['deck-vocab', deck.id] });
       setCardToDelete(null);
+      toast({ title: t('cardDelete.successWordEntry'), variant: 'success' });
+    } catch {
+      toast({ title: t('cardDelete.error'), variant: 'destructive' });
     } finally {
       setIsDeleting(false);
     }
-  }, [cardToDelete, deck.id, queryClient]);
+  }, [cardToDelete, deck.id, queryClient, t]);
 
   // ── Derived state ──────────────────────────────────────────────────────────
 
@@ -171,13 +175,6 @@ export function VocabDrawerBody({ deck }: VocabDrawerBodyProps) {
         >
           Sort
         </button>
-
-        {/* Add word — right-aligned */}
-        <div className="ml-auto">
-          <Button size="sm" onClick={() => setAddWordOpen(true)} data-testid="word-list-add-word">
-            {t('decks.addWord')}
-          </Button>
-        </div>
       </div>
 
       {/* ── Empty state ── */}
@@ -313,8 +310,8 @@ export function VocabDrawerBody({ deck }: VocabDrawerBodyProps) {
         isDeleting={isDeleting}
       />
 
-      {/* ── Add word dialog ── */}
-      <LexgenSubmitDialog open={addWordOpen} onOpenChange={setAddWordOpen} />
+      {/* ── Add word dialog (open state lifted to DeckDrawer) ── */}
+      <LexgenSubmitDialog open={addOpen} onOpenChange={onAddOpenChange} />
     </div>
   );
 }
