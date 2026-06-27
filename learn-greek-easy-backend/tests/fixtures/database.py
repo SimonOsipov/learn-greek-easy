@@ -450,12 +450,12 @@ async def _create_schema_with_coordination(engine: AsyncEngine, worker_id: str) 
     import fcntl
     import signal
 
-    # Clean up stale lock files from previous runs (only master/gw0 does this)
-    if worker_id in ("master", "gw0"):
-        # Remove ready file to indicate schema needs to be created
-        if _SCHEMA_READY_FILE.exists():
-            _SCHEMA_READY_FILE.unlink()
-
+    # NOTE: Stale ready/lock-file cleanup from a previous run happens exactly
+    # once on the xdist controller in tests/conftest.py::pytest_configure,
+    # BEFORE any worker is spawned. It must NOT happen here per-worker: xdist
+    # worker start order is non-deterministic, so a late-arriving gw0 unlinking
+    # the ready file mid-run would re-acquire the lock and re-run DROP TABLE
+    # CASCADE while sibling workers hold open transactions -> deadlock cascade.
     # Use file locking to ensure only one worker creates the schema
     _SCHEMA_LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
     _SCHEMA_LOCK_FILE.touch(exist_ok=True)

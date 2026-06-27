@@ -259,6 +259,17 @@ def pytest_configure(config: pytest.Config) -> None:
     # pgvector marker
     config.addinivalue_line("markers", "pgvector: Tests requiring pgvector extension")
 
+    # Clear stale schema-coordination files ONCE, on the xdist controller (or in
+    # a non-parallel run), before any worker subprocess spawns. This forces a
+    # fresh schema for this run while guaranteeing no worker deletes the ready
+    # file mid-run -- which would otherwise let a late gw0 re-drop the shared
+    # schema under other workers' open transactions (DROP TABLE CASCADE deadlock).
+    if not hasattr(config, "workerinput"):
+        from tests.fixtures.database import _SCHEMA_LOCK_FILE, _SCHEMA_READY_FILE
+
+        _SCHEMA_READY_FILE.unlink(missing_ok=True)
+        _SCHEMA_LOCK_FILE.unlink(missing_ok=True)
+
 
 def pytest_collection_modifyitems(  # noqa: C901
     session: pytest.Session,
