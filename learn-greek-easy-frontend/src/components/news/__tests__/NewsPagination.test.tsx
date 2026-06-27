@@ -191,6 +191,26 @@ describe('NewsPagination Component', () => {
       const currentPageButton = screen.getByTestId('news-pagination-page-5');
       expect(currentPageButton).toHaveAttribute('aria-current', 'page');
     });
+
+    it('should NOT apply bg-bg to the active page button (regression: D-active AC)', () => {
+      render(
+        <NewsPagination
+          {...createProps({
+            currentPage: 5,
+            totalPages: 10,
+            onPageChange,
+          })}
+        />
+      );
+
+      const activeButton = screen.getByTestId('news-pagination-page-5');
+      const inactiveButton = screen.getByTestId('news-pagination-page-4');
+
+      // Active page must NOT carry the outline token override (preserves bg-primary)
+      expect(activeButton).not.toHaveClass('bg-bg');
+      // Inactive page should carry the outline token override
+      expect(inactiveButton).toHaveClass('border-line');
+    });
   });
 
   describe('Button Disabled States', () => {

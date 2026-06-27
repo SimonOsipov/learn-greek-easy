@@ -159,7 +159,8 @@ export const NewsPagination: React.FC<NewsPaginationProps> = ({
                 aria-label={`Page ${page}`}
                 aria-current={page === currentPage ? 'page' : undefined}
                 className={cn(
-                  'min-w-[36px] border-line bg-bg',
+                  'min-w-[36px]',
+                  page !== currentPage && 'border-line bg-bg',
                   page === currentPage && 'pointer-events-none'
                 )}
               >
