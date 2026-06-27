@@ -135,11 +135,11 @@ export function VocabDrawerBody({ deck, addOpen, onAddOpenChange }: VocabDrawerB
   // ── POS filter options ─────────────────────────────────────────────────────
 
   const posOptions = [
-    { value: 'all' as PosFilter, label: 'All' },
-    { value: 'noun' as PosFilter, label: 'Noun' },
-    { value: 'verb' as PosFilter, label: 'Verb' },
-    { value: 'adjective' as PosFilter, label: 'Adjective' },
-    { value: 'adverb' as PosFilter, label: 'Adverb' },
+    { value: 'all' as PosFilter, label: t('decks.drawer.pos.all') },
+    { value: 'noun' as PosFilter, label: t('decks.drawer.pos.noun') },
+    { value: 'verb' as PosFilter, label: t('decks.drawer.pos.verb') },
+    { value: 'adjective' as PosFilter, label: t('decks.drawer.pos.adjective') },
+    { value: 'adverb' as PosFilter, label: t('decks.drawer.pos.adverb') },
   ];
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -152,7 +152,7 @@ export function VocabDrawerBody({ deck, addOpen, onAddOpenChange }: VocabDrawerB
         <Input
           data-testid="word-list-search"
           type="search"
-          placeholder="Search words…"
+          placeholder={t('decks.drawer.searchWords')}
           value={searchInput}
           onChange={(e) => handleSearchChange(e.target.value)}
           className="w-48"
@@ -170,10 +170,10 @@ export function VocabDrawerBody({ deck, addOpen, onAddOpenChange }: VocabDrawerB
         <button
           type="button"
           disabled
-          aria-label="Sort (coming soon)"
+          aria-label={t('decks.drawer.sortComingSoon')}
           className="cursor-not-allowed rounded-md border border-input bg-background px-3 py-1.5 text-sm text-muted-foreground opacity-50"
         >
-          Sort
+          {t('decks.drawer.sort')}
         </button>
       </div>
 

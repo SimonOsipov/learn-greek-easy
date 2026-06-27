@@ -1933,6 +1933,17 @@
         "words": "Words",
         "questions": "Questions",
         "settings": "Settings"
+      },
+      "searchWords": "Search words…",
+      "searchQuestions": "Search questions…",
+      "sort": "Sort",
+      "sortComingSoon": "Sort (coming soon)",
+      "pos": {
+        "all": "All",
+        "noun": "Noun",
+        "verb": "Verb",
+        "adjective": "Adjective",
+        "adverb": "Adverb"
       }
     },
     "statusPremium": "Premium",
@@ -2039,7 +2050,7 @@
     "list": {
       "empty": "No decks found."
     },
-    "emptyPageMessage": "No decks yet. Click 'Add deck' to create your first."
+    "emptyPageMessage": "No decks yet. Click 'Create Deck' to create your first."
   },
   "inbox": {
     "breadcrumb": {

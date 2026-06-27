@@ -161,7 +161,7 @@ export function CultureDrawerBody({ deck, addOpen, onAddOpenChange }: CultureDra
         <Input
           data-testid="question-list-search"
           type="search"
-          placeholder="Search questions…"
+          placeholder={t('decks.drawer.searchQuestions')}
           value={searchInput}
           onChange={(e) => handleSearchChange(e.target.value)}
           className="w-48"
@@ -171,10 +171,10 @@ export function CultureDrawerBody({ deck, addOpen, onAddOpenChange }: CultureDra
         <button
           type="button"
           disabled
-          aria-label="Sort (coming soon)"
+          aria-label={t('decks.drawer.sortComingSoon')}
           className="cursor-not-allowed rounded-md border border-input bg-background px-3 py-1.5 text-sm text-muted-foreground opacity-50"
         >
-          Sort
+          {t('decks.drawer.sort')}
         </button>
       </div>
 

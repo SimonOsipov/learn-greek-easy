@@ -46,14 +46,6 @@ function bundle(mods: Record<string, unknown>): Record<string, Set<string>> {
 }
 
 const KNOWN_DRIFT: ReadonlySet<string> = new Set([
-  // en-only (7):
-  'admin:decks.breadcrumb.decks',
-  'admin:decks.statusPremium',
-  'admin:decks.table.cards',
-  'admin:decks.table.deck',
-  'admin:decks.table.lastEdit',
-  'admin:decks.table.owner',
-  'admin:decks.table.type',
   // ru-only (2):
   'admin:tabs.newsComingSoon',
   'admin:tabs.newsComingSoonDescription',
