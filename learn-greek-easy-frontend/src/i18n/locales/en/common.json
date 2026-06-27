@@ -352,7 +352,11 @@
     },
     "empty": {
       "title": "No news articles yet",
-      "description": "Check back later for new content to practice with"
+      "description": "Check back later for new content to practice with",
+      "filtered": {
+        "title": "No articles found",
+        "body": "Try changing the filters or your search."
+      }
     },
     "error": {
       "title": "Unable to load news",

@@ -11,10 +11,9 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { AlertCircle, Newspaper } from 'lucide-react';
+import { AlertCircle, Headphones, Newspaper } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { EmptyState } from '@/components/feedback/EmptyState';
 import { NewsFilters, NewsGrid, NewsPagination, ScrollToTopButton } from '@/components/news';
 import { NewsReaderSheet } from '@/components/news/NewsReaderSheet';
 import { Button } from '@/components/ui/button';
@@ -75,6 +74,10 @@ export const NewsPage: React.FC = () => {
 
   // Calculate total pages
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+  // True when a filter (country or search) is active — determines which empty-state branch to show.
+  // newsLevel is intentionally excluded: it's display-only and never sent to the API.
+  const isFiltered = countryFilter !== 'all' || searchQuery.trim().length > 0;
 
   /**
    * Fetch news articles for a specific page
@@ -265,17 +268,17 @@ export const NewsPage: React.FC = () => {
 
       {/* Error State */}
       {error && (
-        <Card className="border-destructive/50 bg-destructive/10" data-testid="news-error">
+        <Card className="border-danger/50 bg-danger/10" data-testid="news-error">
           <CardContent className="flex items-start gap-3 p-4">
-            <AlertCircle className="h-5 w-5 flex-shrink-0 text-destructive" />
+            <AlertCircle className="h-5 w-5 flex-shrink-0 text-danger" />
             <div className="flex-1">
-              <h3 className="font-medium text-destructive">{t('news.error.title')}</h3>
-              <p className="mt-1 text-sm text-destructive/80">{t('news.error.description')}</p>
+              <h3 className="font-medium text-danger">{t('news.error.title')}</h3>
+              <p className="mt-1 text-sm text-danger/80">{t('news.error.description')}</p>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleRetry}
-                className="mt-3 border-destructive/30 text-destructive hover:bg-destructive/10"
+                className="mt-3 border-danger/30 text-danger hover:bg-danger/10"
                 data-testid="news-retry-button"
               >
                 {t('news.error.retry')}
@@ -319,14 +322,37 @@ export const NewsPage: React.FC = () => {
         </>
       )}
 
-      {/* Empty State */}
-      {!isLoading && !error && articles.length === 0 && (
-        <EmptyState
-          icon={Newspaper}
-          title={t('news.empty.title')}
-          description={t('news.empty.description')}
-        />
-      )}
+      {/* Empty State — split: filtered vs truly-empty */}
+      {!isLoading &&
+        !error &&
+        articles.length === 0 &&
+        (isFiltered ? (
+          <div
+            className="glass flex min-h-[400px] flex-col items-center justify-center p-8 text-center"
+            role="status"
+            aria-label={t('news.empty.filtered.title')}
+            data-testid="news-empty-filtered"
+          >
+            <Headphones className="mb-4 h-10 w-10 text-fg3" aria-hidden="true" />
+            <h3 className="mb-2 font-display text-[19px] font-semibold text-fg">
+              {t('news.empty.filtered.title')}
+            </h3>
+            <p className="max-w-sm text-sm text-fg2">{t('news.empty.filtered.body')}</p>
+          </div>
+        ) : (
+          <div
+            className="glass flex min-h-[400px] flex-col items-center justify-center p-8 text-center"
+            role="status"
+            aria-label={t('news.empty.title')}
+            data-testid="news-empty"
+          >
+            <Newspaper className="mb-4 h-10 w-10 text-fg3" aria-hidden="true" />
+            <h3 className="mb-2 font-display text-[19px] font-semibold text-fg">
+              {t('news.empty.title')}
+            </h3>
+            <p className="max-w-sm text-sm text-fg2">{t('news.empty.description')}</p>
+          </div>
+        ))}
 
       <ScrollToTopButton />
 

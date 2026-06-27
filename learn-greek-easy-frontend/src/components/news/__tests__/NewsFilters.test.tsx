@@ -6,8 +6,6 @@ import { NewsFilters } from '@/components/news/NewsFilters';
 import { render, screen, within } from '@/lib/test-utils';
 
 // Base props without search — search is opt-in per test.
-// Keeping search out of defaultProps ensures the Layout/separator test is unambiguous:
-// it will only find the difficulty-section aria-hidden separator, not the search icon.
 const defaultProps = {
   countryFilter: 'all' as const,
   onCountryChange: vi.fn(),

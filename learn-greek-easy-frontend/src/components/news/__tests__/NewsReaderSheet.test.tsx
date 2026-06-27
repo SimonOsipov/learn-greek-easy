@@ -317,6 +317,7 @@ describe('NewsReaderSheet — "Open original" CTA', () => {
     expect(cta).toHaveAttribute('target', '_blank');
     expect(cta.getAttribute('rel')).toContain('noopener');
     expect(cta).toHaveAttribute('data-testid', 'news-reader-open-original');
+    expect(cta).toHaveClass('self-start');
   });
 
   it('fires news_article_clicked with correct domain on CTA click', async () => {
