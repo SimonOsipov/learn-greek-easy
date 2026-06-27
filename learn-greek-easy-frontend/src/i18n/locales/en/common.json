@@ -386,7 +386,8 @@
     "reader": {
       "back": "Back to news",
       "openOriginal": "Open original",
-      "description": "Read the full article in Greek"
+      "description": "Read the full article in Greek",
+      "close": "Close"
     },
     "search": {
       "placeholder": "Search articles…",

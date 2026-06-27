@@ -19,7 +19,6 @@ import { useTranslation } from 'react-i18next';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
 import { KaraokeText } from '@/components/shared/KaraokeText';
-import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetClose,
@@ -229,7 +228,7 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
         className={cn(
           'flex flex-col p-0',
           'w-full sm:max-w-[560px]',
-          'bg-card',
+          'reader-panel overflow-hidden',
           // Hide the auto-rendered Radix close button — we provide our own in the sticky header
           '[&>button:first-child]:hidden'
         )}
@@ -246,7 +245,7 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
           className={cn(
             'sticky top-0 z-20 flex items-center justify-between',
             'border-b border-line bg-card/95 backdrop-blur-sm',
-            'px-4 py-3'
+            'px-[18px] py-4'
           )}
         >
           {/* Back button */}
@@ -257,9 +256,9 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
             className={cn(
               'flex items-center gap-1.5',
               'rounded-[9px] px-2.5 py-1.5',
-              'text-[13px] font-medium text-fg2',
+              'text-[13.5px] font-semibold text-fg2',
               'transition-colors duration-150',
-              'hover:bg-bg-2 hover:text-fg',
+              'hover:bg-bg-2 hover:text-primary',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2'
             )}
           >
@@ -271,7 +270,7 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
           <SheetClose asChild>
             <button
               type="button"
-              aria-label="Close"
+              aria-label={t('news.reader.close', 'Close')}
               className={cn(
                 'flex h-8 w-8 items-center justify-center',
                 'rounded-[9px] border border-line',
@@ -338,7 +337,7 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
                       disabled={!a2Available}
                       onClick={() => handleSegmentLevel('a2')}
                       className={cn(
-                        'rounded-full px-3 py-1 font-mono text-[12.5px] font-semibold',
+                        'rounded-full px-3 py-0 font-mono text-[11.5px] font-semibold',
                         'transition-all duration-150',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
                         level === 'a2' && a2Available
@@ -359,7 +358,7 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
                       aria-pressed={level === 'b1'}
                       onClick={() => handleSegmentLevel('b1')}
                       className={cn(
-                        'rounded-full px-3 py-1 font-mono text-[12.5px] font-semibold',
+                        'rounded-full px-3 py-0 font-mono text-[11.5px] font-semibold',
                         'transition-all duration-150',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
                         level === 'b1'
@@ -415,10 +414,10 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
                     wordTimestamps={wordTimestamps}
                     currentTimeMs={audioTimeMs}
                     fallbackText={bodyText}
-                    className="font-serif text-[17px] leading-[1.72] text-fg2"
+                    className="font-serif text-[17px] leading-[1.72] text-fg"
                   />
                 ) : (
-                  <div lang="el" className="font-serif text-[17px] leading-[1.72] text-fg2">
+                  <div lang="el" className="font-serif text-[17px] leading-[1.72] text-fg">
                     {bodyText}
                   </div>
                 )}
@@ -427,23 +426,22 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
                     Only navigates when the URL scheme is http/https (XSS guard). When the URL
                     is unsafe or unparseable, the button renders non-navigating (no href/navigation). */}
                 {safeCtaHref ? (
-                  <Button asChild className="w-full gap-2">
-                    <a
-                      href={safeCtaHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      data-testid="news-reader-open-original"
-                      aria-label={t('news.reader.openOriginal', 'Open original')}
-                      onClick={handleOpenOriginalAnalytics}
-                    >
-                      {t('news.reader.openOriginal', 'Open original')}
-                      <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                    </a>
-                  </Button>
+                  <a
+                    href={safeCtaHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-testid="news-reader-open-original"
+                    aria-label={t('news.reader.openOriginal', 'Open original')}
+                    onClick={handleOpenOriginalAnalytics}
+                    className="btn btn-primary self-start"
+                  >
+                    {t('news.reader.openOriginal', 'Open original')}
+                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                  </a>
                 ) : (
-                  <Button
+                  <button
                     type="button"
-                    className="w-full gap-2"
+                    className="btn btn-primary self-start"
                     data-testid="news-reader-open-original"
                     aria-label={t('news.reader.openOriginal', 'Open original')}
                     onClick={handleOpenOriginalAnalytics}
@@ -451,7 +449,7 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
                   >
                     {t('news.reader.openOriginal', 'Open original')}
                     <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                  </Button>
+                  </button>
                 )}
 
                 {/* Source line */}
