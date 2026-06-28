@@ -1,85 +1,35 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 
-import { useMutation } from '@tanstack/react-query';
 import { AlertCircle } from 'lucide-react';
 import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGenerateAudio } from '@/features/words/hooks';
 import { useWordEntry } from '@/features/words/hooks/useWordEntry';
-import { toast } from '@/hooks/use-toast';
-import { adminAPI } from '@/services/adminAPI';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
 
-import { ExamplesEditSection } from './vocabulary/grammar-display/ExamplesEditSection';
 import { GrammarEditSection } from './vocabulary/grammar-display/GrammarEditSection';
 import { IdentityEditSection } from './vocabulary/grammar-display/IdentityEditSection';
 import { TranslationsEditSection } from './vocabulary/grammar-display/TranslationsEditSection';
 
 interface WordEntryContentProps {
   wordEntryId: string;
-  deckId?: string;
-  onUnlinked?: () => void;
   /** Whether the underlying query should run (default true). Lets callers gate
    * the fetch when this panel is mounted-but-hidden behind a tab. */
   enabled?: boolean;
 }
 
-export function WordEntryContent({
-  wordEntryId,
-  deckId,
-  onUnlinked,
-  enabled = true,
-}: WordEntryContentProps) {
+export function WordEntryContent({ wordEntryId, enabled = true }: WordEntryContentProps) {
   const { wordEntry, isLoading, isError, refetch } = useWordEntry({
     wordId: wordEntryId,
     enabled,
   });
-  const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
-  const [autoGenerateAfterEdit, setAutoGenerateAfterEdit] = useState(false);
-  const { t } = useTranslation('admin');
 
   const { triggerGeneration, isGenerating } = useGenerateAudio({
     wordEntryId,
-  });
-
-  useEffect(() => {
-    if (autoGenerateAfterEdit) {
-      triggerGeneration();
-      setAutoGenerateAfterEdit(false);
-    }
-  }, [autoGenerateAfterEdit, triggerGeneration]);
-
-  const unlinkMutation = useMutation({
-    mutationFn: () => {
-      if (!deckId || !wordEntry) throw new Error('Missing deckId or wordEntry');
-      return adminAPI.unlinkWordEntry(deckId, wordEntry.id);
-    },
-    onSuccess: () => {
-      setShowUnlinkConfirm(false);
-      toast({ description: t('wordEntry.unlinkSuccess'), variant: 'success' });
-      onUnlinked?.();
-    },
-    onError: (error: unknown) => {
-      const apiErr = error as { detail?: string };
-      toast({
-        description: apiErr.detail ?? 'Failed to unlink word entry',
-        variant: 'destructive',
-      });
-    },
   });
 
   const handleGenerateAllClick = useCallback(() => {
@@ -95,40 +45,20 @@ export function WordEntryContent({
     triggerGeneration();
   }, [wordEntry, triggerGeneration]);
 
+  // When the tab is disabled (panel mounted but hidden) and no data has loaded yet,
+  // return null rather than ErrorState — the query isn't running so wordEntry is
+  // legitimately null; it's not an error condition.
+  if (!enabled && !wordEntry) return null;
+
   if (isLoading) return <LoadingSkeleton />;
   if (isError || !wordEntry) return <ErrorState onRetry={refetch} />;
 
   return (
-    <>
-      <ContentFields
-        wordEntry={wordEntry}
-        onGenerateClick={handleGenerateAllClick}
-        isGenerating={isGenerating}
-        showUnlinkButton={Boolean(deckId)}
-        onUnlinkClick={() => setShowUnlinkConfirm(true)}
-        onAudioRegenNeeded={() => setAutoGenerateAfterEdit(true)}
-      />
-      {deckId && (
-        <AlertDialog open={showUnlinkConfirm} onOpenChange={setShowUnlinkConfirm}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t('wordEntry.unlinkTitle')}</AlertDialogTitle>
-              <AlertDialogDescription>{t('wordEntry.unlinkConfirm')}</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => unlinkMutation.mutate()}
-                disabled={unlinkMutation.isPending}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Remove
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
-    </>
+    <ContentFields
+      wordEntry={wordEntry}
+      onGenerateClick={handleGenerateAllClick}
+      isGenerating={isGenerating}
+    />
   );
 }
 
@@ -174,19 +104,11 @@ function ContentFields({
   wordEntry,
   onGenerateClick,
   isGenerating,
-  showUnlinkButton,
-  onUnlinkClick,
-  onAudioRegenNeeded,
 }: {
   wordEntry: WordEntryResponse;
   onGenerateClick: () => void;
   isGenerating: boolean;
-  showUnlinkButton: boolean;
-  onUnlinkClick: () => void;
-  onAudioRegenNeeded: () => void;
 }) {
-  const { t } = useTranslation('admin');
-
   return (
     <div className="space-y-3" data-testid="word-entry-content-fields">
       <IdentityEditSection
@@ -198,22 +120,6 @@ function ContentFields({
       <TranslationsEditSection wordEntry={wordEntry} />
 
       <GrammarEditSection wordEntry={wordEntry} />
-
-      <ExamplesEditSection wordEntry={wordEntry} onAudioRegenNeeded={onAudioRegenNeeded} />
-
-      {showUnlinkButton && (
-        <div data-testid="word-entry-actions-footer" className="flex justify-end pt-1">
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-destructive text-destructive hover:bg-destructive/10"
-            onClick={onUnlinkClick}
-            data-testid="word-entry-unlink-btn"
-          >
-            {t('wordEntry.unlinkButton')}
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

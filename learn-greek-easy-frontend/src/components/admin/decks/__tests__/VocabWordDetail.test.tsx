@@ -21,27 +21,14 @@ import { VocabWordDetail } from '../VocabWordDetail';
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 // Stub WordEntryContent — assert it gets wordEntryId (NOT entryId) and no item prop.
+// D3b: deckId and onUnlinked removed from WordEntryContent; unlink moved to DeckDrawer.
 vi.mock('@/components/admin/WordEntryContent', () => ({
   WordEntryContent: ({
     wordEntryId,
-    deckId,
-    onUnlinked,
   }: {
     wordEntryId: string;
-    deckId?: string;
-    onUnlinked?: () => void;
-    // Deliberate: no 'entryId', no 'item' props in the real interface
-  }) => (
-    <div
-      data-testid="word-entry-content-mock"
-      data-word-entry-id={wordEntryId}
-      data-deck-id={deckId ?? ''}
-    >
-      <button data-testid="word-entry-content-unlink" onClick={onUnlinked}>
-        Unlink
-      </button>
-    </div>
-  ),
+    // Deliberate: no 'entryId', no 'item', no 'deckId', no 'onUnlinked' props
+  }) => <div data-testid="word-entry-content-mock" data-word-entry-id={wordEntryId} />,
 }));
 
 // Stub WordEntryCards — assert it gets entryId.
@@ -228,9 +215,9 @@ describe('VocabWordDetail', () => {
     });
 
     // WordEntryContent must get wordEntryId = ITEM_ID, not an 'entryId' prop
+    // D3b: deckId no longer passed to WordEntryContent (unlink moved to DeckDrawer)
     const contentEl = screen.getByTestId('word-entry-content-mock');
     expect(contentEl).toHaveAttribute('data-word-entry-id', ITEM_ID);
-    expect(contentEl).toHaveAttribute('data-deck-id', DECK_ID);
 
     // Switch to cards tab to render WordEntryCards
     const user = userEvent.setup();

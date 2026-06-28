@@ -585,15 +585,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="entry" data-testid="word-entry-tab-content-entry">
-                    <WordEntryContent
-                      wordEntryId={selectedWordEntry.id}
-                      deckId={deck.id}
-                      onUnlinked={() => {
-                        handleBack();
-                        fetchItems();
-                        onItemDeleted?.();
-                      }}
-                    />
+                    <WordEntryContent wordEntryId={selectedWordEntry.id} />
                   </TabsContent>
                   <TabsContent value="cards" data-testid="word-entry-tab-content-cards">
                     <WordEntryCards entryId={selectedWordEntry.id} />

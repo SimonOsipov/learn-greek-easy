@@ -9,11 +9,21 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { SidePanel } from '@/components/ui/side-panel';
 import { toast } from '@/hooks/use-toast';
@@ -85,6 +95,43 @@ export function DeckDrawer() {
   // ── Add-item dialog state (lifted from VocabDrawerBody/CultureDrawerBody) ──
 
   const [addItemOpen, setAddItemOpen] = useState(false);
+
+  // ── Word-detail unlink (D3b) ───────────────────────────────────────────────
+
+  const [unlinkDialogOpen, setUnlinkDialogOpen] = useState(false);
+
+  const unlinkMutation = useMutation({
+    mutationFn: () => {
+      if (!deck || !itemId) throw new Error('Missing deck or itemId');
+      return adminAPI.unlinkWordEntry(deck.id, itemId);
+    },
+    onSuccess: () => {
+      setUnlinkDialogOpen(false);
+      void queryClient.invalidateQueries({ queryKey: ['deck-vocab', deck?.id] });
+      // Also refresh the deck-level item count in the drawer header (mirrors delete flow)
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'deck', deck?.id] });
+      toast({ description: t('wordEntry.unlinkSuccess'), variant: 'success' });
+      // Navigate back to word list
+      setSearchParams((prev) => {
+        const p = new URLSearchParams(prev);
+        p.delete('item');
+        p.delete('subtab');
+        return p;
+      });
+    },
+    onError: () => {
+      toast({ description: t('wordEntry.unlinkConfirm'), variant: 'destructive' });
+    },
+  });
+
+  const popToWordList = useCallback(() => {
+    setSearchParams((prev) => {
+      const p = new URLSearchParams(prev);
+      p.delete('item');
+      p.delete('subtab');
+      return p;
+    });
+  }, [setSearchParams]);
 
   const stripCloseParams = useCallback(() => {
     setSearchParams((prev) => {
@@ -388,8 +435,42 @@ export function DeckDrawer() {
               {resolvedTab === 'settings' && <DeckSettingsTab deck={deck} />}
             </SidePanel.Body>
 
-            {/* Standard drawer footer (ADMIN2-33 FeedbackDrawer standard) — one
-                stable footer across all tabs. Hidden in the ?item= detail view. */}
+            {/* Word-detail footer — Delete (unlink) / Back / Save changes (D3b) */}
+            {itemId && !isCulture && (
+              <SidePanel.Footer data-testid="deck-drawer-footer-detail">
+                <div className="drawer-foot-left">
+                  <button
+                    type="button"
+                    className="btn btn-glass btn-sm danger-text"
+                    onClick={() => setUnlinkDialogOpen(true)}
+                    data-testid="deck-drawer-footer-detail-delete"
+                  >
+                    {t('wordEntry.unlinkButton')}
+                  </button>
+                </div>
+                <div className="drawer-foot-right">
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={popToWordList}
+                    data-testid="deck-drawer-footer-detail-back"
+                  >
+                    {t('wordEntryDetail.back')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled
+                    className="btn btn-primary btn-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    data-testid="deck-drawer-footer-detail-save"
+                  >
+                    <Check className="size-4" aria-hidden="true" />
+                    {t('decks.saveChanges', { defaultValue: 'Save changes' })}
+                  </button>
+                </div>
+              </SidePanel.Footer>
+            )}
+
+            {/* Standard drawer footer — list/settings view */}
             {!itemId && (
               <SidePanel.Footer data-testid="deck-drawer-footer">
                 <div className="drawer-foot-left">
@@ -439,6 +520,28 @@ export function DeckDrawer() {
             isDeleting={isDeleting}
           />
         )}
+
+        {/* Unlink word-from-deck confirmation (D3b) */}
+        <AlertDialog open={unlinkDialogOpen} onOpenChange={setUnlinkDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('wordEntry.unlinkTitle')}</AlertDialogTitle>
+              <AlertDialogDescription>{t('wordEntry.unlinkConfirm')}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>
+                {t('deckEdit.cancel', { defaultValue: 'Cancel' })}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => unlinkMutation.mutate()}
+                disabled={unlinkMutation.isPending}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {t('wordEntry.unlinkButton')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </SidePanel>
     </DeckDrawerContext.Provider>
   );

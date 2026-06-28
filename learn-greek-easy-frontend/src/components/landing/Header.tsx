@@ -76,7 +76,11 @@ const Header = () => {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-72">
+            <SheetContent
+              side="right"
+              className="w-72"
+              overlayClassName="bg-background/80 backdrop-blur-sm"
+            >
               <SheetTitle className="sr-only">{t('header.nav.ariaLabel')}</SheetTitle>
               <nav className="flex flex-col gap-4 pt-8">
                 {navLinks.map((link) => (

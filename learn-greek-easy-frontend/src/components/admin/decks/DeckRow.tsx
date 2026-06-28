@@ -50,10 +50,10 @@ export function DeckRow({ deck, locale, onOpenDrawer, onDelete }: DeckRowProps) 
   };
   const localizedName = getLocalizedDeckName(normalizedDeck, locale);
   const absoluteDate = format(new Date(deck.created_at), 'MMM d, yyyy');
-  const itemLabel =
+  const itemUnit =
     deck.type === 'culture'
-      ? t('decks.row.itemCountQuestions', { count: deck.item_count })
-      : t('decks.row.itemCountCards', { count: deck.item_count });
+      ? t('decks.row.questionsUnit', { count: deck.item_count })
+      : t('decks.row.cardsUnit', { count: deck.item_count });
 
   const isSystem = deck.is_system_deck === true;
 
@@ -134,8 +134,10 @@ export function DeckRow({ deck, locale, onOpenDrawer, onDelete }: DeckRowProps) 
         <time dateTime={deck.created_at}>{absoluteDate}</time>
       </div>
 
-      {/* Col 5: Card / question count — mono right-aligned */}
-      <div className="va-cards-n">{itemLabel}</div>
+      {/* Col 5: Card / question count — emphasized count, dimmed unit */}
+      <div className="va-cards-n">
+        {deck.item_count} <span className="va-dim">{itemUnit}</span>
+      </div>
 
       {/* Col 6: Actions — stop propagation so clicking doesn't open drawer */}
       <div

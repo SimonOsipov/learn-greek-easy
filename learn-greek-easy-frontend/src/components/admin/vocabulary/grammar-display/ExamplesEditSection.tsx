@@ -10,7 +10,6 @@ import { z } from 'zod';
 
 import { AlertDialog } from '@/components/dialogs/AlertDialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -231,34 +230,30 @@ export function ExamplesEditSection({
 
   return (
     <>
-      <Card id="section-examples">
-        <CardHeader className="px-4 pb-2 pt-4">
-          <div className="group flex items-center justify-between text-sm font-semibold">
-            <div className="flex items-center">
-              {t('wordEntryContent.sectionExamples')}
-              <span className="ml-2 rounded-sm border border-muted-foreground/30 bg-muted/50 px-1.5 py-0.5 text-xs text-muted-foreground">
-                {examplesCount}
-              </span>
-            </div>
-            {!isEditing && examplesCount > 0 && (
-              <div
-                data-testid="examples-pencil-actions"
-                className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
-              >
-                <Button
-                  variant="chrome-ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={enterEditMode}
-                  data-testid="examples-edit-btn"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            )}
+      <div id="section-examples" className="dk-block">
+        <div className="group mb-3 flex items-center justify-between text-sm font-semibold">
+          <div className="flex items-center">
+            {t('wordEntryContent.sectionExamples')}
+            <span className="badge b-gray ml-2">{examplesCount}</span>
           </div>
-        </CardHeader>
-        <CardContent className="px-4 pb-4" id="section-ex">
+          {!isEditing && examplesCount > 0 && (
+            <div
+              data-testid="examples-pencil-actions"
+              className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+            >
+              <Button
+                variant="chrome-ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={enterEditMode}
+                data-testid="examples-edit-btn"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+        </div>
+        <div id="section-ex">
           {isEditing ? (
             <Form {...form}>
               <form
@@ -363,8 +358,8 @@ export function ExamplesEditSection({
               )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <div data-testid="examples-discard-dialog">
         <AlertDialog

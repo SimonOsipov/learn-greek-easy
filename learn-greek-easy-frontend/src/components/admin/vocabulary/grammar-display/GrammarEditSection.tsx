@@ -7,9 +7,8 @@ import { useTranslation } from 'react-i18next';
 
 import { AlertDialog } from '@/components/dialogs/AlertDialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useUpdateWordEntry } from '@/features/words/hooks/useUpdateWordEntry';
-import { chipColorClasses, type ChipColor } from '@/lib/completeness';
+import type { ChipColor } from '@/lib/completeness';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
 
 import {
@@ -32,8 +31,9 @@ import { normalizeGrammarData, GRAMMAR_FIELD_COUNTS } from './grammarNormalizer'
 
 function SectionBadge({ filled, total }: { filled: number; total: number }) {
   const color: ChipColor = filled === total ? 'green' : filled > 0 ? 'yellow' : 'gray';
+  const badgeVariant = color === 'green' ? 'b-green' : color === 'yellow' ? 'b-amber' : 'b-gray';
   return (
-    <span className={`ml-2 rounded-sm border px-1.5 py-0.5 text-xs ${chipColorClasses[color]}`}>
+    <span className={`badge ml-2 ${badgeVariant}`}>
       {filled}/{total}
     </span>
   );
@@ -134,32 +134,30 @@ export function GrammarEditSection({ wordEntry, onEditingChange }: GrammarEditSe
 
   return (
     <>
-      <Card id="section-grammar">
-        <CardHeader className="px-4 pb-2 pt-4">
-          <div className="group flex items-center justify-between text-sm font-semibold">
-            <div className="flex items-center">
-              {t('wordEntryContent.sectionGrammar')}
-              {grammarTotal > 0 && <SectionBadge filled={grammarFilled} total={grammarTotal} />}
-            </div>
-            {!isEditing && (
-              <div
-                data-testid="grammar-pencil-actions"
-                className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
-              >
-                <Button
-                  variant="chrome-ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={enterEditMode}
-                  data-testid="grammar-edit-btn"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            )}
+      <div id="section-grammar" className="dk-block">
+        <div className="group mb-3 flex items-center justify-between text-sm font-semibold">
+          <div className="flex items-center">
+            {t('wordEntryContent.sectionGrammar')}
+            {grammarTotal > 0 && <SectionBadge filled={grammarFilled} total={grammarTotal} />}
           </div>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
+          {!isEditing && (
+            <div
+              data-testid="grammar-pencil-actions"
+              className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+            >
+              <Button
+                variant="chrome-ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={enterEditMode}
+                data-testid="grammar-edit-btn"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+        </div>
+        <div>
           {isEditing ? (
             <div className="space-y-3">
               {renderEditForm()}
@@ -191,8 +189,8 @@ export function GrammarEditSection({ wordEntry, onEditingChange }: GrammarEditSe
               grammarData={wordEntry.grammar_data}
             />
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <div data-testid="grammar-discard-dialog">
         <AlertDialog

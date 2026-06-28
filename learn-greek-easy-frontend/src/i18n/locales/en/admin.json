@@ -50,6 +50,9 @@
   "deckCreate": {
     "title": "Create Deck",
     "subtitle": "Create a new vocabulary or culture deck",
+    "subtitleVocabulary": "Set up the deck shell — you'll add words once it's created.",
+    "subtitleCulture": "Set up the deck shell — you'll add questions once it's created.",
+    "coverHint": "Shown behind the deck on its card · JPG, PNG, or WebP, 1200×800+. Optional.",
     "typeLabel": "Deck Type",
     "typeVocabulary": "Vocabulary",
     "typeCulture": "Culture",
@@ -85,7 +88,7 @@
   "sections": {
     "contentSummary": "Content Summary",
     "allDecks": "All Decks",
-    "allDecksDescription": "Search and browse all vocabulary and culture decks"
+    "allDecksDescription": "Search and browse vocabulary and culture decks"
   },
   "stats": {
     "totalDecks": "Total Decks",
@@ -1937,8 +1940,14 @@
       },
       "searchWords": "Search words…",
       "searchQuestions": "Search questions…",
+      "clearSearch": "Clear search",
       "sort": "Sort",
       "sortComingSoon": "Sort (coming soon)",
+      "gender": {
+        "masculine": "masculine",
+        "feminine": "feminine",
+        "neuter": "neuter"
+      },
       "pos": {
         "all": "All",
         "noun": "Noun",
@@ -2046,7 +2055,11 @@
       "itemCountCards_one": "{{count}} card",
       "itemCountCards_other": "{{count}} cards",
       "itemCountQuestions_one": "{{count}} question",
-      "itemCountQuestions_other": "{{count}} questions"
+      "itemCountQuestions_other": "{{count}} questions",
+      "cardsUnit_one": "card",
+      "cardsUnit_other": "cards",
+      "questionsUnit_one": "question",
+      "questionsUnit_other": "questions"
     },
     "list": {
       "empty": "No decks found."

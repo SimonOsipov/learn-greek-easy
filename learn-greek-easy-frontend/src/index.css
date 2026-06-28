@@ -1812,10 +1812,11 @@
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Left-edge drop shadow for the full-screen news drawer handoff (NADM-09 / ADMIN2-27-31).
-     Applied via .drawer-shadow-handoff on the content element when size="full". */
+  /* Left-edge drop shadow for full/half drawers (NADM-09 / ADMIN2-27-31 / ADMIN2-48).
+     Applied via .drawer-shadow-handoff on the content element for size="full" and size="half".
+     Pure black so it doesn't white-glow in dark mode (CD neutral shadow). */
   .drawer-shadow-handoff {
-    box-shadow: -30px 0 60px hsl(var(--fg) / 0.3);
+    box-shadow: -30px 0 60px hsl(0 0% 0% / 0.3);
   }
 
   /* ==========================================================================
@@ -3072,6 +3073,13 @@
     font-weight: 600;
     color: hsl(var(--fg));
   }
+  /* Panel subtitle — sits directly below .va-panel-head */
+  .va-panel-sub {
+    padding: 0 20px 12px;
+    font-size: 13px;
+    color: hsl(var(--fg-3));
+    margin: 6px 0 0;
+  }
 
   /* ── Decks list grid (ADMIN2-47, AC E) — CD .va-list / .va-row ── */
   .va-list {
@@ -3123,9 +3131,8 @@
   }
   .va-cards-n {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 12.5px;
-    font-weight: 500;
-    color: hsl(var(--fg-2));
+    font-size: 13px;
+    font-weight: 600;
     text-align: right;
   }
   .va-row-actions {
@@ -3165,6 +3172,12 @@
   }
   .cd-modal-head {
     padding: 20px 24px 0;
+  }
+  /* modal title — Inter Tight 18/600 (ADMIN2-48-05 F16) */
+  .aw-title {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
   }
   .cd-modal-body {
     padding: 16px 24px;
@@ -3252,15 +3265,42 @@
     flex-direction: column;
     gap: 8px;
   }
+  /* empty dashed click-to-upload tile (ADMIN2-48-05 F17) */
+  .cd-cover-empty {
+    width: 96px;
+    height: 64px;
+    border: 1px dashed hsl(var(--fg) / 0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+    background: transparent;
+    padding: 0;
+    flex-shrink: 0;
+    color: hsl(var(--fg-3));
+  }
+  .cd-cover-empty:hover {
+    border-color: hsl(var(--fg) / 0.35);
+    color: hsl(var(--fg-2));
+  }
+  /* filled preview tile — same dimensions as empty tile */
   .cd-cover-preview {
-    height: 96px;
-    width: auto;
-    border-radius: 8px;
+    width: 96px;
+    height: 64px;
+    border-radius: 10px;
     object-fit: cover;
+    display: block;
   }
   .cd-cover-actions {
     display: flex;
     gap: 8px;
+  }
+  /* hint below the upload button (ADMIN2-48-05 F17) */
+  .cd-cover-hint {
+    font-size: 12px;
+    color: hsl(var(--fg-3));
   }
   .cd-cover-err {
     font-size: 12px;
@@ -3281,29 +3321,37 @@
     border: none;
     padding: 5px 12px;
     border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 600;
     color: hsl(var(--fg-2));
     cursor: pointer;
   }
   .dk-cefr-btn:hover {
     color: hsl(var(--fg));
   }
+  /* active: CD primary fill + white text (ADMIN2-48-05 F18) */
   .dk-cefr-btn.is-active {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  /* CD input field (ADMIN2-48, F19) — radius 9px + --bg-2 fill, overrides shadcn rounded-md / bg-background */
+  .aw-input {
+    border-radius: 9px;
     background: hsl(var(--bg-2));
-    color: hsl(var(--fg));
-    box-shadow: 0 1px 2px hsl(0 0% 0% / 0.15);
   }
 
   /* .aw-btn system — SEPARATE from .btn (do NOT cross) */
+  /* h36/r9 per CD spec (ADMIN2-48-05 F19) */
   .aw-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    height: 38px;
+    height: 36px;
     padding: 0 16px;
-    border-radius: 10px;
+    border-radius: 9px;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
@@ -3437,6 +3485,16 @@
     background: hsl(var(--bg-2));
     color: hsl(var(--fg));
     box-shadow: 0 1px 2px hsl(0 0% 0% / 0.15);
+  }
+  /* Scoped active overrides inside the create-deck modal (ADMIN2-48-05 F19).
+   * Higher specificity (0,3,0 vs 0,2,0) beats the unscoped rule without
+   * touching the changelog .cl-langtabs consumer. */
+  .cd-langtabs .dk-langtab.is-active {
+    background: hsl(var(--card));
+    color: hsl(var(--fg));
+    box-shadow: var(--shadow-1);
+    font-size: 12.5px;
+    font-weight: 600;
   }
 
   /* ── Dimmed helper text (ADMIN2-44) ── */
@@ -5394,6 +5452,148 @@ html.theme-transition *::after {
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+/* ── Deck word-list card item (ADMIN2-48, F7) — CD grey grid row ── */
+.dk-card-item {
+  background: hsl(var(--bg-2));
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+
+.dk-card-item:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 12px hsl(var(--fg) / 0.08),
+    0 0 0 1px hsl(var(--fg) / 0.1);
+}
+
+/* Greek headword — CD Noto Serif display style (ADMIN2-48, F8) */
+.dk-word {
+  font-family: 'Noto Serif', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: hsl(var(--fg));
+}
+
+/* ── Word-detail gender pill (ADMIN2-48, F10) — glyph + label CD pill ── */
+.dk-gender {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.dk-gender-m {
+  background: hsl(210 90% 60% / 0.14);
+  color: hsl(210 80% 55%);
+}
+.dk-gender-f {
+  background: hsl(330 80% 60% / 0.14);
+  color: hsl(330 70% 55%);
+}
+.dk-gender-n {
+  background: hsl(var(--fg) / 0.08);
+  color: hsl(var(--fg-2));
+}
+html.dark .dk-gender-m {
+  color: hsl(210 80% 70%);
+}
+html.dark .dk-gender-f {
+  color: hsl(330 70% 70%);
+}
+
+/* ── Sub-tab segmented control (ADMIN2-48, F11) ── */
+.dk-segtabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: hsl(var(--fg) / 0.05);
+  border: 1px solid hsl(var(--fg) / 0.08);
+  border-radius: 10px;
+}
+.dk-segtab {
+  flex: 1;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 0;
+  text-align: center;
+  background: transparent;
+  border: none;
+  color: hsl(var(--fg-2));
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    box-shadow 0.15s;
+}
+.dk-segtab:hover {
+  color: hsl(var(--fg));
+}
+.dk-segtab.is-active {
+  background: hsl(var(--bg-2));
+  color: hsl(var(--fg));
+  box-shadow:
+    0 1px 4px hsl(var(--fg) / 0.1),
+    0 0 0 1px hsl(var(--fg) / 0.06);
+}
+
+/* ── Detail block shell (ADMIN2-48, F12) ── */
+.dk-block {
+  background: hsl(var(--bg-2));
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+
+/* ── In-block field labels (ADMIN2-48, F13) ── */
+.dk-l {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: hsl(var(--fg-3));
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── ADMIN2-48-05: CD fidelity overrides in @layer utilities ──────────────────
+ * Placed in @layer utilities so these single-class rules share the same cascade
+ * layer as Tailwind utilities. Within a layer, source order determines priority
+ * for equal-specificity selectors — these come after @tailwind utilities and
+ * therefore win over conflicting built-in classes (text-sm, text-muted-foreground).
+ * ─────────────────────────────────────────────────────────────────────────────*/
+@layer utilities {
+  /* F16: modal subtitle — 13px / --fg-3 (beats text-sm / text-muted-foreground) */
+  .cd-sub {
+    font-size: 13px;
+    color: hsl(var(--fg-3));
+  }
+
+  /* F19: Premium-toggle Switch resized to 40×22 without touching the shared
+   * Switch primitive. Higher-specificity compound selectors within the same
+   * @layer utilities beat Tailwind's single-class utilities (h-6, w-11, h-5, w-5). */
+  .dk-toggle button[role='switch'] {
+    width: 40px;
+    height: 22px;
+  }
+  .dk-toggle button[role='switch'] > span {
+    width: 18px;
+    height: 18px;
+  }
+  .dk-toggle button[role='switch'][data-state='checked'] > span {
+    /* Override --tw-translate-x so Tailwind's translate-x calc uses 18 px */
+    --tw-translate-x: 18px;
+  }
 }
 
 /* Accessibility: Respect user's motion preferences */

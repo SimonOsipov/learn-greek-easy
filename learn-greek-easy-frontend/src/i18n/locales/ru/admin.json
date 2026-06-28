@@ -50,6 +50,9 @@
   "deckCreate": {
     "title": "Создать колоду",
     "subtitle": "Создайте новую словарную или культурную колоду",
+    "subtitleVocabulary": "Создайте оболочку колоды — слова можно будет добавить после.",
+    "subtitleCulture": "Создайте оболочку колоды — вопросы можно будет добавить после.",
+    "coverHint": "Отображается на карточке колоды · JPG, PNG или WebP, 1200×800+. Необязательно.",
     "typeLabel": "Тип колоды",
     "typeVocabulary": "Словарь",
     "typeCulture": "Культура",
@@ -85,7 +88,7 @@
   "sections": {
     "contentSummary": "Сводка контента",
     "allDecks": "Все колоды",
-    "allDecksDescription": "Поиск и просмотр всех колод словаря и культуры"
+    "allDecksDescription": "Поиск и просмотр колод словаря и культуры"
   },
   "stats": {
     "totalDecks": "Всего колод",
@@ -1958,8 +1961,14 @@
       },
       "searchWords": "Поиск слов…",
       "searchQuestions": "Поиск вопросов…",
+      "clearSearch": "Очистить поиск",
       "sort": "Сортировка",
       "sortComingSoon": "Сортировка (скоро)",
+      "gender": {
+        "masculine": "мужской",
+        "feminine": "женский",
+        "neuter": "средний"
+      },
       "pos": {
         "all": "Все",
         "noun": "Существительное",
@@ -2075,7 +2084,15 @@
       "itemCountQuestions_one": "{{count}} вопрос",
       "itemCountQuestions_few": "{{count}} вопроса",
       "itemCountQuestions_many": "{{count}} вопросов",
-      "itemCountQuestions_other": "{{count}} вопросов"
+      "itemCountQuestions_other": "{{count}} вопросов",
+      "cardsUnit_one": "карточка",
+      "cardsUnit_few": "карточки",
+      "cardsUnit_many": "карточек",
+      "cardsUnit_other": "карточек",
+      "questionsUnit_one": "вопрос",
+      "questionsUnit_few": "вопроса",
+      "questionsUnit_many": "вопросов",
+      "questionsUnit_other": "вопросов"
     },
     "list": {
       "empty": "Колоды не найдены."

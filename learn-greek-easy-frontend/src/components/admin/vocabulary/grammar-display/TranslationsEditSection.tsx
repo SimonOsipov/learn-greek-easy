@@ -10,7 +10,6 @@ import { z } from 'zod';
 
 import { AlertDialog } from '@/components/dialogs/AlertDialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -21,7 +20,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useUpdateWordEntry } from '@/features/words/hooks/useUpdateWordEntry';
-import { chipColorClasses, type ChipColor } from '@/lib/completeness';
+import type { ChipColor } from '@/lib/completeness';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
 
 import { NotSet } from '../../NotSet';
@@ -32,8 +31,9 @@ import { NotSet } from '../../NotSet';
 
 function SectionBadge({ filled, total }: { filled: number; total: number }) {
   const color: ChipColor = filled === total ? 'green' : filled > 0 ? 'yellow' : 'gray';
+  const badgeVariant = color === 'green' ? 'b-green' : color === 'yellow' ? 'b-amber' : 'b-gray';
   return (
-    <span className={`ml-2 rounded-sm border px-1.5 py-0.5 text-xs ${chipColorClasses[color]}`}>
+    <span className={`badge ml-2 ${badgeVariant}`}>
       {filled}/{total}
     </span>
   );
@@ -50,7 +50,7 @@ function FieldRow({
 }) {
   return (
     <div data-testid={testId}>
-      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dt className="dk-l">{label}</dt>
       <dd className="mt-0.5 text-sm font-medium">{value}</dd>
     </div>
   );
@@ -177,32 +177,30 @@ export function TranslationsEditSection({
 
   return (
     <>
-      <Card id="section-translations">
-        <CardHeader className="px-4 pb-2 pt-4">
-          <div className="group flex items-center justify-between text-sm font-semibold">
-            <div className="flex items-center">
-              {t('wordEntryContent.sectionTranslations')}
-              <SectionBadge filled={compl.filled} total={compl.total} />
-            </div>
-            {!isEditing && (
-              <div
-                data-testid="translations-pencil-actions"
-                className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
-              >
-                <Button
-                  variant="chrome-ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={enterEditMode}
-                  data-testid="translations-edit-btn"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            )}
+      <div id="section-translations" className="dk-block">
+        <div className="group mb-3 flex items-center justify-between text-sm font-semibold">
+          <div className="flex items-center">
+            {t('wordEntryContent.sectionTranslations')}
+            <SectionBadge filled={compl.filled} total={compl.total} />
           </div>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
+          {!isEditing && (
+            <div
+              data-testid="translations-pencil-actions"
+              className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+            >
+              <Button
+                variant="chrome-ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={enterEditMode}
+                data-testid="translations-edit-btn"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+        </div>
+        <div>
           {isEditing ? (
             <Form {...form}>
               <form
@@ -312,8 +310,8 @@ export function TranslationsEditSection({
               />
             </dl>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <div data-testid="translations-discard-dialog">
         <AlertDialog

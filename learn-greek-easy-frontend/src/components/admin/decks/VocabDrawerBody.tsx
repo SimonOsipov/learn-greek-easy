@@ -8,15 +8,13 @@
 import { useState, useCallback, useEffect } from 'react';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Search, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { CardDeleteDialog } from '@/components/admin/CardDeleteDialog';
 import { LexgenSubmitDialog } from '@/components/admin/LexgenSubmitDialog';
 import { ChangelogPagination } from '@/components/changelog/ChangelogPagination';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { SegControl } from '@/components/ui/seg-control';
 import { toast } from '@/hooks/use-toast';
 import { getWordCompletion } from '@/lib/deckCompletion';
@@ -148,15 +146,31 @@ export function VocabDrawerBody({ deck, addOpen, onAddOpenChange }: VocabDrawerB
     <div className="flex flex-col gap-4">
       {/* ── Toolbar ── */}
       <div data-testid="word-list-toolbar" className="flex flex-wrap items-center gap-2">
-        {/* Search */}
-        <Input
-          data-testid="word-list-search"
-          type="search"
-          placeholder={t('decks.drawer.searchWords')}
-          value={searchInput}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          className="w-48"
-        />
+        {/* Search — CD .news-search: full-width, radius 10, bg --bg, border --fg/.1 */}
+        <div className="news-search">
+          <Search className="search-icon" aria-hidden="true" />
+          <input
+            data-testid="word-list-search"
+            type="text"
+            placeholder={t('decks.drawer.searchWords')}
+            aria-label={t('decks.drawer.searchWords')}
+            value={searchInput}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') handleSearchChange('');
+            }}
+          />
+          {searchInput && (
+            <button
+              type="button"
+              className="icon-btn icon-btn-sm clear-btn"
+              onClick={() => handleSearchChange('')}
+              aria-label={t('decks.drawer.clearSearch')}
+            >
+              <X />
+            </button>
+          )}
+        </div>
 
         {/* POS filter */}
         <SegControl
@@ -165,16 +179,6 @@ export function VocabDrawerBody({ deck, addOpen, onAddOpenChange }: VocabDrawerB
           value={posFilter}
           onChange={handlePosChange}
         />
-
-        {/* Sort placeholder */}
-        <button
-          type="button"
-          disabled
-          aria-label={t('decks.drawer.sortComingSoon')}
-          className="cursor-not-allowed rounded-md border border-input bg-background px-3 py-1.5 text-sm text-muted-foreground opacity-50"
-        >
-          {t('decks.drawer.sort')}
-        </button>
       </div>
 
       {/* ── Empty state ── */}
@@ -199,30 +203,28 @@ export function VocabDrawerBody({ deck, addOpen, onAddOpenChange }: VocabDrawerB
                 key={card.id}
                 data-testid="word-row"
                 role="listitem"
-                className="group relative flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:bg-muted/40"
+                className="dk-card-item group"
                 onClick={() => navigateToItem(card)}
               >
-                {/* Decorative checkbox */}
+                {/* Column 1 (20px): Decorative checkbox */}
                 <input
                   type="checkbox"
                   disabled
                   aria-hidden="true"
                   tabIndex={-1}
-                  className="mt-1 shrink-0 cursor-default"
+                  className="mt-1 cursor-default"
                 />
 
-                {/* Content */}
-                <div className="min-w-0 flex-1">
+                {/* Column 2 (1fr): Content */}
+                <div className="min-w-0">
                   {/* First line: Greek word + POS badge + gender chip */}
                   <div className="flex flex-wrap items-center gap-2">
-                    <span lang="el" className="text-2xl font-medium leading-tight">
+                    <span lang="el" className="dk-word">
                       {card.front_text}
                     </span>
 
                     {card.part_of_speech && (
-                      <Badge variant="outline" className="text-xs">
-                        {card.part_of_speech}
-                      </Badge>
+                      <span className="badge b-gray">{card.part_of_speech}</span>
                     )}
 
                     {genderSymbol && (
@@ -250,9 +252,9 @@ export function VocabDrawerBody({ deck, addOpen, onAddOpenChange }: VocabDrawerB
                   )}
                 </div>
 
-                {/* Hover actions */}
+                {/* Column 3 (auto): Hover/focus actions */}
                 <div
-                  className="absolute right-3 top-3 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100"
+                  className="flex items-center gap-1 self-start opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <button

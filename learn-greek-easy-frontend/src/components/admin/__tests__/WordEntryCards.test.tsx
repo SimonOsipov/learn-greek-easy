@@ -6,6 +6,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 
 import { WordEntryCards } from '../WordEntryCards';
+import { useGenerateAudio } from '@/features/words/hooks/useGenerateAudio';
 import { useGenerateCards } from '@/features/words/hooks/useGenerateCards';
 import { useWordEntryCards } from '@/features/words/hooks/useWordEntryCards';
 import { useWordEntry } from '@/features/words/hooks/useWordEntry';
@@ -15,6 +16,22 @@ import i18n from '@/i18n';
 // ============================================
 // Mocks
 // ============================================
+
+vi.mock('@/features/words/hooks/useGenerateAudio', () => ({
+  useGenerateAudio: vi.fn(),
+}));
+
+// ExamplesEditSection uses useUpdateWordEntry (useMutation), which requires QueryClientProvider.
+// Mock it out so existing WordEntryCards tests don't need a QueryClient wrapper.
+// The mock exposes `onAudioRegenNeeded` via a data-testid click so D3a wiring can be tested.
+vi.mock('@/components/admin/vocabulary/grammar-display/ExamplesEditSection', () => ({
+  ExamplesEditSection: ({
+    onAudioRegenNeeded,
+  }: {
+    onAudioRegenNeeded?: () => void;
+    wordEntry?: unknown;
+  }) => <div data-testid="examples-edit-section-mock" onClick={onAudioRegenNeeded} />,
+}));
 
 vi.mock('@/features/words/hooks/useWordEntryCards', () => ({
   useWordEntryCards: vi.fn(),
@@ -62,6 +79,18 @@ const createMockCard = (overrides = {}) => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  (useGenerateAudio as Mock).mockReturnValue({
+    triggerGeneration: vi.fn(),
+    cancel: vi.fn(),
+    progress: {
+      parts: new Map(),
+      totalParts: 0,
+      partsCompleted: 0,
+      status: 'idle' as const,
+      errorMessage: null,
+    },
+    isGenerating: false,
+  });
   (useWordEntryCards as Mock).mockReturnValue({
     cards: [],
     isLoading: false,
@@ -566,6 +595,42 @@ describe('WordEntryCards', () => {
         wordEntryId: 'my-entry-id',
         enabled: true,
       });
+    });
+  });
+
+  // ============================================
+  // D3a: ExamplesEditSection → audio regen wiring
+  // ============================================
+
+  describe('ExamplesEditSection onAudioRegenNeeded wiring (D3a)', () => {
+    it('calls triggerGeneration when ExamplesEditSection fires onAudioRegenNeeded', () => {
+      const triggerGeneration = vi.fn();
+      (useGenerateAudio as Mock).mockReturnValue({
+        triggerGeneration,
+        cancel: vi.fn(),
+        progress: {
+          parts: new Map(),
+          totalParts: 0,
+          partsCompleted: 0,
+          status: 'idle' as const,
+          errorMessage: null,
+        },
+        isGenerating: false,
+      });
+      (useWordEntry as Mock).mockReturnValue({
+        wordEntry: createMockWordEntry(),
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      renderComponent('entry-1');
+
+      // Trigger the onAudioRegenNeeded callback via the mock's click handler
+      fireEvent.click(screen.getByTestId('examples-edit-section-mock'));
+
+      expect(triggerGeneration).toHaveBeenCalledOnce();
     });
   });
 

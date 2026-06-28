@@ -236,6 +236,9 @@ export default {
   		borderColor: {
   			DEFAULT: 'hsl(var(--border))',
   		},
+  		maxWidth: {
+  			'deck-modal': '540px',
+  		},
   		borderRadius: {
   			none: '0px',
   			sm: 'calc(var(--radius) - 4px)',

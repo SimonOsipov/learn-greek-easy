@@ -102,19 +102,34 @@ export const DeckCreateModal: React.FC<DeckCreateModalProps> = ({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {/*
-       * p-0 (via twMerge) defeats the base p-6 from DialogContent.
-       * aw-modal overrides bg/border/radius/shadow; cd-modal sets max-width + padding:0.
-       * zoom-in-95 animation is inherited from the base DialogContent.
+       * F15 (ADMIN2-48-05): shadcn DialogContent injects Tailwind utilities via cn()
+       * that live in @layer utilities and therefore beat .aw-modal/.cd-modal which live
+       * in @layer components. Fix: pass conflicting utilities at the call site so
+       * tailwind-merge deduplicates them — the call-site value wins.
+       *   max-w-deck-modal removes max-w-lg (512 → 540 px)
+       *   bg-card      removes bg-background (--bg → --card)
+       *   shadow-3     removes shadow-lg     (generic → var(--shadow-3))
+       *   sm:rounded-xl removes sm:rounded-lg (8 → 12 px at sm+)
+       *   border-line  removes default border-color (--border → --line)
+       * .aw-modal still provides border-radius at all sizes & border-width/style.
        */}
       <DialogContent
-        className="aw-modal cd-modal p-0"
+        className="aw-modal cd-modal max-w-deck-modal border-line bg-card p-0 shadow-3 sm:rounded-xl"
         hideCloseButton
         data-testid="deck-create-modal"
       >
         <div className="cd-modal-head">
           <DialogHeader>
-            <DialogTitle>{t('deckCreate.title')}</DialogTitle>
-            <DialogDescription>{t('deckCreate.subtitle')}</DialogDescription>
+            {/* F16: Inter Tight 18/600 title via .aw-title */}
+            <DialogTitle className="aw-title">{t('deckCreate.title')}</DialogTitle>
+            {/* F16: POS-aware subtitle in .cd-sub (13 px / --fg-3) */}
+            <DialogDescription className="cd-sub">
+              {t(
+                deckType === 'vocabulary'
+                  ? 'deckCreate.subtitleVocabulary'
+                  : 'deckCreate.subtitleCulture'
+              )}
+            </DialogDescription>
           </DialogHeader>
         </div>
 
