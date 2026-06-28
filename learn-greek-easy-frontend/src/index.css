@@ -5403,6 +5403,35 @@ html.theme-transition *::after {
   flex-shrink: 0;
 }
 
+/* ── Deck word-list card item (ADMIN2-48, F7) — CD grey grid row ── */
+.dk-card-item {
+  background: hsl(var(--bg-2));
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+
+.dk-card-item:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 12px hsl(var(--fg) / 0.08),
+    0 0 0 1px hsl(var(--fg) / 0.1);
+}
+
+/* Greek headword — CD Noto Serif display style (ADMIN2-48, F8) */
+.dk-word {
+  font-family: 'Noto Serif', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: hsl(var(--fg));
+}
+
 /* Accessibility: Respect user's motion preferences */
 @media (prefers-reduced-motion: reduce) {
   * {
