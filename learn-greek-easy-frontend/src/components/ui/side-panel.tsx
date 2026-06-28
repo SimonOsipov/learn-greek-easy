@@ -55,9 +55,7 @@ function SidePanel({
     console.error('[SidePanel] `title` prop is required for accessibility (screen readers).');
   }
   const overlayClass =
-    size === 'full'
-      ? 'fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
-      : 'fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0';
+    'fixed inset-0 z-50 bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0';
 
   const contentClass = cn(
     'fixed z-50 gap-4 bg-background shadow-lg transition ease-in-out',
@@ -67,7 +65,7 @@ function SidePanel({
     'data-[state=closed]:duration-300 data-[state=open]:duration-500',
     'drawer-wrap flex flex-col gap-0 p-0',
     size === 'wide' && 'w-[95vw] !max-w-[1080px] sm:!max-w-[1080px]',
-    size === 'half' && 'drawer-size-half',
+    size === 'half' && 'drawer-size-half drawer-shadow-handoff',
     size === 'full' && 'drawer-shadow-handoff h-screen w-screen !max-w-none',
     className
   );

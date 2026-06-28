@@ -1812,10 +1812,11 @@
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Left-edge drop shadow for the full-screen news drawer handoff (NADM-09 / ADMIN2-27-31).
-     Applied via .drawer-shadow-handoff on the content element when size="full". */
+  /* Left-edge drop shadow for full/half drawers (NADM-09 / ADMIN2-27-31 / ADMIN2-48).
+     Applied via .drawer-shadow-handoff on the content element for size="full" and size="half".
+     Pure black so it doesn't white-glow in dark mode (CD neutral shadow). */
   .drawer-shadow-handoff {
-    box-shadow: -30px 0 60px hsl(var(--fg) / 0.3);
+    box-shadow: -30px 0 60px hsl(0 0% 0% / 0.3);
   }
 
   /* ==========================================================================
