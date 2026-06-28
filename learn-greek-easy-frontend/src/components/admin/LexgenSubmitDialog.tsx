@@ -46,6 +46,7 @@ export function LexgenSubmitDialog({ open, onOpenChange, onSubmitted }: LexgenSu
         toast({
           title: t('lexgenSubmit.successTitle'),
           description: t('lexgenSubmit.successDescription'),
+          variant: 'success',
         });
         setLemma('');
         onOpenChange(false);

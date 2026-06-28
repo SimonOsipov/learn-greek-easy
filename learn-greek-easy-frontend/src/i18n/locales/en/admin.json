@@ -44,10 +44,12 @@
     "imageUploading": "Uploading...",
     "imageUploadError": "Upload failed. Please try again.",
     "removeImage": "Remove Image",
-    "imageRemoveError": "Failed to remove image. Please try again."
+    "imageRemoveError": "Failed to remove image. Please try again.",
+    "saveSuccess": "Deck saved"
   },
   "deckCreate": {
     "title": "Create Deck",
+    "subtitle": "Create a new vocabulary or culture deck",
     "typeLabel": "Deck Type",
     "typeVocabulary": "Vocabulary",
     "typeCulture": "Culture",
@@ -1011,7 +1013,8 @@
     "discardTitle": "Discard Changes?",
     "discardMessage": "You have unsaved changes that will be lost.",
     "keepEditing": "Keep Editing",
-    "discard": "Discard"
+    "discard": "Discard",
+    "error": "Failed to create question. Please try again."
   },
   "cardEdit": {
     "title": "Edit Card",
@@ -1931,6 +1934,17 @@
         "words": "Words",
         "questions": "Questions",
         "settings": "Settings"
+      },
+      "searchWords": "Search words…",
+      "searchQuestions": "Search questions…",
+      "sort": "Sort",
+      "sortComingSoon": "Sort (coming soon)",
+      "pos": {
+        "all": "All",
+        "noun": "Noun",
+        "verb": "Verb",
+        "adjective": "Adjective",
+        "adverb": "Adverb"
       }
     },
     "statusPremium": "Premium",
@@ -2012,27 +2026,17 @@
         "vocab": "Vocab",
         "culture": "Culture"
       },
-      "status": {
-        "label": "Filter by status",
+      "scope": {
+        "label": "Filter by scope",
         "all": "All",
-        "active": "Active",
-        "deactivated": "Deactivated"
+        "global": "Global",
+        "user": "User"
       }
     },
     "wordCount_one": "{{count}} word",
     "wordCount_other": "{{count}} words",
     "questionCount_one": "{{count}} question",
     "questionCount_other": "{{count}} questions",
-    "stats": {
-      "totalDecks": "Total decks",
-      "vocabulary": "Vocabulary",
-      "culture": "Culture",
-      "avgCardsPerDeck": "Avg cards / deck",
-      "totalCardsSub": "{{totalCards}} cards across all decks",
-      "vocabularySub": "{{totalVocabularyCards}} words · A1–B2",
-      "cultureSub": "{{totalCultureQuestions}} questions · {{cultureCount}} active",
-      "avgCardsPerDeckSub": "+0 vs last month"
-    },
     "row": {
       "typeVocabulary": "vocabulary",
       "typeCulture": "culture",
@@ -2047,7 +2051,7 @@
     "list": {
       "empty": "No decks found."
     },
-    "emptyPageMessage": "No decks yet. Click 'Add deck' to create your first."
+    "emptyPageMessage": "No decks yet. Click 'Create Deck' to create your first."
   },
   "inbox": {
     "breadcrumb": {

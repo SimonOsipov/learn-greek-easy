@@ -140,6 +140,7 @@ export interface ListDecksParams {
   page_size?: number;
   search?: string;
   type?: 'vocabulary' | 'culture';
+  scope?: 'all' | 'global' | 'user';
 }
 
 /**
@@ -841,6 +842,7 @@ export const adminAPI = {
       page_size: params.page_size,
       search: params.search,
       type: params.type,
+      scope: params.scope,
     });
     return api.get<DeckListResponse>(`/api/v1/admin/decks${queryString}`);
   },

@@ -157,7 +157,7 @@ function ReplyTab({ feedbackId, onClose, onRequestDelete, form }: ReplyTabProps)
         ...(responseChanged ? { admin_response: trimmed } : {}),
       });
       onClose();
-      toast({ title: t('feedback.v2.reply.saved') });
+      toast({ title: t('feedback.v2.reply.saved'), variant: 'success' });
     } catch (err) {
       toast({
         title: t('feedback.v2.reply.save_error_title'),

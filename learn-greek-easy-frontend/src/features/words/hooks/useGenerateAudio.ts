@@ -105,7 +105,7 @@ export function useGenerateAudio({ wordEntryId }: UseGenerateAudioOptions): UseG
           setProgress((prev) => ({ ...prev, status: 'complete' }));
           setStreamEnabled(false);
           queryClient.invalidateQueries({ queryKey: ['wordEntry', wordEntryId] });
-          toast({ title: t('audioGenerate.success') });
+          toast({ title: t('audioGenerate.success'), variant: 'success' });
           break;
         }
 

@@ -256,10 +256,10 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
     try {
       if (entry) {
         await updateEntry(entry.id, payload);
-        toast({ title: t('admin:changelog.toast.updated') });
+        toast({ title: t('admin:changelog.toast.updated'), variant: 'success' });
       } else {
         await createEntry(payload);
-        toast({ title: t('admin:changelog.toast.created') });
+        toast({ title: t('admin:changelog.toast.created'), variant: 'success' });
       }
       onClose();
     } catch (e) {

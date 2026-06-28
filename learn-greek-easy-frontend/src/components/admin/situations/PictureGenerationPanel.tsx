@@ -121,7 +121,7 @@ export function PictureGenerationPanel({
     try {
       await adminAPI.uploadSituationPicture(situationId, file);
       onCompleted();
-      toast({ title: t('situations.detail.picture.uploadSuccess') });
+      toast({ title: t('situations.detail.picture.uploadSuccess'), variant: 'success' });
     } catch {
       toast({
         title: t('situations.detail.picture.uploadError'),

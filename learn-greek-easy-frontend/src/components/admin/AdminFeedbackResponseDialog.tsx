@@ -123,6 +123,7 @@ export const AdminFeedbackResponseDialog: React.FC<AdminFeedbackResponseDialogPr
       toast({
         title: t('feedback.response.success.title'),
         description: t('feedback.response.success.message'),
+        variant: 'success',
       });
 
       onOpenChange(false);

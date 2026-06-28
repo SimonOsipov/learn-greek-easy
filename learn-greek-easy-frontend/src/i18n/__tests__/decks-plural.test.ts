@@ -128,15 +128,15 @@ describe('ru_word_count_plural_cldr_family', () => {
 // ---------------------------------------------------------------------------
 
 describe('filter_keys_resolve_both_locales', () => {
-  it('EN decks.filters.status.deactivated resolves to a non-key string', () => {
-    const result = i18nEn.t('decks.filters.status.deactivated');
-    expect(result).not.toContain('decks.filters.status.deactivated');
+  it('EN decks.filters.scope.user resolves to a non-key string', () => {
+    const result = i18nEn.t('decks.filters.scope.user');
+    expect(result).not.toContain('decks.filters.scope.user');
     expect(result.length).toBeGreaterThan(0);
   });
 
-  it('RU decks.filters.status.deactivated resolves to a non-key string', () => {
-    const result = i18nRu.t('decks.filters.status.deactivated');
-    expect(result).not.toContain('decks.filters.status.deactivated');
+  it('RU decks.filters.scope.user resolves to a non-key string', () => {
+    const result = i18nRu.t('decks.filters.scope.user');
+    expect(result).not.toContain('decks.filters.scope.user');
     expect(result.length).toBeGreaterThan(0);
   });
 

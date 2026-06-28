@@ -18,6 +18,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  X,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -36,12 +37,11 @@ import {
 } from '@/components/admin';
 import { DeckDrawer } from '@/components/admin/decks/DeckDrawer';
 import { DeckList } from '@/components/admin/decks/DeckList';
-import { DeckStats } from '@/components/admin/decks/DeckStats';
 import { PageHead, type PageHeadProps } from '@/components/admin/shell/page-head';
 import { SectionTabs, type SectionTabItem } from '@/components/admin/shell/section-tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Kicker } from '@/components/ui/kicker';
 import { SegControl } from '@/components/ui/seg-control';
@@ -57,9 +57,11 @@ import { adminAPI } from '@/services/adminAPI';
 import type {
   ContentStatsResponse,
   CultureDeckCreatePayload,
+  CultureDeckCreateResponse,
   DeckListResponse,
   UnifiedDeckItem,
   VocabularyDeckCreatePayload,
+  VocabularyDeckCreateResponse,
 } from '@/services/adminAPI';
 import { useAdminChangelogStore } from '@/stores/adminChangelogStore';
 import { useAdminExercisesStore } from '@/stores/adminExercisesStore';
@@ -164,20 +166,6 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-// ---------------------------------------------------------------------------
-// Status filter type + pure helper — exported for unit tests (ADMIN2-35-03)
-// ---------------------------------------------------------------------------
-
-export type StatusFilter = 'all' | 'active' | 'deactivated';
-
-export function computeDisplayDecks(
-  decks: UnifiedDeckItem[],
-  statusFilter: StatusFilter
-): UnifiedDeckItem[] {
-  if (statusFilter === 'all') return decks;
-  return decks.filter((d) => (statusFilter === 'active' ? d.is_active : !d.is_active));
-}
-
 /**
  * All Decks List Component
  */
@@ -199,19 +187,11 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchInput, setSearchInput] = useState('');
-    const [statusFilter, setStatusFilter] = useState<StatusFilter>(() => {
-      const stored = localStorage.getItem('admin.deckList.statusFilter');
-      return stored === 'active' || stored === 'deactivated' ? stored : 'all';
-    });
+    const [scopeFilter, setScopeFilter] = useState<'all' | 'global' | 'user'>('all');
     const [page, setPage] = useState(1);
     const pageSize = 10;
 
     const debouncedSearch = useDebounce(searchInput, 300);
-
-    const handleStatusFilterChange = (value: StatusFilter) => {
-      setStatusFilter(value);
-      localStorage.setItem('admin.deckList.statusFilter', value);
-    };
 
     // Seam for DKDR-06: writes ?edit=<id> to URL so the drawer can mount.
     const onOpenDrawer = (deck: UnifiedDeckItem) => {
@@ -235,6 +215,7 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
           page_size: number;
           search?: string;
           type?: 'vocabulary' | 'culture';
+          scope?: 'global' | 'user';
         } = {
           page,
           page_size: pageSize,
@@ -246,6 +227,9 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
         if (typeFilter !== 'all') {
           params.type = typeFilter;
         }
+        if (scopeFilter !== 'all') {
+          params.scope = scopeFilter;
+        }
 
         const data = await adminAPI.listDecks(params);
         setDeckList(data);
@@ -255,7 +239,7 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
       } finally {
         setIsLoading(false);
       }
-    }, [page, debouncedSearch, typeFilter, t]);
+    }, [page, debouncedSearch, typeFilter, scopeFilter, t]);
 
     const handleDeleteConfirm = async () => {
       if (!deckToDelete) return;
@@ -272,6 +256,7 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
         void useAdminTabCountsStore.getState().fetchCounts();
         toast({
           title: t('toast.deckDeactivated'),
+          variant: 'success',
         });
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : t('errors.saveFailed');
@@ -301,7 +286,7 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
     // Reset to page 1 when search or filter changes
     useEffect(() => {
       setPage(1);
-    }, [debouncedSearch, typeFilter]);
+    }, [debouncedSearch, typeFilter, scopeFilter]);
 
     const totalPages = deckList ? Math.ceil(deckList.total / pageSize) : 0;
 
@@ -317,52 +302,65 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
       }
     };
 
-    const displayDecks = computeDisplayDecks(deckList?.decks ?? [], statusFilter);
-
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle data-testid="all-decks-title">{t('sections.allDecks')}</CardTitle>
-          <CardDescription data-testid="all-decks-description">
-            {t('sections.allDecksDescription')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Search and Filter Controls */}
-          <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
-            <div className="relative min-w-[240px] flex-1 sm:max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder={t('search.placeholder')}
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-9"
-                data-testid="deck-search-input"
-              />
-            </div>
-            <SegControl
-              options={[
-                { value: 'all', label: t('decks.filters.type.all') },
-                { value: 'vocabulary', label: t('decks.filters.type.vocab') },
-                { value: 'culture', label: t('decks.filters.type.culture') },
-              ]}
-              value={typeFilter}
-              onChange={(value: 'all' | 'vocabulary' | 'culture') => onTypeFilterChange(value)}
-              ariaLabel={t('decks.filters.type.label')}
+      <div className="dk-panel">
+        {/* Panel title — single head, preserves e2e testid */}
+        <div className="va-panel-head" data-testid="all-decks-title">
+          {t('sections.allDecks')}
+        </div>
+
+        {/* Toolbar: search + type seg + scope seg */}
+        <div className="news-toolbar">
+          {/* Search input — full-width, min 280px, with clear button */}
+          <div className="relative min-w-[280px] flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder={t('search.placeholder')}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="pl-9 pr-8"
+              data-testid="deck-search-input"
             />
-            <SegControl
-              options={[
-                { value: 'all', label: t('decks.filters.status.all') },
-                { value: 'active', label: t('decks.filters.status.active') },
-                { value: 'deactivated', label: t('decks.filters.status.deactivated') },
-              ]}
-              value={statusFilter}
-              onChange={handleStatusFilterChange}
-              ariaLabel={t('decks.filters.status.label')}
-            />
+            {searchInput && (
+              <button
+                type="button"
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                onClick={() => setSearchInput('')}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
+          {/* Type filter — server-side, kept as-is */}
+          <SegControl
+            options={[
+              { value: 'all', label: t('decks.filters.type.all') },
+              { value: 'vocabulary', label: t('decks.filters.type.vocab') },
+              { value: 'culture', label: t('decks.filters.type.culture') },
+            ]}
+            value={typeFilter}
+            onChange={(value: 'all' | 'vocabulary' | 'culture') => onTypeFilterChange(value)}
+            ariaLabel={t('decks.filters.type.label')}
+          />
+
+          {/* Scope filter — server-side D5 */}
+          <SegControl
+            options={[
+              { value: 'all', label: t('decks.filters.scope.all') },
+              { value: 'global', label: t('decks.filters.scope.global') },
+              { value: 'user', label: t('decks.filters.scope.user') },
+            ]}
+            value={scopeFilter}
+            onChange={(value: 'all' | 'global' | 'user') => setScopeFilter(value)}
+            ariaLabel={t('decks.filters.scope.label')}
+          />
+        </div>
+
+        {/* Content area */}
+        <div className="p-5">
           {/* Error State */}
           {error && !isLoading && (
             <Alert variant="destructive">
@@ -386,7 +384,7 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
           {/* Deck List — loading + empty states owned by DeckList */}
           {!error && (
             <DeckList
-              decks={displayDecks}
+              decks={deckList?.decks ?? []}
               isLoading={isLoading}
               locale={locale}
               onOpenDrawer={onOpenDrawer}
@@ -400,37 +398,35 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
           {/* Pagination */}
           {!isLoading && !error && deckList && deckList.total > 0 && (
             <div className="mt-4 flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
+              <span className="va-dim">
                 {t('pagination.showing', {
                   from: (page - 1) * pageSize + 1,
                   to: Math.min(page * pageSize, deckList.total),
                   total: deckList.total,
                 })}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
+              </span>
+              <div className="va-pager">
+                <button
+                  type="button"
+                  className="btn btn-glass btn-sm"
                   onClick={handlePreviousPage}
                   disabled={page === 1}
                   data-testid="pagination-prev"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   {t('pagination.previous')}
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  {t('pagination.pageOf', { page, totalPages })}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
+                </button>
+                <span className="va-dim">{t('pagination.pageOf', { page, totalPages })}</span>
+                <button
+                  type="button"
+                  className="btn btn-glass btn-sm"
                   onClick={handleNextPage}
                   disabled={page >= totalPages}
                   data-testid="pagination-next"
                 >
                   {t('pagination.next')}
                   <ChevronRight className="h-4 w-4" />
-                </Button>
+                </button>
               </div>
             </div>
           )}
@@ -443,8 +439,8 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
             onConfirm={handleDeleteConfirm}
             isDeleting={isDeleting}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 );
@@ -555,14 +551,15 @@ export function pageHeadPropsFor(
           cardTotal: _counts.cardTotal,
         }),
         actions: (
-          <Button
-            variant="default"
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
             onClick={_handlers.onCreateDeck}
             data-testid="create-deck-button"
           >
-            <Plus className="size-4" aria-hidden="true" />
+            <Plus className="size-4" aria-hidden />
             {t('decks.actions.createDeck')}
-          </Button>
+          </button>
         ),
         titleTestId: 'admin-title' as const,
         subTestId: 'admin-subtitle' as const,
@@ -871,12 +868,22 @@ const AdminPage: React.FC = () => {
   };
 
   /**
-   * Handle creating a new deck
+   * Handle creating a new deck (ADMIN2-47 D3: create-then-upload cover pattern).
+   *
+   * JSON create is unchanged; if a coverFile is provided, it is uploaded after the
+   * deck is created using the returned id. Partial failure (deck created, cover upload
+   * fails) KEEPS the deck and surfaces a soft warning — never loses the created deck.
    */
-  const handleCreateDeck = async (type: DeckType, data: DeckCreateFormData) => {
+  const handleCreateDeck = async (
+    type: DeckType,
+    data: DeckCreateFormData,
+    coverFile?: File | null
+  ) => {
     setIsCreating(true);
 
     try {
+      let createdId: string;
+
       if (type === 'vocabulary') {
         // VocabularyDeckCreateForm produces trilingual data: name_el, name_en, name_ru, etc.
         // API expects single name field (use name_en as primary)
@@ -902,7 +909,8 @@ const AdminPage: React.FC = () => {
           is_premium: vocabularyData.is_premium,
           is_system_deck: true,
         };
-        await adminAPI.createVocabularyDeck(payload);
+        const res: VocabularyDeckCreateResponse = await adminAPI.createVocabularyDeck(payload);
+        createdId = res.id;
       } else {
         // CultureDeckCreateForm produces trilingual data: name_el, name_en, name_ru, etc.
         // API expects same flat format
@@ -924,12 +932,31 @@ const AdminPage: React.FC = () => {
           category: cultureData.category,
           is_premium: cultureData.is_premium,
         };
-        await adminAPI.createCultureDeck(payload);
+        const res: CultureDeckCreateResponse = await adminAPI.createCultureDeck(payload);
+        createdId = res.id;
+      }
+
+      // Post-create cover upload (deck already exists — never lose it on upload failure)
+      if (coverFile) {
+        try {
+          if (type === 'vocabulary') {
+            await adminAPI.uploadDeckCoverImage(createdId, coverFile);
+          } else {
+            await adminAPI.uploadCultureDeckCoverImage(createdId, coverFile);
+          }
+        } catch {
+          // Soft warning — deck was created successfully; only the cover upload failed
+          toast({
+            title: t('deckEdit.imageUploadError'),
+            variant: 'destructive',
+          });
+        }
       }
 
       // Show success toast
       toast({
         title: t('toast.deckCreated'),
+        variant: 'success',
       });
 
       // Close modal and refresh deck list
@@ -1041,19 +1068,6 @@ const AdminPage: React.FC = () => {
       {/* Decks Tab Content */}
       {activeTab === 'decks' && (
         <>
-          {/* Deck Stats 4-up grid */}
-          <DeckStats
-            totalDecks={stats?.total_decks ?? 0}
-            totalCards={stats?.total_cards ?? 0}
-            vocabularyCount={stats?.total_vocabulary_decks ?? 0}
-            totalVocabularyCards={stats?.total_vocabulary_cards ?? 0}
-            cultureCount={stats?.total_culture_decks ?? 0}
-            totalCultureQuestions={stats?.total_culture_questions ?? 0}
-            avgCardsPerDeck={
-              stats && stats.total_decks > 0 ? Math.round(stats.total_cards / stats.total_decks) : 0
-            }
-          />
-
           {/* All Decks List with Search and Pagination */}
           <section aria-label={t('decks.title')}>
             <AllDecksList

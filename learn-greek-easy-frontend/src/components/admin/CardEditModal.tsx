@@ -101,6 +101,7 @@ export function CardEditModal({ open, onOpenChange, question, onSuccess }: CardE
 
       toast({
         title: t('cardEdit.success'),
+        variant: 'success',
       });
 
       setIsDirty(false);
@@ -130,7 +131,7 @@ export function CardEditModal({ open, onOpenChange, question, onSuccess }: CardE
           setStreamEnabled(false);
           setAudioCooldown(true);
           setTimeout(() => setAudioCooldown(false), 15000);
-          toast({ title: t('cultureAudio.success') });
+          toast({ title: t('cultureAudio.success'), variant: 'success' });
           break;
         case 'culture_audio:error': {
           const d = event.data as { error?: string };

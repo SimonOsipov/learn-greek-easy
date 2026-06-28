@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { toast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/adminAPI';
 import type { UnifiedDeckItem } from '@/services/adminAPI';
 
@@ -69,37 +70,42 @@ export function DeckSettingsTab({ deck, onSaved }: DeckSettingsTabProps) {
     // clean submit never fires a redundant PATCH.
     if (!isDirty) return;
 
-    if (deck.type === 'vocabulary') {
-      const vocabData = data as VocabularyDeckFormData;
-      await adminAPI.updateVocabularyDeck(deck.id, {
-        name_en: vocabData.name_en,
-        name_el: vocabData.name_el || null,
-        name_ru: vocabData.name_ru,
-        description_en: vocabData.description_en || null,
-        description_el: vocabData.description_el || null,
-        description_ru: vocabData.description_ru || null,
-        level: vocabData.level,
-        is_active: vocabData.is_active,
-        is_premium: vocabData.is_premium,
-      });
-    } else {
-      const cultureData = data as CultureDeckFormData;
-      await adminAPI.updateCultureDeck(deck.id, {
-        name_en: cultureData.name_en,
-        name_ru: cultureData.name_ru,
-        description_en: cultureData.description_en || null,
-        description_ru: cultureData.description_ru || null,
-        category: cultureData.category,
-        is_active: cultureData.is_active,
-        is_premium: cultureData.is_premium,
-      });
+    try {
+      if (deck.type === 'vocabulary') {
+        const vocabData = data as VocabularyDeckFormData;
+        await adminAPI.updateVocabularyDeck(deck.id, {
+          name_en: vocabData.name_en,
+          name_el: vocabData.name_el || null,
+          name_ru: vocabData.name_ru,
+          description_en: vocabData.description_en || null,
+          description_el: vocabData.description_el || null,
+          description_ru: vocabData.description_ru || null,
+          level: vocabData.level,
+          is_active: vocabData.is_active,
+          is_premium: vocabData.is_premium,
+        });
+      } else {
+        const cultureData = data as CultureDeckFormData;
+        await adminAPI.updateCultureDeck(deck.id, {
+          name_en: cultureData.name_en,
+          name_ru: cultureData.name_ru,
+          description_en: cultureData.description_en || null,
+          description_ru: cultureData.description_ru || null,
+          category: cultureData.category,
+          is_active: cultureData.is_active,
+          is_premium: cultureData.is_premium,
+        });
+      }
+
+      // Invalidate both the single-deck and the full list cache
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'deck', deck.id] });
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'decks'] });
+
+      toast({ title: t('deckEdit.saveSuccess'), variant: 'success' });
+      onSaved?.();
+    } catch {
+      toast({ title: t('errors.saveFailed'), variant: 'destructive' });
     }
-
-    // Invalidate both the single-deck and the full list cache
-    void queryClient.invalidateQueries({ queryKey: ['admin', 'deck', deck.id] });
-    void queryClient.invalidateQueries({ queryKey: ['admin', 'decks'] });
-
-    onSaved?.();
   };
 
   // ── Cancel / discard ──────────────────────────────────────────────────────

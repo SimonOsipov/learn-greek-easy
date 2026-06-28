@@ -56,6 +56,7 @@ export const NewsItemDeleteDialog: React.FC<NewsItemDeleteDialogProps> = ({
       await deleteNewsItem(item.id);
       toast({
         title: t('news.delete.success'),
+        variant: 'success',
       });
       onOpenChange(false);
     } catch (error) {

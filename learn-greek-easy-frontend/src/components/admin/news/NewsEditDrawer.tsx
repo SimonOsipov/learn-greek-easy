@@ -125,7 +125,7 @@ export const NewsEditDrawer: React.FC = () => {
     }
     try {
       await adminAPI.updateNewsItem(item.id, payload);
-      toast({ title: t('news.edit.success') });
+      toast({ title: t('news.edit.success'), variant: 'success' });
       await useAdminNewsStore.getState().fetchNewsItems();
       closeAndClearUrl();
     } catch (e) {
@@ -172,7 +172,7 @@ export const NewsEditDrawer: React.FC = () => {
     try {
       const targetStatus = item.status === 'draft' ? 'published' : 'published';
       await adminAPI.updateNewsItem(item.id, { status: targetStatus });
-      toast({ title: t('news.edit.success') });
+      toast({ title: t('news.edit.success'), variant: 'success' });
       await useAdminNewsStore.getState().fetchNewsItems();
       closeAndClearUrl();
     } catch (e) {

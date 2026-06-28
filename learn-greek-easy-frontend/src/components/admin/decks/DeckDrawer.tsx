@@ -10,14 +10,12 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft } from 'lucide-react';
+import { Check, ChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/ui/side-panel';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { useDeck } from '@/hooks/useDeck';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
@@ -84,6 +82,10 @@ export function DeckDrawer() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // ── Add-item dialog state (lifted from VocabDrawerBody/CultureDrawerBody) ──
+
+  const [addItemOpen, setAddItemOpen] = useState(false);
+
   const stripCloseParams = useCallback(() => {
     setSearchParams((prev) => {
       const params = new URLSearchParams(prev);
@@ -106,10 +108,11 @@ export function DeckDrawer() {
     closeGuardRef.current = guard;
   }, []);
 
-  // Clear guard when drawer closes
+  // Clear guard and add-item dialog when drawer closes
   useEffect(() => {
     if (!open) {
       closeGuardRef.current = null;
+      setAddItemOpen(false);
     }
   }, [open]);
 
@@ -128,7 +131,7 @@ export function DeckDrawer() {
       stripCloseParams();
       void queryClient.invalidateQueries({ queryKey: ['admin', 'decks'] });
       void useAdminTabCountsStore.getState().fetchCounts();
-      toast({ title: t('toast.deckDeactivated') });
+      toast({ title: t('toast.deckDeactivated'), variant: 'success' });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : t('errors.saveFailed');
       toast({
@@ -149,6 +152,7 @@ export function DeckDrawer() {
   };
 
   const handleTabChange = (value: string) => {
+    setAddItemOpen(false);
     setSearchParams((prev) => {
       const params = new URLSearchParams(prev);
       params.set('subtab', value);
@@ -238,12 +242,7 @@ export function DeckDrawer() {
 
         {/* ── Populated drawer ── */}
         {showContent && (
-          <Tabs
-            value={resolvedTab}
-            onValueChange={handleTabChange}
-            data-testid="deck-drawer-tabs"
-            className="flex min-h-0 flex-1 flex-col"
-          >
+          <div data-testid="deck-drawer-tabs" className="flex min-h-0 flex-1 flex-col">
             {/* Header */}
             <SidePanel.Header>
               <div className="drawer-head-content">
@@ -251,7 +250,7 @@ export function DeckDrawer() {
                 <button
                   type="button"
                   onClick={() => handleOpenChange(false)}
-                  className="drawer-breadcrumb mb-1 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                  className="drawer-breadcrumb mb-1 flex items-center gap-1 text-muted-foreground hover:text-foreground"
                 >
                   <ChevronLeft className="size-4" aria-hidden="true" />
                   {t('decks.breadcrumb.decks', { defaultValue: 'Decks' })} ·{' '}
@@ -300,52 +299,93 @@ export function DeckDrawer() {
             {/* Tab triggers — hidden while a word/question detail is pushed */}
             {!itemId && (
               <SidePanel.Tabs>
-                <TabsList className="w-full justify-start">
+                <div className="drawer-tab-group" role="tablist">
                   {!isCulture && (
-                    <TabsTrigger value="words" data-testid="deck-drawer-tab-words">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={resolvedTab === 'words'}
+                      className={resolvedTab === 'words' ? 'drawer-tab is-active' : 'drawer-tab'}
+                      onClick={() => handleTabChange('words')}
+                      data-testid="deck-drawer-tab-words"
+                    >
                       {t('decks.drawer.tabs.words')}
-                    </TabsTrigger>
+                    </button>
                   )}
                   {isCulture && (
-                    <TabsTrigger value="questions" data-testid="deck-drawer-tab-questions">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={resolvedTab === 'questions'}
+                      className={
+                        resolvedTab === 'questions' ? 'drawer-tab is-active' : 'drawer-tab'
+                      }
+                      onClick={() => handleTabChange('questions')}
+                      data-testid="deck-drawer-tab-questions"
+                    >
                       {t('decks.drawer.tabs.questions')}
-                    </TabsTrigger>
+                    </button>
                   )}
-                  <TabsTrigger value="settings" data-testid="deck-drawer-tab-settings">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={resolvedTab === 'settings'}
+                    className={resolvedTab === 'settings' ? 'drawer-tab is-active' : 'drawer-tab'}
+                    onClick={() => handleTabChange('settings')}
+                    data-testid="deck-drawer-tab-settings"
+                  >
                     {t('decks.drawer.tabs.settings')}
-                  </TabsTrigger>
-                </TabsList>
+                  </button>
+                </div>
+
+                {/* Add word/question button — right-aligned in the tab row, hidden on settings tab */}
+                {resolvedTab !== 'settings' && (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    data-testid={isCulture ? 'question-list-add-question' : 'word-list-add-word'}
+                    onClick={() => setAddItemOpen(true)}
+                  >
+                    {isCulture ? t('decks.addQuestion') : t('decks.addWord')}
+                  </button>
+                )}
               </SidePanel.Tabs>
             )}
 
             {/* Tab content — inside SidePanel.Body for scrolling */}
             <SidePanel.Body>
               {/* Words tab (vocabulary decks only) */}
-              {!isCulture && (
-                <TabsContent value="words">
+              {!isCulture && resolvedTab === 'words' && (
+                <>
                   {itemId ? (
                     <VocabWordDetail deck={deck} itemId={itemId} />
                   ) : (
-                    <VocabDrawerBody deck={deck} />
+                    <VocabDrawerBody
+                      deck={deck}
+                      addOpen={addItemOpen}
+                      onAddOpenChange={setAddItemOpen}
+                    />
                   )}
-                </TabsContent>
+                </>
               )}
 
               {/* Questions tab (culture decks only) */}
-              {isCulture && (
-                <TabsContent value="questions">
+              {isCulture && resolvedTab === 'questions' && (
+                <>
                   {itemId ? (
                     <CultureQuestionDetail deck={deck} itemId={itemId} />
                   ) : (
-                    <CultureDrawerBody deck={deck} />
+                    <CultureDrawerBody
+                      deck={deck}
+                      addOpen={addItemOpen}
+                      onAddOpenChange={setAddItemOpen}
+                    />
                   )}
-                </TabsContent>
+                </>
               )}
 
               {/* Settings tab */}
-              <TabsContent value="settings">
-                <DeckSettingsTab deck={deck} />
-              </TabsContent>
+              {resolvedTab === 'settings' && <DeckSettingsTab deck={deck} />}
             </SidePanel.Body>
 
             {/* Standard drawer footer (ADMIN2-33 FeedbackDrawer standard) — one
@@ -353,35 +393,39 @@ export function DeckDrawer() {
             {!itemId && (
               <SidePanel.Footer data-testid="deck-drawer-footer">
                 <div className="drawer-foot-left">
-                  <Button
-                    variant="destructive"
+                  <button
+                    type="button"
+                    className="btn btn-glass btn-sm danger-text"
                     onClick={() => setDeleteDialogOpen(true)}
                     data-testid="deck-drawer-footer-delete"
                   >
                     {t('deckDelete.confirm', { defaultValue: 'Delete Deck' })}
-                  </Button>
+                  </button>
                 </div>
 
                 <div className="drawer-foot-right">
-                  <Button
-                    variant="ghost"
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
                     onClick={() => handleOpenChange(false)}
                     data-testid="deck-drawer-footer-cancel"
                   >
                     {t('deckEdit.cancel', { defaultValue: 'Cancel' })}
-                  </Button>
-                  <Button
+                  </button>
+                  <button
                     type="submit"
                     form="deck-settings-form"
                     disabled={resolvedTab !== 'settings'}
+                    className="btn btn-primary btn-sm disabled:cursor-not-allowed disabled:opacity-50"
                     data-testid="deck-drawer-footer-save"
                   >
+                    <Check className="size-4" aria-hidden="true" />
                     {t('decks.saveChanges', { defaultValue: 'Save changes' })}
-                  </Button>
+                  </button>
                 </div>
               </SidePanel.Footer>
             )}
-          </Tabs>
+          </div>
         )}
 
         {/* Delete-deck dialog (hoisted from DeckSettingsTab). Reuses

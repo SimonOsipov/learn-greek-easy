@@ -101,7 +101,10 @@ export function AddToDeckModal({ open, onOpenChange, wordEntryId, lemma }: AddTo
         lemma,
         source: 'word_reference',
       });
-      toast({ title: t('wordReference.addToDeck.addedToast', { deckName: deck.name }) });
+      toast({
+        title: t('wordReference.addToDeck.addedToast', { deckName: deck.name }),
+        variant: 'success',
+      });
       await invalidateDeckQueries(deck.id);
     },
     onError: async (err, deck) => {
@@ -125,7 +128,10 @@ export function AddToDeckModal({ open, onOpenChange, wordEntryId, lemma }: AddTo
         lemma,
         source: 'word_reference',
       });
-      toast({ title: t('wordReference.addToDeck.removedToast', { deckName: deck.name }) });
+      toast({
+        title: t('wordReference.addToDeck.removedToast', { deckName: deck.name }),
+        variant: 'success',
+      });
       await invalidateDeckQueries(deck.id);
     },
     onError: async (err, deck) => {

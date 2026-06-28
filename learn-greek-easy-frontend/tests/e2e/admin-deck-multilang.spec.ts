@@ -77,9 +77,8 @@ test.describe('Admin Vocabulary Deck Create - Multilingual', () => {
     const modal = page.getByTestId('deck-create-modal');
     await expect(modal).toBeVisible({ timeout: 5000 });
 
-    // Ensure vocabulary type is selected (default)
-    const typeSelect = page.getByTestId('deck-create-type-select');
-    await expect(typeSelect).toContainText(/vocabulary/i);
+    // Ensure vocabulary type is selected (default — card should have is-active class)
+    await expect(page.getByTestId('deck-create-type-vocabulary')).toHaveClass(/is-active/);
 
     // Fill English tab (default active tab)
     await page.getByTestId('deck-create-lang-tab-en').click();
@@ -91,9 +90,8 @@ test.describe('Admin Vocabulary Deck Create - Multilingual', () => {
     await page.getByTestId('deck-create-name-ru').fill(`Тестовая колода словаря ${uniqueId}`);
     await page.getByTestId('deck-create-description-ru').fill('Русское описание для словарной колоды');
 
-    // Select CEFR level
-    await page.getByTestId('deck-create-level').click();
-    await page.locator('[role="option"]').filter({ hasText: 'A2' }).click();
+    // Select CEFR level via segmented control
+    await page.getByTestId('deck-create-level-A2').click();
 
     // Submit the form
     await page.getByTestId('deck-create-submit').click();
@@ -181,9 +179,8 @@ test.describe('Admin Culture Deck Create - Multilingual', () => {
     const modal = page.getByTestId('deck-create-modal');
     await expect(modal).toBeVisible({ timeout: 5000 });
 
-    // Select culture deck type
-    await page.getByTestId('deck-create-type-select').click();
-    await page.locator('[role="option"]').filter({ hasText: /culture/i }).click();
+    // Select culture deck type via type card
+    await page.getByTestId('deck-create-type-culture').click();
 
     // Wait for culture form to render (form changes based on deck type)
     await expect(page.getByTestId('culture-deck-create-form')).toBeVisible({ timeout: 3000 });
@@ -218,9 +215,8 @@ test.describe('Admin Culture Deck Create - Multilingual', () => {
     const modal = page.getByTestId('deck-create-modal');
     await expect(modal).toBeVisible({ timeout: 5000 });
 
-    // Select culture deck type
-    await page.getByTestId('deck-create-type-select').click();
-    await page.locator('[role="option"]').filter({ hasText: /culture/i }).click();
+    // Select culture deck type via type card
+    await page.getByTestId('deck-create-type-culture').click();
 
     // Wait for culture form
     await expect(page.getByTestId('culture-deck-create-form')).toBeVisible({ timeout: 3000 });
@@ -485,8 +481,8 @@ test.describe('Admin Deck - Language Tab Behavior', () => {
     const modal = page.getByTestId('deck-create-modal');
     await expect(modal).toBeVisible({ timeout: 5000 });
 
-    // Ensure vocabulary type is selected
-    await expect(page.getByTestId('deck-create-type-select')).toContainText(/vocabulary/i);
+    // Ensure vocabulary type is selected (default — card should have is-active class)
+    await expect(page.getByTestId('deck-create-type-vocabulary')).toHaveClass(/is-active/);
 
     // Fill English tab
     await page.getByTestId('deck-create-lang-tab-en').click();

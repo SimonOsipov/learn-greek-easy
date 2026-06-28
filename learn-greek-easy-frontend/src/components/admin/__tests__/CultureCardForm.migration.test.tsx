@@ -122,27 +122,27 @@ describe('CultureDrawerBody + CultureCardForm — C13 integration: Add-question 
     });
     (adminAPI.createCultureQuestion as Mock).mockResolvedValue({ id: 'new-q' });
 
+    const user = userEvent.setup();
+
     const queryClient = makeQueryClient();
     const Wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
 
-    const user = userEvent.setup();
-
     render(
       <MemoryRouter initialEntries={[`/admin?edit=deck-int-1`]}>
         <Routes>
-          <Route path="*" element={<CultureDrawerBody deck={makeDeck()} />} />
+          {/* addOpen=true simulates the DeckDrawer having opened the add dialog */}
+          <Route
+            path="*"
+            element={
+              <CultureDrawerBody deck={makeDeck()} addOpen={true} onAddOpenChange={vi.fn()} />
+            }
+          />
         </Routes>
       </MemoryRouter>,
       { wrapper: Wrapper }
     );
-
-    await waitFor(() => {
-      expect(screen.getByTestId('question-list-add-question')).toBeInTheDocument();
-    });
-
-    await user.click(screen.getByTestId('question-list-add-question'));
 
     await waitFor(() => {
       expect(screen.getByTestId('culture-card-form')).toBeInTheDocument();

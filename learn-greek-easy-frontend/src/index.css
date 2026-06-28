@@ -1217,9 +1217,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
     font-family: 'Inter Tight', sans-serif;
     font-weight: 700;
     font-size: 12px;
@@ -3052,6 +3052,370 @@
     background: hsl(var(--fg) / 0.06);
     border-radius: 8px;
     margin-right: 8px;
+  }
+
+  /* ── Decks tab contained panel (ADMIN2-47) ── */
+  /* Grey bg surface matching .fb-panel / .cl-panel / .va-panel.an-panel pattern. */
+  .dk-panel {
+    background: hsl(var(--bg-2));
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  /* Panel title strip — typography only, no bottom border.
+     The .news-toolbar bottom border below it serves as the single separator. */
+  .va-panel-head {
+    padding: 16px 20px 12px;
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: hsl(var(--fg));
+  }
+
+  /* ── Decks list grid (ADMIN2-47, AC E) — CD .va-list / .va-row ── */
+  .va-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .va-list-head,
+  .va-row {
+    display: grid;
+    grid-template-columns: minmax(280px, 2.4fr) 100px 1.2fr 1fr 100px 70px;
+    gap: 16px;
+    align-items: center;
+    padding: 12px 24px;
+  }
+  .va-list-head {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: hsl(var(--fg-3));
+    border-bottom: 1px solid hsl(var(--line));
+  }
+  .va-row {
+    border-bottom: 1px solid hsl(var(--line));
+  }
+  .va-list .va-row:last-child {
+    border-bottom: none;
+  }
+  .va-row-clickable {
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .va-row-clickable:hover {
+    background: hsl(var(--primary) / 0.04);
+  }
+  .va-cell-deck {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+  .va-owner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: hsl(var(--fg-2));
+    min-width: 0;
+  }
+  .va-cards-n {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: hsl(var(--fg-2));
+    text-align: right;
+  }
+  .va-row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+  }
+  /* D6 minimal inactive affordance (CD has no status column) */
+  .deck-inactive-tag {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 5px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: hsl(var(--fg) / 0.06);
+    color: hsl(var(--fg-3));
+  }
+
+  /* ── Create-deck modal (ADMIN2-47, AC H) — CD .aw-modal/.cd-modal + .aw-btn system ── */
+  .aw-modal {
+    /* generic CD modal shell — bg/border/radius/shadow (lexgen.css parity) */
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--line));
+    border-radius: 12px;
+    box-shadow: var(--shadow-3);
+  }
+  .cd-modal {
+    /* create-deck variant: width + internal rhythm */
+    width: 100%;
+    max-width: 540px;
+    padding: 0; /* header/body/footer own their padding */
+  }
+  .cd-modal-head {
+    padding: 20px 24px 0;
+  }
+  .cd-modal-body {
+    padding: 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .cd-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 24px;
+    border-top: 1px solid hsl(var(--line));
+  }
+
+  /* deck type cards */
+  .cd-type {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .cd-type-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 14px;
+    border: 1px solid hsl(var(--line));
+    border-radius: 10px;
+    background: hsl(var(--bg));
+    cursor: pointer;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    color: hsl(var(--fg));
+    transition: all 0.15s;
+  }
+  .cd-type-card:hover {
+    border-color: hsl(var(--primary) / 0.4);
+  }
+  .cd-type-card.is-active {
+    border-color: hsl(var(--primary));
+    background: hsl(var(--primary) / 0.06);
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.5);
+  }
+  .cd-type-card svg {
+    width: 18px;
+    height: 18px;
+    color: hsl(var(--fg-2));
+  }
+  .cd-type-card.is-active svg {
+    color: hsl(var(--primary));
+  }
+
+  /* labeled field row */
+  .cd-langrow {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .cd-langrow > label {
+    font-size: 12px;
+    font-weight: 600;
+    color: hsl(var(--fg-2));
+  }
+  .cd-req {
+    color: hsl(var(--danger));
+    margin-left: 2px;
+  }
+
+  /* lang tab strip — per-tab buttons reuse .dk-langtab */
+  .cd-langtabs {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    background: hsl(var(--fg) / 0.04);
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 8px;
+    align-self: flex-start;
+  }
+
+  /* cover field */
+  .cd-cover {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .cd-cover-preview {
+    height: 96px;
+    width: auto;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+  .cd-cover-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .cd-cover-err {
+    font-size: 12px;
+    color: hsl(var(--danger));
+  }
+
+  /* CEFR segmented control (vocab) */
+  .dk-cefr {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    background: hsl(var(--fg) / 0.04);
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 8px;
+  }
+  .dk-cefr-btn {
+    background: transparent;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: hsl(var(--fg-2));
+    cursor: pointer;
+  }
+  .dk-cefr-btn:hover {
+    color: hsl(var(--fg));
+  }
+  .dk-cefr-btn.is-active {
+    background: hsl(var(--bg-2));
+    color: hsl(var(--fg));
+    box-shadow: 0 1px 2px hsl(0 0% 0% / 0.15);
+  }
+
+  /* .aw-btn system — SEPARATE from .btn (do NOT cross) */
+  .aw-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 38px;
+    padding: 0 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.18s;
+    white-space: nowrap;
+  }
+  .aw-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .aw-btn-outline {
+    background: transparent;
+    border-color: hsl(var(--line));
+    color: hsl(var(--fg-2));
+  }
+  .aw-btn-outline:hover:not(:disabled) {
+    background: hsl(var(--fg) / 0.04);
+    color: hsl(var(--fg));
+  }
+  .aw-btn-primary {
+    background: linear-gradient(180deg, hsl(var(--primary-2)), hsl(var(--primary)));
+    color: hsl(var(--primary-foreground));
+    box-shadow: 0 8px 20px -6px hsl(var(--primary) / 0.5);
+  }
+  .aw-btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+  .aw-spin {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid hsl(var(--primary-foreground) / 0.4);
+    border-top-color: hsl(var(--primary-foreground));
+    animation: aw-spin 0.6s linear infinite;
+  }
+  @keyframes aw-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* ── CD toast system (ADMIN2-47-07) ── */
+  .aw-toasts {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: max-content;
+    max-width: min(420px, calc(100vw - 32px));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .aw-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 11px;
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--line));
+    box-shadow: var(--shadow-3);
+    color: hsl(var(--fg));
+    animation: aw-toast-in 0.22s var(--ease-smooth);
+  }
+  .aw-toast.is-success {
+    border-color: hsl(var(--success) / 0.35);
+  }
+  .aw-toast.is-error {
+    border-color: hsl(var(--danger) / 0.35);
+  }
+  .aw-toast-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+  }
+  .aw-toast-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+  .aw-toast.is-success .aw-toast-icon {
+    background: hsl(var(--success) / 0.16);
+    color: hsl(var(--success));
+  }
+  .aw-toast.is-error .aw-toast-icon {
+    background: hsl(var(--danger) / 0.16);
+    color: hsl(var(--danger));
+  }
+  @keyframes aw-toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .aw-toast {
+      animation: none;
+    }
   }
 
   /* ── Changelog lang-tab pill buttons (ADMIN2-44 / CD segmented control) ── */

@@ -117,6 +117,7 @@ export const UserDeckEditModal: React.FC<UserDeckEditModalProps> = ({
         }
         toast({
           title: t('modal.createSuccess'),
+          variant: 'success',
         });
       } else {
         if (!deck?.id) {
@@ -135,6 +136,7 @@ export const UserDeckEditModal: React.FC<UserDeckEditModalProps> = ({
         }
         toast({
           title: t('modal.editSuccess'),
+          variant: 'success',
         });
       }
 

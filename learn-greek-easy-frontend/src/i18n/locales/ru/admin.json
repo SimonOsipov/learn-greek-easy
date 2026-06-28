@@ -44,10 +44,12 @@
     "imageUploading": "Загрузка...",
     "imageUploadError": "Ошибка загрузки. Попробуйте снова.",
     "removeImage": "Удалить изображение",
-    "imageRemoveError": "Не удалось удалить изображение. Попробуйте ещё раз."
+    "imageRemoveError": "Не удалось удалить изображение. Попробуйте ещё раз.",
+    "saveSuccess": "Колода сохранена"
   },
   "deckCreate": {
     "title": "Создать колоду",
+    "subtitle": "Создайте новую словарную или культурную колоду",
     "typeLabel": "Тип колоды",
     "typeVocabulary": "Словарь",
     "typeCulture": "Культура",
@@ -111,7 +113,7 @@
     "culture": "Культура"
   },
   "search": {
-    "placeholder": "Поиск колод..."
+    "placeholder": "Поиск колод, слов или кодов…"
   },
   "pagination": {
     "showing": "Показано {{from}}-{{to}} из {{total}}",
@@ -1025,7 +1027,8 @@
     "discardTitle": "Отменить изменения?",
     "discardMessage": "У вас есть несохранённые изменения, которые будут потеряны.",
     "keepEditing": "Продолжить редактирование",
-    "discard": "Отменить"
+    "discard": "Отменить",
+    "error": "Не удалось создать вопрос. Попробуйте ещё раз."
   },
   "cardEdit": {
     "title": "Редактировать карточку",
@@ -1938,11 +1941,12 @@
   "decks": {
     "breadcrumb": {
       "dashboard": "Админ",
-      "current": "Колоды"
+      "current": "Колоды",
+      "decks": "Колоды"
     },
     "kicker": "Админ · Колоды",
     "title": "Колоды",
-    "sub": "Словарные и культурные колоды — поиск, создание, управление.",
+    "sub": "{{deckTotal}} колод · {{cardTotal}} карточек · словарные и культурные наборы для экзамена",
     "actions": {
       "createDeck": "Создать колоду"
     },
@@ -1951,7 +1955,26 @@
         "words": "Слова",
         "questions": "Вопросы",
         "settings": "Настройки"
+      },
+      "searchWords": "Поиск слов…",
+      "searchQuestions": "Поиск вопросов…",
+      "sort": "Сортировка",
+      "sortComingSoon": "Сортировка (скоро)",
+      "pos": {
+        "all": "Все",
+        "noun": "Существительное",
+        "verb": "Глагол",
+        "adjective": "Прилагательное",
+        "adverb": "Наречие"
       }
+    },
+    "statusPremium": "Премиум",
+    "table": {
+      "deck": "Колода",
+      "type": "Тип",
+      "owner": "Владелец",
+      "lastEdit": "Изменено",
+      "cards": "Карточки"
     },
     "settings": {
       "identity": "Идентификация",
@@ -2024,11 +2047,11 @@
         "vocab": "Словарные",
         "culture": "Культура"
       },
-      "status": {
-        "label": "Фильтр по статусу",
+      "scope": {
+        "label": "Фильтр по области",
         "all": "Все",
-        "active": "Активные",
-        "deactivated": "Деактивированные"
+        "global": "Системные",
+        "user": "Пользовательские"
       }
     },
     "wordCount_one": "{{count}} слово",
@@ -2039,16 +2062,6 @@
     "questionCount_few": "{{count}} вопроса",
     "questionCount_many": "{{count}} вопросов",
     "questionCount_other": "{{count}} вопросов",
-    "stats": {
-      "totalDecks": "Всего колод",
-      "vocabulary": "Словарные",
-      "culture": "Культурные",
-      "avgCardsPerDeck": "Карточек / колода",
-      "totalCardsSub": "{{totalCards}} карточек во всех колодах",
-      "vocabularySub": "{{totalVocabularyCards}} слов · A1–B2",
-      "cultureSub": "{{totalCultureQuestions}} вопросов · {{cultureCount}} активных",
-      "avgCardsPerDeckSub": "+0 к прошлому месяцу"
-    },
     "row": {
       "typeVocabulary": "словарный",
       "typeCulture": "культура",
@@ -2067,7 +2080,7 @@
     "list": {
       "empty": "Колоды не найдены."
     },
-    "emptyPageMessage": "Пока нет колод. Нажмите «Добавить колоду», чтобы создать первую."
+    "emptyPageMessage": "Пока нет колод. Нажмите «Создать колоду», чтобы создать первую."
   },
   "inbox": {
     "breadcrumb": {

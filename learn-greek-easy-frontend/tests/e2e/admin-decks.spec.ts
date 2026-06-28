@@ -267,7 +267,7 @@ test.describe.skip('ADMIN2-09 Decks Drawer — happy paths (DKDR-14)', () => {
     await navigateToAdminTab(page, 'decks');
     await expect(page.getByTestId('deck-empty-page')).toBeVisible({ timeout: 10_000 });
     await expect(
-      page.getByText("No decks yet. Click 'Add deck' to create your first.")
+      page.getByText("No decks yet. Click 'Create Deck' to create your first.")
     ).toBeVisible();
   });
 });

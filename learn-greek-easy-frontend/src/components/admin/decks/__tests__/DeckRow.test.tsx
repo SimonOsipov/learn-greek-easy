@@ -25,15 +25,9 @@ const makeDeck = (overrides: Partial<UnifiedDeckItem> = {}): UnifiedDeckItem => 
   ...overrides,
 });
 
-/** Wrap DeckRow in a valid table context since <tr> requires <tbody> parent. */
+/** Render DeckRow directly — it is now a grid <div>, no table wrapper needed. */
 function renderRow(props: React.ComponentProps<typeof DeckRow>) {
-  return render(
-    <table>
-      <tbody>
-        <DeckRow {...props} />
-      </tbody>
-    </table>
-  );
+  return render(<DeckRow {...props} />);
 }
 
 describe('DeckRow', () => {
@@ -164,22 +158,24 @@ describe('DeckRow', () => {
     expect(actions.className).not.toContain('opacity-0');
   });
 
-  // ── status badge (ADMIN2-35-02) ──────────────────────────────────────────
+  // ── D6 inactive affordance (ADMIN2-47-03) ────────────────────────────────
+  // Active rows show NO deck-row-status tag; only deactivated rows show the
+  // muted .deck-inactive-tag near the name.
 
-  // TEST SPEC: row_shows_active_badge
-  // AC-1: deck.is_active === true → deck-row-status contains "Active"
-  it('row_shows_active_badge: is_active:true renders deck-row-status containing "Active"', () => {
+  // TEST SPEC: row_shows_active_badge (updated D6 semantics)
+  // AC: deck.is_active === true → no deck-row-status element present
+  it('row_shows_active_badge: is_active:true renders no deck-row-status element', () => {
     renderRow({
       deck: makeDeck({ is_active: true }),
       locale: 'en',
       onOpenDrawer: vi.fn(),
       onDelete: vi.fn(),
     });
-    expect(screen.getByTestId('deck-row-status')).toHaveTextContent('Active');
+    expect(screen.queryByTestId('deck-row-status')).not.toBeInTheDocument();
   });
 
-  // TEST SPEC: row_shows_deactivated_badge
-  // AC-1: deck.is_active === false → deck-row-status contains "Deactivated"
+  // TEST SPEC: row_shows_deactivated_badge (updated D6 semantics)
+  // AC: deck.is_active === false → deck-row-status contains "Deactivated"
   it('row_shows_deactivated_badge: is_active:false renders deck-row-status containing "Deactivated"', () => {
     renderRow({
       deck: makeDeck({ is_active: false }),
@@ -190,17 +186,16 @@ describe('DeckRow', () => {
     expect(screen.getByTestId('deck-row-status')).toHaveTextContent('Deactivated');
   });
 
-  // ── ADVERSARIAL: culture deck badge ──────────────────────────────────────
-  // The status badge must render for culture decks too — guards against an
-  // accidental type guard that would hide it for non-vocabulary rows.
-  it('culture_deck_shows_active_badge: culture deck with is_active:true renders deck-row-status containing "Active"', () => {
+  // ── ADVERSARIAL: culture deck inactive affordance ─────────────────────────
+  // Guards against an accidental type guard that would hide the tag for non-vocabulary rows.
+  it('culture_deck_shows_active_badge: culture deck with is_active:true renders no deck-row-status', () => {
     renderRow({
       deck: makeDeck({ type: 'culture', is_active: true }),
       locale: 'en',
       onOpenDrawer: vi.fn(),
       onDelete: vi.fn(),
     });
-    expect(screen.getByTestId('deck-row-status')).toHaveTextContent('Active');
+    expect(screen.queryByTestId('deck-row-status')).not.toBeInTheDocument();
   });
 
   it('culture_deck_shows_deactivated_badge: culture deck with is_active:false renders deck-row-status containing "Deactivated"', () => {

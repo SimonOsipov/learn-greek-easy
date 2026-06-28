@@ -70,7 +70,7 @@ export function WordEntryContent({
     },
     onSuccess: () => {
       setShowUnlinkConfirm(false);
-      toast({ description: t('wordEntry.unlinkSuccess') });
+      toast({ description: t('wordEntry.unlinkSuccess'), variant: 'success' });
       onUnlinked?.();
     },
     onError: (error: unknown) => {
