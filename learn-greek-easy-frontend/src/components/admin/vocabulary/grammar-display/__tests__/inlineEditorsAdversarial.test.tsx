@@ -393,21 +393,18 @@ describe('AC-6: independent editors — no cross-disable between sections', () =
     expect(translationsPencil).not.toBeDisabled();
   });
 
-  it('Examples section pencil remains enabled while Translations is in edit mode', async () => {
+  it('ExamplesEditSection not in WordEntryContent (moved to WordEntryCards by D3a)', async () => {
+    // D3a: ExamplesEditSection moved from WordEntryContent to WordEntryCards.
+    // examples-edit-btn no longer appears in the Word Entry sub-tab context.
+    // The cross-editor independence for examples is validated in WordEntryCards tests.
     const user = userEvent.setup();
     renderWordEntryContent({ wordEntryId: 'we-123' });
 
-    // Enter Translations edit mode
+    expect(screen.queryByTestId('examples-edit-btn')).not.toBeInTheDocument();
+
+    // Translations still works independently
     const translationsPencil = screen.getByTestId('translations-edit-btn');
     await user.click(translationsPencil);
-
-    // Translations should now be in edit mode (pencil hidden)
-    expect(screen.queryByTestId('translations-edit-btn')).not.toBeInTheDocument();
     expect(screen.getByTestId('translations-edit-form')).toBeInTheDocument();
-
-    // Examples pencil must still be present and NOT disabled
-    const examplesPencil = screen.getByTestId('examples-edit-btn');
-    expect(examplesPencil).toBeInTheDocument();
-    expect(examplesPencil).not.toBeDisabled();
   });
 });

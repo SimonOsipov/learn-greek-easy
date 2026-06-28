@@ -5432,6 +5432,89 @@ html.theme-transition *::after {
   color: hsl(var(--fg));
 }
 
+/* ── Word-detail gender pill (ADMIN2-48, F10) — glyph + label CD pill ── */
+.dk-gender {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.dk-gender-m {
+  background: hsl(210 90% 60% / 0.14);
+  color: hsl(210 80% 55%);
+}
+.dk-gender-f {
+  background: hsl(330 80% 60% / 0.14);
+  color: hsl(330 70% 55%);
+}
+.dk-gender-n {
+  background: hsl(var(--fg) / 0.08);
+  color: hsl(var(--fg-2));
+}
+html.dark .dk-gender-m {
+  color: hsl(210 80% 70%);
+}
+html.dark .dk-gender-f {
+  color: hsl(330 70% 70%);
+}
+
+/* ── Sub-tab segmented control (ADMIN2-48, F11) ── */
+.dk-segtabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: hsl(var(--fg) / 0.05);
+  border: 1px solid hsl(var(--fg) / 0.08);
+  border-radius: 10px;
+}
+.dk-segtab {
+  flex: 1;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 0;
+  text-align: center;
+  background: transparent;
+  border: none;
+  color: hsl(var(--fg-2));
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    box-shadow 0.15s;
+}
+.dk-segtab:hover {
+  color: hsl(var(--fg));
+}
+.dk-segtab.is-active {
+  background: hsl(var(--bg-2));
+  color: hsl(var(--fg));
+  box-shadow:
+    0 1px 4px hsl(var(--fg) / 0.1),
+    0 0 0 1px hsl(var(--fg) / 0.06);
+}
+
+/* ── Detail block shell (ADMIN2-48, F12) ── */
+.dk-block {
+  background: hsl(var(--bg-2));
+  border: 1px solid hsl(var(--fg) / 0.06);
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+
+/* ── In-block field labels (ADMIN2-48, F13) ── */
+.dk-l {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: hsl(var(--fg-3));
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
 /* Accessibility: Respect user's motion preferences */
 @media (prefers-reduced-motion: reduce) {
   * {

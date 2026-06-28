@@ -10,7 +10,6 @@ import { z } from 'zod';
 
 import { AlertDialog } from '@/components/dialogs/AlertDialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -21,7 +20,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useUpdateWordEntry } from '@/features/words/hooks/useUpdateWordEntry';
-import { chipColorClasses, type ChipColor } from '@/lib/completeness';
+import type { ChipColor } from '@/lib/completeness';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
 
 import { AudioGenerateButton } from '../../AudioGenerateButton';
@@ -34,8 +33,9 @@ import { NotSet } from '../../NotSet';
 
 function SectionBadge({ filled, total }: { filled: number; total: number }) {
   const color: ChipColor = filled === total ? 'green' : filled > 0 ? 'yellow' : 'gray';
+  const badgeVariant = color === 'green' ? 'b-green' : color === 'yellow' ? 'b-amber' : 'b-gray';
   return (
-    <span className={`ml-2 rounded-sm border px-1.5 py-0.5 text-xs ${chipColorClasses[color]}`}>
+    <span className={`badge ml-2 ${badgeVariant}`}>
       {filled}/{total}
     </span>
   );
@@ -150,32 +150,30 @@ export function IdentityEditSection({
 
   return (
     <>
-      <Card id="section-identity">
-        <CardHeader className="px-4 pb-2 pt-4">
-          <div className="group flex items-center justify-between">
-            <div className="flex items-center text-sm font-semibold">
-              {t('wordEntryContent.sectionIdentity')}
-              <SectionBadge filled={compl.filled} total={compl.total} />
-            </div>
-            {!isEditing && (
-              <div
-                data-testid="identity-pencil-actions"
-                className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
-              >
-                <Button
-                  variant="chrome-ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={enterEditMode}
-                  data-testid="identity-edit-btn"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            )}
+      <div id="section-identity" className="dk-block">
+        <div className="group mb-3 flex items-center justify-between">
+          <div className="flex items-center text-sm font-semibold">
+            {t('wordEntryContent.sectionIdentity')}
+            <SectionBadge filled={compl.filled} total={compl.total} />
           </div>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
+          {!isEditing && (
+            <div
+              data-testid="identity-pencil-actions"
+              className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+            >
+              <Button
+                variant="chrome-ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={enterEditMode}
+                data-testid="identity-edit-btn"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+        </div>
+        <div>
           {isEditing ? (
             <Form {...form}>
               <form
@@ -244,9 +242,7 @@ export function IdentityEditSection({
             <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
               {/* Part of Speech — read-only display */}
               <div data-testid="word-entry-content-pos">
-                <dt className="text-sm text-muted-foreground">
-                  {t('wordEntryContent.partOfSpeech')}
-                </dt>
+                <dt className="dk-l">{t('wordEntryContent.partOfSpeech')}</dt>
                 <dd className="mt-0.5 text-sm font-medium">
                   {wordEntry.part_of_speech ? capitalize(wordEntry.part_of_speech) : <NotSet />}
                 </dd>
@@ -254,9 +250,7 @@ export function IdentityEditSection({
 
               {/* Pronunciation + Audio controls */}
               <div id="section-pron" data-testid="word-entry-content-pronunciation">
-                <dt className="text-sm text-muted-foreground">
-                  {t('wordEntryContent.pronunciation')}
-                </dt>
+                <dt className="dk-l">{t('wordEntryContent.pronunciation')}</dt>
                 <dd className="mt-0.5 flex items-center gap-2 text-sm font-medium">
                   {wordEntry.pronunciation ? wordEntry.pronunciation : <NotSet />}
                   <div className="flex items-center gap-2">
@@ -275,8 +269,8 @@ export function IdentityEditSection({
               </div>
             </dl>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <div data-testid="identity-discard-dialog">
         <AlertDialog

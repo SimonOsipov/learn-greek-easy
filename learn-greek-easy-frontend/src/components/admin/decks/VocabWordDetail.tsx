@@ -36,6 +36,18 @@ const GENDER_SYMBOLS: Record<string, string> = {
   neuter: '⚲',
 };
 
+const GENDER_LABELS: Record<string, string> = {
+  feminine: 'feminine',
+  masculine: 'masculine',
+  neuter: 'neuter',
+};
+
+const GENDER_VARIANT_CLASS: Record<string, string> = {
+  feminine: 'dk-gender-f',
+  masculine: 'dk-gender-m',
+  neuter: 'dk-gender-n',
+};
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface VocabWordDetailProps {
@@ -122,10 +134,11 @@ export function VocabWordDetail({ deck, itemId }: VocabWordDetailProps) {
   const completionTone: 'green' | 'amber' | 'red' =
     pct >= 80 ? 'green' : pct >= 40 ? 'amber' : 'red';
 
-  const genderSymbol =
-    adminCard?.part_of_speech === 'noun' && adminCard.gender
-      ? (GENDER_SYMBOLS[adminCard.gender] ?? null)
-      : null;
+  const genderRaw =
+    adminCard?.part_of_speech === 'noun' && adminCard.gender ? adminCard.gender : null;
+  const genderSymbol = genderRaw ? (GENDER_SYMBOLS[genderRaw] ?? null) : null;
+  const genderLabel = genderRaw ? (GENDER_LABELS[genderRaw] ?? genderRaw) : null;
+  const genderVariantClass = genderRaw ? (GENDER_VARIANT_CLASS[genderRaw] ?? 'dk-gender-n') : '';
 
   // Use front_text from adminCard when available; fall back to wordEntry.lemma
   // (adminCard is from the list; wordEntry is from the detail fetch).
@@ -157,28 +170,27 @@ export function VocabWordDetail({ deck, itemId }: VocabWordDetailProps) {
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="size-4" aria-hidden="true" />
-          {t('decks.drawer.tabs.words')}
+          {t('wordEntryDetail.back')}
         </button>
 
         {/* Greek word + meta */}
         <div className="flex flex-wrap items-center gap-2">
-          <h3
-            lang="el"
-            className="text-2xl font-medium leading-tight"
-            data-testid="vocab-word-detail-lemma"
-          >
+          <h3 lang="el" className="dk-word" data-testid="vocab-word-detail-lemma">
             {greekWord}
           </h3>
 
           {posLabel && (
-            <Badge variant="outline" className="text-xs" data-testid="vocab-word-detail-pos">
+            <span className="badge b-gray" data-testid="vocab-word-detail-pos">
               {posLabel}
-            </Badge>
+            </span>
           )}
 
-          {genderSymbol && (
-            <span className="text-sm text-muted-foreground" data-testid="vocab-word-detail-gender">
-              {genderSymbol}
+          {genderSymbol && genderLabel && (
+            <span
+              className={`dk-gender ${genderVariantClass}`}
+              data-testid="vocab-word-detail-gender"
+            >
+              {genderSymbol} {genderLabel}
             </span>
           )}
 
@@ -208,15 +220,15 @@ export function VocabWordDetail({ deck, itemId }: VocabWordDetailProps) {
         <Skeleton className="h-6 w-full" data-testid="vocab-word-detail-pills-skeleton" />
       )}
 
-      {/* ── Sub-tabs ── */}
-      <div className="drawer-tab-group" role="tablist" data-testid="word-entry-detail-tabs">
+      {/* ── Sub-tabs (F11 — segmented control) ── */}
+      <div className="dk-segtabs" role="tablist" data-testid="word-entry-detail-tabs">
         <button
           type="button"
           role="tab"
           id="word-entry-tab-entry"
           aria-selected={subtab === 'entry'}
           aria-controls="word-entry-tab-content-entry"
-          className={subtab === 'entry' ? 'drawer-tab is-active' : 'drawer-tab'}
+          className={subtab === 'entry' ? 'dk-segtab is-active' : 'dk-segtab'}
           onClick={() => handleSubtabChange('entry')}
           data-testid="word-entry-tab-entry"
         >
@@ -228,7 +240,7 @@ export function VocabWordDetail({ deck, itemId }: VocabWordDetailProps) {
           id="word-entry-tab-cards"
           aria-selected={subtab === 'cards'}
           aria-controls="word-entry-tab-content-cards"
-          className={subtab === 'cards' ? 'drawer-tab is-active' : 'drawer-tab'}
+          className={subtab === 'cards' ? 'dk-segtab is-active' : 'dk-segtab'}
           onClick={() => handleSubtabChange('cards')}
           data-testid="word-entry-tab-cards"
         >
@@ -244,12 +256,7 @@ export function VocabWordDetail({ deck, itemId }: VocabWordDetailProps) {
         className="mt-2"
         data-testid="word-entry-tab-content-entry"
       >
-        <WordEntryContent
-          wordEntryId={itemId}
-          deckId={deck.id}
-          onUnlinked={popToList}
-          enabled={subtab === 'entry'}
-        />
+        <WordEntryContent wordEntryId={itemId} enabled={subtab === 'entry'} />
       </div>
 
       <div

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useGenerateAudio } from '@/features/words/hooks/useGenerateAudio';
 import { useGenerateCards } from '@/features/words/hooks/useGenerateCards';
 import { useWordEntry } from '@/features/words/hooks/useWordEntry';
 import { useWordEntryCards } from '@/features/words/hooks/useWordEntryCards';
@@ -25,6 +26,7 @@ import type {
 import { AudioStatusBadge } from './AudioStatusBadge';
 import { CardGenerateButton } from './CardGenerateButton';
 import { NotSet } from './NotSet';
+import { ExamplesEditSection } from './vocabulary/grammar-display/ExamplesEditSection';
 
 interface WordEntryCardsProps {
   entryId: string;
@@ -233,6 +235,16 @@ export function WordEntryCards({ entryId, enabled = true }: WordEntryCardsProps)
   const { wordEntry } = useWordEntry({ wordId: entryId, enabled });
   const generateCards = useGenerateCards();
 
+  // Audio re-generation after example edits (D3a — examples moved from Word Entry tab)
+  const [autoGenerateAfterEdit, setAutoGenerateAfterEdit] = useState(false);
+  const { triggerGeneration } = useGenerateAudio({ wordEntryId: entryId });
+  useEffect(() => {
+    if (autoGenerateAfterEdit) {
+      triggerGeneration();
+      setAutoGenerateAfterEdit(false);
+    }
+  }, [autoGenerateAfterEdit, triggerGeneration]);
+
   if (isLoading) {
     return (
       <div className="space-y-3" data-testid="cards-tab-loading">
@@ -315,6 +327,14 @@ export function WordEntryCards({ entryId, enabled = true }: WordEntryCardsProps)
               generateCards.mutate({ wordEntryId: entryId, cardType: genType })
             }
             pendingType={generateCards.isPending ? generateCards.variables?.cardType : undefined}
+          />
+        )}
+
+        {/* Examples section (D3a — moved from Word Entry tab per CD) */}
+        {wordEntry && (
+          <ExamplesEditSection
+            wordEntry={wordEntry}
+            onAudioRegenNeeded={() => setAutoGenerateAfterEdit(true)}
           />
         )}
       </div>

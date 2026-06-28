@@ -97,7 +97,7 @@ beforeEach(() => {
 });
 
 function renderComponent(
-  props: { wordEntryId: string; deckId?: string; onUnlinked?: () => void } = {
+  props: { wordEntryId: string } = {
     wordEntryId: 'we-123',
   }
 ) {
@@ -280,94 +280,23 @@ describe('WordEntryContent', () => {
   });
 
   // ============================================
-  // Group 6: Examples Section
+  // Group 6: Examples Section (D3a — moved to Cards tab)
   // ============================================
 
   describe('examples section', () => {
-    it('renders examples section', () => {
+    // D3a: ExamplesEditSection moved to the Cards sub-tab (WordEntryCards). Word Entry tab
+    // no longer renders examples — asserting absence keeps the spec honest.
+    it('does NOT render the examples section in the Word Entry tab (D3a — moved to Cards tab)', () => {
       renderComponent();
-      expect(screen.getByTestId('word-entry-content-examples')).toBeInTheDocument();
+      expect(screen.queryByTestId('word-entry-content-examples')).not.toBeInTheDocument();
     });
 
-    it('renders example with Greek text', () => {
+    it('does NOT render individual example cards in the Word Entry tab (D3a)', () => {
       renderComponent();
-      expect(screen.getByTestId('word-entry-content-example-0')).toBeInTheDocument();
-      expect(screen.getByTestId('word-entry-content-example-0')).toHaveTextContent(
-        'Το σπίτι είναι μεγάλο.'
-      );
+      expect(screen.queryByTestId('word-entry-content-example-0')).not.toBeInTheDocument();
     });
 
-    it('renders example English text', () => {
-      renderComponent();
-      expect(screen.getByTestId('word-entry-content-example-0')).toHaveTextContent(
-        'The house is big.'
-      );
-    });
-
-    it('renders not-set fallback when English is empty string', () => {
-      (useWordEntry as Mock).mockReturnValue({
-        wordEntry: createMockWordEntry({
-          examples: [
-            {
-              id: 'ex-1',
-              greek: 'Το σπίτι είναι μεγάλο.',
-              english: '',
-              russian: null,
-              audio_key: null,
-              audio_url: null,
-            },
-          ],
-        }),
-        isLoading: false,
-        isError: false,
-        refetch: vi.fn(),
-      });
-      renderComponent();
-      expect(screen.getByTestId('word-entry-content-example-0')).toHaveTextContent('Not set');
-    });
-
-    it('renders example Russian when non-empty', () => {
-      renderComponent();
-      expect(screen.getByTestId('word-entry-content-example-0')).toHaveTextContent('Дом большой.');
-    });
-
-    it('shows Not set for example Russian when empty string', () => {
-      (useWordEntry as Mock).mockReturnValue({
-        wordEntry: createMockWordEntry({
-          examples: [
-            {
-              id: 'ex-1',
-              greek: 'Το σπίτι είναι μεγάλο.',
-              english: 'The house is big.',
-              russian: '',
-              audio_key: null,
-              audio_url: null,
-            },
-          ],
-        }),
-        isLoading: false,
-        isError: false,
-        refetch: vi.fn(),
-      });
-      renderComponent();
-      // Russian row always renders — shows "Not set" when empty/null
-      const exampleCard = screen.getByTestId('word-entry-content-example-0');
-      expect(exampleCard).toHaveTextContent('Russian');
-      expect(exampleCard).toHaveTextContent('Not set');
-    });
-
-    it('shows no-examples state when examples is null', () => {
-      (useWordEntry as Mock).mockReturnValue({
-        wordEntry: createMockWordEntry({ examples: null }),
-        isLoading: false,
-        isError: false,
-        refetch: vi.fn(),
-      });
-      renderComponent();
-      expect(screen.getByTestId('word-entry-content-no-examples')).toBeInTheDocument();
-    });
-
-    it('shows no-examples state when examples is empty array', () => {
+    it('does NOT render the no-examples state in the Word Entry tab (D3a)', () => {
       (useWordEntry as Mock).mockReturnValue({
         wordEntry: createMockWordEntry({ examples: [] }),
         isLoading: false,
@@ -375,7 +304,7 @@ describe('WordEntryContent', () => {
         refetch: vi.fn(),
       });
       renderComponent();
-      expect(screen.getByTestId('word-entry-content-no-examples')).toBeInTheDocument();
+      expect(screen.queryByTestId('word-entry-content-no-examples')).not.toBeInTheDocument();
     });
   });
 
@@ -435,9 +364,11 @@ describe('WordEntryContent', () => {
       expect(screen.getByTestId('audio-status-badge-lemma')).toBeInTheDocument();
     });
 
-    it('renders per-example badges with correct testids', () => {
+    it('example audio badges not rendered in WordEntryContent (ExamplesEditSection moved to WordEntryCards)', () => {
+      // D3a: ExamplesEditSection moved from WordEntryContent to WordEntryCards; examples
+      // are now in the Cards sub-tab, not the Word Entry sub-tab.
       renderComponent();
-      expect(screen.getByTestId('audio-status-badge-example-0')).toBeInTheDocument();
+      expect(screen.queryByTestId('audio-status-badge-example-0')).not.toBeInTheDocument();
     });
 
     it('audio-status-badge-lemma testid is present', () => {
@@ -445,9 +376,10 @@ describe('WordEntryContent', () => {
       expect(screen.getByTestId('audio-status-badge-lemma')).toBeInTheDocument();
     });
 
-    it('audio-status-badge-example-0 testid is present', () => {
+    it('audio-status-badge-example-0 not rendered in WordEntryContent (moved to WordEntryCards)', () => {
+      // D3a: ExamplesEditSection moved to WordEntryCards — no example badges in WordEntryContent.
       renderComponent();
-      expect(screen.getByTestId('audio-status-badge-example-0')).toBeInTheDocument();
+      expect(screen.queryByTestId('audio-status-badge-example-0')).not.toBeInTheDocument();
     });
 
     it('example badge is hidden when audio_status is undefined on example', () => {
@@ -508,7 +440,9 @@ describe('WordEntryContent', () => {
       expect(screen.getByTestId('audio-generate-btn-lemma')).toHaveTextContent('Regenerate');
     });
 
-    it('shows audio status badge for example with missing audio status (no per-example generate button)', () => {
+    it('no example audio elements in WordEntryContent with missing audio status (ExamplesEditSection moved to WordEntryCards)', () => {
+      // D3a: ExamplesEditSection (and its audio status badges) moved to WordEntryCards.
+      // Neither example badges nor per-example generate buttons appear in WordEntryContent.
       (useWordEntry as Mock).mockReturnValue({
         wordEntry: createMockWordEntry({
           examples: [
@@ -528,16 +462,14 @@ describe('WordEntryContent', () => {
         refetch: vi.fn(),
       });
       renderComponent();
-      // Per-example generate buttons are removed — only the status badge remains
-      expect(screen.getByTestId('audio-status-badge-example-0')).toBeInTheDocument();
+      expect(screen.queryByTestId('audio-status-badge-example-0')).not.toBeInTheDocument();
       expect(screen.queryByTestId('audio-generate-btn-example-0')).not.toBeInTheDocument();
     });
 
-    it('shows audio status badge for example with ready audio status (no per-example generate button)', () => {
-      // Default mock has example audio_status: 'ready'
+    it('no example audio elements in WordEntryContent with ready audio status (ExamplesEditSection moved to WordEntryCards)', () => {
+      // D3a: ExamplesEditSection moved to WordEntryCards.
       renderComponent();
-      // Per-example generate buttons are removed — only the status badge remains
-      expect(screen.getByTestId('audio-status-badge-example-0')).toBeInTheDocument();
+      expect(screen.queryByTestId('audio-status-badge-example-0')).not.toBeInTheDocument();
       expect(screen.queryByTestId('audio-generate-btn-example-0')).not.toBeInTheDocument();
     });
 
@@ -568,30 +500,20 @@ describe('WordEntryContent', () => {
   });
 
   // ============================================
-  // Group 10: Unlink button footer placement (AC-4)
+  // Group 10: Unlink button footer placement (D3b — moved to DeckDrawer footer)
   // ============================================
 
   describe('Unlink button footer placement', () => {
-    it('renders word-entry-actions-footer with unlink button when deckId provided', () => {
-      renderComponent({ wordEntryId: 'we-123', deckId: 'deck-456' });
-      const footer = screen.getByTestId('word-entry-actions-footer');
-      expect(footer).toBeInTheDocument();
-      const unlinkBtn = screen.getByTestId('word-entry-unlink-btn');
-      expect(unlinkBtn).toBeInTheDocument();
-      expect(footer).toContainElement(unlinkBtn);
-    });
-
-    it('unlink button is NOT inside section-identity', () => {
-      renderComponent({ wordEntryId: 'we-123', deckId: 'deck-456' });
-      const identitySection = document.getElementById('section-identity');
-      expect(identitySection).not.toBeNull();
-      const unlinkBtn = screen.getByTestId('word-entry-unlink-btn');
-      expect(identitySection!.contains(unlinkBtn)).toBe(false);
-    });
-
-    it('does not render word-entry-actions-footer when no deckId', () => {
+    // D3b: The inline "Remove from deck" button was removed from WordEntryContent.
+    // The Delete (unlink) action now lives in DeckDrawer's word-detail footer.
+    // WordEntryContent no longer accepts deckId or renders unlink UI.
+    it('does NOT render word-entry-actions-footer (D3b — unlink moved to DeckDrawer footer)', () => {
       renderComponent({ wordEntryId: 'we-123' });
       expect(screen.queryByTestId('word-entry-actions-footer')).not.toBeInTheDocument();
+    });
+
+    it('does NOT render word-entry-unlink-btn (D3b)', () => {
+      renderComponent({ wordEntryId: 'we-123' });
       expect(screen.queryByTestId('word-entry-unlink-btn')).not.toBeInTheDocument();
     });
   });
