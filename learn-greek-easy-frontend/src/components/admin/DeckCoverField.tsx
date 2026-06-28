@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 
+import { Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -13,7 +14,13 @@ interface DeckCoverFieldProps {
 }
 
 /**
- * Presentational cover-image field for create-deck modal.
+ * Presentational cover-image field for create-deck modal (ADMIN2-47, ADMIN2-48-05 F17).
+ *
+ * CD layout:
+ *  1. 96×64 dashed click-to-upload tile (.cd-cover-empty) — shows Upload icon when
+ *     empty; shows the preview image (object-fit:cover) when a file is selected.
+ *  2. "Upload image" button (.aw-btn .aw-btn-outline) + optional "Remove" when filled.
+ *  3. Descriptive .cd-cover-hint text.
  *
  * Validates file type + size, renders a blob preview URL, and calls
  * onChange(file) on selection or onChange(null) on remove.
@@ -70,14 +77,25 @@ export const DeckCoverField: React.FC<DeckCoverFieldProps> = ({ file, onChange }
 
   return (
     <div className="cd-cover">
-      {previewUrl && (
-        <img
-          src={previewUrl}
-          alt=""
-          className="cd-cover-preview"
-          data-testid="deck-create-cover-preview"
-        />
-      )}
+      {/* 96×64 dashed tile — empty shows upload icon; filled shows preview image */}
+      <button
+        type="button"
+        className="cd-cover-empty"
+        aria-label={t('deckEdit.uploadImage')}
+        data-testid="deck-create-cover-tile"
+        onClick={() => inputRef.current?.click()}
+      >
+        {previewUrl ? (
+          <img
+            src={previewUrl}
+            alt=""
+            className="cd-cover-preview"
+            data-testid="deck-create-cover-preview"
+          />
+        ) : (
+          <Upload className="h-5 w-5" />
+        )}
+      </button>
 
       <div className="cd-cover-actions">
         <button
@@ -100,6 +118,9 @@ export const DeckCoverField: React.FC<DeckCoverFieldProps> = ({ file, onChange }
           </button>
         )}
       </div>
+
+      {/* Descriptive hint below the upload button */}
+      <p className="cd-cover-hint">{t('deckCreate.coverHint')}</p>
 
       {/* Hidden file input */}
       <input

@@ -3173,6 +3173,12 @@
   .cd-modal-head {
     padding: 20px 24px 0;
   }
+  /* modal title — Inter Tight 18/600 (ADMIN2-48-05 F16) */
+  .aw-title {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+  }
   .cd-modal-body {
     padding: 16px 24px;
     display: flex;
@@ -3259,15 +3265,42 @@
     flex-direction: column;
     gap: 8px;
   }
+  /* empty dashed click-to-upload tile (ADMIN2-48-05 F17) */
+  .cd-cover-empty {
+    width: 96px;
+    height: 64px;
+    border: 1px dashed hsl(var(--fg) / 0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+    background: transparent;
+    padding: 0;
+    flex-shrink: 0;
+    color: hsl(var(--fg-3));
+  }
+  .cd-cover-empty:hover {
+    border-color: hsl(var(--fg) / 0.35);
+    color: hsl(var(--fg-2));
+  }
+  /* filled preview tile — same dimensions as empty tile */
   .cd-cover-preview {
-    height: 96px;
-    width: auto;
-    border-radius: 8px;
+    width: 96px;
+    height: 64px;
+    border-radius: 10px;
     object-fit: cover;
+    display: block;
   }
   .cd-cover-actions {
     display: flex;
     gap: 8px;
+  }
+  /* hint below the upload button (ADMIN2-48-05 F17) */
+  .cd-cover-hint {
+    font-size: 12px;
+    color: hsl(var(--fg-3));
   }
   .cd-cover-err {
     font-size: 12px;
@@ -3288,29 +3321,31 @@
     border: none;
     padding: 5px 12px;
     border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 600;
     color: hsl(var(--fg-2));
     cursor: pointer;
   }
   .dk-cefr-btn:hover {
     color: hsl(var(--fg));
   }
+  /* active: CD primary fill + white text (ADMIN2-48-05 F18) */
   .dk-cefr-btn.is-active {
-    background: hsl(var(--bg-2));
-    color: hsl(var(--fg));
-    box-shadow: 0 1px 2px hsl(0 0% 0% / 0.15);
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
   }
 
   /* .aw-btn system — SEPARATE from .btn (do NOT cross) */
+  /* h36/r9 per CD spec (ADMIN2-48-05 F19) */
   .aw-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    height: 38px;
+    height: 36px;
     padding: 0 16px;
-    border-radius: 10px;
+    border-radius: 9px;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
@@ -3444,6 +3479,16 @@
     background: hsl(var(--bg-2));
     color: hsl(var(--fg));
     box-shadow: 0 1px 2px hsl(0 0% 0% / 0.15);
+  }
+  /* Scoped active overrides inside the create-deck modal (ADMIN2-48-05 F19).
+   * Higher specificity (0,3,0 vs 0,2,0) beats the unscoped rule without
+   * touching the changelog .cl-langtabs consumer. */
+  .cd-langtabs .dk-langtab.is-active {
+    background: hsl(var(--card));
+    color: hsl(var(--fg));
+    box-shadow: var(--shadow-1);
+    font-size: 12.5px;
+    font-weight: 600;
   }
 
   /* ── Dimmed helper text (ADMIN2-44) ── */
@@ -5513,6 +5558,36 @@ html.dark .dk-gender-f {
   color: hsl(var(--fg-3));
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+/* ── ADMIN2-48-05: CD fidelity overrides in @layer utilities ──────────────────
+ * Placed in @layer utilities so these single-class rules share the same cascade
+ * layer as Tailwind utilities. Within a layer, source order determines priority
+ * for equal-specificity selectors — these come after @tailwind utilities and
+ * therefore win over conflicting built-in classes (text-sm, text-muted-foreground).
+ * ─────────────────────────────────────────────────────────────────────────────*/
+@layer utilities {
+  /* F16: modal subtitle — 13px / --fg-3 (beats text-sm / text-muted-foreground) */
+  .cd-sub {
+    font-size: 13px;
+    color: hsl(var(--fg-3));
+  }
+
+  /* F19: Premium-toggle Switch resized to 40×22 without touching the shared
+   * Switch primitive. Higher-specificity compound selectors within the same
+   * @layer utilities beat Tailwind's single-class utilities (h-6, w-11, h-5, w-5). */
+  .dk-toggle button[role='switch'] {
+    width: 40px;
+    height: 22px;
+  }
+  .dk-toggle button[role='switch'] > span {
+    width: 18px;
+    height: 18px;
+  }
+  .dk-toggle button[role='switch'][data-state='checked'] > span {
+    /* Override --tw-translate-x so Tailwind's translate-x calc uses 18 px */
+    --tw-translate-x: 18px;
+  }
 }
 
 /* Accessibility: Respect user's motion preferences */

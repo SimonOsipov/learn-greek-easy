@@ -174,11 +174,15 @@ export const VocabularyDeckCreateForm: React.FC<VocabularyDeckCreateFormProps> =
                         {REQUIRED_LANGS.includes(lang) && <span className="cd-req">*</span>}
                       </FormLabel>
                       <FormControl>
+                        {/* F19: radius 9px + --bg-2 fill (overrides rounded-md / bg-background via tailwind-merge) */}
                         <Input
                           placeholder={t('deckCreate.namePlaceholder')}
                           data-testid={`deck-create-name-${lang}`}
                           lang={lang === 'el' ? 'el' : undefined}
-                          className={cn(lang === 'el' && 'font-serif not-italic')}
+                          className={cn(
+                            'rounded-[9px] bg-bg-2',
+                            lang === 'el' && 'font-serif not-italic'
+                          )}
                           {...field}
                           value={field.value as string}
                         />
@@ -244,12 +248,13 @@ export const VocabularyDeckCreateForm: React.FC<VocabularyDeckCreateFormProps> =
             )}
           />
 
-          {/* Premium toggle */}
+          {/* Premium toggle — .dk-toggle wrapper resizes Switch to CD 40×22 without
+               touching the shared Switch primitive (ADMIN2-48-05 F19) */}
           <FormField
             control={form.control}
             name="is_premium"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <FormItem className="dk-toggle flex flex-row items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
                   <FormLabel className="text-base">{t('deckCreate.isPremium')}</FormLabel>
                   <FormDescription>{t('deckCreate.isPremiumDescription')}</FormDescription>
