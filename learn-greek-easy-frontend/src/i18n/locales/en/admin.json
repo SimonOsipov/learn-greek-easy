@@ -85,7 +85,7 @@
   "sections": {
     "contentSummary": "Content Summary",
     "allDecks": "All Decks",
-    "allDecksDescription": "Search and browse all vocabulary and culture decks"
+    "allDecksDescription": "Search and browse vocabulary and culture decks"
   },
   "stats": {
     "totalDecks": "Total Decks",
@@ -2046,7 +2046,11 @@
       "itemCountCards_one": "{{count}} card",
       "itemCountCards_other": "{{count}} cards",
       "itemCountQuestions_one": "{{count}} question",
-      "itemCountQuestions_other": "{{count}} questions"
+      "itemCountQuestions_other": "{{count}} questions",
+      "cardsUnit_one": "card",
+      "cardsUnit_other": "cards",
+      "questionsUnit_one": "question",
+      "questionsUnit_other": "questions"
     },
     "list": {
       "empty": "No decks found."

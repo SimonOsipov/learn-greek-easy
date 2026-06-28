@@ -304,10 +304,11 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
 
     return (
       <div className="dk-panel">
-        {/* Panel title — single head, preserves e2e testid */}
+        {/* Panel title + subtitle */}
         <div className="va-panel-head" data-testid="all-decks-title">
           {t('sections.allDecks')}
         </div>
+        <div className="va-panel-sub">{t('sections.allDecksDescription')}</div>
 
         {/* Toolbar: search + type seg + scope seg */}
         <div className="news-toolbar">
