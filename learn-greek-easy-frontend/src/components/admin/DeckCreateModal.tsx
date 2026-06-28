@@ -106,7 +106,7 @@ export const DeckCreateModal: React.FC<DeckCreateModalProps> = ({
        * that live in @layer utilities and therefore beat .aw-modal/.cd-modal which live
        * in @layer components. Fix: pass conflicting utilities at the call site so
        * tailwind-merge deduplicates them — the call-site value wins.
-       *   max-w-[540px] removes max-w-lg (512 → 540 px)
+       *   max-w-deck-modal removes max-w-lg (512 → 540 px)
        *   bg-card      removes bg-background (--bg → --card)
        *   shadow-3     removes shadow-lg     (generic → var(--shadow-3))
        *   sm:rounded-xl removes sm:rounded-lg (8 → 12 px at sm+)
@@ -114,7 +114,7 @@ export const DeckCreateModal: React.FC<DeckCreateModalProps> = ({
        * .aw-modal still provides border-radius at all sizes & border-width/style.
        */}
       <DialogContent
-        className="aw-modal cd-modal max-w-[540px] border-line bg-card p-0 shadow-3 sm:rounded-xl"
+        className="aw-modal cd-modal max-w-deck-modal border-line bg-card p-0 shadow-3 sm:rounded-xl"
         hideCloseButton
         data-testid="deck-create-modal"
       >

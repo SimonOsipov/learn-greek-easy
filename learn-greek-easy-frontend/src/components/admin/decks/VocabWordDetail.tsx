@@ -21,6 +21,7 @@ import { WordEntryContent } from '@/components/admin/WordEntryContent';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useWordEntry } from '@/features/words/hooks/useWordEntry';
+import { tDynamic } from '@/i18n/tDynamic';
 import { computeCompletionPercentage } from '@/lib/completeness';
 import { getWordCompletion } from '@/lib/deckCompletion';
 import { adminAPI, type AdminVocabularyCard, type UnifiedDeckItem } from '@/services/adminAPI';
@@ -36,11 +37,7 @@ const GENDER_SYMBOLS: Record<string, string> = {
   neuter: '⚲',
 };
 
-const GENDER_LABELS: Record<string, string> = {
-  feminine: 'feminine',
-  masculine: 'masculine',
-  neuter: 'neuter',
-};
+// Gender label words are now localized via i18n (decks.drawer.gender.*)
 
 const GENDER_VARIANT_CLASS: Record<string, string> = {
   feminine: 'dk-gender-f',
@@ -137,7 +134,11 @@ export function VocabWordDetail({ deck, itemId }: VocabWordDetailProps) {
   const genderRaw =
     adminCard?.part_of_speech === 'noun' && adminCard.gender ? adminCard.gender : null;
   const genderSymbol = genderRaw ? (GENDER_SYMBOLS[genderRaw] ?? null) : null;
-  const genderLabel = genderRaw ? (GENDER_LABELS[genderRaw] ?? genderRaw) : null;
+  // Localized gender word — falls back to raw string if key is missing.
+  // Uses tDynamic because the key segment is computed at runtime.
+  const genderLabel = genderRaw
+    ? tDynamic(t, `decks.drawer.gender.${genderRaw}`, { defaultValue: genderRaw })
+    : null;
   const genderVariantClass = genderRaw ? (GENDER_VARIANT_CLASS[genderRaw] ?? 'dk-gender-n') : '';
 
   // Use front_text from adminCard when available; fall back to wordEntry.lemma

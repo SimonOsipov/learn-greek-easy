@@ -153,6 +153,7 @@ export function VocabDrawerBody({ deck, addOpen, onAddOpenChange }: VocabDrawerB
             data-testid="word-list-search"
             type="text"
             placeholder={t('decks.drawer.searchWords')}
+            aria-label={t('decks.drawer.searchWords')}
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
             onKeyDown={(e) => {
@@ -164,7 +165,7 @@ export function VocabDrawerBody({ deck, addOpen, onAddOpenChange }: VocabDrawerB
               type="button"
               className="icon-btn icon-btn-sm clear-btn"
               onClick={() => handleSearchChange('')}
-              aria-label="Clear"
+              aria-label={t('decks.drawer.clearSearch')}
             >
               <X />
             </button>
@@ -251,9 +252,9 @@ export function VocabDrawerBody({ deck, addOpen, onAddOpenChange }: VocabDrawerB
                   )}
                 </div>
 
-                {/* Column 3 (auto): Hover actions */}
+                {/* Column 3 (auto): Hover/focus actions */}
                 <div
-                  className="flex items-center gap-1 self-start opacity-0 transition-opacity group-hover:opacity-100"
+                  className="flex items-center gap-1 self-start opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <button

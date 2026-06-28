@@ -174,15 +174,12 @@ export const VocabularyDeckCreateForm: React.FC<VocabularyDeckCreateFormProps> =
                         {REQUIRED_LANGS.includes(lang) && <span className="cd-req">*</span>}
                       </FormLabel>
                       <FormControl>
-                        {/* F19: radius 9px + --bg-2 fill (overrides rounded-md / bg-background via tailwind-merge) */}
+                        {/* F19: .aw-input sets radius 9px + --bg-2 fill (overrides rounded-md / bg-background via @layer specificity) */}
                         <Input
                           placeholder={t('deckCreate.namePlaceholder')}
                           data-testid={`deck-create-name-${lang}`}
                           lang={lang === 'el' ? 'el' : undefined}
-                          className={cn(
-                            'rounded-[9px] bg-bg-2',
-                            lang === 'el' && 'font-serif not-italic'
-                          )}
+                          className={cn('aw-input', lang === 'el' && 'font-serif not-italic')}
                           {...field}
                           value={field.value as string}
                         />

@@ -108,6 +108,8 @@ export function DeckDrawer() {
     onSuccess: () => {
       setUnlinkDialogOpen(false);
       void queryClient.invalidateQueries({ queryKey: ['deck-vocab', deck?.id] });
+      // Also refresh the deck-level item count in the drawer header (mirrors delete flow)
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'deck', deck?.id] });
       toast({ description: t('wordEntry.unlinkSuccess'), variant: 'success' });
       // Navigate back to word list
       setSearchParams((prev) => {

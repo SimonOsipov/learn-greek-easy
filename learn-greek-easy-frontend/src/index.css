@@ -3336,6 +3336,12 @@
     color: hsl(var(--primary-foreground));
   }
 
+  /* CD input field (ADMIN2-48, F19) — radius 9px + --bg-2 fill, overrides shadcn rounded-md / bg-background */
+  .aw-input {
+    border-radius: 9px;
+    background: hsl(var(--bg-2));
+  }
+
   /* .aw-btn system — SEPARATE from .btn (do NOT cross) */
   /* h36/r9 per CD spec (ADMIN2-48-05 F19) */
   .aw-btn {

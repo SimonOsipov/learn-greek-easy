@@ -52,7 +52,7 @@
     "subtitle": "Create a new vocabulary or culture deck",
     "subtitleVocabulary": "Set up the deck shell — you'll add words once it's created.",
     "subtitleCulture": "Set up the deck shell — you'll add questions once it's created.",
-    "coverHint": "Shown behind the deck on its card · JPG or PNG, 1200×800+. Optional.",
+    "coverHint": "Shown behind the deck on its card · JPG, PNG, or WebP, 1200×800+. Optional.",
     "typeLabel": "Deck Type",
     "typeVocabulary": "Vocabulary",
     "typeCulture": "Culture",
@@ -1940,8 +1940,14 @@
       },
       "searchWords": "Search words…",
       "searchQuestions": "Search questions…",
+      "clearSearch": "Clear search",
       "sort": "Sort",
       "sortComingSoon": "Sort (coming soon)",
+      "gender": {
+        "masculine": "masculine",
+        "feminine": "feminine",
+        "neuter": "neuter"
+      },
       "pos": {
         "all": "All",
         "noun": "Noun",

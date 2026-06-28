@@ -45,6 +45,11 @@ export function WordEntryContent({ wordEntryId, enabled = true }: WordEntryConte
     triggerGeneration();
   }, [wordEntry, triggerGeneration]);
 
+  // When the tab is disabled (panel mounted but hidden) and no data has loaded yet,
+  // return null rather than ErrorState — the query isn't running so wordEntry is
+  // legitimately null; it's not an error condition.
+  if (!enabled && !wordEntry) return null;
+
   if (isLoading) return <LoadingSkeleton />;
   if (isError || !wordEntry) return <ErrorState onRetry={refetch} />;
 
