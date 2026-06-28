@@ -53,11 +53,19 @@ def _bypass_deck_api_redis_cache():
     """
 
     async def _passthrough(key, factory, ttl=None):
-        """Call factory directly, bypassing any Redis read/write."""
-        result = factory()
-        if asyncio.iscoroutine(result):
-            return await result
-        return result
+        """Call factory directly, bypassing any Redis read/write.
+
+        Mirrors ``CacheService.get_or_set`` cache-miss semantics: a factory
+        exception returns ``None`` (so ``list_decks`` follows its real
+        ``cached is None`` fall-through path) rather than propagating.
+        """
+        try:
+            result = factory()
+            if asyncio.iscoroutine(result):
+                return await result
+            return result
+        except Exception:
+            return None
 
     mock_cache = MagicMock(name="bypass_deck_api_cache")
     mock_cache.get_or_set = _passthrough
