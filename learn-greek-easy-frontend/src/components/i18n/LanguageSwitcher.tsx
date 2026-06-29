@@ -22,6 +22,13 @@ interface LanguageSwitcherProps {
   buttonVariant?: ButtonProps['variant'];
   /** Additional CSS classes */
   className?: string;
+  /**
+   * When true, renders the trigger as a plain <button className="icon-btn"> instead of
+   * the shadcn <Button>. Use in the learner header where ThemeSwitcher uses .icon-btn
+   * so the two adjacent controls share the same size/radius. Other call sites (landing,
+   * auth, practice) leave this false and keep the existing shadcn Button.
+   */
+  iconButton?: boolean;
 }
 
 /**
@@ -50,6 +57,7 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
   variant = 'icon',
   buttonVariant = 'chrome-ghost',
   className,
+  iconButton = false,
 }) => {
   const { t } = useTranslation('common');
   const { currentLanguage, changeLanguage, isChanging, availableLanguages } = useLanguage();
@@ -68,28 +76,44 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant={buttonVariant}
-          size={variant === 'icon' ? 'icon' : 'default'}
-          className={cn('relative', className)}
-          disabled={isChanging}
-          aria-label={t('language.select')}
-          data-testid="language-switcher-trigger"
-        >
-          {isChanging ? (
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          ) : (
-            <>
-              <Globe className="h-5 w-5" />
-              {variant === 'full' && currentLangOption && (
-                <span className="ml-2">
-                  {currentLangOption.flag && <>{currentLangOption.flag} </>}
-                  {currentLangOption.nativeName}
-                </span>
-              )}
-            </>
-          )}
-        </Button>
+        {iconButton ? (
+          <button
+            type="button"
+            className={cn('icon-btn relative', className)}
+            disabled={isChanging}
+            aria-label={t('language.select')}
+            data-testid="language-switcher-trigger"
+          >
+            {isChanging ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            ) : (
+              <Globe className="h-4 w-4" />
+            )}
+          </button>
+        ) : (
+          <Button
+            variant={buttonVariant}
+            size={variant === 'icon' ? 'icon' : 'default'}
+            className={cn('relative', className)}
+            disabled={isChanging}
+            aria-label={t('language.select')}
+            data-testid="language-switcher-trigger"
+          >
+            {isChanging ? (
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            ) : (
+              <>
+                <Globe className="h-5 w-5" />
+                {variant === 'full' && currentLangOption && (
+                  <span className="ml-2">
+                    {currentLangOption.flag && <>{currentLangOption.flag} </>}
+                    {currentLangOption.nativeName}
+                  </span>
+                )}
+              </>
+            )}
+          </Button>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44" data-testid="language-switcher-menu">
         {availableLanguages.map((option) => {

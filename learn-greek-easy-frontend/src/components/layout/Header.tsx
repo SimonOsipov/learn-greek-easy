@@ -250,7 +250,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
             </button>
 
             {/* Language Switcher */}
-            <LanguageSwitcher variant="icon" />
+            <LanguageSwitcher variant="icon" iconButton />
 
             {/* Notifications */}
             <NotificationsDropdown />

@@ -471,6 +471,19 @@
     height: 64px;
   }
 
+  /* Notification dot in .db-top is slightly tighter than the generic .icon-btn .dot
+     (CD source: top:5px/right:5px vs base top:7px/right:8px; border 1.5px vs 2px) */
+  .db-top .icon-btn .dot {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: hsl(var(--danger));
+    border: 1.5px solid hsl(var(--bg));
+  }
+
   /* .va-brand: logo + wordmark link */
   .va-brand {
     display: inline-flex;
