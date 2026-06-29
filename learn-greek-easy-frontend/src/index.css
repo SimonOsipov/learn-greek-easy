@@ -1789,6 +1789,102 @@
 
   /* End DASH2-01-06 feed styles */
 
+  /* ── Empty state / new-user StarterView (DASH2-01-07) ───────────────────── */
+  .db-empty {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 36px 32px;
+    background:
+      radial-gradient(60% 60% at 100% 0%, hsl(var(--primary) / 0.12), transparent 60%),
+      radial-gradient(60% 60% at 0% 100%, hsl(var(--accent) / 0.08), transparent 60%),
+      hsl(var(--bg-2));
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 22px;
+  }
+  .db-empty-h {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.018em;
+    margin: 0;
+  }
+  .db-empty-sub {
+    font-size: 14px;
+    color: hsl(var(--fg-2));
+    margin: 4px 0 8px;
+    max-width: 600px;
+    line-height: 1.55;
+  }
+  .db-empty-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .db-empty-card {
+    padding: 22px;
+    background: hsl(var(--bg));
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    cursor: pointer;
+    transition:
+      transform 0.18s,
+      border-color 0.18s,
+      box-shadow 0.18s;
+  }
+  .db-empty-card:hover {
+    transform: translateY(-2px);
+    border-color: hsl(var(--primary) / 0.4);
+    box-shadow: 0 12px 28px -16px hsl(var(--primary) / 0.25);
+  }
+  .db-empty-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: hsl(var(--primary) / 0.14);
+    color: hsl(var(--primary));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .db-empty-h2 {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    margin: 0;
+  }
+  .db-empty-sub2 {
+    font-size: 12.5px;
+    color: hsl(var(--fg-3));
+    margin: 2px 0 0;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.02em;
+  }
+  .db-empty-meta {
+    font-size: 13px;
+    color: hsl(var(--fg-2));
+    line-height: 1.55;
+    margin: 0;
+    flex: 1;
+  }
+  .db-empty-foot {
+    margin-top: auto;
+    display: flex;
+  }
+  @media (max-width: 1100px) {
+    .db-empty-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  /* End DASH2-01-07 starter styles */
+
   /* ── UnwiredDot — global so it paints on /dashboard and all routes (DASH2-01-02)
      Mirrors dx.css rules; having both loaded on deck routes is harmless (identical). */
   .dx-unwired-dot {

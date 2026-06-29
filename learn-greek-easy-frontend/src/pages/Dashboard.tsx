@@ -8,7 +8,9 @@ import { DashboardGreeting } from '@/components/dashboard/DashboardGreeting';
 import { Feed } from '@/components/dashboard/Feed';
 import { HeroEntries } from '@/components/dashboard/HeroEntries';
 import { composeFeed } from '@/components/dashboard/lib/composeFeed';
+import { isNewUser } from '@/components/dashboard/lib/isNewUser';
 import { MetricStrip } from '@/components/dashboard/MetricStrip';
+import { StarterView } from '@/components/dashboard/StarterView';
 import { WhatsNewStrip } from '@/components/dashboard/WhatsNewStrip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -143,6 +145,24 @@ export const Dashboard: React.FC = () => {
   const currentStreak = analyticsData?.streak?.currentStreak ?? 0;
   const longestStreak = analyticsData?.streak?.longestStreak ?? 0;
 
+  // Mastered count — lifted to top level so both isNewUser predicate and MetricStrip
+  // share ONE derivation (prevents drift between the gate condition and the tile).
+  const mastered = analyticsData
+    ? masteredCount({
+        new: analyticsData.wordStatus.new ?? 0,
+        learning: analyticsData.wordStatus.learning,
+        review: analyticsData.wordStatus.review,
+        mastered: analyticsData.wordStatus.mastered,
+      })
+    : 0;
+
+  // New-user gate — false during load or analytics error (anti-flash guard).
+  // Decision: Feed is hidden entirely when isNew because composeFeed always emits
+  // a wordOfDay card and pickResumeDeck returns decks[0] at zero progress,
+  // which would show a bogus "Resume deck" card to a brand-new user.
+  const isNew =
+    !isLoading && !!analyticsData && isNewUser({ cardsDue, currentStreak, mastered, decks });
+
   // Unified feed — client-side composition in fixed priority order
   const feedItems = useMemo(
     () =>
@@ -169,22 +189,26 @@ export const Dashboard: React.FC = () => {
         recentActivity={analyticsData?.recentActivity ?? []}
       />
 
-      {/* Hero entry cards (DASH2-01-03) */}
-      <HeroEntries
-        decks={decks}
-        cardsDue={cardsDue}
-        deckCount={deckCount}
-        minutesToday={minutesToday}
-        streak={currentStreak}
-        onResumeDeck={handleContinueDeck}
-        onStartReview={handleStartReview}
-        onBrowseDecks={() => navigate('/decks')}
-      />
+      {/* Hero entry cards (DASH2-01-03) OR new-user starter view (DASH2-01-07) */}
+      {isNew ? (
+        <StarterView />
+      ) : (
+        <HeroEntries
+          decks={decks}
+          cardsDue={cardsDue}
+          deckCount={deckCount}
+          minutesToday={minutesToday}
+          streak={currentStreak}
+          onResumeDeck={handleContinueDeck}
+          onStartReview={handleStartReview}
+          onBrowseDecks={() => navigate('/decks')}
+        />
+      )}
 
-      {/* Recently added strip (DASH2-01-05) */}
-      <WhatsNewStrip whatsNewCount={whatsNewCount} />
+      {/* Recently added strip (DASH2-01-05) — hidden for new users */}
+      {!isNew && <WhatsNewStrip whatsNewCount={whatsNewCount} />}
 
-      {/* Metrics Grid */}
+      {/* Metrics Grid — ALWAYS rendered (shows zeros for new users) */}
       <section data-testid="metrics-section">
         {isLoading ? (
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-4">
@@ -201,12 +225,7 @@ export const Dashboard: React.FC = () => {
             dueToday={analyticsData.today?.cardsDue ?? 0}
             currentStreak={analyticsData.streak.currentStreak}
             longestStreak={analyticsData.streak.longestStreak}
-            mastered={masteredCount({
-              new: analyticsData.wordStatus.new ?? 0,
-              learning: analyticsData.wordStatus.learning,
-              review: analyticsData.wordStatus.review,
-              mastered: analyticsData.wordStatus.mastered,
-            })}
+            mastered={mastered}
             allTimeLabel={formatStudyTime(analyticsData.summary.totalTimeStudied)}
           />
         ) : (
@@ -216,13 +235,17 @@ export const Dashboard: React.FC = () => {
         )}
       </section>
 
-      {/* Unified feed (DASH2-01-06) — replaces NewsSection + Active-Decks */}
-      <Feed
-        items={feedItems}
-        onOpenDeck={handleContinueDeck}
-        onStartReview={handleStartReview}
-        onStartQuick={() => navigate('/practice/exercises')}
-      />
+      {/* Unified feed (DASH2-01-06) — hidden for new users (DASH2-01-07).
+          Decision: composeFeed always emits a wordOfDay card and pickResumeDeck
+          returns decks[0] at zero progress → bogus "Resume deck" for new users. */}
+      {!isNew && (
+        <Feed
+          items={feedItems}
+          onOpenDeck={handleContinueDeck}
+          onStartReview={handleStartReview}
+          onStartQuick={() => navigate('/practice/exercises')}
+        />
+      )}
     </div>
   );
 };

@@ -48,9 +48,7 @@ function makeDeck(opts: { lastStudied?: Date | null } = {}): Deck {
 
 describe('isNewUser', () => {
   it('returns true when all signals are zero and decks list is empty (truly new user)', () => {
-    expect(
-      isNewUser({ cardsDue: 0, currentStreak: 0, mastered: 0, decks: [] })
-    ).toBe(true);
+    expect(isNewUser({ cardsDue: 0, currentStreak: 0, mastered: 0, decks: [] })).toBe(true);
   });
 
   it('returns true when deck exists but has never been studied (lastStudied undefined)', () => {
@@ -66,21 +64,15 @@ describe('isNewUser', () => {
   });
 
   it('returns false when cardsDue > 0 (user has cards to review)', () => {
-    expect(
-      isNewUser({ cardsDue: 5, currentStreak: 0, mastered: 0, decks: [] })
-    ).toBe(false);
+    expect(isNewUser({ cardsDue: 5, currentStreak: 0, mastered: 0, decks: [] })).toBe(false);
   });
 
   it('returns false when currentStreak > 0 (user has an active streak)', () => {
-    expect(
-      isNewUser({ cardsDue: 0, currentStreak: 3, mastered: 0, decks: [] })
-    ).toBe(false);
+    expect(isNewUser({ cardsDue: 0, currentStreak: 3, mastered: 0, decks: [] })).toBe(false);
   });
 
   it('returns false when mastered > 0 (user has mastered cards)', () => {
-    expect(
-      isNewUser({ cardsDue: 0, currentStreak: 0, mastered: 7, decks: [] })
-    ).toBe(false);
+    expect(isNewUser({ cardsDue: 0, currentStreak: 0, mastered: 7, decks: [] })).toBe(false);
   });
 
   it('returns false when any deck has a lastStudied date (user has a prior session)', () => {

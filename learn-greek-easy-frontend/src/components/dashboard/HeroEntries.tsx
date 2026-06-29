@@ -138,7 +138,7 @@ export function HeroEntries({
   }, [resumeDeck]);
 
   return (
-    <section className="db-hero">
+    <section className="db-hero" data-testid="hero-entries">
       {/* ── Card 1: Continue ──────────────────────────────────────────────── */}
       <article className="db-entry" data-tone="primary">
         <div className="db-entry-head">

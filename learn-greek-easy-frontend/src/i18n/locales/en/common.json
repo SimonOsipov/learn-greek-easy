@@ -352,6 +352,29 @@
         "cta": "Start",
         "meta": "{{count}} exercises ready"
       }
+    },
+    "starter": {
+      "kicker": "Welcome to Greeklish",
+      "heading": "Three ways to start learning Greek today",
+      "sub": "Pick one. You can always come back to the others. Most people start with the first deck — it's 20 cards and takes about 15 minutes.",
+      "deck": {
+        "title": "First Greek words",
+        "sub": "20 cards · 15 min · A1",
+        "meta": "Greetings, family, food — the absolute basics.",
+        "cta": "Start deck"
+      },
+      "article": {
+        "title": "Read your first article",
+        "sub": "Cyprus news · 1 min audio · B2",
+        "meta": "Listen along with native audio, tap any word for a translation.",
+        "cta": "Open article"
+      },
+      "dialog": {
+        "title": "Try a real conversation",
+        "sub": "Coffee shop scenario · 8 turns · A2",
+        "meta": "Practice the words you'd actually say at a καφενείο.",
+        "cta": "Start dialog"
+      }
     }
   },
   "welcome": {
