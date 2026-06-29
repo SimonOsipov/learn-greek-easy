@@ -407,11 +407,11 @@ function FeedDeck({
       <div className="db-card-foot">
         <div className="db-card-foot-l">
           <span>
-            <b style={{ color: 'hsl(var(--fg))' }}>{progress?.dueToday ?? 0}</b>{' '}
+            <b className="text-fg">{progress?.dueToday ?? 0}</b>{' '}
             {t('dashboard.feed.deck.meta', {
               due: '',
               mastered: progress?.cardsMastered ?? 0,
-            }).replace('{{due}} ', '')}
+            })}
           </span>
         </div>
         <button className="btn btn-glass btn-sm" onClick={() => onOpenDeck(deck.id)}>
