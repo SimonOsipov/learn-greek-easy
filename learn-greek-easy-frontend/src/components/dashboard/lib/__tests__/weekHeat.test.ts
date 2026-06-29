@@ -140,3 +140,47 @@ describe('buildWeekHeat — UTC boundary: timestamps straddle midnight correctly
     expect(result.heat[5]).toBe(0); // June 28 has no activity
   });
 });
+
+// ── Adversarial boundary tests (QA-DASH2-01-02) ──────────────────────────────
+
+describe('buildWeekHeat — window-edge adversarial (QA-DASH2-01-02)', () => {
+  it('entry exactly 6 days ago (2026-06-23) lands at idx 0 (oldest included day)', () => {
+    // daysAgo = 6 → idx = 6 - 6 = 0; filter passes (0 <= 6 <= 6).
+    // This is the LAST day included by the fence `daysAgo <= 6`.
+    const activity = [{ timestamp: '2026-06-23T00:00:00Z', cardsReviewed: 13 }];
+    const result = buildWeekHeat(activity, NOW);
+    expect(result.heat[0]).toBe(5); // bucketWeekHeatIntensity(13) = 5
+    // All other days zero (only one activity entry)
+    for (let i = 1; i <= 6; i++) expect(result.heat[i]).toBe(0);
+  });
+
+  it('entry exactly 7 days ago (2026-06-22) is excluded — first day outside window', () => {
+    // daysAgo = 7 → filter `daysAgo <= 6` fails → entry dropped → heat all zeros.
+    const activity = [{ timestamp: '2026-06-22T00:00:00Z', cardsReviewed: 13 }];
+    const result = buildWeekHeat(activity, NOW);
+    expect(result.heat).toEqual([0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it('future-dated entry (tomorrow, daysAgo < 0) is excluded', () => {
+    // daysAgo = -1 → filter `daysAgo >= 0` fails → entry dropped → heat all zeros.
+    const activity = [{ timestamp: '2026-06-30T12:00:00Z', cardsReviewed: 10 }];
+    const result = buildWeekHeat(activity, NOW);
+    expect(result.heat).toEqual([0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it('all 7 days filled: activity on each day of the window', () => {
+    // Provide exactly one entry per day (Jul 23–29).
+    const activity = [
+      { timestamp: '2026-06-23T10:00:00Z', cardsReviewed: 1 }, // idx 0 → bucket 1
+      { timestamp: '2026-06-24T10:00:00Z', cardsReviewed: 3 }, // idx 1 → bucket 2
+      { timestamp: '2026-06-25T10:00:00Z', cardsReviewed: 5 }, // idx 2 → bucket 3
+      { timestamp: '2026-06-26T10:00:00Z', cardsReviewed: 8 }, // idx 3 → bucket 4
+      { timestamp: '2026-06-27T10:00:00Z', cardsReviewed: 13 }, // idx 4 → bucket 5
+      { timestamp: '2026-06-28T10:00:00Z', cardsReviewed: 2 }, // idx 5 → bucket 1
+      { timestamp: '2026-06-29T10:00:00Z', cardsReviewed: 4 }, // idx 6 → bucket 2
+    ];
+    const result = buildWeekHeat(activity, NOW);
+    expect(result.heat).toEqual([1, 2, 3, 4, 5, 1, 2]);
+    expect(result.todayIdx).toBe(6);
+  });
+});
