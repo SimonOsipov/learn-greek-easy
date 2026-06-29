@@ -177,7 +177,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                     <DropdownMenuTrigger
                       className={cn(
                         'flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors hover:text-primary focus:outline-none',
-                        isActiveParent(item) ? 'active text-primary' : 'text-muted-foreground'
+                        isActiveParent(item) ? 'active' : 'text-muted-foreground'
                       )}
                       data-testid={`${item.path.replace('/', '')}-dropdown-trigger`}
                     >
@@ -207,7 +207,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                     to={item.path}
                     className={cn(
                       'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors hover:text-primary',
-                      isActiveRoute(item.path) ? 'active text-primary' : 'text-muted-foreground'
+                      isActiveRoute(item.path) ? 'active' : 'text-muted-foreground'
                     )}
                   >
                     {tDynamic(t, item.labelKey)}

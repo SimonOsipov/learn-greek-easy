@@ -45,7 +45,7 @@ export function DashboardGreeting({
   return (
     <div className="db-greeting">
       <div className="db-greeting-l">
-        <h1 className="db-hello">
+        <h1 className="db-hello" data-testid="dashboard-title">
           <span lang="el">{t('welcome.helloGreek')}</span>
           <span className="db-hello-en"> {userName}</span>
           <span className="db-hello-wave">👋</span>

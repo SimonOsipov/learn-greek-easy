@@ -504,10 +504,17 @@
   }
 
   /* .va-nav .active: CD active-nav pill (bg + color) */
-  /* NOTE: text-primary Tailwind utility wins the color race; .active supplies the bg pill */
+  /* Active color hsl(221 83% 45%) is darker than --primary to clear WCAG AA on the 12% tint.
+     Computed contrast: 5.73:1 on tint ≈ rgb(229 236 253). Pending Claude Design reconciliation. */
   .va-nav .active {
     background: hsl(var(--primary) / 0.12);
     border-radius: 8px;
+    color: hsl(221 83% 45%);
+  }
+  /* Dark mode: hsl(221 83% 45%) fails on dark tint (2.23:1).
+     hsl(var(--primary)) = hsl(221 90% 65%) in dark → 4.51:1 on dark tint — passes AA. */
+  .dark .va-nav .active {
+    color: hsl(var(--primary));
   }
 
   /* .va-top-right: actions cluster on the right */

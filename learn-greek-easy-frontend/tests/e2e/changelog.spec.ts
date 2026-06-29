@@ -169,8 +169,8 @@ test.describe('Changelog - User Flow', () => {
     await expect(feedbackDropdown).toBeVisible();
     await feedbackDropdown.click();
 
-    // Click "New Features & Changes" option in dropdown
-    const changelogOption = page.getByRole('menuitem', { name: /new features|changes/i });
+    // Click changelog option — use stable testid (label renamed to "What's New")
+    const changelogOption = page.getByTestId('nav-item-changelog');
     await expect(changelogOption).toBeVisible({ timeout: 5000 });
     await changelogOption.click();
 
