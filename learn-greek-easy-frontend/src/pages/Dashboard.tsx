@@ -189,8 +189,19 @@ export const Dashboard: React.FC = () => {
         recentActivity={analyticsData?.recentActivity ?? []}
       />
 
-      {/* Hero entry cards (DASH2-01-03) OR new-user starter view (DASH2-01-07) */}
-      {isNew ? (
+      {/* Hero entry cards (DASH2-01-03) OR new-user starter view (DASH2-01-07).
+          Skeleton while loading: isNew is only known once analytics+decks resolve,
+          so without this the page would render the returning layout (hero cards +
+          feed) first and then swap a new user to StarterView — a visible redraw.
+          Reserving the hero space with a skeleton until isLoading clears removes
+          the swap (skeleton → correct final layout). */}
+      {isLoading ? (
+        <div className="db-hero" aria-hidden="true">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-60 rounded-2xl" />
+          ))}
+        </div>
+      ) : isNew ? (
         <StarterView />
       ) : (
         <HeroEntries
@@ -205,8 +216,9 @@ export const Dashboard: React.FC = () => {
         />
       )}
 
-      {/* Recently added strip (DASH2-01-05) — hidden for new users */}
-      {!isNew && <WhatsNewStrip whatsNewCount={whatsNewCount} />}
+      {/* Recently added strip (DASH2-01-05) — only once loaded as a returning user
+          (gated on !isLoading so it doesn't show-then-hide during the load window). */}
+      {!isLoading && !isNew && <WhatsNewStrip whatsNewCount={whatsNewCount} />}
 
       {/* Metrics Grid — ALWAYS rendered (shows zeros for new users) */}
       <section data-testid="metrics-section">
@@ -235,10 +247,11 @@ export const Dashboard: React.FC = () => {
         )}
       </section>
 
-      {/* Unified feed (DASH2-01-06) — hidden for new users (DASH2-01-07).
-          Decision: composeFeed always emits a wordOfDay card and pickResumeDeck
-          returns decks[0] at zero progress → bogus "Resume deck" for new users. */}
-      {!isNew && (
+      {/* Unified feed (DASH2-01-06) — only once loaded as a returning user.
+          Hidden for new users (DASH2-01-07): composeFeed always emits a wordOfDay
+          card and pickResumeDeck returns decks[0] at zero progress → bogus
+          "Resume deck". Gated on !isLoading too so it doesn't show-then-hide. */}
+      {!isLoading && !isNew && (
         <Feed
           items={feedItems}
           onOpenDeck={handleContinueDeck}
