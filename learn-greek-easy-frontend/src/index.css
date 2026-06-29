@@ -607,6 +607,241 @@
     outline-offset: 2px;
   }
 
+  /* ── Hero entry cards — 3-up grid (DASH2-01-03) ─────────────────────────── */
+  .db-hero {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 6px;
+  }
+  @media (max-width: 1100px) {
+    .db-hero {
+      grid-template-columns: 1fr;
+    }
+  }
+  .db-entry {
+    padding: 22px 22px 20px;
+    border-radius: 18px;
+    background: hsl(var(--bg-2));
+    border: 1px solid hsl(var(--line));
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    min-height: 240px;
+  }
+  .db-entry:hover {
+    border-color: hsl(var(--primary) / 0.42);
+  }
+  .db-entry-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .db-entry-kicker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: hsl(var(--fg-3));
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .db-entry-kicker::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: hsl(var(--primary));
+  }
+  .db-entry-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: hsl(var(--primary) / 0.12);
+    color: hsl(var(--primary));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .db-entry-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  .db-entry-h {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.018em;
+    line-height: 1.18;
+    margin: 0;
+  }
+  .db-entry-h-el {
+    font-family: 'Noto Serif', Georgia, serif;
+    font-size: 15px;
+    color: hsl(var(--fg-2));
+    margin: 4px 0 0;
+    letter-spacing: 0;
+  }
+  .db-entry-body {
+    margin-top: 14px;
+    min-height: 56px;
+    font-size: 13px;
+    color: hsl(var(--fg-2));
+    line-height: 1.55;
+    flex: 1;
+  }
+  .db-entry-sub {
+    font-size: 13px;
+    line-height: 1.55;
+    color: hsl(var(--fg-2));
+    margin: 8px 0 0;
+  }
+  .db-entry-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .db-entry .btn {
+    width: auto;
+  }
+  .db-entry-stat {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    font-family: 'Inter Tight', sans-serif;
+  }
+  .db-entry-stat b {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: hsl(var(--fg));
+  }
+  .db-entry-stat span {
+    font-size: 12px;
+    color: hsl(var(--fg-3));
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .db-entry-foot svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+  .db-entry-progress {
+    height: 6px;
+    border-radius: 999px;
+    background: hsl(var(--fg) / 0.08);
+    overflow: hidden;
+    margin-top: 12px;
+  }
+  .db-entry-progress > span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)));
+    border-radius: 999px;
+  }
+
+  /* Per-tone accents (token-based; primary navy dropped → bg-2 + tint border) */
+  .db-entry[data-tone='primary'] {
+    border-color: hsl(var(--primary) / 0.32);
+  }
+  .db-entry[data-tone='primary'] .db-entry-icon {
+    background: hsl(var(--primary) / 0.2);
+    color: hsl(var(--primary));
+  }
+  .db-entry[data-tone='primary'] .db-entry-kicker {
+    color: hsl(var(--primary));
+  }
+  .db-entry[data-tone='primary'] .db-entry-kicker::before {
+    background: hsl(var(--primary));
+  }
+  .db-entry[data-tone='violet'] {
+    border-color: hsl(var(--accent) / 0.3);
+  }
+  .db-entry[data-tone='violet'] .db-entry-icon {
+    background: hsl(var(--accent) / 0.16);
+    color: hsl(var(--accent));
+  }
+  .db-entry[data-tone='violet'] .db-entry-kicker {
+    color: hsl(var(--accent));
+  }
+  .db-entry[data-tone='violet'] .db-entry-kicker::before {
+    background: hsl(var(--accent));
+  }
+  .db-entry[data-tone='amber'] {
+    border-color: hsl(var(--warning) / 0.35);
+  }
+  .db-entry[data-tone='amber'] .db-entry-icon {
+    background: hsl(var(--warning) / 0.16);
+    color: hsl(var(--warning));
+  }
+  .db-entry[data-tone='amber'] .db-entry-kicker {
+    color: hsl(var(--warning));
+  }
+  .db-entry[data-tone='amber'] .db-entry-kicker::before {
+    background: hsl(var(--warning));
+  }
+
+  /* Daily-goal ring (SVG donut) */
+  .db-ring {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .db-ring-svg {
+    width: 84px;
+    height: 84px;
+    flex-shrink: 0;
+    transform: rotate(-90deg);
+  }
+  .db-ring-track {
+    fill: none;
+    stroke: hsl(var(--fg) / 0.08);
+    stroke-width: 8;
+  }
+  .db-ring-fill {
+    fill: none;
+    stroke: url(#dbringGrad);
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.4s var(--ease-smooth);
+  }
+  .db-ring-center {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-family: 'Inter Tight', sans-serif;
+    line-height: 1;
+  }
+  .db-ring-center b {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .db-ring-center span {
+    font-size: 11px;
+    color: hsl(var(--fg-3));
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .db-ring-side {
+    font-size: 12.5px;
+    color: hsl(var(--fg-2));
+    line-height: 1.45;
+  }
+  .db-ring-side b {
+    color: hsl(var(--fg));
+    font-weight: 600;
+  }
+
   /* ── UnwiredDot — global so it paints on /dashboard and all routes (DASH2-01-02)
      Mirrors dx.css rules; having both loaded on deck routes is harmless (identical). */
   .dx-unwired-dot {

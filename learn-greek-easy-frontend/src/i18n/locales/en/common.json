@@ -244,6 +244,34 @@
       },
       "seeAll": "See All News",
       "kicker": "News"
+    },
+    "hero": {
+      "continue": {
+        "kicker": "Continue",
+        "body": "You were on card <pos>—</pos> · {{when}}.",
+        "cardIndexUnwiredAria": "Card position — not yet connected to backend data",
+        "dueNow": "cards due now",
+        "cta": "Resume",
+        "emptyTitle": "Start learning",
+        "emptyBody": "Pick a deck to begin your Greek learning journey."
+      },
+      "review": {
+        "kicker": "Today's review",
+        "title": "{{count}} cards across {{decks}} decks",
+        "titleNothing": "Nothing due — relax!",
+        "body": "Estimated <est>~ min</est>.",
+        "estimateUnwiredAria": "Time estimate — not yet connected to backend data",
+        "bodyNothing": "Come back tomorrow or explore a new deck.",
+        "cta": "Start review",
+        "ctaNothing": "Browse decks"
+      },
+      "dailyGoal": {
+        "kicker": "Daily goal",
+        "title": "<current>{{current}}</current> min / <goal>—</goal> today",
+        "minLabel": "min today",
+        "goalUnwiredAria": "Daily minute goal — not yet connected to backend data",
+        "streakLabel": "day streak"
+      }
     }
   },
   "welcome": {

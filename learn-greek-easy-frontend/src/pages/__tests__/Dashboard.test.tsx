@@ -77,6 +77,13 @@ const analyticsFixture = {
   overview: { totalReviews: 10, cardsStudied: 5, averageAccuracy: 0.8, totalStudyTime: 60 },
   streak: { currentStreak: 3, longestStreak: 7, lastStudyDate: new Date().toISOString() },
   wordStatus: { learning: 5, review: 10, mastered: 2, newCards: 0 },
+  today: {
+    cardsDue: 5,
+    studyTimeSeconds: 720,
+    dailyGoal: 20,
+    reviewsCompleted: 3,
+    goalProgressPercentage: 50,
+  },
   progressData: [],
   deckStats: [],
   recentActivity: [],

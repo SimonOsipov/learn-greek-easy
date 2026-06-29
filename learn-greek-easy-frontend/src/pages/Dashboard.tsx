@@ -4,10 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { DashboardGreeting } from '@/components/dashboard/DashboardGreeting';
+import { HeroEntries } from '@/components/dashboard/HeroEntries';
 import { NewsSection } from '@/components/dashboard/NewsSection';
 import { DeckCard } from '@/components/display/DeckCard';
 import { MetricCard } from '@/components/display/MetricCard';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -206,6 +206,9 @@ export const Dashboard: React.FC = () => {
   // Number of decks with at least one card due today
   const deckCount = decks.filter((d) => (d.progress?.dueToday ?? 0) > 0).length;
 
+  // Current streak (real data from analytics)
+  const streak = analyticsData?.streak?.currentStreak ?? 0;
+
   return (
     <div className="mx-auto max-w-7xl space-y-6 pb-8" data-testid="dashboard">
       {/* Greeting bar (DASH2-01-02) */}
@@ -216,8 +219,18 @@ export const Dashboard: React.FC = () => {
         minutesToday={minutesToday}
         recentActivity={analyticsData?.recentActivity ?? []}
       />
-      {/* TRANSITIONAL: replaced by hero EntryCards in DASH2-01-03 */}
-      <Button onClick={handleStartReview}>{t('welcome.startReview')}</Button>
+
+      {/* Hero entry cards (DASH2-01-03) */}
+      <HeroEntries
+        decks={decks}
+        cardsDue={cardsDue}
+        deckCount={deckCount}
+        minutesToday={minutesToday}
+        streak={streak}
+        onResumeDeck={handleContinueDeck}
+        onStartReview={handleStartReview}
+        onBrowseDecks={() => navigate('/decks')}
+      />
 
       {/* Metrics Grid */}
       <section data-testid="metrics-section">
