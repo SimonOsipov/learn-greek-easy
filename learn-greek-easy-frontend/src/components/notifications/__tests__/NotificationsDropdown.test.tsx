@@ -6,22 +6,26 @@
  * - Component shows disabled state when notifications preference is false
  * - Component shows normal state when notifications preference is true
  * - Component defaults to enabled when notifications preference is undefined
+ * - D-NAV: trigger shows red dot (not numeric count) when unreadCount > 0
+ * - D-NAV: unread count text remains visible in the dropdown header
  */
 
 import React from 'react';
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { NotificationsDropdown } from '../NotificationsDropdown';
 
 // Mock the NotificationContext
 const mockNotificationsEnabled = vi.fn();
+const mockUnreadCount = vi.fn();
 
 vi.mock('@/contexts/NotificationContext', () => ({
   useNotifications: () => ({
     notifications: [],
-    unreadCount: 0,
+    unreadCount: mockUnreadCount(),
     isLoading: false,
     error: null,
     hasMore: false,
@@ -78,6 +82,7 @@ vi.mock('@/components/ui/tooltip', () => ({
 describe('NotificationsDropdown', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUnreadCount.mockReturnValue(0);
   });
 
   describe('Notification Preference Behavior', () => {
@@ -146,6 +151,58 @@ describe('NotificationsDropdown', () => {
       render(<NotificationsDropdown />);
 
       expect(screen.getByTestId('notifications-trigger')).toBeInTheDocument();
+    });
+  });
+
+  describe('D-NAV: dot badge vs numeric count (DASH2-01)', () => {
+    it('should show .dot.dot-red on the trigger when unreadCount > 0', () => {
+      mockNotificationsEnabled.mockReturnValue(true);
+      mockUnreadCount.mockReturnValue(3);
+
+      render(<NotificationsDropdown />);
+
+      const trigger = screen.getByTestId('notifications-trigger');
+      const dot = trigger.querySelector('.dot.dot-red');
+      expect(dot).toBeInTheDocument();
+    });
+
+    it('should NOT render a numeric count badge on the trigger when unreadCount > 0', () => {
+      mockNotificationsEnabled.mockReturnValue(true);
+      mockUnreadCount.mockReturnValue(5);
+
+      render(<NotificationsDropdown />);
+
+      const trigger = screen.getByTestId('notifications-trigger');
+      // No numeric text inside the trigger (only the bell svg and the dot span)
+      expect(trigger.textContent).toBe('');
+    });
+
+    it('should NOT show .dot.dot-red on the trigger when unreadCount === 0', () => {
+      mockNotificationsEnabled.mockReturnValue(true);
+      mockUnreadCount.mockReturnValue(0);
+
+      render(<NotificationsDropdown />);
+
+      const trigger = screen.getByTestId('notifications-trigger');
+      const dot = trigger.querySelector('.dot.dot-red');
+      expect(dot).not.toBeInTheDocument();
+    });
+
+    it('should show "{n} new" count text inside the dropdown header when unreadCount > 0', async () => {
+      const user = userEvent.setup();
+      mockNotificationsEnabled.mockReturnValue(true);
+      mockUnreadCount.mockReturnValue(7);
+
+      render(<NotificationsDropdown />);
+
+      // Open the dropdown
+      const trigger = screen.getByTestId('notifications-trigger');
+      await user.click(trigger);
+
+      // The "{n} new" badge should appear in the dropdown header (not on the trigger)
+      await waitFor(() => {
+        expect(screen.getByText('7 new')).toBeInTheDocument();
+      });
     });
   });
 });

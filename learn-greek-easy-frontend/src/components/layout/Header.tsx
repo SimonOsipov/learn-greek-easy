@@ -1,15 +1,13 @@
 import React, { useCallback, useState } from 'react';
 
-import { Menu, ChevronDown, Crown, User, CircleHelp } from 'lucide-react';
+import { Menu, ChevronDown, Crown, User, CircleHelp, Sun, Moon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { LogoutDialog } from '@/components/auth/LogoutDialog';
 import { LanguageSwitcher } from '@/components/i18n';
 import { NotificationsDropdown } from '@/components/notifications';
-import { ThemeSwitcher } from '@/components/theme';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useLayoutContext } from '@/contexts/LayoutContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
 import { tDynamic } from '@/i18n/tDynamic';
 import { track } from '@/lib/analytics';
@@ -51,6 +50,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
   const navigate = useNavigate();
   const { toggleSidebar, isDesktop } = useLayoutContext();
   const { user, updateProfile } = useAuth();
+  const { currentTheme, toggleTheme } = useTheme();
 
   const [tourRunning, setTourRunning] = useState(false);
 
@@ -147,40 +147,37 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
   };
 
   return (
-    <header
-      className={cn('sticky top-0 z-50 w-full border-b border-border bg-background', className)}
-    >
+    <header className={cn('va-top', className)}>
       <PageContainer>
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo and Mobile Menu Toggle */}
-          <div className="flex items-center space-x-4">
+        <div className="db-top">
+          {/* Brand + Mobile Menu Toggle */}
+          <div className="flex items-center gap-3">
             {!isDesktop && (
-              <Button
-                variant="ghost"
-                size="icon"
+              <button
+                className="icon-btn lg:hidden"
                 onClick={toggleSidebar}
-                className="lg:hidden"
                 aria-label={t('nav.toggleMenu')}
               >
                 <Menu className="h-5 w-5" />
-              </Button>
+              </button>
             )}
 
-            <Link to="/dashboard" className="flex items-center space-x-2">
-              <h1 className="text-xl font-semibold text-foreground">{APP_NAME}</h1>
+            <Link to="/dashboard" className="va-brand">
+              <span className="brand-mark">Ελ</span>
+              <span className="brand-text">{APP_NAME}</span>
             </Link>
           </div>
 
           {/* Desktop Navigation */}
           {isDesktop && (
-            <nav className="hidden items-center space-x-6 lg:flex" data-testid="main-nav">
+            <nav className="va-nav" data-testid="main-nav">
               {navItems.map((item) =>
                 item.children ? (
                   <DropdownMenu key={item.path}>
                     <DropdownMenuTrigger
                       className={cn(
-                        'flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary focus:outline-none',
-                        isActiveParent(item) ? 'text-primary' : 'text-muted-foreground'
+                        'flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors hover:text-primary focus:outline-none',
+                        isActiveParent(item) ? 'active text-primary' : 'text-muted-foreground'
                       )}
                       data-testid={`${item.path.replace('/', '')}-dropdown-trigger`}
                     >
@@ -209,8 +206,8 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                     key={item.path}
                     to={item.path}
                     className={cn(
-                      'text-sm font-medium transition-colors hover:text-primary',
-                      isActiveRoute(item.path) ? 'text-primary' : 'text-muted-foreground'
+                      'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors hover:text-primary',
+                      isActiveRoute(item.path) ? 'active text-primary' : 'text-muted-foreground'
                     )}
                   >
                     {tDynamic(t, item.labelKey)}
@@ -220,24 +217,37 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
             </nav>
           )}
 
-          {/* Right side: Theme, Language, Notifications and User Menu */}
-          <div className="flex items-center space-x-3">
+          {/* Right side: Tour, Theme, Language, Notifications, User Menu */}
+          <div className="va-top-right">
             {/* Tour Button */}
-            <Button
-              variant="ghost"
-              size="icon"
+            <button
+              className="btn btn-ghost btn-sm hidden items-center gap-1.5 lg:inline-flex"
               onClick={handleStartTour}
               disabled={tourRunning}
               aria-label={t('tour.button')}
               data-testid="tour-button"
-              className="lg:w-auto lg:gap-2 lg:px-3"
             >
-              <CircleHelp className="h-5 w-5" />
-              <span className="hidden text-sm lg:inline">{t('tour.button')}</span>
-            </Button>
+              <CircleHelp className="h-4 w-4" />
+              <span className="text-sm">{t('tour.button')}</span>
+            </button>
 
-            {/* Theme Switcher */}
-            <ThemeSwitcher />
+            {/* Theme Switcher — plain .icon-btn to avoid Button cascade trap */}
+            <button
+              className="icon-btn"
+              onClick={() => toggleTheme('header')}
+              aria-label={
+                currentTheme === 'light'
+                  ? t('theme.switchToDark', 'Switch to dark mode')
+                  : t('theme.switchToLight', 'Switch to light mode')
+              }
+              data-testid="theme-switcher"
+            >
+              {currentTheme === 'light' ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+            </button>
 
             {/* Language Switcher */}
             <LanguageSwitcher variant="icon" />
@@ -245,22 +255,21 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
             {/* Notifications */}
             <NotificationsDropdown />
 
-            {/* User Menu */}
+            {/* User Menu — plain button trigger to avoid Button cascade trap */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="relative h-9 w-9 rounded-full"
+                <button
+                  className="avatar avatar-blue"
                   aria-label={t('nav.userMenu')}
                   data-testid="user-menu-trigger"
                 >
-                  <Avatar className="h-9 w-9">
+                  <Avatar className="h-full w-full">
                     <AvatarImage src={user?.avatar || ''} alt={user?.name || 'User'} />
-                    <AvatarFallback className="bg-gradient-to-br from-gradient-from to-gradient-to text-white">
+                    <AvatarFallback className="bg-transparent text-xs font-bold tracking-wide text-inherit">
                       {initials}
                     </AvatarFallback>
                   </Avatar>
-                </Button>
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">

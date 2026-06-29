@@ -451,6 +451,60 @@
     background: hsl(var(--danger));
   }
 
+  /* ── Learner header chrome (DASH2-01) — ported from CD dashboard.css ── */
+  /* .va-top: sticky outer wrapper (replaces sticky/z-50/border/bg utilities on <header>) */
+  .va-top {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    width: 100%;
+    border-bottom: 1px solid hsl(var(--line));
+    background: hsl(var(--bg));
+  }
+
+  /* .db-top: inner flex row (replaces flex h-16 items-center justify-between on inner div) */
+  .db-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    height: 64px;
+  }
+
+  /* .va-brand: logo + wordmark link */
+  .va-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: hsl(var(--fg));
+    flex-shrink: 0;
+  }
+
+  /* .va-nav: desktop nav bar */
+  .va-nav {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* .va-nav .active: CD active-nav pill (bg + color) */
+  /* NOTE: text-primary Tailwind utility wins the color race; .active supplies the bg pill */
+  .va-nav .active {
+    background: hsl(var(--primary) / 0.12);
+    border-radius: 8px;
+  }
+
+  /* .va-top-right: actions cluster on the right */
+  .va-top-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
   /* ----- Brand mark ---------------------------------------------------------- */
   .brand-mark {
     display: inline-flex;

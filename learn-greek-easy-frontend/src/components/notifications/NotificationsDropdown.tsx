@@ -61,16 +61,14 @@ export const NotificationsDropdown: React.FC = () => {
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative"
+            <button
+              className="icon-btn relative"
               disabled
               aria-label={t('notifications.disabled')}
               data-testid="notifications-trigger"
             >
-              <Bell className="h-5 w-5 text-muted-foreground" />
-            </Button>
+              <Bell className="h-4 w-4 text-muted-foreground" />
+            </button>
           </TooltipTrigger>
           <TooltipContent>
             <p>{t('notifications.disabledTooltip')}</p>
@@ -83,20 +81,15 @@ export const NotificationsDropdown: React.FC = () => {
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative"
+        {/* plain button so .icon-btn wins over Button cascade trap (D-NAV: count → red dot) */}
+        <button
+          className="icon-btn relative"
           aria-label={t('notifications.title')}
           data-testid="notifications-trigger"
         >
-          <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-warning text-[10px] font-medium text-white">
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
-          )}
-        </Button>
+          <Bell className="h-4 w-4" />
+          {unreadCount > 0 && <span className="dot dot-red" aria-hidden="true" />}
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-80" align="end" forceMount>
         {/* Header */}

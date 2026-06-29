@@ -110,8 +110,13 @@ vi.mock('@/components/notifications', () => ({
   NotificationsDropdown: () => <div data-testid="notifications-dropdown">Notifications</div>,
 }));
 
-vi.mock('@/components/theme', () => ({
-  ThemeSwitcher: () => <div data-testid="theme-switcher">Theme</div>,
+// ThemeSwitcher is no longer used; Header now calls useTheme directly — mock the context
+vi.mock('@/contexts/ThemeContext', () => ({
+  useTheme: () => ({
+    currentTheme: 'light',
+    toggleTheme: vi.fn(),
+    isChanging: false,
+  }),
 }));
 
 describe('Header', () => {
