@@ -83,13 +83,10 @@ export function DashboardGreeting({
                   .filter(Boolean)
                   .join(' ')}
                 data-h={h}
-                title={t(h === 1 ? 'welcome.heatReviews_one' : 'welcome.heatReviews_other', {
+                title={t('welcome.heatReviews', { count: h })}
+                aria-label={`${dayInitials[i] ?? ''}: ${t('welcome.heatReviews', {
                   count: h,
-                })}
-                aria-label={`${dayInitials[i] ?? ''}: ${t(
-                  h === 1 ? 'welcome.heatReviews_one' : 'welcome.heatReviews_other',
-                  { count: h }
-                )}${i === todayIdx ? ' (today)' : ''}`}
+                })}${i === todayIdx ? ' (today)' : ''}`}
               />
             ))}
           </div>

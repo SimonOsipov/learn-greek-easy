@@ -403,7 +403,9 @@
     "minuteGoalUnwiredAria": "Дневная цель в минутах — данные ещё не подключены.",
     "thisWeek": "Эта неделя",
     "heatReviews_one": "{{count}} повторение",
-    "heatReviews_other": "{{count}} повторений"
+    "heatReviews_few": "{{count}} повторения",
+    "heatReviews_many": "{{count}} повторений",
+    "heatReviews_other": "{{count}} повторения"
   },
   "actions": {
     "save": "Сохранить",
