@@ -282,6 +282,15 @@
         "goalUnwiredAria": "Daily minute goal — not yet connected to backend data",
         "streakLabel": "day streak"
       }
+    },
+    "whatsNew": {
+      "heading": "Recently added",
+      "situations": "new situations",
+      "newsItems": "news items",
+      "audioArticles": "articles got audio",
+      "newsItemsAria": "News items count — not yet connected to backend data.",
+      "audioArticlesAria": "Audio articles count — not yet connected to backend data.",
+      "seeAll": "See all updates"
     }
   },
   "welcome": {

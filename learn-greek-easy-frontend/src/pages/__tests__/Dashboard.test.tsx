@@ -68,6 +68,19 @@ vi.mock('@/lib/errorReporting', () => ({
   reportAPIError: vi.fn(),
 }));
 
+vi.mock('@/services/situationAPI', () => ({
+  situationAPI: {
+    getComprehension: vi.fn().mockResolvedValue({
+      whats_new_count: 0,
+      comprehension_percentage: 0,
+      verdict: '',
+      topic_confidence: [],
+      streak: 0,
+      recent_sessions: [],
+    }),
+  },
+}));
+
 // ---------------------------------------------------------------------------
 // Analytics fixture — matches shape expected by Dashboard widgets
 // ---------------------------------------------------------------------------

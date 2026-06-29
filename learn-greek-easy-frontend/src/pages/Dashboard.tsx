@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
 
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -7,6 +8,7 @@ import { DashboardGreeting } from '@/components/dashboard/DashboardGreeting';
 import { HeroEntries } from '@/components/dashboard/HeroEntries';
 import { MetricStrip } from '@/components/dashboard/MetricStrip';
 import { NewsSection } from '@/components/dashboard/NewsSection';
+import { WhatsNewStrip } from '@/components/dashboard/WhatsNewStrip';
 import { DeckCard } from '@/components/display/DeckCard';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,6 +18,7 @@ import { getLocalizedDeckDescription, getLocalizedDeckName } from '@/lib/deckLoc
 import { reportAPIError } from '@/lib/errorReporting';
 import { masteredCount } from '@/lib/progressGlossary';
 import { formatStudyTime } from '@/lib/timeFormatUtils';
+import { situationAPI } from '@/services/situationAPI';
 import { useAuthStore } from '@/stores/authStore';
 import { useDeckStore } from '@/stores/deckStore';
 
@@ -154,6 +157,15 @@ export const Dashboard: React.FC = () => {
   // Current streak (real data from analytics)
   const streak = analyticsData?.streak?.currentStreak ?? 0;
 
+  // Situations comprehension — used for the "Recently added" strip (DASH2-01-05)
+  const { data: comprehension } = useQuery({
+    queryKey: ['situations-comprehension'],
+    queryFn: () => situationAPI.getComprehension(),
+    retry: false,
+    staleTime: 60_000,
+  });
+  const whatsNewCount = comprehension?.whats_new_count ?? 0;
+
   return (
     <div className="mx-auto max-w-7xl space-y-6 pb-8" data-testid="dashboard">
       {/* Greeting bar (DASH2-01-02) */}
@@ -176,6 +188,9 @@ export const Dashboard: React.FC = () => {
         onStartReview={handleStartReview}
         onBrowseDecks={() => navigate('/decks')}
       />
+
+      {/* Recently added strip (DASH2-01-05) */}
+      <WhatsNewStrip whatsNewCount={whatsNewCount} />
 
       {/* Metrics Grid */}
       <section data-testid="metrics-section">

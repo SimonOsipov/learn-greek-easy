@@ -12,7 +12,7 @@
  *  8. CD order verified: primary→amber→green→violet via data-tone attributes
  */
 
-import { screen, within } from '@testing-library/react';
+import '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 
 import { renderWithProviders } from '@/lib/test-utils';
@@ -125,10 +125,7 @@ describe('MetricStrip adversarial (DASH2-01-04)', () => {
     for (const tile of dotTiles) {
       const trendEl = tile.querySelector('.db-metric-trend');
       expect(trendEl).not.toBeNull();
-      expect(trendEl!.classList.contains('is-flat')).toBe(
-        true,
-        `Expected .is-flat on trend in tile ${tile.getAttribute('data-testid')}`
-      );
+      expect(trendEl!.classList.contains('is-flat')).toBe(true);
       expect(trendEl!.querySelector('.dx-unwired-dot')).not.toBeNull();
     }
   });
