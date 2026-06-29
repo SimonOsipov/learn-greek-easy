@@ -223,9 +223,11 @@ test.describe('News Feed - Learner Dashboard Tests', () => {
     const feedSection = page.getByTestId('feed-section');
     await expect(feedSection).toBeVisible({ timeout: 15000 });
 
-    // Redesign: composeFeed emits news 1:1 with no cap (one card per seeded item).
-    // news-section-loading / news-card-* testids removed; use data-kind="news" badge spans.
+    // Redesign: composeFeed surfaces news as data-kind="news" cards; news loads async
+    // (TanStack Query), so wait for the first card to render before counting — otherwise
+    // count() races the query and returns 0 right after feed-section becomes visible.
     const newsCards = feedSection.locator('[data-kind="news"]');
+    await expect(newsCards.first()).toBeVisible({ timeout: 10000 });
     const cardCount = await newsCards.count();
 
     // Seeder creates items; composeFeed has no upper cap — just verify ≥1 surfaced
