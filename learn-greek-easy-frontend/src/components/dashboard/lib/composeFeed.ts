@@ -6,6 +6,8 @@ import type { NewsItemResponse } from '@/services/adminAPI';
 import type { Deck } from '@/types/deck';
 import type { LearnerSituationListItem } from '@/types/situation';
 
+import { decksWithDue, pickResumeDeck } from './heroEntries';
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type FeedType =
@@ -88,6 +90,18 @@ export const FEED_FILTERS: FeedFilter[] = [
   { k: 'practice', types: ['situation', 'quick'] },
 ];
 
+// ─── Internal helpers ─────────────────────────────────────────────────────────
+
+/** Cycled tones for deck cards (grammar-≥2 decks) to add visual variety. */
+const DECK_TONES: FeedTone[] = ['primary', 'violet', 'cyan', 'green'];
+
+/** Derive the illo identifier from a deck's category. */
+function illoFromCategory(category: string): 'deck' | 'verbs' | 'culture' {
+  if (category === 'culture') return 'culture';
+  if (category === 'grammar') return 'verbs';
+  return 'deck';
+}
+
 // ─── Selector functions ───────────────────────────────────────────────────────
 
 /**
@@ -105,11 +119,96 @@ export const FEED_FILTERS: FeedFilter[] = [
  *   milestone  — if currentStreak > 0
  *   news       — one item per news element (1:1)
  *   quick      — if queueCount > 0
- *
- * TODO (DASH2-01-06 executor): implement.
  */
-export function composeFeed(_s: FeedSources): FeedItem[] {
-  return []; // TODO
+export function composeFeed(s: FeedSources): FeedItem[] {
+  const items: FeedItem[] = [];
+
+  // 1. resume — most-recently-studied / first-with-due / first deck
+  const resumeDeck = pickResumeDeck(s.decks);
+  if (resumeDeck) {
+    items.push({
+      id: `resume-${resumeDeck.id}`,
+      type: 'resume',
+      span: 'hero',
+      tone: 'primary',
+      deck: resumeDeck,
+    });
+  }
+
+  // 2. review — any cards due today
+  if (s.cardsDue > 0) {
+    items.push({
+      id: 'review',
+      type: 'review',
+      span: 'side',
+      tone: 'blue',
+      cardsDue: s.cardsDue,
+      dueDecks: decksWithDue(s.decks),
+    });
+  }
+
+  // 3. situation — first situation from the list
+  if (s.situations.length > 0) {
+    const sit = s.situations[0];
+    items.push({
+      id: `situation-${sit.id}`,
+      type: 'situation',
+      span: 'compact',
+      tone: 'cyan',
+      situation: sit,
+    });
+  }
+
+  // 4. wordOfDay — ALWAYS (D-WOTD: no backend source yet; renders as placeholder)
+  items.push({ id: 'word-of-day', type: 'wordOfDay', span: 'compact', tone: 'amber' });
+
+  // 5. deck — active decks (in-progress or cardsReview > 0) excluding the resume deck
+  let deckIndex = 0;
+  for (const deck of s.decks) {
+    const isActive =
+      deck.progress?.status === 'in-progress' || (deck.progress?.cardsReview ?? 0) > 0;
+    const isResume = deck.id === resumeDeck?.id;
+    if (!isActive || isResume) continue;
+    items.push({
+      id: `deck-${deck.id}`,
+      type: 'deck',
+      span: 'side',
+      tone: DECK_TONES[deckIndex % DECK_TONES.length],
+      deck,
+      illo: illoFromCategory(deck.category),
+    });
+    deckIndex++;
+  }
+
+  // 6. milestone — active streak
+  if (s.currentStreak > 0) {
+    items.push({
+      id: 'milestone',
+      type: 'milestone',
+      span: 'compact',
+      tone: 'amber',
+      currentStreak: s.currentStreak,
+      longestStreak: s.longestStreak,
+    });
+  }
+
+  // 7. news — one item per news article (1:1 mapping)
+  for (const n of s.news) {
+    items.push({ id: `news-${n.id}`, type: 'news', span: 'compact', tone: 'blue', news: n });
+  }
+
+  // 8. quick — exercises ready in the queue
+  if (s.queueCount > 0) {
+    items.push({
+      id: 'quick',
+      type: 'quick',
+      span: 'compact',
+      tone: 'green',
+      queueCount: s.queueCount,
+    });
+  }
+
+  return items;
 }
 
 /**
@@ -117,18 +216,29 @@ export function composeFeed(_s: FeedSources): FeedItem[] {
  * wordOfDay and milestone are excluded from per-tab counts (appear only under 'all').
  *
  * Returns { all, cards, news, practice }.
- * TODO (DASH2-01-06 executor): implement.
  */
-export function countByFilter(_items: FeedItem[]): Record<FeedFilterKey, number> {
-  return {} as Record<FeedFilterKey, number>; // TODO
+export function countByFilter(items: FeedItem[]): Record<FeedFilterKey, number> {
+  return {
+    all: items.length,
+    cards: items.filter((i) =>
+      (FEED_FILTERS.find((f) => f.k === 'cards')!.types as FeedType[]).includes(i.type)
+    ).length,
+    news: items.filter((i) => i.type === 'news').length,
+    practice: items.filter((i) =>
+      (FEED_FILTERS.find((f) => f.k === 'practice')!.types as FeedType[]).includes(i.type)
+    ).length,
+  };
 }
 
 /**
  * Filter items by filter key.
  * 'all' → return all items unchanged.
  * Other keys → return only items whose type is in the filter's types array.
- * TODO (DASH2-01-06 executor): implement.
  */
-export function filterFeed(items: FeedItem[], _filterKey: string): FeedItem[] {
-  return items; // TODO (intentionally pass-through — executor filters by type)
+export function filterFeed(items: FeedItem[], filterKey: string): FeedItem[] {
+  if (filterKey === 'all') return items;
+  const filter = FEED_FILTERS.find((f) => f.k === filterKey);
+  if (!filter?.types) return items;
+  const types = filter.types as FeedType[];
+  return items.filter((i) => types.includes(i.type));
 }

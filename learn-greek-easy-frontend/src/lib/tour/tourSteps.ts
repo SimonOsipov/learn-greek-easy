@@ -37,52 +37,13 @@ export function buildTourSteps(navigate: NavigateFunction, t: TFunction): DriveS
     },
   });
 
+  // D-TOUR (DASH2-01-06): retarget to unified feed filters; 4 news-internal steps removed.
   steps.push({
-    element: '[data-testid="news-section"]',
+    element: '[data-testid="feed-filters"]',
     popover: {
-      title: t('tour.steps.news_section.title'),
-      description: t('tour.steps.news_section.description'),
+      title: t('tour.steps.feed.title'),
+      description: t('tour.steps.feed.description'),
       side: 'top',
-      align: 'start',
-    },
-  });
-
-  steps.push({
-    element: '[data-testid="news-country-filters"]',
-    popover: {
-      title: t('tour.steps.news_country.title'),
-      description: t('tour.steps.news_country.description'),
-      side: 'bottom',
-      align: 'start',
-    },
-  });
-
-  steps.push({
-    element: '[data-testid="news-difficulty-selector"]',
-    popover: {
-      title: t('tour.steps.news_difficulty.title'),
-      description: t('tour.steps.news_difficulty.description'),
-      side: 'bottom',
-      align: 'start',
-    },
-  });
-
-  steps.push({
-    element: '[data-testid^="news-card-"]',
-    popover: {
-      title: t('tour.steps.news_card.title'),
-      description: t('tour.steps.news_card.description'),
-      side: 'top',
-      align: 'start',
-    },
-  });
-
-  steps.push({
-    element: '[data-testid="news-section-see-all"]',
-    popover: {
-      title: t('tour.steps.news_all.title'),
-      description: t('tour.steps.news_all.description'),
-      side: 'bottom',
       align: 'start',
     },
   });

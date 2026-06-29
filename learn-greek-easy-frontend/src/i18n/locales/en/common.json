@@ -291,6 +291,67 @@
       "newsItemsAria": "News items count — not yet connected to backend data.",
       "audioArticlesAria": "Audio articles count — not yet connected to backend data.",
       "seeAll": "See all updates"
+    },
+    "feed": {
+      "heading": "Your feed today",
+      "subtitle": "A mix of decks, news, and conversations to keep you learning.",
+      "filters": {
+        "all": "All",
+        "cards": "Cards",
+        "news": "News",
+        "practice": "Practice"
+      },
+      "resume": {
+        "kicker": "Pick up where you left off",
+        "typeBadge": "Deck",
+        "cta": "Resume deck",
+        "dueNow": "cards due now",
+        "ofMastered": "of {{total}} mastered",
+        "complete": "complete"
+      },
+      "review": {
+        "kicker": "Your daily review",
+        "typeBadge": "Today",
+        "title": "{{count}} cards across {{decks}} decks",
+        "cardsCount": "{{count}} cards",
+        "cta": "Start session"
+      },
+      "situation": {
+        "kicker": "Practice conversation",
+        "typeBadge": "Dialog",
+        "exercises": "{{count}} exercises"
+      },
+      "word": {
+        "kicker": "Word of the day",
+        "typeBadge": "Word",
+        "unwiredAria": "Word of the day — not yet connected to backend data"
+      },
+      "deck": {
+        "kicker": "Continue learning",
+        "typeBadge": "Deck",
+        "cta": "Open deck",
+        "meta": "{{due}} due · {{mastered}} mastered"
+      },
+      "milestone": {
+        "kicker": "You're on a streak",
+        "typeBadge": "Streak",
+        "title": "{{count}} days in a row",
+        "beatBest": "{{count}} more days to beat your best ({{best}})",
+        "personalBest": "Your best streak yet — keep it going!",
+        "cta": "Keep streak"
+      },
+      "news": {
+        "kicker": "News",
+        "kickerWithCountry": "News · {{country}}",
+        "typeBadge": "News",
+        "readPractice": "Read & practice"
+      },
+      "quick": {
+        "kicker": "Quick practice",
+        "typeBadge": "Quick",
+        "cta": "Start",
+        "meta": "{{count}} exercises ready"
+      }
     }
   },
   "welcome": {
@@ -749,6 +810,10 @@
       "vocab_deck": {
         "title": "Start with Vocabulary",
         "description": "This vocabulary deck covers essential Greek nouns — a great place to start building your foundation. Click any deck to begin learning."
+      },
+      "feed": {
+        "title": "Your Learning Feed",
+        "description": "Filter your feed by cards, news, or practice. Everything is mixed in one place — picked from your active decks, news, and conversations."
       }
     },
     "dismiss": {
