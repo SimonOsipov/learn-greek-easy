@@ -77,6 +77,27 @@ describe('pickResumeDeck', () => {
     const withDue = deck('b', { dueToday: 10 });
     expect(pickResumeDeck([withDue, withStudied])?.id).toBe('a');
   });
+
+  // Adversarial: tie — two decks with identical lastStudied timestamps.
+  // The reduce keeps the first (left-biased "not strictly greater"), which is stable.
+  it('tie on lastStudied: returns the first deck in list order', () => {
+    const ts = new Date('2026-06-28T12:00:00Z');
+    const first = deck('a', { lastStudied: ts });
+    const second = deck('b', { lastStudied: ts });
+    expect(pickResumeDeck([first, second])?.id).toBe('a');
+  });
+
+  // Adversarial: deck with no progress object at all (progress is optional on Deck type).
+  // Should not throw and should fall through to decks[0].
+  it('deck with no progress falls through to decks[0]', () => {
+    const noProgress = deck('a');
+    // Patch progress away entirely — the type allows undefined.
+    (noProgress as unknown as { progress: undefined }).progress = undefined;
+    const withProgress = deck('b', { dueToday: 5 });
+    // 'a' has no progress so no lastStudied and no dueToday — 'b' has dueToday.
+    // pickResumeDeck should pick 'b' via the dueToday branch.
+    expect(pickResumeDeck([noProgress, withProgress])?.id).toBe('b');
+  });
 });
 
 // ─── decksWithDue ────────────────────────────────────────────────────────────
