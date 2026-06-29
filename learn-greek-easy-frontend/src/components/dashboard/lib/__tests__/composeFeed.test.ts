@@ -399,15 +399,15 @@ describe('composeFeed — adversarial', () => {
 
   // Edge: grammar and culture deck categories → correct illo values
   it('illo_assigned_from_deck_category', () => {
-    const grammarDeck = {
+    const grammarDeck: Deck = {
       ...makeDeck('grammar-1', { cardsReview: 1, lastStudied: undefined }),
       category: 'grammar',
     };
-    const cultureDeck = {
+    const cultureDeck: Deck = {
       ...makeDeck('culture-1', { cardsReview: 1, lastStudied: undefined }),
       category: 'culture',
     };
-    const vocabDeck = {
+    const vocabDeck: Deck = {
       ...makeDeck('vocab-1', { cardsReview: 1, lastStudied: undefined }),
       category: 'vocabulary',
     };
