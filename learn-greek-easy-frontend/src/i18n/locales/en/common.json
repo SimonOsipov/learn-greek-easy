@@ -223,7 +223,17 @@
       "days": "days",
       "wordsTotal": "words total",
       "thisPeriod": "this period",
-      "allTime": "all time"
+      "allTime": "all time",
+      "allTimeLabel": "All-time",
+      "wordsUnit": "words",
+      "trendBestStreak": "best: {{count}}",
+      "trendStartStreak": "start one today",
+      "trendSinceYesterday": "+— since yesterday",
+      "trendSinceYesterdayAria": "+— since yesterday — not yet connected to backend data.",
+      "trendGoal": "goal —",
+      "trendGoalAria": "goal — not yet connected to backend data.",
+      "trendNewToday": "+— new today",
+      "trendNewTodayAria": "+— new today — not yet connected to backend data."
     },
     "activeDecks": {
       "kicker": "Active Decks",

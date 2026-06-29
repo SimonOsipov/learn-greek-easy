@@ -5,9 +5,9 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { DashboardGreeting } from '@/components/dashboard/DashboardGreeting';
 import { HeroEntries } from '@/components/dashboard/HeroEntries';
+import { MetricStrip } from '@/components/dashboard/MetricStrip';
 import { NewsSection } from '@/components/dashboard/NewsSection';
 import { DeckCard } from '@/components/display/DeckCard';
-import { MetricCard } from '@/components/display/MetricCard';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -18,7 +18,6 @@ import { masteredCount } from '@/lib/progressGlossary';
 import { formatStudyTime } from '@/lib/timeFormatUtils';
 import { useAuthStore } from '@/stores/authStore';
 import { useDeckStore } from '@/stores/deckStore';
-import type { Metric } from '@/types/dashboard';
 
 /**
  * Dashboard Page
@@ -96,60 +95,6 @@ export const Dashboard: React.FC = () => {
     },
     [decks, navigate]
   );
-
-  // Build metrics from analytics data (memoized)
-  const metrics = useMemo((): Metric[] => {
-    if (!analyticsData) {
-      return [];
-    }
-
-    const { summary, streak, wordStatus } = analyticsData;
-
-    // Calculate due cards from word status
-    const dueToday = wordStatus.learning + wordStatus.review;
-
-    return [
-      {
-        id: '1',
-        label: t('dashboard.metrics.dueToday'),
-        value: dueToday,
-        sublabel: t('dashboard.metrics.cardsToReview'),
-        color: 'primary',
-        icon: '📚',
-      },
-      {
-        id: '2',
-        label: t('dashboard.metrics.currentStreak'),
-        value: streak.currentStreak,
-        sublabel: t('dashboard.metrics.days'),
-        color: 'orange',
-        icon: '🔥',
-      },
-      {
-        id: '3',
-        label: t('dashboard.metrics.mastered'),
-        value: masteredCount({
-          new: wordStatus.new ?? 0,
-          learning: wordStatus.learning,
-          review: wordStatus.review,
-          mastered: wordStatus.mastered,
-        }),
-        sublabel: t('dashboard.metrics.wordsTotal'),
-        color: 'green',
-        icon: '✅',
-      },
-      {
-        id: '4',
-        label: t('dashboard.metrics.totalTime'),
-        value: formatStudyTime(summary.totalTimeStudied),
-        sublabel: t('dashboard.metrics.allTime'),
-        color: 'muted',
-        icon: '⏱️',
-      },
-    ];
-  }, [analyticsData, t]);
-
-  // formatStudyTime is now imported from '@/lib/timeFormatUtils' with day support
 
   // Get active decks (in-progress or with progress) - memoized
   const activeDecks = useMemo(
@@ -234,10 +179,6 @@ export const Dashboard: React.FC = () => {
 
       {/* Metrics Grid */}
       <section data-testid="metrics-section">
-        <p className="kicker mb-2">{t('dashboard.progress.kicker')}</p>
-        <h2 className="mb-4 text-lg font-semibold text-foreground">
-          {t('dashboard.progress.title')}
-        </h2>
         {isLoading ? (
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
@@ -248,12 +189,19 @@ export const Dashboard: React.FC = () => {
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center text-destructive">
             {t('dashboard.progress.error')}
           </div>
-        ) : metrics.length > 0 ? (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-4">
-            {metrics.map((metric) => (
-              <MetricCard key={metric.id} {...metric} />
-            ))}
-          </div>
+        ) : analyticsData ? (
+          <MetricStrip
+            dueToday={analyticsData.today?.cardsDue ?? 0}
+            currentStreak={analyticsData.streak.currentStreak}
+            longestStreak={analyticsData.streak.longestStreak}
+            mastered={masteredCount({
+              new: analyticsData.wordStatus.new ?? 0,
+              learning: analyticsData.wordStatus.learning,
+              review: analyticsData.wordStatus.review,
+              mastered: analyticsData.wordStatus.mastered,
+            })}
+            allTimeLabel={formatStudyTime(analyticsData.summary.totalTimeStudied)}
+          />
         ) : (
           <div className="hairline rounded-lg border p-4 text-center text-muted-foreground">
             {t('dashboard.progress.empty')}

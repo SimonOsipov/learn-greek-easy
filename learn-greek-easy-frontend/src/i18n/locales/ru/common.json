@@ -234,7 +234,17 @@
       "days": "дней",
       "wordsTotal": "слов всего",
       "thisPeriod": "за этот период",
-      "allTime": "за всё время"
+      "allTime": "за всё время",
+      "allTimeLabel": "За всё время",
+      "wordsUnit": "слов",
+      "trendBestStreak": "рекорд: {{count}}",
+      "trendStartStreak": "начни сегодня",
+      "trendSinceYesterday": "+— за вчера",
+      "trendSinceYesterdayAria": "+— за вчера — пока не подключено к данным.",
+      "trendGoal": "цель —",
+      "trendGoalAria": "цель — пока не подключено к данным.",
+      "trendNewToday": "+— новых сегодня",
+      "trendNewTodayAria": "+— новых сегодня — пока не подключено к данным."
     },
     "activeDecks": {
       "kicker": "Активные колоды",
