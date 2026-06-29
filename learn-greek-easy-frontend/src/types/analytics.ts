@@ -252,6 +252,24 @@ export interface AnalyticsDashboardData {
   };
   fetchedAt: Date; // When this data was fetched/calculated
 
+  /**
+   * Today's at-a-glance stats (from DashboardStatsResponse.today / TodayStats).
+   * Used by the greeting bar and daily-goal ring.
+   * Optional because transform.ts does not yet populate it (DASH2-01-02).
+   */
+  today?: {
+    /** Maps TodayStats.study_time_seconds */
+    studyTimeSeconds: number;
+    /** Maps TodayStats.daily_goal */
+    dailyGoal: number;
+    /** Maps TodayStats.cards_due */
+    cardsDue: number;
+    /** Maps TodayStats.reviews_completed */
+    reviewsCompleted: number;
+    /** Maps TodayStats.goal_progress_percentage */
+    goalProgressPercentage: number;
+  };
+
   // Summary metrics (for header cards)
   summary: {
     totalCardsReviewed: number; // In date range

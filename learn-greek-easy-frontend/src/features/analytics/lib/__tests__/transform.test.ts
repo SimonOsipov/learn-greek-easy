@@ -471,6 +471,38 @@ describe('wordStatus — adversarial edge cases (PRACT2-7-02)', () => {
   });
 });
 
+// ── DASH2-01-02 RED: transform.today ─────────────────────────────────────
+// These tests FAIL until transform.ts maps dashboard.today → result.today.
+// The mock already contains today: { reviews_completed:5, cards_due:2,
+// daily_goal:10, goal_progress_percentage:50, study_time_seconds:100 }.
+
+describe('transform.today — greeting bar + daily-goal fields (DASH2-01-02)', () => {
+  it('exposes result.today.studyTimeSeconds from dashboard.today.study_time_seconds', () => {
+    const result = run();
+    expect(result.today?.studyTimeSeconds).toBe(100);
+  });
+
+  it('exposes result.today.dailyGoal from dashboard.today.daily_goal', () => {
+    const result = run();
+    expect(result.today?.dailyGoal).toBe(10);
+  });
+
+  it('exposes result.today.cardsDue from dashboard.today.cards_due', () => {
+    const result = run();
+    expect(result.today?.cardsDue).toBe(2);
+  });
+
+  it('exposes result.today.reviewsCompleted from dashboard.today.reviews_completed', () => {
+    const result = run();
+    expect(result.today?.reviewsCompleted).toBe(5);
+  });
+
+  it('exposes result.today.goalProgressPercentage from dashboard.today.goal_progress_percentage', () => {
+    const result = run();
+    expect(result.today?.goalProgressPercentage).toBe(50);
+  });
+});
+
 // ── basic summary / shape ─────────────────────────────────────────────────
 
 describe('summary mapping', () => {
