@@ -3,10 +3,11 @@ import React, { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 
+import { DashboardGreeting } from '@/components/dashboard/DashboardGreeting';
 import { NewsSection } from '@/components/dashboard/NewsSection';
 import { DeckCard } from '@/components/display/DeckCard';
 import { MetricCard } from '@/components/display/MetricCard';
-import { WelcomeSection } from '@/components/display/WelcomeSection';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -198,23 +199,25 @@ export const Dashboard: React.FC = () => {
   // Get user display name
   const userName = user?.name || user?.email?.split('@')[0] || 'Learner';
 
-  // Get due count for welcome section
-  const dueCount = analyticsData
-    ? analyticsData.wordStatus.learning + analyticsData.wordStatus.review
-    : 0;
+  // Greeting bar derived values from analytics.today (may be undefined if data not loaded)
+  const cardsDue = analyticsData?.today?.cardsDue ?? 0;
+  const minutesToday = Math.round((analyticsData?.today?.studyTimeSeconds ?? 0) / 60);
 
-  // Get streak for welcome section
-  const currentStreak = analyticsData?.streak.currentStreak || 0;
+  // Number of decks with at least one card due today
+  const deckCount = decks.filter((d) => (d.progress?.dueToday ?? 0) > 0).length;
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 pb-8" data-testid="dashboard">
-      {/* Welcome Section (carries the page h1) */}
-      <WelcomeSection
+      {/* Greeting bar (DASH2-01-02) */}
+      <DashboardGreeting
         userName={userName}
-        dueCount={dueCount}
-        streak={currentStreak}
-        onStartReview={handleStartReview}
+        cardsDue={cardsDue}
+        deckCount={deckCount}
+        minutesToday={minutesToday}
+        recentActivity={analyticsData?.recentActivity ?? []}
       />
+      {/* TRANSITIONAL: replaced by hero EntryCards in DASH2-01-03 */}
+      <Button onClick={handleStartReview}>{t('welcome.startReview')}</Button>
 
       {/* Metrics Grid */}
       <section data-testid="metrics-section">

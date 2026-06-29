@@ -518,6 +518,114 @@
     flex-shrink: 0;
   }
 
+  /* ── Greeting bar (DASH2-01-02) ──────────────────────────────────────────── */
+  .db-greeting {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+    padding-top: 4px;
+    margin-bottom: 2px;
+  }
+  .db-greeting-l {
+    min-width: 0;
+  }
+  .db-hello {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: clamp(28px, 3.2vw, 40px);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+    margin: 0 0 8px;
+  }
+  .db-hello [lang='el'] {
+    font-family: 'Noto Serif', Georgia, serif;
+    font-weight: 600;
+    font-size: 0.92em;
+    margin-right: 0.45em;
+    color: hsl(var(--fg));
+  }
+  .db-hello-en {
+    font-weight: 600;
+  }
+  .db-hello-wave {
+    display: inline-block;
+    margin-left: 8px;
+  }
+  .db-hello-sub {
+    font-size: 14px;
+    color: hsl(var(--fg-2));
+    margin: 0;
+    max-width: 560px;
+    line-height: 1.55;
+  }
+  .db-hello-sub b {
+    color: hsl(var(--fg));
+    font-weight: 600;
+  }
+  .db-week {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 14px;
+  }
+  .db-week-l {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: hsl(var(--fg-3));
+    margin-right: 4px;
+  }
+  .db-week-cell {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    background: hsl(var(--fg) / 0.06);
+    border: 1px solid hsl(var(--fg) / 0.04);
+  }
+  .db-week-cell[data-h='1'] {
+    background: hsl(var(--primary) / 0.22);
+  }
+  .db-week-cell[data-h='2'] {
+    background: hsl(var(--primary) / 0.38);
+  }
+  .db-week-cell[data-h='3'] {
+    background: hsl(var(--primary) / 0.55);
+  }
+  .db-week-cell[data-h='4'] {
+    background: hsl(var(--primary) / 0.78);
+  }
+  .db-week-cell[data-h='5'] {
+    background: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.18);
+  }
+  .db-week-today {
+    outline: 2px solid hsl(var(--fg));
+    outline-offset: 2px;
+  }
+
+  /* ── UnwiredDot — global so it paints on /dashboard and all routes (DASH2-01-02)
+     Mirrors dx.css rules; having both loaded on deck routes is harmless (identical). */
+  .dx-unwired-dot {
+    position: relative;
+    display: inline-block;
+  }
+  .dx-unwired-dot-marker {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: hsl(var(--danger));
+  }
+  .dx-unwired-dot-marker[data-tone='amber'] {
+    background: hsl(var(--warning));
+  }
+
   /* ----- Brand mark ---------------------------------------------------------- */
   .brand-mark {
     display: inline-flex;

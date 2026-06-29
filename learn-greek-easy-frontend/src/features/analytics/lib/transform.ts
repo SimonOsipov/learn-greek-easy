@@ -153,6 +153,13 @@ export const transformToAnalyticsDashboardData = (
             : 'All time',
     },
     fetchedAt: now,
+    today: {
+      studyTimeSeconds: dashboard.today.study_time_seconds,
+      dailyGoal: dashboard.today.daily_goal,
+      cardsDue: dashboard.today.cards_due,
+      reviewsCompleted: dashboard.today.reviews_completed,
+      goalProgressPercentage: dashboard.today.goal_progress_percentage,
+    },
     summary: {
       totalCardsReviewed: dashboard.overview.total_cards_studied,
       totalTimeStudied: dashboard.overview.total_study_time_seconds,

@@ -256,7 +256,15 @@
       "keepItUp": "{{count}} day streak - keep it up!",
       "readyToStart": "Ready to start learning?"
     },
-    "startReview": "Start Review Session"
+    "startReview": "Start Review Session",
+    "helloGreek": "Γεια σου,",
+    "dueAcrossDecks": "You have <count>{{count}} cards</count> due across <decks>{{decks}} decks</decks> today.",
+    "nothingDue": "Welcome aboard. Let's get you started — pick one of the three paths below.",
+    "minutesGoalLine": "Aim for <goal>— min</goal> — you're at <current>{{current}} min</current>.",
+    "minuteGoalUnwiredAria": "Daily minute goal — not yet connected to backend data.",
+    "thisWeek": "This week",
+    "heatReviews_one": "{{count}} review",
+    "heatReviews_other": "{{count}} reviews"
   },
   "actions": {
     "save": "Save",

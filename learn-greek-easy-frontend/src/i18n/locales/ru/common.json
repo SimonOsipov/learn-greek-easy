@@ -267,7 +267,15 @@
       "keepItUp": "Серия {{count}} дней - продолжайте!",
       "readyToStart": "Готовы начать обучение?"
     },
-    "startReview": "Начать повторение"
+    "startReview": "Начать повторение",
+    "helloGreek": "Γεια σου,",
+    "dueAcrossDecks": "У вас <count>{{count}} карточек</count> на повторение в <decks>{{decks}} колодах</decks> сегодня.",
+    "nothingDue": "Добро пожаловать. Давайте начнём — выберите один из трёх путей ниже.",
+    "minutesGoalLine": "Цель: <goal>— мин</goal> — сейчас: <current>{{current}} мин</current>.",
+    "minuteGoalUnwiredAria": "Дневная цель в минутах — данные ещё не подключены.",
+    "thisWeek": "Эта неделя",
+    "heatReviews_one": "{{count}} повторение",
+    "heatReviews_other": "{{count}} повторений"
   },
   "actions": {
     "save": "Сохранить",
