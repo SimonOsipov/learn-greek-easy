@@ -254,8 +254,8 @@ export interface AnalyticsDashboardData {
 
   /**
    * Today's at-a-glance stats (from DashboardStatsResponse.today / TodayStats).
-   * Used by the greeting bar and daily-goal ring.
-   * Optional because transform.ts does not yet populate it (DASH2-01-02).
+   * Used by the greeting bar (DASH2-01-02) and daily-goal ring (DASH2-01-04).
+   * Optional for backward compat with any stale cache entries that predate DASH2-01-02.
    */
   today?: {
     /** Maps TodayStats.study_time_seconds */
