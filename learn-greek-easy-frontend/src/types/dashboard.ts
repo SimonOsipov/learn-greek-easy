@@ -1,19 +1,5 @@
 // Dashboard and metrics type definitions
 
-// Test dashboard metric types
-export interface Metric {
-  id: string;
-  label: string;
-  value: number | string;
-  sublabel: string;
-  color?: 'primary' | 'orange' | 'green' | 'blue' | 'muted';
-  icon?: string;
-  trend?: {
-    value: number;
-    direction: 'up' | 'down';
-  };
-}
-
 // Deck types
 export interface DeckProgress {
   current: number;

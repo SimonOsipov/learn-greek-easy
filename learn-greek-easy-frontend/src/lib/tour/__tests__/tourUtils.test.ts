@@ -89,11 +89,12 @@ describe('tourUtils', () => {
   });
 
   describe('buildTourSteps', () => {
-    it('returns 10 steps', () => {
+    // D-TOUR (DASH2-01-06): 4 news-internal steps removed → 6 steps total (was 10).
+    it('returns 6 steps', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
       const steps = buildTourSteps(mockNavigate, mockT as any);
-      expect(steps).toHaveLength(10);
+      expect(steps).toHaveLength(6);
     });
 
     it('step 1 uses tour.steps.navigation keys', () => {
@@ -115,13 +116,13 @@ describe('tourUtils', () => {
       expect(steps[1].element).toBe('[data-testid="metrics-section"]');
     });
 
-    it('step 3 targets news-section with tour.steps.news_section keys', () => {
+    it('step 3 targets feed-filters with tour.steps.feed keys', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
       const steps = buildTourSteps(mockNavigate, mockT as any);
-      expect(mockT).toHaveBeenCalledWith('tour.steps.news_section.title');
-      expect(mockT).toHaveBeenCalledWith('tour.steps.news_section.description');
-      expect(steps[2].element).toBe('[data-testid="news-section"]');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.feed.title');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.feed.description');
+      expect(steps[2].element).toBe('[data-testid="feed-filters"]');
     });
 
     it('all steps have title and description in popover', () => {
@@ -143,43 +144,43 @@ describe('tourUtils', () => {
       expect(typeof steps[1].onHighlightStarted).toBe('function');
     });
 
-    it('steps 3-7 do not have onHighlightStarted (stay on dashboard)', () => {
+    it('steps 3-4 do not have onHighlightStarted (stay on dashboard)', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
       const steps = buildTourSteps(mockNavigate, mockT as any);
-      for (let i = 2; i <= 6; i++) {
+      for (let i = 2; i <= 3; i++) {
         expect(steps[i].onHighlightStarted).toBeUndefined();
       }
     });
 
-    it('step 8 targets decks-dropdown-trigger with no onHighlightStarted', () => {
+    it('step 4 targets decks-dropdown-trigger with no onHighlightStarted', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
       const steps = buildTourSteps(mockNavigate, mockT as any);
-      expect(steps[7].element).toBe('[data-testid="decks-dropdown-trigger"]');
+      expect(steps[3].element).toBe('[data-testid="decks-dropdown-trigger"]');
       expect(mockT).toHaveBeenCalledWith('tour.steps.decks_dropdown.title');
       expect(mockT).toHaveBeenCalledWith('tour.steps.decks_dropdown.description');
-      expect(steps[7].onHighlightStarted).toBeUndefined();
+      expect(steps[3].onHighlightStarted).toBeUndefined();
     });
 
-    it('step 9 targets deck-filters with onHighlightStarted navigating to /decks', () => {
+    it('step 5 targets deck-filters with onHighlightStarted navigating to /decks', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
       const steps = buildTourSteps(mockNavigate, mockT as any);
-      expect(steps[8].element).toBe('[data-testid="deck-filters"]');
+      expect(steps[4].element).toBe('[data-testid="deck-filters"]');
       expect(mockT).toHaveBeenCalledWith('tour.steps.deck_filters.title');
       expect(mockT).toHaveBeenCalledWith('tour.steps.deck_filters.description');
-      expect(typeof steps[8].onHighlightStarted).toBe('function');
+      expect(typeof steps[4].onHighlightStarted).toBe('function');
     });
 
-    it('step 10 targets deck card via element function with onHighlightStarted', () => {
+    it('step 6 targets deck card via element function with onHighlightStarted', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
       const steps = buildTourSteps(mockNavigate, mockT as any);
-      expect(typeof steps[9].element).toBe('function');
+      expect(typeof steps[5].element).toBe('function');
       expect(mockT).toHaveBeenCalledWith('tour.steps.vocab_deck.title');
       expect(mockT).toHaveBeenCalledWith('tour.steps.vocab_deck.description');
-      expect(typeof steps[9].onHighlightStarted).toBe('function');
+      expect(typeof steps[5].onHighlightStarted).toBe('function');
     });
   });
 });

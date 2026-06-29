@@ -68,6 +68,41 @@ vi.mock('@/lib/errorReporting', () => ({
   reportAPIError: vi.fn(),
 }));
 
+vi.mock('@/services/situationAPI', () => ({
+  situationAPI: {
+    getComprehension: vi.fn().mockResolvedValue({
+      whats_new_count: 0,
+      comprehension_percentage: 0,
+      verdict: '',
+      topic_confidence: [],
+      streak: 0,
+      recent_sessions: [],
+    }),
+    getList: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, page_size: 6 }),
+  },
+}));
+
+vi.mock('@/services/adminAPI', () => ({
+  adminAPI: {
+    getNewsItems: vi.fn().mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      page_size: 6,
+      country_counts: { cyprus: 0, greece: 0, world: 0 },
+      audio_count: 0,
+      b1_audio_count: 0,
+      b1_pending_regen_count: 0,
+    }),
+  },
+}));
+
+vi.mock('@/services/exerciseAPI', () => ({
+  exerciseAPI: {
+    getQueue: vi.fn().mockResolvedValue({ total_in_queue: 0, exercises: [] }),
+  },
+}));
+
 // ---------------------------------------------------------------------------
 // Analytics fixture — matches shape expected by Dashboard widgets
 // ---------------------------------------------------------------------------
@@ -77,6 +112,13 @@ const analyticsFixture = {
   overview: { totalReviews: 10, cardsStudied: 5, averageAccuracy: 0.8, totalStudyTime: 60 },
   streak: { currentStreak: 3, longestStreak: 7, lastStudyDate: new Date().toISOString() },
   wordStatus: { learning: 5, review: 10, mastered: 2, newCards: 0 },
+  today: {
+    cardsDue: 5,
+    studyTimeSeconds: 720,
+    dailyGoal: 20,
+    reviewsCompleted: 3,
+    goalProgressPercentage: 50,
+  },
   progressData: [],
   deckStats: [],
   recentActivity: [],
@@ -186,29 +228,31 @@ describe('Dashboard navigation', () => {
   });
 
   // -----------------------------------------------------------------------
-  // "Continue Learning" button (per-deck)
+  // Feed deck/resume card CTAs (DASH2-01-06: rewired from removed DeckCard buttons)
+  // Fixture: mockDecks = [vocabDeck, cultureDeck]. vocabDeck has dueToday=5 → resume card.
+  // cultureDeck is the remaining active deck → deck card "Open deck".
   // -----------------------------------------------------------------------
 
-  it('navigates to /decks/:id/practice when clicking Continue Learning on a vocab deck', async () => {
+  it('navigates to /decks/:id/practice when clicking Resume deck (vocab deck is resume)', async () => {
     await act(async () => {
       renderDashboard(queryClient);
     });
 
-    const buttons = screen.getAllByRole('button', { name: /continue learning/i });
-    // First deck in our fixture list is the vocab deck
-    fireEvent.click(buttons[0]);
+    // vocabDeck becomes the resume card (has dueToday=5, comes first with due cards)
+    const resumeBtn = screen.getByRole('button', { name: /resume deck/i });
+    fireEvent.click(resumeBtn);
 
     expect(mockNavigate).toHaveBeenCalledWith(`/decks/${VOCAB_DECK_ID}/practice`);
   });
 
-  it('navigates to /culture/:id/practice when clicking Continue Learning on a culture deck', async () => {
+  it('navigates to /culture/:id/practice when clicking Open deck on a culture deck card', async () => {
     await act(async () => {
       renderDashboard(queryClient);
     });
 
-    const buttons = screen.getAllByRole('button', { name: /continue learning/i });
-    // Second deck in our fixture list is the culture deck
-    fireEvent.click(buttons[1]);
+    // cultureDeck is NOT the resume deck → rendered as a deck card with "Open deck" CTA
+    const openDeckBtns = screen.getAllByRole('button', { name: /open deck/i });
+    fireEvent.click(openDeckBtns[0]);
 
     expect(mockNavigate).toHaveBeenCalledWith(`/culture/${CULTURE_DECK_ID}/practice`);
   });
@@ -267,12 +311,16 @@ describe('Dashboard navigation', () => {
       renderDashboard(queryClient);
     });
 
-    // Click Start Review
+    // Click Start Review (from HeroEntries — still present)
     fireEvent.click(screen.getByRole('button', { name: /start review/i }));
 
-    // Click all Continue Learning buttons
-    const continueButtons = screen.getAllByRole('button', { name: /continue learning/i });
-    continueButtons.forEach((btn) => fireEvent.click(btn));
+    // Click Resume deck CTA (feed resume card)
+    const resumeBtn = screen.queryByRole('button', { name: /resume deck/i });
+    if (resumeBtn) fireEvent.click(resumeBtn);
+
+    // Click all Open deck CTAs (feed deck cards)
+    const openDeckBtns = screen.queryAllByRole('button', { name: /open deck/i });
+    openDeckBtns.forEach((btn) => fireEvent.click(btn));
 
     // Assert none of the navigate calls used the old /review route
     const allCalls = (mockNavigate.mock.calls as [string][]).map(([url]) => url);

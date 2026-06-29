@@ -57,9 +57,8 @@ test.describe('Analytics Dashboard', () => {
     // Verify dashboard loaded
     await expect(page.getByTestId('dashboard-title')).toBeVisible();
 
-    // Wait for "Your Progress" section to be visible
-    const progressSection = page.getByRole('heading', { name: /your progress/i });
-    await expect(progressSection).toBeVisible({ timeout: 10000 });
+    // Wait for metric strip (redesign removed "Your Progress" heading; MetricStrip is the equivalent)
+    await expect(page.getByTestId('metric-strip')).toBeVisible({ timeout: 10000 });
 
     // Look for actual metric labels on Dashboard
     // Dashboard has: Due Today, Current Streak, Mastered, Total Time
@@ -171,27 +170,12 @@ test.describe('Analytics Dashboard', () => {
   });
 
   test('E2E-05.6: Dashboard displays user greeting', async ({ page }) => {
-    // Look for user greeting or welcome message
-    const greetingPatterns = [
-      /welcome.*test user/i,
-      /hello.*test/i,
-      /hi.*test/i,
-      /dashboard/i,
-    ];
-
-    let foundGreeting = false;
-
-    for (const pattern of greetingPatterns) {
-      const element = page.getByText(pattern).first();
-      const isVisible = await element.isVisible().catch(() => false);
-      if (isVisible) {
-        foundGreeting = true;
-        break;
-      }
-    }
-
-    // At least dashboard heading should be visible
-    expect(foundGreeting).toBe(true);
+    // Redesign: greeting is "Γεια σου, {name} 👋" rendered in data-testid="dashboard-title".
+    // Assert the h1 is visible and contains the seeded learner's name.
+    const titleEl = page.getByTestId('dashboard-title');
+    await expect(titleEl).toBeVisible({ timeout: 10000 });
+    // Seeded learner name is "E2E Learner" (auth-helpers.ts SEED_USERS.LEARNER.name)
+    await expect(titleEl).toContainText('E2E Learner');
   });
 
   test('E2E-05.7: Dashboard has quick action buttons', async ({ page }) => {

@@ -85,6 +85,28 @@ describe('LanguageSwitcher', () => {
       const button = screen.getByTestId('language-switcher-trigger');
       expect(button).toHaveClass('custom-class');
     });
+
+    it('should render as a plain button with .icon-btn when iconButton is true', async () => {
+      const user = userEvent.setup();
+      render(<LanguageSwitcher variant="icon" iconButton />);
+
+      const button = screen.getByTestId('language-switcher-trigger');
+      // Must be a native <button>, not a shadcn wrapper
+      expect(button.tagName).toBe('BUTTON');
+      expect(button).toHaveClass('icon-btn');
+      // Accessible label is preserved
+      expect(button).toHaveAttribute('aria-label');
+
+      // Dropdown still works: menu opens and language options are present
+      await user.click(button);
+
+      await waitFor(() => {
+        const menu = document.querySelector('[data-testid="language-switcher-menu"]');
+        expect(menu).toBeInTheDocument();
+        expect(document.querySelector('[data-testid="language-option-en"]')).toBeInTheDocument();
+        expect(document.querySelector('[data-testid="language-option-ru"]')).toBeInTheDocument();
+      });
+    });
   });
 
   describe('Dropdown Menu', () => {

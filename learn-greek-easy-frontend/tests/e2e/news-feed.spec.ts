@@ -200,62 +200,55 @@ test.describe('News Feed - Learner Dashboard Tests', () => {
     await seedNewsItems(request);
   });
 
-  test('NEWSFEED-10: News section displays on dashboard', async ({ page }) => {
+  test('NEWSFEED-10: News cards display in dashboard feed', async ({ page }) => {
     await page.goto('/dashboard');
     await verifyAuthSucceeded(page, '/dashboard');
 
     // Wait for dashboard to load
     await expect(page.getByTestId('dashboard')).toBeVisible({ timeout: 15000 });
 
-    // News section should be visible
-    const newsSection = page.getByTestId('news-section');
-    await expect(newsSection).toBeVisible({ timeout: 10000 });
+    // Redesign: dedicated news-section removed; news surfaces as FeedNews cards
+    // inside the unified feed-section (data-kind="news" on the badge span).
+    const feedSection = page.getByTestId('feed-section');
+    await expect(feedSection).toBeVisible({ timeout: 10000 });
+    const newsCards = feedSection.locator('[data-kind="news"]');
+    await expect(newsCards.first()).toBeVisible({ timeout: 10000 });
   });
 
-  test('NEWSFEED-11: News section displays up to 3 items', async ({ page }) => {
+  test('NEWSFEED-11: News cards in feed match seeded count', async ({ page }) => {
     await page.goto('/dashboard');
     await verifyAuthSucceeded(page, '/dashboard');
 
-    // Wait for news section
-    const newsSection = page.getByTestId('news-section');
-    await expect(newsSection).toBeVisible({ timeout: 15000 });
+    // Wait for feed section
+    const feedSection = page.getByTestId('feed-section');
+    await expect(feedSection).toBeVisible({ timeout: 15000 });
 
-    // Wait for cards to load (not loading state)
-    const loadingState = page.getByTestId('news-section-loading');
-    await expect(loadingState).toBeHidden({ timeout: 10000 });
-
-    // Count news cards
-    const newsCards = page.locator('[data-testid^="news-card-"]');
+    // Redesign: composeFeed surfaces news as data-kind="news" cards; news loads async
+    // (TanStack Query), so wait for the first card to render before counting — otherwise
+    // count() races the query and returns 0 right after feed-section becomes visible.
+    const newsCards = feedSection.locator('[data-kind="news"]');
+    await expect(newsCards.first()).toBeVisible({ timeout: 10000 });
     const cardCount = await newsCards.count();
 
-    // Should have 1-6 cards (max 6 displayed on dashboard)
+    // Seeder creates items; composeFeed has no upper cap — just verify ≥1 surfaced
     expect(cardCount).toBeGreaterThanOrEqual(1);
-    expect(cardCount).toBeLessThanOrEqual(6);
   });
 
-  test('NEWSFEED-12: News card link has correct attributes', async ({ page }) => {
+  test('NEWSFEED-12: News card is present and interactive in feed', async ({ page }) => {
     await page.goto('/dashboard');
     await verifyAuthSucceeded(page, '/dashboard');
 
-    // Wait for news section
-    const newsSection = page.getByTestId('news-section');
-    await expect(newsSection).toBeVisible({ timeout: 15000 });
+    // Wait for feed section
+    const feedSection = page.getByTestId('feed-section');
+    await expect(feedSection).toBeVisible({ timeout: 15000 });
 
-    // Wait for loading to complete
-    const loadingState = page.getByTestId('news-section-loading');
-    await expect(loadingState).toBeHidden({ timeout: 10000 });
-
-    // Get first news card
-    const firstCard = page.locator('[data-testid^="news-card-"]').first();
-    await expect(firstCard).toBeVisible();
-
-    // Verify it's a link with correct attributes
-    const href = await firstCard.getAttribute('href');
-    const target = await firstCard.getAttribute('target');
-
-    expect(href).toBeTruthy();
-    expect(href).toMatch(/^https?:\/\//); // Should be a valid URL
-    expect(target).toBe('_blank'); // Should open in new tab
+    // Redesign: news cards are <article class="db-card is-news"> with onClick → window.open.
+    // The anchor href/target model is gone by design (coverage lives on /news page cards).
+    // Assert the news badge and card article are visible — confirms rendered & actionable.
+    const newsBadge = feedSection.locator('[data-kind="news"]').first();
+    await expect(newsBadge).toBeVisible({ timeout: 10000 });
+    const newsArticle = feedSection.locator('article.is-news').first();
+    await expect(newsArticle).toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -302,7 +295,7 @@ test.describe('News Feed - Mobile Responsive Tests', () => {
     await seedNewsItems(request);
   });
 
-  test('NEWSFEED-30: News section displays correctly on mobile', async ({ page }) => {
+  test('NEWSFEED-30: News cards display correctly on mobile', async ({ page }) => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
 
@@ -312,16 +305,10 @@ test.describe('News Feed - Mobile Responsive Tests', () => {
     // Wait for dashboard to load
     await expect(page.getByTestId('dashboard')).toBeVisible({ timeout: 15000 });
 
-    // News section should be visible
-    const newsSection = page.getByTestId('news-section');
-    await expect(newsSection).toBeVisible({ timeout: 10000 });
-
-    // Wait for loading to complete
-    const loadingState = page.getByTestId('news-section-loading');
-    await expect(loadingState).toBeHidden({ timeout: 10000 });
-
-    // Cards should be displayed (single column on mobile)
-    const newsCards = page.locator('[data-testid^="news-card-"]');
-    await expect(newsCards.first()).toBeVisible();
+    // Redesign: news cards now in unified feed-section (news-section / news-section-loading removed)
+    const feedSection = page.getByTestId('feed-section');
+    await expect(feedSection).toBeVisible({ timeout: 10000 });
+    const newsCards = feedSection.locator('[data-kind="news"]');
+    await expect(newsCards.first()).toBeVisible({ timeout: 10000 });
   });
 });

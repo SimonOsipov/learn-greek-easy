@@ -224,30 +224,15 @@ test.describe('News Feed Page - Navigation Tests', () => {
     await seedNewsFeedPage(request);
   });
 
-  test('NEWSFEED-PAGE-08: Navigate from dashboard "See all" link', async ({ page }) => {
-    // Go to dashboard first
+  // NEWSFEED-PAGE-08: Skipped — dashboard "See all" link deliberately removed in DASH2-01
+  // redesign (news folded into unified Feed; country browsing lives on /news page).
+  // /news navigation coverage is provided by NEWSFEED-PAGE-09 (Practice dropdown path).
+  test.skip('NEWSFEED-PAGE-08: Navigate from dashboard "See all" link', async ({ page }) => {
+    // Removed affordance: the dashboard news-section + "See all" link no longer exist.
+    // Coverage: NEWSFEED-PAGE-09 verifies /news is reachable via Practice > News Feed.
     await page.goto('/dashboard');
     await verifyAuthSucceeded(page, '/dashboard');
-
-    // Wait for dashboard to load
     await expect(page.getByTestId('dashboard')).toBeVisible({ timeout: 15000 });
-
-    // Wait for news section to appear
-    const newsSection = page.getByTestId('news-section');
-    await expect(newsSection).toBeVisible({ timeout: 15000 });
-
-    // Wait for news section loading to complete
-    const loadingState = page.getByTestId('news-section-loading');
-    await expect(loadingState).toBeHidden({ timeout: 10000 });
-
-    // Click "See all" link
-    const seeAllLink = page.getByTestId('news-section-see-all');
-    await expect(seeAllLink).toBeVisible();
-    await seeAllLink.click();
-
-    // Verify navigation to /news page
-    await page.waitForURL('/news', { timeout: 10000 });
-    await expect(page.getByTestId('news-page')).toBeVisible({ timeout: 10000 });
   });
 
   test('NEWSFEED-PAGE-09: Access from Practice dropdown menu', async ({ page }) => {

@@ -1,15 +1,14 @@
 /**
- * Dashboard Metrics — Mastered Tile Selector Regression Guard (PRACT2-7-03 AC-1)
+ * Dashboard Metrics — Due-Today Selector Regression Guard + Mastered Tile Guard (DASH2-01-04)
  *
- * Verifies that the "Освоено" (mastered) metric tile on the Dashboard shows
- * the value from `wordStatus.mastered` (= `masteredCount(cardsByStatus)`).
+ * 1. Due-Today regression: fixture today.cardsDue=5 AND learning+review=13.
+ *    Asserts the "Due Today" metric tile shows **5** (true SRS), NOT 13.
+ *    RED against old code (showed learning+review); GREEN after DASH2-01-04 rewire.
  *
- * This is a REGRESSION GUARD: the current code already reads `wordStatus.mastered`
- * directly (Dashboard.tsx:129). If a future refactor accidentally swaps it for
- * e.g. `wordStatus.total` or `summary.totalCardsReviewed`, this test will catch it.
- *
- * Strategy: inject analytics data with `wordStatus.mastered = 12` and assert
- * the "Освоено" MetricCard renders the value `12`.
+ * 2. Mastered tile selector (PRACT2-7-03 AC-1):
+ *    Verifies the "Mastered" metric tile shows wordStatus.mastered (12).
+ *    Selectors migrated from MetricCard (.card/.metric-value) to MetricStrip
+ *    (.db-metric/.db-metric-v) as part of DASH2-01-04.
  */
 
 import { act } from 'react';
@@ -63,6 +62,19 @@ vi.mock('@/lib/errorReporting', () => ({
   reportAPIError: vi.fn(),
 }));
 
+vi.mock('@/services/situationAPI', () => ({
+  situationAPI: {
+    getComprehension: vi.fn().mockResolvedValue({
+      whats_new_count: 0,
+      comprehension_percentage: 0,
+      verdict: '',
+      topic_confidence: [],
+      streak: 0,
+      recent_sessions: [],
+    }),
+  },
+}));
+
 vi.mock('@/stores/deckStore', () => ({
   useDeckStore: (selector: (s: Record<string, unknown>) => unknown) =>
     selector({
@@ -73,7 +85,10 @@ vi.mock('@/stores/deckStore', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Analytics fixture: mastered=12, other statuses have distinct values
+// Analytics fixture:
+//   - today.cardsDue = 5  (SRS due — the CORRECT Due-Today source)
+//   - wordStatus.learning=5 + wordStatus.review=8 = 13  (the WRONG old source)
+//   - wordStatus.mastered = 12  (canonical mastered value)
 // ---------------------------------------------------------------------------
 
 const masteredValue = 12;
@@ -82,7 +97,15 @@ const analyticsFixture = {
   summary: { totalTimeStudied: 60, totalCardsReviewed: 137 },
   overview: { totalReviews: 137, cardsStudied: 50, averageAccuracy: 0.8, totalStudyTime: 60 },
   streak: { currentStreak: 3, longestStreak: 7, lastStudyDate: new Date().toISOString() },
-  // mastered=12 is the value under test; learning/review are distinct non-12 values
+  // today.cardsDue=5 is the canonical SRS source; learning+review=13 is NOT
+  today: {
+    cardsDue: 5,
+    studyTimeSeconds: 0,
+    dailyGoal: 20,
+    reviewsCompleted: 0,
+    goalProgressPercentage: 0,
+  },
+  // learning=5, review=8 → sum=13; mastered=12 is the canonical mastered value
   wordStatus: { learning: 5, review: 8, mastered: masteredValue, newCards: 0 },
   progressData: [],
   deckStats: [],
@@ -100,10 +123,10 @@ function renderDashboard(queryClient: QueryClient) {
 }
 
 // ---------------------------------------------------------------------------
-// Test
+// Tests
 // ---------------------------------------------------------------------------
 
-describe('Dashboard mastered tile selector (PRACT2-7-03 AC-1)', () => {
+describe('Dashboard metric tile selectors (DASH2-01-04 + PRACT2-7-03 AC-1)', () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
@@ -118,30 +141,49 @@ describe('Dashboard mastered tile selector (PRACT2-7-03 AC-1)', () => {
     queryClient.clear();
   });
 
+  it('test_dashboard_due_today_uses_srs_cardsDue: Due Today tile shows today.cardsDue (5), NOT learning+review (13)', async () => {
+    await act(async () => {
+      renderDashboard(queryClient);
+    });
+
+    const metricsSection = screen.getByTestId('metrics-section');
+
+    // Find the Due Today tile — works on both MetricCard (.card) and MetricStrip (.db-metric)
+    const allTiles = Array.from(metricsSection.querySelectorAll('.card, .db-metric'));
+    const dueTodayTile = allTiles.find(
+      (el) => el.textContent?.includes('Due Today') || el.textContent?.includes('Due today')
+    );
+    expect(dueTodayTile).toBeDefined();
+
+    // Find the value element — MetricCard uses .metric-value, MetricStrip uses .db-metric-v
+    const valueEl = dueTodayTile!.querySelector('.metric-value, .db-metric-v');
+    expect(valueEl).not.toBeNull();
+
+    // Must show 5 (today.cardsDue), NOT 13 (learning=5 + review=8)
+    // RED against old code (shows 13); GREEN after Dashboard.tsx rewire.
+    expect(valueEl!.textContent?.trim()).toBe('5');
+  });
+
   it('test_dashboard_mastered_uses_canonical_selector: mastered tile shows wordStatus.mastered (12)', async () => {
     await act(async () => {
       renderDashboard(queryClient);
     });
 
-    // The MetricCard for "Mastered" renders its `value` prop as text inside
-    // a `.metric-value` element. We look up the metric section and find the
-    // MetricCard that contains the "Mastered" label, then assert its value text.
-    // Note: i18n renders in English ("Mastered") in the test environment;
-    // the RU label "Освоено" appears in production (dashboard.metrics.mastered).
     const metricsSection = screen.getByTestId('metrics-section');
 
-    // The mastered MetricCard shows the value directly as a text node.
-    // `masteredValue` (12) is a unique number in the fixture — no other
-    // metric equals 12 — so querying by its text is unambiguous.
+    // The metrics section must contain the mastered value somewhere
     expect(metricsSection).toHaveTextContent(String(masteredValue));
 
-    // Additional: confirm the card labelled "Mastered" shows exactly 12.
-    const allCards = metricsSection.querySelectorAll('.card');
-    const masteredCard = Array.from(allCards).find((card) =>
-      card.textContent?.includes('Mastered')
+    // Find the Mastered tile using MetricStrip selectors (.db-metric / .db-metric-v)
+    const allTiles = metricsSection.querySelectorAll('.db-metric');
+    const masteredTile = Array.from(allTiles).find((tile) =>
+      tile.textContent?.includes('Mastered')
     );
-    expect(masteredCard).toBeDefined();
-    const valueEl = masteredCard!.querySelector('.metric-value');
-    expect(valueEl?.textContent).toBe(String(masteredValue));
+    expect(masteredTile).toBeDefined();
+
+    // .db-metric-v contains {mastered}<small>words</small> — toContain handles the suffix
+    const valueEl = masteredTile!.querySelector('.db-metric-v');
+    expect(valueEl).not.toBeNull();
+    expect(valueEl!.textContent).toContain(String(masteredValue));
   });
 });

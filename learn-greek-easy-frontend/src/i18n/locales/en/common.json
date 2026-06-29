@@ -208,8 +208,6 @@
   "dashboard": {
     "title": "Dashboard",
     "progress": {
-      "kicker": "Progress",
-      "title": "Your Progress",
       "error": "Failed to load metrics. Please try refreshing the page.",
       "empty": "No progress data yet. Start studying to see your metrics!"
     },
@@ -223,7 +221,17 @@
       "days": "days",
       "wordsTotal": "words total",
       "thisPeriod": "this period",
-      "allTime": "all time"
+      "allTime": "all time",
+      "allTimeLabel": "All-time",
+      "wordsUnit": "words",
+      "trendBestStreak": "best: {{count}}",
+      "trendStartStreak": "start one today",
+      "trendSinceYesterday": "+— since yesterday",
+      "trendSinceYesterdayAria": "+— since yesterday — not yet connected to backend data.",
+      "trendGoal": "goal —",
+      "trendGoalAria": "goal — not yet connected to backend data.",
+      "trendNewToday": "+— new today",
+      "trendNewTodayAria": "+— new today — not yet connected to backend data."
     },
     "activeDecks": {
       "kicker": "Active Decks",
@@ -244,6 +252,126 @@
       },
       "seeAll": "See All News",
       "kicker": "News"
+    },
+    "hero": {
+      "continue": {
+        "kicker": "Continue",
+        "body": "You were on card <pos>—</pos> · {{when}}.",
+        "cardIndexUnwiredAria": "Card position — not yet connected to backend data",
+        "dueNow": "cards due now",
+        "cta": "Resume",
+        "emptyTitle": "Start learning",
+        "emptyBody": "Pick a deck to begin your Greek learning journey."
+      },
+      "review": {
+        "kicker": "Today's review",
+        "title": "{{count}} cards across {{decks}} decks",
+        "titleNothing": "Nothing due — relax!",
+        "body": "Estimated <est>~ min</est>.",
+        "estimateUnwiredAria": "Time estimate — not yet connected to backend data",
+        "bodyNothing": "Come back tomorrow or explore a new deck.",
+        "cta": "Start review",
+        "ctaNothing": "Browse decks"
+      },
+      "dailyGoal": {
+        "kicker": "Daily goal",
+        "minLabel": "min today",
+        "goalUnwiredAria": "Daily minute goal — not yet connected to backend data",
+        "streakLabel": "day streak"
+      }
+    },
+    "whatsNew": {
+      "heading": "Recently added",
+      "situations": "new situations",
+      "newsItems": "news items",
+      "audioArticles": "articles got audio",
+      "newsItemsAria": "News items count — not yet connected to backend data.",
+      "audioArticlesAria": "Audio articles count — not yet connected to backend data.",
+      "seeAll": "See all updates"
+    },
+    "feed": {
+      "heading": "Your feed today",
+      "subtitle": "A mix of decks, news, and conversations to keep you learning.",
+      "filters": {
+        "all": "All",
+        "cards": "Cards",
+        "news": "News",
+        "practice": "Practice"
+      },
+      "resume": {
+        "kicker": "Pick up where you left off",
+        "typeBadge": "Deck",
+        "cta": "Resume deck",
+        "dueNow": "cards due now",
+        "ofMastered": "of {{total}} mastered",
+        "complete": "complete"
+      },
+      "review": {
+        "kicker": "Your daily review",
+        "typeBadge": "Today",
+        "title": "{{count}} cards across {{decks}} decks",
+        "cardsCount": "{{count}} cards",
+        "cta": "Start session"
+      },
+      "situation": {
+        "kicker": "Practice conversation",
+        "typeBadge": "Dialog",
+        "exercises": "{{count}} exercises"
+      },
+      "word": {
+        "kicker": "Word of the day",
+        "typeBadge": "Word",
+        "unwiredAria": "Word of the day — not yet connected to backend data"
+      },
+      "deck": {
+        "kicker": "Continue learning",
+        "typeBadge": "Deck",
+        "cta": "Open deck",
+        "meta": "{{due}} due · {{mastered}} mastered"
+      },
+      "milestone": {
+        "kicker": "You're on a streak",
+        "typeBadge": "Streak",
+        "title": "{{count}} days in a row",
+        "beatBest": "{{count}} more days to beat your best ({{best}})",
+        "personalBest": "Your best streak yet — keep it going!",
+        "cta": "Keep streak"
+      },
+      "news": {
+        "kicker": "News",
+        "kickerWithCountry": "News · {{country}}",
+        "typeBadge": "News",
+        "readPractice": "Read & practice"
+      },
+      "quick": {
+        "kicker": "Quick practice",
+        "typeBadge": "Quick",
+        "cta": "Start",
+        "meta": "{{count}} exercises ready"
+      }
+    },
+    "starter": {
+      "kicker": "Welcome to Greeklish",
+      "heading": "Three ways to start learning Greek today",
+      "sub": "Pick one. You can always come back to the others. Most people start with the first deck — it's 20 cards and takes about 15 minutes.",
+      "deck": {
+        "title": "First Greek words",
+        "sub": "20 cards · 15 min · A1",
+        "meta": "Greetings, family, food — the absolute basics.",
+        "cta": "Start deck"
+      },
+      "article": {
+        "title": "Read your first article",
+        "sub": "Cyprus news · 1 min audio · B2",
+        "meta": "Listen along with native audio, tap any word for a translation.",
+        "cta": "Open article"
+      },
+      "dialog": {
+        "title": "Try a real conversation",
+        "sub": "Coffee shop scenario · 8 turns · A2",
+        "meta": "Practice the words you'd actually say at a καφενείο.",
+        "cta": "Start dialog"
+      }
     }
   },
   "welcome": {
@@ -256,7 +384,15 @@
       "keepItUp": "{{count}} day streak - keep it up!",
       "readyToStart": "Ready to start learning?"
     },
-    "startReview": "Start Review Session"
+    "startReview": "Start Review Session",
+    "helloGreek": "Γεια σου,",
+    "dueAcrossDecks": "You have <count>{{count}} cards</count> due across <decks>{{decks}} decks</decks> today.",
+    "nothingDue": "Welcome aboard. Let's get you started — pick one of the three paths below.",
+    "minutesGoalLine": "Aim for <goal>— min</goal> — you're at <current>{{current}} min</current>.",
+    "minuteGoalUnwiredAria": "Daily minute goal — not yet connected to backend data.",
+    "thisWeek": "This week",
+    "heatReviews_one": "{{count}} review",
+    "heatReviews_other": "{{count}} reviews"
   },
   "actions": {
     "save": "Save",
@@ -319,8 +455,8 @@
     "upgradeToPremium": "Upgrade to Premium",
     "mySubscription": "My Subscription",
     "feedbackDropdown": {
-      "feedback": "Submit Feedback",
-      "changelog": "New Features & Changes"
+      "feedback": "Feedback & Ideas",
+      "changelog": "What's New"
     }
   },
   "language": {
@@ -694,6 +830,10 @@
       "vocab_deck": {
         "title": "Start with Vocabulary",
         "description": "This vocabulary deck covers essential Greek nouns — a great place to start building your foundation. Click any deck to begin learning."
+      },
+      "feed": {
+        "title": "Your Learning Feed",
+        "description": "Filter your feed by cards, news, or practice. Everything is mixed in one place — picked from your active decks, news, and conversations."
       }
     },
     "dismiss": {

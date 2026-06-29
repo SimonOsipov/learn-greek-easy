@@ -26,7 +26,7 @@ export type {
 } from './auth';
 
 // Export dashboard types explicitly
-export type { Metric, DeckProgress, DeckStats, Deck } from './dashboard';
+export type { DeckProgress, DeckStats, Deck } from './dashboard';
 
 // Export review types explicitly
 export type {

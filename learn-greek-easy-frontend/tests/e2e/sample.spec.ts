@@ -14,8 +14,10 @@ test.describe('Playwright Setup Validation - Authenticated', () => {
   test('should access dashboard when authenticated', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page).toHaveURL('/dashboard');
-    await expect(page.getByRole('heading', { name: /your progress/i })).toBeVisible();
-    await expect(page.getByRole('heading', { name: /active decks/i })).toBeVisible();
+    // Redesign removed "Your Progress" and "Active Decks" headings.
+    // Dashboard container and MetricStrip are the stable equivalents.
+    await expect(page.getByTestId('dashboard')).toBeVisible();
+    await expect(page.getByTestId('metric-strip')).toBeVisible();
   });
 });
 

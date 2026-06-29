@@ -110,8 +110,13 @@ vi.mock('@/components/notifications', () => ({
   NotificationsDropdown: () => <div data-testid="notifications-dropdown">Notifications</div>,
 }));
 
-vi.mock('@/components/theme', () => ({
-  ThemeSwitcher: () => <div data-testid="theme-switcher">Theme</div>,
+// ThemeSwitcher is no longer used; Header now calls useTheme directly — mock the context
+vi.mock('@/contexts/ThemeContext', () => ({
+  useTheme: () => ({
+    currentTheme: 'light',
+    toggleTheme: vi.fn(),
+    isChanging: false,
+  }),
 }));
 
 describe('Header', () => {
@@ -374,11 +379,12 @@ describe('Decks dropdown — Culture entry', () => {
     });
   });
 
-  it('should apply text-primary to Decks trigger on /culture/decks/abc (parent active)', async () => {
+  it('should apply active class to Decks trigger on /culture/decks/abc (parent active)', async () => {
+    // text-primary removed from trigger; .va-nav .active owns the color via CSS for WCAG AA
     renderHeaderAt('/culture/decks/abc');
 
     const trigger = screen.getByTestId('decks-dropdown-trigger');
-    expect(trigger).toHaveClass('text-primary');
+    expect(trigger).toHaveClass('active');
   });
 
   it('should NOT apply text-primary to Decks trigger on /cultural-something', () => {

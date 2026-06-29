@@ -164,36 +164,19 @@ test.describe('MCNEWS - Dashboard Shows Pills Without Filter', () => {
     await seedNewsCountryData(request);
   });
 
-  test('MCNEWS-E2E-05: Dashboard shows news with country pills and filter tabs', async ({
-    page,
-  }) => {
+  test('MCNEWS-E2E-05: Dashboard shows news cards in unified feed', async ({ page }) => {
     await page.goto('/dashboard');
     await verifyAuthSucceeded(page, '/dashboard');
 
-    // Wait for news section
-    const newsSection = page.getByTestId('news-section');
-    await expect(newsSection).toBeVisible({ timeout: 20000 });
+    // Redesign: the dedicated dashboard news-section (with country pills + filter tabs) was removed.
+    // News now surfaces as FeedNews cards inside the unified feed-section.
+    // Country-pill display and filter tabs are covered by /news page tests (MCNEWS-E2E-01..04).
+    const feedSection = page.getByTestId('feed-section');
+    await expect(feedSection).toBeVisible({ timeout: 20000 });
 
-    // Wait for news section to load (not in loading state)
-    const newsLoading = page.getByTestId('news-section-loading');
-    if (await newsLoading.isVisible()) {
-      await expect(newsLoading).toBeHidden({ timeout: 15000 });
-    }
-
-    // Verify news cards are present
-    const newsCards = newsSection.locator('[data-testid^="news-card-"]');
-    const cardCount = await newsCards.count();
-    expect(cardCount).toBeGreaterThanOrEqual(0); // May be empty if no data
-
-    // Country filter buttons (All/Cyprus/Greece/World) ARE present on dashboard
-    const filters = newsSection.getByTestId('news-filters');
-    await expect(filters).toBeVisible({ timeout: 10000 });
-    await expect(filters.getByRole('button', { name: /Cyprus/i })).toBeVisible();
-    await expect(filters.getByRole('button', { name: /Greece/i })).toBeVisible();
-    await expect(filters.getByRole('button', { name: /World/i })).toBeVisible();
-    // Verify the difficulty level buttons (A2/B1) are present
-    await expect(filters.getByRole('button', { name: /A2/i })).toBeVisible();
-    await expect(filters.getByRole('button', { name: /B1/i })).toBeVisible();
+    // Assert ≥1 news card appears in the feed after seeding
+    const newsCards = feedSection.locator('[data-kind="news"]');
+    await expect(newsCards.first()).toBeVisible({ timeout: 15000 });
   });
 });
 
