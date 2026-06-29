@@ -377,3 +377,146 @@ describe('filterFeed', () => {
     expect(practice.every((i) => ['situation', 'quick'].includes(i.type))).toBe(true);
   });
 });
+
+// ─── Adversarial / edge / boundary tests (QA Mode B additions) ───────────────
+
+describe('composeFeed — adversarial', () => {
+  // Edge: partial sources — only news + quick present (no decks, no streak, etc.)
+  // Verify that the fixed emission ORDER is upheld even when most types are absent.
+  // Expected order: wordOfDay (always) → news items → quick
+  it('partial_sources_maintain_fixed_order', () => {
+    const items = composeFeed({
+      decks: [],
+      cardsDue: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+      news: [n1, n2],
+      situations: [],
+      queueCount: 3,
+    });
+    expect(items.map((i) => i.type)).toEqual(['wordOfDay', 'news', 'news', 'quick']);
+  });
+
+  // Edge: grammar and culture deck categories → correct illo values
+  it('illo_assigned_from_deck_category', () => {
+    const grammarDeck = {
+      ...makeDeck('grammar-1', { cardsReview: 1, lastStudied: undefined }),
+      category: 'grammar',
+    };
+    const cultureDeck = {
+      ...makeDeck('culture-1', { cardsReview: 1, lastStudied: undefined }),
+      category: 'culture',
+    };
+    const vocabDeck = {
+      ...makeDeck('vocab-1', { cardsReview: 1, lastStudied: undefined }),
+      category: 'vocabulary',
+    };
+    // Use a second vocab deck as the resume (most recently studied),
+    // so grammar/culture/vocab all appear as deck items
+    const resumeDeckX = makeDeck('resume-x', {
+      lastStudied: new Date('2026-06-28'),
+      cardsReview: 1,
+    });
+    const items = composeFeed({
+      decks: [resumeDeckX, grammarDeck, cultureDeck, vocabDeck],
+      cardsDue: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+      news: [],
+      situations: [],
+      queueCount: 0,
+    });
+    const deckItems = items.filter((i) => i.type === 'deck') as Extract<
+      FeedItem,
+      { type: 'deck' }
+    >[];
+    const byId = Object.fromEntries(deckItems.map((i) => [i.deck.id, i.illo]));
+    expect(byId['grammar-1']).toBe('verbs');
+    expect(byId['culture-1']).toBe('culture');
+    expect(byId['vocab-1']).toBe('deck');
+  });
+
+  // Edge: only 1 of 3 situations emitted (first only)
+  it('situations_uses_first_only', () => {
+    const s2 = makeSituation('S2');
+    const s3 = makeSituation('S3');
+    const items = composeFeed({ ...fullSources, situations: [sit1, s2, s3] });
+    const sitItems = items.filter((i) => i.type === 'situation');
+    expect(sitItems).toHaveLength(1);
+    const first = sitItems[0] as Extract<FeedItem, { type: 'situation' }>;
+    expect(first.situation.id).toBe('S1');
+  });
+
+  // Edge: 4 active (non-resume) decks → tones cycle primary→violet→cyan→green
+  it('deck_tones_cycle_over_four_decks', () => {
+    const EXPECTED_TONES = ['primary', 'violet', 'cyan', 'green'];
+    const resumeDeckR = makeDeck('R', { lastStudied: new Date('2026-06-28'), cardsReview: 1 });
+    const d1 = makeDeck('D1', { cardsReview: 1 });
+    const d2 = makeDeck('D2', { cardsReview: 1 });
+    const d3 = makeDeck('D3', { cardsReview: 1 });
+    const d4 = makeDeck('D4', { cardsReview: 1 });
+    const items = composeFeed({
+      decks: [resumeDeckR, d1, d2, d3, d4],
+      cardsDue: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+      news: [],
+      situations: [],
+      queueCount: 0,
+    });
+    const deckItems = items.filter((i) => i.type === 'deck') as Extract<
+      FeedItem,
+      { type: 'deck' }
+    >[];
+    expect(deckItems).toHaveLength(4);
+    deckItems.forEach((item, i) => {
+      expect(item.tone).toBe(EXPECTED_TONES[i]);
+    });
+  });
+});
+
+describe('countByFilter — adversarial', () => {
+  // Boundary: empty feed → all counts are 0
+  it('countByFilter_empty_feed_returns_all_zeros', () => {
+    const counts = countByFilter([]);
+    expect(counts).toEqual({ all: 0, cards: 0, news: 0, practice: 0 });
+  });
+
+  // Edge: feed with ONLY wordOfDay and milestone → all=2, everything else=0
+  it('countByFilter_word_and_milestone_only_produces_non_zero_all', () => {
+    const onlyUncounted: FeedItem[] = [
+      { id: 'word-of-day', type: 'wordOfDay', span: 'compact', tone: 'amber' },
+      {
+        id: 'milestone',
+        type: 'milestone',
+        span: 'compact',
+        tone: 'amber',
+        currentStreak: 5,
+        longestStreak: 10,
+      },
+    ];
+    const counts = countByFilter(onlyUncounted);
+    expect(counts.all).toBe(2);
+    expect(counts.cards).toBe(0);
+    expect(counts.news).toBe(0);
+    expect(counts.practice).toBe(0);
+  });
+});
+
+describe('filterFeed — adversarial', () => {
+  // Boundary: unknown filter key falls through to returning all items
+  // (type safety guard: FeedFilterKey union prevents this at compile time,
+  //  but the runtime fallback in filterFeed returns all items, not empty)
+  it('unknown_filter_key_returns_all_items_as_fallback', () => {
+    // Cast to string to simulate an unexpected runtime value
+    const result = filterFeed(ten, 'unknown_key_xyz');
+    // The current implementation: unknown key → filter not found → !filter?.types → returns items
+    expect(result).toHaveLength(ten.length);
+  });
+
+  // Boundary: filter on an empty feed returns empty
+  it('filterFeed_empty_input_returns_empty', () => {
+    expect(filterFeed([], 'cards')).toHaveLength(0);
+    expect(filterFeed([], 'all')).toHaveLength(0);
+  });
+});
