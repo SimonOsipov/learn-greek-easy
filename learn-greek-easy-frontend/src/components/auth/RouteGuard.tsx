@@ -4,6 +4,7 @@ import log from '@/lib/logger';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppStore } from '@/stores/appStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useDeckStore } from '@/stores/deckStore';
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -72,6 +73,16 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
               isAuthenticated: false,
               isLoading: false,
             });
+            // Drop the persisted deck-cover cache so a different account signing
+            // in on this browser never inherits the previous user's deck list.
+            useDeckStore.setState({
+              rawDecks: [],
+              decks: [],
+              totalDecks: 0,
+              selectedDeck: null,
+              lastFetchedAt: null,
+            });
+            useDeckStore.persist.clearStorage();
           }
         });
         subscription = data.subscription;

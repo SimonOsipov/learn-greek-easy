@@ -131,12 +131,16 @@ test.describe('Landing Page - Unauthenticated', () => {
     test('should have proper heading hierarchy', async ({ page }) => {
       await page.goto('/');
 
-      // Should have exactly one h1
-      const h1Elements = page.locator('h1');
-      expect(await h1Elements.count()).toBe(1);
+      // React mounts the hero after async i18n init — i.e. after goto's load
+      // event — so wait for it before counting. A non-retrying count() here
+      // raced a not-yet-rendered DOM and saw 0 h1s.
+      const heroTitle = page.getByTestId('hero-title');
+      await expect(heroTitle).toBeVisible();
+
+      // Should have exactly one h1 — the hero title (auto-retries until settled)
+      await expect(page.locator('h1')).toHaveCount(1);
 
       // Hero title should be the h1
-      const heroTitle = page.getByTestId('hero-title');
       const tagName = await heroTitle.evaluate((el) => el.tagName.toLowerCase());
       expect(tagName).toBe('h1');
     });

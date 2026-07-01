@@ -159,7 +159,15 @@ test('ASHELL-SMOKE-05: no console errors during 3-step smoke', async ({ page }) 
       !e.includes('ERR_BLOCKED_BY_CLIENT') &&
       !e.includes('Failed to preconnect') &&
       !e.includes('sentry.io') &&
-      !e.includes('ingest.us.sentry.io')
+      !e.includes('ingest.us.sentry.io') &&
+      // Font *download* failures are an env artifact, not an app error: in the CI
+      // sandbox both the external CDN (fonts.gstatic.com) and — flakily, on
+      // Firefox — the self-hosted @fontsource woff2 fail to fetch, so we can't
+      // scope this to a single host. We still match the full "download failed"
+      // signature (not any "downloadable font:" message), so a genuine font
+      // problem that surfaces differently (e.g. "rejected by sanitizer") is not
+      // hidden.
+      !(e.includes('downloadable font') && e.includes('download failed'))
   );
 
   expect(appErrors).toHaveLength(0);

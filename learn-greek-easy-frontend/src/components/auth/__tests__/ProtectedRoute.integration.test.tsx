@@ -11,6 +11,13 @@ import { useAuthStore } from '@/stores/authStore';
 
 import { ProtectedRoute } from '../ProtectedRoute';
 
+// ProtectedRoute warms the deck-cover cache on auth; stub it so this route-guard
+// integration test doesn't fire a real /decks fetch (kept behaviour is unit-tested
+// in deckStore.test.ts / useWarmDeckCovers is exercised there).
+vi.mock('@/hooks/useWarmDeckCovers', () => ({
+  useWarmDeckCovers: () => {},
+}));
+
 // Mock all API services to prevent real network calls
 vi.mock('@/services/authAPI', () => ({
   authAPI: {

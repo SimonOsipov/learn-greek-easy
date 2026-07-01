@@ -190,6 +190,7 @@ vi.mock('@/stores/deckStore', () => ({
       decks: mockDecks,
       isLoading: false,
       fetchDecks: mockFetchDecks,
+      ensureDecksFresh: mockFetchDecks,
     }),
 }));
 

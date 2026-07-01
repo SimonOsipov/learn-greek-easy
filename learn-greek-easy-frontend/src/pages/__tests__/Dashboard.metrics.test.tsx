@@ -81,6 +81,7 @@ vi.mock('@/stores/deckStore', () => ({
       decks: [],
       isLoading: false,
       fetchDecks: vi.fn(() => Promise.resolve()),
+      ensureDecksFresh: vi.fn(() => Promise.resolve()),
     }),
 }));
 

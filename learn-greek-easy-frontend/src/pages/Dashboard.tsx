@@ -46,14 +46,15 @@ export const Dashboard: React.FC = () => {
   // Deck data
   const decks = useDeckStore((state) => state.decks);
   const decksLoading = useDeckStore((state) => state.isLoading);
-  const fetchDecks = useDeckStore((state) => state.fetchDecks);
+  const ensureDecksFresh = useDeckStore((state) => state.ensureDecksFresh);
 
-  // Fetch decks on mount
+  // Warm/refresh decks on mount. ensureDecksFresh de-dupes with the app-init
+  // warm (ProtectedRoute) and paints instantly from the persisted cover cache.
   useEffect(() => {
-    fetchDecks().catch((error) => {
-      reportAPIError(error, { operation: 'fetchDecks', endpoint: '/decks' });
+    ensureDecksFresh().catch((error) => {
+      reportAPIError(error, { operation: 'ensureDecksFresh', endpoint: '/decks' });
     });
-  }, [fetchDecks]);
+  }, [ensureDecksFresh]);
 
   useTourAutoTrigger();
 
