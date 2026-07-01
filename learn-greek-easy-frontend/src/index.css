@@ -1278,6 +1278,58 @@
     }
   }
 
+  /* ── Loading skeleton — outline cards, only the border pulses (dashboard load).
+     Calm bg-2 fill (no fill-fade); border-color animates --line → --primary tint,
+     the same tint the hero/feed cards use on hover. Reuses .db-hero / .db-feed. ── */
+  @keyframes dbSkelBorder {
+    0%,
+    100% {
+      border-color: hsl(var(--line));
+    }
+    50% {
+      border-color: hsl(var(--primary) / 0.42);
+    }
+  }
+  .db-skel {
+    background: hsl(var(--bg-2));
+    border: 1px solid hsl(var(--line));
+    border-radius: 16px;
+    animation: dbSkelBorder 1.6s ease-in-out infinite;
+  }
+  .db-skel.is-entry {
+    min-height: 240px;
+    border-radius: 18px;
+  }
+  .db-skel.is-metric {
+    min-height: 96px;
+    border-radius: 12px;
+  }
+  .db-feed .db-skel.is-hero {
+    grid-column: span 12;
+    min-height: 200px;
+    border-radius: 18px;
+  }
+  .db-feed .db-skel.is-cell {
+    grid-column: span 4;
+    min-height: 150px;
+  }
+  @media (max-width: 1100px) {
+    .db-feed .db-skel.is-cell {
+      grid-column: span 6;
+    }
+  }
+  @media (max-width: 720px) {
+    .db-feed .db-skel.is-cell {
+      grid-column: span 12;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .db-skel {
+      animation: none;
+      border-color: hsl(var(--primary) / 0.28);
+    }
+  }
+
   /* ── Hero resume card ────────────────────────────────────────────────────── */
   .db-card.is-resume {
     background:

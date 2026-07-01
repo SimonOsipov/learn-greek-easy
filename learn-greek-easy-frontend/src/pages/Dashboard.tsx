@@ -12,7 +12,6 @@ import { isNewUser } from '@/components/dashboard/lib/isNewUser';
 import { MetricStrip } from '@/components/dashboard/MetricStrip';
 import { StarterView } from '@/components/dashboard/StarterView';
 import { WhatsNewStrip } from '@/components/dashboard/WhatsNewStrip';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useTourAutoTrigger } from '@/hooks/useTourAutoTrigger';
 import { reportAPIError } from '@/lib/errorReporting';
@@ -199,7 +198,7 @@ export const Dashboard: React.FC = () => {
       {isLoading ? (
         <div className="db-hero" aria-hidden="true">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-60 rounded-2xl" />
+            <div key={i} className="db-skel is-entry" />
           ))}
         </div>
       ) : isNew ? (
@@ -224,9 +223,9 @@ export const Dashboard: React.FC = () => {
       {/* Metrics Grid — ALWAYS rendered (shows zeros for new users) */}
       <section data-testid="metrics-section">
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-4" aria-hidden="true">
             {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-24 rounded-lg" />
+              <div key={i} className="db-skel is-metric" />
             ))}
           </div>
         ) : analyticsError ? (
@@ -247,6 +246,21 @@ export const Dashboard: React.FC = () => {
           </div>
         )}
       </section>
+
+      {/* Feed skeleton (loading) — outline cards for the WHOLE feed so the full
+          page reads as loading, not just hero + metrics. Mirrors the real 12-col
+          feed: 1 hero (span-12) + side/compact cells (span-4). Only the border
+          pulses (see .db-skel in index.css). */}
+      {isLoading && (
+        <section aria-hidden="true" data-testid="feed-skeleton">
+          <div className="db-feed">
+            <div className="db-skel is-hero" />
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="db-skel is-cell" />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Unified feed (DASH2-01-06) — only once loaded as a returning user.
           Hidden for new users (DASH2-01-07): composeFeed always emits a wordOfDay
