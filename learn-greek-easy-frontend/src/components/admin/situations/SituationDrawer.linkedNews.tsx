@@ -98,7 +98,7 @@ export function SituationDrawerLinkedNews({ situation }: Props) {
         /* ── Rich article card ────────────────────────────────────────────── */
         <button
           type="button"
-          className="linked-news-card group w-full cursor-pointer rounded-lg border border-border bg-card p-4 text-left transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="linked-news-card group w-full cursor-pointer rounded-lg border border-border bg-card p-4 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           data-testid="linked-news-card"
           onClick={handleCardClick}
         >
