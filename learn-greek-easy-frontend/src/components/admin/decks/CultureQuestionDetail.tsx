@@ -303,7 +303,7 @@ export function CultureQuestionDetail({ deck, itemId }: CultureQuestionDetailPro
                 <div className="text-sm font-semibold">{t('decks.culture.read.sectionTitle')}</div>
                 {!isEditing && (
                   <Button
-                    variant="chrome-ghost"
+                    variant="ghost"
                     size="icon"
                     className="h-6 w-6 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
                     onClick={enterEditMode}

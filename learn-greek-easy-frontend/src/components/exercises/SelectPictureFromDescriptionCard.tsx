@@ -42,7 +42,7 @@ function getOptionClasses(
     return cn(base, 'cursor-not-allowed border-transparent opacity-50');
   }
 
-  return cn(base, 'cursor-pointer border-transparent hover:border-accent');
+  return cn(base, 'cursor-pointer border-transparent hover:border-primary/50');
 }
 
 export function SelectPictureFromDescriptionCard({

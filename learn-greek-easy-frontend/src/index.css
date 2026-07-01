@@ -64,7 +64,6 @@
     ); /* was 240 5.9% 10% near-black — APP-WIDE focus-ring color shift, verified at RESKIN-01-13 */
     --destructive-foreground: 0 0% 100%;
     --success-foreground: 0 0% 100%;
-    --border-strong: var(--line-2);
 
     /* Shims so shadcn primitives keep compiling without renaming (diff stays in two files) */
     --background: var(--bg);
@@ -274,13 +273,6 @@
   }
 
   /* .bg-gradient-accent removed — zero call sites in src/; not canonized per RESKIN-01-01 */
-
-  .text-gradient {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
 }
 
 /* Custom animations that aren't in Tailwind by default */

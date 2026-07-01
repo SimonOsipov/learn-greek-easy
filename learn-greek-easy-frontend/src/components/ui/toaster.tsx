@@ -1,5 +1,3 @@
-'use client';
-
 import { AlertCircle, Check } from 'lucide-react';
 
 import {

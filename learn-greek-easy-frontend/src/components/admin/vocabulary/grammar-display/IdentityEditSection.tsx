@@ -162,7 +162,7 @@ export function IdentityEditSection({
               className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
             >
               <Button
-                variant="chrome-ghost"
+                variant="ghost"
                 size="icon"
                 className="h-6 w-6"
                 onClick={enterEditMode}

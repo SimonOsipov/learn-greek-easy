@@ -19,7 +19,6 @@ export default {
   			fg3: 'hsl(var(--fg-3))',
   			line: 'hsl(var(--line))',
   			'line-2': 'hsl(var(--line-2))',
-  			'border-strong': 'hsl(var(--border-strong))',
   			card: {
   				DEFAULT: 'hsl(var(--card))',
   				foreground: 'hsl(var(--card-foreground))'
@@ -45,10 +44,6 @@ export default {
   			},
   			input: 'hsl(var(--input))',
   			ring: 'hsl(var(--ring))',
-  			gradient: {
-  				from: '#667eea',
-  				to: '#764ba2'
-  			},
   			secondary: {
   				DEFAULT: 'hsl(var(--secondary))',
   				foreground: 'hsl(var(--secondary-foreground))'
@@ -58,8 +53,7 @@ export default {
   				foreground: 'hsl(var(--success-foreground))'
   			},
   			warning: {
-  				DEFAULT: 'hsl(var(--warning))',
-  				foreground: 'hsl(var(--warning-foreground))'
+  				DEFAULT: 'hsl(var(--warning))'
   			},
   			info: 'hsl(var(--info))',
   			danger: 'hsl(var(--danger))',

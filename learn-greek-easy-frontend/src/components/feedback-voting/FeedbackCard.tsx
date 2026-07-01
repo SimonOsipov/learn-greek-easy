@@ -80,7 +80,7 @@ export const FeedbackCard: React.FC<FeedbackCardProps> = ({ feedback }) => {
               {isOwner && (
                 <div className="flex items-center gap-1">
                   <Button
-                    variant="chrome-ghost"
+                    variant="ghost"
                     size="icon"
                     className="h-8 w-8"
                     onClick={() => setIsEditDialogOpen(true)}
@@ -91,7 +91,7 @@ export const FeedbackCard: React.FC<FeedbackCardProps> = ({ feedback }) => {
                     <span className="sr-only">{t('edit.button')}</span>
                   </Button>
                   <Button
-                    variant="chrome-ghost"
+                    variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => setIsDeleteDialogOpen(true)}

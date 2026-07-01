@@ -43,7 +43,7 @@ export const FeedbackVoteButton: React.FC<FeedbackVoteButtonProps> = ({
   return (
     <div className="flex flex-col items-center" data-testid="vote-buttons">
       <Button
-        variant="chrome-ghost"
+        variant="ghost"
         size="icon"
         className={cn('h-7 w-8', userVote === 'up' && 'bg-primary/10 text-primary')}
         onClick={handleUpvote}
@@ -66,7 +66,7 @@ export const FeedbackVoteButton: React.FC<FeedbackVoteButtonProps> = ({
         {voteCount}
       </span>
       <Button
-        variant="chrome-ghost"
+        variant="ghost"
         size="icon"
         className={cn('h-7 w-8', userVote === 'down' && 'bg-destructive/10 text-destructive')}
         onClick={handleDownvote}

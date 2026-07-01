@@ -19,10 +19,7 @@ interface ThemeSwitcherProps {
  * Uses Sun icon for light mode, Moon icon for dark mode.
  * Matches the LanguageSwitcher ghost button pattern.
  */
-export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({
-  className,
-  variant = 'chrome-ghost',
-}) => {
+export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ className, variant = 'ghost' }) => {
   const { t } = useTranslation('common');
   const { currentTheme, toggleTheme, isChanging } = useTheme();
 

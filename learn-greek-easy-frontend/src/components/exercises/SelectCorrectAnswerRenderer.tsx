@@ -65,7 +65,7 @@ export function SelectCorrectAnswerRenderer({
       return cn(base, 'cursor-not-allowed opacity-50');
     }
 
-    return cn(base, 'cursor-pointer hover:bg-accent');
+    return cn(base, 'cursor-pointer hover:border-primary/50 hover:bg-card');
   };
 
   return (

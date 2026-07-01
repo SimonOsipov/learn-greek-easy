@@ -49,7 +49,7 @@ All colors stored as HSL channels (`221 83% 53%`) so `hsl(var(--x) / 0.12)` work
 |---|---|---|---|
 | `--primary` | `221 83% 53%` | `221 90% 65%` | Primary action, links, focus ring |
 | `--primary-2` | `221 83% 65%` | `221 90% 75%` | Gradient highlight on primary |
-| `--accent` | `262 83% 58%` | (same) | Violet accent |
+| `--accent` | `280 92% 62%` | (same) | Violet accent |
 | `--accent-2` | `188 95% 50%` | (same) | Cyan accent |
 | `--accent-3` | `32 100% 60%` | (same) | Burnt orange accent |
 | `--success` | `160 84% 39%` | (same) | Confirm, completion, "Got it" |
@@ -83,7 +83,6 @@ Map onto surface/brand tokens — don't redefine, alias.
 | `--input` | `222 18% 80%` light · `224 18% 30%` dark | Form border (stronger than `--line`) |
 | `--ring` | `var(--primary)` | Focus outline color |
 | `--destructive-foreground` | `0 0% 100%` | White-on-danger |
-| `--border-strong` | `var(--line-2)` | Emphasis dividers |
 
 ### Practice palette (study / quiz / culture surfaces)
 
@@ -337,9 +336,9 @@ All shadcn-based, all token-aware. Don't re-implement these inline.
 
 **Buttons & inputs:** `button`, `input`, `textarea`, `label`, `checkbox`, `switch`, `slider`, `select`, `form` (RHF wrapper)
 
-`button` variants: `default` · `destructive` · `outline` · `secondary` · `ghost` (content-area icon/text button — `hover:bg-accent` lights up in electric violet, use where a chromatic pop is intentional) · `chrome-ghost` (system-chrome icon button — theme/language toggles, nav-rail icons; `hover:bg-muted` stays neutral so utility chrome doesn't introduce a third hue on otherwise mono-palette surfaces like the auth card or app shell) · `link` · `success` (`bg-gradient-success text-success-foreground`, emerald→green gradient) · `hero` · `hero-outline` · `landing-chrome` (icon button on the landing dark-navy chrome bar — uses `text-landing-header-fg` resting + `hover:bg-landing-header-fg/10`; do not use `ghost` on the landing header, the app `--accent` hover collides with the dark-navy surface) · `landing-primary` (primary CTA on the landing chrome bar and over the hero/final-CTA dark photography — `bg-landing-greek-blue text-landing-header-fg`, theme-invariant; matches the G-logo brand color so chrome and CTAs stay visually unified).
+`button` variants: `default` · `destructive` · `outline` · `secondary` · `ghost` (icon/text button used across content areas and system chrome alike — theme/language toggles, nav-rail icons, in-card actions; `hover:bg-muted` stays neutral so it doesn't introduce a third hue on otherwise mono-palette surfaces like the auth card or app shell. The `chrome-ghost` variant has been retired and folded into `ghost` — there is no separate "electric-violet pop" hover convention) · `link` · `success` (`bg-gradient-success text-success-foreground`, emerald→green gradient) · `hero` · `hero-outline` · `landing-chrome` (icon button on the landing dark-navy chrome bar — uses `text-landing-header-fg` resting + `hover:bg-landing-header-fg/10`; do not use `ghost` on the landing header, its neutral hover reads poorly on the dark-navy surface) · `landing-primary` (primary CTA on the landing chrome bar and over the hero/final-CTA dark photography — `bg-landing-greek-blue text-landing-header-fg`, theme-invariant; matches the G-logo brand color so chrome and CTAs stay visually unified).
 **Overlays:** `popover`, `tooltip`, `dialog`, `alert-dialog`, `alert`, `sheet`, `toast` + `toaster`, `dropdown-menu`
-**Disclosure:** `accordion`, `collapsible`, `tabs`, `navigation-menu`
+**Disclosure:** `accordion`, `collapsible`, `tabs`
 **Layout / data:** `card`, `avatar`, `skeleton`, `separator`, `scroll-area`, `table`, `scrollable-table` (sticky-header for wide tables — used in Conjugation / Declension), `chart` (Recharts wrapper, pulls from `--chart-1..8`), `progress`, `badge`
 **Audio:** `SpeakerButton`, `AudioSpeedToggle` (paired with SpeakerButton: 0.75× / 1× / 1.25× pill)
 

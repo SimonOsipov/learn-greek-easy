@@ -328,7 +328,7 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
               {user.avatar && (
                 <Button
                   type="button"
-                  variant="chrome-ghost"
+                  variant="ghost"
                   size="sm"
                   onClick={handleRemoveAvatar}
                   disabled={isUploadingAvatar || isRemovingAvatar}

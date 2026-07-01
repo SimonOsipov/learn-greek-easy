@@ -55,7 +55,7 @@ interface LanguageSwitcherProps {
  */
 export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
   variant = 'icon',
-  buttonVariant = 'chrome-ghost',
+  buttonVariant = 'ghost',
   className,
   iconButton = false,
 }) => {
@@ -124,7 +124,7 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
               onClick={() => handleLanguageChange(option.code)}
               className={cn(
                 'cursor-pointer justify-between',
-                isSelected && 'bg-accent font-medium'
+                isSelected && 'bg-primary/10 font-medium text-primary'
               )}
               data-testid={`language-option-${option.code}`}
               aria-selected={isSelected}

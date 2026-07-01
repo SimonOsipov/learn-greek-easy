@@ -74,7 +74,7 @@ export function ChangelogCard({ entry }: ChangelogCardProps) {
                 {formattedDate}
               </time>
               <Button
-                variant="chrome-ghost"
+                variant="ghost"
                 size="icon"
                 className="h-9 w-9 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100"
                 onClick={handleCopyLink}

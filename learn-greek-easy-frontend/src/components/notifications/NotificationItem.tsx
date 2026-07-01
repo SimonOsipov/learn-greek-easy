@@ -117,8 +117,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
   return (
     <div
       className={cn(
-        'flex cursor-pointer items-start gap-3 rounded-md p-3 transition-colors hover:bg-accent',
-        !notification.read && 'bg-accent/50'
+        'flex cursor-pointer items-start gap-3 rounded-md p-3 transition-colors hover:bg-muted',
+        !notification.read && 'bg-primary/10'
       )}
       onClick={handleClick}
       onKeyDown={handleKeyDown}

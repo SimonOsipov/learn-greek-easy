@@ -39,7 +39,7 @@
 }
 
 .greekly-tour-popover .driver-popover-prev-btn:hover {
-  background-color: hsl(var(--accent)) !important;
+  background-color: hsl(var(--muted)) !important;
 }
 
 .greekly-tour-popover .driver-popover-next-btn,

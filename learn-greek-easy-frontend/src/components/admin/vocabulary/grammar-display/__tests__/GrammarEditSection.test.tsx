@@ -432,10 +432,10 @@ describe('GrammarEditSection', () => {
   });
 
   // ============================================
-  // Group 7: Hover-reveal + chrome-ghost (AC-1, ADMIN2-38-03)
+  // Group 7: Hover-reveal + ghost (AC-1, ADMIN2-38-03, DASH2-03-02)
   // ============================================
 
-  describe('hover-reveal and chrome-ghost (AC-1)', () => {
+  describe('hover-reveal and ghost (AC-1)', () => {
     it('pencil is wrapped in an actions container with opacity-0 at rest', () => {
       renderWithI18n(<GrammarEditSection wordEntry={createMockWordEntry()} />);
       // After implementation: the pencil button is wrapped in a div with data-testid="grammar-pencil-actions"
@@ -455,10 +455,9 @@ describe('GrammarEditSection', () => {
       expect(headerRow?.className).toContain('group');
     });
 
-    it('pencil Button uses chrome-ghost variant (hover:bg-muted, not hover:bg-accent)', () => {
+    it('pencil Button uses ghost variant (hover:bg-muted, not hover:bg-accent)', () => {
       renderWithI18n(<GrammarEditSection wordEntry={createMockWordEntry()} />);
-      // After implementation: variant="chrome-ghost" → hover:bg-muted (not hover:bg-accent).
-      // Currently: variant="ghost" → assertion fails RED.
+      // variant="ghost" → hover:bg-muted (not hover:bg-accent), per DASH2-03-02.
       const container = screen.getByTestId('grammar-pencil-actions');
       const button = container.querySelector('button');
       expect(button?.className).toContain('hover:bg-muted');
