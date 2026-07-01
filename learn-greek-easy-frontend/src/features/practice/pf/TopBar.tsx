@@ -67,7 +67,7 @@ export function TopBar({
       {/* ── Left: exit + deck label ─────────────────────────────────────── */}
       <div className="flex min-w-0 items-center gap-2">
         <Button
-          variant="chrome-ghost"
+          variant="ghost"
           size="sm"
           onClick={onExit}
           aria-label="Exit practice"

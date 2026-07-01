@@ -348,10 +348,10 @@ describe('IdentityEditSection', () => {
   });
 
   // ============================================
-  // Group 6: Hover-reveal + chrome-ghost (AC-1, ADMIN2-38-03)
+  // Group 6: Hover-reveal + ghost (AC-1, ADMIN2-38-03, DASH2-03-02)
   // ============================================
 
-  describe('hover-reveal and chrome-ghost (AC-1)', () => {
+  describe('hover-reveal and ghost (AC-1)', () => {
     it('pencil is wrapped in an actions container with opacity-0 at rest', () => {
       renderWithI18n(<IdentityEditSection wordEntry={createMockWordEntry()} {...defaultProps} />);
       // After implementation: the pencil button is wrapped in a div with data-testid="identity-pencil-actions"
@@ -373,11 +373,10 @@ describe('IdentityEditSection', () => {
       expect(headerRow?.className).toContain('group');
     });
 
-    it('pencil Button uses chrome-ghost variant (hover:bg-muted, not hover:bg-accent)', () => {
+    it('pencil Button uses ghost variant (hover:bg-muted, not hover:bg-accent)', () => {
       renderWithI18n(<IdentityEditSection wordEntry={createMockWordEntry()} {...defaultProps} />);
-      // After implementation: the Button has variant="chrome-ghost" which CVA resolves to
-      // "text-foreground hover:bg-muted hover:text-foreground" (button.tsx:19).
-      // Currently: variant="ghost" gives hover:bg-accent → assertion fails RED.
+      // The Button has variant="ghost" which CVA resolves to
+      // "text-foreground hover:bg-muted hover:text-foreground" (button.tsx), per DASH2-03-02.
       const container = screen.getByTestId('identity-pencil-actions');
       const button = container.querySelector('button');
       expect(button?.className).toContain('hover:bg-muted');

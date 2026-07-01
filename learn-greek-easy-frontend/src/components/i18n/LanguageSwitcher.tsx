@@ -55,7 +55,7 @@ interface LanguageSwitcherProps {
  */
 export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
   variant = 'icon',
-  buttonVariant = 'chrome-ghost',
+  buttonVariant = 'ghost',
   className,
   iconButton = false,
 }) => {
