@@ -27,11 +27,11 @@ async function bootstrap() {
   // Initialize i18n BEFORE rendering - ensures correct language resources are loaded
   await initI18n();
 
-  // Hide LCP shell when React takes over
-  const lcpShell = document.getElementById('lcp-shell');
-  if (lcpShell) {
-    lcpShell.classList.add('hidden');
-  }
+  // Remove the pre-React LCP shell now that React owns the screen. Merely hiding
+  // it (display:none) leaves its role="status" live-region in the DOM, where it
+  // shadows app toast queries like page.locator('[role="status"]').first() — the
+  // hidden shell is the first match, so the real toast is never asserted.
+  document.getElementById('lcp-shell')?.remove();
 
   // Render React app
   createRoot(document.getElementById('root')!).render(

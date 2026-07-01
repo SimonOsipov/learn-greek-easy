@@ -159,7 +159,12 @@ test('ASHELL-SMOKE-05: no console errors during 3-step smoke', async ({ page }) 
       !e.includes('ERR_BLOCKED_BY_CLIENT') &&
       !e.includes('Failed to preconnect') &&
       !e.includes('sentry.io') &&
-      !e.includes('ingest.us.sentry.io')
+      !e.includes('ingest.us.sentry.io') &&
+      // External web-font CDNs (fonts.gstatic.com) are unreliable/blocked in the
+      // CI sandbox; a "downloadable font: download failed" console error is an
+      // environment artifact, not an app error. (Firefox-only; other engines
+      // don't surface it.)
+      !e.includes('downloadable font')
   );
 
   expect(appErrors).toHaveLength(0);

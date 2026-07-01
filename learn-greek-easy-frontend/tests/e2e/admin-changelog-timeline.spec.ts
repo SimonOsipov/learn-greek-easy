@@ -274,11 +274,17 @@ test.describe('Admin Changelog Timeline — ADMIN2-21 extension (CLTT-E2E-01..07
   test('CLTT-E2E-09: RU admin — editor opens on RU tab by default and edit reflects in list', async ({
     page,
   }) => {
-    // ── 1. Set UI language to RU before navigating ───────────────────────────
-    await page.goto('https://greeklish.eu/');
-    await page.evaluate(() => localStorage.setItem('i18nextLng', 'ru'));
-
+    // ── 1. Set UI language to RU ──────────────────────────────────────────────
+    // localStorage is origin-scoped, so set i18nextLng on the baseURL origin the
+    // app actually runs on — NOT https://greeklish.eu, a different origin whose
+    // storage never reaches localhost/preview — then reload so i18n re-inits in
+    // RU. The prior cross-origin set left the UI in EN on webkit/firefox, so the
+    // RU tab stayed aria-selected="false". Mirrors the reliable CLTT-E2E-06.
     await navigateToAdminTab(page, 'changelog');
+    await expect(page.getByTestId('changelog-tab')).toBeVisible({ timeout: 15_000 });
+
+    await page.evaluate(() => localStorage.setItem('i18nextLng', 'ru'));
+    await page.reload();
     await expect(page.getByTestId('changelog-tab')).toBeVisible({ timeout: 15_000 });
 
     // ── 2. Need at least one entry to open ───────────────────────────────────
