@@ -64,4 +64,26 @@ describe('Button Component', () => {
 
     expect(handleClick).not.toHaveBeenCalled();
   });
+
+  // DASH2-03-02 (test-first, RED until ghost/outline hover migrated to neutral):
+  // Claude Design has no violet button hover anywhere — every ghost/outline/icon/
+  // secondary button hovers neutral. Locks the resolved-class contract before the
+  // migration lands.
+  describe('variant hover contract (DASH2-03-02)', () => {
+    it('ghost variant hover resolves to neutral hover:bg-muted, not hover:bg-accent', () => {
+      render(<Button variant="ghost">Ghost</Button>);
+
+      const button = screen.getByRole('button', { name: /ghost/i });
+      expect(button.className).toContain('hover:bg-muted');
+      expect(button.className).not.toContain('hover:bg-accent');
+    });
+
+    it('outline variant hover resolves to neutral hover:bg-muted, not hover:bg-accent', () => {
+      render(<Button variant="outline">Outline</Button>);
+
+      const button = screen.getByRole('button', { name: /outline/i });
+      expect(button.className).toContain('hover:bg-muted');
+      expect(button.className).not.toContain('hover:bg-accent');
+    });
+  });
 });
