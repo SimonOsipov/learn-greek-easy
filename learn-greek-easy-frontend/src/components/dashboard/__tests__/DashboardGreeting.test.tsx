@@ -78,6 +78,24 @@ describe('DashboardGreeting', () => {
     expect(screen.getByText(/Welcome aboard/i)).toBeInTheDocument();
   });
 
+  it('renders a skeleton (NOT the "Welcome aboard" copy) while loading, even when cardsDue defaults to 0', () => {
+    // Regression: during the analytics load `cardsDue` defaults to 0, which used
+    // to flash the zero-due onboarding line on every refresh for users who
+    // actually have due cards. isLoading must suppress the subtitle entirely.
+    render(
+      <DashboardGreeting
+        userName="Nico"
+        cardsDue={0}
+        deckCount={0}
+        minutesToday={0}
+        recentActivity={[]}
+        isLoading
+      />
+    );
+    expect(screen.queryByText(/Welcome aboard/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId('greeting-sub-skeleton')).toBeInTheDocument();
+  });
+
   it('minutes line shows real minutesToday and the UnwiredDot for the goal', () => {
     render(
       <DashboardGreeting

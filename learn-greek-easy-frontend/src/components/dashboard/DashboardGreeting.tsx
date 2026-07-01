@@ -4,6 +4,7 @@
 
 import { Trans, useTranslation } from 'react-i18next';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import { UnwiredDot, rollingDayLabels } from '@/features/decks/dx';
 import type { AnalyticsActivityItem } from '@/types/analytics';
 
@@ -19,6 +20,13 @@ export interface DashboardGreetingProps {
   minutesToday: number;
   /** Recent activity entries from analyticsData.recentActivity */
   recentActivity: AnalyticsActivityItem[];
+  /**
+   * True while analytics is still loading. Suppresses the subtitle (renders a
+   * skeleton instead) so the zero-due "nothingDue" onboarding copy never flashes
+   * before the real `cardsDue` arrives — `cardsDue` defaults to 0 during load,
+   * which would otherwise show "Welcome aboard…" on every refresh.
+   */
+  isLoading?: boolean;
 }
 
 export function DashboardGreeting({
@@ -27,6 +35,7 @@ export function DashboardGreeting({
   deckCount,
   minutesToday,
   recentActivity,
+  isLoading = false,
 }: DashboardGreetingProps) {
   const { t } = useTranslation('common');
 
@@ -51,7 +60,9 @@ export function DashboardGreeting({
           <span className="db-hello-wave">👋</span>
         </h1>
 
-        {cardsDue > 0 ? (
+        {isLoading ? (
+          <Skeleton className="h-5 w-80 max-w-full rounded" data-testid="greeting-sub-skeleton" />
+        ) : cardsDue > 0 ? (
           <p className="db-hello-sub">
             <Trans
               i18nKey="welcome.dueAcrossDecks"

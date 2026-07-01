@@ -187,6 +187,7 @@ export const Dashboard: React.FC = () => {
         deckCount={deckCount}
         minutesToday={minutesToday}
         recentActivity={analyticsData?.recentActivity ?? []}
+        isLoading={isLoading}
       />
 
       {/* Hero entry cards (DASH2-01-03) OR new-user starter view (DASH2-01-07).
