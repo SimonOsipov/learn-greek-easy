@@ -139,10 +139,14 @@ test.describe('Admin Changelog Timeline — ADMIN2-21 extension (CLTT-E2E-01..07
   test('CLTT-E2E-03: row content matches active UI locale (EN → title_en, RU → title_ru)', async ({
     page,
   }) => {
-    // Set UI to EN, capture first-row title
-    await page.goto('https://greeklish.eu/');
-    await page.evaluate(() => localStorage.setItem('i18nextLng', 'en'));
+    // Set UI to EN, capture first-row title. Set i18nextLng on the baseURL
+    // origin the app runs on (not https://greeklish.eu — a different origin
+    // whose localStorage never reaches localhost/preview), then reload so i18n
+    // re-inits in EN rather than relying on EN being the default locale.
     await navigateToAdminTab(page, 'changelog');
+    await expect(page.getByTestId('changelog-tab')).toBeVisible({ timeout: 15_000 });
+    await page.evaluate(() => localStorage.setItem('i18nextLng', 'en'));
+    await page.reload();
     await expect(page.getByTestId('changelog-tab')).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('.cl-entry').first()).toBeVisible({ timeout: 10_000 });
 
