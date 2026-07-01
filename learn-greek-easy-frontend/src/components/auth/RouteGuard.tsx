@@ -1,8 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
-import { Loader2 } from 'lucide-react';
-
-import { APP_NAME } from '@/lib/constants';
 import log from '@/lib/logger';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppStore } from '@/stores/appStore';
@@ -13,39 +10,17 @@ interface RouteGuardProps {
 }
 
 /**
- * Loading component shown while authentication is being verified.
- */
-function AuthLoadingScreen() {
-  return (
-    <div
-      data-testid="auth-loading"
-      className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50"
-    >
-      <div className="space-y-4 text-center">
-        <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold">{APP_NAME}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Loading your experience...</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
  * RouteGuard component that verifies authentication on app load
  * using Supabase's onAuthStateChange listener.
  *
  * Subscribes to auth state changes and calls checkAuth() to sync
- * the Zustand auth store with the current Supabase session.
- * Shows a loading screen until the initial auth check completes.
+ * the Zustand auth store with the current Supabase session, then marks
+ * auth initialized (drives `data-app-ready`). Renders children immediately;
+ * the per-route ProtectedRoute + Suspense fallback own the loading UI.
  */
 export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const setAuthInitialized = useAppStore((state) => state.setAuthInitialized);
-  const [isInitializing, setIsInitializing] = useState(false);
   const hasInitializedRef = useRef(false);
   const initialSessionHandledRef = useRef(false);
 
@@ -60,7 +35,6 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
       } finally {
         if (!abortController.signal.aborted && !hasInitializedRef.current) {
           hasInitializedRef.current = true;
-          setIsInitializing(false);
           setAuthInitialized();
         }
       }
@@ -108,7 +82,6 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
         // Treat as unauthenticated — complete initialization so the user is not stuck on the spinner.
         if (!hasInitializedRef.current) {
           hasInitializedRef.current = true;
-          setIsInitializing(false);
           setAuthInitialized();
         }
       });
@@ -119,10 +92,6 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
       subscription?.unsubscribe();
     };
   }, [checkAuth, setAuthInitialized]);
-
-  if (isInitializing) {
-    return <AuthLoadingScreen />;
-  }
 
   return <>{children}</>;
 };
