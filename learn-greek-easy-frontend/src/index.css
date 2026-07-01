@@ -1498,6 +1498,32 @@
     background: hsl(0 0% 100%);
   }
 
+  /* Deck cover photo in the feed (deck-covers-always-available): when a deck has
+     a cover image, the illustration block / hero front tile paints the real
+     photo (the URL is set inline as background-image; these rules only add cover
+     sizing + a legibility scrim). The gradient tile + Greek-letter mark remain
+     the no-cover fallback. */
+  .db-card.is-deck .db-deck-illo.has-cover {
+    background-size: cover;
+    background-position: center;
+  }
+  .db-cover.has-cover {
+    background-size: cover;
+    background-position: center;
+  }
+  .db-cover.has-cover::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    /* CD one-off: dark scrim over the cover photo so white cover text stays legible */
+    background: linear-gradient(180deg, hsl(0 0% 0% / 0.12) 0%, hsl(0 0% 0% / 0.62) 100%);
+  }
+  .db-cover.has-cover > * {
+    position: relative;
+    z-index: 1;
+  }
+
   @media (max-width: 1100px) {
     .db-resume-grid {
       grid-template-columns: 1fr;

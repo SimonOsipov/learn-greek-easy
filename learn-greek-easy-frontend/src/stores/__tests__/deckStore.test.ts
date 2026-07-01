@@ -11,9 +11,10 @@
  * Strategy: build mock Deck objects, invoke the store's applyFilters path via
  * the exported useDeckStore, or test the pure transform directly.
  *
- * Because deckStore uses devtools (not persist) in its current form, we CAN
- * unit-test the pure client-side filter branch by importing the store and
- * resetting state between tests.
+ * deckStore now composes devtools + persist (the persisted slice is the slim
+ * deck-cover cache). We still unit-test the pure client-side filter branch and
+ * the store actions by importing the store and resetting state (and
+ * localStorage) between tests.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -237,8 +238,8 @@ describe('transformDeckResponse — titleGreek mapping (DGREEK-08)', () => {
 import { useDeckStore } from '@/stores/deckStore';
 import { deckAPI } from '@/services/deckAPI';
 import { progressAPI } from '@/services/progressAPI';
-import type { DeckDetailResponse } from '@/services/deckAPI';
-import type { DeckProgressDetailResponse } from '@/services/progressAPI';
+import type { DeckDetailResponse, DeckListResponse } from '@/services/deckAPI';
+import type { DeckProgressDetailResponse, DeckProgressListResponse } from '@/services/progressAPI';
 
 const WORD_COUNT = 37;
 const SRS_CARD_COUNT = 555; // 37 words x ~15 SRS cards each
@@ -415,5 +416,131 @@ describe('deckStore — parallel dispatch / no auth gate (PERF-02-05)', () => {
     useDeckStore.getState().fetchDecks();
 
     expect(deckAPI.getList).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// deckStore — ensureDecksFresh + cover persistence (deck-covers-always-available)
+//
+// ensureDecksFresh() warms/refreshes the deck list once per session so covers
+// are available everywhere without visiting /decks. Persist stores a slim
+// cover cache (progress stripped) so covers paint instantly on reload.
+// ---------------------------------------------------------------------------
+
+const COVER_URL = 'https://cdn.example.com/cover-1.jpg';
+const PERSIST_KEY = 'greeklish-deck-covers-v1';
+
+function makeDeckResponse(overrides: Partial<DeckResponse> = {}): DeckResponse {
+  return {
+    id: 'deck-cover-1',
+    name: 'Greetings',
+    description: 'Basic greetings',
+    name_el: 'Χαιρετισμοί',
+    name_en: 'Greetings',
+    name_ru: 'Приветствия',
+    level: 'a1' as DeckResponse['level'],
+    is_active: true,
+    is_premium: false,
+    card_count: 12,
+    estimated_time_minutes: 8,
+    tags: [],
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-02T00:00:00Z',
+    cover_image_url: COVER_URL,
+    cover_image_variants: { 400: 'https://cdn.example.com/cover-1-400.webp' },
+    ...overrides,
+  };
+}
+
+const EMPTY_PROGRESS: DeckProgressListResponse = { total: 0, page: 1, page_size: 50, decks: [] };
+
+function deckList(decks: DeckResponse[]): DeckListResponse {
+  return { total: decks.length, page: 1, page_size: 50, decks };
+}
+
+describe('deckStore — ensureDecksFresh + cover persistence (deck-covers-always-available)', () => {
+  beforeEach(() => {
+    vi.mocked(deckAPI.getList).mockReset();
+    vi.mocked(progressAPI.getDeckProgressList).mockReset();
+    localStorage.clear();
+    useDeckStore.setState({
+      rawDecks: [],
+      decks: [],
+      totalDecks: 0,
+      lastFetchedAt: null,
+      isLoading: false,
+      error: null,
+      filters: { search: '', levels: [], categories: [], status: [] },
+    });
+  });
+
+  it('fetches and populates covers when the list is empty/stale', async () => {
+    vi.mocked(deckAPI.getList).mockResolvedValue(deckList([makeDeckResponse()]));
+    vi.mocked(progressAPI.getDeckProgressList).mockResolvedValue(EMPTY_PROGRESS);
+
+    await useDeckStore.getState().ensureDecksFresh();
+
+    expect(deckAPI.getList).toHaveBeenCalledTimes(1);
+    expect(useDeckStore.getState().rawDecks).toHaveLength(1);
+    expect(useDeckStore.getState().rawDecks[0].coverImageUrl).toBe(COVER_URL);
+  });
+
+  it('skips the fetch when the list is still fresh', async () => {
+    vi.mocked(deckAPI.getList).mockResolvedValue(deckList([makeDeckResponse()]));
+    vi.mocked(progressAPI.getDeckProgressList).mockResolvedValue(EMPTY_PROGRESS);
+
+    await useDeckStore.getState().ensureDecksFresh(); // primes cache + lastFetchedAt
+    expect(deckAPI.getList).toHaveBeenCalledTimes(1);
+
+    await useDeckStore.getState().ensureDecksFresh(); // fresh → no second fetch
+    expect(deckAPI.getList).toHaveBeenCalledTimes(1);
+  });
+
+  it('coalesces concurrent callers onto a single fetch', async () => {
+    let resolveList: (v: DeckListResponse) => void = () => {};
+    const listPromise = new Promise<DeckListResponse>((r) => {
+      resolveList = r;
+    });
+    vi.mocked(deckAPI.getList).mockReturnValue(listPromise);
+    vi.mocked(progressAPI.getDeckProgressList).mockResolvedValue(EMPTY_PROGRESS);
+
+    const p1 = useDeckStore.getState().ensureDecksFresh();
+    const p2 = useDeckStore.getState().ensureDecksFresh();
+
+    resolveList(deckList([makeDeckResponse()]));
+    await Promise.all([p1, p2]);
+
+    expect(deckAPI.getList).toHaveBeenCalledTimes(1);
+  });
+
+  it('persists a slim cover cache to localStorage (strips volatile progress)', () => {
+    const deck = makeDeck({
+      id: 'd1',
+      coverImageUrl: COVER_URL,
+      progress: {
+        deckId: 'd1',
+        status: 'in-progress',
+        cardsTotal: 10,
+        cardsNew: 5,
+        cardsLearning: 3,
+        cardsReview: 2,
+        cardsMastered: 2,
+        dueToday: 2,
+        streak: 0,
+        totalTimeSpent: 0,
+        accuracy: 50,
+      },
+    });
+
+    useDeckStore.setState({ rawDecks: [deck], decks: [deck], totalDecks: 1 });
+
+    // In-memory state keeps full progress...
+    expect(useDeckStore.getState().rawDecks[0].progress).toBeDefined();
+
+    // ...but the persisted copy keeps the cover URL and drops progress.
+    const stored = JSON.parse(localStorage.getItem(PERSIST_KEY) ?? '{}');
+    const persistedDeck = stored.state.rawDecks[0];
+    expect(persistedDeck.coverImageUrl).toBe(COVER_URL);
+    expect(persistedDeck.progress).toBeUndefined();
   });
 });

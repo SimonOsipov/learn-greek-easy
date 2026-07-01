@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 
+import { useWarmDeckCovers } from '@/hooks/useWarmDeckCovers';
 import { useAuthStore } from '@/stores/authStore';
 
 interface ProtectedRouteProps {
@@ -16,6 +17,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const location = useLocation();
   const { isAuthenticated, user, isLoading, _hasHydrated } = useAuthStore();
+
+  // Warm the deck-cover cache once auth is confirmed so covers are available on
+  // every page (deck hero, dashboard feed) without first visiting /decks.
+  // Called unconditionally (hook rules); it self-gates on isAuthenticated.
+  useWarmDeckCovers();
 
   // Show loading state while checking auth or waiting for hydration
   // Wait for hydration to prevent flash redirect before localStorage is read

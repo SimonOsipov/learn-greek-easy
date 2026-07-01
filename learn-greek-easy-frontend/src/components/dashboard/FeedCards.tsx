@@ -12,6 +12,7 @@ import { UnwiredDot } from '@/features/decks/dx';
 import { tDynamic } from '@/i18n/tDynamic';
 import { track } from '@/lib/analytics';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
+import { pickBestSrc } from '@/lib/imageVariants';
 import { formatPublicationDate, safeExternalHref } from '@/utils/newsFormat';
 
 import type { FeedItem } from './lib/composeFeed';
@@ -72,6 +73,9 @@ function FeedHeroResume({
     progress && progress.cardsTotal > 0
       ? Math.round(((progress.cardsLearning + progress.cardsMastered) / progress.cardsTotal) * 100)
       : 0;
+  // Real cover photo for the front tile (falls back to the gradient tile when
+  // the deck has no cover image). Best-fit derivative for the ~200px tile.
+  const coverSrc = pickBestSrc(deck.coverImageVariants, 480, deck.coverImageUrl);
 
   return (
     <article className="db-card is-resume span-hero" data-tone={item.tone}>
@@ -123,7 +127,10 @@ function FeedHeroResume({
             </span>
             <div className="db-cover-title">{name}</div>
           </div>
-          <div className="db-cover db-cover-3">
+          <div
+            className={coverSrc ? 'db-cover db-cover-3 has-cover' : 'db-cover db-cover-3'}
+            style={coverSrc ? { backgroundImage: `url("${coverSrc}")` } : undefined}
+          >
             <span className="db-cover-tag">
               {deck.level} · {deck.category}
             </span>
@@ -383,13 +390,21 @@ function FeedDeck({
     progress && progress.cardsTotal > 0
       ? Math.round(((progress.cardsLearning + progress.cardsMastered) / progress.cardsTotal) * 100)
       : 0;
+  // Real cover photo for the illustration block (falls back to the gradient +
+  // Greek-letter mark when the deck has no cover image).
+  const coverSrc = pickBestSrc(deck.coverImageVariants, 480, deck.coverImageUrl);
 
   return (
     <article className="db-card is-deck span-side" data-tone={item.tone} data-illo={item.illo}>
-      <div className="db-deck-illo">
-        <span className="db-deck-illo-mark" lang="el">
-          {ILLO_MARK[item.illo] ?? 'Ελ'}
-        </span>
+      <div
+        className={coverSrc ? 'db-deck-illo has-cover' : 'db-deck-illo'}
+        style={coverSrc ? { backgroundImage: `url("${coverSrc}")` } : undefined}
+      >
+        {!coverSrc && (
+          <span className="db-deck-illo-mark" lang="el">
+            {ILLO_MARK[item.illo] ?? 'Ελ'}
+          </span>
+        )}
       </div>
       <div className="db-card-head">
         <span className="db-card-kicker">{t('dashboard.feed.deck.kicker')}</span>
