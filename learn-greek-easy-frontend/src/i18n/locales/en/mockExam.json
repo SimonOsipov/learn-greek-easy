@@ -49,6 +49,67 @@
     "verdictThoroughlyPrepared": "Thoroughly Prepared",
     "donutLabel": "Ready"
   },
+  "cultureMotivation": {
+    "improving": {
+      "notReady": {
+        "1": "You're heading the right way — readiness is up {{delta}} points to {{currentPercent}}%. Keep going and the pass mark is well within reach.",
+        "2": "Nice climb — {{previousPercent}}% to {{currentPercent}}% this week. There's plenty of time to keep building toward passing."
+      },
+      "gettingThere": {
+        "1": "Real momentum — up {{delta}} points to {{currentPercent}}%. You're closing in on ready.",
+        "2": "You're getting there fast: {{currentPercent}}% readiness and climbing. One more good week and you're set."
+      },
+      "ready": {
+        "1": "Strong work — {{currentPercent}}% and up {{delta}} points. You're ready; keep the streak alive.",
+        "2": "You've crossed into ready at {{currentPercent}}%, up from {{previousPercent}}%. Keep sharpening the edges."
+      },
+      "thoroughlyPrepared": {
+        "1": "Outstanding — {{currentPercent}}% readiness, up {{delta}} points. You're thoroughly prepared for the exam.",
+        "2": "Peak form: {{currentPercent}}% and still rising. You've learned {{questionsLearned}} of {{questionsTotal}} questions — go book that exam."
+      }
+    },
+    "stagnant": {
+      "notReady": {
+        "1": "You're at {{currentPercent}}% readiness. A short session this week is the quickest way to start climbing toward the pass mark.",
+        "2": "Steady at {{currentPercent}}% — you've learned {{questionsLearned}} of {{questionsTotal}} questions. Pick a category and add a few more today."
+      },
+      "gettingThere": {
+        "1": "Holding at {{currentPercent}}%. One focused session this week could tip you into ready.",
+        "2": "You've plateaued around {{currentPercent}}% — a quick round of practice will get things moving again."
+      },
+      "ready": {
+        "1": "Steady at {{currentPercent}}% and you're ready. A quick review keeps it locked in.",
+        "2": "You're holding ready at {{currentPercent}}%. A light session this week keeps your recall fresh."
+      },
+      "thoroughlyPrepared": {
+        "1": "Rock solid at {{currentPercent}}% — thoroughly prepared. A brief review is all it takes to stay sharp.",
+        "2": "You're sitting pretty at {{currentPercent}}%, with {{questionsLearned}} of {{questionsTotal}} questions learned. A light pass keeps you exam-ready."
+      }
+    },
+    "declining": {
+      "notReady": {
+        "1": "Readiness dipped {{delta}} points to {{currentPercent}}%. No stress — a session or two will bring it right back up.",
+        "2": "You've slipped to {{currentPercent}}% from {{previousPercent}}%. It happens — jump back in and you'll recover quickly."
+      },
+      "gettingThere": {
+        "1": "Down {{delta}} points to {{currentPercent}}%, but you're close. A quick refresher will get you back on track.",
+        "2": "A small dip to {{currentPercent}}% this week. Pick up where you left off and you'll be climbing again in no time."
+      },
+      "ready": {
+        "1": "Slight slip to {{currentPercent}}%, yet you're still ready. A short review will restore your edge.",
+        "2": "You eased off {{delta}} points to {{currentPercent}}%. A quick session brings your recall back to full strength."
+      },
+      "thoroughlyPrepared": {
+        "1": "Down {{delta}} points but still thoroughly prepared at {{currentPercent}}%. A brief pass keeps you there.",
+        "2": "Even after a dip you're at {{currentPercent}}% — well prepared. Refresh {{questionsLearned}} of {{questionsTotal}} and you're back at your best."
+      }
+    },
+    "newUser": {
+      "1": "Welcome! The culture bank has {{questionsTotal}} questions. Start a session to begin building your exam readiness.",
+      "2": "Ready to begin? Work through the {{questionsTotal}}-question culture bank at your own pace — your progress tracks from day one.",
+      "3": "Your Cyprus culture prep starts here, with {{questionsTotal}} questions waiting. Take your first session today."
+    }
+  },
   "actions": {
     "startExam": "Start Mock Exam",
     "continueExam": "Continue Exam",
