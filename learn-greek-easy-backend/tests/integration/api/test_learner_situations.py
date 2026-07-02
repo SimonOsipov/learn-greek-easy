@@ -321,7 +321,9 @@ class TestLearnerSituationListEndpoint:
             lambda key, **kwargs: f"https://s3.example.com/{key}"
         )
 
-        with patch("src.api.v1.situations.get_s3_service", return_value=mock_s3):
+        # list_situations delegates to LearnerSituationService (PERF-15-02), which
+        # calls get_s3_service() from its own module — patch it there, not on the router.
+        with patch("src.services.learner_situation_service.get_s3_service", return_value=mock_s3):
             response = await client.get(LIST_URL, headers=auth_headers)
 
         assert response.status_code == 200

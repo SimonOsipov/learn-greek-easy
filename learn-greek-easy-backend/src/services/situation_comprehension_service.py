@@ -326,11 +326,17 @@ class SituationComprehensionService:
         READY + created_at >= now_utc - 7d, account-wide, not per-user) —
         this exists so the dashboard gather layer can fetch just this count
         without paying for the rest of the overview aggregation.
-
-        STUB — PERF-15-02 executor replaces this with the real query (see
-        the whats_new_count computation in get_overview above).
         """
-        return 0
+        cutoff = datetime.now(tz=timezone.utc) - timedelta(days=_WHATS_NEW_DAYS)
+        count = (
+            await self.db.execute(
+                select(func.count(Situation.id)).where(
+                    Situation.status == SituationStatus.READY,
+                    Situation.created_at >= cutoff,
+                )
+            )
+        ).scalar_one()
+        return count or 0
 
 
 def _status_value(status: "CardStatus | str | None") -> str | None:

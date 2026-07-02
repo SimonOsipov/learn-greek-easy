@@ -120,12 +120,23 @@ class SlimNews(BaseModel):
     def from_full(cls, full: "NewsItemResponse") -> "SlimNews":
         """Map a full ``NewsItemResponse`` onto this slim dashboard-feed DTO.
 
-        STUB — PERF-15-02 executor replaces this with the real field mapping
-        (carries id/situation_id/title_*/publication_date/country/
-        audio_duration_seconds/image_url/image_variants; drops the heavy
-        reader-only fields per the class docstring).
+        Carries only the card-rendering fields (id/situation_id/title_*/
+        publication_date/country/audio_duration_seconds/image_url/
+        image_variants); drops the heavy reader-only fields per the class
+        docstring.
         """
-        raise NotImplementedError("SlimNews.from_full — PERF-15-02 executor implements this")
+        return cls(
+            id=full.id,
+            situation_id=full.situation_id,
+            title_el=full.title_el,
+            title_en=full.title_en,
+            title_ru=full.title_ru,
+            publication_date=full.publication_date,
+            country=full.country,
+            audio_duration_seconds=full.audio_duration_seconds,
+            image_url=full.image_url,
+            image_variants=full.image_variants,
+        )
 
 
 class SlimSituation(BaseModel):

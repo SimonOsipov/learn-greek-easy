@@ -60,9 +60,10 @@ from src.schemas.deck import (
 )
 from src.schemas.word_entry import WordEntryResponse
 from src.services.card_generator_service import CardGeneratorService
-from src.services.s3_service import S3Service, get_s3_service
+from src.services.s3_service import get_s3_service
 from src.services.word_entry_response import word_entry_to_response
 from src.tasks.background import invalidate_cache_task
+from src.utils.deck_cover import deck_cover_url, deck_cover_variants
 from src.utils.heatmap import bucket_heatmap_intensity
 
 router = APIRouter(
@@ -73,23 +74,6 @@ router = APIRouter(
         422: {"description": "Validation error"},
     },
 )
-
-
-def _deck_cover_url(deck: Deck, s3: S3Service) -> str | None:
-    if not deck.cover_image_s3_key:
-        return None
-    # 30-day expiry (matches avatar URLs in auth.py). Cover images are stable,
-    # long-lived assets. The default 24h expiry is only 600s longer than the
-    # in-process URL cache window, so stale-cached URLs expire mid-flight and S3
-    # returns 403 -> intermittently missing cover images.
-    return s3.generate_presigned_url(deck.cover_image_s3_key, expiry_seconds=2592000)
-
-
-def _deck_cover_variants(deck: Deck, s3: S3Service) -> dict[int, str] | None:
-    if not deck.cover_image_s3_key:
-        return None
-    raw = s3.get_derivative_presigned_urls(deck.cover_image_s3_key)
-    return raw if isinstance(raw, dict) and raw else None
 
 
 def _map_trilingual_create_fields(create_data: dict) -> None:
@@ -231,8 +215,8 @@ async def list_decks(
                     card_count=card_counts.get(deck.id, 0),
                     created_at=deck.created_at,
                     updated_at=deck.updated_at,
-                    cover_image_url=_deck_cover_url(deck, s3),
-                    cover_image_variants=_deck_cover_variants(deck, s3),
+                    cover_image_url=deck_cover_url(deck, s3),
+                    cover_image_variants=deck_cover_variants(deck, s3),
                 )
             )
 
@@ -484,8 +468,8 @@ async def search_decks(
                 card_count=card_counts.get(deck.id, 0),
                 created_at=deck.created_at,
                 updated_at=deck.updated_at,
-                cover_image_url=_deck_cover_url(deck, s3),
-                cover_image_variants=_deck_cover_variants(deck, s3),
+                cover_image_url=deck_cover_url(deck, s3),
+                cover_image_variants=deck_cover_variants(deck, s3),
             )
         )
 
@@ -603,8 +587,8 @@ async def list_my_decks(
                 card_count=card_counts.get(deck.id, 0),
                 created_at=deck.created_at,
                 updated_at=deck.updated_at,
-                cover_image_url=_deck_cover_url(deck, s3),
-                cover_image_variants=_deck_cover_variants(deck, s3),
+                cover_image_url=deck_cover_url(deck, s3),
+                cover_image_variants=deck_cover_variants(deck, s3),
             )
         )
 
@@ -715,8 +699,8 @@ async def get_deck(
         updated_at=deck.updated_at,
         card_count=card_count,
         is_owned=deck.owner_id == current_user.id,
-        cover_image_url=_deck_cover_url(deck, s3),
-        cover_image_variants=_deck_cover_variants(deck, s3),
+        cover_image_url=deck_cover_url(deck, s3),
+        cover_image_variants=deck_cover_variants(deck, s3),
     )
 
 
@@ -1274,8 +1258,8 @@ async def update_deck(
         card_count=card_count,
         created_at=updated_deck.created_at,
         updated_at=updated_deck.updated_at,
-        cover_image_url=_deck_cover_url(updated_deck, s3),
-        cover_image_variants=_deck_cover_variants(updated_deck, s3),
+        cover_image_url=deck_cover_url(updated_deck, s3),
+        cover_image_variants=deck_cover_variants(updated_deck, s3),
     )
 
 
