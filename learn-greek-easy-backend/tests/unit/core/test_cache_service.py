@@ -578,6 +578,59 @@ class TestCacheInvalidation:
         mock_redis.delete.assert_called()
 
 
+class TestCacheInvalidationSweepsDashboardSummary:
+    """PERF-15-04: the dashboard-summary cache key must live under the
+    progress:user:{uid}:* namespace so invalidate_user_progress() sweeps it
+    automatically after any review/progress-changing action -- no bespoke
+    invalidation call needed for the new endpoint.
+
+    NOTE: this test doesn't touch src/api/v1/dashboard.py at all -- it
+    proves the namespacing convention (progress:user:{uid}:dashboard_summary)
+    against the ALREADY-implemented CacheService.invalidate_user_progress().
+    It is expected to be GREEN already; it exists to lock in the key format
+    PERF-15-04's real endpoint must follow for automatic invalidation to work.
+    """
+
+    @pytest.mark.asyncio
+    async def test_summary_key_swept_by_invalidate_user_progress(self):
+        """A progress:user:{uid}:dashboard_summary key falls inside the
+        glob pattern invalidate_user_progress() sweeps, and is actually
+        deleted when that method runs against a redis holding it.
+        """
+        import fnmatch
+
+        user_id = uuid4()
+        prefix = "cache"
+        summary_key = f"progress:user:{user_id}:dashboard_summary"
+        full_summary_key = f"{prefix}:{summary_key}"
+        sweep_pattern = f"{prefix}:progress:user:{user_id}:*"
+
+        # 1. Namespacing proof: the dashboard-summary key matches the glob
+        #    pattern invalidate_user_progress() sweeps.
+        assert fnmatch.fnmatchcase(full_summary_key, sweep_pattern), (
+            f"Expected {full_summary_key!r} to match sweep pattern {sweep_pattern!r} "
+            "-- dashboard_summary must live under progress:user:{uid}:*"
+        )
+
+        # 2. Behavioral proof: a redis holding that exact key gets it deleted
+        #    when invalidate_user_progress(user_id) runs (SCAN returns it once).
+        mock_redis = AsyncMock()
+        mock_redis.scan.side_effect = [(0, [full_summary_key])]
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = prefix
+            service = CacheService(redis_client=mock_redis)
+
+            await service.invalidate_user_progress(user_id)
+
+        deleted_keys = [key for call in mock_redis.delete.call_args_list for key in call.args]
+        assert full_summary_key in deleted_keys, (
+            f"Expected {full_summary_key!r} to be deleted by invalidate_user_progress, "
+            f"got deletes: {deleted_keys}"
+        )
+
+
 class TestCachedDecorator:
     """Test suite for @cached decorator."""
 

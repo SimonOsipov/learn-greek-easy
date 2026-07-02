@@ -28,6 +28,7 @@ from src.api.v1.billing import router as billing_router
 from src.api.v1.card_errors import router as card_errors_router
 from src.api.v1.changelog import router as changelog_router
 from src.api.v1.culture import router as culture_router
+from src.api.v1.dashboard import router as dashboard_router
 from src.api.v1.decks import router as deck_router
 from src.api.v1.exercises import router as exercises_router
 from src.api.v1.feedback import router as feedback_router
@@ -158,6 +159,15 @@ v1_router.include_router(
     progress_router,
     prefix="/progress",
     tags=["Progress"],
+)
+
+# =============================================================================
+# Dashboard Routes
+# =============================================================================
+v1_router.include_router(
+    dashboard_router,
+    prefix="/dashboard",
+    tags=["Dashboard"],
 )
 
 # =============================================================================
