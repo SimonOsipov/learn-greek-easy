@@ -67,48 +67,63 @@ handle /version {
 # Real API namespace — proxy /api/v1/* to backend with dynamic DNS resolution for Railway
 # Uses dynamic A record lookup with 1s refresh to handle backend IP changes
 # Includes Railway's internal DNS resolver to bypass system DNS caching
+# NOTE: a top-level `route /api/v1/*` (instead of `handle /api/v1/*`) was tried
+# and rejected — it pulls this block OUT of the handle-block specificity-sorted
+# group, so it loses to the less-specific `handle /api/* { respond 404 }` below
+# and ALL /api/v1/* traffic (incl. the Stripe webhook) 404s at the edge instead
+# of proxying. Verified live. Keeping `handle /api/v1/*` as the outer matcher
+# preserves correct specificity-group ordering; the nested `route {}` below
+# forces its two directives to run in WRITTEN order (dotfile check before
+# reverse_proxy) instead of Caddy's normal directiveOrder-based reordering.
 handle /api/v1/* {
-	reverse_proxy {
-		dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
-			refresh 1s
-			versions ipv4 ipv6
-			resolvers fd12::10
-			dial_timeout 30s
-		}
+	route {
+		# Reject dotfile / VCS probes inside the v1 namespace (e.g. /api/v1/.env,
+		# /api/v1/.git/config) before they reach the backend.
+		@v1dotfiles path */.env */.git/*
+		respond @v1dotfiles 404
 
-		# Buffer request body to prevent streaming race condition
-		# Ensures entire POST body is read before selecting upstream
-		request_buffers 1MB
+		reverse_proxy {
+			dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
+				refresh 1s
+				versions ipv4 ipv6
+				resolvers fd12::10
+				dial_timeout 30s
+			}
 
-		# Allow retries for mutating methods (default is GET only)
-		lb_retry_match {
-			method POST PUT PATCH DELETE
-		}
+			# Buffer request body to prevent streaming race condition
+			# Ensures entire POST body is read before selecting upstream
+			request_buffers 1MB
 
-		# Aggressive load balancer retries (Railway recommended)
-		# User never sees 502 from stale IPs - Caddy retries with fresh DNS
-		lb_try_duration 10s
-		lb_try_interval 250ms
-		lb_retries 100
+			# Allow retries for mutating methods (default is GET only)
+			lb_retry_match {
+				method POST PUT PATCH DELETE
+			}
 
-		# Relaxed passive health checks (Railway recommended)
-		# Prevents marking backend unhealthy too fast during DNS transitions
-		fail_duration 60s
-		max_fails 300
-		unhealthy_status 502 503 504
-		unhealthy_latency 5s
-		unhealthy_request_count 200
+			# Aggressive load balancer retries (Railway recommended)
+			# User never sees 502 from stale IPs - Caddy retries with fresh DNS
+			lb_try_duration 10s
+			lb_try_interval 250ms
+			lb_retries 100
 
-		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-		header_up X-Forwarded-Host {host}
+			# Relaxed passive health checks (Railway recommended)
+			# Prevents marking backend unhealthy too fast during DNS transitions
+			fail_duration 60s
+			max_fails 300
+			unhealthy_status 502 503 504
+			unhealthy_latency 5s
+			unhealthy_request_count 200
 
-		transport http {
-			read_timeout 120s
-			write_timeout 120s
-			keepalive 30s
-			keepalive_idle_conns 10
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-Host {host}
+
+			transport http {
+				read_timeout 120s
+				write_timeout 120s
+				keepalive 30s
+				keepalive_idle_conns 10
+			}
 		}
 	}
 }
@@ -261,12 +276,9 @@ respond @sourcemaps 404
 # in Caddy's directive order (verified via caddy:alpine — it does NOT beat the
 # SPA catch-all handle{} below), so this is wrapped in `handle` to join the
 # same specificity-sorted group as the other handle blocks above.
-# Residual gap: /api/v1/.env is NOT caught here — handle /api/v1/* outranks
-# this matcher in that sort (longer literal prefix wins), and closing that
-# gap would require nesting a matcher inside handle /api/v1/*, which would
-# mean the reverse_proxy block is no longer byte-for-byte unchanged. Those
-# probes still proxy to the backend and get FastAPI's normal 404 (unchanged
-# from pre-PERF-14 behavior, not a regression) — see PR description.
+# /api/v1/.env and /api/v1/.git/* are covered separately by the nested
+# `route {}` inside handle /api/v1/* above (respond-before-proxy, in written
+# order) — this site-wide matcher and that one together fully close AC 5.
 @dotfileProbes path */.env */.git/*
 handle @dotfileProbes {
 	respond 404
