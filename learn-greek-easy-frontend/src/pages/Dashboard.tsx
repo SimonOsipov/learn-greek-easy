@@ -12,6 +12,10 @@ import { isNewUser } from '@/components/dashboard/lib/isNewUser';
 import { MetricStrip } from '@/components/dashboard/MetricStrip';
 import { StarterView } from '@/components/dashboard/StarterView';
 import { WhatsNewStrip } from '@/components/dashboard/WhatsNewStrip';
+// The resume-hero cover stack renders DxCover, whose styles live in dx.css.
+// dx.css must be imported by the route module (not the dx barrel — Vite doesn't
+// reliably inject the barrel's CSS chunk), or the cover tiles render unstyled.
+import '@/features/decks/dx/dx.css';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useTourAutoTrigger } from '@/hooks/useTourAutoTrigger';
 import { reportAPIError } from '@/lib/errorReporting';
