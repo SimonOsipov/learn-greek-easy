@@ -13,6 +13,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 import sqlalchemy as sa
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -1239,6 +1240,35 @@ class TestCultureStreak:
 
         assert result.current_streak == 0
 
+    @pytest.mark.asyncio
+    async def test_current_streak_independent_of_readiness_percentage(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        culture_deck: CultureDeck,
+    ):
+        """current_streak surfaces correctly even when readiness_percentage is 0.
+
+        QA adversarial (DASH2-02-01): the two fields are computed by unrelated
+        code paths (SRS card-stage aggregation vs. answer/mock-exam date
+        union). Guards against a future refactor accidentally gating
+        current_streak on readiness (e.g. short-circuiting when
+        questions_total==0) or the reverse.
+        """
+        # Questions exist but the user has no CultureQuestionStats rows, so
+        # every weighted-sum term is 0 -> readiness_percentage == 0.0.
+        await create_questions_for_deck(db_session, culture_deck, 10)
+
+        with patch(
+            "src.services.culture_question_service.compute_culture_streak",
+            new=AsyncMock(return_value=5),
+        ):
+            service = CultureQuestionService(db_session)
+            result = await service.get_culture_readiness(test_user.id)
+
+        assert result.readiness_percentage == 0.0
+        assert result.current_streak == 5
+
 
 class TestCultureReadinessResponseSchema:
     """Schema-only tests for CultureReadinessResponse.current_streak (DASH2-02-01).
@@ -1261,3 +1291,38 @@ class TestCultureReadinessResponseSchema:
 
         assert "current_streak" in dumped
         assert dumped["current_streak"] == 3
+
+    def test_current_streak_rejects_negative_value(self):
+        """current_streak enforces ge=0 -- a negative value must fail validation.
+
+        QA adversarial (DASH2-02-01): guards the ``ge=0`` constraint itself,
+        since ``test_readiness_response_serializes_current_streak`` only ever
+        exercises a valid (positive) value and would not catch a dropped
+        constraint.
+        """
+        with pytest.raises(ValidationError):
+            CultureReadinessResponse(
+                readiness_percentage=42.0,
+                verdict="getting_there",
+                questions_learned=10,
+                questions_total=20,
+                total_answers=5,
+                current_streak=-1,
+            )
+
+    def test_current_streak_field_required(self):
+        """current_streak has no default -- omitting it must fail validation.
+
+        QA adversarial (DASH2-02-01): guards against a future edit silently
+        reintroducing a default (e.g. ``= 0``), which would let callers forget
+        to wire compute_culture_streak without any test noticing.
+        """
+        with pytest.raises(ValidationError):
+            CultureReadinessResponse(
+                readiness_percentage=42.0,
+                verdict="getting_there",
+                questions_learned=10,
+                questions_total=20,
+                total_answers=5,
+                # current_streak intentionally omitted
+            )
