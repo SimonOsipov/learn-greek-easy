@@ -29,7 +29,7 @@ The backend service is configured as **private** on Railway, meaning it does not
 ### Traffic Flow
 
 1. **Frontend requests**: Users access the frontend at `https://learn-greek-frontend.up.railway.app`
-2. **API requests**: The frontend's Caddy server proxies `/api/*` requests to the internal backend
+2. **API requests**: The frontend's Caddy server proxies `/api/v1/*` requests to the internal backend; everything else under `/api/*` is answered with a flat 404 at the edge (scanner probe drop-list)
 3. **Health checks**: CI/CD uses `/api/v1/health/*` endpoints through the frontend proxy
 
 ### Environment Variables
@@ -48,8 +48,8 @@ The frontend Caddyfile uses dynamic DNS resolution to handle backend IP changes 
 ```caddy
 :{$PORT:80}
 
-# API proxy to backend with dynamic DNS resolution
-handle /api/* {
+# Real API namespace — proxy /api/v1/* to backend with dynamic DNS resolution
+handle /api/v1/* {
     reverse_proxy {
         # Dynamic A-record DNS with Railway's internal resolver
         dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
@@ -86,6 +86,13 @@ handle /api/* {
         }
     }
 }
+
+# Everything else under /api/ is scanner noise (non-v1 leak-path probes) —
+# answered with a flat 404 at the edge so it never reaches the backend.
+# handle blocks sort by matcher specificity, so /api/v1/* above always wins.
+handle /api/* {
+    respond 404
+}
 ```
 
 ### Proxied Routes
@@ -94,7 +101,8 @@ All routes proxied from frontend to backend:
 
 | Route | Purpose |
 |-------|---------|
-| `/api/*` | All API endpoints (with request body buffering + retry for mutations) |
+| `/api/v1/*` | All API endpoints (with request body buffering + retry for mutations) |
+| `/api/*` | Everything else under `/api/` — edge-404 scanner drop-list (non-v1 leak-path probes never reach the backend) |
 | `/health*` | Health check endpoints |
 | `/version` | Version endpoint |
 | `/docs`, `/docs/*` | Swagger UI (dev only — disabled in production) |
