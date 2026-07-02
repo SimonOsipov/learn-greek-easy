@@ -98,6 +98,16 @@ class TestDashboardSummaryCacheRed:
         with (
             _make_cache_settings_patch(),
             patch("src.api.v1.dashboard.get_cache", return_value=real_cache),
+            # Fixture fix (PERF-15-04 GREEN pass): db is a bare MagicMock, so
+            # the real DashboardSummaryService.build() cannot execute (it
+            # issues real SQLAlchemy queries via 6 sub-services); patch it
+            # to a valid response, matching the sibling hit/none-fallback
+            # tests below. Assertions (setex key/ttl/call_count) unchanged.
+            patch(
+                "src.services.dashboard_summary_service.DashboardSummaryService.build",
+                new_callable=AsyncMock,
+                return_value=_make_valid_summary_response(),
+            ),
         ):
             await get_dashboard_summary(db=db, current_user=user)
 
