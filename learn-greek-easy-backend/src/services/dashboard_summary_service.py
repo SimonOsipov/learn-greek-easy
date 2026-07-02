@@ -1,30 +1,54 @@
-"""Dashboard summary gather-layer service (PERF-15-02).
+"""Dashboard summary gather + compose service (PERF-15-02 / PERF-15-03).
 
 Gathers the pieces needed for the single-call ``DashboardSummaryResponse``
 (see src/schemas/dashboard.py, PERF-15-01) from decks, situations, news, the
 exercise queue, and gamification data, reusing the existing services rather
 than duplicating their queries (AC-7, behavior-preserving).
 
-This module builds only the GATHER half: each ``_gather_*`` method returns
-one piece of raw/slim data. Deriving today/streak/week_heat/decks/feed and
-composing the final ``DashboardSummaryResponse`` (``build()``) is PERF-15-03
-— the ``_gather_*`` methods are the seams that story composes over.
+The ``_gather_*`` methods (PERF-15-02) each return one piece of raw/slim
+data. ``build()`` (PERF-15-03) is the composition seam: it derives
+today/streak/week_heat/decks/feed via the PURE helpers in
+``src.services.dashboard_compose`` and assembles the final
+``DashboardSummaryResponse``.
 
-All gather calls run sequentially against the SAME injected ``AsyncSession``
-(an AsyncSession is not safe for concurrent use across coroutines).
+All gather/compute calls run sequentially against the SAME injected
+``AsyncSession`` (an AsyncSession is not safe for concurrent use across
+coroutines), and deliberately call the PRIVATE ``_compute_*`` methods on
+``ProgressService`` (bypassing its Redis sub-caches) since ``build()``'s own
+result is the single cached artifact (PERF-15-04 wires the endpoint-level
+cache).
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.schemas.dashboard import SlimNews, SlimSituation
+from src.repositories.deck import DeckRepository
+from src.schemas.dashboard import (
+    DashboardSummaryResponse,
+    SlimNews,
+    SlimSituation,
+    StreakSummary,
+    TodaySummary,
+)
+from src.services.dashboard_compose import (
+    ComposeFeedSignals,
+    build_week_heat,
+    compose_feed,
+    derive_is_new_user,
+    map_deck_slice,
+)
 from src.services.exercise_sm2_service import ExerciseSM2Service
 from src.services.learner_situation_service import LearnerSituationService
 from src.services.news_item_service import NewsItemService
+from src.services.progress_service import ProgressService
+from src.services.s3_service import get_s3_service
 from src.services.situation_comprehension_service import SituationComprehensionService
+from src.utils.deck_cover import deck_cover_url, deck_cover_variants
 
 # Matches the dashboard's canonical queue params, used today across the
 # separate /exercises/queue calls the dashboard replaces (exercises.py defaults).
@@ -33,6 +57,31 @@ _QUEUE_NEW_LIMIT = 10
 
 # Matches the dashboard feed's news card count.
 _NEWS_PAGE_SIZE = 6
+
+# Matches the dashboard's deck-strip size — generous enough to cover every
+# system deck without paginating (there are far fewer than 50 today).
+_DECKS_LIMIT = 50
+
+
+@dataclass
+class _DeckView:
+    """Adapts a ``Deck`` ORM row into ``dashboard_compose.DeckLike`` with its
+    S3-derived cover fields pre-resolved. ``map_deck_slice`` is a PURE
+    function (no I/O), but a bare ``Deck`` row has no ``cover_image_url`` /
+    ``cover_image_variants`` attributes — those are computed on the fly via
+    ``deck_cover_url``/``deck_cover_variants`` (S3 presigned URLs) at the
+    existing deck endpoints. This view resolves them once, here, so the
+    pure helper can stay DB/I-O-free.
+    """
+
+    id: UUID
+    name_el: str | None
+    name_en: str | None
+    name_ru: str | None
+    level: str
+    is_premium: bool
+    cover_image_url: str | None
+    cover_image_variants: dict[int, str] | None
 
 
 class DashboardSummaryService:
@@ -102,6 +151,94 @@ class DashboardSummaryService:
             "whats_new_count": whats_new_count,
             "queue_count": queue_count,
         }
+
+    async def build(self, user_id: UUID) -> DashboardSummaryResponse:
+        """Compose the single-call ``DashboardSummaryResponse`` for
+        ``user_id``: gathers stats/decks/feed sources on the shared
+        ``self.db`` session and derives every field via the pure helpers in
+        ``dashboard_compose`` (byte-parity with the frontend it replaces).
+
+        Does not cache — PERF-15-04 wraps this at the endpoint/Redis layer.
+        """
+        progress_service = ProgressService(self.db)
+
+        # ── Stats (today/streak/mastered/week_heat) ────────────────────────
+        stats = await progress_service._compute_dashboard_stats(user_id)
+        today = TodaySummary(**stats.today.model_dump())
+        streak = StreakSummary(
+            current_streak=stats.streak.current_streak,
+            longest_streak=stats.streak.longest_streak,
+        )
+        mastered = stats.cards_by_status.get("mastered", 0)
+        # UTC, NOT date.today() — the frontend oracle anchors on Date.UTC;
+        # using the server's local day here would silently drift bucket
+        # boundaries (see dashboard_compose.build_week_heat).
+        week_heat = build_week_heat(
+            stats.recent_activity, today_utc=datetime.now(timezone.utc).date()
+        )
+
+        # ── Decks (system vocabulary decks, newest first) ──────────────────
+        deck_repo = DeckRepository(self.db)
+        active_decks = await deck_repo.list_active(limit=_DECKS_LIMIT)
+        deck_ids = [deck.id for deck in active_decks]
+        card_counts = await deck_repo.get_batch_card_counts(deck_ids)
+        progress_list = await progress_service._compute_deck_progress_list(
+            user_id, page_size=_DECKS_LIMIT
+        )
+        progress_map = {p.deck_id: p for p in progress_list.decks}
+
+        s3 = get_s3_service()
+        deck_slices = [
+            map_deck_slice(
+                _DeckView(
+                    id=deck.id,
+                    name_el=deck.name_el,
+                    name_en=deck.name_en,
+                    name_ru=deck.name_ru,
+                    level=(deck.level.value if hasattr(deck.level, "value") else deck.level),
+                    is_premium=deck.is_premium,
+                    cover_image_url=deck_cover_url(deck, s3),
+                    cover_image_variants=deck_cover_variants(deck, s3),
+                ),
+                progress_map.get(deck.id),
+                card_counts.get(deck.id, 0),
+            )
+            for deck in active_decks
+        ]
+
+        # ── Non-critical feed sources (news/situation/whats_new/queue) ─────
+        gathered = await self.gather(user_id)
+
+        is_new_user = derive_is_new_user(
+            cards_due=today.cards_due,
+            current_streak=streak.current_streak,
+            mastered=mastered,
+            deck_slices=deck_slices,
+        )
+
+        feed = compose_feed(
+            ComposeFeedSignals(
+                deck_slices=deck_slices,
+                cards_due=today.cards_due,
+                situation=gathered["situation"],
+                news=gathered["news"],
+                current_streak=streak.current_streak,
+                longest_streak=streak.longest_streak,
+                queue_count=gathered["queue_count"],
+            )
+        )
+
+        return DashboardSummaryResponse(
+            is_new_user=is_new_user,
+            mastered=mastered,
+            today=today,
+            streak=streak,
+            week_heat=week_heat,
+            decks=deck_slices,
+            feed=feed,
+            whats_new_count=gathered["whats_new_count"],
+            queue_count=gathered["queue_count"],
+        )
 
 
 __all__ = ["DashboardSummaryService"]
