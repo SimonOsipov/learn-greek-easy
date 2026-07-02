@@ -223,6 +223,9 @@ function makeReadiness(overrides?: Partial<CultureReadinessResponse>): CultureRe
     total_answers: 0,
     categories: [],
     motivation: null,
+    // DASH2-02-04: Streak tile reads this field. Default 0 matches the rest of
+    // this "empty" fixture's zeroed-out shape.
+    current_streak: 0,
     ...overrides,
   };
 }
@@ -272,6 +275,9 @@ function makeRichReadiness(
       },
     ],
     motivation: null,
+    // DASH2-02-04: non-zero default so tests using the plain (no-override)
+    // fixture exercise the "real streak value" path, not the zero/empty edge.
+    current_streak: 4,
     ...overrides,
   };
 }
@@ -552,8 +558,9 @@ describe('MockExamPage', () => {
       // PRACT2-11-02 removed the old StatsGrid; the page now shows the curated
       // CultureMetricStrip (Accuracy · Learned · Best · Streak). When stats fails
       // but readiness + queue succeed: the launcher still renders, Best degrades
-      // to `—` (best score comes from stats), Streak stays `—` (unwired, no
-      // endpoint), and Accuracy / Learned come from readiness (AC-6).
+      // to `—` (best score comes from stats), Streak is wired to
+      // readiness.current_streak (DASH2-02-04), and Accuracy / Learned come
+      // from readiness (AC-6).
       mockGetStatistics.mockRejectedValue(new Error('Stats unavailable'));
       mockGetReadiness.mockResolvedValue(makeRichReadiness());
       mockGetQuestionQueue.mockResolvedValue(makeQueue({ can_start_exam: true }));
@@ -570,8 +577,9 @@ describe('MockExamPage', () => {
       expect(within(screen.getByTestId('culture-metric-1')).getByText('220')).toBeInTheDocument();
       // Best degrades to `—` because the stats source failed (no best_score).
       expect(within(screen.getByTestId('culture-metric-2')).getByText('—')).toBeInTheDocument();
-      // Streak is the permanently-unwired placeholder `—`.
-      expect(within(screen.getByTestId('culture-metric-3')).getByText('—')).toBeInTheDocument();
+      // Streak is wired to readiness.current_streak (DASH2-02-04) — 4 here from
+      // the rich fixture default, independent of the stats failure above.
+      expect(within(screen.getByTestId('culture-metric-3')).getByText('4')).toBeInTheDocument();
       // Sanity: there is no leftover StatsGrid — the strip is the only metric block.
       expect(strip).toBeInTheDocument();
     });
@@ -645,11 +653,12 @@ describe('MockExamPage', () => {
       render(<MockExamPage />);
 
       await screen.findByTestId('culture-metric-strip');
-      // 0 Accuracy → 72 · 1 Learned → 220 · 2 Best → 88 (stats) · 3 Streak → `—`.
+      // 0 Accuracy → 72 · 1 Learned → 220 · 2 Best → 88 (stats) · 3 Streak → 4
+      // (readiness.current_streak, DASH2-02-04).
       expect(within(screen.getByTestId('culture-metric-0')).getByText('72')).toBeInTheDocument();
       expect(within(screen.getByTestId('culture-metric-1')).getByText('220')).toBeInTheDocument();
       expect(within(screen.getByTestId('culture-metric-2')).getByText('88')).toBeInTheDocument();
-      expect(within(screen.getByTestId('culture-metric-3')).getByText('—')).toBeInTheDocument();
+      expect(within(screen.getByTestId('culture-metric-3')).getByText('4')).toBeInTheDocument();
     });
 
     it('renders category rows weakest-first with a "Practice {weakest}" CTA to its deck', async () => {
@@ -864,6 +873,69 @@ describe('MockExamPage', () => {
       // Hero still renders (readiness present), but no category panel.
       await screen.findByLabelText('10% readiness');
       expect(screen.queryByText(/where you're weakest/i)).not.toBeInTheDocument();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Streak tile wired to readiness.current_streak (DASH2-02-04)
+  //
+  // RED as of this commit: the tile still hardcodes value: '—' + unwired: true
+  // in MockExamPage.tsx's CuratedMetricStrip (~L350-358), ignoring
+  // current_streak entirely. These fail today for the right reason —
+  // assertion mismatches ("expected 4 (or 0), found —" / "expected no
+  // unwired-dot, found one") — not compile or collection errors. They go
+  // green once the executor wires value to readiness?.current_streak ?? '—'
+  // and deletes unwired/unwiredLabel from the streak metric object.
+  // ---------------------------------------------------------------------------
+
+  describe('streak tile reflects readiness.current_streak (DASH2-02-04)', () => {
+    it('shows the real current_streak value with the days suffix, not the unwired placeholder', async () => {
+      mockGetStatistics.mockResolvedValue(makeStats());
+      mockGetQuestionQueue.mockResolvedValue(makeQueue());
+      mockGetReadiness.mockResolvedValue(makeRichReadiness({ current_streak: 4 }));
+
+      render(<MockExamPage />);
+
+      const streakTile = await screen.findByTestId('culture-metric-3');
+      expect(within(streakTile).getByText('4')).toBeInTheDocument();
+      expect(within(streakTile).getByText('days')).toBeInTheDocument();
+      // Streak is now a real, wired metric — the "not yet connected to
+      // backend data" danger dot must be gone.
+      expect(within(streakTile).queryByTestId('unwired-dot')).not.toBeInTheDocument();
+    });
+
+    it('shows 0, not the — placeholder, for a real zero-day streak', async () => {
+      mockGetStatistics.mockResolvedValue(makeStats());
+      mockGetQuestionQueue.mockResolvedValue(makeQueue());
+      mockGetReadiness.mockResolvedValue(makeRichReadiness({ current_streak: 0 }));
+
+      render(<MockExamPage />);
+
+      const streakTile = await screen.findByTestId('culture-metric-3');
+      // A real 0-day streak must render as "0", not fall through to the `—`
+      // placeholder — guards a `value || '—'` regression (0 is falsy) as
+      // opposed to the correct `value ?? '—'`.
+      expect(within(streakTile).getByText('0')).toBeInTheDocument();
+      expect(within(streakTile).queryByText('—')).not.toBeInTheDocument();
+    });
+
+    it('degrades the streak tile to — (no unwired marker) when the readiness query fails, without blocking the launcher (AC-6)', async () => {
+      mockGetReadiness.mockRejectedValue(new Error('Readiness unavailable'));
+      mockGetStatistics.mockResolvedValue(makeStats());
+      mockGetQuestionQueue.mockResolvedValue(makeQueue({ can_start_exam: true }));
+
+      render(<MockExamPage />);
+
+      // A readiness failure must not block the page (AC-6) — launcher renders.
+      const startButton = await screen.findByTestId('start-exam-button');
+      expect(startButton).not.toBeDisabled();
+
+      const streakTile = screen.getByTestId('culture-metric-3');
+      expect(within(streakTile).getByText('—')).toBeInTheDocument();
+      // Distinguishes the new graceful-degradation `—` (readiness?.current_streak
+      // ?? '—', no unwired flag) from the old permanent "unwired" placeholder —
+      // the danger dot must not render even in this degraded state.
+      expect(within(streakTile).queryByTestId('unwired-dot')).not.toBeInTheDocument();
     });
   });
 
