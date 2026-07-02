@@ -75,7 +75,14 @@ test.describe('Dashboard Single-Call Network Contract (PERF-15-07)', () => {
     await page.goto('/dashboard');
     await verifyAuthSucceeded(page, '/dashboard');
     await page.getByTestId('dashboard').waitFor({ state: 'visible', timeout: 15000 });
-    await page.waitForLoadState('networkidle');
+    // The dashboard keeps /api/v1/notifications/stream (SSE) open, so
+    // waitForLoadState('networkidle') can hang/time out — it never resolves
+    // while that connection is live. feed-section renders only once the
+    // summary resolves, so its visibility is a deterministic readiness
+    // signal; the trailing timeout gives a moment for any late duplicate
+    // call to land before we snapshot the request list below.
+    await expect(page.getByTestId('feed-section')).toBeVisible({ timeout: 10000 });
+    await page.waitForTimeout(500);
 
     const summaryRequests = requests.filter(
       (r) => r.method() === 'GET' && SUMMARY_ENDPOINT.test(r.url())
@@ -106,7 +113,11 @@ test.describe('Dashboard Single-Call Network Contract (PERF-15-07)', () => {
 
     const resp = await summaryResponsePromise;
     await page.getByTestId('dashboard').waitFor({ state: 'visible', timeout: 15000 });
-    await page.waitForLoadState('networkidle');
+    // See the AC-1/AC-2 test above for why networkidle is unsafe here (the
+    // open SSE stream never idles). feed-section renders only once the
+    // summary resolves, so its visibility is a deterministic readiness
+    // signal; the response body itself was already captured above.
+    await expect(page.getByTestId('feed-section')).toBeVisible({ timeout: 10000 });
 
     const body = await resp.body();
     const bytes = body.length;
@@ -123,8 +134,11 @@ test.describe('Dashboard Single-Call Network Contract (PERF-15-07)', () => {
   test('AC-3: dashboard renders the same structural surface in EN and RU', async ({ page }) => {
     await page.goto('/dashboard');
     await verifyAuthSucceeded(page, '/dashboard');
+    // No networkidle wait (see the AC-1/AC-2 test above): this initial load
+    // is immediately superseded by the EN reload below, whose own
+    // metric-strip/feed-section visibility checks are the readiness gate
+    // the assertions that follow actually depend on.
     await page.getByTestId('dashboard').waitFor({ state: 'visible', timeout: 15000 });
-    await page.waitForLoadState('networkidle');
 
     // ── EN ────────────────────────────────────────────────────────────────
     // Set i18nextLng on the baseURL origin the app actually runs on (not

@@ -134,7 +134,8 @@ describe('Dashboard — new-user StarterView gating', () => {
   describe('all-zero signals (isNew === true)', () => {
     beforeEach(() => {
       mockGetSummary.mockResolvedValue(newUserSummaryFixture);
-      queryClient.setQueryData(['dashboard-summary'], newUserSummaryFixture);
+      // User-scoped key (matches the mocked authStore's user.id = 'u1' above).
+      queryClient.setQueryData(['dashboard-summary', 'u1'], newUserSummaryFixture);
     });
 
     it('renders StarterView with the correct heading', async () => {
@@ -186,7 +187,8 @@ describe('Dashboard — new-user StarterView gating', () => {
   describe('returning user (cardsDue > 0 → isNew === false)', () => {
     beforeEach(() => {
       mockGetSummary.mockResolvedValue(returningUserSummaryFixture);
-      queryClient.setQueryData(['dashboard-summary'], returningUserSummaryFixture);
+      // User-scoped key (matches the mocked authStore's user.id = 'u1' above).
+      queryClient.setQueryData(['dashboard-summary', 'u1'], returningUserSummaryFixture);
     });
 
     it('renders HeroEntries (hero-entries in the DOM)', async () => {

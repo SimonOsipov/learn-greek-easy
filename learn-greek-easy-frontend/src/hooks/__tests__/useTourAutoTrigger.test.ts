@@ -50,7 +50,8 @@ vi.mock('@/stores/authStore', () => ({
 }));
 
 // PERF-15-06: dashboard-readiness now comes from dashboardAPI.getSummary
-// (the shared ['dashboard-summary'] query), not useAnalytics.
+// (the shared, user-scoped ['dashboard-summary', userId] query), not
+// useAnalytics.
 const mockGetSummary = vi.fn();
 vi.mock('@/services/dashboardAPI', () => ({
   dashboardAPI: { getSummary: () => mockGetSummary() },
@@ -88,6 +89,11 @@ function makeWrapper(queryClient: QueryClient) {
 // doesn't matter beyond being truthy).
 const fixtureData = { is_new_user: false };
 
+// Matches mockUser's id ('1') seeded in beforeEach below — the query key is
+// now user-scoped (['dashboard-summary', userId]), so cache seeds/removals
+// must target the same id the mocked authStore reports.
+const DASHBOARD_SUMMARY_KEY = ['dashboard-summary', '1'];
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -109,7 +115,7 @@ describe('useTourAutoTrigger', () => {
     mockGetSummary.mockResolvedValue(fixtureData);
     queryClient = createTestQueryClient();
     // Seed cache so hook sees data immediately (avoids async fetch in timer tests)
-    queryClient.setQueryData(['dashboard-summary'], fixtureData);
+    queryClient.setQueryData(DASHBOARD_SUMMARY_KEY, fixtureData);
   });
 
   afterEach(() => {
@@ -119,7 +125,7 @@ describe('useTourAutoTrigger', () => {
 
   it('does not trigger when dashboard summary is loading', () => {
     // Remove seeded data so query fires and stays loading
-    queryClient.removeQueries({ queryKey: ['dashboard-summary'] });
+    queryClient.removeQueries({ queryKey: DASHBOARD_SUMMARY_KEY });
     mockGetSummary.mockReturnValue(new Promise(() => {}));
 
     renderHook(() => useTourAutoTrigger(), { wrapper: makeWrapper(queryClient) });
@@ -142,13 +148,13 @@ describe('useTourAutoTrigger', () => {
 
   it('fail-safe: sets triggeredRef after 10s, preventing late trigger', () => {
     // Dashboard never loads
-    queryClient.removeQueries({ queryKey: ['dashboard-summary'] });
+    queryClient.removeQueries({ queryKey: DASHBOARD_SUMMARY_KEY });
     mockGetSummary.mockReturnValue(new Promise(() => {}));
 
     renderHook(() => useTourAutoTrigger(), { wrapper: makeWrapper(queryClient) });
     vi.advanceTimersByTime(10_000);
     // Now simulate dashboard loading
-    queryClient.setQueryData(['dashboard-summary'], fixtureData);
+    queryClient.setQueryData(DASHBOARD_SUMMARY_KEY, fixtureData);
     // Re-render would be needed but triggeredRef is already set
     expect(mockStartTour).not.toHaveBeenCalled();
   });

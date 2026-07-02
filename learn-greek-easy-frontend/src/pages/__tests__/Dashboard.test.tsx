@@ -10,7 +10,7 @@
  *
  * PERF-15-05: hero/feed deck rendering sources from the dashboard-summary
  * endpoint (dashboardAPI.getSummary). We mock at the API-client level and
- * seed the `['dashboard-summary']` query cache.
+ * seed the user-scoped `['dashboard-summary', userId]` query cache.
  *
  * PERF-15-06: Dashboard.tsx no longer reads deckStore at all — the nav
  * handlers (handleStartReview/handleContinueDeck) resolve decks off
@@ -245,7 +245,8 @@ let mockDecks: ReturnType<typeof makeDeck>[] = [];
 function renderDashboard(queryClient: QueryClient) {
   const summaryFixture = makeSummaryFromDecks(mockDecks);
   mockGetSummary.mockResolvedValue(summaryFixture);
-  queryClient.setQueryData(['dashboard-summary'], summaryFixture);
+  // User-scoped key (matches the mocked authStore's user.id = 'u1' above).
+  queryClient.setQueryData(['dashboard-summary', 'u1'], summaryFixture);
 
   const DashboardWithQuery = () =>
     createElement(QueryClientProvider, { client: queryClient }, createElement(Dashboard));

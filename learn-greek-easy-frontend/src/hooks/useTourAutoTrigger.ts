@@ -18,9 +18,10 @@ export function useTourAutoTrigger(): void {
   const isAuthenticated = useAuthStore((state) => !!state.user);
   const tourCompletedAt = useAuthStore((state) => state.user?.tourCompletedAt);
   const updateProfile = useAuthStore((state) => state.updateProfile);
-  // PERF-15-06: readiness now comes off the shared ['dashboard-summary']
-  // query (Dashboard.tsx's own source of truth) instead of a separate
-  // useAnalytics() fetch — no new network call, just a shared cache read.
+  // PERF-15-06: readiness now comes off the shared, user-scoped
+  // ['dashboard-summary', userId] query (Dashboard.tsx's own source of
+  // truth) instead of a separate useAnalytics() fetch — no new network
+  // call, just a shared cache read.
   const { data, isLoading } = useDashboardSummary();
   const { t } = useTranslation('common');
   const navigate = useNavigate();

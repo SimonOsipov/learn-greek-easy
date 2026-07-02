@@ -27,6 +27,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.logging import get_logger
 from src.repositories.deck import DeckRepository
 from src.schemas.dashboard import (
     DashboardSummaryResponse,
@@ -62,6 +63,8 @@ _NEWS_PAGE_SIZE = 6
 # system deck without paginating (there are far fewer than 50 today).
 _DECKS_LIMIT = 50
 
+logger = get_logger(__name__)
+
 
 @dataclass
 class _DeckView:
@@ -91,47 +94,90 @@ class DashboardSummaryService:
         self.db = db
 
     async def _gather_news(self) -> list[SlimNews]:
-        """Latest published news items, slim-mapped for the dashboard feed."""
-        news_response = await NewsItemService(self.db).get_list(page_size=_NEWS_PAGE_SIZE)
-        return [SlimNews.from_full(item) for item in news_response.items]
+        """Latest published news items, slim-mapped for the dashboard feed.
+
+        Non-critical feed source: a transient failure here degrades to an
+        empty list instead of 500ing the whole consolidated summary — the
+        core stats/decks composed in ``build()`` stay hard-failing.
+        """
+        try:
+            news_response = await NewsItemService(self.db).get_list(page_size=_NEWS_PAGE_SIZE)
+            return [SlimNews.from_full(item) for item in news_response.items]
+        except Exception:
+            logger.opt(exception=True).warning(
+                "dashboard summary: news gather failed, degrading to []"
+            )
+            return []
 
     async def _gather_situation(self, user_id: UUID) -> SlimSituation | None:
-        """Newest READY situation for the learner, or None if there are none."""
-        result = await LearnerSituationService(self.db).list_for_learner(
-            user_id, page=1, page_size=1
-        )
-        if not result.items:
+        """Newest READY situation for the learner, or None if there are none.
+
+        Non-critical feed source: degrades to None on failure (see
+        ``_gather_news`` docstring for the degradation rationale).
+        """
+        try:
+            result = await LearnerSituationService(self.db).list_for_learner(
+                user_id, page=1, page_size=1
+            )
+            if not result.items:
+                return None
+            item = result.items[0]
+            return SlimSituation(
+                id=item.id,
+                scenario_el=item.scenario_el,
+                scenario_en=item.scenario_en,
+                scenario_ru=item.scenario_ru,
+                status=item.status.value,
+                has_audio=item.has_audio,
+                has_dialog=item.has_dialog,
+                exercise_total=item.exercise_total,
+                exercise_completed=item.exercise_completed,
+                source_image_url=item.source_image_url,
+                domain=item.domain,
+                description_source_type=item.description_source_type,
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                "dashboard summary: situation gather failed, degrading to None",
+                user_id=str(user_id),
+            )
             return None
-        item = result.items[0]
-        return SlimSituation(
-            id=item.id,
-            scenario_el=item.scenario_el,
-            scenario_en=item.scenario_en,
-            scenario_ru=item.scenario_ru,
-            status=item.status.value,
-            has_audio=item.has_audio,
-            has_dialog=item.has_dialog,
-            exercise_total=item.exercise_total,
-            exercise_completed=item.exercise_completed,
-            source_image_url=item.source_image_url,
-            domain=item.domain,
-            description_source_type=item.description_source_type,
-        )
 
     async def _gather_whats_new_count(self) -> int:
-        """Account-wide count of READY situations added in the last 7 days."""
-        return await SituationComprehensionService(self.db).count_whats_new()
+        """Account-wide count of READY situations added in the last 7 days.
+
+        Non-critical feed source: degrades to 0 on failure (see
+        ``_gather_news`` docstring for the degradation rationale).
+        """
+        try:
+            return await SituationComprehensionService(self.db).count_whats_new()
+        except Exception:
+            logger.opt(exception=True).warning(
+                "dashboard summary: whats_new_count gather failed, degrading to 0"
+            )
+            return 0
 
     async def _gather_queue_count(self, user_id: UUID) -> int:
-        """Study-queue size using the dashboard's canonical queue params."""
-        queue = await ExerciseSM2Service(self.db).get_study_queue(
-            user_id,
-            limit=_QUEUE_LIMIT,
-            include_new=True,
-            new_limit=_QUEUE_NEW_LIMIT,
-            include_early_practice=False,
-        )
-        return queue.total_in_queue
+        """Study-queue size using the dashboard's canonical queue params.
+
+        Non-critical feed source: degrades to 0 on failure (see
+        ``_gather_news`` docstring for the degradation rationale).
+        """
+        try:
+            queue = await ExerciseSM2Service(self.db).get_study_queue(
+                user_id,
+                limit=_QUEUE_LIMIT,
+                include_new=True,
+                new_limit=_QUEUE_NEW_LIMIT,
+                include_early_practice=False,
+            )
+            return queue.total_in_queue
+        except Exception:
+            logger.opt(exception=True).warning(
+                "dashboard summary: queue_count gather failed, degrading to 0",
+                user_id=str(user_id),
+            )
+            return 0
 
     async def gather(self, user_id: UUID) -> dict:
         """Gather all dashboard-summary source data for ``user_id``.

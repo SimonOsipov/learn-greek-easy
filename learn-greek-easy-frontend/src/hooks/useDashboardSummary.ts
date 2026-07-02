@@ -15,7 +15,11 @@ export const useDashboardSummary = () => {
   const userId = useAuthStore((s) => s.user?.id);
 
   const query = useQuery<DashboardSummaryResponse>({
-    queryKey: ['dashboard-summary'],
+    // User-scoped (mirrors useAnalytics's ['analytics', userId, dateRange]
+    // convention): an unscoped key is shared across accounts, so with the
+    // default 5-min staleTime a new login could briefly render the
+    // PREVIOUS user's cached summary before logout invalidation catches up.
+    queryKey: ['dashboard-summary', userId],
     queryFn: dashboardAPI.getSummary,
     enabled: !!userId,
   });

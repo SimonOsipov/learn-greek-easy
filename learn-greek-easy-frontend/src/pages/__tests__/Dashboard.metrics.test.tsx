@@ -125,8 +125,9 @@ describe('Dashboard metric tile selectors (DASH2-01-04 + PRACT2-7-03 AC-1)', () 
     vi.clearAllMocks();
     mockGetSummary.mockResolvedValue(summaryFixture);
     queryClient = createTestQueryClient();
-    // Seed the cache so the component renders in loaded state immediately
-    queryClient.setQueryData(['dashboard-summary'], summaryFixture);
+    // Seed the cache so the component renders in loaded state immediately.
+    // User-scoped key (matches the mocked authStore's user.id = 'u1' above).
+    queryClient.setQueryData(['dashboard-summary', 'u1'], summaryFixture);
   });
 
   afterEach(() => {

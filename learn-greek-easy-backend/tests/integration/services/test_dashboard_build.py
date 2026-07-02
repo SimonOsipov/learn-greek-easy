@@ -23,6 +23,7 @@ Two scenarios:
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
@@ -115,6 +116,62 @@ class TestDashboardSummaryBuildNewUser:
 
         oracle_stats = await ProgressService(db_session).get_dashboard_stats(test_user.id)
         assert result.all_time_study_time_seconds == oracle_stats.overview.total_study_time_seconds
+
+
+@pytest.mark.integration
+class TestDashboardSummaryBuildGracefulDegradation:
+    """CodeRabbit fix: a transient failure in a NON-CRITICAL feed source
+    (news/queue) must not 500 the whole consolidated ``build()`` call --
+    core fields (today/streak/mastered/decks) stay populated and the
+    failing source's own field degrades to its safe default. Exercised at
+    the ``build()`` level (rather than the pure ``gather()`` unit tests in
+    tests/unit/services/test_dashboard_summary_degradation.py) to prove the
+    degradation survives end-to-end through the real DB-backed composition,
+    not just in isolation.
+    """
+
+    @pytest.mark.asyncio
+    async def test_news_gather_failure_still_returns_valid_response(
+        self, db_session: AsyncSession, test_user
+    ) -> None:
+        with patch(
+            "src.services.dashboard_summary_service.NewsItemService.get_list",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("news db blip"),
+        ):
+            result = await DashboardSummaryService(db_session).build(test_user.id)
+
+        # Core fields stay populated -- the failure is isolated to news.
+        assert result.is_new_user is True
+        assert result.mastered == 0
+        assert result.today.cards_due == 0
+        assert result.streak.current_streak == 0
+        assert result.decks == []
+
+        # News-derived feed items are empty; the rest of the feed still
+        # composes (word_of_day is always-on).
+        assert "news" not in [item.type for item in result.feed]
+        assert [item.type for item in result.feed] == ["word_of_day"]
+
+    @pytest.mark.asyncio
+    async def test_queue_gather_failure_still_returns_valid_response(
+        self, db_session: AsyncSession, test_user
+    ) -> None:
+        with patch(
+            "src.services.dashboard_summary_service.ExerciseSM2Service.get_study_queue",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("queue db blip"),
+        ):
+            result = await DashboardSummaryService(db_session).build(test_user.id)
+
+        # Failing source degrades to its safe default...
+        assert result.queue_count == 0
+        # ...while core fields stay populated.
+        assert result.is_new_user is True
+        assert result.mastered == 0
+        assert result.today.cards_due == 0
+        assert result.streak.current_streak == 0
+        assert result.decks == []
 
 
 @pytest.mark.integration

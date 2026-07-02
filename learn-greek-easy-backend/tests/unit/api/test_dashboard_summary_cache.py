@@ -41,12 +41,27 @@ def _make_real_cache(mock_redis) -> CacheService:
 
 
 def _make_cache_settings_patch():
+    """Patches settings on BOTH modules the read path touches.
+
+    ``CacheService.get_or_set`` (src.core.cache) reads cache_enabled/
+    cache_key_prefix to build the key and call setex, but
+    ``get_dashboard_summary`` (src.api.v1.dashboard) reads its own
+    module-level ``settings`` (imported from src.config) for the TTL passed
+    into get_or_set. Patching only src.core.cache.settings left the TTL
+    assertion passing merely because it happened to match the real default
+    (60) -- not because the test actually isolated it. TTL is set to a
+    non-default sentinel (99) so the assertion would fail if this patch
+    weren't wired through.
+    """
     mock_settings = MagicMock()
     mock_settings.cache_enabled = True
     mock_settings.cache_key_prefix = "cache"
     mock_settings.cache_default_ttl = 300
-    mock_settings.cache_user_progress_ttl = 60
-    return patch("src.core.cache.settings", mock_settings)
+    mock_settings.cache_user_progress_ttl = 99
+    return (
+        patch("src.core.cache.settings", mock_settings),
+        patch("src.api.v1.dashboard.settings", mock_settings),
+    )
 
 
 def _make_valid_summary_response() -> DashboardSummaryResponse:
@@ -82,9 +97,12 @@ class TestDashboardSummaryCacheRed:
 
     async def test_summary_cache_miss_sets_key_and_ttl(self):
         """Cache miss: result stored at progress:user:{uid}:dashboard_summary
-        (full redis key cache:progress:user:{uid}:dashboard_summary, TTL=60)
-        -- matches the existing progress:user:{uid}:dashboard namespacing
-        precedent in src/services/progress_service.py.
+        (full redis key cache:progress:user:{uid}:dashboard_summary, real TTL
+        is cache_user_progress_ttl=60) -- matches the existing
+        progress:user:{uid}:dashboard namespacing precedent in
+        src/services/progress_service.py. The test patches TTL to the
+        non-default sentinel 99 to prove isolation (see
+        _make_cache_settings_patch's docstring).
 
         RED: setex call_count == 0 (STUB never touches the cache).
         """
@@ -96,8 +114,11 @@ class TestDashboardSummaryCacheRed:
         user_id = uuid4()
         user = _make_mock_user(user_id)
 
+        core_cache_settings_patch, dashboard_settings_patch = _make_cache_settings_patch()
+
         with (
-            _make_cache_settings_patch(),
+            core_cache_settings_patch,
+            dashboard_settings_patch,
             patch("src.api.v1.dashboard.get_cache", return_value=real_cache),
             # Fixture fix (PERF-15-04 GREEN pass): db is a bare MagicMock, so
             # the real DashboardSummaryService.build() cannot execute (it
@@ -120,7 +141,11 @@ class TestDashboardSummaryCacheRed:
         )
         actual_key, actual_ttl, _payload = mock_redis.setex.call_args[0]
         assert actual_key == expected_key, f"Wrong cache key: {actual_key!r}"
-        assert actual_ttl == 60, f"Wrong TTL: {actual_ttl}"
+        # Non-default sentinel (real default is 60) -- proves the endpoint's
+        # module-level `settings` (src.api.v1.dashboard) is actually patched,
+        # not just src.core.cache.settings; this assertion would fail if it
+        # were silently reading the real default instead.
+        assert actual_ttl == 99, f"Wrong TTL: {actual_ttl}"
 
     async def test_summary_cache_hit_skips_build(self):
         """Cache hit: DashboardSummaryService.build() must not run, and the
