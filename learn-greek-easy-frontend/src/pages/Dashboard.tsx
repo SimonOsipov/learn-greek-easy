@@ -8,7 +8,7 @@ import { DashboardGreeting } from '@/components/dashboard/DashboardGreeting';
 import { Feed } from '@/components/dashboard/Feed';
 import { HeroEntries } from '@/components/dashboard/HeroEntries';
 import { composeFeed } from '@/components/dashboard/lib/composeFeed';
-import { isNewUser } from '@/components/dashboard/lib/isNewUser';
+import { toDashboardDecks } from '@/components/dashboard/lib/summaryDeckAdapter';
 import { MetricStrip } from '@/components/dashboard/MetricStrip';
 import { StarterView } from '@/components/dashboard/StarterView';
 import { WhatsNewStrip } from '@/components/dashboard/WhatsNewStrip';
@@ -17,9 +17,9 @@ import { WhatsNewStrip } from '@/components/dashboard/WhatsNewStrip';
 // reliably inject the barrel's CSS chunk), or the cover tiles render unstyled.
 import '@/features/decks/dx/dx.css';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useDashboardSummary } from '@/hooks/useDashboardSummary';
 import { useTourAutoTrigger } from '@/hooks/useTourAutoTrigger';
 import { reportAPIError } from '@/lib/errorReporting';
-import { masteredCount } from '@/lib/progressGlossary';
 import { formatStudyTime } from '@/lib/timeFormatUtils';
 import { adminAPI } from '@/services/adminAPI';
 import { exerciseAPI } from '@/services/exerciseAPI';
@@ -44,12 +44,24 @@ export const Dashboard: React.FC = () => {
   // Auth state
   const user = useAuthStore((state) => state.user);
 
-  // Analytics data (auto-loads on mount)
-  const { data: analyticsData, loading: analyticsLoading, error: analyticsError } = useAnalytics();
+  // Dashboard summary (PERF-15) — single-call source for greeting stats,
+  // metric strip, week-heat, hero (resume/daily-goal ring) and deck data.
+  const { data: summary, isLoading: summaryLoading, error: summaryError } = useDashboardSummary();
 
-  // Deck data
+  // Analytics — kept ONLY for MetricStrip's all-time study-time tile
+  // (analyticsData.summary.totalTimeStudied — a genuine DTO gap: it is NOT
+  // one of the 5 documented "unwired null" slots on DashboardSummaryResponse,
+  // it's simply absent) and for useTourAutoTrigger's readiness signal.
+  // PERF-15-06 says it removes this call from the dashboard entirely — that
+  // requires either extending the summary DTO with a lifetime-time-studied
+  // field first, or accepting the all-time tile stays on `useAnalytics`.
+  const { data: analyticsData, loading: analyticsLoading } = useAnalytics();
+
+  // Deck data — deckStore is still warmed/read here for the resume/open-deck
+  // navigation handlers below (culture vs vocabulary routing); rendering
+  // (greeting/metrics/hero/feed) now reads `summary.decks` instead. Removing
+  // this store dependency + the ensureDecksFresh() warm is PERF-15-06.
   const decks = useDeckStore((state) => state.decks);
-  const decksLoading = useDeckStore((state) => state.isLoading);
   const ensureDecksFresh = useDeckStore((state) => state.ensureDecksFresh);
 
   // Warm/refresh decks on mount. ensureDecksFresh de-dupes with the app-init
@@ -141,37 +153,34 @@ export const Dashboard: React.FC = () => {
 
   // ── Derived values ─────────────────────────────────────────────────────────
 
-  const isLoading = analyticsLoading || decksLoading;
+  // Summary must resolve before the page can render its final layout;
+  // analytics is also awaited since MetricStrip's all-time tile still reads
+  // it (see the `useAnalytics` comment above).
+  const isLoading = summaryLoading || analyticsLoading;
   const userName = user?.name || user?.email?.split('@')[0] || 'Learner';
-  const cardsDue = analyticsData?.today?.cardsDue ?? 0;
-  const minutesToday = Math.round((analyticsData?.today?.studyTimeSeconds ?? 0) / 60);
-  const deckCount = decks.filter((d) => (d.progress?.dueToday ?? 0) > 0).length;
-  const currentStreak = analyticsData?.streak?.currentStreak ?? 0;
-  const longestStreak = analyticsData?.streak?.longestStreak ?? 0;
+  const cardsDue = summary?.today?.cards_due ?? 0;
+  const minutesToday = Math.round((summary?.today?.study_time_seconds ?? 0) / 60);
+  // Deck slices from the summary, adapted onto the legacy Deck shape that
+  // HeroEntries/composeFeed consume (PERF-15-06 removes this adapter).
+  const summaryDecks = useMemo(() => toDashboardDecks(summary?.decks ?? []), [summary]);
+  const deckCount = summaryDecks.filter((d) => (d.progress?.dueToday ?? 0) > 0).length;
+  const currentStreak = summary?.streak?.current_streak ?? 0;
+  const longestStreak = summary?.streak?.longest_streak ?? 0;
+  const mastered = summary?.mastered ?? 0;
 
-  // Mastered count — lifted to top level so both isNewUser predicate and MetricStrip
-  // share ONE derivation (prevents drift between the gate condition and the tile).
-  const mastered = analyticsData
-    ? masteredCount({
-        new: analyticsData.wordStatus.new ?? 0,
-        learning: analyticsData.wordStatus.learning,
-        review: analyticsData.wordStatus.review,
-        mastered: analyticsData.wordStatus.mastered,
-      })
-    : 0;
+  // New-user gate — server-authoritative (summary.is_new_user), false during
+  // load (anti-flash guard). Decision: Feed is hidden entirely when isNew
+  // because composeFeed always emits a wordOfDay card and pickResumeDeck
+  // returns decks[0] at zero progress, which would show a bogus "Resume
+  // deck" card to a brand-new user.
+  const isNew = !isLoading && !!summary && summary.is_new_user;
 
-  // New-user gate — false during load or analytics error (anti-flash guard).
-  // Decision: Feed is hidden entirely when isNew because composeFeed always emits
-  // a wordOfDay card and pickResumeDeck returns decks[0] at zero progress,
-  // which would show a bogus "Resume deck" card to a brand-new user.
-  const isNew =
-    !isLoading && !!analyticsData && isNewUser({ cardsDue, currentStreak, mastered, decks });
-
-  // Unified feed — client-side composition in fixed priority order
+  // Unified feed — client-side composition in fixed priority order, fed from
+  // the summary's deck slices (PERF-15-06 replaces this with summary.feed).
   const feedItems = useMemo(
     () =>
       composeFeed({
-        decks,
+        decks: summaryDecks,
         cardsDue,
         currentStreak,
         longestStreak,
@@ -179,7 +188,15 @@ export const Dashboard: React.FC = () => {
         situations: situationsData?.items ?? [],
         queueCount: exerciseQueueData?.total_in_queue ?? 0,
       }),
-    [decks, cardsDue, currentStreak, longestStreak, newsData, situationsData, exerciseQueueData]
+    [
+      summaryDecks,
+      cardsDue,
+      currentStreak,
+      longestStreak,
+      newsData,
+      situationsData,
+      exerciseQueueData,
+    ]
   );
 
   return (
@@ -190,12 +207,12 @@ export const Dashboard: React.FC = () => {
         cardsDue={cardsDue}
         deckCount={deckCount}
         minutesToday={minutesToday}
-        recentActivity={analyticsData?.recentActivity ?? []}
+        weekHeat={summary?.week_heat}
         isLoading={isLoading}
       />
 
       {/* Hero entry cards (DASH2-01-03) OR new-user starter view (DASH2-01-07).
-          Skeleton while loading: isNew is only known once analytics+decks resolve,
+          Skeleton while loading: isNew is only known once the summary resolves,
           so without this the page would render the returning layout (hero cards +
           feed) first and then swap a new user to StarterView — a visible redraw.
           Reserving the hero space with a skeleton until isLoading clears removes
@@ -210,7 +227,7 @@ export const Dashboard: React.FC = () => {
         <StarterView />
       ) : (
         <HeroEntries
-          decks={decks}
+          decks={summaryDecks}
           cardsDue={cardsDue}
           deckCount={deckCount}
           minutesToday={minutesToday}
@@ -233,17 +250,17 @@ export const Dashboard: React.FC = () => {
               <div key={i} className="db-skel is-metric" />
             ))}
           </div>
-        ) : analyticsError ? (
+        ) : summaryError ? (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center text-destructive">
             {t('dashboard.progress.error')}
           </div>
-        ) : analyticsData ? (
+        ) : summary ? (
           <MetricStrip
-            dueToday={analyticsData.today?.cardsDue ?? 0}
-            currentStreak={analyticsData.streak.currentStreak}
-            longestStreak={analyticsData.streak.longestStreak}
+            dueToday={cardsDue}
+            currentStreak={currentStreak}
+            longestStreak={longestStreak}
             mastered={mastered}
-            allTimeLabel={formatStudyTime(analyticsData.summary.totalTimeStudied)}
+            allTimeLabel={formatStudyTime(analyticsData?.summary.totalTimeStudied ?? 0)}
           />
         ) : (
           <div className="hairline rounded-lg border p-4 text-center text-muted-foreground">

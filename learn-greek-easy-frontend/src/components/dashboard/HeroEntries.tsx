@@ -129,13 +129,9 @@ export function HeroEntries({
     }
   }, [dueDeckList, i18n.language]);
 
-  // Progress fraction for resume deck
-  const progressFraction = React.useMemo(() => {
-    if (!resumeDeck?.progress) return 0;
-    const { cardsLearning, cardsMastered, cardsTotal } = resumeDeck.progress;
-    if (!cardsTotal) return 0;
-    return (cardsLearning + cardsMastered) / cardsTotal;
-  }, [resumeDeck]);
+  // Completion percentage for the resume deck's progress bar — server-computed
+  // (DashboardDeckSlice.completion_pct, PERF-15), no client recomputation.
+  const completionPct = resumeDeck?.progress?.completionPct ?? 0;
 
   return (
     <section className="db-hero" data-testid="hero-entries">
@@ -161,7 +157,7 @@ export function HeroEntries({
 
             {/* Progress bar */}
             <div className="db-entry-progress" aria-hidden="true">
-              <span style={{ width: `${Math.round(progressFraction * 100)}%` }} />
+              <span style={{ width: `${completionPct}%` }} />
             </div>
 
             <div className="db-entry-body">

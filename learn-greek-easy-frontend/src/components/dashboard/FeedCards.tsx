@@ -69,10 +69,9 @@ function FeedHeroResume({
   const deck = item.deck;
   const name = getLocalizedDeckName(deck, i18n.language);
   const progress = deck.progress;
-  const pct =
-    progress && progress.cardsTotal > 0
-      ? Math.round(((progress.cardsLearning + progress.cardsMastered) / progress.cardsTotal) * 100)
-      : 0;
+  // Server-computed completion percentage (DashboardDeckSlice.completion_pct,
+  // PERF-15) — no client recomputation.
+  const pct = progress?.completionPct ?? 0;
   // Fanned cover stack: front = resume deck, behind = up to 2 sibling decks.
   // Rendered via the shared DxCover primitive (same as the deck-detail hero) so
   // every tile paints its real cover photo with a gradient + 404→original fallback.
@@ -395,10 +394,9 @@ function FeedDeck({
   const deck = item.deck;
   const name = getLocalizedDeckName(deck, i18n.language);
   const progress = deck.progress;
-  const pct =
-    progress && progress.cardsTotal > 0
-      ? Math.round(((progress.cardsLearning + progress.cardsMastered) / progress.cardsTotal) * 100)
-      : 0;
+  // Server-computed completion percentage (DashboardDeckSlice.completion_pct,
+  // PERF-15) — no client recomputation.
+  const pct = progress?.completionPct ?? 0;
   // Real cover photo for the illustration block (falls back to the gradient +
   // Greek-letter mark when the deck has no cover image).
   const coverSrc = pickBestSrc(deck.coverImageVariants, 480, deck.coverImageUrl);

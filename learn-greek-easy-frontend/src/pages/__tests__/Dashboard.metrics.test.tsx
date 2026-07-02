@@ -1,14 +1,17 @@
 /**
  * Dashboard Metrics — Due-Today Selector Regression Guard + Mastered Tile Guard (DASH2-01-04)
  *
- * 1. Due-Today regression: fixture today.cardsDue=5 AND learning+review=13.
- *    Asserts the "Due Today" metric tile shows **5** (true SRS), NOT 13.
- *    RED against old code (showed learning+review); GREEN after DASH2-01-04 rewire.
+ * 1. Due-Today regression: dashboard-summary fixture today.cards_due=5.
+ *    Asserts the "Due Today" metric tile shows **5** (the SRS due count).
  *
  * 2. Mastered tile selector (PRACT2-7-03 AC-1):
- *    Verifies the "Mastered" metric tile shows wordStatus.mastered (12).
+ *    Verifies the "Mastered" metric tile shows summary.mastered (12).
  *    Selectors migrated from MetricCard (.card/.metric-value) to MetricStrip
  *    (.db-metric/.db-metric-v) as part of DASH2-01-04.
+ *
+ * PERF-15-05: both tiles now source from dashboardAPI.getSummary (mocked +
+ * cache-seeded below) instead of analytics' wordStatus/today. The analytics
+ * mock/fixture stays only because MetricStrip's all-time tile still reads it.
  */
 
 import { act } from 'react';
@@ -54,6 +57,12 @@ vi.mock('@/features/analytics', () => ({
   getAnalytics: (...args: unknown[]) => mockGetAnalytics(...args),
 }));
 
+// PERF-15-05: metric-strip data now comes from dashboardAPI.getSummary.
+const mockGetSummary = vi.fn();
+vi.mock('@/services/dashboardAPI', () => ({
+  dashboardAPI: { getSummary: () => mockGetSummary() },
+}));
+
 vi.mock('@/hooks/useTourAutoTrigger', () => ({
   useTourAutoTrigger: vi.fn(),
 }));
@@ -86,31 +95,44 @@ vi.mock('@/stores/deckStore', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Analytics fixture:
-//   - today.cardsDue = 5  (SRS due — the CORRECT Due-Today source)
-//   - wordStatus.learning=5 + wordStatus.review=8 = 13  (the WRONG old source)
-//   - wordStatus.mastered = 12  (canonical mastered value)
+// Analytics fixture — kept minimal; MetricStrip's all-time tile is the only
+// remaining reader (analyticsData.summary.totalTimeStudied). Due-today and
+// mastered now come exclusively from the dashboard-summary fixture below.
+// ---------------------------------------------------------------------------
+
+const analyticsFixture = {
+  summary: { totalTimeStudied: 60, totalCardsReviewed: 137 },
+};
+
+// ---------------------------------------------------------------------------
+// Dashboard-summary fixture:
+//   - today.cards_due = 5   (the Due-Today tile's sole source)
+//   - mastered = 12         (the Mastered tile's sole source)
 // ---------------------------------------------------------------------------
 
 const masteredValue = 12;
 
-const analyticsFixture = {
-  summary: { totalTimeStudied: 60, totalCardsReviewed: 137 },
-  overview: { totalReviews: 137, cardsStudied: 50, averageAccuracy: 0.8, totalStudyTime: 60 },
-  streak: { currentStreak: 3, longestStreak: 7, lastStudyDate: new Date().toISOString() },
-  // today.cardsDue=5 is the canonical SRS source; learning+review=13 is NOT
+const summaryFixture = {
+  is_new_user: false,
+  mastered: masteredValue,
   today: {
-    cardsDue: 5,
-    studyTimeSeconds: 0,
-    dailyGoal: 20,
-    reviewsCompleted: 0,
-    goalProgressPercentage: 0,
+    reviews_completed: 0,
+    cards_due: 5,
+    daily_goal: 20,
+    goal_progress_percentage: 0,
+    study_time_seconds: 0,
   },
-  // learning=5, review=8 → sum=13; mastered=12 is the canonical mastered value
-  wordStatus: { learning: 5, review: 8, mastered: masteredValue, newCards: 0 },
-  progressData: [],
-  deckStats: [],
-  recentActivity: [],
+  streak: { current_streak: 3, longest_streak: 7 },
+  week_heat: { heat: [0, 0, 0, 0, 0, 0, 0], today_idx: 6 },
+  decks: [],
+  feed: [],
+  whats_new_count: 0,
+  queue_count: 0,
+  word_of_day: null,
+  recently_added: null,
+  review_time_estimate_minutes: null,
+  resume_position: null,
+  minutes_goal: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -133,16 +155,18 @@ describe('Dashboard metric tile selectors (DASH2-01-04 + PRACT2-7-03 AC-1)', () 
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetAnalytics.mockResolvedValue(analyticsFixture);
+    mockGetSummary.mockResolvedValue(summaryFixture);
     queryClient = createTestQueryClient();
-    // Seed cache so component renders in loaded state immediately
+    // Seed caches so the component renders in loaded state immediately
     queryClient.setQueryData(['analytics', 'u1', 'last7'], analyticsFixture);
+    queryClient.setQueryData(['dashboard-summary'], summaryFixture);
   });
 
   afterEach(() => {
     queryClient.clear();
   });
 
-  it('test_dashboard_due_today_uses_srs_cardsDue: Due Today tile shows today.cardsDue (5), NOT learning+review (13)', async () => {
+  it('test_dashboard_due_today_uses_srs_cardsDue: Due Today tile shows summary.today.cards_due (5)', async () => {
     await act(async () => {
       renderDashboard(queryClient);
     });
@@ -160,12 +184,11 @@ describe('Dashboard metric tile selectors (DASH2-01-04 + PRACT2-7-03 AC-1)', () 
     const valueEl = dueTodayTile!.querySelector('.metric-value, .db-metric-v');
     expect(valueEl).not.toBeNull();
 
-    // Must show 5 (today.cardsDue), NOT 13 (learning=5 + review=8)
-    // RED against old code (shows 13); GREEN after Dashboard.tsx rewire.
+    // Must show 5 (summary.today.cards_due)
     expect(valueEl!.textContent?.trim()).toBe('5');
   });
 
-  it('test_dashboard_mastered_uses_canonical_selector: mastered tile shows wordStatus.mastered (12)', async () => {
+  it('test_dashboard_mastered_uses_canonical_selector: mastered tile shows summary.mastered (12)', async () => {
     await act(async () => {
       renderDashboard(queryClient);
     });

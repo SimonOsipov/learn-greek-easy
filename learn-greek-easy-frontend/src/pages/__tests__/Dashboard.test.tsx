@@ -8,9 +8,13 @@
  * route from /decks/:id/review to /decks/:id/practice, and the Dashboard
  * was missed — causing a 404 in production.
  *
- * Analytics is tested at the API-client level (AC #10): we mock
- * @/features/analytics.getAnalytics and seed the query cache, rather than
- * mocking the useAnalytics hook directly.
+ * PERF-15-05: hero/feed deck rendering now sources from the dashboard-summary
+ * endpoint (dashboardAPI.getSummary), not the deckStore. We mock at the
+ * API-client level (mirroring the pre-existing analytics pattern) and seed
+ * the `['dashboard-summary']` query cache. deckStore's `decks` mock is kept
+ * ONLY because handleContinueDeck/handleStartReview still resolve
+ * culture-vs-vocab routing off it — the fixture IDs/categories must match
+ * the summary fixture's deck slices for a click to find the right deck.
  */
 
 import { act } from 'react';
@@ -58,6 +62,12 @@ vi.mock('@/stores/dateRangeStore', () => ({
 const mockGetAnalytics = vi.fn();
 vi.mock('@/features/analytics', () => ({
   getAnalytics: (...args: unknown[]) => mockGetAnalytics(...args),
+}));
+
+// PERF-15-05: dashboard-summary is the source for hero/feed deck rendering.
+const mockGetSummary = vi.fn();
+vi.mock('@/services/dashboardAPI', () => ({
+  dashboardAPI: { getSummary: () => mockGetSummary() },
 }));
 
 vi.mock('@/hooks/useTourAutoTrigger', () => ({
@@ -178,6 +188,64 @@ const cultureDeck = makeDeck({
 });
 
 // ---------------------------------------------------------------------------
+// Dashboard-summary fixture (PERF-15-05) — deck slices mirror whatever
+// `mockDecks` (deckStore) is set to for the test, so a hero/feed CTA click
+// resolves against the SAME deck id/category the navigation handlers read
+// off deckStore. `today.cards_due` stays fixed at 5 (independent of decks),
+// matching the pre-PERF-15 analyticsFixture.today.cardsDue.
+// ---------------------------------------------------------------------------
+
+function makeDeckSlice(deck: ReturnType<typeof makeDeck>) {
+  return {
+    deck_id: deck.id,
+    name_el: deck.titleGreek,
+    name_en: deck.title,
+    name_ru: null,
+    level: deck.level,
+    is_premium: deck.isPremium,
+    category: deck.category,
+    card_count: deck.cardCount,
+    cover_image_url: null,
+    cover_image_variants: null,
+    status: deck.progress.status,
+    cards_total: deck.progress.cardsTotal,
+    cards_new: deck.progress.cardsNew,
+    cards_learning: deck.progress.cardsLearning,
+    cards_review: deck.progress.cardsReview,
+    cards_mastered: deck.progress.cardsMastered,
+    due_today: deck.progress.dueToday,
+    completion_pct: 50,
+    mastery_pct: 25,
+    last_studied_at: null,
+  };
+}
+
+function makeSummaryFromDecks(decks: ReturnType<typeof makeDeck>[]) {
+  return {
+    is_new_user: false,
+    mastered: 2,
+    today: {
+      reviews_completed: 3,
+      cards_due: 5,
+      daily_goal: 20,
+      goal_progress_percentage: 50,
+      study_time_seconds: 720,
+    },
+    streak: { current_streak: 3, longest_streak: 7 },
+    week_heat: { heat: [0, 0, 0, 0, 0, 0, 0], today_idx: 6 },
+    decks: decks.map(makeDeckSlice),
+    feed: [],
+    whats_new_count: 0,
+    queue_count: 0,
+    word_of_day: null,
+    recently_added: null,
+    review_time_estimate_minutes: null,
+    resume_position: null,
+    minutes_goal: null,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // deckStore mock — mutable decks list swapped per-test
 // ---------------------------------------------------------------------------
 
@@ -196,6 +264,8 @@ vi.mock('@/stores/deckStore', () => ({
 
 // ---------------------------------------------------------------------------
 // Helper: render Dashboard with a QueryClientProvider seeded with analytics
+// + dashboard-summary (the latter built from the CURRENT mockDecks, so it
+// must be seeded at render time — after a test has reassigned mockDecks).
 //
 // renderWithProviders already wraps with BrowserRouter + i18n etc.
 // We compose QueryClientProvider around Dashboard before passing to it,
@@ -203,6 +273,10 @@ vi.mock('@/stores/deckStore', () => ({
 // ---------------------------------------------------------------------------
 
 function renderDashboard(queryClient: QueryClient) {
+  const summaryFixture = makeSummaryFromDecks(mockDecks);
+  mockGetSummary.mockResolvedValue(summaryFixture);
+  queryClient.setQueryData(['dashboard-summary'], summaryFixture);
+
   const DashboardWithQuery = () =>
     createElement(QueryClientProvider, { client: queryClient }, createElement(Dashboard));
   return renderWithProviders(createElement(DashboardWithQuery));
