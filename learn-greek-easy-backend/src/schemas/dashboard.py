@@ -229,35 +229,24 @@ class DashboardSummaryResponse(BaseModel):
     """Composed payload for GET /dashboard/summary — replaces eight
     separate dashboard calls with one session/one Redis entry (TTL 60s).
 
-    Every field carries a zero-value default so this schema is
-    argless-constructible (see test_summary_unwired_slots_default_null).
-    In production the PERF-15-02 mapper always supplies real values for
-    the 9 "core" fields below; the defaults exist purely to satisfy that
-    construction contract, not to be relied on as meaningful business
-    values.
+    The 9 "core" fields below are REQUIRED: the PERF-15-02 mapper must
+    always supply real values for them, so a buggy build that omits one
+    fails schema validation loudly instead of serializing a silently
+    malformed 200 response. Only the 5 unwired slots (AC-6) default to
+    `None`.
     """
 
     model_config = ConfigDict(from_attributes=True)
 
-    is_new_user: bool = False
-    mastered: int = 0
-    today: TodaySummary = Field(
-        default_factory=lambda: TodaySummary(
-            reviews_completed=0,
-            cards_due=0,
-            daily_goal=0,
-            goal_progress_percentage=0.0,
-            study_time_seconds=0,
-        )
-    )
-    streak: StreakSummary = Field(
-        default_factory=lambda: StreakSummary(current_streak=0, longest_streak=0)
-    )
-    week_heat: WeekHeat = Field(default_factory=lambda: WeekHeat(heat=[0] * 7))
-    decks: list[DashboardDeckSlice] = Field(default_factory=list)
-    feed: list[FeedItem] = Field(default_factory=list)
-    whats_new_count: int = 0
-    queue_count: int = 0
+    is_new_user: bool
+    mastered: int
+    today: TodaySummary
+    streak: StreakSummary
+    week_heat: WeekHeat
+    decks: list[DashboardDeckSlice]
+    feed: list[FeedItem]
+    whats_new_count: int
+    queue_count: int
 
     # Unwired nullable slots (AC-6): part of the DTO contract, not
     # populated by any endpoint yet. Each defaults to None; a later story
