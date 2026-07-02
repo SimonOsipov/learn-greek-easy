@@ -9,6 +9,7 @@ This module tests:
 """
 
 from datetime import date, datetime, timedelta
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import sqlalchemy as sa
@@ -23,6 +24,7 @@ from src.db.models import (
     CultureQuestionStats,
     User,
 )
+from src.schemas.culture import CultureReadinessResponse
 from src.services.culture_question_service import CultureQuestionService
 
 # =============================================================================
@@ -1177,3 +1179,85 @@ class TestCategoryAccuracy:
         assert result.questions_total == 10
         assert result.total_answers == 8
         assert result.accuracy_percentage == 75.0
+
+
+# =============================================================================
+# TestCultureStreak (DASH2-02-01, RED — pre-implementation)
+# =============================================================================
+
+
+class TestCultureStreak:
+    """Tests for the current_streak field on get_culture_readiness (DASH2-02-01).
+
+    RED pre-implementation: CultureReadinessResponse has no ``current_streak``
+    field yet, and CultureQuestionService.get_culture_readiness does not call
+    compute_culture_streak. These tests fail today and must pass once the
+    executor wires compute_culture_streak into the response build.
+    """
+
+    @pytest.mark.asyncio
+    async def test_readiness_includes_current_streak(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        culture_deck: CultureDeck,
+    ):
+        """current_streak reflects compute_culture_streak's return value.
+
+        Patched at src.services.culture_question_service.compute_culture_streak
+        (where the service is expected to import/call it — see progress_service.py
+        for the established import-then-call pattern with the sibling
+        compute_aggregated_streak/compute_vocabulary_streak helpers).
+        """
+        await create_questions_for_deck(db_session, culture_deck, 10)
+
+        with patch(
+            "src.services.culture_question_service.compute_culture_streak",
+            new=AsyncMock(return_value=7),
+        ):
+            service = CultureQuestionService(db_session)
+            result = await service.get_culture_readiness(test_user.id)
+
+        assert result.current_streak == 7
+
+    @pytest.mark.asyncio
+    async def test_readiness_current_streak_zero_for_no_activity(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        culture_deck: CultureDeck,
+    ):
+        """No culture answers or mock exam sessions -> current_streak=0, no crash.
+
+        Exercises the real compute_culture_streak path (no mocking) so the
+        DB-backed union query and empty-dates guard are both proven safe.
+        """
+        await create_questions_for_deck(db_session, culture_deck, 10)
+
+        service = CultureQuestionService(db_session)
+        result = await service.get_culture_readiness(test_user.id)
+
+        assert result.current_streak == 0
+
+
+class TestCultureReadinessResponseSchema:
+    """Schema-only tests for CultureReadinessResponse.current_streak (DASH2-02-01).
+
+    No DB required — pure Pydantic construction/serialization.
+    """
+
+    def test_readiness_response_serializes_current_streak(self):
+        """current_streak is a required top-level field that survives model_dump()."""
+        response = CultureReadinessResponse(
+            readiness_percentage=42.0,
+            verdict="getting_there",
+            questions_learned=10,
+            questions_total=20,
+            total_answers=5,
+            current_streak=3,
+        )
+
+        dumped = response.model_dump()
+
+        assert "current_streak" in dumped
+        assert dumped["current_streak"] == 3
