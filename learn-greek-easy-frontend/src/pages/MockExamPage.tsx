@@ -297,12 +297,13 @@ function CategoryPanel({ categories }: { categories: CategoryReadiness[] }) {
  * Curated set = Accuracy · Learned · Best score · Streak. The readiness donut
  * (hero) owns Readiness%, so it is NOT repeated here; the exam-volume stats
  * (Total exams / Pass rate / Average) are demoted to the recent-attempts meta
- * line, so they are not repeated as cards either (AC-4). Streak stays the
- * unwired `—` placeholder — there is no streak endpoint (AC-8 / Decision 4).
+ * line, so they are not repeated as cards either (AC-4). Streak is now wired to
+ * `readiness.current_streak` (DASH2-02-04) — a real 0 renders "0", and a
+ * readiness failure degrades it to `—` like the other readiness-derived cards.
  *
- * Accuracy / Learned / category count come from readiness; Best score comes
- * from the mock-exam statistics. Both sources can be null (a readiness or stats
- * failure must not block the page, AC-6) — each metric degrades to `—`.
+ * Accuracy / Learned / Streak / category count come from readiness; Best score
+ * comes from the mock-exam statistics. Both sources can be null (a readiness or
+ * stats failure must not block the page, AC-6) — each metric degrades to `—`.
  *
  * NOTE: labels resolve via the `mockExam` namespace — the whole `readiness` key
  * block (including `metricBestScore`) was migrated culture → mockExam in
@@ -350,10 +351,10 @@ const CuratedMetricStrip: React.FC<CuratedMetricStripProps> = ({ readiness, best
     {
       icon: <Flame aria-hidden="true" />,
       label: t('readiness.metricStreak', 'Streak'),
-      value: '—',
+      // `??` (not `||`) so a real 0-day streak renders "0", not the `—`
+      // placeholder. When readiness is null (query failed) this degrades to `—`.
+      value: readiness?.current_streak ?? '—',
       sub: t('readiness.days', 'days'),
-      unwired: true,
-      unwiredLabel: 'Streak — not yet connected to backend data.',
       tone: 'primary',
     },
   ];
