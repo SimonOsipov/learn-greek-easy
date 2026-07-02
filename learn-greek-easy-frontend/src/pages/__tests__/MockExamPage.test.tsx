@@ -937,6 +937,55 @@ describe('MockExamPage', () => {
       // the danger dot must not render even in this degraded state.
       expect(within(streakTile).queryByTestId('unwired-dot')).not.toBeInTheDocument();
     });
+
+    // QA adversarial (DASH2-02-04): large values render without truncation or
+    // formatting surprises — guards against e.g. a hidden width/overflow rule
+    // on .dx-metric-v clipping multi-digit values.
+    it('renders a large streak value (365) in full, unformatted and untruncated', async () => {
+      mockGetStatistics.mockResolvedValue(makeStats());
+      mockGetQuestionQueue.mockResolvedValue(makeQueue());
+      mockGetReadiness.mockResolvedValue(makeRichReadiness({ current_streak: 365 }));
+
+      render(<MockExamPage />);
+
+      const streakTile = await screen.findByTestId('culture-metric-3');
+      // Exact text match (not a substring/regex) — rules out truncation
+      // ("36…"), thousands-separator insertion ("3,65"), or any other
+      // formatting surprise on a 3-digit value.
+      expect(within(streakTile).getByText('365')).toBeInTheDocument();
+      expect(within(streakTile).queryByTestId('unwired-dot')).not.toBeInTheDocument();
+    });
+
+    // QA adversarial (DASH2-02-04): sibling-tile regression guard. The pre-
+    // existing "renders the curated metric strip with readiness-derived
+    // Accuracy + Learned and stats-derived Best" test (above, ~L650) already
+    // asserts all 4 tiles (culture-metric-0..3) together in a rich-readiness +
+    // stats render and was flipped in this task's RED commit — Accuracy=72,
+    // Learned=220, Best=88, Streak=4, at their original indices. That test is
+    // confirmed green (see MockExamPage test run) and stands in for this
+    // check; no separate duplicate is added here (Simplicity First).
+
+    // QA adversarial (DASH2-02-04): defensive `??` also covers `undefined`,
+    // not just the documented "readiness null" case. The BE field is
+    // required, so this can't happen through normal typed usage — the cast
+    // simulates a malformed/partial payload slipping past the type system
+    // (e.g. an older cached response) to prove the tile can't render "NaN" or
+    // literal "undefined".
+    it('degrades to — (not NaN/undefined) if current_streak were undefined despite the required type', async () => {
+      mockGetStatistics.mockResolvedValue(makeStats());
+      mockGetQuestionQueue.mockResolvedValue(makeQueue());
+      mockGetReadiness.mockResolvedValue(
+        makeRichReadiness({ current_streak: undefined as unknown as number })
+      );
+
+      render(<MockExamPage />);
+
+      const streakTile = await screen.findByTestId('culture-metric-3');
+      expect(within(streakTile).getByText('—')).toBeInTheDocument();
+      expect(within(streakTile).queryByText('NaN')).not.toBeInTheDocument();
+      expect(within(streakTile).queryByText('undefined')).not.toBeInTheDocument();
+      expect(within(streakTile).queryByTestId('unwired-dot')).not.toBeInTheDocument();
+    });
   });
 
   // ---------------------------------------------------------------------------
