@@ -184,3 +184,44 @@ class TestDashboardSummaryCacheRed:
             "Expected direct build() fallback when get_or_set returns None, "
             f"got {build_spy.call_count} call(s)"
         )
+
+    async def test_summary_cache_hit_corrupt_falls_back_to_build(self):
+        """Corrupt-cache guard (QA, PERF-15-04 Mode B): a cache hit whose
+        payload fails DashboardSummaryResponse.model_validate() (e.g. a
+        stale/mismatched shape missing a required core field, such as after
+        a schema change that outpaces a still-live 60s TTL entry) must fall
+        back to a direct build() recompute rather than propagating the
+        ValidationError as a 500.
+
+        Exercises the `except ValidationError: pass -> build()` branch in
+        src/api/v1/dashboard.py, which none of the hit/miss/none tests above
+        reach (they all use fully-valid payloads).
+        """
+        corrupt_dump = _make_valid_summary_response().model_dump(mode="json")
+        del corrupt_dump["mastered"]  # required core field -> model_validate fails
+        mock_cache = MagicMock()
+        mock_cache.get_or_set = AsyncMock(return_value=corrupt_dump)
+
+        db = _make_mock_db()
+        user = _make_mock_user()
+        valid_response = _make_valid_summary_response()
+
+        with (
+            patch("src.api.v1.dashboard.get_cache", return_value=mock_cache),
+            patch(
+                "src.services.dashboard_summary_service.DashboardSummaryService.build",
+                new_callable=AsyncMock,
+                return_value=valid_response,
+            ) as build_spy,
+        ):
+            result = await get_dashboard_summary(db=db, current_user=user)
+
+        assert isinstance(result, DashboardSummaryResponse)
+        assert result is valid_response, (
+            "Expected the fallback branch to return the direct build() result "
+            f"unchanged, got a different object: {result!r}"
+        )
+        assert build_spy.call_count == 1, (
+            "Expected direct build() fallback when the cached payload fails "
+            f"model_validate(), got {build_spy.call_count} call(s)"
+        )
