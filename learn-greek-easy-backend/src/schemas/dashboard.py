@@ -26,10 +26,13 @@ Design notes (see the PERF-15 finalized plan for the full rationale):
 """
 
 from datetime import date, datetime
-from typing import Annotated, Literal, Union
+from typing import TYPE_CHECKING, Annotated, Literal, Union
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+
+if TYPE_CHECKING:
+    from src.schemas.news_item import NewsItemResponse
 
 
 class WeekHeat(BaseModel):
@@ -112,6 +115,17 @@ class SlimNews(BaseModel):
     audio_duration_seconds: float | None = None
     image_url: str | None = None
     image_variants: dict[int, str] | None = None
+
+    @classmethod
+    def from_full(cls, full: "NewsItemResponse") -> "SlimNews":
+        """Map a full ``NewsItemResponse`` onto this slim dashboard-feed DTO.
+
+        STUB — PERF-15-02 executor replaces this with the real field mapping
+        (carries id/situation_id/title_*/publication_date/country/
+        audio_duration_seconds/image_url/image_variants; drops the heavy
+        reader-only fields per the class docstring).
+        """
+        raise NotImplementedError("SlimNews.from_full — PERF-15-02 executor implements this")
 
 
 class SlimSituation(BaseModel):

@@ -316,6 +316,22 @@ class SituationComprehensionService:
             whats_new_count=whats_new_count or 0,
         )
 
+    # ------------------------------------------------------------------
+    # PERF-15-02: standalone whats-new count for the dashboard gather layer
+    # ------------------------------------------------------------------
+    async def count_whats_new(self) -> int:
+        """Account-wide count of READY situations created in the last 7 days.
+
+        Must match ``get_overview().whats_new_count`` exactly (same filter:
+        READY + created_at >= now_utc - 7d, account-wide, not per-user) —
+        this exists so the dashboard gather layer can fetch just this count
+        without paying for the rest of the overview aggregation.
+
+        STUB — PERF-15-02 executor replaces this with the real query (see
+        the whats_new_count computation in get_overview above).
+        """
+        return 0
+
 
 def _status_value(status: "CardStatus | str | None") -> str | None:
     """Coerce a CardStatus / raw string / NULL to its string value (None when no record)."""
