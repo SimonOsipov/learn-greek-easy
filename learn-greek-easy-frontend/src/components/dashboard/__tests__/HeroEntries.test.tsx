@@ -28,6 +28,7 @@ function makeDeck(
     cardsMastered: number;
     cardsTotal: number;
     lastStudied: Date;
+    completionPct: number;
   }> = {}
 ) {
   return {
@@ -57,6 +58,7 @@ function makeDeck(
       lastStudied: overrides.lastStudied,
       totalTimeSpent: 0,
       accuracy: 75,
+      completionPct: overrides.completionPct,
     },
   };
 }
@@ -144,5 +146,37 @@ describe('HeroEntries', () => {
     const browseButtons = screen.getAllByRole('button', { name: /browse decks/i });
     fireEvent.click(browseButtons[0]);
     expect(onBrowseDecks).toHaveBeenCalledTimes(1);
+  });
+
+  // PERF-15-05 regression guard: the resume card's progress-bar width must
+  // render `resumeDeck.progress.completionPct` verbatim (server-computed,
+  // DashboardDeckSlice.completion_pct) — NOT the deleted
+  // `Math.round((cardsLearning + cardsMastered) / cardsTotal * 100)`
+  // client recomputation. cardsLearning/cardsMastered/cardsTotal below are
+  // deliberately set so the OLD formula would yield a DIFFERENT number
+  // (60%) than completionPct (33%), so a regression back to client-side
+  // recomputation fails this assertion.
+  it('renders the resume progress bar width from completionPct, not a client recomputation', () => {
+    const deck1 = makeDeck('d1', {
+      lastStudied: new Date('2026-06-28T10:00:00Z'),
+      cardsLearning: 6,
+      cardsMastered: 6,
+      cardsTotal: 20,
+      completionPct: 33,
+    });
+
+    renderHero({ decks: [deck1], cardsDue: 5 });
+
+    const bar = document.querySelector('.db-entry-progress span');
+    expect(bar).not.toBeNull();
+    expect((bar as HTMLElement).style.width).toBe('33%');
+  });
+
+  it('resume progress bar falls back to 0% when completionPct is undefined', () => {
+    const deck1 = makeDeck('d1', { lastStudied: new Date('2026-06-28T10:00:00Z') });
+    renderHero({ decks: [deck1], cardsDue: 5 });
+
+    const bar = document.querySelector('.db-entry-progress span');
+    expect((bar as HTMLElement).style.width).toBe('0%');
   });
 });

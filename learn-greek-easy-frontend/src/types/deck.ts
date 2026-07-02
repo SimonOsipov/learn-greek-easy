@@ -38,6 +38,14 @@ export interface DeckProgress {
   lastStudied?: Date;
   totalTimeSpent: number; // Total minutes spent on deck
   accuracy: number; // Overall accuracy percentage (0-100)
+  /**
+   * Server-computed completion percentage (0-100), sourced from
+   * DashboardDeckSlice.completion_pct (PERF-15). Optional — only populated
+   * when the Deck was adapted from a dashboard-summary deck slice
+   * (see src/components/dashboard/lib/summaryDeckAdapter.ts); other Deck
+   * sources (deckStore, admin) leave this undefined.
+   */
+  completionPct?: number;
 }
 
 /**

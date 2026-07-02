@@ -6,22 +6,24 @@ import { Trans, useTranslation } from 'react-i18next';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { UnwiredDot, rollingDayLabels } from '@/features/decks/dx';
-import type { AnalyticsActivityItem } from '@/types/analytics';
-
-import { buildWeekHeat } from './lib/weekHeat';
+import type { DashboardWeekHeat } from '@/types/dashboard';
 
 export interface DashboardGreetingProps {
   userName: string;
-  /** Cards due today from analytics.today.cardsDue */
+  /** Cards due today from summary.today.cards_due */
   cardsDue: number;
   /** Number of decks that have due cards today */
   deckCount: number;
-  /** Minutes studied today (round(studyTimeSeconds/60)) — real data */
+  /** Minutes studied today (round(study_time_seconds/60)) — real data */
   minutesToday: number;
-  /** Recent activity entries from analyticsData.recentActivity */
-  recentActivity: AnalyticsActivityItem[];
   /**
-   * True while analytics is still loading. Suppresses the subtitle (renders a
+   * Week-heat strip data from summary.week_heat (PERF-15) — bucketing is
+   * computed server-side now; this component only renders it. Undefined
+   * while the summary is still loading (heat strip renders hidden).
+   */
+  weekHeat?: DashboardWeekHeat;
+  /**
+   * True while the summary is still loading. Suppresses the subtitle (renders a
    * skeleton instead) so the zero-due "nothingDue" onboarding copy never flashes
    * before the real `cardsDue` arrives — `cardsDue` defaults to 0 during load,
    * which would otherwise show "Welcome aboard…" on every refresh.
@@ -34,18 +36,13 @@ export function DashboardGreeting({
   cardsDue,
   deckCount,
   minutesToday,
-  recentActivity,
+  weekHeat,
   isLoading = false,
 }: DashboardGreetingProps) {
   const { t } = useTranslation('common');
 
-  // Map AnalyticsActivityItem[] → the shape buildWeekHeat expects
-  const activityForHeat = recentActivity.map((a) => ({
-    timestamp: a.timestamp instanceof Date ? a.timestamp.toISOString() : String(a.timestamp),
-    cardsReviewed: a.cardsReviewed ?? 0,
-  }));
-
-  const { heat, todayIdx } = buildWeekHeat(activityForHeat);
+  const heat = weekHeat?.heat ?? [];
+  const todayIdx = weekHeat?.today_idx ?? 6;
   const hasHeat = heat.some((h) => h > 0);
 
   // Weekday initials for the rolling window (UTC), oldest first

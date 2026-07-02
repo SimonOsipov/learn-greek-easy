@@ -7,6 +7,15 @@
  *
  * Shares the same mock infrastructure as Dashboard.test.tsx.
  * Existing returning-user tests are in that file and must remain untouched.
+ *
+ * PERF-15-05: the new-user gate is now server-authoritative
+ * (summary.is_new_user) instead of the client isNewUser() predicate, so the
+ * two fixtures below set is_new_user directly rather than deriving it from
+ * all-zero analytics signals.
+ *
+ * PERF-15-06: Dashboard.tsx dropped its situationAPI/adminAPI/exerciseAPI/
+ * deckStore reads entirely (isNew hides the feed anyway, so `feed: []` in
+ * both fixtures is realistic either way), so those mocks were removed.
  */
 
 import { act } from 'react';
@@ -50,110 +59,50 @@ vi.mock('@/stores/dateRangeStore', () => ({
     selector({ dateRange: 'last7' }),
 }));
 
-const mockGetAnalytics = vi.fn();
-vi.mock('@/features/analytics', () => ({
-  getAnalytics: (...args: unknown[]) => mockGetAnalytics(...args),
+// PERF-15-05: is_new_user + due-today now come from dashboardAPI.getSummary.
+const mockGetSummary = vi.fn();
+vi.mock('@/services/dashboardAPI', () => ({
+  dashboardAPI: { getSummary: () => mockGetSummary() },
 }));
 
 vi.mock('@/hooks/useTourAutoTrigger', () => ({
   useTourAutoTrigger: vi.fn(),
 }));
 
-vi.mock('@/lib/errorReporting', () => ({
-  reportAPIError: vi.fn(),
-}));
-
-vi.mock('@/services/situationAPI', () => ({
-  situationAPI: {
-    getComprehension: vi.fn().mockResolvedValue({
-      whats_new_count: 0,
-      comprehension_percentage: 0,
-      verdict: '',
-      topic_confidence: [],
-      streak: 0,
-      recent_sessions: [],
-    }),
-    getList: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, page_size: 6 }),
-  },
-}));
-
-vi.mock('@/services/adminAPI', () => ({
-  adminAPI: {
-    getNewsItems: vi.fn().mockResolvedValue({
-      items: [],
-      total: 0,
-      page: 1,
-      page_size: 6,
-      country_counts: { cyprus: 0, greece: 0, world: 0 },
-      audio_count: 0,
-      b1_audio_count: 0,
-      b1_pending_regen_count: 0,
-    }),
-  },
-}));
-
-vi.mock('@/services/exerciseAPI', () => ({
-  exerciseAPI: {
-    getQueue: vi.fn().mockResolvedValue({ total_in_queue: 0, exercises: [] }),
-  },
-}));
-
 // ---------------------------------------------------------------------------
-// deckStore mock — mutable decks list swapped per-test
+// Dashboard-summary fixtures — is_new_user is now server-authoritative.
 // ---------------------------------------------------------------------------
 
-let mockDecks: unknown[] = [];
-const mockFetchDecks = vi.fn(() => Promise.resolve());
-
-vi.mock('@/stores/deckStore', () => ({
-  useDeckStore: (selector: (s: Record<string, unknown>) => unknown) =>
-    selector({
-      decks: mockDecks,
-      isLoading: false,
-      fetchDecks: mockFetchDecks,
-      ensureDecksFresh: mockFetchDecks,
-    }),
-}));
-
-// ---------------------------------------------------------------------------
-// Analytics fixtures
-// ---------------------------------------------------------------------------
-
-/** All-zero fixture: every isNewUser signal is zero → isNew === true. */
-const newUserFixture = {
-  summary: { totalTimeStudied: 0, totalCardsReviewed: 0 },
-  overview: { totalReviews: 0, cardsStudied: 0, averageAccuracy: 0, totalStudyTime: 0 },
-  streak: { currentStreak: 0, longestStreak: 0, lastStudyDate: new Date().toISOString() },
-  wordStatus: {
-    new: 0,
-    learning: 0,
-    review: 0,
-    mastered: 0,
-    newPercent: 0,
-    learningPercent: 0,
-    reviewPercent: 0,
-    masteredPercent: 0,
-    total: 0,
-    deckId: '',
-    date: new Date(),
-  },
+/** New-user fixture: is_new_user=true, today.cards_due=0 → StarterView + zero tile. */
+const newUserSummaryFixture = {
+  is_new_user: true,
+  mastered: 0,
   today: {
-    cardsDue: 0,
-    studyTimeSeconds: 0,
-    dailyGoal: 20,
-    reviewsCompleted: 0,
-    goalProgressPercentage: 0,
+    reviews_completed: 0,
+    cards_due: 0,
+    daily_goal: 20,
+    goal_progress_percentage: 0,
+    study_time_seconds: 0,
   },
-  progressData: [],
-  deckStats: [],
-  recentActivity: [],
+  streak: { current_streak: 0, longest_streak: 0 },
+  week_heat: { heat: [0, 0, 0, 0, 0, 0, 0], today_idx: 6 },
+  decks: [],
+  feed: [],
+  whats_new_count: 0,
+  queue_count: 0,
+  all_time_study_time_seconds: 0,
+  word_of_day: null,
+  recently_added: null,
+  review_time_estimate_minutes: null,
+  resume_position: null,
+  minutes_goal: null,
 };
 
-/** Returning-user fixture: cardsDue > 0 → isNew === false. */
-const returningUserFixture = {
-  ...newUserFixture,
-  streak: { currentStreak: 0, longestStreak: 0, lastStudyDate: new Date().toISOString() },
-  today: { ...newUserFixture.today, cardsDue: 5 },
+/** Returning-user fixture: is_new_user=false, today.cards_due=5 → HeroEntries. */
+const returningUserSummaryFixture = {
+  ...newUserSummaryFixture,
+  is_new_user: false,
+  today: { ...newUserSummaryFixture.today, cards_due: 5 },
 };
 
 // ---------------------------------------------------------------------------
@@ -175,7 +124,6 @@ describe('Dashboard — new-user StarterView gating', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockDecks = [];
     queryClient = createTestQueryClient();
   });
 
@@ -185,8 +133,9 @@ describe('Dashboard — new-user StarterView gating', () => {
 
   describe('all-zero signals (isNew === true)', () => {
     beforeEach(() => {
-      mockGetAnalytics.mockResolvedValue(newUserFixture);
-      queryClient.setQueryData(['analytics', 'u1', 'last7'], newUserFixture);
+      mockGetSummary.mockResolvedValue(newUserSummaryFixture);
+      // User-scoped key (matches the mocked authStore's user.id = 'u1' above).
+      queryClient.setQueryData(['dashboard-summary', 'u1'], newUserSummaryFixture);
     });
 
     it('renders StarterView with the correct heading', async () => {
@@ -237,8 +186,9 @@ describe('Dashboard — new-user StarterView gating', () => {
 
   describe('returning user (cardsDue > 0 → isNew === false)', () => {
     beforeEach(() => {
-      mockGetAnalytics.mockResolvedValue(returningUserFixture);
-      queryClient.setQueryData(['analytics', 'u1', 'last7'], returningUserFixture);
+      mockGetSummary.mockResolvedValue(returningUserSummaryFixture);
+      // User-scoped key (matches the mocked authStore's user.id = 'u1' above).
+      queryClient.setQueryData(['dashboard-summary', 'u1'], returningUserSummaryFixture);
     });
 
     it('renders HeroEntries (hero-entries in the DOM)', async () => {

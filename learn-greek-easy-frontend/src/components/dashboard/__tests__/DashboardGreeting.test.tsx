@@ -1,38 +1,21 @@
 // src/components/dashboard/__tests__/DashboardGreeting.test.tsx
 // Component tests for DashboardGreeting (DASH2-01-02).
+//
+// PERF-15-05: week-heat bucketing moved server-side (summary.week_heat);
+// this component now only RENDERS a heat array/todayIdx it's handed, so
+// these tests pass `weekHeat` directly instead of raw `recentActivity` and
+// no longer exercise the bucketing edge cases (UTC day-window boundaries,
+// undefined cardsReviewed coercion) — those are covered by the backend's
+// `test_dashboard_summary_derivations.py` (byte-parity port of the deleted
+// `buildWeekHeat`/`weekHeat.ts`).
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 import { render, screen } from '@/lib/test-utils';
 
 import { DashboardGreeting } from '../DashboardGreeting';
-import type { DashboardGreetingProps } from '../DashboardGreeting';
 
-// Fixed "now" for buildWeekHeat — 2026-06-29 10:00 UTC
-// heat strip test uses activity entries landing in the window
-const NOW_ISO = '2026-06-29T10:00:00Z';
-
-function makeActivity(
-  entries: Array<{ timestamp: string; cardsReviewed: number }>
-): DashboardGreetingProps['recentActivity'] {
-  return entries.map((e, i) => ({
-    activityId: `a-${i}`,
-    type: 'review_session' as const,
-    timestamp: new Date(e.timestamp),
-    relativeTime: 'Today',
-    title: `Reviewed ${e.cardsReviewed} cards`,
-    description: `${e.cardsReviewed} cards`,
-    cardsReviewed: e.cardsReviewed,
-    accuracy: 80,
-    icon: 'book-open',
-    color: 'blue',
-  }));
-}
-
-// Restore real timers after any test that calls vi.setSystemTime.
-afterEach(() => {
-  vi.useRealTimers();
-});
+const ZERO_HEAT = { heat: [0, 0, 0, 0, 0, 0, 0], today_idx: 6 };
 
 describe('DashboardGreeting', () => {
   it('renders the user name', () => {
@@ -42,7 +25,7 @@ describe('DashboardGreeting', () => {
         cardsDue={5}
         deckCount={2}
         minutesToday={10}
-        recentActivity={[]}
+        weekHeat={ZERO_HEAT}
       />
     );
     expect(screen.getByText(/Nico/)).toBeInTheDocument();
@@ -55,7 +38,7 @@ describe('DashboardGreeting', () => {
         cardsDue={8}
         deckCount={3}
         minutesToday={5}
-        recentActivity={[]}
+        weekHeat={ZERO_HEAT}
       />
     );
     // N cards and M decks appear as bolded text inside the subline
@@ -72,14 +55,14 @@ describe('DashboardGreeting', () => {
         cardsDue={0}
         deckCount={0}
         minutesToday={0}
-        recentActivity={[]}
+        weekHeat={ZERO_HEAT}
       />
     );
     expect(screen.getByText(/Welcome aboard/i)).toBeInTheDocument();
   });
 
   it('renders a skeleton (NOT the "Welcome aboard" copy) while loading, even when cardsDue defaults to 0', () => {
-    // Regression: during the analytics load `cardsDue` defaults to 0, which used
+    // Regression: during the summary load `cardsDue` defaults to 0, which used
     // to flash the zero-due onboarding line on every refresh for users who
     // actually have due cards. isLoading must suppress the subtitle entirely.
     render(
@@ -88,7 +71,7 @@ describe('DashboardGreeting', () => {
         cardsDue={0}
         deckCount={0}
         minutesToday={0}
-        recentActivity={[]}
+        weekHeat={ZERO_HEAT}
         isLoading
       />
     );
@@ -103,7 +86,7 @@ describe('DashboardGreeting', () => {
         cardsDue={5}
         deckCount={1}
         minutesToday={12}
-        recentActivity={[]}
+        weekHeat={ZERO_HEAT}
       />
     );
     // Real minutes appear
@@ -115,14 +98,20 @@ describe('DashboardGreeting', () => {
     expect(dot.textContent).not.toMatch(/^\d+/);
   });
 
-  it('heat strip is hidden when all activity is zero', () => {
+  it('heat strip is hidden when weekHeat is undefined (still loading)', () => {
+    render(<DashboardGreeting userName="Nico" cardsDue={5} deckCount={1} minutesToday={0} />);
+    expect(screen.queryByText(/this week/i)).not.toBeInTheDocument();
+    expect(document.querySelectorAll('.db-week-cell')).toHaveLength(0);
+  });
+
+  it('heat strip is hidden when all heat buckets are zero', () => {
     render(
       <DashboardGreeting
         userName="Nico"
         cardsDue={5}
         deckCount={1}
         minutesToday={0}
-        recentActivity={[]}
+        weekHeat={ZERO_HEAT}
       />
     );
     expect(screen.queryByText(/this week/i)).not.toBeInTheDocument();
@@ -130,20 +119,14 @@ describe('DashboardGreeting', () => {
   });
 
   it('renders 7 cells with one .db-week-today and "reviews" wording when heat is non-empty', () => {
-    // Pin system time so buildWeekHeat()'s `new Date()` matches the fixture timestamp.
-    // Without this, the test breaks the day after NOW_ISO (the activity falls outside
-    // the 7-day window and the strip is hidden). QA-DASH2-01-02.
-    vi.setSystemTime(new Date(NOW_ISO));
-
-    // 5 reviews today lands at idx 6 → bucket 3; other days zero
-    const activity = makeActivity([{ timestamp: NOW_ISO, cardsReviewed: 5 }]);
+    // 5 reviews bucketed to intensity 3 at today's index (6); other days zero.
     render(
       <DashboardGreeting
         userName="Nico"
         cardsDue={5}
         deckCount={1}
         minutesToday={0}
-        recentActivity={activity}
+        weekHeat={{ heat: [0, 0, 0, 0, 0, 0, 3], today_idx: 6 }}
       />
     );
 
@@ -166,84 +149,21 @@ describe('DashboardGreeting', () => {
     const hasReviews = [...allTitles, ...allAriaLabels].some((s) => s.includes('review'));
     expect(hasReviews).toBe(true);
   });
-});
 
-// ── Adversarial edge cases (QA-DASH2-01-02) ──────────────────────────────────
-
-describe('DashboardGreeting — adversarial', () => {
-  it('activity with cardsReviewed=undefined still renders without throwing', () => {
-    // AnalyticsActivityItem.cardsReviewed is optional (?). The component
-    // defensively coerces it: `a.cardsReviewed ?? 0`. Confirm no throw + no heat.
-    vi.setSystemTime(new Date(NOW_ISO));
-    const activity: DashboardGreetingProps['recentActivity'] = [
-      {
-        activityId: 'a-undef',
-        type: 'review_session',
-        timestamp: new Date(NOW_ISO),
-        relativeTime: 'Today',
-        title: 'Reviewed undefined cards',
-        description: 'undefined% accuracy',
-        cardsReviewed: undefined,
-        accuracy: 0,
-        icon: 'book-open',
-        color: 'blue',
-      },
-    ];
-    render(
-      <DashboardGreeting
-        userName="Nico"
-        cardsDue={3}
-        deckCount={1}
-        minutesToday={0}
-        recentActivity={activity}
-      />
-    );
-    // Should render the user name without throwing
-    expect(screen.getByText(/Nico/)).toBeInTheDocument();
-    // cardsReviewed=undefined → coerced to 0 → heat[6]=0 → hasHeat=false → no strip
-    expect(document.querySelectorAll('.db-week-cell')).toHaveLength(0);
-  });
-
-  it('heat strip is hidden when only out-of-window activity exists (activity 8 days ago)', () => {
-    // 8 days old should be excluded; heat = all zeros → strip hidden.
-    vi.setSystemTime(new Date(NOW_ISO));
-    const activity = makeActivity([
-      { timestamp: '2026-06-21T10:00:00Z', cardsReviewed: 15 }, // 8 days before 2026-06-29
-    ]);
+  it('data-h + today marker line up with the given heat array and todayIdx', () => {
+    // idx 0 gets bucket 5 (oldest day); today (idx 6) stays 0.
     render(
       <DashboardGreeting
         userName="Nico"
         cardsDue={5}
         deckCount={1}
         minutesToday={0}
-        recentActivity={activity}
+        weekHeat={{ heat: [5, 0, 0, 0, 0, 0, 0], today_idx: 6 }}
       />
     );
-    // out-of-window → hasHeat=false
-    expect(document.querySelectorAll('.db-week-cell')).toHaveLength(0);
-    expect(screen.queryByText(/this week/i)).not.toBeInTheDocument();
-  });
-
-  it('heat strip shows when activity is exactly 6 days ago (oldest included day)', () => {
-    // 6 days before 2026-06-29 = 2026-06-23 → idx 0 in the window.
-    vi.setSystemTime(new Date(NOW_ISO));
-    const activity = makeActivity([
-      { timestamp: '2026-06-23T12:00:00Z', cardsReviewed: 13 }, // → bucket 5
-    ]);
-    render(
-      <DashboardGreeting
-        userName="Nico"
-        cardsDue={5}
-        deckCount={1}
-        minutesToday={0}
-        recentActivity={activity}
-      />
-    );
-    // idx 0 is in the window → hasHeat=true
     const cells = document.querySelectorAll('.db-week-cell');
     expect(cells).toHaveLength(7);
     expect(screen.getByText(/this week/i)).toBeInTheDocument();
-    // idx 0 cell gets data-h=5; today (idx 6) gets data-h=0
     expect(cells[0].getAttribute('data-h')).toBe('5');
     expect(cells[6].getAttribute('data-h')).toBe('0');
   });

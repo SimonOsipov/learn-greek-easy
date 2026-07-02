@@ -1,11 +1,11 @@
-"""Unit tests for the _deck_cover_variants helper and its population at vocab call sites.
+"""Unit tests for the deck_cover_variants helper and its population at vocab call sites.
 
 These tests close the coverage gap identified in INFRA-11-03: the 3 pre-authored
 schema tests in TestDeckCoverImageVariants prove the field EXISTS on DeckResponse,
 but do NOT prove that api/v1/decks.py POPULATES it at the 5 call sites.
 
 This module adds:
-1. Direct unit tests of _deck_cover_variants (the helper itself).
+1. Direct unit tests of deck_cover_variants (the helper itself).
 2. Endpoint-level population tests at two representative call sites
    (list_decks and get_deck) using the same mocked HTTP stack the existing
    test_decks.py tests use.  These prove that a bug in the wiring
@@ -21,12 +21,12 @@ from httpx import AsyncClient
 from src.db.models import Deck, DeckLevel
 
 # =============================================================================
-# 1. Direct tests of _deck_cover_variants helper
+# 1. Direct tests of deck_cover_variants helper
 # =============================================================================
 
 
 class TestDeckCoverVariantsHelper:
-    """Direct unit tests of the _deck_cover_variants module-level helper.
+    """Direct unit tests of the deck_cover_variants module-level helper.
 
     These tests import and call the function in isolation, completely
     bypassing the HTTP stack and database.  A bug in the helper body
@@ -35,12 +35,12 @@ class TestDeckCoverVariantsHelper:
 
     @pytest.mark.unit
     def test_helper_returns_dict_when_cover_key_present(self):
-        """_deck_cover_variants: deck with cover_image_s3_key returns derivative dict.
+        """deck_cover_variants: deck with cover_image_s3_key returns derivative dict.
 
         S3 returns {400: "u400", 800: "u800", 1600: "u1600"} →
         helper must return that exact dict unchanged.
         """
-        from src.api.v1.decks import _deck_cover_variants
+        from src.utils.deck_cover import deck_cover_variants
 
         mock_deck = MagicMock(spec=Deck)
         mock_deck.cover_image_s3_key = "decks/abc/cover.jpg"
@@ -52,7 +52,7 @@ class TestDeckCoverVariantsHelper:
             1600: "u1600",
         }
 
-        result = _deck_cover_variants(mock_deck, mock_s3)
+        result = deck_cover_variants(mock_deck, mock_s3)
 
         # get_derivative_presigned_urls must have been called with the cover key
         mock_s3.get_derivative_presigned_urls.assert_called_once_with(mock_deck.cover_image_s3_key)
@@ -60,18 +60,18 @@ class TestDeckCoverVariantsHelper:
 
     @pytest.mark.unit
     def test_helper_returns_none_when_no_cover_key(self):
-        """_deck_cover_variants: deck with cover_image_s3_key=None returns None.
+        """deck_cover_variants: deck with cover_image_s3_key=None returns None.
 
         S3 must NOT be called when there is no cover key.
         """
-        from src.api.v1.decks import _deck_cover_variants
+        from src.utils.deck_cover import deck_cover_variants
 
         mock_deck = MagicMock(spec=Deck)
         mock_deck.cover_image_s3_key = None
 
         mock_s3 = MagicMock()
 
-        result = _deck_cover_variants(mock_deck, mock_s3)
+        result = deck_cover_variants(mock_deck, mock_s3)
 
         # S3 should never be touched if there is no cover key
         mock_s3.get_derivative_presigned_urls.assert_not_called()
@@ -79,13 +79,13 @@ class TestDeckCoverVariantsHelper:
 
     @pytest.mark.unit
     def test_helper_returns_none_when_s3_returns_empty_dict(self):
-        """_deck_cover_variants: S3 returns {} (derivatives not yet generated) → None.
+        """deck_cover_variants: S3 returns {} (derivatives not yet generated) → None.
 
         An empty dict means no derivative objects exist yet (PERF-11 backfill pending).
         The helper must normalize {} → None so the schema field is null rather than
         an empty object, which prevents the frontend from rendering a broken srcset.
         """
-        from src.api.v1.decks import _deck_cover_variants
+        from src.utils.deck_cover import deck_cover_variants
 
         mock_deck = MagicMock(spec=Deck)
         mock_deck.cover_image_s3_key = "decks/abc/cover.jpg"
@@ -93,12 +93,12 @@ class TestDeckCoverVariantsHelper:
         mock_s3 = MagicMock()
         mock_s3.get_derivative_presigned_urls.return_value = {}
 
-        result = _deck_cover_variants(mock_deck, mock_s3)
+        result = deck_cover_variants(mock_deck, mock_s3)
 
         mock_s3.get_derivative_presigned_urls.assert_called_once()
         assert (
             result is None
-        ), "_deck_cover_variants must return None (not {}) when S3 reports no derivatives"
+        ), "deck_cover_variants must return None (not {}) when S3 reports no derivatives"
 
 
 # =============================================================================
@@ -111,7 +111,7 @@ class TestListDecksPopulatesCoverVariants:
 
     This test drives the real HTTP path (via AsyncClient with mocked repo + S3)
     and asserts the JSON response includes cover_image_variants.
-    A bug where _deck_cover_variants is called but its result is not passed to
+    A bug where deck_cover_variants is called but its result is not passed to
     DeckResponse, or the call is silently removed, would cause this test to fail.
     """
 

@@ -1,14 +1,24 @@
 /**
  * Dashboard Metrics — Due-Today Selector Regression Guard + Mastered Tile Guard (DASH2-01-04)
  *
- * 1. Due-Today regression: fixture today.cardsDue=5 AND learning+review=13.
- *    Asserts the "Due Today" metric tile shows **5** (true SRS), NOT 13.
- *    RED against old code (showed learning+review); GREEN after DASH2-01-04 rewire.
+ * 1. Due-Today regression: dashboard-summary fixture today.cards_due=5.
+ *    Asserts the "Due Today" metric tile shows **5** (the SRS due count).
  *
  * 2. Mastered tile selector (PRACT2-7-03 AC-1):
- *    Verifies the "Mastered" metric tile shows wordStatus.mastered (12).
+ *    Verifies the "Mastered" metric tile shows summary.mastered (12).
  *    Selectors migrated from MetricCard (.card/.metric-value) to MetricStrip
  *    (.db-metric/.db-metric-v) as part of DASH2-01-04.
+ *
+ * 3. All-time tile (PERF-15-05 follow-up): now sources from
+ *    summary.all_time_study_time_seconds — the DTO-gap fix that let
+ *    Dashboard.tsx drop its own separate useAnalytics() mount entirely.
+ *
+ * PERF-15-05: all three tiles now source exclusively from dashboardAPI.getSummary
+ * (mocked + cache-seeded below); no `@/features/analytics` mock is needed.
+ *
+ * PERF-15-06: Dashboard.tsx dropped its situationAPI/deckStore reads
+ * entirely, so those mocks were removed from this file too (they'd otherwise
+ * be dead registrations for modules the component no longer imports).
  */
 
 import { act } from 'react';
@@ -18,6 +28,7 @@ import { screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+import { formatStudyTime } from '@/lib/timeFormatUtils';
 import { renderWithProviders, createTestQueryClient } from '@/lib/test-utils';
 
 import { Dashboard } from '../Dashboard';
@@ -49,68 +60,48 @@ vi.mock('@/stores/dateRangeStore', () => ({
     selector({ dateRange: 'last7' }),
 }));
 
-const mockGetAnalytics = vi.fn();
-vi.mock('@/features/analytics', () => ({
-  getAnalytics: (...args: unknown[]) => mockGetAnalytics(...args),
+// PERF-15-05: metric-strip data now comes from dashboardAPI.getSummary.
+const mockGetSummary = vi.fn();
+vi.mock('@/services/dashboardAPI', () => ({
+  dashboardAPI: { getSummary: () => mockGetSummary() },
 }));
 
 vi.mock('@/hooks/useTourAutoTrigger', () => ({
   useTourAutoTrigger: vi.fn(),
 }));
 
-vi.mock('@/lib/errorReporting', () => ({
-  reportAPIError: vi.fn(),
-}));
-
-vi.mock('@/services/situationAPI', () => ({
-  situationAPI: {
-    getComprehension: vi.fn().mockResolvedValue({
-      whats_new_count: 0,
-      comprehension_percentage: 0,
-      verdict: '',
-      topic_confidence: [],
-      streak: 0,
-      recent_sessions: [],
-    }),
-  },
-}));
-
-vi.mock('@/stores/deckStore', () => ({
-  useDeckStore: (selector: (s: Record<string, unknown>) => unknown) =>
-    selector({
-      decks: [],
-      isLoading: false,
-      fetchDecks: vi.fn(() => Promise.resolve()),
-      ensureDecksFresh: vi.fn(() => Promise.resolve()),
-    }),
-}));
-
 // ---------------------------------------------------------------------------
-// Analytics fixture:
-//   - today.cardsDue = 5  (SRS due — the CORRECT Due-Today source)
-//   - wordStatus.learning=5 + wordStatus.review=8 = 13  (the WRONG old source)
-//   - wordStatus.mastered = 12  (canonical mastered value)
+// Dashboard-summary fixture:
+//   - today.cards_due = 5                    (the Due-Today tile's sole source)
+//   - mastered = 12                           (the Mastered tile's sole source)
+//   - all_time_study_time_seconds = 5400      (the All-Time tile's sole source)
 // ---------------------------------------------------------------------------
 
 const masteredValue = 12;
+const allTimeStudyTimeSeconds = 5400; // formatStudyTime(5400) === "1h 30m"
 
-const analyticsFixture = {
-  summary: { totalTimeStudied: 60, totalCardsReviewed: 137 },
-  overview: { totalReviews: 137, cardsStudied: 50, averageAccuracy: 0.8, totalStudyTime: 60 },
-  streak: { currentStreak: 3, longestStreak: 7, lastStudyDate: new Date().toISOString() },
-  // today.cardsDue=5 is the canonical SRS source; learning+review=13 is NOT
+const summaryFixture = {
+  is_new_user: false,
+  mastered: masteredValue,
   today: {
-    cardsDue: 5,
-    studyTimeSeconds: 0,
-    dailyGoal: 20,
-    reviewsCompleted: 0,
-    goalProgressPercentage: 0,
+    reviews_completed: 0,
+    cards_due: 5,
+    daily_goal: 20,
+    goal_progress_percentage: 0,
+    study_time_seconds: 0,
   },
-  // learning=5, review=8 → sum=13; mastered=12 is the canonical mastered value
-  wordStatus: { learning: 5, review: 8, mastered: masteredValue, newCards: 0 },
-  progressData: [],
-  deckStats: [],
-  recentActivity: [],
+  streak: { current_streak: 3, longest_streak: 7 },
+  week_heat: { heat: [0, 0, 0, 0, 0, 0, 0], today_idx: 6 },
+  decks: [],
+  feed: [],
+  whats_new_count: 0,
+  queue_count: 0,
+  all_time_study_time_seconds: allTimeStudyTimeSeconds,
+  word_of_day: null,
+  recently_added: null,
+  review_time_estimate_minutes: null,
+  resume_position: null,
+  minutes_goal: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -132,17 +123,18 @@ describe('Dashboard metric tile selectors (DASH2-01-04 + PRACT2-7-03 AC-1)', () 
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetAnalytics.mockResolvedValue(analyticsFixture);
+    mockGetSummary.mockResolvedValue(summaryFixture);
     queryClient = createTestQueryClient();
-    // Seed cache so component renders in loaded state immediately
-    queryClient.setQueryData(['analytics', 'u1', 'last7'], analyticsFixture);
+    // Seed the cache so the component renders in loaded state immediately.
+    // User-scoped key (matches the mocked authStore's user.id = 'u1' above).
+    queryClient.setQueryData(['dashboard-summary', 'u1'], summaryFixture);
   });
 
   afterEach(() => {
     queryClient.clear();
   });
 
-  it('test_dashboard_due_today_uses_srs_cardsDue: Due Today tile shows today.cardsDue (5), NOT learning+review (13)', async () => {
+  it('test_dashboard_due_today_uses_srs_cardsDue: Due Today tile shows summary.today.cards_due (5)', async () => {
     await act(async () => {
       renderDashboard(queryClient);
     });
@@ -160,12 +152,11 @@ describe('Dashboard metric tile selectors (DASH2-01-04 + PRACT2-7-03 AC-1)', () 
     const valueEl = dueTodayTile!.querySelector('.metric-value, .db-metric-v');
     expect(valueEl).not.toBeNull();
 
-    // Must show 5 (today.cardsDue), NOT 13 (learning=5 + review=8)
-    // RED against old code (shows 13); GREEN after Dashboard.tsx rewire.
+    // Must show 5 (summary.today.cards_due)
     expect(valueEl!.textContent?.trim()).toBe('5');
   });
 
-  it('test_dashboard_mastered_uses_canonical_selector: mastered tile shows wordStatus.mastered (12)', async () => {
+  it('test_dashboard_mastered_uses_canonical_selector: mastered tile shows summary.mastered (12)', async () => {
     await act(async () => {
       renderDashboard(queryClient);
     });
@@ -186,5 +177,14 @@ describe('Dashboard metric tile selectors (DASH2-01-04 + PRACT2-7-03 AC-1)', () 
     const valueEl = masteredTile!.querySelector('.db-metric-v');
     expect(valueEl).not.toBeNull();
     expect(valueEl!.textContent).toContain(String(masteredValue));
+  });
+
+  it('test_dashboard_alltime_uses_summary_study_time: all-time tile shows formatStudyTime(summary.all_time_study_time_seconds)', async () => {
+    await act(async () => {
+      renderDashboard(queryClient);
+    });
+
+    const valueEl = screen.getByTestId('db-metric-alltime-value');
+    expect(valueEl.textContent?.trim()).toBe(formatStudyTime(allTimeStudyTimeSeconds));
   });
 });

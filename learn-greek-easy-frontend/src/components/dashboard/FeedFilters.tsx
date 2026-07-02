@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { tDynamic } from '@/i18n/tDynamic';
 
-import type { FeedFilterKey } from './lib/composeFeed';
+import type { FeedFilterKey } from './lib/feedItem';
 
 interface FeedFiltersProps {
   filter: FeedFilterKey;

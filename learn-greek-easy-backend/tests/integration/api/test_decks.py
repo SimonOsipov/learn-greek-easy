@@ -16,6 +16,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import Deck
+from tests.factories import DeckFactory
 from tests.fixtures.deck import DeckWithCards, MultiLevelDecks
 
 
@@ -258,6 +259,67 @@ class TestListDecksEndpoint:
         data = response.json()
         assert data["total"] == 3  # 3 decks created by multi_level_decks
         assert len(data["decks"]) == 1  # But only 1 returned per page
+
+
+class TestListDecksCoverImageRegressionGuard:
+    """AC-7 regression guard (PERF-15-02, Mode A).
+
+    Locks the current GET /api/v1/decks cover_image_url / cover_image_variants
+    contract BEFORE the PERF-15-02 executor extracts _deck_cover_url /
+    _deck_cover_variants (decks.py:78-92) into src/utils/deck_cover.py. This
+    test is a regression guard, not a new-capability RED test: the endpoint
+    already implements this behavior today, so it is expected to be GREEN
+    from the start. It exists to catch a behavior-changing extraction, not to
+    pin an unbuilt feature.
+    """
+
+    @pytest.mark.asyncio
+    async def test_cover_fields_present_after_upload(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+        mocker,
+    ) -> None:
+        mock_s3 = mocker.MagicMock()
+        mock_s3.generate_presigned_url.return_value = "https://s3.example.com/deck-images/test.jpg"
+        mock_s3.get_derivative_presigned_urls.return_value = {
+            320: "https://s3.example.com/deck-images/test-320.webp"
+        }
+        mocker.patch("src.api.v1.decks.get_s3_service", return_value=mock_s3)
+
+        await DeckFactory.create(session=db_session, cover_image_s3_key="deck-images/test-id.jpg")
+        await db_session.flush()
+
+        response = await client.get("/api/v1/decks", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] >= 1
+        deck = next(d for d in data["decks"] if d["cover_image_url"] is not None)
+        assert deck["cover_image_url"] == "https://s3.example.com/deck-images/test.jpg"
+        assert deck["cover_image_variants"] == {
+            "320": "https://s3.example.com/deck-images/test-320.webp"
+        }
+        mock_s3.generate_presigned_url.assert_called()
+        mock_s3.get_derivative_presigned_urls.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_cover_fields_null_without_cover(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+    ) -> None:
+        await DeckFactory.create(session=db_session, cover_image_s3_key=None)
+        await db_session.flush()
+
+        response = await client.get("/api/v1/decks", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        deck = next(d for d in data["decks"] if d["cover_image_url"] is None)
+        assert deck["cover_image_variants"] is None
 
 
 class TestCreateDeckEndpoint:
