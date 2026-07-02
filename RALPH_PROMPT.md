@@ -202,6 +202,7 @@ Read the corresponding agent technical prompt file BEFORE executing the stage yo
 #### Stage 2: Explore Verification
 - Spawn an `Explore` subagent via Task tool, passing `$WORKTREE_PATH` as CWD so it greps the right tree
 - Verify all referenced files exist; patterns, imports, and placement locations match; references are accessible
+- For any UI-touching subtask: grep `tests/e2e/` for the changed testids/routes/visible labels and enumerate every matching spec as a required-update deliverable of the owning subtask (prefer restoring a stable testid over editing N specs); a redesign story budgets its final subtask for E2E realignment (ref: `feedback_ralph_explore_e2e_specs.md`)
 - If gaps found, update the Backlog task's implementation_notes via `mcp__backlog__task_edit`
 - **Checkpoint:** `EXPLORE_DONE`
 
@@ -216,6 +217,7 @@ Read the corresponding agent technical prompt file BEFORE executing the stage yo
 - Spawn a `product-executor` subagent via Task tool, passing `$WORKTREE_PATH` as CWD
 - Pass it the COMPLETE Backlog subtask details: acceptance criteria, implementation plan, references, implementation notes
 - For `Test-first: yes` subtasks, instruct it to **drive the Stage 2.5 red tests to green** — implement until they pass, without weakening, skipping, or deleting any red test (if a test itself is wrong, it flags it rather than editing around it). It authors no *new* tests (QA adds those in Stage 4).
+- If the subtask authors an Alembic migration: the executor sets `down_revision` from a fresh `alembic heads` run in the worktree — never from the plan (plans go stale as parallel stories merge; a wrong base crash-loops the shared dev backend).
 - The executor handles all file reads, edits, and creation **inside the worktree**
 - The executor commits inside the worktree and (per its FIRST/MIDDLE/FINAL `**Order**` logic in `~/.claude/agents/product-executor.md`) handles `git push` and the PR draft/ready transitions
 - After the executor finishes, run tests inside the worktree:
@@ -271,6 +273,7 @@ This is a **release handshake**, not agent-driven browsing: RALPH triggers the l
 
 1. **Read the original acceptance criteria** from the Obsidian parent story (the original objective — NOT the possibly-edited subtask ACs).
 2. **Trigger the locked release.**
+   - **Pre-dispatch freshness check (mandatory):** `git -C "$WORKTREE_PATH" fetch origin` — if `origin/main` has commits not in the branch, `git merge origin/main`, push, and wait for CI to re-green BEFORE triggering. A base missing main's migrations crash-loops the shared dev backend and burns the lease (ADMIN2-38, PERF-12); a merge also invalidates stale CI caches (PERF-10 pip-audit).
    - **PRIMARY — label:** add the `ready-to-verify` label to the PR. The `dispatch-release-verify` shim in `preview.yml` fires `release-verify.yml` at the PR head ref.
      ```bash
      gh pr edit "$PR_NUMBER" --add-label ready-to-verify

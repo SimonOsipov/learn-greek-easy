@@ -50,7 +50,7 @@ cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && /User
 
 5. **Log investigation**: Use **Sentry MCP** `search_events` tool to query production logs (not Railway MCP). Sentry Logs indexes all loguru output with severity, trace IDs, and structured attributes. Railway log filter cannot search inside loguru's serialized JSON output.
 
-6. **TypeScript build**: `npx tsc -b` must pass before commit — `Frontend tsc -b` is a required GitHub status check on `main` (no skip mechanic).
+6. **TypeScript build**: `npx tsc -b --force` must pass before commit (always `--force` — a warm `.tsbuildinfo` hides unused-symbol/type errors that CI's clean build catches) — `Frontend tsc -b` is a required GitHub status check on `main` (no skip mechanic).
 
 ## Design System
 
