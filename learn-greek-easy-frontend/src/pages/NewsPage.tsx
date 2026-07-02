@@ -52,6 +52,8 @@ export const NewsPage: React.FC = () => {
 
   // Reader sheet state — which article (if any) is open in the slide-over
   const [openArticle, setOpenArticle] = useState<NewsItemResponse | null>(null);
+  // Whether the reader should autostart playback (set when opened via a card Play button)
+  const [openAutoplay, setOpenAutoplay] = useState(false);
 
   // Track if we've already tracked the page view (only track on first successful load)
   const hasTrackedPageView = useRef(false);
@@ -213,10 +215,12 @@ export const NewsPage: React.FC = () => {
     track('news_level_toggled', { level, page: 'news' });
   }, []);
 
-  /** Open the reader slide-over for an article. Fires news_article_opened. */
+  /** Open the reader slide-over for an article. Fires news_article_opened.
+   *  `opts.autoplay` (set when opened via a card Play button) autostarts the reader audio. */
   const handleOpenArticle = useCallback(
-    (article: NewsItemResponse) => {
+    (article: NewsItemResponse, opts?: { autoplay?: boolean }) => {
       setOpenArticle(article);
+      setOpenAutoplay(opts?.autoplay ?? false);
       try {
         const domain = new URL(article.original_article_url).hostname;
         track('news_article_opened', {
@@ -360,8 +364,12 @@ export const NewsPage: React.FC = () => {
       <NewsReaderSheet
         article={openArticle}
         open={openArticle !== null}
+        autoplay={openAutoplay}
         onOpenChange={(o) => {
-          if (!o) setOpenArticle(null);
+          if (!o) {
+            setOpenArticle(null);
+            setOpenAutoplay(false);
+          }
         }}
         level={newsLevel}
         onLevelChange={handleLevelChange}

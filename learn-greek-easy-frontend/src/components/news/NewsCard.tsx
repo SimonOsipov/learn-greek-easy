@@ -47,8 +47,9 @@ export interface NewsCardProps {
   level?: NewsLevel;
   variant?: 'compact' | 'full';
   eager?: boolean;
-  /** Called when the user activates the card body (for Batch 3 slide-over reader). */
-  onOpen?: (article: NewsItemResponse) => void;
+  /** Called when the user activates the card body, or — with `{ autoplay: true }` — the
+   *  card's Play button. Wires into the slide-over reader (autoplay opens + starts playback there). */
+  onOpen?: (article: NewsItemResponse, opts?: { autoplay?: boolean }) => void;
 }
 
 export const NewsCard: React.FC<NewsCardProps> = ({
@@ -385,6 +386,9 @@ export const NewsCard: React.FC<NewsCardProps> = ({
               disableScrub
               showSpeedControl={false}
               disabled={!audioUrl}
+              // Reader mode: the Play button opens the reader and autoplays there
+              // (single click), instead of playing this on-card mini-player.
+              onPlayIntent={onOpen ? () => onOpen(article, { autoplay: true }) : undefined}
               onPlay={handlePlay}
               onPause={handlePause}
               onComplete={handleComplete}

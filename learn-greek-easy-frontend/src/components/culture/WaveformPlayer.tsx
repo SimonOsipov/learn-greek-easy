@@ -46,6 +46,14 @@ export interface WaveformPlayerProps {
   disableScrub?: boolean;
   /** Callback fired when audio is paused. Receives currentTime in seconds. */
   onPause?: (currentTime: number) => void;
+  /** When true, playback starts automatically once on mount. Used when the reader
+   *  is opened via a card Play button so the click's user-activation carries into
+   *  the fresh player. If the browser blocks it, play() rejects and degrades to paused. */
+  autoPlay?: boolean;
+  /** When provided, the play button calls this INSTEAD of toggling internal playback —
+   *  turns the player into a launcher (keeps the waveform visual). Used by the /news
+   *  card so its Play button opens the reader + autoplays there rather than playing on the card. */
+  onPlayIntent?: () => void;
 }
 
 export const WaveformPlayer: FC<WaveformPlayerProps> = ({
@@ -62,6 +70,8 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
   barCount,
   disableScrub = false,
   onPause,
+  autoPlay = false,
+  onPlayIntent,
 }) => {
   const effectiveBarCount = barCount ?? BAR_COUNT;
   const barsRef = useRef<number[] | null>(null);
@@ -193,6 +203,39 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
     setIsPlaying((prev) => !prev);
   }, [isAudioMode, isPlaying, disabled, shouldTrackAnalytics, onPlay, effectiveDuration, onPause]);
 
+  /** Play button click. When `onPlayIntent` is set the player acts as a launcher:
+   *  the click is handed off (e.g. open the reader + autoplay there) instead of
+   *  playing this player's own audio. stopPropagation prevents a parent card's
+   *  onClick from also firing (which would open without the autoplay intent). */
+  const handlePlayButtonClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (onPlayIntent) {
+        e.stopPropagation();
+        onPlayIntent();
+        return;
+      }
+      togglePlayPause();
+    },
+    [onPlayIntent, togglePlayPause]
+  );
+
+  // Autoplay once on mount when requested. Kept within the originating click's
+  // user-activation window (the reader mounts synchronously on that click).
+  const autoPlayedRef = useRef(false);
+  useEffect(() => {
+    if (!autoPlay || autoPlayedRef.current) return;
+    if (!isAudioMode || !audioRef.current) return;
+    autoPlayedRef.current = true;
+    audioRef.current.playbackRate = speedRef.current;
+    audioRef.current.play().catch(() => setAudioError(true));
+    setIsPlaying(true);
+    if (shouldTrackAnalytics && !hasPlayedRef.current && onPlay) {
+      onPlay(effectiveDuration);
+      hasPlayedRef.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPlay, isAudioMode]);
+
   const handleScrub = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
       if (disabled) return;
@@ -306,7 +349,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
         <button
           type="button"
           data-testid="waveform-play-button"
-          onClick={togglePlayPause}
+          onClick={handlePlayButtonClick}
           aria-disabled={disabled || undefined}
           className={cn(
             'flex flex-shrink-0 items-center justify-center rounded-full',

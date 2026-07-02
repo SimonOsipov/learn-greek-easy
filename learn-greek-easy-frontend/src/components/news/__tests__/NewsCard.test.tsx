@@ -339,6 +339,19 @@ describe('NewsCard two-zone: onOpen wiring (AC-5, AC-9, AC-13)', () => {
 
     expect(onOpen).toHaveBeenCalledWith(article);
   });
+
+  it('card Play button opens the reader with autoplay intent — not on-card playback (reader mode)', () => {
+    const onOpen = vi.fn();
+    const article = createMockArticle({ audio_url: 'https://example.com/audio.mp3' });
+    render(<NewsCard article={article} newsLang="el" onOpen={onOpen} />);
+
+    fireEvent.click(screen.getByTestId('waveform-play-button'));
+
+    // Single click routes to the reader with autoplay; the card's own mini-player
+    // never starts (button stays on the Play affordance, not Pause).
+    expect(onOpen).toHaveBeenCalledWith(article, { autoplay: true });
+    expect(screen.getByRole('button', { name: 'Play audio' })).toBeInTheDocument();
+  });
 });
 
 describe('NewsCard external-link button: stops propagation + outbound (AC-2, AC-5, AC-13)', () => {

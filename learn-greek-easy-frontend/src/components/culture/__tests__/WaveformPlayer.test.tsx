@@ -1345,4 +1345,36 @@ describe('WaveformPlayer', () => {
       });
     });
   });
+
+  describe('Launcher mode (onPlayIntent) + autoPlay', () => {
+    it('onPlayIntent: play button fires the intent and does NOT play own audio', () => {
+      const onPlayIntent = vi.fn();
+      const playSpy = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue();
+
+      render(
+        <WaveformPlayer audioUrl="https://example.com/audio.mp3" onPlayIntent={onPlayIntent} />
+      );
+
+      fireEvent.click(screen.getByTestId('waveform-play-button'));
+
+      expect(onPlayIntent).toHaveBeenCalledTimes(1);
+      expect(playSpy).not.toHaveBeenCalled();
+    });
+
+    it('autoPlay: starts playback once on mount', () => {
+      const playSpy = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue();
+
+      render(<WaveformPlayer audioUrl="https://example.com/audio.mp3" autoPlay />);
+
+      expect(playSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('autoPlay off (default): does not auto-start playback', () => {
+      const playSpy = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue();
+
+      render(<WaveformPlayer audioUrl="https://example.com/audio.mp3" />);
+
+      expect(playSpy).not.toHaveBeenCalled();
+    });
+  });
 });
