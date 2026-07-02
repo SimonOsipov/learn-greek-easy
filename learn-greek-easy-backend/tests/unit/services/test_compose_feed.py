@@ -207,6 +207,52 @@ class TestComposeFeedAllPresent:
 
 
 @pytest.mark.unit
+class TestComposeFeedDeckGateParity:
+    """QA Mode B parity guard: the client (composeFeed.ts) gates 'deck' items
+    on `status === 'in-progress' || cardsReview > 0` -- an OR, not just the
+    due-count clause. A deck that is in-progress but has NOTHING due today
+    (due_today == 0) must still emit a 'deck' item. If a future refactor
+    narrows the gate to `due_today > 0` alone, this deck would silently
+    vanish from the feed -- a real parity regression this test would catch."""
+
+    def test_in_progress_deck_with_zero_due_today_still_emits_deck_item(self) -> None:
+        resume_id, in_progress_no_due_id = uuid4(), uuid4()
+
+        # Resume pick: most-recently-studied.
+        resume_deck = _deck_slice(
+            deck_id=resume_id,
+            last_studied_at=datetime(2026, 3, 10),
+            status="in-progress",
+            due_today=0,
+        )
+        # In-progress (cards_studied > 0 upstream) but nothing due today --
+        # the gate's `status == 'in-progress'` clause alone must let it through.
+        in_progress_no_due = _deck_slice(
+            deck_id=in_progress_no_due_id,
+            last_studied_at=None,
+            status="in-progress",
+            due_today=0,
+        )
+
+        signals = ComposeFeedSignals(
+            deck_slices=[resume_deck, in_progress_no_due],
+            cards_due=0,
+            situation=None,
+            news=[],
+            current_streak=0,
+            longest_streak=0,
+            queue_count=0,
+        )
+
+        items = compose_feed(signals)
+        deck_items = [i for i in items if i.type == "deck"]
+
+        assert [i.deck_id for i in deck_items] == [in_progress_no_due_id]
+        # No 'review' item either: cards_due == 0 at the signal level.
+        assert "review" not in [i.type for i in items]
+
+
+@pytest.mark.unit
 class TestComposeFeedAllGatedOff:
     """AC-4: when every gated source is absent, only word_of_day (always
     emitted) — plus a resume item IFF pick_resume_deck still resolves one

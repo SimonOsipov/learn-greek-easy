@@ -147,6 +147,40 @@ class TestBuildWeekHeat:
         assert result.heat == [0, 0, 0, 0, 0, 0, 1]
         assert result.today_idx == 6
 
+    def test_eight_days_ago_dropped_seven_days_ago_bucket_kept(self) -> None:
+        """QA Mode B adversarial: an entry 8 days ago must be dropped just
+        like the 7-days-ago boundary case, and must NOT bleed into index 0
+        (6 days ago) via an off-by-one in the days_ago->idx conversion."""
+        today_utc = date(2026, 3, 15)
+        recent_activity = [
+            # 6 days ago -> index 0, kept.
+            RecentActivity(
+                date=today_utc - timedelta(days=6), reviews_count=3, average_quality=3.0
+            ),
+            # 8 days ago -> dropped entirely (well outside the 0..6 window).
+            RecentActivity(
+                date=today_utc - timedelta(days=8), reviews_count=50, average_quality=3.0
+            ),
+        ]
+
+        result = build_week_heat(recent_activity, today_utc=today_utc)
+
+        assert result.heat == [2, 0, 0, 0, 0, 0, 0]  # bucket_heatmap_intensity(3) == 2
+        assert result.today_idx == 6
+
+    def test_same_utc_day_entry_lands_at_index_six(self) -> None:
+        """A RecentActivity dated exactly today_utc (days_ago == 0) must map
+        to index 6 (today), not be treated as out-of-window."""
+        today_utc = date(2026, 3, 15)
+        recent_activity = [
+            RecentActivity(date=today_utc, reviews_count=9, average_quality=3.0),
+        ]
+
+        result = build_week_heat(recent_activity, today_utc=today_utc)
+
+        assert result.heat == [0, 0, 0, 0, 0, 0, 4]  # bucket_heatmap_intensity(9) == 4
+        assert result.today_idx == 6
+
 
 @pytest.mark.unit
 class TestMapDeckSlice:
