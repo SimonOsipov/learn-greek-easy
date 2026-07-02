@@ -82,6 +82,7 @@ from src.schemas.culture import (
     MotivationMessage,
     SM2QuestionResult,
 )
+from src.services.gamification.streak import compute_culture_streak
 from src.services.s3_service import IMAGE_PRESIGN_EXPIRY_SECONDS, S3Service, get_s3_service
 from src.services.xp_constants import (
     PERFECT_RECALL_THRESHOLD_SECONDS,
@@ -1120,6 +1121,9 @@ class CultureQuestionService:
             has_stats=has_stats,
         )
 
+        # Current culture study streak (culture answers + mock exams, 1-day UTC grace)
+        current_streak = await compute_culture_streak(self.db, user_id)
+
         return CultureReadinessResponse(
             readiness_percentage=round(readiness_percentage, 1),
             verdict=verdict,
@@ -1129,6 +1133,7 @@ class CultureQuestionService:
                 round(accuracy_percentage, 1) if accuracy_percentage is not None else None
             ),
             total_answers=total_answers,
+            current_streak=current_streak,
             categories=categories_list,
             motivation=motivation,
         )
