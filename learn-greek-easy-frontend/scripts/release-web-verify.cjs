@@ -84,9 +84,19 @@ async function runWebVerify() {
     console.log('Step 6: Waiting for app-ready signal ...');
     await page.locator('[data-app-ready="true"]').waitFor({ state: 'attached', timeout: 30000 });
 
-    // Step 10: Confirm dashboard visible + screenshot
+    // Step 10: Confirm dashboard visible + screenshot.
+    // The [data-testid="dashboard"] container renders IMMEDIATELY (with an
+    // internal loading skeleton) while useDashboardSummary is in flight, so
+    // waiting on it alone screenshots the skeleton, not the real dashboard.
+    // metric-strip mounts only once the summary resolves — for BOTH new and
+    // returning users (Dashboard.tsx gates <MetricStrip> on `summary`, not
+    // `!isNew`) — making it the deterministic loaded-state signal. This
+    // mirrors the loaded-only waits used for decks (deck-card) and mock-exam
+    // (start-exam-button) below.
     console.log('Step 7: Waiting for dashboard component ...');
     await page.locator('[data-testid="dashboard"]').waitFor({ state: 'visible', timeout: 15000 });
+    console.log('Step 7b: Waiting for dashboard loaded state (metric-strip) ...');
+    await page.locator('[data-testid="metric-strip"]').waitFor({ state: 'visible', timeout: 15000 });
     await page.screenshot({ path: path.join(REPORTS_DIR, '02-dashboard.png'), fullPage: true });
     console.log('  Screenshot: 02-dashboard.png');
 
