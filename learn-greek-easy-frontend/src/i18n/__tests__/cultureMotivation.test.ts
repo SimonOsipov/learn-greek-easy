@@ -199,3 +199,135 @@ describe('en ↔ ru cultureMotivation parity', () => {
     expect(ruNotEn, `ru-only cultureMotivation leaves: ${ruNotEn.join(', ')}`).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// QA adversarial coverage (Mode B) — mechanical authoring-defect checks the
+// RED shape test above didn't include. These judge structure, not tone:
+// duplicate variants defeat weekly rotation, an untranslated leaf silently
+// ships English copy under the ru locale, and malformed placeholder spacing
+// slips past a naive `{{token}}` regex.
+// ---------------------------------------------------------------------------
+
+/**
+ * Leaves that are legitimately identical between en and ru are allowlisted
+ * here with a reason — the untranslated-RU guard below treats any other
+ * exact en===ru match as an authoring defect (a full sentence copy-pasted
+ * instead of translated).
+ */
+const EN_RU_INTENTIONAL_MATCHES = new Set<string>([
+  // (none currently — all 27 leaves are full, distinctly-translated sentences)
+]);
+
+describe('cultureMotivation adversarial checks (QA-added)', () => {
+  it('within each (direction, verdict) bucket, variant "1" !== variant "2" (per locale)', () => {
+    const violations: string[] = [];
+    for (const [locale, bundle] of [
+      ['en', en],
+      ['ru', ru],
+    ] as const) {
+      const cm = getCultureMotivation(bundle);
+      for (const direction of RETURNING_DIRECTIONS) {
+        for (const verdict of VERDICTS) {
+          const v1 = getAtPath(cm, `${direction}.${verdict}.1`);
+          const v2 = getAtPath(cm, `${direction}.${verdict}.2`);
+          if (typeof v1 === 'string' && typeof v2 === 'string' && v1 === v2) {
+            violations.push(
+              `${locale}: ${direction}.${verdict} — variants "1" and "2" are identical`
+            );
+          }
+        }
+      }
+    }
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
+
+  it('no two newUser variants are verbatim-identical (per locale)', () => {
+    const violations: string[] = [];
+    for (const [locale, bundle] of [
+      ['en', en],
+      ['ru', ru],
+    ] as const) {
+      const cm = getCultureMotivation(bundle);
+      const values = NEW_USER_VARIANTS.map((v) => getAtPath(cm, `newUser.${v}`));
+      const seen = new Map<string, string>();
+      for (const [i, variant] of NEW_USER_VARIANTS.entries()) {
+        const value = values[i];
+        if (typeof value !== 'string') continue;
+        const prior = seen.get(value);
+        if (prior) {
+          violations.push(`${locale}: newUser.${variant} is identical to newUser.${prior}`);
+        } else {
+          seen.set(value, variant);
+        }
+      }
+    }
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
+
+  it('every ru leaf differs from its en counterpart (untranslated-copy guard)', () => {
+    const enLeaves = getCultureMotivation(en);
+    const ruLeaves = getCultureMotivation(ru);
+    const violations: string[] = [];
+    let checked = 0;
+    for (const path of EXPECTED_LEAF_PATHS) {
+      const enValue = getAtPath(enLeaves, path);
+      const ruValue = getAtPath(ruLeaves, path);
+      if (typeof enValue !== 'string' || typeof ruValue !== 'string') continue;
+      checked++;
+      if (enValue === ruValue && !EN_RU_INTENTIONAL_MATCHES.has(path)) {
+        violations.push(`${path}: ru is verbatim-identical to en -> ${JSON.stringify(enValue)}`);
+      }
+    }
+    // Guard against a vacuous pass: must have actually compared all 27 leaves.
+    expect(checked, `expected to compare all 27 leaves, only compared ${checked}`).toBe(27);
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
+
+  it('no leaf is empty or whitespace-only (either locale)', () => {
+    const violations: string[] = [];
+    for (const [locale, bundle] of [
+      ['en', en],
+      ['ru', ru],
+    ] as const) {
+      const cm = getCultureMotivation(bundle);
+      for (const path of EXPECTED_LEAF_PATHS) {
+        const value = getAtPath(cm, path);
+        if (typeof value === 'string' && value.trim().length === 0) {
+          violations.push(`${locale}: ${path} is empty/whitespace-only`);
+        }
+      }
+    }
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
+
+  it('no leaf has malformed placeholder spacing (e.g. "{{ questionsTotal}}") that would defeat token matching', () => {
+    // Stricter than PLACEHOLDER_RE: requires zero whitespace inside the braces.
+    const STRICT_PLACEHOLDER_RE = /\{\{\w+\}\}/g;
+    const violations: string[] = [];
+    for (const [locale, bundle] of [
+      ['en', en],
+      ['ru', ru],
+    ] as const) {
+      const cm = getCultureMotivation(bundle);
+      for (const path of EXPECTED_LEAF_PATHS) {
+        const value = getAtPath(cm, path);
+        if (typeof value !== 'string') continue;
+        const loose = [...value.matchAll(PLACEHOLDER_RE)];
+        const strict = [...value.matchAll(STRICT_PLACEHOLDER_RE)];
+        if (loose.length !== strict.length) {
+          violations.push(
+            `${locale}: ${path} has malformed placeholder spacing -> ${JSON.stringify(value)}`
+          );
+        }
+        // Also catch stray single braces that aren't part of a doubled pair.
+        const strayBraces = value.match(/(?<!\{)\{(?!\{)|(?<!\})\}(?!\})/g);
+        if (strayBraces) {
+          violations.push(
+            `${locale}: ${path} has stray single brace(s) -> ${JSON.stringify(value)}`
+          );
+        }
+      }
+    }
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
+});
