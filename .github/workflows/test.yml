@@ -94,6 +94,32 @@ jobs:
         working-directory: learn-greek-easy-frontend
         run: npm run typecheck:test
 
+  # Job 1c: Caddyfile Validate & Format (PERF-14-02) — sibling of frontend-lint.
+  # Guards the frontend proxy config: `caddy validate` (same command the
+  # container runs at boot, docker-entrypoint.sh:16) + a `caddy fmt`
+  # format-check, so an invalid or unformatted Caddyfile fails CI Gate
+  # before merge instead of only surfacing at container boot.
+  caddy-validate:
+    name: Caddyfile Validate & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Validate & format-check Caddyfile (stock caddy:alpine)
+        working-directory: learn-greek-easy-frontend
+        run: |
+          # Validate (same command the container runs at boot, docker-entrypoint.sh:16)
+          docker run --rm -v "$PWD:/work" -w /work caddy:alpine \
+            caddy validate --adapter caddyfile --config Caddyfile
+          # Format-check: overwrite a copy in-container, then fail if it changed the committed file
+          docker run --rm -v "$PWD:/work" -w /work caddy:alpine \
+            caddy fmt --overwrite Caddyfile
+          if ! git diff --exit-code Caddyfile; then
+            echo "::error file=learn-greek-easy-frontend/Caddyfile::Caddyfile is not caddy-fmt formatted. Run: caddy fmt --overwrite Caddyfile"
+            exit 1
+          fi
+
   # Job 2: Backend Lint & Format
   backend-lint:
     name: Backend Lint & Format
