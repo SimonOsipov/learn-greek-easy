@@ -12,6 +12,10 @@
  * (summary.is_new_user) instead of the client isNewUser() predicate, so the
  * two fixtures below set is_new_user directly rather than deriving it from
  * all-zero analytics signals.
+ *
+ * PERF-15-06: Dashboard.tsx dropped its situationAPI/adminAPI/exerciseAPI/
+ * deckStore reads entirely (isNew hides the feed anyway, so `feed: []` in
+ * both fixtures is realistic either way), so those mocks were removed.
  */
 
 import { act } from 'react';
@@ -63,62 +67,6 @@ vi.mock('@/services/dashboardAPI', () => ({
 
 vi.mock('@/hooks/useTourAutoTrigger', () => ({
   useTourAutoTrigger: vi.fn(),
-}));
-
-vi.mock('@/lib/errorReporting', () => ({
-  reportAPIError: vi.fn(),
-}));
-
-vi.mock('@/services/situationAPI', () => ({
-  situationAPI: {
-    getComprehension: vi.fn().mockResolvedValue({
-      whats_new_count: 0,
-      comprehension_percentage: 0,
-      verdict: '',
-      topic_confidence: [],
-      streak: 0,
-      recent_sessions: [],
-    }),
-    getList: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, page_size: 6 }),
-  },
-}));
-
-vi.mock('@/services/adminAPI', () => ({
-  adminAPI: {
-    getNewsItems: vi.fn().mockResolvedValue({
-      items: [],
-      total: 0,
-      page: 1,
-      page_size: 6,
-      country_counts: { cyprus: 0, greece: 0, world: 0 },
-      audio_count: 0,
-      b1_audio_count: 0,
-      b1_pending_regen_count: 0,
-    }),
-  },
-}));
-
-vi.mock('@/services/exerciseAPI', () => ({
-  exerciseAPI: {
-    getQueue: vi.fn().mockResolvedValue({ total_in_queue: 0, exercises: [] }),
-  },
-}));
-
-// ---------------------------------------------------------------------------
-// deckStore mock — mutable decks list swapped per-test
-// ---------------------------------------------------------------------------
-
-let mockDecks: unknown[] = [];
-const mockFetchDecks = vi.fn(() => Promise.resolve());
-
-vi.mock('@/stores/deckStore', () => ({
-  useDeckStore: (selector: (s: Record<string, unknown>) => unknown) =>
-    selector({
-      decks: mockDecks,
-      isLoading: false,
-      fetchDecks: mockFetchDecks,
-      ensureDecksFresh: mockFetchDecks,
-    }),
 }));
 
 // ---------------------------------------------------------------------------
@@ -176,7 +124,6 @@ describe('Dashboard — new-user StarterView gating', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockDecks = [];
     queryClient = createTestQueryClient();
   });
 

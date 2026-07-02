@@ -115,6 +115,9 @@ class SlimNews(BaseModel):
     audio_duration_seconds: float | None = None
     image_url: str | None = None
     image_variants: dict[int, str] | None = None
+    # PERF-15-06: carried (not heavy) — the dashboard feed's news card opens
+    # this URL on click, same as the full news reader.
+    original_article_url: str | None = None
 
     @classmethod
     def from_full(cls, full: "NewsItemResponse") -> "SlimNews":
@@ -122,8 +125,8 @@ class SlimNews(BaseModel):
 
         Carries only the card-rendering fields (id/situation_id/title_*/
         publication_date/country/audio_duration_seconds/image_url/
-        image_variants); drops the heavy reader-only fields per the class
-        docstring.
+        image_variants/original_article_url); drops the heavy reader-only
+        fields per the class docstring.
         """
         return cls(
             id=full.id,
@@ -136,6 +139,7 @@ class SlimNews(BaseModel):
             audio_duration_seconds=full.audio_duration_seconds,
             image_url=full.image_url,
             image_variants=full.image_variants,
+            original_article_url=full.original_article_url,
         )
 
 

@@ -1,11 +1,12 @@
 // src/components/dashboard/lib/summaryDeckAdapter.ts
 // PERF-15-05 — adapts DashboardDeckSlice (from GET /dashboard/summary) onto
 // the legacy `Deck`/`DeckProgress` shape (@/types/deck) that HeroEntries,
-// FeedCards, composeFeed and heroEntries.ts already consume.
+// FeedCards and heroEntries.ts already consume.
 //
-// PERF-15-06 removes this adapter along with composeFeed (the feed will
-// render directly from summary.feed, resolving `deck_id` against
-// summary.decks instead of nesting whole Deck objects).
+// PERF-15-06 removed composeFeed, but KEPT this adapter: HeroEntries still
+// consumes toDashboardDecks() directly, and lib/summaryFeed.ts's
+// mapSummaryFeed() uses toDashboardDeck() (singular) as its deck_id -> Deck
+// resolver when projecting summary.feed onto FeedItem[].
 
 import type { DashboardDeckSlice } from '@/types/dashboard';
 import type { Deck, DeckProgress } from '@/types/deck';

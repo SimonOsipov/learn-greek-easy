@@ -1,14 +1,13 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { DashboardGreeting } from '@/components/dashboard/DashboardGreeting';
 import { Feed } from '@/components/dashboard/Feed';
 import { HeroEntries } from '@/components/dashboard/HeroEntries';
-import { composeFeed } from '@/components/dashboard/lib/composeFeed';
 import { toDashboardDecks } from '@/components/dashboard/lib/summaryDeckAdapter';
+import { mapSummaryFeed } from '@/components/dashboard/lib/summaryFeed';
 import { MetricStrip } from '@/components/dashboard/MetricStrip';
 import { StarterView } from '@/components/dashboard/StarterView';
 import { WhatsNewStrip } from '@/components/dashboard/WhatsNewStrip';
@@ -18,13 +17,8 @@ import { WhatsNewStrip } from '@/components/dashboard/WhatsNewStrip';
 import '@/features/decks/dx/dx.css';
 import { useDashboardSummary } from '@/hooks/useDashboardSummary';
 import { useTourAutoTrigger } from '@/hooks/useTourAutoTrigger';
-import { reportAPIError } from '@/lib/errorReporting';
 import { formatStudyTime } from '@/lib/timeFormatUtils';
-import { adminAPI } from '@/services/adminAPI';
-import { exerciseAPI } from '@/services/exerciseAPI';
-import { situationAPI } from '@/services/situationAPI';
 import { useAuthStore } from '@/stores/authStore';
-import { useDeckStore } from '@/stores/deckStore';
 
 /**
  * Dashboard Page
@@ -43,31 +37,23 @@ export const Dashboard: React.FC = () => {
   // Auth state
   const user = useAuthStore((state) => state.user);
 
-  // Dashboard summary (PERF-15) — single-call source for greeting stats,
-  // metric strip, week-heat, hero (resume/daily-goal ring) and deck data.
+  // Dashboard summary (PERF-15) — SOLE data source for the page: greeting
+  // stats, metric strip, week-heat, hero (resume/daily-goal ring), decks and
+  // the unified feed. PERF-15-06 removed the last per-page fetches (the
+  // deckStore warm + 4 feed-source queries below) — this is now the ONE
+  // call the dashboard's cold load makes.
   const { data: summary, isLoading: summaryLoading, error: summaryError } = useDashboardSummary();
 
-  // Deck data — deckStore is still warmed/read here for the resume/open-deck
-  // navigation handlers below (culture vs vocabulary routing); rendering
-  // (greeting/metrics/hero/feed) now reads `summary.decks` instead. Removing
-  // this store dependency + the ensureDecksFresh() warm is PERF-15-06.
-  const decks = useDeckStore((state) => state.decks);
-  const ensureDecksFresh = useDeckStore((state) => state.ensureDecksFresh);
-
-  // Warm/refresh decks on mount. ensureDecksFresh de-dupes with the app-init
-  // warm (ProtectedRoute) and paints instantly from the persisted cover cache.
-  useEffect(() => {
-    ensureDecksFresh().catch((error) => {
-      reportAPIError(error, { operation: 'ensureDecksFresh', endpoint: '/decks' });
-    });
-  }, [ensureDecksFresh]);
-
   useTourAutoTrigger();
+
+  // Deck slices from the summary, adapted onto the legacy Deck shape that
+  // HeroEntries and the nav handlers below consume.
+  const summaryDecks = useMemo(() => toDashboardDecks(summary?.decks ?? []), [summary]);
 
   // Navigate to review session
   const handleStartReview = () => {
     // Navigate to first deck with due cards, or decks page
-    const deckWithDue = decks.find(
+    const deckWithDue = summaryDecks.find(
       (d) => (d.progress?.cardsReview ?? 0) > 0 || d.progress?.status === 'in-progress'
     );
     if (deckWithDue) {
@@ -78,8 +64,8 @@ export const Dashboard: React.FC = () => {
       } else {
         navigate(`/decks/${deckWithDue.id}/practice`);
       }
-    } else if (decks.length > 0) {
-      const firstDeck = decks[0];
+    } else if (summaryDecks.length > 0) {
+      const firstDeck = summaryDecks[0];
       const isCultureDeck = firstDeck.category === 'culture';
       if (isCultureDeck) {
         navigate(`/culture/${firstDeck.id}/practice`);
@@ -94,7 +80,7 @@ export const Dashboard: React.FC = () => {
   // Navigate to deck study - memoized for stable reference
   const handleContinueDeck = useCallback(
     (deckId: string) => {
-      const deck = decks.find((d) => d.id === deckId);
+      const deck = summaryDecks.find((d) => d.id === deckId);
       // Culture decks go to /culture/{id}/practice, vocabulary decks go to /decks/{id}/practice
       const isCultureDeck = deck?.category === 'culture';
       if (isCultureDeck) {
@@ -103,43 +89,8 @@ export const Dashboard: React.FC = () => {
         navigate(`/decks/${deckId}/practice`);
       }
     },
-    [decks, navigate]
+    [summaryDecks, navigate]
   );
-
-  // Situations comprehension — used for the "Recently added" strip (DASH2-01-05)
-  const { data: comprehension } = useQuery({
-    queryKey: ['situations-comprehension'],
-    queryFn: () => situationAPI.getComprehension(),
-    retry: false,
-    staleTime: 60_000,
-  });
-  const whatsNewCount = comprehension?.whats_new_count ?? 0;
-
-  // ── NEW queries for the unified feed (DASH2-01-06) ─────────────────────────
-
-  // Dashboard news items (same source as removed NewsSection — 6 items for the feed)
-  const { data: newsData } = useQuery({
-    queryKey: ['dashboard-news'],
-    queryFn: () => adminAPI.getNewsItems(1, 6),
-    staleTime: 60_000,
-    retry: false,
-  });
-
-  // Learner situations for feed situation card
-  const { data: situationsData } = useQuery({
-    queryKey: ['situations', 1, '', false],
-    queryFn: () => situationAPI.getList({ page: 1, page_size: 6 }),
-    staleTime: 60_000,
-    retry: false,
-  });
-
-  // Exercise queue count for quick-practice card
-  const { data: exerciseQueueData } = useQuery({
-    queryKey: ['exercise-queue'],
-    queryFn: () => exerciseAPI.getQueue({}),
-    staleTime: 60_000,
-    retry: false,
-  });
 
   // ── Derived values ─────────────────────────────────────────────────────────
 
@@ -150,43 +101,27 @@ export const Dashboard: React.FC = () => {
   const userName = user?.name || user?.email?.split('@')[0] || 'Learner';
   const cardsDue = summary?.today?.cards_due ?? 0;
   const minutesToday = Math.round((summary?.today?.study_time_seconds ?? 0) / 60);
-  // Deck slices from the summary, adapted onto the legacy Deck shape that
-  // HeroEntries/composeFeed consume (PERF-15-06 removes this adapter).
-  const summaryDecks = useMemo(() => toDashboardDecks(summary?.decks ?? []), [summary]);
   const deckCount = summaryDecks.filter((d) => (d.progress?.dueToday ?? 0) > 0).length;
   const currentStreak = summary?.streak?.current_streak ?? 0;
   const longestStreak = summary?.streak?.longest_streak ?? 0;
   const mastered = summary?.mastered ?? 0;
+  // "Recently added" strip count (DASH2-01-05) — was its own
+  // situations-comprehension fetch; the summary DTO already carries it.
+  const whatsNewCount = summary?.whats_new_count ?? 0;
 
   // New-user gate — server-authoritative (summary.is_new_user), false during
   // load (anti-flash guard). Decision: Feed is hidden entirely when isNew
-  // because composeFeed always emits a wordOfDay card and pickResumeDeck
-  // returns decks[0] at zero progress, which would show a bogus "Resume
-  // deck" card to a brand-new user.
+  // because the server's compose_feed always emits a word_of_day item and
+  // picks decks[0] at zero progress as resume, which would show a bogus
+  // "Resume deck" card to a brand-new user.
   const isNew = !isLoading && !!summary && summary.is_new_user;
 
-  // Unified feed — client-side composition in fixed priority order, fed from
-  // the summary's deck slices (PERF-15-06 replaces this with summary.feed).
+  // Unified feed — server-composed (dashboard_compose.py's compose_feed);
+  // this only resolves deck_id references against summary.decks and
+  // normalizes field names, it does NOT re-order or re-gate (PERF-15-06).
   const feedItems = useMemo(
-    () =>
-      composeFeed({
-        decks: summaryDecks,
-        cardsDue,
-        currentStreak,
-        longestStreak,
-        news: newsData?.items ?? [],
-        situations: situationsData?.items ?? [],
-        queueCount: exerciseQueueData?.total_in_queue ?? 0,
-      }),
-    [
-      summaryDecks,
-      cardsDue,
-      currentStreak,
-      longestStreak,
-      newsData,
-      situationsData,
-      exerciseQueueData,
-    ]
+    () => mapSummaryFeed(summary?.feed ?? [], summary?.decks ?? []),
+    [summary]
   );
 
   return (
@@ -275,8 +210,8 @@ export const Dashboard: React.FC = () => {
       )}
 
       {/* Unified feed (DASH2-01-06) — only once loaded as a returning user.
-          Hidden for new users (DASH2-01-07): composeFeed always emits a wordOfDay
-          card and pickResumeDeck returns decks[0] at zero progress → bogus
+          Hidden for new users (DASH2-01-07): compose_feed always emits a wordOfDay
+          card and picks decks[0] at zero progress as resume → bogus
           "Resume deck". Gated on !isLoading too so it doesn't show-then-hide. */}
       {!isLoading && !isNew && (
         <Feed

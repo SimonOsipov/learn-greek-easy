@@ -49,16 +49,11 @@ vi.mock('@/stores/authStore', () => ({
   ) => selector({ user: mockUser, updateProfile: mockUpdateProfile }),
 }));
 
-let mockDateRange = 'last7';
-vi.mock('@/stores/dateRangeStore', () => ({
-  useDateRangeStore: (selector: (s: { dateRange: string }) => unknown) =>
-    selector({ dateRange: mockDateRange }),
-}));
-
-// Mock @/features/analytics so no real API calls are made (AC #10)
-const mockGetAnalytics = vi.fn();
-vi.mock('@/features/analytics', () => ({
-  getAnalytics: (...args: unknown[]) => mockGetAnalytics(...args),
+// PERF-15-06: dashboard-readiness now comes from dashboardAPI.getSummary
+// (the shared ['dashboard-summary'] query), not useAnalytics.
+const mockGetSummary = vi.fn();
+vi.mock('@/services/dashboardAPI', () => ({
+  dashboardAPI: { getSummary: () => mockGetSummary() },
 }));
 
 let mockDecks: Array<{ id: string; title: string }> = [];
@@ -88,14 +83,10 @@ function makeWrapper(queryClient: QueryClient) {
   };
 }
 
-// Full analytics fixture (any non-null value tells the hook "dashboard loaded")
-const fixtureData = {
-  overview: { totalReviews: 10, cardsStudied: 5, averageAccuracy: 0.8, totalStudyTime: 600 },
-  streak: { currentStreak: 1, longestStreak: 5, lastStudyDate: new Date().toISOString() },
-  progressData: [],
-  deckStats: [],
-  recentActivity: [],
-};
+// Minimal dashboard-summary fixture (any non-null value tells the hook
+// "dashboard loaded" — the hook only checks `data != null`, so field shape
+// doesn't matter beyond being truthy).
+const fixtureData = { is_new_user: false };
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -113,13 +104,12 @@ describe('useTourAutoTrigger', () => {
     mockIsTourCompleted.mockReturnValue(false);
     mockUpdateProfile.mockResolvedValue(undefined);
     mockDecks = [];
-    mockDateRange = 'last7';
 
     // Default: data loaded, not loading
-    mockGetAnalytics.mockResolvedValue(fixtureData);
+    mockGetSummary.mockResolvedValue(fixtureData);
     queryClient = createTestQueryClient();
     // Seed cache so hook sees data immediately (avoids async fetch in timer tests)
-    queryClient.setQueryData(['analytics', '1', 'last7'], fixtureData);
+    queryClient.setQueryData(['dashboard-summary'], fixtureData);
   });
 
   afterEach(() => {
@@ -127,10 +117,10 @@ describe('useTourAutoTrigger', () => {
     vi.useRealTimers();
   });
 
-  it('does not trigger when analytics is loading', () => {
+  it('does not trigger when dashboard summary is loading', () => {
     // Remove seeded data so query fires and stays loading
-    queryClient.removeQueries({ queryKey: ['analytics'] });
-    mockGetAnalytics.mockReturnValue(new Promise(() => {}));
+    queryClient.removeQueries({ queryKey: ['dashboard-summary'] });
+    mockGetSummary.mockReturnValue(new Promise(() => {}));
 
     renderHook(() => useTourAutoTrigger(), { wrapper: makeWrapper(queryClient) });
     vi.advanceTimersByTime(250);
@@ -152,13 +142,13 @@ describe('useTourAutoTrigger', () => {
 
   it('fail-safe: sets triggeredRef after 10s, preventing late trigger', () => {
     // Dashboard never loads
-    queryClient.removeQueries({ queryKey: ['analytics'] });
-    mockGetAnalytics.mockReturnValue(new Promise(() => {}));
+    queryClient.removeQueries({ queryKey: ['dashboard-summary'] });
+    mockGetSummary.mockReturnValue(new Promise(() => {}));
 
     renderHook(() => useTourAutoTrigger(), { wrapper: makeWrapper(queryClient) });
     vi.advanceTimersByTime(10_000);
     // Now simulate dashboard loading
-    queryClient.setQueryData(['analytics', '1', 'last7'], fixtureData);
+    queryClient.setQueryData(['dashboard-summary'], fixtureData);
     // Re-render would be needed but triggeredRef is already set
     expect(mockStartTour).not.toHaveBeenCalled();
   });

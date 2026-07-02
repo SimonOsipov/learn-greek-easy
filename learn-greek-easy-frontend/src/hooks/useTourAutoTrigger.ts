@@ -4,7 +4,7 @@ import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
-import { useAnalytics } from '@/hooks/useAnalytics';
+import { useDashboardSummary } from '@/hooks/useDashboardSummary';
 import { startTour, buildTourSteps } from '@/lib/tour';
 import { useAppStore, selectIsReady } from '@/stores/appStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -18,12 +18,15 @@ export function useTourAutoTrigger(): void {
   const isAuthenticated = useAuthStore((state) => !!state.user);
   const tourCompletedAt = useAuthStore((state) => state.user?.tourCompletedAt);
   const updateProfile = useAuthStore((state) => state.updateProfile);
-  const { data, loading } = useAnalytics();
+  // PERF-15-06: readiness now comes off the shared ['dashboard-summary']
+  // query (Dashboard.tsx's own source of truth) instead of a separate
+  // useAnalytics() fetch — no new network call, just a shared cache read.
+  const { data, isLoading } = useDashboardSummary();
   const { t } = useTranslation('common');
   const navigate = useNavigate();
   const triggeredRef = useRef(false);
 
-  const isDashboardReady = !loading && data != null;
+  const isDashboardReady = !isLoading && data != null;
 
   useEffect(() => {
     if (!isAppReady || !isAuthenticated) return;

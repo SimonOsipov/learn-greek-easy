@@ -91,6 +91,7 @@ class TestSlimNewsFromFull:
         assert slim.audio_duration_seconds == full.audio_duration_seconds
         assert slim.image_url == full.image_url
         assert slim.image_variants == full.image_variants
+        assert slim.original_article_url == full.original_article_url
 
     def test_slim_news_mapping_with_none_optional_fields(self) -> None:
         """QA Mode B adversarial: optional fields as None must not crash the

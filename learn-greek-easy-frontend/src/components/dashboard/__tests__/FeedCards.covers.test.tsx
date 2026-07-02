@@ -12,7 +12,7 @@ import { renderWithProviders } from '@/lib/test-utils';
 import type { Deck } from '@/types/deck';
 
 import { FeedCard } from '../FeedCards';
-import type { FeedItem } from '../lib/composeFeed';
+import type { FeedItem } from '../lib/feedItem';
 
 const COVER_URL = 'https://cdn.example.com/deck-cover.jpg';
 

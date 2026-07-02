@@ -15,7 +15,7 @@ import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { pickBestSrc } from '@/lib/imageVariants';
 import { formatPublicationDate, safeExternalHref } from '@/utils/newsFormat';
 
-import type { FeedItem } from './lib/composeFeed';
+import type { FeedItem } from './lib/feedItem';
 
 // ─── Shared SVG icons (matched to CD dashboard.jsx DI) ───────────────────────
 

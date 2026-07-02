@@ -8,13 +8,19 @@
  * route from /decks/:id/review to /decks/:id/practice, and the Dashboard
  * was missed — causing a 404 in production.
  *
- * PERF-15-05: hero/feed deck rendering now sources from the dashboard-summary
- * endpoint (dashboardAPI.getSummary), not the deckStore. We mock at the
- * API-client level (mirroring the pre-existing analytics pattern) and seed
- * the `['dashboard-summary']` query cache. deckStore's `decks` mock is kept
- * ONLY because handleContinueDeck/handleStartReview still resolve
- * culture-vs-vocab routing off it — the fixture IDs/categories must match
- * the summary fixture's deck slices for a click to find the right deck.
+ * PERF-15-05: hero/feed deck rendering sources from the dashboard-summary
+ * endpoint (dashboardAPI.getSummary). We mock at the API-client level and
+ * seed the `['dashboard-summary']` query cache.
+ *
+ * PERF-15-06: Dashboard.tsx no longer reads deckStore at all — the nav
+ * handlers (handleStartReview/handleContinueDeck) resolve decks off
+ * `summary.decks`, and the feed renders from server-composed `summary.feed`
+ * (not client-side composeFeed). `makeSummaryFromDecks` below builds both
+ * `decks` and a matching `feed` (resume + deck items only — enough for the
+ * CTA-wiring assertions below; full feed-composition ordering/gating is
+ * unit-tested server-side in test_compose_feed.py) using the same
+ * resume-pick rule as the backend's pick_resume_deck (most-recently-studied,
+ * else first-with-due, else first).
  */
 
 import { act } from 'react';
@@ -66,45 +72,6 @@ vi.mock('@/services/dashboardAPI', () => ({
 
 vi.mock('@/hooks/useTourAutoTrigger', () => ({
   useTourAutoTrigger: vi.fn(),
-}));
-
-vi.mock('@/lib/errorReporting', () => ({
-  reportAPIError: vi.fn(),
-}));
-
-vi.mock('@/services/situationAPI', () => ({
-  situationAPI: {
-    getComprehension: vi.fn().mockResolvedValue({
-      whats_new_count: 0,
-      comprehension_percentage: 0,
-      verdict: '',
-      topic_confidence: [],
-      streak: 0,
-      recent_sessions: [],
-    }),
-    getList: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, page_size: 6 }),
-  },
-}));
-
-vi.mock('@/services/adminAPI', () => ({
-  adminAPI: {
-    getNewsItems: vi.fn().mockResolvedValue({
-      items: [],
-      total: 0,
-      page: 1,
-      page_size: 6,
-      country_counts: { cyprus: 0, greece: 0, world: 0 },
-      audio_count: 0,
-      b1_audio_count: 0,
-      b1_pending_regen_count: 0,
-    }),
-  },
-}));
-
-vi.mock('@/services/exerciseAPI', () => ({
-  exerciseAPI: {
-    getQueue: vi.fn().mockResolvedValue({ total_in_queue: 0, exercises: [] }),
-  },
 }));
 
 // ---------------------------------------------------------------------------
@@ -161,10 +128,10 @@ const cultureDeck = makeDeck({
 });
 
 // ---------------------------------------------------------------------------
-// Dashboard-summary fixture (PERF-15-05) — deck slices mirror whatever
-// `mockDecks` (deckStore) is set to for the test, so a hero/feed CTA click
-// resolves against the SAME deck id/category the navigation handlers read
-// off deckStore. `today.cards_due` stays fixed at 5, independent of decks.
+// Dashboard-summary fixture (PERF-15-05/06) — deck slices + a matching feed
+// are built from `mockDecks`, so a hero/feed CTA click resolves against the
+// SAME deck id/category the navigation handlers read off `summary.decks`.
+// `today.cards_due` stays fixed at 5, independent of decks.
 // ---------------------------------------------------------------------------
 
 function makeDeckSlice(deck: ReturnType<typeof makeDeck>) {
@@ -188,11 +155,52 @@ function makeDeckSlice(deck: ReturnType<typeof makeDeck>) {
     due_today: deck.progress.dueToday,
     completion_pct: 50,
     mastery_pct: 25,
-    last_studied_at: null,
+    last_studied_at: null as string | null,
   };
 }
 
+/**
+ * Build a minimal server-shaped feed (resume + deck items only — this file's
+ * tests exercise resume/deck CTA wiring, not full feed composition, which is
+ * unit-tested server-side in test_compose_feed.py) mirroring the backend's
+ * pick_resume_deck (src/services/dashboard_compose.py): the deck with the
+ * max last_studied_at, else the first deck with due_today > 0, else the
+ * first deck.
+ */
+function buildFeedFromDeckSlices(slices: ReturnType<typeof makeDeckSlice>[]) {
+  if (slices.length === 0) return [];
+
+  const withLastStudied = slices.filter((s) => s.last_studied_at != null);
+  const resume =
+    withLastStudied.length > 0
+      ? withLastStudied.reduce((best, s) =>
+          (s.last_studied_at as string) > (best.last_studied_at as string) ? s : best
+        )
+      : (slices.find((s) => s.due_today > 0) ?? slices[0]);
+
+  const feed: unknown[] = [
+    {
+      type: 'resume',
+      id: `resume-${resume.deck_id}`,
+      deck_id: resume.deck_id,
+      sibling_deck_ids: slices
+        .filter((s) => s.deck_id !== resume.deck_id)
+        .slice(0, 2)
+        .map((s) => s.deck_id),
+    },
+  ];
+
+  for (const s of slices) {
+    const isActive = s.status === 'in-progress' || s.due_today > 0;
+    if (!isActive || s.deck_id === resume.deck_id) continue;
+    feed.push({ type: 'deck', id: `deck-${s.deck_id}`, deck_id: s.deck_id });
+  }
+
+  return feed;
+}
+
 function makeSummaryFromDecks(decks: ReturnType<typeof makeDeck>[]) {
+  const deckSlices = decks.map(makeDeckSlice);
   return {
     is_new_user: false,
     mastered: 2,
@@ -205,8 +213,8 @@ function makeSummaryFromDecks(decks: ReturnType<typeof makeDeck>[]) {
     },
     streak: { current_streak: 3, longest_streak: 7 },
     week_heat: { heat: [0, 0, 0, 0, 0, 0, 0], today_idx: 6 },
-    decks: decks.map(makeDeckSlice),
-    feed: [],
+    decks: deckSlices,
+    feed: buildFeedFromDeckSlices(deckSlices),
     whats_new_count: 0,
     queue_count: 0,
     all_time_study_time_seconds: 60,
@@ -219,21 +227,10 @@ function makeSummaryFromDecks(decks: ReturnType<typeof makeDeck>[]) {
 }
 
 // ---------------------------------------------------------------------------
-// deckStore mock — mutable decks list swapped per-test
+// Deck fixtures list — mutable, swapped per-test; feeds makeSummaryFromDecks.
 // ---------------------------------------------------------------------------
 
 let mockDecks: ReturnType<typeof makeDeck>[] = [];
-const mockFetchDecks = vi.fn(() => Promise.resolve());
-
-vi.mock('@/stores/deckStore', () => ({
-  useDeckStore: (selector: (s: Record<string, unknown>) => unknown) =>
-    selector({
-      decks: mockDecks,
-      isLoading: false,
-      fetchDecks: mockFetchDecks,
-      ensureDecksFresh: mockFetchDecks,
-    }),
-}));
 
 // ---------------------------------------------------------------------------
 // Helper: render Dashboard with a QueryClientProvider seeded with

@@ -91,6 +91,8 @@ export interface DashboardSlimNews {
   audio_duration_seconds: number | null;
   image_url: string | null;
   image_variants: Record<number, string> | null;
+  /** PERF-15-06: carried (not heavy) — the feed's news card opens this URL. */
+  original_article_url: string | null;
 }
 
 /** Slim situation DTO for the dashboard feed. */

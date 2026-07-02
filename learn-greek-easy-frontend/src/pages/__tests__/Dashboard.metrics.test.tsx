@@ -15,6 +15,10 @@
  *
  * PERF-15-05: all three tiles now source exclusively from dashboardAPI.getSummary
  * (mocked + cache-seeded below); no `@/features/analytics` mock is needed.
+ *
+ * PERF-15-06: Dashboard.tsx dropped its situationAPI/deckStore reads
+ * entirely, so those mocks were removed from this file too (they'd otherwise
+ * be dead registrations for modules the component no longer imports).
  */
 
 import { act } from 'react';
@@ -64,33 +68,6 @@ vi.mock('@/services/dashboardAPI', () => ({
 
 vi.mock('@/hooks/useTourAutoTrigger', () => ({
   useTourAutoTrigger: vi.fn(),
-}));
-
-vi.mock('@/lib/errorReporting', () => ({
-  reportAPIError: vi.fn(),
-}));
-
-vi.mock('@/services/situationAPI', () => ({
-  situationAPI: {
-    getComprehension: vi.fn().mockResolvedValue({
-      whats_new_count: 0,
-      comprehension_percentage: 0,
-      verdict: '',
-      topic_confidence: [],
-      streak: 0,
-      recent_sessions: [],
-    }),
-  },
-}));
-
-vi.mock('@/stores/deckStore', () => ({
-  useDeckStore: (selector: (s: Record<string, unknown>) => unknown) =>
-    selector({
-      decks: [],
-      isLoading: false,
-      fetchDecks: vi.fn(() => Promise.resolve()),
-      ensureDecksFresh: vi.fn(() => Promise.resolve()),
-    }),
 }));
 
 // ---------------------------------------------------------------------------

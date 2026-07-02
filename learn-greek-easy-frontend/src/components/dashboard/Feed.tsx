@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { FeedCard } from './FeedCards';
 import { FeedFilters } from './FeedFilters';
-import { countByFilter, filterFeed, type FeedFilterKey, type FeedItem } from './lib/composeFeed';
+import { countByFilter, filterFeed, type FeedFilterKey, type FeedItem } from './lib/feedItem';
 
 export interface FeedProps {
   items: FeedItem[];
