@@ -137,6 +137,11 @@ vi.mock('react-i18next', async () => {
                 "You've got {{questionsTotal}} questions waiting — let's get started!",
               'cultureMotivation.improving.ready.1':
                 "You're up to {{currentPercent}}% (from {{previousPercent}}%, +{{delta}}pp) — {{questionsLearned}} of {{questionsTotal}} learned. Keep it up!",
+              // QA (DASH2-02-03 adversarial): a non-"improving" direction, to
+              // guard against a render path that only handles the happy-path
+              // direction exercised by the executor's own tests.
+              'cultureMotivation.stagnant.notReady.1':
+                "You're at {{currentPercent}}% readiness. A short session this week is the quickest way to start climbing toward the pass mark.",
             };
             const val = map[key];
             if (typeof val === 'function') return val(opts);
@@ -745,6 +750,74 @@ describe('MockExamPage', () => {
       expect(nudge).toHaveTextContent('300');
       expect(nudge).toHaveTextContent('490');
       expect(nudge.textContent).not.toContain('{{');
+    });
+
+    // QA (DASH2-02-03 adversarial): the executor's own tests only exercise
+    // 'new_user' and 'improving' delta_direction motivation copy. Guard that a
+    // 'stagnant' direction — a real authored key, not a happy-path pick — also
+    // resolves + interpolates correctly, not just the directions the executor
+    // happened to test.
+    it('renders interpolated motivation copy for a stagnant (non-improving) direction', async () => {
+      mockGetReadiness.mockResolvedValue(
+        makeRichReadiness({
+          motivation: {
+            message_key: 'cultureMotivation.stagnant.notReady.1',
+            params: { currentPercent: 58 },
+            delta_direction: 'stagnant',
+            delta_percentage: 0,
+          },
+        })
+      );
+
+      render(<MockExamPage />);
+
+      const nudge = await screen.findByRole('note');
+      expect(nudge).toHaveTextContent('58');
+      expect(nudge.textContent).not.toContain('{{');
+      expect(document.body.textContent).not.toContain('cultureMotivation.');
+    });
+
+    // QA (DASH2-02-03 adversarial): the motivation nudge and the "not enough
+    // questions" warning share the exact same markup shape (`className="cx-nudge"
+    // role="note"`), so when both conditions hold simultaneously
+    // (!canStartExam && queueInfo, AND readiness?.motivation set) two role="note"
+    // elements coexist on the page. A caller using the singular
+    // `getByRole('note')` would throw "found multiple elements" here — assert
+    // both render independently, with no cross-contamination of content.
+    it('renders both the motivation nudge and the not-enough-questions warning without collision', async () => {
+      mockGetQuestionQueue.mockResolvedValue(
+        makeQueue({ can_start_exam: false, available_questions: 10 })
+      );
+      mockGetReadiness.mockResolvedValue(
+        makeRichReadiness({
+          motivation: {
+            message_key: 'cultureMotivation.newUser.1',
+            params: { questionsTotal: 490 },
+            delta_direction: 'new_user',
+            delta_percentage: 0,
+          },
+        })
+      );
+
+      render(<MockExamPage />);
+
+      await screen.findByLabelText('45% readiness');
+
+      const notes = screen.getAllByRole('note');
+      expect(notes).toHaveLength(2);
+
+      const motivationNote = notes.find((n) => n.textContent?.includes('490'));
+      const warningNote = notes.find((n) => n.textContent?.includes('Not enough questions'));
+
+      expect(motivationNote).toBeDefined();
+      expect(warningNote).toBeDefined();
+      expect(motivationNote).not.toBe(warningNote);
+      // Neither nudge's content leaks into the other.
+      expect(motivationNote?.textContent).not.toContain('Not enough questions');
+      expect(warningNote?.textContent).not.toContain('cultureMotivation.');
+      // The disabled start button confirms canStartExam is actually false here
+      // (not a false-positive from a queue mock that didn't take effect).
+      expect(screen.getByTestId('start-exam-button')).toBeDisabled();
     });
 
     it('hides the nudge when the motivation key is unresolved', async () => {
