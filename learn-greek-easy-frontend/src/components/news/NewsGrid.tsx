@@ -31,8 +31,9 @@ export interface NewsGridProps {
   /** Number of skeleton cards to show during loading */
   skeletonCount?: number;
   level?: NewsLevel;
-  /** Called when the user activates a card body (wires into the slide-over reader). */
-  onOpen?: (article: NewsItemResponse) => void;
+  /** Called when the user activates a card body, or (with `{ autoplay: true }`) its
+   *  Play button — wires into the slide-over reader. */
+  onOpen?: (article: NewsItemResponse, opts?: { autoplay?: boolean }) => void;
 }
 
 export const NewsGrid: React.FC<NewsGridProps> = ({

@@ -45,6 +45,8 @@ export interface NewsReaderSheetProps {
   onOpenChange: (open: boolean) => void;
   level: NewsLevel;
   onLevelChange: (level: NewsLevel) => void;
+  /** When true, the reader autostarts playback on open (set when opened via a card Play button). */
+  autoplay?: boolean;
 }
 
 export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
@@ -53,6 +55,7 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
   onOpenChange,
   level,
   onLevelChange,
+  autoplay = false,
 }) => {
   const { t, i18n } = useTranslation('common');
 
@@ -400,6 +403,7 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
                       barCount={44}
                       showSpeedControl
                       disabled={!audioUrl}
+                      autoPlay={autoplay}
                       onPlay={handlePlay}
                       onPause={handlePause}
                       onComplete={handleComplete}
