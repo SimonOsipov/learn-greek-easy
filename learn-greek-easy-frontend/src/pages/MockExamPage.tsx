@@ -512,6 +512,19 @@ export const MockExamPage: React.FC = () => {
 
   const canStartExam = queueInfo?.can_start_exam ?? false;
 
+  // Resolve + interpolate the motivation copy from its i18n key. An unresolved
+  // key (no translation entry) resolves to '' via defaultValue, which hides the
+  // nudge below — the raw message_key must never reach the DOM (DASH2-02-03).
+  const motivationText = readiness?.motivation
+    ? // message_key is a backend-provided i18n key (runtime-dynamic string), which
+      // cannot satisfy strictKeyChecks' literal-key constraint statically — call t()
+      // through a loosened signature. defaultValue: '' resolves an unknown key to ''.
+      (t as (key: string, opts: Record<string, unknown>) => string)(
+        readiness.motivation.message_key,
+        { ...readiness.motivation.params, defaultValue: '' }
+      )
+    : '';
+
   return (
     <div className="space-y-6 pb-8" data-testid="mock-exam-page">
       {/* Breadcrumb */}
@@ -551,13 +564,13 @@ export const MockExamPage: React.FC = () => {
           {/* Readiness hero (only when readiness data is present) */}
           {readiness && <ReadinessHero readiness={readiness} />}
 
-          {/* Motivation nudge (only when set) */}
-          {readiness?.motivation && (
+          {/* Motivation nudge (only when set AND the copy resolves non-empty) */}
+          {readiness?.motivation && motivationText && (
             <div className="cx-nudge" role="note">
               <span className="cx-nudge-icon">
                 <Zap aria-hidden="true" />
               </span>
-              <span>{readiness.motivation.message_key}</span>
+              <span>{motivationText}</span>
             </div>
           )}
 
