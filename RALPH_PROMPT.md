@@ -155,7 +155,7 @@ All planning runs **inside the worktree** so every file reference is written aga
 - **Checkpoint:** `SUBTASKS_READY`
 
 #### d. Decisions surfacing (non-blocking)
-- When spawning the FIRST subtask's executor (Phase 1), instruct it to include in the draft PR description: the story's **## Decisions** section (PM defaults + architect assumptions + conservative-default debate dispositions) and a pointer to the QA Debate Log. This is the user's review surface — the run does NOT wait for input; completion gates remain CI + Phase 3.5 as always.
+- When spawning the FIRST subtask's executor (Phase 1), instruct it to include in the draft PR description: the story's **## Decisions** section (PM defaults + architect assumptions + conservative-default debate dispositions **+ any `fast-convergence` dispositions** — round-1 convergence escalates as collusion smell interactively; in unattended mode PR visibility is the compensating control) and a pointer to the QA Debate Log. This is the user's review surface — the run does NOT wait for input; completion gates remain CI + Phase 3.5 as always.
 
 Then proceed to Phase 1 exactly as for a pre-planned story.
 
@@ -179,16 +179,8 @@ For each subtask, in dependency order, execute the 4 stages below. Delegate to s
 - **NativeWind opacity gotcha:** never put a `token/NN` opacity modifier on a custom var-backed token — it renders DARK on native (the RN opacity-modifier path is broken; see MOB-13 / project memory). Use an explicit full-color token instead.
 - **No web preview deploy** — the mobile Phase 3.5 gate runs locally on an iOS simulator (and, when the Android SDK/emulator is set up, an Android emulator) and diffs against the design export, not a preview URL. Two complementary local checks: the **`.maestro/*.yaml` flows** (the same `onboarding.yaml` + `smoke.yaml` + `reset-onboarding` endpoint as the CI `mobile-e2e` job — the repeatable E2E gate, **unchanged**) and the **cross-platform `mobile-mcp` visual-fidelity capture** (launch + navigate + screenshot each screen on iOS + Android — the capture mechanism, replacing `xcrun simctl … screenshot`). See the Mobile variant in Phase 3.5.
 
-#### Fallback: If Subagent Spawning Fails
-Read the corresponding agent technical prompt file BEFORE executing the stage yourself:
-
-| Stage | Read this file first |
-|-------|---------------------|
-| Architecture | `~/.claude/agents/product-architecture-spec.md` |
-| Test-Spec | `~/.claude/agents/product-qa-spec.md` (Mode A) |
-| QA Verify | `~/.claude/agents/product-qa-spec.md` (Mode B) |
-| Execution | `~/.claude/agents/product-executor.md` |
-| Explore | No file needed — use Glob/Grep/Read directly inside the worktree |
+#### If Subagent Spawning Fails: retry, then HALT — NEVER perform the stage yourself
+Retry the Task call up to **twice** (fresh spawns; transient API/credit errors often clear). If the third attempt fails: **HALT the run** — leave the subtask "In Progress", report which stage's spawn failed and the error, and surface to the user. Do NOT execute the stage in-context as the orchestrator, under any framing. Architecture, execution, and QA merging into one context defeats the fresh-context generator/critic separation that the whole pipeline exists to enforce — a same-context QA pass of your own work is worthless evidence, and this fallback has silently fired before (executor spawn failed on credits; the orchestrator edited files directly until the user noticed). A halted run costs an hour; a self-certified defect costs a rework round. **Sole exception:** the Explore stage (read-only Glob/Grep/Read verification) may be performed in-context — it produces no work product to self-grade.
 
 #### Stage 1: Architecture
 - Spawn a `product-architecture-spec` subagent via Task tool
@@ -253,7 +245,7 @@ The orchestrator never runs `git checkout -b`, `gh pr create`, or `gh pr ready` 
 
 After the FINAL subtask's Stage 4 completes:
 
-1. **Monitor CI** — poll `gh pr checks [PR_NUMBER]` every 3 minutes (CI Monitoring Protocol below).
+1. **Monitor CI** — poll `gh pr checks [PR_NUMBER]` every 270 s (the single poll constant — CI Monitoring Protocol below).
 2. **Review CodeRabbit comments** as soon as all per-push *test* checks pass — CodeRabbit runs before the Phase 3.5 release handshake, so you needn't wait for the locked release to start it.
    ```bash
    gh pr view [PR_NUMBER] --comments
@@ -397,7 +389,7 @@ A PreCompact hook auto-saves state. After compaction, READ the handoff to contin
 
 Use this protocol whenever waiting for CI after a push.
 
-### Poll every 3 minutes
+### Poll every 270 s (the single poll constant, everywhere in this pipeline)
 ```bash
 gh pr checks [PR_NUMBER]
 ```
@@ -464,7 +456,7 @@ gh run list --branch "$BRANCH" --limit 1 --json databaseId,status -q '.[0]'
 | Hiding/disabling features to "fix" bugs | Actually fix the bug; add missing data |
 | Outputting ALL_TASKS_COMPLETE before CI test checks pass | Wait for all test checks to pass |
 | Treating Deploy/Smoke/A11y/K6/Lighthouse as never-required | They are required — verified inside the locked `release-verify.yml` run (Phase 3.5). Per-push, start CodeRabbit as soon as test checks pass; completion still needs a green release |
-| Sleeping/polling tightly for CI | Poll every 3 minutes per CI Monitoring Protocol |
+| Sleeping/polling tightly for CI | Poll every 270 s per CI Monitoring Protocol (the single poll constant) |
 | Waiting indefinitely for stuck E2E shard | Check logs — if only setup steps, treat as passed |
 | Not cleaning up worktree after merge | Run /post-merge-cleanup or `git worktree remove` manually |
 | Bouncing the executor on uncited taste | Style fails must cite a docs/design-system.md rule; pure taste is advisory → escalate to the user |
