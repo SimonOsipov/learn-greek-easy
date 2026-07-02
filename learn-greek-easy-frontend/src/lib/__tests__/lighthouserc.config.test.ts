@@ -42,6 +42,20 @@ interface DesktopLighthouseConfig {
 
 interface MobileLighthouseConfig {
   ci: {
+    collect: {
+      url?: string[];
+      numberOfRuns: number;
+      settings: {
+        formFactor: string;
+        screenEmulation: {
+          mobile: boolean;
+          width: number;
+          height: number;
+          deviceScaleFactor: number;
+        };
+        throttling: { rttMs: number; throughputKbps: number; cpuSlowdownMultiplier: number };
+      };
+    };
     assert: {
       // Target shape (post PERF-23-01): per-URL entries, no top-level
       // `assertions`. Both fields are optional here so the test file
@@ -50,6 +64,9 @@ interface MobileLighthouseConfig {
       // present at runtime.
       assertMatrix?: LighthouseAssertMatrixEntry[];
       assertions?: Record<string, unknown>;
+    };
+    upload: {
+      target: string;
     };
   };
 }
@@ -182,6 +199,133 @@ describe('lighthouserc LCP/assertMatrix gate (PERF-23-01)', () => {
 
     it('desktop total-blocking-time stays warn at 300', () => {
       expect(desktopAssertions['total-blocking-time']).toEqual(['warn', { maxNumericValue: 300 }]);
+    });
+  });
+
+  // --- QA adversarial/edge coverage (Stage 4, added post-implementation) ---
+  // The 12 tests above are the AC-derived oracle authored RED pre-implementation
+  // (Stage 2.5). These additional tests probe regex robustness, key-set
+  // completeness, and untouched-block survival that the AC tests didn't cover.
+  describe('assertMatrix regex robustness (QA adversarial)', () => {
+    const registerEntry = () => findMatrixEntry(mobileMatrix, 'https://x/register')!;
+
+    it('does NOT match /register lookalikes with extra trailing characters', () => {
+      // '/register2' and '/registers' share the '/register' prefix but do not
+      // END the path in exactly '/register' — the `$`-anchor must reject them,
+      // else they'd be silently demoted to warn alongside the real /register.
+      expect(findMatrixEntry(mobileMatrix, 'https://x/register2')).toBe(
+        findMatrixEntry(mobileMatrix, 'https://x/')
+      );
+      expect(findMatrixEntry(mobileMatrix, 'https://x/registers')).toBe(
+        findMatrixEntry(mobileMatrix, 'https://x/')
+      );
+    });
+
+    it('does NOT match /register as a mid-path segment', () => {
+      // '/admin/register/settings' contains '/register' but not at the end of
+      // the path — must fall to the non-register (error) entry.
+      const entry = findMatrixEntry(mobileMatrix, 'https://x/admin/register/settings');
+      expect(entry?.assertions['largest-contentful-paint']).toEqual([
+        'error',
+        { maxNumericValue: 4000 },
+      ]);
+    });
+
+    it('DOES match /register nested under a subpath (documented current behavior)', () => {
+      // The pattern is '.*/register$' — ANY path ending in '/register' demotes,
+      // not just the exact top-level route. This is intended-and-documented
+      // behavior, not a bug: today only the top-level /register route is ever
+      // Lighthouse-tested (LIGHTHOUSE_URLS), so the broader match is inert in
+      // practice, but a future nested route ending in /register would also be
+      // demoted. Asserting it here makes that a visible decision, not a
+      // silent side effect.
+      const entry = findMatrixEntry(mobileMatrix, 'https://x/foo/register');
+      expect(entry).toBe(registerEntry());
+      expect(entry?.assertions['largest-contentful-paint']).toEqual([
+        'warn',
+        { maxNumericValue: 4000 },
+      ]);
+    });
+
+    it('trailing slash on /register falls to the non-register (error) entry today', () => {
+      // 'https://x/register/' does not end in '/register' (it ends in '/'), so
+      // the `$`-anchored register pattern does not match — it falls to the
+      // catch-all non-register entry and keeps the hard error@4000 floor. This
+      // is the Stage-1 addendum's edge-case note #2: if a redirect ever
+      // appends a trailing slash to /register, the demotion silently stops
+      // applying and the gate would go red again. Documented here so that
+      // regression is a visible test failure, not a silent CI surprise.
+      const entry = findMatrixEntry(mobileMatrix, 'https://x/register/');
+      expect(entry).toBe(findMatrixEntry(mobileMatrix, 'https://x/'));
+      expect(entry?.assertions['largest-contentful-paint']).toEqual([
+        'error',
+        { maxNumericValue: 4000 },
+      ]);
+    });
+
+    it('query string on /register falls to the non-register (error) entry today', () => {
+      // 'https://x/register?a=1' does not end in '/register' either (it ends
+      // in '?a=1'), so it also falls through to the hard-error entry. Same
+      // Stage-1 addendum note #2 caveat as the trailing-slash case above.
+      const entry = findMatrixEntry(mobileMatrix, 'https://x/register?a=1');
+      expect(entry).toBe(findMatrixEntry(mobileMatrix, 'https://x/'));
+      expect(entry?.assertions['largest-contentful-paint']).toEqual([
+        'error',
+        { maxNumericValue: 4000 },
+      ]);
+    });
+  });
+
+  describe('assertMatrix entry key-set completeness (QA adversarial)', () => {
+    const expectedKeys = [
+      'categories:performance',
+      'categories:accessibility',
+      'categories:best-practices',
+      'categories:seo',
+      'largest-contentful-paint',
+    ].sort();
+
+    it('every assertMatrix entry carries EXACTLY the 5 expected assertion keys (no dropped/extra)', () => {
+      expect(mobileMatrix).toBeDefined();
+      const matrix = mobileMatrix ?? [];
+      expect(matrix.length).toBe(2);
+      for (const entry of matrix) {
+        expect(Object.keys(entry.assertions).sort()).toEqual(expectedKeys);
+      }
+    });
+  });
+
+  describe('untouched collect/upload blocks survive the assertMatrix rewrite (QA adversarial)', () => {
+    it('collect.url is absent-env-driven and unaffected by the assert rewrite', () => {
+      // This subtask only touches `assert` + the header comment; `collect.url`
+      // is env-driven and must still fall back to the localhost default (or
+      // reflect LIGHTHOUSE_URLS verbatim) whenever a real env var IS set —
+      // either way, it must not have been hardcoded or dropped by the rewrite.
+      if (process.env.LIGHTHOUSE_URLS) {
+        expect(mobileConfig.ci.collect.url).toEqual(process.env.LIGHTHOUSE_URLS.split(','));
+      } else {
+        expect(mobileConfig.ci.collect.url).toEqual(['http://localhost:5173']);
+      }
+    });
+
+    it('collect.settings (mobile formFactor, screen emulation, throttling) is unchanged', () => {
+      expect(mobileConfig.ci.collect.numberOfRuns).toBe(1);
+      expect(mobileConfig.ci.collect.settings.formFactor).toBe('mobile');
+      expect(mobileConfig.ci.collect.settings.screenEmulation).toEqual({
+        mobile: true,
+        width: 390,
+        height: 844,
+        deviceScaleFactor: 3,
+      });
+      expect(mobileConfig.ci.collect.settings.throttling).toEqual({
+        rttMs: 150,
+        throughputKbps: 1638.4,
+        cpuSlowdownMultiplier: 2,
+      });
+    });
+
+    it('upload.target is unchanged', () => {
+      expect(mobileConfig.ci.upload.target).toBe('temporary-public-storage');
     });
   });
 });
