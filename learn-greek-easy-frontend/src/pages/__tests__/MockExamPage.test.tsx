@@ -126,10 +126,47 @@ vi.mock('react-i18next', async () => {
               'readiness.verdictReady': 'Ready',
               'readiness.verdictThoroughlyPrepared': 'Thoroughly Prepared',
               'readiness.donutLabel': 'Ready',
+              // cultureMotivation.* — DASH2-02-03: MockExamPage resolves
+              // readiness.motivation.message_key via
+              // t(message_key, { ...params, defaultValue: '' }). These entries
+              // are written as raw i18next-style templates (`{{param}}`
+              // placeholders), interpolated below — NOT pre-baked with `opts`
+              // like the entries above — so tests can assert real interpolation
+              // and hide-on-unresolved-key behaviour, not just presence of a key.
+              'cultureMotivation.newUser.1':
+                "You've got {{questionsTotal}} questions waiting — let's get started!",
+              'cultureMotivation.improving.ready.1':
+                "You're up to {{currentPercent}}% (from {{previousPercent}}%, +{{delta}}pp) — {{questionsLearned}} of {{questionsTotal}} learned. Keep it up!",
             };
             const val = map[key];
             if (typeof val === 'function') return val(opts);
-            return val ?? key;
+            const isOptsObject = typeof opts === 'object' && opts !== null;
+            // Honor i18next's `defaultValue` option for unmapped keys so callers
+            // that call t(key, { ...params, defaultValue: '' }) resolve an
+            // unknown key to '' instead of the raw key (DASH2-02-03 hide-on-empty).
+            // Guarded on isOptsObject because some callers pass a plain string as
+            // the second arg (e.g. t('breadcrumb.culture', 'Culture')), and `in`
+            // throws on a non-object right-hand side.
+            if (
+              val === undefined &&
+              isOptsObject &&
+              'defaultValue' in (opts as Record<string, unknown>)
+            ) {
+              return String((opts as { defaultValue?: unknown }).defaultValue ?? '');
+            }
+            const resolved = val ?? key;
+            // Interpolate {{paramName}} placeholders using opts, like real
+            // i18next (only the cultureMotivation.* templates above use this
+            // syntax — pre-existing entries are already pre-baked and contain
+            // no {{...}}, so this is a no-op for them).
+            if (isOptsObject) {
+              return resolved.replace(/\{\{(\w+)\}\}/g, (_match, name: string) =>
+                name in (opts as Record<string, unknown>)
+                  ? String((opts as Record<string, unknown>)[name])
+                  : `{{${name}}}`
+              );
+            }
+            return resolved;
           },
           i18n: { language: 'en' },
         };
@@ -641,21 +678,97 @@ describe('MockExamPage', () => {
     });
 
     it('renders the motivation nudge when motivation is set', async () => {
+      // DASH2-02-03: message_key is an i18n key resolved (+ interpolated) via
+      // t(), not raw display text — mock resolves 'cultureMotivation.newUser.1'
+      // to a template containing {{questionsTotal}}.
       mockGetReadiness.mockResolvedValue(
         makeRichReadiness({
           motivation: {
-            message_key: 'You are making great progress!',
-            params: {},
-            delta_direction: 'improving',
-            delta_percentage: 5,
+            message_key: 'cultureMotivation.newUser.1',
+            params: { questionsTotal: 490 },
+            delta_direction: 'new_user',
+            delta_percentage: 0,
           },
         })
       );
 
       render(<MockExamPage />);
 
-      const nudge = await screen.findByText('You are making great progress!');
-      expect(nudge).toBeInTheDocument();
+      const nudge = await screen.findByRole('note');
+      expect(nudge).toHaveTextContent("You've got 490 questions waiting — let's get started!");
+    });
+
+    // DASH2-02-03: message_key must be resolved + interpolated via t(), never
+    // rendered as the raw i18n key.
+    it('renders interpolated motivation copy, never the raw key', async () => {
+      mockGetReadiness.mockResolvedValue(
+        makeRichReadiness({
+          motivation: {
+            message_key: 'cultureMotivation.newUser.1',
+            params: { questionsTotal: 490 },
+            delta_direction: 'new_user',
+            delta_percentage: 0,
+          },
+        })
+      );
+
+      render(<MockExamPage />);
+
+      const nudge = await screen.findByRole('note');
+      expect(nudge).toHaveTextContent('490');
+      expect(document.body.textContent).not.toContain('cultureMotivation.');
+    });
+
+    it('interpolates returning-user motivation params', async () => {
+      mockGetReadiness.mockResolvedValue(
+        makeRichReadiness({
+          motivation: {
+            message_key: 'cultureMotivation.improving.ready.1',
+            params: {
+              currentPercent: 62,
+              previousPercent: 55,
+              delta: 7,
+              questionsTotal: 490,
+              questionsLearned: 300,
+            },
+            delta_direction: 'improving',
+            delta_percentage: 7,
+          },
+        })
+      );
+
+      render(<MockExamPage />);
+
+      const nudge = await screen.findByRole('note');
+      expect(nudge).toHaveTextContent('62');
+      expect(nudge).toHaveTextContent('55');
+      expect(nudge).toHaveTextContent('300');
+      expect(nudge).toHaveTextContent('490');
+      expect(nudge.textContent).not.toContain('{{');
+    });
+
+    it('hides the nudge when the motivation key is unresolved', async () => {
+      // message_key has no entry in the i18n map, so t(key, { defaultValue: '' })
+      // resolves to '' — the nudge must not render at all (not even empty).
+      mockGetReadiness.mockResolvedValue(
+        makeRichReadiness({
+          motivation: {
+            message_key: 'cultureMotivation.unmapped.999',
+            params: {},
+            delta_direction: 'stagnant',
+            delta_percentage: 0,
+          },
+        })
+      );
+
+      render(<MockExamPage />);
+
+      // Wait for the page to settle on the readiness hero before asserting
+      // absence (avoids a false-negative from asserting during the loading
+      // skeleton, before the motivation block would have rendered at all).
+      await screen.findByLabelText('45% readiness');
+      expect(screen.queryByRole('note')).not.toBeInTheDocument();
+      expect(document.body.textContent).not.toContain('cultureMotivation.');
     });
 
     it('hides the motivation nudge when motivation is null', async () => {
