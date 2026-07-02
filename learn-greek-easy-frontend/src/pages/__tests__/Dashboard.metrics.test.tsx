@@ -9,9 +9,12 @@
  *    Selectors migrated from MetricCard (.card/.metric-value) to MetricStrip
  *    (.db-metric/.db-metric-v) as part of DASH2-01-04.
  *
- * PERF-15-05: both tiles now source from dashboardAPI.getSummary (mocked +
- * cache-seeded below) instead of analytics' wordStatus/today. The analytics
- * mock/fixture stays only because MetricStrip's all-time tile still reads it.
+ * 3. All-time tile (PERF-15-05 follow-up): now sources from
+ *    summary.all_time_study_time_seconds — the DTO-gap fix that let
+ *    Dashboard.tsx drop its own separate useAnalytics() mount entirely.
+ *
+ * PERF-15-05: all three tiles now source exclusively from dashboardAPI.getSummary
+ * (mocked + cache-seeded below); no `@/features/analytics` mock is needed.
  */
 
 import { act } from 'react';
@@ -21,6 +24,7 @@ import { screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+import { formatStudyTime } from '@/lib/timeFormatUtils';
 import { renderWithProviders, createTestQueryClient } from '@/lib/test-utils';
 
 import { Dashboard } from '../Dashboard';
@@ -50,11 +54,6 @@ vi.mock('@/stores/authStore', () => ({
 vi.mock('@/stores/dateRangeStore', () => ({
   useDateRangeStore: (selector: (s: { dateRange: string }) => unknown) =>
     selector({ dateRange: 'last7' }),
-}));
-
-const mockGetAnalytics = vi.fn();
-vi.mock('@/features/analytics', () => ({
-  getAnalytics: (...args: unknown[]) => mockGetAnalytics(...args),
 }));
 
 // PERF-15-05: metric-strip data now comes from dashboardAPI.getSummary.
@@ -95,22 +94,14 @@ vi.mock('@/stores/deckStore', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Analytics fixture — kept minimal; MetricStrip's all-time tile is the only
-// remaining reader (analyticsData.summary.totalTimeStudied). Due-today and
-// mastered now come exclusively from the dashboard-summary fixture below.
-// ---------------------------------------------------------------------------
-
-const analyticsFixture = {
-  summary: { totalTimeStudied: 60, totalCardsReviewed: 137 },
-};
-
-// ---------------------------------------------------------------------------
 // Dashboard-summary fixture:
-//   - today.cards_due = 5   (the Due-Today tile's sole source)
-//   - mastered = 12         (the Mastered tile's sole source)
+//   - today.cards_due = 5                    (the Due-Today tile's sole source)
+//   - mastered = 12                           (the Mastered tile's sole source)
+//   - all_time_study_time_seconds = 5400      (the All-Time tile's sole source)
 // ---------------------------------------------------------------------------
 
 const masteredValue = 12;
+const allTimeStudyTimeSeconds = 5400; // formatStudyTime(5400) === "1h 30m"
 
 const summaryFixture = {
   is_new_user: false,
@@ -128,6 +119,7 @@ const summaryFixture = {
   feed: [],
   whats_new_count: 0,
   queue_count: 0,
+  all_time_study_time_seconds: allTimeStudyTimeSeconds,
   word_of_day: null,
   recently_added: null,
   review_time_estimate_minutes: null,
@@ -154,11 +146,9 @@ describe('Dashboard metric tile selectors (DASH2-01-04 + PRACT2-7-03 AC-1)', () 
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetAnalytics.mockResolvedValue(analyticsFixture);
     mockGetSummary.mockResolvedValue(summaryFixture);
     queryClient = createTestQueryClient();
-    // Seed caches so the component renders in loaded state immediately
-    queryClient.setQueryData(['analytics', 'u1', 'last7'], analyticsFixture);
+    // Seed the cache so the component renders in loaded state immediately
     queryClient.setQueryData(['dashboard-summary'], summaryFixture);
   });
 
@@ -209,5 +199,14 @@ describe('Dashboard metric tile selectors (DASH2-01-04 + PRACT2-7-03 AC-1)', () 
     const valueEl = masteredTile!.querySelector('.db-metric-v');
     expect(valueEl).not.toBeNull();
     expect(valueEl!.textContent).toContain(String(masteredValue));
+  });
+
+  it('test_dashboard_alltime_uses_summary_study_time: all-time tile shows formatStudyTime(summary.all_time_study_time_seconds)', async () => {
+    await act(async () => {
+      renderDashboard(queryClient);
+    });
+
+    const valueEl = screen.getByTestId('db-metric-alltime-value');
+    expect(valueEl.textContent?.trim()).toBe(formatStudyTime(allTimeStudyTimeSeconds));
   });
 });

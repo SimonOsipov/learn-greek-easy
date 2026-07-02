@@ -202,6 +202,8 @@ export interface DashboardSummaryResponse {
   feed: DashboardFeedItem[];
   whats_new_count: number;
   queue_count: number;
+  /** Lifetime (vocab + culture + mock) study time, in seconds. */
+  all_time_study_time_seconds: number;
 
   // Unwired nullable slots — reserved, wired later.
   word_of_day: DashboardWordOfDay | null;

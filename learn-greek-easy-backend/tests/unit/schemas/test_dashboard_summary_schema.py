@@ -100,6 +100,7 @@ class TestDashboardSummaryResponse:
             feed=[],
             whats_new_count=0,
             queue_count=0,
+            all_time_study_time_seconds=0,
         )
         kwargs.update(overrides)
         return kwargs
@@ -114,7 +115,7 @@ class TestDashboardSummaryResponse:
 
     def test_core_fields_required_zero_args_rejected(self):
         """Contract: DashboardSummaryResponse() with no args must fail —
-        the 9 core fields are not optional. A mapper that forgets to
+        the 10 core fields are not optional. A mapper that forgets to
         populate one of them must blow up loudly, not ship a zero-value
         200 response."""
         with pytest.raises(ValidationError):
@@ -132,6 +133,7 @@ class TestDashboardSummaryResponse:
             "feed",
             "whats_new_count",
             "queue_count",
+            "all_time_study_time_seconds",
         ],
     )
     def test_core_fields_individually_required(self, missing_field):

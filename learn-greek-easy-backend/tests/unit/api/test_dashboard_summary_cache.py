@@ -67,6 +67,7 @@ def _make_valid_summary_response() -> DashboardSummaryResponse:
         feed=[],
         whats_new_count=0,
         queue_count=0,
+        all_time_study_time_seconds=0,
     )
 
 

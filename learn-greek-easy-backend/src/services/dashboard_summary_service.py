@@ -238,6 +238,7 @@ class DashboardSummaryService:
             feed=feed,
             whats_new_count=gathered["whats_new_count"],
             queue_count=gathered["queue_count"],
+            all_time_study_time_seconds=stats.overview.total_study_time_seconds,
         )
 
 

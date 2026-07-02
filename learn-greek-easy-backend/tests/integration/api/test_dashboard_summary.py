@@ -53,7 +53,7 @@ class TestDashboardSummaryEndpoint:
     @pytest.mark.asyncio
     async def test_summary_returns_full_dto(self, client: AsyncClient, auth_headers: dict) -> None:
         """Authed request -> 200 with the full DashboardSummaryResponse
-        contract: the 9 required fields plus the 5 nullable unwired slots
+        contract: the 10 required fields plus the 5 nullable unwired slots
         (AC-6), null for a brand-new user with nothing wiring them yet.
 
         RED reason: the STUB returns a hardcoded placeholder dict, not a
@@ -75,6 +75,7 @@ class TestDashboardSummaryEndpoint:
             "feed",
             "whats_new_count",
             "queue_count",
+            "all_time_study_time_seconds",
         ):
             assert field in data, f"Missing required field: {field}"
 

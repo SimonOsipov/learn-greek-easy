@@ -254,7 +254,7 @@ class DashboardSummaryResponse(BaseModel):
     """Composed payload for GET /dashboard/summary — replaces eight
     separate dashboard calls with one session/one Redis entry (TTL 60s).
 
-    The 9 "core" fields below are REQUIRED: the PERF-15-02 mapper must
+    The 10 "core" fields below are REQUIRED: the PERF-15-02 mapper must
     always supply real values for them, so a buggy build that omits one
     fails schema validation loudly instead of serializing a silently
     malformed 200 response. Only the 5 unwired slots (AC-6) default to
@@ -272,6 +272,14 @@ class DashboardSummaryResponse(BaseModel):
     feed: list[FeedItem]
     whats_new_count: int
     queue_count: int
+    # Lifetime (vocab + culture + mock) study time in seconds — mirrors
+    # OverviewStats.total_study_time_seconds (src/schemas/progress.py).
+    # DashboardSummaryService.build() already computes this via
+    # ProgressService._compute_dashboard_stats, so it's free (no extra
+    # queries); it closes the DTO gap that used to force the dashboard page
+    # to keep its own separate useAnalytics() call just for the all-time
+    # metric tile (PERF-15-05).
+    all_time_study_time_seconds: int
 
     # Unwired nullable slots (AC-6): part of the DTO contract, not
     # populated by any endpoint yet. Each defaults to None; a later story

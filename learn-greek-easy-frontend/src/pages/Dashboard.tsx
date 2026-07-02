@@ -16,7 +16,6 @@ import { WhatsNewStrip } from '@/components/dashboard/WhatsNewStrip';
 // dx.css must be imported by the route module (not the dx barrel — Vite doesn't
 // reliably inject the barrel's CSS chunk), or the cover tiles render unstyled.
 import '@/features/decks/dx/dx.css';
-import { useAnalytics } from '@/hooks/useAnalytics';
 import { useDashboardSummary } from '@/hooks/useDashboardSummary';
 import { useTourAutoTrigger } from '@/hooks/useTourAutoTrigger';
 import { reportAPIError } from '@/lib/errorReporting';
@@ -47,15 +46,6 @@ export const Dashboard: React.FC = () => {
   // Dashboard summary (PERF-15) — single-call source for greeting stats,
   // metric strip, week-heat, hero (resume/daily-goal ring) and deck data.
   const { data: summary, isLoading: summaryLoading, error: summaryError } = useDashboardSummary();
-
-  // Analytics — kept ONLY for MetricStrip's all-time study-time tile
-  // (analyticsData.summary.totalTimeStudied — a genuine DTO gap: it is NOT
-  // one of the 5 documented "unwired null" slots on DashboardSummaryResponse,
-  // it's simply absent) and for useTourAutoTrigger's readiness signal.
-  // PERF-15-06 says it removes this call from the dashboard entirely — that
-  // requires either extending the summary DTO with a lifetime-time-studied
-  // field first, or accepting the all-time tile stays on `useAnalytics`.
-  const { data: analyticsData, loading: analyticsLoading } = useAnalytics();
 
   // Deck data — deckStore is still warmed/read here for the resume/open-deck
   // navigation handlers below (culture vs vocabulary routing); rendering
@@ -153,10 +143,10 @@ export const Dashboard: React.FC = () => {
 
   // ── Derived values ─────────────────────────────────────────────────────────
 
-  // Summary must resolve before the page can render its final layout;
-  // analytics is also awaited since MetricStrip's all-time tile still reads
-  // it (see the `useAnalytics` comment above).
-  const isLoading = summaryLoading || analyticsLoading;
+  // Summary must resolve before the page can render its final layout — it's
+  // now the sole source for every metric tile, including MetricStrip's
+  // all-time study-time tile (PERF-15-05 follow-up).
+  const isLoading = summaryLoading;
   const userName = user?.name || user?.email?.split('@')[0] || 'Learner';
   const cardsDue = summary?.today?.cards_due ?? 0;
   const minutesToday = Math.round((summary?.today?.study_time_seconds ?? 0) / 60);
@@ -260,7 +250,7 @@ export const Dashboard: React.FC = () => {
             currentStreak={currentStreak}
             longestStreak={longestStreak}
             mastered={mastered}
-            allTimeLabel={formatStudyTime(analyticsData?.summary.totalTimeStudied ?? 0)}
+            allTimeLabel={formatStudyTime(summary?.all_time_study_time_seconds ?? 0)}
           />
         ) : (
           <div className="hairline rounded-lg border p-4 text-center text-muted-foreground">

@@ -55,11 +55,6 @@ vi.mock('@/stores/dateRangeStore', () => ({
     selector({ dateRange: 'last7' }),
 }));
 
-const mockGetAnalytics = vi.fn();
-vi.mock('@/features/analytics', () => ({
-  getAnalytics: (...args: unknown[]) => mockGetAnalytics(...args),
-}));
-
 // PERF-15-05: is_new_user + due-today now come from dashboardAPI.getSummary.
 const mockGetSummary = vi.fn();
 vi.mock('@/services/dashboardAPI', () => ({
@@ -127,15 +122,6 @@ vi.mock('@/stores/deckStore', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Analytics fixture — kept minimal; only MetricStrip's all-time tile
-// (analyticsData.summary.totalTimeStudied) still reads it.
-// ---------------------------------------------------------------------------
-
-const analyticsFixture = {
-  summary: { totalTimeStudied: 0, totalCardsReviewed: 0 },
-};
-
-// ---------------------------------------------------------------------------
 // Dashboard-summary fixtures — is_new_user is now server-authoritative.
 // ---------------------------------------------------------------------------
 
@@ -156,6 +142,7 @@ const newUserSummaryFixture = {
   feed: [],
   whats_new_count: 0,
   queue_count: 0,
+  all_time_study_time_seconds: 0,
   word_of_day: null,
   recently_added: null,
   review_time_estimate_minutes: null,
@@ -199,8 +186,6 @@ describe('Dashboard — new-user StarterView gating', () => {
 
   describe('all-zero signals (isNew === true)', () => {
     beforeEach(() => {
-      mockGetAnalytics.mockResolvedValue(analyticsFixture);
-      queryClient.setQueryData(['analytics', 'u1', 'last7'], analyticsFixture);
       mockGetSummary.mockResolvedValue(newUserSummaryFixture);
       queryClient.setQueryData(['dashboard-summary'], newUserSummaryFixture);
     });
@@ -253,8 +238,6 @@ describe('Dashboard — new-user StarterView gating', () => {
 
   describe('returning user (cardsDue > 0 → isNew === false)', () => {
     beforeEach(() => {
-      mockGetAnalytics.mockResolvedValue(analyticsFixture);
-      queryClient.setQueryData(['analytics', 'u1', 'last7'], analyticsFixture);
       mockGetSummary.mockResolvedValue(returningUserSummaryFixture);
       queryClient.setQueryData(['dashboard-summary'], returningUserSummaryFixture);
     });

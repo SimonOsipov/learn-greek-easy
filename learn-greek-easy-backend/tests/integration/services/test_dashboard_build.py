@@ -41,6 +41,7 @@ from src.db.models import (
     WordEntry,
 )
 from src.services.dashboard_summary_service import DashboardSummaryService
+from src.services.progress_service import ProgressService
 
 _TODAY_START = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
 
@@ -105,6 +106,15 @@ class TestDashboardSummaryBuildNewUser:
         # pick_resume_deck returns None (empty list -> no resume item).
         assert [item.type for item in result.feed] == ["word_of_day"]
         assert result.feed[0].id == "word-of-day"
+
+        # DTO-gap fix (PERF-15-05 follow-up): all_time_study_time_seconds is
+        # free off the same stats.overview the mapper already computed —
+        # parity with the old analytics-derived source (ProgressService's
+        # own public get_dashboard_stats()).
+        assert result.all_time_study_time_seconds == 0
+
+        oracle_stats = await ProgressService(db_session).get_dashboard_stats(test_user.id)
+        assert result.all_time_study_time_seconds == oracle_stats.overview.total_study_time_seconds
 
 
 @pytest.mark.integration
@@ -286,3 +296,12 @@ class TestDashboardSummaryBuildReturningUser:
         # ── non-critical sources gracefully empty (no news/situations/queue seeded)
         assert result.whats_new_count == 0
         assert result.queue_count == 0
+
+        # DTO-gap fix (PERF-15-05 follow-up): all_time_study_time_seconds
+        # sums the one seeded CardRecordReview.time_taken (=8; no culture/mock
+        # reviews seeded) — and must match the old analytics-derived oracle,
+        # ProgressService's own public get_dashboard_stats(), for the same user.
+        assert result.all_time_study_time_seconds == 8
+
+        oracle_stats = await ProgressService(db_session).get_dashboard_stats(test_user.id)
+        assert result.all_time_study_time_seconds == oracle_stats.overview.total_study_time_seconds

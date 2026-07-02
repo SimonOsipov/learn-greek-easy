@@ -58,12 +58,6 @@ vi.mock('@/stores/dateRangeStore', () => ({
     selector({ dateRange: 'last7' }),
 }));
 
-// Mock at the API-client level (AC #10) — not at the hook level
-const mockGetAnalytics = vi.fn();
-vi.mock('@/features/analytics', () => ({
-  getAnalytics: (...args: unknown[]) => mockGetAnalytics(...args),
-}));
-
 // PERF-15-05: dashboard-summary is the source for hero/feed deck rendering.
 const mockGetSummary = vi.fn();
 vi.mock('@/services/dashboardAPI', () => ({
@@ -112,27 +106,6 @@ vi.mock('@/services/exerciseAPI', () => ({
     getQueue: vi.fn().mockResolvedValue({ total_in_queue: 0, exercises: [] }),
   },
 }));
-
-// ---------------------------------------------------------------------------
-// Analytics fixture — matches shape expected by Dashboard widgets
-// ---------------------------------------------------------------------------
-
-const analyticsFixture = {
-  summary: { totalTimeStudied: 60, totalCardsReviewed: 10 },
-  overview: { totalReviews: 10, cardsStudied: 5, averageAccuracy: 0.8, totalStudyTime: 60 },
-  streak: { currentStreak: 3, longestStreak: 7, lastStudyDate: new Date().toISOString() },
-  wordStatus: { learning: 5, review: 10, mastered: 2, newCards: 0 },
-  today: {
-    cardsDue: 5,
-    studyTimeSeconds: 720,
-    dailyGoal: 20,
-    reviewsCompleted: 3,
-    goalProgressPercentage: 50,
-  },
-  progressData: [],
-  deckStats: [],
-  recentActivity: [],
-};
 
 // ---------------------------------------------------------------------------
 // Deck fixtures
@@ -191,8 +164,7 @@ const cultureDeck = makeDeck({
 // Dashboard-summary fixture (PERF-15-05) — deck slices mirror whatever
 // `mockDecks` (deckStore) is set to for the test, so a hero/feed CTA click
 // resolves against the SAME deck id/category the navigation handlers read
-// off deckStore. `today.cards_due` stays fixed at 5 (independent of decks),
-// matching the pre-PERF-15 analyticsFixture.today.cardsDue.
+// off deckStore. `today.cards_due` stays fixed at 5, independent of decks.
 // ---------------------------------------------------------------------------
 
 function makeDeckSlice(deck: ReturnType<typeof makeDeck>) {
@@ -237,6 +209,7 @@ function makeSummaryFromDecks(decks: ReturnType<typeof makeDeck>[]) {
     feed: [],
     whats_new_count: 0,
     queue_count: 0,
+    all_time_study_time_seconds: 60,
     word_of_day: null,
     recently_added: null,
     review_time_estimate_minutes: null,
@@ -263,9 +236,9 @@ vi.mock('@/stores/deckStore', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Helper: render Dashboard with a QueryClientProvider seeded with analytics
-// + dashboard-summary (the latter built from the CURRENT mockDecks, so it
-// must be seeded at render time — after a test has reassigned mockDecks).
+// Helper: render Dashboard with a QueryClientProvider seeded with
+// dashboard-summary (built from the CURRENT mockDecks, so it must be seeded
+// at render time — after a test has reassigned mockDecks).
 //
 // renderWithProviders already wraps with BrowserRouter + i18n etc.
 // We compose QueryClientProvider around Dashboard before passing to it,
@@ -292,10 +265,7 @@ describe('Dashboard navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockDecks = [vocabDeck, cultureDeck];
-    mockGetAnalytics.mockResolvedValue(analyticsFixture);
     queryClient = createTestQueryClient();
-    // Seed analytics cache so Dashboard renders in loaded state immediately (AC #9)
-    queryClient.setQueryData(['analytics', 'u1', 'last7'], analyticsFixture);
   });
 
   afterEach(() => {
