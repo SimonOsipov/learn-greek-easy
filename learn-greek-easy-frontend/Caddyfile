@@ -78,8 +78,8 @@ handle /version {
 handle /api/v1/* {
 	route {
 		# Reject dotfile / VCS probes inside the v1 namespace (e.g. /api/v1/.env,
-		# /api/v1/.git/config) before they reach the backend.
-		@v1dotfiles path */.env */.git/*
+		# /api/v1/.git, /api/v1/.git/config) before they reach the backend.
+		@v1dotfiles path */.env */.git */.git/*
 		respond @v1dotfiles 404
 
 		reverse_proxy {
@@ -267,19 +267,24 @@ handle @static {
 	file_server
 }
 
-# Reject source map requests (no prod sourcemaps; prevent accidental 200)
-@sourcemaps path *.map
-respond @sourcemaps 404
-
-# Reject dotfile / VCS probes site-wide (e.g. /.git/config, /some/.env).
+# Reject source map requests (no prod sourcemaps; prevent accidental 200).
 # NOTE: a bare top-level `respond @matcher` is evaluated AFTER handle blocks
 # in Caddy's directive order (verified via caddy:alpine — it does NOT beat the
-# SPA catch-all handle{} below), so this is wrapped in `handle` to join the
-# same specificity-sorted group as the other handle blocks above.
-# /api/v1/.env and /api/v1/.git/* are covered separately by the nested
+# SPA catch-all handle{} below), so a bare `respond @sourcemaps 404` here was
+# actually dead code (*.map requests fell through to the SPA fallback, a real
+# info-leak). Wrapped in `handle` to join the same specificity-sorted group
+# as the other handle blocks above, same fix as @dotfileProbes below.
+@sourcemaps path *.map
+handle @sourcemaps {
+	respond 404
+}
+
+# Reject dotfile / VCS probes site-wide (e.g. /.git, /.git/config, /some/.env).
+# Wrapped in `handle` for the same reason as @sourcemaps above.
+# /api/v1/.env and /api/v1/.git(/*) are covered separately by the nested
 # `route {}` inside handle /api/v1/* above (respond-before-proxy, in written
 # order) — this site-wide matcher and that one together fully close AC 5.
-@dotfileProbes path */.env */.git/*
+@dotfileProbes path */.env */.git */.git/*
 handle @dotfileProbes {
 	respond 404
 }
