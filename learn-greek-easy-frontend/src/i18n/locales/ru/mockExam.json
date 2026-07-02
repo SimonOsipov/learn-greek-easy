@@ -43,6 +43,8 @@
     "catCta": "Практиковать {{category}} — {{pct}}% готовности",
     "catNoAttempts": "Попыток пока нет",
     "catAccuracy": "Точность: {{pct}}%",
+    "catMastered": "{{mastered}} / {{total}} освоено",
+    "legend": "Освоено — какую часть всего банка вопросов вы закрепили. Точность — как часто вы отвечаете верно на уже пройденные вопросы.",
     "verdictNotReady": "Не готов",
     "verdictGettingThere": "Прогресс есть",
     "verdictReady": "Готов",

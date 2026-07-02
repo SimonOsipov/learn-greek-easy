@@ -43,6 +43,8 @@
     "catCta": "Practice {{category}} — {{pct}}% ready",
     "catNoAttempts": "No attempts yet",
     "catAccuracy": "Accuracy: {{pct}}%",
+    "catMastered": "{{mastered}} / {{total}} mastered",
+    "legend": "Mastered = how much of the whole question bank you've locked in. Accuracy = how often you're right on the ones you've tried.",
     "verdictNotReady": "Not Ready",
     "verdictGettingThere": "Getting There",
     "verdictReady": "Ready",

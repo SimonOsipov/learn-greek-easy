@@ -231,14 +231,24 @@ function CategoryPanel({ categories }: { categories: CategoryReadiness[] }) {
 
   return (
     <div className="dx-action">
-      <div className="dx-action-head">
-        <div className="dx-section-eyebrow">
-          <Kicker tone="violet">{t('readiness.catEyebrow', "Where you're weakest")}</Kicker>
-          <h2 className="dx-action-h">{t('readiness.catTitle', 'Progress by category')}</h2>
+      <div className="cx-cat-head">
+        <div className="dx-action-head">
+          <div className="dx-section-eyebrow">
+            <Kicker tone="violet">{t('readiness.catEyebrow', "Where you're weakest")}</Kicker>
+            <h2 className="dx-action-h">{t('readiness.catTitle', 'Progress by category')}</h2>
+          </div>
+          <span className="dx-action-pct">
+            {t('readiness.catMeta', 'red bars are below 30% · pass-mark 60%')}
+          </span>
         </div>
-        <span className="dx-action-pct">
-          {t('readiness.catMeta', 'red bars are below 30% · pass-mark 60%')}
-        </span>
+        {/* One-line legend: distinguishes the two numbers in each row so a low
+            readiness % next to a real mastered count no longer reads as a bug. */}
+        <p className="cx-cat-legend">
+          {t('readiness.legend', {
+            defaultValue:
+              "Mastered = how much of the whole question bank you've locked in. Accuracy = how often you're right on the ones you've tried.",
+          })}
+        </p>
       </div>
 
       <div className="cx-cat-list">
@@ -254,7 +264,19 @@ function CategoryPanel({ categories }: { categories: CategoryReadiness[] }) {
                 <span style={{ width: `${Math.max(cat.readiness_percentage, 1)}%` }} />
               </div>
               <div className="cx-cat-meta">
-                <span className="cx-cat-pct">{Math.round(cat.readiness_percentage)}%</span>
+                {/* PRIMARY: the mastered count leads — it's the row's most
+                    prominent figure, so a low readiness % reads as "N of many"
+                    rather than a broken 1%. */}
+                <span className="cx-cat-mastered" data-testid={`cat-mastered-${cat.category}`}>
+                  {t('readiness.catMastered', {
+                    mastered: cat.questions_mastered,
+                    total: cat.questions_total,
+                    defaultValue: '{{mastered}} / {{total}} mastered',
+                  })}
+                </span>
+                {/* SECONDARY: readiness % kept but demoted to the muted
+                    accuracy style (untoned so it stays quiet vs. the count). */}
+                <span className="cx-cat-accuracy">{Math.round(cat.readiness_percentage)}%</span>
                 <span
                   className="cx-cat-accuracy"
                   data-tone={cat.accuracy_percentage !== null ? tone : undefined}
