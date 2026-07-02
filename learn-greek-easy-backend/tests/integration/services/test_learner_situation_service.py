@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.db.models import ExerciseType
 from src.services.learner_situation_service import LearnerSituationService
 from tests.factories.exercise import ExerciseFactory, ExerciseRecordFactory
 from tests.factories.situation import SituationFactory
@@ -41,10 +42,18 @@ class TestLearnerSituationServiceListForLearner:
         description = await SituationDescriptionFactory.create(
             session=db_session, situation_id=ready1.id
         )
+        # Distinct exercise_type per row -- uq_desc_exercise_type_level_modality
+        # is unique on (description_id, exercise_type, audio_level, modality);
+        # the factory defaults audio_level/modality, so exercise_type must vary
+        # within the same description (mirrors test_learner_situations.py's
+        # _create_situation_with_exercises helper).
+        _exercise_types = [ExerciseType.FILL_GAPS, ExerciseType.SELECT_HEARD]
         exercises = []
-        for _ in range(2):
+        for exercise_type in _exercise_types:
             de = await DescriptionExerciseFactory.create(
-                session=db_session, description_id=description.id
+                session=db_session,
+                description_id=description.id,
+                exercise_type=exercise_type,
             )
             ex = await ExerciseFactory.create(session=db_session, description_exercise_id=de.id)
             exercises.append(ex)
