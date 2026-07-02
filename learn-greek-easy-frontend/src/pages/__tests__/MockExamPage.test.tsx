@@ -121,9 +121,10 @@ vi.mock('react-i18next', async () => {
               'readiness.catCta': `Practice ${opts?.category} — ${opts?.pct}% ready`,
               'readiness.catNoAttempts': 'No attempts yet',
               'readiness.catAccuracy': `Accuracy: ${opts?.pct}%`,
+              'readiness.catReadiness': `Readiness: ${opts?.pct}%`,
               'readiness.catMastered': `${opts?.mastered} / ${opts?.total} mastered`,
               'readiness.legend':
-                "Mastered = how much of the whole question bank you've locked in. Accuracy = how often you're right on the ones you've tried.",
+                "Readiness = how far through the whole question bank you are. Mastered = how many you've fully locked in. Accuracy = how often you're right on the ones you've tried.",
               'readiness.verdictNotReady': 'Not Ready',
               'readiness.verdictGettingThere': 'Getting There',
               'readiness.verdictReady': 'Ready',
@@ -686,9 +687,10 @@ describe('MockExamPage', () => {
       // DASH2-02-05: each row leads with a "X / Y mastered" figure sourced
       // from questions_mastered / questions_total (history = 25 / 110).
       expect(screen.getByTestId('cat-mastered-history')).toHaveTextContent('25 / 110 mastered');
-      // The one-line legend explaining mastered vs. accuracy renders once.
+      // The one-line legend distinguishing the three row figures (Readiness +
+      // Mastered = coverage, Accuracy = correctness) renders once.
       expect(
-        screen.getByText(/Mastered = how much of the whole question bank/i)
+        screen.getByText(/Readiness = how far through the whole question bank/i)
       ).toBeInTheDocument();
     });
 

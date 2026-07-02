@@ -241,12 +241,14 @@ function CategoryPanel({ categories }: { categories: CategoryReadiness[] }) {
             {t('readiness.catMeta', 'red bars are below 30% · pass-mark 60%')}
           </span>
         </div>
-        {/* One-line legend: distinguishes the two numbers in each row so a low
-            readiness % next to a real mastered count no longer reads as a bug. */}
+        {/* One-line legend: distinguishes the three figures in each row —
+            Readiness + Mastered are the coverage side, Accuracy is the
+            correctness side — so a low readiness % next to a real mastered
+            count and an Accuracy % no longer reads as a bug. */}
         <p className="cx-cat-legend">
           {t('readiness.legend', {
             defaultValue:
-              "Mastered = how much of the whole question bank you've locked in. Accuracy = how often you're right on the ones you've tried.",
+              "Readiness = how far through the whole question bank you are. Mastered = how many you've fully locked in. Accuracy = how often you're right on the ones you've tried.",
           })}
         </p>
       </div>
@@ -275,8 +277,16 @@ function CategoryPanel({ categories }: { categories: CategoryReadiness[] }) {
                   })}
                 </span>
                 {/* SECONDARY: readiness % kept but demoted to the muted
-                    accuracy style (untoned so it stays quiet vs. the count). */}
-                <span className="cx-cat-accuracy">{Math.round(cat.readiness_percentage)}%</span>
+                    accuracy style (untoned so it stays quiet vs. the count) and
+                    now explicitly labeled — an unlabeled % sitting next to
+                    "Accuracy: X%" reintroduced the readiness-vs-accuracy
+                    ambiguity this task exists to fix (CodeRabbit). */}
+                <span className="cx-cat-accuracy">
+                  {t('readiness.catReadiness', {
+                    pct: Math.round(cat.readiness_percentage),
+                    defaultValue: 'Readiness: {{pct}}%',
+                  })}
+                </span>
                 <span
                   className="cx-cat-accuracy"
                   data-tone={cat.accuracy_percentage !== null ? tone : undefined}
