@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.services.situation_comprehension_service import SituationComprehensionService
 from tests.factories.situation import SituationFactory
+from tests.helpers.time import freeze_time
 
 
 @pytest.mark.integration
@@ -49,3 +50,33 @@ class TestCountWhatsNew:
         # Sanity check on the seeding: exactly the 2 recent READY situations count.
         assert overview.whats_new_count == 2
         assert actual == overview.whats_new_count
+
+    @pytest.mark.asyncio
+    async def test_count_whats_new_boundary_is_inclusive(
+        self, db_session: AsyncSession, test_user
+    ) -> None:
+        """QA Mode B adversarial: the cutoff filter is ``created_at >= cutoff``
+        (inclusive), so a situation created at exactly the 7-day mark counts —
+        it must not be excluded by an off-by-one/strict-inequality regression.
+
+        Time is frozen so the cutoff computed here and the cutoff the service
+        computes internally (``datetime.now(tz=timezone.utc) - timedelta(days=7)``)
+        are byte-identical — a wall-clock-derived cutoff would race the service's
+        own ``now()`` call and make this assertion flaky.
+        """
+        frozen_now = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+        with freeze_time(frozen_now):
+            cutoff = frozen_now - timedelta(days=7)
+
+            # Exactly at the cutoff — must be INCLUDED (>=, not >).
+            await SituationFactory.create(session=db_session, ready=True, created_at=cutoff)
+            # One second older than the cutoff — must be EXCLUDED.
+            await SituationFactory.create(
+                session=db_session, ready=True, created_at=cutoff - timedelta(seconds=1)
+            )
+            await db_session.flush()
+
+            service = SituationComprehensionService(db_session)
+            actual = await service.count_whats_new()
+
+        assert actual == 1

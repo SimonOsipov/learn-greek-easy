@@ -202,6 +202,54 @@ class TestLearnerSituationListEndpoint:
         assert data["total"] == 1
 
     @pytest.mark.asyncio
+    async def test_search_matches_scenario_el(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+    ) -> None:
+        """QA Mode B adversarial: the search OR spans all 3 scenario langs, not
+        just scenario_en (AC-7 extraction must preserve the 3-way ilike OR)."""
+        await SituationFactory.create(
+            session=db_session, ready=True, scenario_el="Στο καφέ", scenario_en="Unrelated"
+        )
+        await SituationFactory.create(
+            session=db_session,
+            ready=True,
+            scenario_el="Στο λεωφορείο",
+            scenario_en="Also unrelated",
+        )
+        await db_session.flush()
+
+        response = await client.get(LIST_URL, params={"search": "καφέ"}, headers=auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["scenario_el"] == "Στο καφέ"
+
+    @pytest.mark.asyncio
+    async def test_search_matches_scenario_ru(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+    ) -> None:
+        """QA Mode B adversarial: search also matches scenario_ru."""
+        await SituationFactory.create(
+            session=db_session, ready=True, scenario_ru="В кафе", scenario_en="Unrelated"
+        )
+        await SituationFactory.create(
+            session=db_session, ready=True, scenario_ru="В автобусе", scenario_en="Also unrelated"
+        )
+        await db_session.flush()
+
+        response = await client.get(LIST_URL, params={"search": "кафе"}, headers=auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["scenario_ru"] == "В кафе"
+
+    @pytest.mark.asyncio
     async def test_has_audio_filter_true(
         self,
         client: AsyncClient,
@@ -228,6 +276,43 @@ class TestLearnerSituationListEndpoint:
         assert data["total"] == 1
         assert data["items"][0]["scenario_en"] == "With audio"
         assert data["items"][0]["has_audio"] is True
+
+    @pytest.mark.asyncio
+    async def test_has_audio_filter_false(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+    ) -> None:
+        """QA Mode B adversarial: has_audio=False must partition the OTHER way —
+        both "no description at all" and "description with no audio key" count,
+        per the extracted audio_filter's ``~has() OR audio_s3_key IS NULL`` branch.
+        """
+        # Situation with audio — excluded from has_audio=False.
+        await _create_situation_with_exercises(
+            db_session,
+            num_exercises=0,
+            scenario_en="With audio",
+            audio_s3_key="audio/test.mp3",
+        )
+        # Situation with a description but no audio key.
+        await _create_situation_with_exercises(
+            db_session,
+            num_exercises=0,
+            scenario_en="Without audio",
+        )
+        # Situation with no description at all (~Situation.description.has()).
+        await SituationFactory.create(session=db_session, ready=True, scenario_en="No description")
+        await db_session.flush()
+
+        response = await client.get(LIST_URL, params={"has_audio": "false"}, headers=auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 2
+        returned_en = {item["scenario_en"] for item in data["items"]}
+        assert returned_en == {"Without audio", "No description"}
+        for item in data["items"]:
+            assert item["has_audio"] is False
 
     @pytest.mark.asyncio
     async def test_exercise_total_count(

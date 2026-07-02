@@ -55,3 +55,22 @@ class TestDashboardSummaryGatherQueueCount:
         result = await DashboardSummaryService(db_session).gather(test_user.id)
 
         assert result["queue_count"] == expected
+
+
+@pytest.mark.integration
+class TestDashboardSummaryGatherGracefulDegrade:
+    """QA Mode B adversarial: gather() must degrade gracefully with no data
+    seeded at all — a brand-new account with no news, no READY situations,
+    and no exercises should get an empty-but-valid gather() result, not a
+    crash (e.g. an unguarded ``items[0]`` on an empty situations page)."""
+
+    @pytest.mark.asyncio
+    async def test_gather_with_no_news_no_situations_no_queue(
+        self, db_session: AsyncSession, test_user
+    ) -> None:
+        result = await DashboardSummaryService(db_session).gather(test_user.id)
+
+        assert result["news"] == []
+        assert result["situation"] is None
+        assert result["whats_new_count"] == 0
+        assert result["queue_count"] == 0

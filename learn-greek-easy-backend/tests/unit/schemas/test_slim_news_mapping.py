@@ -92,6 +92,56 @@ class TestSlimNewsFromFull:
         assert slim.image_url == full.image_url
         assert slim.image_variants == full.image_variants
 
+    def test_slim_news_mapping_with_none_optional_fields(self) -> None:
+        """QA Mode B adversarial: optional fields as None must not crash the
+        mapper and must be carried through as None (not coerced to a default).
+
+        audio_duration_seconds/image_url/image_variants are the only optional
+        fields SlimNews declares (src/schemas/dashboard.py) — this is the
+        realistic "no audio yet, no derivatives yet" news item shape.
+        """
+        linked = LinkedSituationSummary(
+            id=uuid4(),
+            title_en="English title",
+            title_el="Ελληνικός τίτλος",
+            status="ready",
+            levels=["B1"],
+            country="cyprus",
+            role_count=0,
+            role_names=[],
+            turn_count=0,
+            exercise_count=0,
+            audio_seconds=0.0,
+        )
+        now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        full = NewsItemResponse(
+            id=uuid4(),
+            situation_id=uuid4(),
+            title_el="Τίτλος",
+            title_en="Title",
+            title_ru="Заголовок",
+            description_el="Πλήρης περιγραφή του άρθρου.",
+            publication_date=date(2026, 1, 1),
+            original_article_url="https://example.com/article",
+            country="cyprus",
+            image_url=None,
+            audio_duration_seconds=None,
+            status=NewsItemStatus.PUBLISHED,
+            image_variants=None,
+            linked_situation=linked,
+            created_at=now,
+            updated_at=now,
+        )
+
+        slim = SlimNews.from_full(full)
+
+        assert slim.audio_duration_seconds is None
+        assert slim.image_url is None
+        assert slim.image_variants is None
+        # Required fields still carried correctly alongside the None optionals.
+        assert slim.id == full.id
+        assert slim.title_el == full.title_el
+
     def test_slim_news_has_no_heavy_fields(self) -> None:
         """Structural guard: SlimNews must never grow the heavy reader-only
         fields carried by the full NewsItemResponse DTO.
