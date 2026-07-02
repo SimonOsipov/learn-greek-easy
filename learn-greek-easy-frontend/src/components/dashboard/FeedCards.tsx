@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { COUNTRY_CONFIG } from '@/components/news';
 import { situationToCoverProps } from '@/components/situations/situationToCoverProps';
-import { UnwiredDot } from '@/features/decks/dx';
+import { DxCover, UnwiredDot } from '@/features/decks/dx';
 import { tDynamic } from '@/i18n/tDynamic';
 import { track } from '@/lib/analytics';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
@@ -73,9 +73,11 @@ function FeedHeroResume({
     progress && progress.cardsTotal > 0
       ? Math.round(((progress.cardsLearning + progress.cardsMastered) / progress.cardsTotal) * 100)
       : 0;
-  // Real cover photo for the front tile (falls back to the gradient tile when
-  // the deck has no cover image). Best-fit derivative for the ~200px tile.
-  const coverSrc = pickBestSrc(deck.coverImageVariants, 480, deck.coverImageUrl);
+  // Fanned cover stack: front = resume deck, behind = up to 2 sibling decks.
+  // Rendered via the shared DxCover primitive (same as the deck-detail hero) so
+  // every tile paints its real cover photo with a gradient + 404→original fallback.
+  const siblings = item.siblings;
+  const showSiblings = siblings.length >= 2;
 
   return (
     <article className="db-card is-resume span-hero" data-tone={item.tone}>
@@ -113,40 +115,47 @@ function FeedHeroResume({
             </button>
           </div>
         </div>
-        {/* Deck-cover stack — decorative illustration from CD */}
+        {/* Deck-cover stack — fanned covers via the shared DxCover primitive.
+            Front tile = resume deck; the two tiles behind = sibling decks, each
+            painting its own cover photo (gradient fallback when none). */}
         <div className="db-resume-r">
-          <div className="db-cover db-cover-1">
-            <span className="db-cover-tag">
+          {showSiblings && (
+            <>
+              <DxCover deck={siblings[0]} variant="stack-1" className="dx-cover dx-cover-1">
+                <span className="dx-cover-tag">
+                  {siblings[0].level} · {siblings[0].category}
+                </span>
+                <div className="dx-cover-title">
+                  {getLocalizedDeckName(siblings[0], i18n.language)}
+                </div>
+              </DxCover>
+              <DxCover deck={siblings[1]} variant="stack-2" className="dx-cover dx-cover-2">
+                <span className="dx-cover-tag">
+                  {siblings[1].level} · {siblings[1].category}
+                </span>
+                <div className="dx-cover-title">
+                  {getLocalizedDeckName(siblings[1], i18n.language)}
+                </div>
+              </DxCover>
+            </>
+          )}
+          <DxCover deck={deck} variant="stack-front" className="dx-cover dx-cover-3">
+            <span className="dx-cover-tag">
               {deck.level} · {deck.category}
             </span>
-            <div className="db-cover-title">{name}</div>
-          </div>
-          <div className="db-cover db-cover-2">
-            <span className="db-cover-tag">
-              {deck.level} · {deck.category}
-            </span>
-            <div className="db-cover-title">{name}</div>
-          </div>
-          <div
-            className={coverSrc ? 'db-cover db-cover-3 has-cover' : 'db-cover db-cover-3'}
-            style={coverSrc ? { backgroundImage: `url("${coverSrc}")` } : undefined}
-          >
-            <span className="db-cover-tag">
-              {deck.level} · {deck.category}
-            </span>
-            <div className="db-cover-title">{name}</div>
+            <div className="dx-cover-title">{name}</div>
             {deck.titleGreek && (
-              <div className="db-cover-el" lang="el">
+              <div className="dx-cover-el" lang="el">
                 {deck.titleGreek}
               </div>
             )}
-            <div className="db-cover-foot">
-              <span className="db-cover-pct">{pct}%</span>
-              <span className="db-cover-bar">
+            <div className="dx-cover-foot">
+              <span className="dx-cover-pct">{pct}%</span>
+              <span className="dx-cover-bar">
                 <span style={{ width: `${pct}%` }} />
               </span>
             </div>
-          </div>
+          </DxCover>
         </div>
       </div>
     </article>

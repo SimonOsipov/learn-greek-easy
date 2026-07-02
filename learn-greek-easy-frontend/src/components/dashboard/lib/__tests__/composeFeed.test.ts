@@ -174,6 +174,12 @@ describe('composeFeed', () => {
     const resumeCard = resumeItems[0] as Extract<FeedItem, { type: 'resume' }>;
     expect(resumeCard.deck.id).toBe('A');
 
+    // Sibling cover stack: up to 2 other decks, never the resume deck itself
+    expect(resumeCard.siblings).toHaveLength(2);
+    const siblingIds = resumeCard.siblings.map((d) => d.id);
+    expect(siblingIds).not.toContain('A');
+    siblingIds.forEach((id) => expect(['B', 'C']).toContain(id));
+
     // deckA must NOT appear as a deck item
     const deckIds = deckItems.map((i) => (i as Extract<FeedItem, { type: 'deck' }>).deck.id);
     expect(deckIds).not.toContain('A');
@@ -305,7 +311,7 @@ describe('FEED_FILTERS', () => {
 // Pre-built item array (10 items matching §6 spec) for pure filter/count tests.
 // Constructed directly as literals so these tests don't depend on composeFeed.
 const ten: FeedItem[] = [
-  { id: 'resume-A', type: 'resume', span: 'hero', tone: 'primary', deck: deckA },
+  { id: 'resume-A', type: 'resume', span: 'hero', tone: 'primary', deck: deckA, siblings: [] },
   { id: 'review', type: 'review', span: 'side', tone: 'blue', cardsDue: 3, dueDecks: [deckA] },
   { id: 'situation-S1', type: 'situation', span: 'compact', tone: 'cyan', situation: sit1 },
   { id: 'word-of-day', type: 'wordOfDay', span: 'compact', tone: 'amber' },

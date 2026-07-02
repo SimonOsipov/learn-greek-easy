@@ -29,7 +29,7 @@ export type FeedTone = 'primary' | 'violet' | 'cyan' | 'amber' | 'green' | 'blue
  * cards localize via useTranslation + getLocalizedDeckName (no i18n in this module).
  */
 export type FeedItem =
-  | { id: string; type: 'resume'; span: 'hero'; tone: 'primary'; deck: Deck }
+  | { id: string; type: 'resume'; span: 'hero'; tone: 'primary'; deck: Deck; siblings: Deck[] }
   | { id: string; type: 'review'; span: 'side'; tone: 'blue'; cardsDue: number; dueDecks: Deck[] }
   | {
       id: string;
@@ -126,12 +126,16 @@ export function composeFeed(s: FeedSources): FeedItem[] {
   // 1. resume — most-recently-studied / first-with-due / first deck
   const resumeDeck = pickResumeDeck(s.decks);
   if (resumeDeck) {
+    // Fanned cover stack (mirrors the deck-detail DxResumeHero): up to 2 other
+    // decks rendered behind the resume deck, each showing its own cover.
+    const siblings = s.decks.filter((d) => d.id !== resumeDeck.id).slice(0, 2);
     items.push({
       id: `resume-${resumeDeck.id}`,
       type: 'resume',
       span: 'hero',
       tone: 'primary',
       deck: resumeDeck,
+      siblings,
     });
   }
 
