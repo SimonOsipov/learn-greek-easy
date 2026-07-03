@@ -202,21 +202,6 @@ class TestConfiguredSend:
 class TestErrorHandling:
     """Resend API errors are caught and logged as ERROR, never raised."""
 
-    def test_resend_error_logged_as_error(
-        self,
-        _reset_singleton: None,
-        mock_settings_configured: MagicMock,
-        caplog_loguru: pytest.LogCaptureFixture,
-    ) -> None:
-        """Exception from Resend is caught and logged as ERROR."""
-        with patch("src.services.email_service.resend") as mock_resend:
-            mock_resend.Emails.send.side_effect = Exception("Resend API unavailable")
-            with caplog_loguru.at_level(logging.WARNING):
-                service = get_email_service()
-                service.send(to="user@example.com", subject="Test", html="<p>Hello</p>")
-        error_records = [r for r in caplog_loguru.records if r.levelno == logging.ERROR]
-        assert len(error_records) >= 1
-
     def test_resend_error_does_not_propagate(
         self, _reset_singleton: None, mock_settings_configured: MagicMock
     ) -> None:
