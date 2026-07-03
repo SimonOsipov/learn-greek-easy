@@ -132,6 +132,36 @@ describe('exercisePracticeStore', () => {
   });
 
   // ============================================
+  // Test 1b (PERF-17-05 QA adversarial): practice-store getQueue call must
+  // NOT send `summary` — this path stays on the full (non-slim) payload.
+  // buildQueryString (api.ts) serializes `false` -> `summary=false`, so the
+  // key must be absent entirely, not merely falsy. Regression guard: if a
+  // future change threads `summary` into exercisePracticeStore's call, the
+  // session-start payload would silently go slim and break in-session
+  // per-item rendering (items/word_timestamps/description_* nulled).
+  // ============================================
+
+  it('startSession calls exerciseAPI.getQueue WITHOUT a summary param (full-path guard)', async () => {
+    vi.mocked(exerciseAPI.getQueue).mockResolvedValue(mockQueueResponse);
+
+    await useExercisePracticeStore.getState().startSession();
+
+    expect(exerciseAPI.getQueue).toHaveBeenCalledWith({ modality: undefined });
+    const callArgs = vi.mocked(exerciseAPI.getQueue).mock.calls[0][0];
+    expect(callArgs).not.toHaveProperty('summary');
+  });
+
+  it('startSession(modality) calls exerciseAPI.getQueue WITHOUT a summary param', async () => {
+    vi.mocked(exerciseAPI.getQueue).mockResolvedValue(mockQueueResponse);
+
+    await useExercisePracticeStore.getState().startSession('listening');
+
+    expect(exerciseAPI.getQueue).toHaveBeenCalledWith({ modality: 'listening' });
+    const callArgs = vi.mocked(exerciseAPI.getQueue).mock.calls[0][0];
+    expect(callArgs).not.toHaveProperty('summary');
+  });
+
+  // ============================================
   // Test 2: submitAnswer records correct answer
   // ============================================
 

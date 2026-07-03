@@ -378,12 +378,13 @@ describe('completion banner (PRACT2-12-06)', () => {
   });
 });
 
-// ─── PERF-17-05: summary mode + unified queue total (RED specs) ────────────
+// ─── PERF-17-05: summary mode + unified queue total ────────────────────────
 //
-// Stage 2.5 (Mode A) — authored BEFORE implementation. Current code
-// (ExercisePreSessionPage.tsx as of this commit):
-//   - calls exerciseAPI.getQueue({}) (line 182)              → T05-1 is RED
-//   - gate reads data.total_due + data.total_new (line 187)  → T05-2/T05-4 RED
+// Authored RED in Stage 2.5 (Mode A) before implementation; now GREEN against
+// the implemented hub (ExercisePreSessionPage.tsx): getQueue({ summary: true })
+// at :182, gate reads data.total_in_queue at :189. QA (Mode B) verified these
+// are meaningful (not vacuous) and added the complement-direction adversarial
+// case below (early-practice-only queue) plus a practice-store no-summary guard.
 // D10/F4: total_in_queue is the canonical count (equals the dashboard's
 // queue_count for the same user); it can be LOWER than total_due+total_new
 // when a picture-match item is dropped for an insufficient distractor pool,
@@ -448,7 +449,6 @@ describe('PERF-17-05: summary mode + total_in_queue gate', () => {
 
     renderPage();
 
-    // RED today: current code calls getQueue({}) (ExercisePreSessionPage.tsx:182)
     await waitFor(() => {
       expect(mockGetQueue).toHaveBeenCalledWith({ summary: true });
     });
@@ -523,6 +523,31 @@ describe('PERF-17-05: summary mode + total_in_queue gate', () => {
         makeSlimItem({ exercise_id: 'ex-2' }),
         makeSlimItem({ exercise_id: 'ex-3' }),
         makeSlimItem({ exercise_id: 'ex-4' }),
+      ],
+    });
+
+    renderPage();
+
+    await waitForQueueLoaded(/* expectEmpty */ false);
+    expect(screen.getByTestId('start-daily-mix-btn')).not.toBeDisabled();
+  });
+
+  // ── QA adversarial: complement of T05-4 — early-practice-only queue ─────
+  it('QA: gate is ENABLED for an early-practice-only queue where total_due + total_new === 0 but total_in_queue > 0', async () => {
+    // The OTHER direction of the D10 divergence (§8/F4): total_due=0,
+    // total_new=0 (so the OLD sum-based gate would wrongly read 0 and
+    // disable), but total_early_practice=2 folds into total_in_queue=2.
+    // The new gate must read total_in_queue and ENABLE — proving D10 isn't
+    // just "more conservative" but genuinely reads a different, correct
+    // signal in both directions.
+    mockGetQueue.mockResolvedValue({
+      total_due: 0,
+      total_new: 0,
+      total_early_practice: 2,
+      total_in_queue: 2,
+      exercises: [
+        makeSlimItem({ exercise_id: 'ex-early-1', is_early_practice: true, is_new: false }),
+        makeSlimItem({ exercise_id: 'ex-early-2', is_early_practice: true, is_new: false }),
       ],
     });
 
