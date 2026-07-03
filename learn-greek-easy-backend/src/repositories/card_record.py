@@ -142,6 +142,34 @@ class CardRecordRepository(BaseRepository[CardRecord]):
         result = await self.db.execute(query)
         return result.scalar_one()
 
+    async def count_active_by_decks(self, deck_ids: list[UUID]) -> dict[UUID, int]:
+        """Count active card records for multiple decks in one query.
+
+        Batched equivalent of ``count_by_deck(deck_id, is_active=True)`` used by
+        the ``/progress/decks`` list path (PERF-18-01) to avoid a per-deck N+1
+        loop. Decks with no active card records are absent from the returned
+        dict — callers treat a missing deck_id as ``0``.
+
+        Args:
+            deck_ids: List of deck UUIDs to count active card records for.
+
+        Returns:
+            Dict mapping deck_id to its active CardRecord count (missing ⇒ 0).
+        """
+        if not deck_ids:
+            return {}
+
+        query = (
+            select(CardRecord.deck_id, func.count().label("count"))
+            .where(
+                CardRecord.deck_id.in_(deck_ids),
+                CardRecord.is_active.is_(True),
+            )
+            .group_by(CardRecord.deck_id)
+        )
+        result = await self.db.execute(query)
+        return {row[0]: row[1] for row in result.all()}
+
     async def bulk_upsert(
         self,
         card_records_data: list[dict],
