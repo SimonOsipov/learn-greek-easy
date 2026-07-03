@@ -138,9 +138,24 @@ async def due_question_stats(
 
 @pytest.fixture
 def mock_s3_service():
-    """Create a mock S3 service."""
+    """Create a mock S3 service.
+
+    `generate_presigned_urls` (the PERF-21-02 batch entry point that
+    `get_question_queue` now dispatches via `asyncio.to_thread`) returns a REAL
+    dict keyed by object key, mirroring `S3Service.generate_presigned_urls`
+    (skip empty keys, dedupe by key). Without this, the auto-mock would return a
+    bare `MagicMock`, so `url_map.get(key)` would feed a `MagicMock` into
+    `CultureQuestionQueueItem(image_url=...)` and raise pydantic ValidationError.
+    Every present key resolves to the same constant URL as the singular
+    `generate_presigned_url`, so the existing queue tests keep asserting
+    `image_url == "https://s3.example.com/presigned-url"`; a key never collected
+    (e.g. a null image_key) is simply absent, so `url_map.get(...)` -> None.
+    """
     mock = MagicMock()
     mock.generate_presigned_url.return_value = "https://s3.example.com/presigned-url"
+    mock.generate_presigned_urls.side_effect = lambda pairs: {
+        key: "https://s3.example.com/presigned-url" for key, _expiry in pairs if key
+    }
     return mock
 
 
@@ -876,7 +891,7 @@ class TestBuildQueueItem:
         question = culture_questions[0]
         stats = due_question_stats[0]
 
-        result = service._build_queue_item(question, stats)
+        result = service._build_queue_item(question, stats, url_map={})
 
         assert result.is_new is False
         assert result.status == stats.status.value
@@ -893,48 +908,62 @@ class TestBuildQueueItem:
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
         question = culture_questions[0]
 
-        result = service._build_queue_item(question, stats=None)
+        result = service._build_queue_item(question, stats=None, url_map={})
 
         assert result.is_new is True
         assert result.status == CardStatus.NEW.value
         assert result.due_date is None
 
     @pytest.mark.asyncio
-    async def test_generates_presigned_url_for_image(
+    async def test_image_url_from_url_map(
         self,
         db_session: AsyncSession,
         culture_questions: list[CultureQuestion],
         mock_s3_service,
     ):
-        """Should generate presigned URL when image_key exists."""
+        """image_url should be resolved from the batch-signed url_map for image_key.
+
+        PERF-21-02 moved presigning out of `_build_queue_item` and into the batch
+        step (`get_question_queue` -> `generate_presigned_urls`); the builder now
+        distributes URLs from the supplied `url_map`. This asserts the map value
+        lands on `image_url` (distribution correctness) rather than that the
+        singular `generate_presigned_url` was called -- it no longer is, by design
+        (that batch wiring is covered by `TestQueueBatchPresigning`).
+        """
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
         # Find a question with image_key (every 3rd in fixture, index 0, 3, 6, 9)
         question = culture_questions[0]  # Has image_key
+        assert question.image_key  # fixture invariant: index 0 has an image_key
 
-        result = service._build_queue_item(question, stats=None)
+        url_map = {question.image_key: "https://s3.example.com/presigned-url"}
+        result = service._build_queue_item(question, stats=None, url_map=url_map)
 
-        if question.image_key:
-            assert result.image_url == "https://s3.example.com/presigned-url"
-            mock_s3_service.generate_presigned_url.assert_called_with(
-                question.image_key, expiry_seconds=2592000
-            )
+        assert result.image_url == "https://s3.example.com/presigned-url"
 
     @pytest.mark.asyncio
-    async def test_generates_presigned_url_for_audio(
+    async def test_audio_url_from_url_map(
         self,
         db_session: AsyncSession,
         culture_questions: list[CultureQuestion],
         mock_s3_service,
     ):
-        """Should generate presigned URL when audio_s3_key exists."""
+        """audio_url should be resolved from the batch-signed url_map for audio_s3_key.
+
+        PERF-21-02 moved presigning into the batch step; `_build_queue_item` now
+        reads the audio URL from `url_map` instead of calling the singular
+        `generate_presigned_url`.
+        """
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
         question = culture_questions[0]
         question.audio_s3_key = "culture/audio/test.mp3"
 
-        result = service._build_queue_item(question, stats=None)
+        url_map = {
+            question.image_key: "https://s3.example.com/presigned-url",
+            question.audio_s3_key: "https://s3.example.com/presigned-url",
+        }
+        result = service._build_queue_item(question, stats=None, url_map=url_map)
 
         assert result.audio_url == "https://s3.example.com/presigned-url"
-        mock_s3_service.generate_presigned_url.assert_any_call("culture/audio/test.mp3")
 
     @pytest.mark.asyncio
     async def test_audio_url_none_when_no_audio(
@@ -947,7 +976,7 @@ class TestBuildQueueItem:
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
         question = culture_questions[1]  # No audio_s3_key
 
-        result = service._build_queue_item(question, stats=None)
+        result = service._build_queue_item(question, stats=None, url_map={})
 
         assert result.audio_url is None
 
@@ -1551,7 +1580,7 @@ class TestVariableAnswerCount:
         """2-option question should return options array of length 2."""
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
 
-        result = service._build_queue_item(two_option_question, stats=None)
+        result = service._build_queue_item(two_option_question, stats=None, url_map={})
 
         assert len(result.options) == 2
         assert result.option_count == 2
@@ -1568,7 +1597,7 @@ class TestVariableAnswerCount:
         """3-option question should return options array of length 3."""
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
 
-        result = service._build_queue_item(three_option_question, stats=None)
+        result = service._build_queue_item(three_option_question, stats=None, url_map={})
 
         assert len(result.options) == 3
         assert result.option_count == 3
