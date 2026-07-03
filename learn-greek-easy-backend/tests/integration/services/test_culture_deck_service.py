@@ -44,6 +44,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from datetime import date, datetime, timezone
 from typing import Any, Generator, Optional
+from unittest.mock import patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -495,3 +496,212 @@ async def test_culture_list_locale_parity_en_ru(
     # Progress is locale-independent and byte-identical to the oracle.
     _assert_progress_matches(resp_en.progress, expected_progress, label="en")
     _assert_progress_matches(resp_ru.progress, expected_progress, label="ru")
+
+
+# ---------------------------------------------------------------------------
+# PERF-18-02 QA (Mode B) — adversarial / edge coverage added during
+# verification. Extends the 4 authored-RED test-spec rows above with the
+# boundary cases they did not cover:
+#   1. last_practiced is status-agnostic (a NEW-status stat can drive it);
+#   2. an unstarted deck is kept in the list with progress=None (not zeroed);
+#   3. cross-deck GROUP BY (deck_id, status) isolation — no bucket leakage;
+#   4. the single progress batch is scoped to the current PAGE's deck_ids.
+# All reuse the same real-DB + independent-oracle (`_get_deck_progress`, still
+# the untouched single-deck `get_deck` helper) convention as the parity locks.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_culture_list_last_practiced_includes_newest_new_status_stat(
+    db_session: AsyncSession,
+) -> None:
+    """last_practiced_at is status-agnostic: a NEW-status stat that is the deck's
+    newest row still drives last_practiced_at.
+
+    Guards the F3-style trap for this subtask. `get_batch_deck_progress` buckets
+    *counts* by status (MASTERED/LEARNING/REVIEW), but must take
+    ``max(updated_at)`` across ALL status groups — including NEW — for
+    ``last_practiced``, matching the untouched, status-agnostic
+    ``get_last_practiced_at`` (culture_question_stats.py:213-242, ORDER BY
+    updated_at DESC LIMIT 1, no status filter). A regression that folded the
+    max into the status if/elif would silently drop the NEW-status timestamp.
+    """
+    user = await _seed_user(db_session)
+    deck = await _seed_culture_deck(db_session, suffix="new-newest")
+    q_learning = await _seed_culture_question(db_session, deck)
+    q_new = await _seed_culture_question(db_session, deck)
+    await _seed_stat(
+        db_session,
+        user,
+        q_learning,
+        status=CardStatus.LEARNING,
+        updated_at=datetime(2026, 6, 1, 9, tzinfo=timezone.utc),
+    )
+    # NEW-status stat that is the newest row for the deck -> must win last_practiced.
+    newest = datetime(2026, 6, 1, 12, tzinfo=timezone.utc)
+    await _seed_stat(
+        db_session,
+        user,
+        q_new,
+        status=CardStatus.NEW,
+        updated_at=newest,
+    )
+
+    service = CultureDeckService(db_session)
+    expected = await service._get_deck_progress(user.id, deck.id)
+    assert expected is not None
+    # Non-vacuous: the NEW-status row is the newest, so it drives last_practiced.
+    assert expected.last_practiced_at == newest
+    assert expected.questions_total == 2
+    assert expected.questions_mastered == 0
+    assert expected.questions_learning == 1  # 1 LEARNING + 0 REVIEW
+    assert expected.questions_new == 1  # 2 - (0 + 1 + 0)
+
+    result = await service.list_decks(user_id=user.id, page=1, page_size=20)
+    by_id = {d.id: d for d in result.decks}
+    _assert_progress_matches(by_id[deck.id].progress, expected, label="new-newest")
+    assert by_id[deck.id].progress is not None
+    assert by_id[deck.id].progress.last_practiced_at == newest
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_culture_list_unstarted_deck_kept_with_none_progress(
+    db_session: AsyncSession,
+) -> None:
+    """A deck present in get_batch_question_counts but ABSENT from
+    get_batch_deck_progress (zero stats for this user) renders progress=None —
+    mirroring ``has_user_started_deck() == False`` — NOT a zeroed
+    CultureDeckProgress, and is still returned in the list (not dropped).
+    """
+    user = await _seed_user(db_session)
+
+    started = await _seed_culture_deck(db_session, suffix="started")
+    q_started = await _seed_culture_question(db_session, started)
+    await _seed_stat(
+        db_session,
+        user,
+        q_started,
+        status=CardStatus.MASTERED,
+        updated_at=datetime(2026, 6, 5, tzinfo=timezone.utc),
+    )
+
+    unstarted = await _seed_culture_deck(db_session, suffix="unstarted-kept")
+    await _seed_culture_question(db_session, unstarted)
+    await _seed_culture_question(db_session, unstarted)
+
+    service = CultureDeckService(db_session)
+    result = await service.list_decks(user_id=user.id, page=1, page_size=20)
+    by_id = {d.id: d for d in result.decks}
+
+    assert {started.id, unstarted.id} <= set(by_id), "unstarted deck was dropped from the list"
+    # Started deck: real progress.
+    assert by_id[started.id].progress is not None
+    assert by_id[started.id].progress.questions_mastered == 1
+    # Unstarted deck: progress is None (NOT CultureDeckProgress(total, 0, 0, total)).
+    assert by_id[unstarted.id].progress is None
+    # ...but its question_count is still populated (batch count is progress-independent).
+    assert by_id[unstarted.id].question_count == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_culture_list_cross_deck_bucket_isolation(
+    db_session: AsyncSession,
+) -> None:
+    """GROUP BY (deck_id, status) must isolate counts per deck — one user's stats
+    spanning two decks on the same page must not leak deck A's buckets into deck
+    B. Regression guard against a status-only GROUP BY (which would merge counts
+    across every deck on the page).
+    """
+    user = await _seed_user(db_session)
+
+    deck_a = await _seed_culture_deck(db_session, suffix="iso-a")
+    a1 = await _seed_culture_question(db_session, deck_a)
+    a2 = await _seed_culture_question(db_session, deck_a)
+    a3 = await _seed_culture_question(db_session, deck_a)
+    await _seed_stat(
+        db_session,
+        user,
+        a1,
+        status=CardStatus.MASTERED,
+        updated_at=datetime(2026, 6, 1, 8, tzinfo=timezone.utc),
+    )
+    await _seed_stat(
+        db_session,
+        user,
+        a2,
+        status=CardStatus.MASTERED,
+        updated_at=datetime(2026, 6, 1, 9, tzinfo=timezone.utc),
+    )
+    await _seed_stat(
+        db_session,
+        user,
+        a3,
+        status=CardStatus.LEARNING,
+        updated_at=datetime(2026, 6, 1, 10, tzinfo=timezone.utc),
+    )
+
+    deck_b = await _seed_culture_deck(db_session, suffix="iso-b")
+    b1 = await _seed_culture_question(db_session, deck_b)
+    await _seed_culture_question(db_session, deck_b)  # no stat -> counts toward new
+    await _seed_stat(
+        db_session,
+        user,
+        b1,
+        status=CardStatus.REVIEW,
+        updated_at=datetime(2026, 6, 2, 7, tzinfo=timezone.utc),
+    )
+
+    service = CultureDeckService(db_session)
+    exp_a = await service._get_deck_progress(user.id, deck_a.id)
+    exp_b = await service._get_deck_progress(user.id, deck_b.id)
+    assert exp_a is not None and exp_b is not None
+    # Non-vacuous AND provably distinct per deck (would collide under a leak).
+    assert (exp_a.questions_mastered, exp_a.questions_learning, exp_a.questions_new) == (2, 1, 0)
+    assert (exp_b.questions_mastered, exp_b.questions_learning, exp_b.questions_new) == (0, 1, 1)
+    assert exp_a.last_practiced_at == datetime(2026, 6, 1, 10, tzinfo=timezone.utc)
+    assert exp_b.last_practiced_at == datetime(2026, 6, 2, 7, tzinfo=timezone.utc)
+
+    result = await service.list_decks(user_id=user.id, page=1, page_size=20)
+    by_id = {d.id: d for d in result.decks}
+    _assert_progress_matches(by_id[deck_a.id].progress, exp_a, label="iso-a")
+    _assert_progress_matches(by_id[deck_b.id].progress, exp_b, label="iso-b")
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_culture_list_progress_batch_scoped_to_page(
+    db_session: AsyncSession,
+) -> None:
+    """The single progress batch is scoped to the CURRENT PAGE's deck_ids, not
+    every deck the user has touched: get_batch_deck_progress is called exactly
+    once, with exactly the page's deck ids (not the full started-deck set).
+    """
+    user = await _seed_user(db_session)
+    total_decks = 25
+    page_size = 20
+    for i in range(total_decks):
+        deck = await _seed_culture_deck(db_session, suffix=f"page-{i:02d}")
+        question = await _seed_culture_question(db_session, deck)
+        await _seed_stat(
+            db_session,
+            user,
+            question,
+            status=CardStatus.LEARNING,
+            updated_at=datetime(2026, 6, 1, tzinfo=timezone.utc),
+        )
+
+    service = CultureDeckService(db_session)
+    original = service.stats_repo.get_batch_deck_progress
+    with patch.object(service.stats_repo, "get_batch_deck_progress", wraps=original) as spy:
+        result = await service.list_decks(user_id=user.id, page=1, page_size=page_size)
+
+    assert len(result.decks) == page_size
+    spy.assert_awaited_once()
+    called_deck_ids = spy.call_args.args[1]  # signature: (user_id, deck_ids)
+    page_ids = {d.id for d in result.decks}
+    assert set(called_deck_ids) == page_ids
+    # Scoped to the page, not the full 25-deck started set.
+    assert len(set(called_deck_ids)) == page_size
