@@ -237,3 +237,133 @@ async def test_picture_match_no_order_by_random_per_item(
         f"queue items, got {len(pool_stmts)} (fan-out is still per-item, not "
         f"per-exercise-type):\n" + "\n---\n".join(pool_stmts)
     )
+
+
+# ---------------------------------------------------------------------------
+# AC1/AC2 (QA edge) — pool keyed per exercise_type; no cross-type fan-out
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_pool_keyed_per_exercise_type_no_cross_type_fanout(
+    db_session: AsyncSession,
+    db_engine: AsyncEngine,
+) -> None:
+    """AC1/AC2 (QA edge) — a queue mixing TWO exercise-types builds exactly one
+    pool per type (2 total), never one shared pool and never per-item fan-out.
+
+    Seeds 4 approved SELECT_PICTURE_FROM_DESCRIPTION situations and 4 approved
+    SELECT_DESCRIPTION_FROM_PICTURE situations (disjoint situations per type).
+    Each item's eligible pool = the other 3 same-type situations (>= 3), so
+    nothing is dropped. Guards `pool_by_type` keying:
+      - exactly 2 pool-shaped queries (1 per distinct type) — a single shared
+        pool ignoring exercise_type would emit 1; per-item fan-out would emit 8;
+      - zero `ORDER BY random()` statements;
+      - no items dropped (each type has a self-sufficient pool).
+    """
+    type_a = ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION
+    type_b = ExerciseType.SELECT_DESCRIPTION_FROM_PICTURE
+
+    pairs_a = await _create_n_ready_picture_exercises(db_session, n=4, exercise_type=type_a)
+    pairs_b = await _create_n_ready_picture_exercises(db_session, n=4, exercise_type=type_b)
+    await db_session.commit()
+
+    queue_items = [
+        ExerciseQueueItem(
+            exercise_id=exercise.id,
+            source_type=ExerciseSourceType.PICTURE,
+            exercise_type=et,
+            is_new=True,
+        )
+        for et, pairs in ((type_a, pairs_a), (type_b, pairs_b))
+        for _pic_ex, exercise in pairs
+    ]
+
+    service = ExerciseSM2Service(db_session)
+
+    with _mock_s3_presign():
+        with capture_sql(db_engine) as stmts:
+            to_drop = await service.load_picture_match_enrichment(queue_items)
+
+    assert to_drop == set(), (
+        f"Expected no items dropped (each type has 3 other same-type eligible "
+        f"situations), got {to_drop}"
+    )
+
+    order_by_random_stmts = [s for s in stmts if _is_order_by_random(s)]
+    assert (
+        order_by_random_stmts == []
+    ), f"Found {len(order_by_random_stmts)} 'ORDER BY random()' statement(s):\n" + "\n---\n".join(
+        order_by_random_stmts
+    )
+
+    pool_stmts = [s for s in stmts if _is_candidate_pool_query(s)]
+    assert len(pool_stmts) == 2, (
+        f"Expected exactly 2 candidate-pool queries (one per distinct "
+        f"exercise_type) across a mixed 8-item queue, got {len(pool_stmts)} — "
+        f"a single shared pool (ignoring exercise_type) emits 1; per-item "
+        f"fan-out emits 8:\n" + "\n---\n".join(pool_stmts)
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC2 (QA edge) — insufficient per-type pool drops its items cleanly
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_insufficient_pool_type_drops_items_cleanly(
+    db_session: AsyncSession,
+    db_engine: AsyncEngine,
+) -> None:
+    """AC2 (QA edge) — items whose exercise_type has an insufficient eligible
+    pool (< 3 after anchor exclusion) are dropped cleanly at the enrichment
+    layer, while the pool is still queried exactly once for that type.
+
+    Seeds only 2 approved SELECT_PICTURE_FROM_DESCRIPTION situations: each item's
+    eligible pool = the single other situation = 1 < 3, so BOTH items must land
+    in the drop set (InsufficientDistractorPoolError → to_drop, per
+    exercise_sm2_service.py:387-393). The pool query still runs once (the drop
+    happens in-Python over the fetched pool, not via a per-item query), and no
+    `ORDER BY random()` statement appears.
+    """
+    pairs = await _create_n_ready_picture_exercises(db_session, n=2)
+    await db_session.commit()
+
+    queue_items = [
+        ExerciseQueueItem(
+            exercise_id=exercise.id,
+            source_type=ExerciseSourceType.PICTURE,
+            exercise_type=ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION,
+            is_new=True,
+        )
+        for _pic_ex, exercise in pairs
+    ]
+    expected_dropped = {exercise.id for _pic_ex, exercise in pairs}
+
+    service = ExerciseSM2Service(db_session)
+
+    with _mock_s3_presign():
+        with capture_sql(db_engine) as stmts:
+            to_drop = await service.load_picture_match_enrichment(queue_items)
+
+    assert to_drop == expected_dropped, (
+        f"Expected both items dropped for insufficient pool (1 eligible < 3), "
+        f"got {to_drop} vs expected {expected_dropped}"
+    )
+
+    order_by_random_stmts = [s for s in stmts if _is_order_by_random(s)]
+    assert (
+        order_by_random_stmts == []
+    ), f"Found {len(order_by_random_stmts)} 'ORDER BY random()' statement(s):\n" + "\n---\n".join(
+        order_by_random_stmts
+    )
+
+    pool_stmts = [s for s in stmts if _is_candidate_pool_query(s)]
+    assert len(pool_stmts) == 1, (
+        f"Expected exactly 1 candidate-pool query for the single distinct "
+        f"exercise_type even when all items drop, got {len(pool_stmts)}:\n"
+        + "\n---\n".join(pool_stmts)
+    )
