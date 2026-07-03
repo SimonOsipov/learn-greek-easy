@@ -226,3 +226,27 @@ class TestErrorHandling:
             service = get_email_service()
             # Must not raise
             service.send(to="user@example.com", subject="Test", html="<p>Hello</p>")
+
+    def test_send_failure_logged_at_error(
+        self,
+        _reset_singleton: None,
+        mock_settings_configured: MagicMock,
+        caplog_loguru: pytest.LogCaptureFixture,
+    ) -> None:
+        """PERF-19-03: exception from Resend is logged at ERROR (Sentry-visible), not
+        merely WARNING.
+
+        THRESHOLD TRAP: this must assert `== logging.ERROR` — `>= logging.WARNING`
+        is already true today (WARNING >= WARNING) and would stay green pre-impl.
+        """
+        with patch("src.services.email_service.resend") as mock_resend:
+            mock_resend.Emails.send.side_effect = Exception("Resend API unavailable")
+            with caplog_loguru.at_level(logging.WARNING):
+                service = get_email_service()
+                service.send(to="user@example.com", subject="Test", html="<p>Hello</p>")
+        error_records = [r for r in caplog_loguru.records if r.levelno == logging.ERROR]
+        assert len(error_records) >= 1, (
+            f"Expected an ERROR-level record, got levels: "
+            f"{[r.levelno for r in caplog_loguru.records]}"
+        )
+        # Fire-and-forget semantics: send() must not raise even on ERROR-level failure.
