@@ -17,8 +17,10 @@ from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.db.models import Situation, SituationDescription
 from tests.factories import NewsItemFactory, SituationFactory, SituationPictureFactory
 
 # =============================================================================
@@ -170,6 +172,128 @@ class TestListNewsEndpoint:
         response = await client.get("/api/v1/news?page=0")
 
         assert response.status_code == 422
+
+
+# =============================================================================
+# PERF-17-01 (Stage 2.5 RED): slim list DTO — GET /api/v1/news must drop
+# reader/admin-only heavy fields from LIST items while keeping every
+# card-render field (D1). GET /news/{id} and /admin/news are untouched by
+# this subtask (see TestGetNewsItemEndpoint / test_admin_news.py).
+# =============================================================================
+
+
+class TestListNewsSlimShape:
+    """PERF-17-01 T01-1 / T01-5 — slim list item shape (AC#1, AC#5).
+
+    RED reason: today ``GET /api/v1/news`` list items are full
+    ``NewsItemResponse`` objects, which DO carry word_timestamps,
+    word_timestamps_a2, linked_situation, status, created_at, and
+    updated_at — so the "must be absent" assertions below fail on
+    assertion (KeyError-style `in` check), not on import/collection.
+    Once the executor introduces ``NewsSlimItem`` / ``get_list_slim`` and
+    repoints ``list_news_items`` (src/api/v1/news.py) onto it, these turn
+    green.
+    """
+
+    @pytest.mark.asyncio
+    async def test_list_news_slim_shape_keeps_card_fields_drops_heavy_fields(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+    ):
+        """AC#1: slim list items keep every NewsCard-rendered field and
+        drop word_timestamps/word_timestamps_a2/linked_situation/status/
+        created_at/updated_at.
+        """
+        await NewsItemFactory.create(published=True)
+
+        response = await client.get("/api/v1/news?page_size=6")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["items"]) >= 1
+        item = data["items"][0]
+
+        # Card-render fields (D1) must survive the slim-down.
+        for field in (
+            "title_el",
+            "description_el",
+            "audio_url",
+            "image_variants",
+            "country",
+            "publication_date",
+            "original_article_url",
+        ):
+            assert field in item, f"Slim list item missing card-render field: {field}"
+
+        # Reader/admin-only heavy fields must be dropped from the LIST item.
+        for dropped in (
+            "word_timestamps",
+            "word_timestamps_a2",
+            "linked_situation",
+            "status",
+            "created_at",
+            "updated_at",
+        ):
+            assert dropped not in item, f"Slim list item still carries heavy field: {dropped}"
+
+    @pytest.mark.asyncio
+    async def test_list_news_slim_has_a2_content_true_only_when_both_a2_fields_present(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+    ):
+        """AC#5: has_a2_content is True iff BOTH title_el_a2
+        (situation.scenario_el_a2) AND description_el_a2
+        (description.text_el_a2) are set; False when only one is present.
+
+        Also re-asserts the heavy-field-absence guard from the sibling test
+        above (on this item's own data) so this test independently proves
+        it targets the slim shape, not the current full-item response.
+        """
+        item_both = await NewsItemFactory.create(
+            published=True,
+            original_article_url="https://example.com/perf17-a2-both",
+        )
+        situation_both = await db_session.get(Situation, item_both.situation_id)
+        assert situation_both is not None
+        situation_both.scenario_el_a2 = "Απλά ελληνικά και τα δύο πεδία"
+        description_both = (
+            await db_session.execute(
+                select(SituationDescription).where(
+                    SituationDescription.situation_id == item_both.situation_id
+                )
+            )
+        ).scalar_one()
+        description_both.text_el_a2 = "Απλή περιγραφή και τα δύο πεδία"
+
+        item_missing = await NewsItemFactory.create(
+            published=True,
+            original_article_url="https://example.com/perf17-a2-title-only",
+        )
+        situation_missing = await db_session.get(Situation, item_missing.situation_id)
+        assert situation_missing is not None
+        situation_missing.scenario_el_a2 = "Μόνο ο τίτλος A2"
+        # description_missing.text_el_a2 intentionally left None (factory default).
+
+        await db_session.flush()
+
+        response = await client.get("/api/v1/news?page_size=6")
+
+        assert response.status_code == 200
+        data = response.json()
+        by_url = {i["original_article_url"]: i for i in data["items"]}
+        assert item_both.original_article_url in by_url
+        assert item_missing.original_article_url in by_url
+        both = by_url[item_both.original_article_url]
+        missing = by_url[item_missing.original_article_url]
+
+        # Slim-shape guard (keeps this test RED for the right reason today).
+        assert "word_timestamps" not in both
+        assert "word_timestamps" not in missing
+
+        assert both["has_a2_content"] is True
+        assert missing["has_a2_content"] is False
 
 
 # =============================================================================
