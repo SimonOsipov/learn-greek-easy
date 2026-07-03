@@ -2838,3 +2838,108 @@ class TestQueueBatchPresigning:
             assert item.is_new is False
         for item in queue.questions[4:]:
             assert item.is_new is True
+
+
+class TestQueueBatchPresigningEdgeCases:
+    """QA Verify (Mode B) adversarial/edge coverage for PERF-21-02, added on top
+    of the 5 architect-authored AC tests in `TestQueueBatchPresigning` above.
+
+    All DB-free by construction (unpersisted `CultureQuestion`, no session/
+    flush), matching `test_queue_item_urls_unchanged` / `test_queue_item_no_media_is_none`
+    — these exercise `_build_queue_item` directly rather than the DB-gated
+    `get_question_queue`, so they run with zero Postgres dependency locally
+    and in CI alike.
+    """
+
+    def test_queue_item_mixed_media_only_image_present(self, batched_s3_service):
+        """A question with an image but no audio/A2 audio must still get its
+        image signed and resolved — a mixed-media item isn't all-or-nothing.
+        image_url comes from the map; audio_url/audio_a2_url are None because
+        their keys were never in the map (not merely absent-but-falsy).
+        """
+        service = CultureQuestionService(db=MagicMock(), s3_service=batched_s3_service)
+        question = CultureQuestion(
+            id=uuid4(),
+            deck_id=None,
+            question_text={"en": "Q?", "el": "Ε;", "ru": "В?"},
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+            image_key="imgOnly",
+            audio_s3_key=None,
+            audio_a2_s3_key=None,
+        )
+        url_map = batched_s3_service.generate_presigned_urls(
+            [("imgOnly", IMAGE_PRESIGN_EXPIRY_SECONDS)]
+        )
+
+        result = service._build_queue_item(question, stats=None, url_map=url_map)
+
+        assert result.image_url == url_map["imgOnly"]
+        assert result.audio_url is None
+        assert result.audio_a2_url is None
+
+    def test_queue_item_key_missing_from_url_map_resolves_to_none(self, batched_s3_service):
+        """Defensive coverage: the question references a real key, but the
+        supplied `url_map` doesn't include it (e.g. it was signed for a
+        different, narrower collection pass). `.get()` must degrade to None
+        rather than raise KeyError -- proving the builder tolerates a url_map
+        that didn't cover every key the question references.
+        """
+        service = CultureQuestionService(db=MagicMock(), s3_service=batched_s3_service)
+        question = CultureQuestion(
+            id=uuid4(),
+            deck_id=None,
+            question_text={"en": "Q?", "el": "Ε;", "ru": "В?"},
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+            image_key="imgNotInMap",
+            audio_s3_key="audNotInMap",
+            audio_a2_s3_key="a2NotInMap",
+        )
+
+        # url_map deliberately omits all three keys the question references.
+        result = service._build_queue_item(question, stats=None, url_map={})
+
+        assert result.image_url is None
+        assert result.audio_url is None
+        assert result.audio_a2_url is None
+
+    def test_queue_item_url_distributed_correctly_from_shared_map(self, batched_s3_service):
+        """Distribution correctness: given a url_map covering several keys
+        (as it would across a whole queue), each field on THIS item pulls
+        exactly its own key's URL -- not another key's, not a stale/None
+        value for a key that is genuinely present and signed.
+        """
+        service = CultureQuestionService(db=MagicMock(), s3_service=batched_s3_service)
+        question = CultureQuestion(
+            id=uuid4(),
+            deck_id=None,
+            question_text={"en": "Q?", "el": "Ε;", "ru": "В?"},
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+            image_key="imgShared",
+            audio_s3_key="audShared",
+            audio_a2_s3_key=None,
+        )
+        # Map covers this item's keys plus an unrelated key from another
+        # queued question, mirroring the real whole-queue url_map shape.
+        url_map = batched_s3_service.generate_presigned_urls(
+            [
+                ("imgShared", IMAGE_PRESIGN_EXPIRY_SECONDS),
+                ("audShared", None),
+                ("someoneElsesImage", IMAGE_PRESIGN_EXPIRY_SECONDS),
+            ]
+        )
+
+        result = service._build_queue_item(question, stats=None, url_map=url_map)
+
+        assert result.image_url == url_map["imgShared"]
+        assert result.audio_url == url_map["audShared"]
+        assert result.audio_a2_url is None
+        assert result.image_url != url_map["someoneElsesImage"]
