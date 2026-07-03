@@ -10,7 +10,13 @@ from uuid import uuid4
 
 import pytest
 
-from src.core.cache import CacheService, cached, get_cache, reset_cache
+from src.core.cache import (
+    _SINGLE_FLIGHT_RELEASE_LUA,
+    CacheService,
+    cached,
+    get_cache,
+    reset_cache,
+)
 
 
 class TestCacheServiceAvailability:
@@ -493,6 +499,17 @@ class _FakeAsyncRedis:
                 count += 1
         return count
 
+    async def eval(self, script: str, numkeys: int, *keys_and_args: Any) -> int:
+        """Supports the single-flight release CAD (`_SINGLE_FLIGHT_RELEASE_LUA`
+        in src.core.cache): deletes `key` iff its stored value == `token`,
+        mirroring the real Lua script's ownership check."""
+        key = keys_and_args[0]
+        token = keys_and_args[1]
+        if self.store.get(key) == token:
+            del self.store[key]
+            return 1
+        return 0
+
 
 class TestCacheGetOrSetSingleFlight:
     """PERF-16-01: single-flight `SET NX PX` guard for `get_or_set`.
@@ -640,10 +657,14 @@ class TestCacheGetOrSetSingleFlight:
     @pytest.mark.asyncio
     async def test_get_or_set_releases_lock_on_factory_error(self):
         """If the leader's factory raises, the lock it acquired must be
-        released (deleted) in a finally block -- not leaked until PX expiry."""
-        mock_redis = AsyncMock()
-        mock_redis.get.return_value = None  # cold cache
-        mock_redis.set.return_value = True  # lock acquired, no contention
+        released in a finally block -- not leaked until PX expiry.
+
+        Asserted behaviorally (lock key gone from the store / a subsequent
+        SET NX succeeds immediately) rather than via a `redis.delete`
+        call-spy, since the release now goes through an ownership-checked
+        compare-and-delete (`eval`), not a bare `delete` (PERF-16 CodeRabbit
+        fix: the lock's value is a per-leader token, not a fixed sentinel)."""
+        fake_redis = _FakeAsyncRedis()
 
         async def failing_factory():
             raise RuntimeError("boom")
@@ -654,21 +675,21 @@ class TestCacheGetOrSetSingleFlight:
             mock_settings.cache_default_ttl = 300
             mock_settings.cache_single_flight_lock_ttl_ms = 5000
             mock_settings.cache_single_flight_poll_ms = 50
-            service = CacheService(redis_client=mock_redis)
+            service = CacheService(redis_client=fake_redis)
 
             result = await service.get_or_set("errkey:lock", failing_factory, ttl=30)
 
         assert result is None
 
-        assert mock_redis.delete.called, (
-            "expected the single-flight lock key to be released via "
-            "redis.delete after the factory raised"
+        lock_key = "cache:errkey:lock:lock"
+        assert lock_key not in fake_redis.store, (
+            "expected the single-flight lock key to be released after the "
+            "factory raised, not leaked until PX expiry"
         )
-        deleted_keys = [key for call in mock_redis.delete.call_args_list for key in call.args]
-        assert any("errkey:lock" in k and k.startswith("cache:") for k in deleted_keys), (
-            f"expected a lock key derived from 'errkey:lock' under the "
-            f"'cache:' prefix to be deleted, got: {deleted_keys}"
-        )
+        # Prove the lock is genuinely free, not just absent from a call log:
+        # a fresh SET NX must succeed immediately.
+        reacquired = await fake_redis.set(lock_key, "new-leader-token", nx=True, px=5000)
+        assert reacquired is True, "expected a subsequent SET NX to succeed on the freed lock"
 
     @pytest.mark.asyncio
     async def test_get_or_set_hit_skips_lock(self):
@@ -771,7 +792,9 @@ class TestCacheGetOrSetSingleFlightAdversarial:
         mock_redis.setex.assert_called_once()
         # Lock release is still attempted in finally even though the lock
         # was never really held (harmless no-op against a real backend).
-        assert mock_redis.delete.called
+        # Release now goes through the ownership-checked eval() CAD, not a
+        # bare delete() (PERF-16 CodeRabbit fix).
+        assert mock_redis.eval.called
 
     @pytest.mark.asyncio
     async def test_get_or_set_leader_none_result_no_hang_no_permanent_dogpile(self):
@@ -871,6 +894,33 @@ class TestCacheGetOrSetSingleFlightAdversarial:
             f"published (~30ms), but the call took {elapsed:.3f}s -- "
             f"suggests it drained the full lock_ttl_ms budget instead of "
             f"observing the value on an early poll"
+        )
+
+    @pytest.mark.asyncio
+    async def test_single_flight_release_is_ownership_checked(self):
+        """PERF-16 CodeRabbit fix: a leader's release must only delete the
+        lock if it still holds the value the leader itself wrote. If the
+        leader's factory overran lock_ttl_ms, the lock could have expired
+        and been re-acquired by a second leader by the time the first
+        leader's `finally` runs -- a bare `delete(lock_key)` would blow away
+        the SECOND leader's lock and reopen the dogpile. The ownership token
+        + compare-and-delete must prevent that: releasing with a stale token
+        is a no-op, and the current owner's lock survives untouched."""
+        fake_redis = _FakeAsyncRedis()
+        lock_key = "cache:ownership:key:lock"
+
+        # Simulate: leader 1's token expired/was superseded, leader 2 has
+        # since acquired the SAME lock key with a different token.
+        token_1 = "leader-1-token"
+        token_2 = "leader-2-token"
+        fake_redis.store[lock_key] = token_2
+
+        result = await fake_redis.eval(_SINGLE_FLIGHT_RELEASE_LUA, 1, lock_key, token_1)
+
+        assert result == 0, "a release with a stale/foreign token must not report a deletion"
+        assert fake_redis.store[lock_key] == token_2, (
+            "leader 1's release must not delete leader 2's lock -- doing so "
+            "would reopen the dogpile the single-flight guard exists to prevent"
         )
 
 

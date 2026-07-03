@@ -345,7 +345,12 @@ async def get_me(
     cached = await cache.get_or_set(key, _load_body, ttl=settings.cache_auth_me_body_ttl)  # type: ignore[arg-type]
     if cached is not None:
         try:
-            return UserProfileResponse.model_validate(cached)
+            resp = UserProfileResponse.model_validate(cached)
+            # auth_provider is request-scoped (from this request's JWT claims), not
+            # user-stable, so a cache HIT must not serve a stale provider captured by
+            # whichever request originally populated the cache entry.
+            resp.auth_provider = _extract_auth_provider(request)
+            return resp
         except ValidationError:
             pass
     return await _reload_and_build()

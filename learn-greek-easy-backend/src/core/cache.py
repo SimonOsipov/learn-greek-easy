@@ -19,6 +19,7 @@ NOTE: If Redis is unavailable, all cache operations gracefully degrade
 import asyncio
 import functools
 import json
+import secrets
 from typing import Any, Awaitable, Callable, Optional, TypeVar, Union, cast
 from uuid import UUID
 
@@ -35,6 +36,14 @@ T = TypeVar("T")
 
 # Global cache service instance
 _cache_service: Optional["CacheService"] = None
+
+# Ownership-checked compare-and-delete for the single-flight lock: only deletes
+# the lock if its value still matches the caller's token, so a leader that
+# overran the lock TTL can never release a different leader's lock (PERF-16).
+_SINGLE_FLIGHT_RELEASE_LUA = (
+    "if redis.call('get', KEYS[1]) == ARGV[1] "
+    "then return redis.call('del', KEYS[1]) else return 0 end"
+)
 
 
 class CacheService:
@@ -278,9 +287,13 @@ class CacheService:
         lock_key = self._build_key(f"{key}:lock")
         lock_ttl_ms = settings.cache_single_flight_lock_ttl_ms
         poll_ms = settings.cache_single_flight_poll_ms
+        # Ownership token: proves THIS leader still holds the lock at release
+        # time, so a release can never delete a different leader's lock after
+        # this one's TTL expired mid-computation (see _SINGLE_FLIGHT_RELEASE_LUA).
+        token = secrets.token_hex(16)
 
         try:
-            acquired = await redis.set(lock_key, b"1", nx=True, px=lock_ttl_ms)
+            acquired = await redis.set(lock_key, token, nx=True, px=lock_ttl_ms)
         except Exception as e:
             # Lock backend degraded - degrade to leader behavior, never block
             logger.error(f"Single-flight lock acquisition failed for '{key}': {e}")
@@ -291,9 +304,15 @@ class CacheService:
                 return await self._compute_and_cache(key, factory, ttl)
             finally:
                 try:
-                    await redis.delete(lock_key)
+                    # redis-stubs' AsyncScriptCommands.eval() is unannotated
+                    # (Any params/return), not this codebase's own typing gap.
+                    await redis.eval(  # type: ignore[no-untyped-call]
+                        _SINGLE_FLIGHT_RELEASE_LUA, 1, lock_key, token
+                    )
                 except Exception as e:
-                    logger.error(f"Failed to release single-flight lock for '{key}': {e}")
+                    # Best-effort release; never break the caller. Worst case the
+                    # lock simply expires via its own TTL.
+                    logger.debug(f"Single-flight lock release failed for '{key}': {e}")
 
         # Follower: poll for the leader's published value up to the lock TTL budget
         elapsed_ms = 0
