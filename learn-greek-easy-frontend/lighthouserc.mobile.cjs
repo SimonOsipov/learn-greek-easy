@@ -1,7 +1,8 @@
 /**
  * Lighthouse CI Configuration - Mobile
  *
- * This configuration is used for mobile performance testing in the PR preview workflow.
+ * Consumed ONLY by release-verify.yml (Assert Lighthouse (Mobile), lines 1217/1218/1248)
+ * and the unit test lighthouserc.config.test.ts. NOT used by preview.yml/test.yml.
  * Uses mobile emulation with throttling to simulate real mobile conditions.
  *
  * Score thresholds (lower than desktop due to mobile constraints):
@@ -56,12 +57,21 @@ module.exports = {
         'categories:best-practices': ['warn', { minScore: 0.8 }],
         'categories:seo': ['warn', { minScore: 0.8 }],
 
-        // LCP gate floor = 4000ms = the "poor" boundary (matches parse-lighthouse-results.cjs
-        // lcp.poor and the Web Vitals poor line). This is the failing FLOOR, not the 2.5s
-        // "good" target — error@2500 would flake on single-run lab noise (numberOfRuns:1,
-        // mobile 4xCPU/4G) and tempt re-adding `|| true`. The 2.5s target is tracked as a
-        // FIELD metric, not enforced as a lab gate.
-        'largest-contentful-paint': ['error', { maxNumericValue: 4000 }],
+        // LCP gate = error @ 7000ms on ALL three URLs. This is a dev-environment
+        // regression TRIPWIRE (USER decision 2026-07-03), NOT a Web Vitals line:
+        // the observed stable LCP band on shared dev is 5.3-6.3s across all
+        // retained runs (Jun 23 - Jul 2, 2026), so 7000 ≈ observed max + headroom.
+        // The Web Vitals "poor" floor (4000, chosen by PERF-09) is the restore
+        // target once the real LCP fix lands — tracked in the PERF-24 story
+        // (Obsidian: User Stories/PERF/PERF-24 "Get Pre-Auth Mobile LCP Under the
+        // Web Vitals Poor Line"). The 2.5s "good" target stays a FIELD metric, not
+        // enforced as a lab gate — error@2500 would flake on single-run lab noise
+        // (numberOfRuns:1, mobile 4xCPU/4G) and tempt re-adding `|| true`.
+        // NOTE: scripts/parse-lighthouse-results.cjs still uses lcp.poor=4000 to
+        // color the PR-comment bands, so mobile LCP values between 4000-7000ms
+        // will render as "poor" there — informational only, this assertion
+        // (not that script) is what gates the CI job.
+        'largest-contentful-paint': ['error', { maxNumericValue: 7000 }],
       },
     },
 
