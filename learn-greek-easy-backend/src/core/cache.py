@@ -498,6 +498,24 @@ class CacheService:
         logger.info(f"Invalidated all cache data for user {user_id_str} ({deleted} entries)")
         return deleted
 
+    async def invalidate_user_identity(
+        self, supabase_id: Optional[str], user_id: Union[UUID, str]
+    ) -> None:
+        """Bust the identity projection + /auth/me body cache for one user (PERF-16).
+
+        Called from every write path that can change a user's identity
+        projection (is_active, is_superuser, supabase_id, or the /auth/me
+        response body) so the identity TTL (raised to 900s in PERF-16-02)
+        never serves a stale projection past the mutation that invalidated it.
+
+        ``supabase_id`` is Optional because User.supabase_id is nullable at
+        the ORM level and some callers (e.g. account deletion) pass it
+        through unchecked; a None/absent supabase_id degrades to a harmless
+        no-op delete rather than skipping the (always-safe) user:me bust.
+        """
+        await self.delete(f"user:identity:{supabase_id}")
+        await self.delete(f"user:me:{user_id}")
+
 
 # =============================================================================
 # Global Instance Management

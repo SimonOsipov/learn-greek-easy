@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.core.cache import get_cache
 from src.core.dependencies import get_current_user
 from src.core.logging import get_logger
 from src.core.subscription import get_effective_access_level
@@ -440,6 +441,7 @@ async def update_me(
             db.add(settings)
 
     await db.commit()
+    await get_cache().invalidate_user_identity(current_user.supabase_id, current_user.id)
 
     # Reload user with settings to get updated timestamps
     # (required for lazy="raise" relationships)
@@ -537,6 +539,7 @@ async def delete_avatar(
     current_user.avatar_url = None
     db.add(current_user)
     await db.commit()
+    await get_cache().invalidate_user_identity(current_user.supabase_id, current_user.id)
 
     return AvatarDeleteResponse(
         success=True,

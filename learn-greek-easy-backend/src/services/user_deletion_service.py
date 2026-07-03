@@ -16,6 +16,7 @@ from uuid import UUID
 import sentry_sdk
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.cache import get_cache
 from src.core.exceptions import SupabaseAdminError
 from src.core.logging import get_logger
 from src.core.supabase_admin import get_supabase_admin_client
@@ -136,6 +137,12 @@ class UserDeletionService:
                 "User record deleted from database",
                 extra={"user_id": str(user_id)},
             )
+
+            # PERF-16-02: bust the identity cache for the deleted user. Without
+            # this, a stale identity projection could let get_or_create_user's
+            # cache-hit path re-provision a new user row for the same
+            # supabase_id before the (now 900s) TTL expires.
+            await get_cache().invalidate_user_identity(supabase_id, user_id)
 
             # Step 3: Delete from Supabase (if applicable)
             if supabase_id:
