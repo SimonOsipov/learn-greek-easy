@@ -433,3 +433,133 @@ async def test_submit_all_scoring_identical_fixture(
     assert all(
         entry["question_id"] != unknown_question_id for entry in answer_results
     ), "Unknown question_id leaked into answer_results (should have been skipped)"
+
+
+# ---------------------------------------------------------------------------
+# QA (PERF-18-04, Mode B) — adversarial / boundary coverage of the batched
+# read path. Added post-implementation on top of the three AC-derived specs.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_submit_all_all_unknown_question_ids_still_one_in_query(
+    db_session: AsyncSession,
+    db_engine: AsyncEngine,
+    test_user: User,
+    active_mock_exam: MockExamSession,
+    culture_questions: list[CultureQuestion],
+    mock_s3_service,
+) -> None:
+    """Edge — every answer references a question_id absent from the DB.
+
+    All five answers miss `questions_by_id` (dict has no key) so each hits the
+    `if question is None: continue` branch (mock_exam_service.py:284-294) and
+    nothing is saved/scored/XP'd. Two properties are locked here:
+
+      1. `q_ids` is still NON-empty (five unknown uuids), so the batch helper
+         `_get_questions_by_ids` DOES issue its `IN (...)` SELECT (returning
+         zero rows) — exactly ONE such query, and ZERO single-id
+         `culture_questions.id = <param>` SELECTs. This distinguishes the
+         all-miss case (one IN query) from the empty-`answers` case (no query
+         at all, guarded by mock_exam_service.py:591-592) and is ALSO a
+         regression lock against the N+1 returning: today's batched code
+         issues 1 IN query, the old per-answer `_get_question` loop would have
+         issued 5 single-id SELECTs and 0 IN queries.
+      2. The session still completes cleanly with a 0 score — no crash on a
+         wholly-unresolved payload.
+
+    `culture_questions` is seeded (30 rows exist) purely to prove the misses
+    are genuine lookups against a populated table, not an empty one.
+    """
+    service = MockExamService(db_session, s3_service=mock_s3_service)
+
+    unknown_ids = [uuid4() for _ in range(5)]
+    answers = [
+        {"question_id": qid, "selected_option": 1, "time_taken_seconds": 10} for qid in unknown_ids
+    ]
+
+    with capture_sql(db_engine) as stmts:
+        result = await service.submit_all_answers(
+            user_id=test_user.id,
+            session_id=active_mock_exam.id,
+            answers=answers,
+            total_time_seconds=50,
+        )
+
+    single_id_selects = [s for s in stmts if _is_single_id_question_select(s)]
+    in_selects = [s for s in stmts if _is_in_query_question_select(s)]
+
+    assert single_id_selects == [], (
+        f"Found {len(single_id_selects)} single-id `culture_questions.id =` SELECT(s) — "
+        f"the per-answer N+1 `_get_question` loop is still present:\n"
+        + "\n---\n".join(single_id_selects)
+    )
+    assert len(in_selects) == 1, (
+        f"Expected exactly 1 batched `IN (...)` question SELECT even when every id "
+        f"misses, found {len(in_selects)}. Captured statements ({len(stmts)}):\n"
+        + "\n---\n".join(stmts)
+    )
+
+    # Every answer was silently skipped — no crash, nothing processed.
+    assert result["new_answers_count"] == 0
+    assert result["duplicate_answers_count"] == 0
+    assert result["answer_results"] == []
+    assert result["score"] == 0
+    assert result["percentage"] == 0.0
+    assert result["passed"] is False
+    assert result["session"].status == MockExamStatus.COMPLETED
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_submit_all_single_answer_one_in_query(
+    db_session: AsyncSession,
+    db_engine: AsyncEngine,
+    test_user: User,
+    active_mock_exam: MockExamSession,
+    culture_questions: list[CultureQuestion],
+    mock_s3_service,
+) -> None:
+    """Boundary — a one-answer payload still issues exactly ONE IN query.
+
+    The smallest non-empty batch (`q_ids` length 1). Confirms the read is
+    batched even at size 1 (no degenerate per-answer fan-out) and that the
+    single valid answer is processed normally. The old per-answer
+    `_get_question` loop would also have issued exactly one query here — but a
+    *single-id* one — so the `_is_in_query_question_select` / zero-single-id
+    pair still discriminates old shape from new at this boundary.
+    """
+    service = MockExamService(db_session, s3_service=mock_s3_service)
+
+    question = culture_questions[0]
+    answers = [
+        {
+            "question_id": question.id,
+            "selected_option": question.correct_option,
+            "time_taken_seconds": 10,
+        }
+    ]
+
+    with capture_sql(db_engine) as stmts:
+        result = await service.submit_all_answers(
+            user_id=test_user.id,
+            session_id=active_mock_exam.id,
+            answers=answers,
+            total_time_seconds=10,
+        )
+
+    assert result["new_answers_count"] == 1
+    assert result["duplicate_answers_count"] == 0
+
+    single_id_selects = [s for s in stmts if _is_single_id_question_select(s)]
+    in_selects = [s for s in stmts if _is_in_query_question_select(s)]
+
+    assert single_id_selects == [], (
+        f"Found {len(single_id_selects)} single-id `culture_questions.id =` SELECT(s) for a "
+        f"one-answer payload — read is not batched:\n" + "\n---\n".join(single_id_selects)
+    )
+    assert len(in_selects) == 1, (
+        f"Expected exactly 1 batched `IN (...)` question SELECT for a one-answer payload, "
+        f"found {len(in_selects)}. Captured statements ({len(stmts)}):\n" + "\n---\n".join(stmts)
+    )
