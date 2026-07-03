@@ -1,13 +1,21 @@
 """Unit tests for ExerciseSM2Service PostHog event firing."""
 
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
-from src.db.models import CardStatus, DeckLevel, ExerciseModality, ExerciseSourceType
+from src.db.models import (
+    CardStatus,
+    DeckLevel,
+    ExerciseModality,
+    ExerciseSourceType,
+    ExerciseType,
+)
+from src.schemas.exercise_queue import ExerciseItemPayload
 from src.services.exercise_sm2_service import ExerciseSM2Service
+from src.services.picture_match_service import InsufficientDistractorPoolError
 
 
 def _make_mock_exercise(
@@ -319,3 +327,157 @@ class TestLoadDescriptionEnrichment:
         data = result[exercise.id]
         assert data["description_text_el"] == "B1 fallback text"
         assert data["description_audio_url"] is None
+
+
+@pytest.mark.unit
+class TestGetStudyQueueSummaryMode:
+    """PERF-17-03: get_study_queue(summary=True) count-parity + slim payload.
+
+    RED for the right reason today: `summary` is not yet a parameter of
+    get_study_queue, so every call below raises TypeError("unexpected keyword
+    argument 'summary'") until PERF-17-03 adds the kwarg.
+    """
+
+    @pytest.mark.asyncio
+    async def test_summary_true_preserves_counts_on_mixed_queue(self, mock_db_session):
+        """T03-1: summary=True returns identical total_due/total_new/
+        total_early_practice/total_in_queue to summary=False for the same
+        user/params on a due+new+early-practice mixed queue.
+        """
+        user_id = uuid4()
+
+        due_record = _make_mock_record(status=CardStatus.REVIEW)
+        due_record.exercise = _make_mock_exercise(source_type=ExerciseSourceType.WORD_ORDER)
+        due_record.next_review_date = date.today()
+
+        new_exercise = _make_mock_exercise(source_type=ExerciseSourceType.WORD_ORDER)
+
+        early_record = _make_mock_record(status=CardStatus.REVIEW)
+        early_record.exercise = _make_mock_exercise(source_type=ExerciseSourceType.WORD_ORDER)
+        early_record.next_review_date = date.today() + timedelta(days=3)
+
+        service = ExerciseSM2Service(mock_db_session)
+        service.record_repo.get_due_exercises = AsyncMock(return_value=[due_record])
+        service.record_repo.get_new_exercises = AsyncMock(return_value=[new_exercise])
+        service.record_repo.get_early_practice_exercises = AsyncMock(return_value=[early_record])
+
+        queue_full = await service.get_study_queue(
+            user_id, include_early_practice=True, summary=False
+        )
+        queue_summary = await service.get_study_queue(
+            user_id, include_early_practice=True, summary=True
+        )
+
+        assert queue_summary.total_due == queue_full.total_due == 1
+        assert queue_summary.total_new == queue_full.total_new == 1
+        assert queue_summary.total_early_practice == queue_full.total_early_practice == 1
+        assert queue_summary.total_in_queue == queue_full.total_in_queue == 3
+
+    @pytest.mark.asyncio
+    async def test_summary_true_nulls_heavy_fields_keeps_light_fields(self, mock_db_session):
+        """T03-2: summary=True nulls/empties heavy per-item fields (items,
+        word_timestamps, description_text_el, description_audio_url) while
+        light fields (scenario_*, modality, audio_level, exercise_type)
+        stay populated exactly as enriched.
+        """
+        user_id = uuid4()
+
+        due_record = _make_mock_record(status=CardStatus.REVIEW)
+        due_record.exercise = _make_mock_exercise(source_type=ExerciseSourceType.DESCRIPTION)
+        due_record.next_review_date = date.today()
+
+        service = ExerciseSM2Service(mock_db_session)
+        service.record_repo.get_due_exercises = AsyncMock(return_value=[due_record])
+        service.record_repo.get_new_exercises = AsyncMock(return_value=[])
+        service.record_repo.get_early_practice_exercises = AsyncMock(return_value=[])
+        service.load_description_enrichment = AsyncMock(
+            return_value={
+                due_record.exercise.id: {
+                    "situation_id": uuid4(),
+                    "scenario_el": "Σκηνή",
+                    "scenario_en": "Scene",
+                    "scenario_ru": "Сцена",
+                    "description_text_el": "Ο Γιάννης.",
+                    "description_audio_url": "https://cdn/b1/audio.mp3",
+                    "description_audio_duration": 12.5,
+                    "word_timestamps": [{"word": "Ο", "start": 0.0, "end": 0.2}],
+                    "items": [ExerciseItemPayload(item_index=0, payload={"a": 1})],
+                    "exercise_type": ExerciseType.FILL_GAPS,
+                    "modality": ExerciseModality.READING,
+                    "audio_level_value": DeckLevel.B1,
+                }
+            }
+        )
+
+        queue = await service.get_study_queue(user_id, summary=True)
+
+        assert len(queue.exercises) == 1
+        item = queue.exercises[0]
+        # Heavy fields: nulled/empty
+        assert item.items == []
+        assert item.word_timestamps is None
+        assert item.description_text_el is None
+        assert item.description_audio_url is None
+        assert item.description_audio_duration is None
+        # Light fields: still populated as enriched
+        assert item.scenario_el == "Σκηνή"
+        assert item.scenario_en == "Scene"
+        assert item.scenario_ru == "Сцена"
+        assert item.modality == ExerciseModality.READING
+        assert item.audio_level == DeckLevel.B1
+        assert item.exercise_type == ExerciseType.FILL_GAPS
+
+    @pytest.mark.asyncio
+    async def test_picture_match_drop_count_parity_across_summary_modes(self, mock_db_session):
+        """T03-5: a picture-match item whose enrichment raises
+        InsufficientDistractorPoolError is dropped in BOTH summary=True and
+        summary=False; total_in_queue matches between modes and is strictly
+        less than total_due + total_new (drop, not truncation).
+
+        Uses the plain-Exception service-layer InsufficientDistractorPoolError
+        from src.services.picture_match_service (NOT the HTTP-facing
+        InsufficientDistractorPoolException in src.core.exceptions) so the
+        real drop path in load_picture_match_enrichment is exercised.
+        """
+        user_id = uuid4()
+
+        due_record = _make_mock_record(status=CardStatus.REVIEW)
+        due_record.exercise = _make_mock_exercise(source_type=ExerciseSourceType.WORD_ORDER)
+        due_record.next_review_date = date.today()
+
+        picture_source_exercise = _make_mock_exercise(source_type=ExerciseSourceType.PICTURE)
+        picture_source_exercise.picture_exercise = MagicMock()
+        picture_source_exercise.picture_exercise.exercise_type = (
+            ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION
+        )
+        picture_source_exercise.picture_exercise.picture = MagicMock()
+        picture_source_exercise.picture_exercise.picture.situation_id = uuid4()
+
+        service = ExerciseSM2Service(mock_db_session)
+        service.record_repo.get_due_exercises = AsyncMock(return_value=[due_record])
+        service.record_repo.get_new_exercises = AsyncMock(return_value=[picture_source_exercise])
+        service.record_repo.get_early_practice_exercises = AsyncMock(return_value=[])
+
+        # load_picture_match_enrichment's own bulk-load query: return the
+        # picture exercise with its picture_exercise relation populated so
+        # the code proceeds to (and fails inside) assemble_picture_match_payload.
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [picture_source_exercise]
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
+
+        with patch(
+            "src.services.exercise_sm2_service.assemble_picture_match_payload",
+            AsyncMock(side_effect=InsufficientDistractorPoolError()),
+        ):
+            queue_full = await service.get_study_queue(user_id, summary=False)
+            queue_summary = await service.get_study_queue(user_id, summary=True)
+
+        # Pre-drop counts unaffected by the drop or by summary mode.
+        assert queue_full.total_due == queue_summary.total_due == 1
+        assert queue_full.total_new == queue_summary.total_new == 1
+        # Post-drop count-parity: the picture item is dropped in both modes.
+        assert queue_full.total_in_queue == queue_summary.total_in_queue == 1
+        assert queue_full.total_in_queue < queue_full.total_due + queue_full.total_new
+        remaining_ids = {item.exercise_id for item in queue_full.exercises}
+        assert due_record.exercise.id in remaining_ids
+        assert picture_source_exercise.id not in remaining_ids
