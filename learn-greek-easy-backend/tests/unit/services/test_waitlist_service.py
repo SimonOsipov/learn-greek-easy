@@ -16,9 +16,10 @@ class TestWaitlistServiceGuards:
     async def test_subscribe_dry_run_when_resend_not_configured(self) -> None:
         """subscribe() returns success without calling Resend when API key is missing."""
         service = WaitlistService()
+        background_tasks = MagicMock()
         with patch("src.services.waitlist_service.settings") as mock_settings:
             mock_settings.resend_configured = False
-            result = await service.subscribe("test@example.com")
+            result = await service.subscribe("test@example.com", background_tasks)
         assert result == {"message": "Check your email to confirm"}
 
     async def test_confirm_returns_false_when_resend_not_configured(self) -> None:
