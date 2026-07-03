@@ -15,6 +15,7 @@ from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import settings
 from src.core.dependencies import (
     get_current_superuser,
     get_current_user,
@@ -569,20 +570,61 @@ class TestGetOrCreateUserCache:
         assert returned.is_superuser is True
 
     # -------------------------------------------------------------------------
-    # iv. Projection stored with a short TTL (numeric range, not settings reference)
+    # iv. Cache miss → cache.set called with the configured TTL and full payload
+    # -------------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_identity_cache_set_uses_configured_ttl(self):
+        """Cold miss on an existing user: cache.set gets settings.cache_user_identity_ttl
+        and the {id, is_active, is_superuser} payload (PERF-16-02).
+
+        This pins BOTH the TTL source (must read the live setting, not a hardcoded
+        number -- important now that PERF-16-02 raises the default from 20s to
+        900s) and the payload shape, in one assertion. Overlaps in intent with
+        test_cache_miss_queries_db_and_stores_projection (payload) and
+        test_projection_stored_with_short_ttl (TTL) above -- kept as a combined
+        regression guard so a future change can't satisfy one half while
+        breaking the other.
+        """
+        supabase_id = str(uuid4())
+        claims = _make_claims(supabase_id)
+        user = _make_db_user()
+
+        db = AsyncMock(spec=AsyncSession)
+        _stub_execute_for_existing_user(db, user)
+
+        cache = AsyncMock()
+        cache.get = AsyncMock(return_value=None)
+        cache.set = AsyncMock(return_value=True)
+
+        mock_get_cache = MagicMock(return_value=cache)
+
+        with patch("src.core.dependencies.get_cache", mock_get_cache, create=True):
+            await get_or_create_user(db, claims)
+
+        cache.set.assert_called_once_with(
+            f"user:identity:{supabase_id}",
+            {"id": str(user.id), "is_active": user.is_active, "is_superuser": user.is_superuser},
+            ttl=settings.cache_user_identity_ttl,
+        )
+
+    # -------------------------------------------------------------------------
+    # v. Projection stored with the configured TTL (settings-bound, not a range)
     # -------------------------------------------------------------------------
 
     @pytest.mark.asyncio
     async def test_projection_stored_with_short_ttl(self):
-        """Cache miss + existing user: cache.set is called with a TTL in [15, 30] seconds.
+        """Cache miss + existing user: cache.set TTL equals settings.cache_user_identity_ttl.
 
-        The TTL range (15–30 s) is intentionally loose to avoid coupling the test
-        to the exact settings.cache_user_identity_ttl value (default: 20).  We do NOT
-        reference settings.cache_user_identity_ttl here because that setting does not
-        exist pre-implementation — referencing it would produce an AttributeError and
-        turn a clean RED into a dirty collection error.
+        PERF-16-02 (F1): re-pinned to the live setting instead of a loose [15, 30]
+        range. The setting now exists (it shipped in PERF-05-05 and PERF-16-02
+        raises its default from 20s to 900s), so referencing it directly is safe
+        and makes this test immune to future TTL-default changes.
 
-        RED reason: cache.set is never called in the current implementation.
+        RED reason (pre-PERF-16-02): none -- get_or_create_user already reads
+        settings.cache_user_identity_ttl, so this assertion holds against the
+        current implementation. It is a regression guard, not a not-implemented
+        red.
         """
         supabase_id = str(uuid4())
         claims = _make_claims(supabase_id)
@@ -611,8 +653,8 @@ class TestGetOrCreateUserCache:
         )
         assert ttl_value is not None, "cache.set must be called with a ttl argument"
         assert (
-            15 <= ttl_value <= 30
-        ), f"TTL must be between 15 and 30 seconds (identity tokens are short-lived); got {ttl_value}"
+            ttl_value == settings.cache_user_identity_ttl
+        ), f"TTL must equal settings.cache_user_identity_ttl ({settings.cache_user_identity_ttl}); got {ttl_value}"
 
     # -------------------------------------------------------------------------
     # v. Cache disabled (get→None, set→False) → existing query runs, no db.get

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.core.billing_utils import _build_price_to_cycle_map
+from src.core.cache import get_cache
 from src.core.dependencies import get_current_user
 from src.core.exceptions import AlreadyPremiumException, BillingNotConfiguredException
 from src.core.logging import get_logger
@@ -263,6 +264,7 @@ async def change_subscription_plan(
 
     service = SubscriptionService(db)
     await service.change_plan(current_user, BillingCycle(body.billing_cycle))
+    await get_cache().invalidate_user_identity(current_user.supabase_id, current_user.id)
 
     return await _build_billing_status_response(current_user)
 
@@ -281,6 +283,7 @@ async def cancel_subscription(
 
     service = SubscriptionService(db)
     await service.cancel(current_user)
+    await get_cache().invalidate_user_identity(current_user.supabase_id, current_user.id)
 
     return await _build_billing_status_response(current_user)
 
@@ -299,5 +302,6 @@ async def reactivate_subscription(
 
     service = SubscriptionService(db)
     await service.reactivate(current_user)
+    await get_cache().invalidate_user_identity(current_user.supabase_id, current_user.id)
 
     return await _build_billing_status_response(current_user)

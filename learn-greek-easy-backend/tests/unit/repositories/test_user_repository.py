@@ -17,6 +17,7 @@ UserSettingsRepository:
 Tests use real database fixtures to verify SQL queries work correctly.
 """
 
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
@@ -274,6 +275,31 @@ class TestDeactivate:
 
         with pytest.raises(NotFoundException):
             await repo.deactivate(uuid4())
+
+    @pytest.mark.asyncio
+    async def test_deactivate_repo_calls_invalidation(
+        self,
+        db_session: AsyncSession,
+        supabase_user: User,
+    ):
+        """deactivate() busts the identity cache for the deactivated user (PERF-16-02).
+
+        DB-BOUND: uses the real db_session fixture -- CI-verified only, not
+        runnable against the local no-DB dev setup.
+
+        RED reason: UserRepository.deactivate never calls the identity
+        invalidation helper today.
+        """
+        repo = UserRepository(db_session)
+        mock_cache = AsyncMock()
+        mock_cache.invalidate_user_identity = AsyncMock()
+
+        with patch("src.repositories.user.get_cache", return_value=mock_cache, create=True):
+            await repo.deactivate(supabase_user.id)
+
+        mock_cache.invalidate_user_identity.assert_awaited_once_with(
+            supabase_user.supabase_id, supabase_user.id
+        )
 
 
 # =============================================================================

@@ -125,7 +125,7 @@ async def _reconcile_email(
             .where(User.supabase_id == claims.supabase_id)
         )
         return refreshed.scalar_one_or_none() or user
-    await cache.delete(identity_key)
+    await cache.invalidate_user_identity(claims.supabase_id, user.id)
     try:
         await propagate_email_change(user, new_email)
     except Exception:

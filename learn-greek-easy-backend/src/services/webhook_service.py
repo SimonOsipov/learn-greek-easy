@@ -10,6 +10,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.billing_utils import price_id_to_billing_cycle, stripe_status_to_subscription_status
+from src.core.cache import get_cache
 from src.core.logging import get_logger
 from src.core.posthog import capture_event
 from src.db.models import BillingCycle, SubscriptionStatus, SubscriptionTier, User
@@ -41,6 +42,11 @@ class WebhookService:
         self.db = db
         self.user_repo = UserRepository(db)
         self.webhook_repo = WebhookEventRepository(db)
+        # PERF-16-02: set by a handler as soon as it loads the user it will
+        # mutate, so process_event can bust that user's identity cache on
+        # BOTH the success path and the handler-raised (but still committed)
+        # path. Reset at the top of every process_event call.
+        self._touched_user: User | None = None
 
     async def process_event(self, event: dict) -> bool:
         """Process a Stripe webhook event.
@@ -54,6 +60,11 @@ class WebhookService:
         Returns:
             Always True.
         """
+        # PERF-16-02: reset per-call; a handler sets this to the user it
+        # mutates so the identity cache can be busted below regardless of
+        # whether the handler succeeds or raises.
+        self._touched_user = None
+
         event_id = event.get("id")
         event_type = event.get("type")
 
@@ -99,6 +110,17 @@ class WebhookService:
             )
             await self.webhook_repo.mark_failed(webhook_event, str(e))
 
+        # PERF-16-02: bust the identity cache for any user a handler touched,
+        # on BOTH the success path above and the handler-raised path (the
+        # except block never re-raises -- it marks the event failed and
+        # falls through here). A partially-committed mutation on the raised
+        # path would otherwise leave a stale identity/is_active projection
+        # cached for up to cache_user_identity_ttl (now 900s).
+        if self._touched_user is not None:
+            await get_cache().invalidate_user_identity(
+                self._touched_user.supabase_id, self._touched_user.id
+            )
+
         return True
 
     # =========================================================================
@@ -117,6 +139,7 @@ class WebhookService:
         if not user:
             logger.warning("checkout.session.completed user not found", supabase_id=supabase_id)
             return
+        self._touched_user = user
 
         # Extract billing cycle from metadata
         metadata = session.get("metadata") or {}
@@ -184,6 +207,7 @@ class WebhookService:
         user = await self._find_user_by_stripe_customer_id(customer_id, "invoice.paid")
         if user is None:
             return
+        self._touched_user = user
 
         is_first_invoice = user.subscription_created_at is None
         now = datetime.now(timezone.utc)
@@ -228,6 +252,7 @@ class WebhookService:
         user = await self._find_user_by_stripe_customer_id(customer_id, "invoice.payment_failed")
         if user is None:
             return
+        self._touched_user = user
 
         user.subscription_status = SubscriptionStatus.PAST_DUE
 
@@ -250,6 +275,7 @@ class WebhookService:
         )
         if user is None:
             return
+        self._touched_user = user
 
         user.subscription_status = SubscriptionStatus.PAST_DUE
 
@@ -275,6 +301,7 @@ class WebhookService:
         )
         if user is None:
             return
+        self._touched_user = user
 
         # Capture old state for change detection
         old_billing_cycle = user.billing_cycle
@@ -357,6 +384,7 @@ class WebhookService:
         )
         if user is None:
             return
+        self._touched_user = user
 
         was_billing_cycle = user.billing_cycle
 

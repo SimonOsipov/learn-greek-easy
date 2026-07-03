@@ -11,10 +11,13 @@ import uuid as uuid_module
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.config import settings
+from src.core.cache import get_cache
 from src.core.dependencies import get_current_user
 from src.core.logging import get_logger
 from src.core.subscription import get_effective_access_level
@@ -277,8 +280,16 @@ async def get_me(
     Returns the user's profile information including their settings.
     Requires a valid JWT access token in the Authorization header.
 
-    Reloads user from database to ensure clean session state and avoid
-    MissingGreenlet errors when serializing ORM objects across async contexts.
+    Read-through cache-aside (PERF-16-03), mirroring
+    get_dashboard_summary (src/api/v1/dashboard.py): the built
+    UserProfileResponse is cached at ``user:me:{user_id}`` for
+    ``cache_auth_me_body_ttl`` seconds via CacheService.get_or_set, and
+    busted by CacheService.invalidate_user_identity (PERF-16-02) on every
+    write path that can change the profile. On a cache hit the cached
+    dict is reconstructed via model_validate with no ORM access; on a
+    miss (or a disabled/degraded cache) it reloads the user from the
+    database to ensure clean session state and avoid MissingGreenlet
+    errors when serializing ORM objects across async contexts.
 
     The user's settings (daily_goal, email_notifications) are included
     in the response for convenience.
@@ -318,12 +329,31 @@ async def get_me(
             }
         }
     """
-    # Reload user with settings to ensure clean session state
-    stmt = select(User).options(selectinload(User.settings)).where(User.id == current_user.id)
-    result = await db.execute(stmt)
-    user = result.scalar_one()
 
-    return _build_user_profile_response(user, auth_provider=_extract_auth_provider(request))
+    async def _reload_and_build() -> UserProfileResponse:
+        # Reload user with settings to ensure clean session state
+        stmt = select(User).options(selectinload(User.settings)).where(User.id == current_user.id)
+        result = await db.execute(stmt)
+        user = result.scalar_one()
+        return _build_user_profile_response(user, auth_provider=_extract_auth_provider(request))
+
+    async def _load_body() -> dict:
+        return (await _reload_and_build()).model_dump(mode="json")
+
+    cache = get_cache()
+    key = f"user:me:{current_user.id}"
+    cached = await cache.get_or_set(key, _load_body, ttl=settings.cache_auth_me_body_ttl)  # type: ignore[arg-type]
+    if cached is not None:
+        try:
+            resp = UserProfileResponse.model_validate(cached)
+            # auth_provider is request-scoped (from this request's JWT claims), not
+            # user-stable, so a cache HIT must not serve a stale provider captured by
+            # whichever request originally populated the cache entry.
+            resp.auth_provider = _extract_auth_provider(request)
+            return resp
+        except ValidationError:
+            pass
+    return await _reload_and_build()
 
 
 @router.patch(
@@ -440,6 +470,7 @@ async def update_me(
             db.add(settings)
 
     await db.commit()
+    await get_cache().invalidate_user_identity(current_user.supabase_id, current_user.id)
 
     # Reload user with settings to get updated timestamps
     # (required for lazy="raise" relationships)
@@ -537,6 +568,7 @@ async def delete_avatar(
     current_user.avatar_url = None
     db.add(current_user)
     await db.commit()
+    await get_cache().invalidate_user_identity(current_user.supabase_id, current_user.id)
 
     return AvatarDeleteResponse(
         success=True,

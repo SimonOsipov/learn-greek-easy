@@ -3,7 +3,7 @@
 Mode B adversarial coverage added AFTER the AC tests (test_dependencies_email_reconciliation.py)
 were confirmed green.  These tests probe the edges the AC tests did not explicitly cover:
 
-1. claims.email is None   → no write, no propagation, no cache delete
+1. claims.email is None   → no write, no propagation, no identity-cache invalidation
 2. Whitespace-padded claim → documents the current impl behaviour
    (no .strip() call — spurious write if Supabase ever delivers a padded email).
 3. propagate_email_change raises a non-IntegrityError → EXPECTED TO FAIL in current impl
@@ -62,6 +62,7 @@ def _make_cold_cache() -> AsyncMock:
     cache.get = AsyncMock(return_value=None)
     cache.set = AsyncMock(return_value=True)
     cache.delete = AsyncMock(return_value=True)
+    cache.invalidate_user_identity = AsyncMock(return_value=None)
     return cache
 
 
@@ -78,7 +79,8 @@ async def test_adv1_none_email_claim_no_reconciliation():
     A token without an email claim (e.g. phone-only auth stub) must never
     null or overwrite users.email.  The guard `if claims.email and ...` at
     dependencies.py:157 handles this.  Confirm no flush, no propagate, no
-    cache.delete is triggered beyond what the normal warm-cache set does.
+    identity-cache invalidation is triggered beyond what the normal
+    warm-cache set does.
     """
     supabase_id = str(uuid4())
     user = _make_db_user(supabase_id=supabase_id, email="existing@x.com")
@@ -102,8 +104,9 @@ async def test_adv1_none_email_claim_no_reconciliation():
 
     # No propagation must occur
     mock_propagate.assert_not_called()
-    # cache.delete must NOT be called (it's only called inside _reconcile_email)
-    cache.delete.assert_not_called()
+    # cache.invalidate_user_identity must NOT be called (it's only called
+    # inside _reconcile_email, PERF-16-02)
+    cache.invalidate_user_identity.assert_not_called()
     # db.flush must NOT be called for reconciliation (there's no email to reconcile)
     db.flush.assert_not_awaited()
     # user.email must be untouched
@@ -336,28 +339,29 @@ async def test_adv5_case_only_change_no_propagation_to_stripe_resend():
 
     mock_propagate.assert_not_called()
     db.flush.assert_not_awaited()
-    cache.delete.assert_not_called()
+    cache.invalidate_user_identity.assert_not_called()
     # Email must remain unchanged (the stored casing is preserved)
     assert returned.email == "Old@X.com"
 
 
 # ============================================================================
-# ADV-6: cache.delete called AFTER flush, BEFORE propagation
+# ADV-6: cache.invalidate_user_identity called AFTER flush, BEFORE propagation
 # ============================================================================
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_adv6_cache_delete_after_flush_before_propagation():
-    """ADV-6: cache.delete must happen after flush but before propagation.
+async def test_adv6_cache_invalidate_after_flush_before_propagation():
+    """ADV-6: identity-cache invalidation must happen after flush but before
+    propagation.
 
     The correct order inside _reconcile_email is:
-      1. user.email = new_email  (in-memory mutation)
-      2. db.flush()              (persist to DB)
-      3. cache.delete(key)       (bust identity cache)
-      4. propagate_email_change  (best-effort mirror)
+      1. user.email = new_email              (in-memory mutation)
+      2. db.flush()                          (persist to DB)
+      3. cache.invalidate_user_identity(...) (bust identity + /me caches, PERF-16-02)
+      4. propagate_email_change              (best-effort mirror)
 
-    If cache.delete happens after propagation, a propagation error (ADV-3)
+    If invalidation happens after propagation, a propagation error (ADV-3)
     could leave a stale cache entry.  Verify steps 2→3→4 are ordered.
     """
     supabase_id = str(uuid4())
@@ -374,10 +378,10 @@ async def test_adv6_cache_delete_after_flush_before_propagation():
 
     cache = _make_cold_cache()
 
-    async def record_delete(key: str) -> None:
-        call_order.append("delete")
+    async def record_invalidate(sb_id: str, user_id: object) -> None:
+        call_order.append("invalidate")
 
-    cache.delete = AsyncMock(side_effect=record_delete)
+    cache.invalidate_user_identity = AsyncMock(side_effect=record_invalidate)
 
     async def record_propagate(u: object, email: str) -> None:
         call_order.append("propagate")
@@ -398,6 +402,6 @@ async def test_adv6_cache_delete_after_flush_before_propagation():
 
     assert call_order == [
         "flush",
-        "delete",
+        "invalidate",
         "propagate",
-    ], f"Expected order [flush, delete, propagate], got {call_order}"
+    ], f"Expected order [flush, invalidate, propagate], got {call_order}"

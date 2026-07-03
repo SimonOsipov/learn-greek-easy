@@ -113,9 +113,27 @@ class Settings(BaseSettings):
         description="User statistics cache TTL in seconds (2 minutes)",
     )
     cache_user_identity_ttl: int = Field(
-        default=20,
+        default=900,
         gt=0,
-        description="TTL (seconds) for the supabase_id→identity user lookup cache (PERF-05-05)",
+        description=(
+            "TTL (seconds) for the supabase_id→identity user lookup cache; "
+            "event-invalidated (PERF-16)"
+        ),
+    )
+    cache_auth_me_body_ttl: int = Field(
+        default=120,
+        gt=0,
+        description="TTL (seconds) for the cached GET /auth/me response body; event-invalidated via user:me:{id} (PERF-16)",
+    )
+    cache_single_flight_lock_ttl_ms: int = Field(
+        default=5000,
+        gt=0,
+        description="get_or_set single-flight lock TTL in ms (PERF-16)",
+    )
+    cache_single_flight_poll_ms: int = Field(
+        default=50,
+        gt=0,
+        description="get_or_set single-flight follower poll interval in ms (PERF-16)",
     )
 
     # =========================================================================

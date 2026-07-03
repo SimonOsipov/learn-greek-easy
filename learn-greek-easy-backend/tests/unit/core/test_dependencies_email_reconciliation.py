@@ -16,7 +16,7 @@ Reconciliation contract (EMAIL-19-02, supabase_id cold-path only):
   - On supabase_id hit + claims.email differs case-insensitively from user.email:
       1. user.email = claims.email
       2. db.flush()
-      3. cache.delete("user:identity:{supabase_id}")
+      3. cache.invalidate_user_identity(supabase_id, user.id) (PERF-16-02)
       4. best-effort call to propagate_email_change(user, new_email)
   - On IntegrityError (duplicate email): rollback, log, keep old email, no raise.
   - Warm cache hit (cache.get returns a projection): returns cached user early,
@@ -202,19 +202,23 @@ async def test_ac2b_case_insensitive_equal_no_write():
 
 
 # ============================================================================
-# AC-3: cold path + mismatch → cache.delete called with correct key
+# AC-3: cold path + mismatch → identity cache invalidated for the user
 # ============================================================================
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_ac3_cold_path_reconciliation_deletes_identity_cache():
-    """AC-3: reconciliation fires on cold path → cache.delete("user:identity:{sub}") called.
+    """AC-3: reconciliation fires on cold path → cache.invalidate_user_identity
+    called with the user's (supabase_id, id) (PERF-16-02: was a bare
+    cache.delete(identity_key) call; now routed through the shared choke point
+    so it also busts the /auth/me body cache).
 
     The identity-cache key must be deleted so the next warm-hit can't serve
     stale identity data.
 
-    RED reason: the current code never calls cache.delete; the assertion fails.
+    RED reason (pre-PERF-16-02): the current code never calls cache.delete;
+    the assertion fails.
     """
     supabase_id = str(uuid4())
     user = _make_db_user(supabase_id=supabase_id, email="old@x.com")
@@ -226,10 +230,8 @@ async def test_ac3_cold_path_reconciliation_deletes_identity_cache():
     cache = AsyncMock()
     cache.get = AsyncMock(return_value=None)
     cache.set = AsyncMock(return_value=True)
-    cache.delete = AsyncMock(return_value=True)
+    cache.invalidate_user_identity = AsyncMock(return_value=None)
     mock_get_cache = MagicMock(return_value=cache)
-
-    expected_key = f"user:identity:{supabase_id}"
 
     with (
         patch("src.core.dependencies.get_cache", mock_get_cache, create=True),
@@ -241,8 +243,8 @@ async def test_ac3_cold_path_reconciliation_deletes_identity_cache():
     ):
         await get_or_create_user(db, claims)
 
-    # cache.delete must have been called with the exact identity key
-    cache.delete.assert_awaited_once_with(expected_key)
+    # cache.invalidate_user_identity must have been called with the user's ids
+    cache.invalidate_user_identity.assert_awaited_once_with(supabase_id, user.id)
 
 
 # ============================================================================
