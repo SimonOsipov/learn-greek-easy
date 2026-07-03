@@ -132,8 +132,9 @@ function renderReader(
   // item — the reader's prop-fallback merge (detail ?? prop) keeps every existing
   // prop-driven assertion (incl. karaoke) green.
   vi.mocked(adminAPI.getNewsItem).mockResolvedValue(article ?? createArticle());
-  return render(
-    <QueryClientProvider client={createTestQueryClient()}>
+  const qc = createTestQueryClient();
+  const result = render(
+    <QueryClientProvider client={qc}>
       <NewsReaderSheet
         article={article}
         open={open}
@@ -143,6 +144,16 @@ function renderReader(
       />
     </QueryClientProvider>
   );
+  // PERF-17-04: re-wrap rerender() in the SAME QueryClientProvider instance so the
+  // two pre-existing tests that call rerender(<NewsReaderSheet .../>) keep a
+  // QueryClient ancestor across rerenders. The raw RTL rerender replaces the whole
+  // tree — without this wrap it drops the provider and the reader's useQuery throws
+  // "No QueryClient set" on the next render.
+  return {
+    ...result,
+    rerender: (ui: Parameters<typeof result.rerender>[0]) =>
+      result.rerender(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>),
+  };
 }
 
 // PERF-17-04: provider-wrapped render helper for the detail-fetch-on-open tests below.
