@@ -35,6 +35,7 @@ import io
 import posixpath
 import threading
 import time
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -287,6 +288,39 @@ class S3Service:
                 },
             )
             return None
+
+    def generate_presigned_urls(
+        self,
+        keys_with_expiry: Sequence[tuple[Optional[str], Optional[int]]],
+    ) -> dict[str, Optional[str]]:
+        """Batch-sign presigned GET URLs, deduping by object key.
+
+        Signs each *unique* object key exactly once by delegating to the single-key
+        ``generate_presigned_url`` routine — so the output is byte-identical to the
+        per-key path, and the existing ``_SIGN_LOCK``, per-instance ``_url_cache``,
+        and floored window clock are all reused unchanged (no parallel signing path).
+
+        Dedup is by object key alone (first-seen expiry wins), matching ``_url_cache``
+        which is likewise keyed by object key. Empty/``None`` keys are skipped and
+        never inserted — callers read a missing key as "no URL".
+
+        Meant to be dispatched via ``asyncio.to_thread`` so the whole (lock-serialized)
+        signing loop runs off the event loop in one hop.
+
+        Args:
+            keys_with_expiry: Sequence of ``(object_key, expiry_seconds)`` pairs.
+                ``expiry_seconds=None`` falls through to the configured default.
+
+        Returns:
+            Mapping of each unique non-empty object key to its presigned URL
+            (or ``None`` when signing failed / S3 is not configured).
+        """
+        result: dict[str, Optional[str]] = {}
+        for key, expiry in keys_with_expiry:
+            if not key or key in result:
+                continue
+            result[key] = self.generate_presigned_url(key, expiry_seconds=expiry)
+        return result
 
     def check_object_exists(self, image_key: str) -> bool:
         """Check if an object exists in S3.
