@@ -3,6 +3,7 @@
 
 import asyncio
 import json
+import time
 from typing import Any, Dict
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -692,6 +693,185 @@ class TestCacheGetOrSetSingleFlight:
 
         assert result == cached_value
         mock_redis.set.assert_not_called()
+
+
+class TestCacheGetOrSetSingleFlightAdversarial:
+    """QA (PERF-16-01): adversarial/edge coverage beyond the architect's
+    RED specs in TestCacheGetOrSetSingleFlight -- sync factories, a
+    lock-backend outage on acquisition, a legitimately-None leader result,
+    and follower poll latency (must return promptly, not after the full
+    lock TTL budget).
+    """
+
+    @pytest.mark.asyncio
+    async def test_get_or_set_single_flight_sync_factory(self):
+        """A plain sync (non-coroutine) factory must work through the
+        leader path exactly like an async factory: get_or_set supports
+        both via asyncio.iscoroutine, and the single-flight lock wraps
+        either kind transparently."""
+        fake_redis = _FakeAsyncRedis()
+        call_count = 0
+
+        def sync_factory() -> Dict[str, str]:
+            nonlocal call_count
+            call_count += 1
+            return {"value": "sync_computed"}
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = "cache"
+            mock_settings.cache_default_ttl = 300
+            mock_settings.cache_single_flight_lock_ttl_ms = 5000
+            mock_settings.cache_single_flight_poll_ms = 50
+            service = CacheService(redis_client=fake_redis)
+
+            result = await asyncio.wait_for(
+                service.get_or_set("sync:key", sync_factory, ttl=30), timeout=5
+            )
+
+        assert result == {"value": "sync_computed"}
+        assert call_count == 1
+        # Leader path must have cached the sync result under the real key
+        # (not the lock key) via setex.
+        assert fake_redis.store.get("cache:sync:key") == json.dumps({"value": "sync_computed"})
+        # Lock must be released, not leaked until PX expiry.
+        assert "cache:sync:key:lock" not in fake_redis.store
+
+    @pytest.mark.asyncio
+    async def test_get_or_set_lock_acquisition_error_falls_through_to_leader(self):
+        """If the lock backend itself errors on SET NX (e.g. a Redis blip),
+        get_or_set must degrade to leader behavior -- run the factory once
+        and return/cache its value -- rather than propagating the error or
+        silently returning None."""
+        mock_redis = AsyncMock()
+        mock_redis.get.return_value = None  # cold cache
+        mock_redis.set.side_effect = Exception("connection reset")
+
+        call_count = 0
+
+        async def factory():
+            nonlocal call_count
+            call_count += 1
+            return {"value": "degraded_leader"}
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = "cache"
+            mock_settings.cache_default_ttl = 300
+            mock_settings.cache_single_flight_lock_ttl_ms = 5000
+            mock_settings.cache_single_flight_poll_ms = 50
+            service = CacheService(redis_client=mock_redis)
+
+            result = await asyncio.wait_for(
+                service.get_or_set("lockerr:key", factory, ttl=30), timeout=5
+            )
+
+        assert result == {"value": "degraded_leader"}
+        assert call_count == 1
+        mock_redis.setex.assert_called_once()
+        # Lock release is still attempted in finally even though the lock
+        # was never really held (harmless no-op against a real backend).
+        assert mock_redis.delete.called
+
+    @pytest.mark.asyncio
+    async def test_get_or_set_leader_none_result_no_hang_no_permanent_dogpile(self):
+        """A factory that legitimately returns None must not be cached (per
+        existing get_or_set contract), and the lock must still be released.
+        A concurrent follower must NOT hang or spin forever waiting for a
+        value that will never appear -- it must fall through to self-serve
+        once the (short, test-tuned) lock TTL budget elapses, bounded and
+        deterministic, not a permanent deadlock."""
+        fake_redis = _FakeAsyncRedis()
+        call_count = 0
+
+        async def none_factory():
+            nonlocal call_count
+            call_count += 1
+            await asyncio.sleep(0.01)
+            return None
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = "cache"
+            mock_settings.cache_default_ttl = 300
+            mock_settings.cache_single_flight_lock_ttl_ms = 60
+            mock_settings.cache_single_flight_poll_ms = 10
+            service = CacheService(redis_client=fake_redis)
+
+            results = await asyncio.wait_for(
+                asyncio.gather(
+                    service.get_or_set("none:key", none_factory, ttl=30),
+                    service.get_or_set("none:key", none_factory, ttl=30),
+                ),
+                timeout=5,  # generous bound -- proves it terminates, not a hang
+            )
+
+        # Both callers resolve to None -- no crash, no hang.
+        assert results == [None, None]
+        # Nothing was ever cached for a None result.
+        assert "cache:none:key" not in fake_redis.store
+        # The lock is released, not leaked.
+        assert "cache:none:key:lock" not in fake_redis.store
+        # NOTE (known design tradeoff, not a hang/leak): because a None
+        # result is indistinguishable from "not computed yet" in the cache,
+        # the follower cannot short-circuit on the leader's (None) result --
+        # it still waits out the poll budget and self-serves, so the
+        # factory runs twice here (once per caller) rather than once. This
+        # is bounded by lock_ttl_ms per follower, never unbounded.
+        assert call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_get_or_set_follower_returns_promptly_not_after_full_budget(self):
+        """A follower must return as soon as the leader's value appears in
+        the cache, not after waiting out the entire lock_ttl_ms budget --
+        i.e. the poll loop must actually observe the value on an early
+        iteration rather than always draining the full window."""
+        fake_redis = _FakeAsyncRedis()
+        leader_started = asyncio.Event()
+
+        async def leader_factory():
+            leader_started.set()
+            await asyncio.sleep(0.03)  # leader takes ~30ms
+            return {"value": "prompt_leader"}
+
+        async def follower_factory():
+            raise AssertionError(
+                "follower must observe the leader's value and must not "
+                "self-serve after only ~30ms against a 5s lock_ttl_ms budget"
+            )
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = "cache"
+            mock_settings.cache_default_ttl = 300
+            # Lock TTL budget is generous (5s); poll is fine-grained (10ms).
+            # If the follower correctly observes the leader's value shortly
+            # after ~30ms, the test finishes in well under a second. If it
+            # were (incorrectly) waiting out the full budget, this would
+            # take ~5s and trip the tight wait_for below.
+            mock_settings.cache_single_flight_lock_ttl_ms = 5000
+            mock_settings.cache_single_flight_poll_ms = 10
+            service = CacheService(redis_client=fake_redis)
+
+            start = time.monotonic()
+            leader_task = asyncio.ensure_future(
+                service.get_or_set("prompt:key", leader_factory, ttl=30)
+            )
+            await leader_started.wait()
+            follower_task = asyncio.ensure_future(
+                service.get_or_set("prompt:key", follower_factory, ttl=30)
+            )
+
+            results = await asyncio.wait_for(asyncio.gather(leader_task, follower_task), timeout=2)
+            elapsed = time.monotonic() - start
+
+        assert results == [{"value": "prompt_leader"}, {"value": "prompt_leader"}]
+        assert elapsed < 1.0, (
+            f"expected the follower to return promptly after the leader "
+            f"published (~30ms), but the call took {elapsed:.3f}s -- "
+            f"suggests it drained the full lock_ttl_ms budget instead of "
+            f"observing the value on an early poll"
+        )
 
 
 class TestCacheExists:
