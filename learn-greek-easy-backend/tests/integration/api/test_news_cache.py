@@ -14,12 +14,9 @@ PERF-17 (## Target design SS B, Decisions D6/D8/D11/D15):
   pre-edit state, and a call-order spy independently proves commit() happens
   strictly before delete_pattern().
 
-RED (Stage 2.5, pre-implementation): src/api/v1/admin.py does not import
-`get_cache` today (Drift #1, Stage-1 Architecture validation on
-task-1245) and never calls delete_pattern for news. These tests patch
-`src.api.v1.admin.get_cache` with `create=True` so the module imports
-cleanly today; each test fails at its delete_pattern-call assertion, which
-is a not-implemented failure, not a collection error.
+These tests patch `src.api.v1.admin.get_cache` with `create=True` so the
+module import target is explicit regardless of how the singleton is wired
+internally (mirrors the decks/dashboard precedents).
 """
 
 from datetime import date
@@ -104,7 +101,6 @@ class TestNewsCacheInvalidationOnCreate:
 
         assert response.status_code == 201
 
-        # RED: admin.py never calls get_cache/delete_pattern for news today.
         assert mock_cache.delete_pattern.call_count == 1, (
             "Expected delete_pattern('news:list:*') invoked once after create, "
             f"got {mock_cache.delete_pattern.call_count} call(s)"
@@ -191,11 +187,11 @@ class TestNewsCacheInvalidationOrdering:
         superuser_auth_headers: dict,
         db_session: AsyncSession,
     ) -> None:
-        """Update/delete currently have NO explicit db.commit() (Drift/F3 finding on
-        task-1245): the deferred get_db commit runs AFTER the handler returns in
-        production, so a naive "invalidate then commit" ordering would let a
-        subsequent request re-cache the pre-write row. The executor must add an
-        explicit `await db.commit()` BEFORE `delete_pattern`.
+        """Update/delete had NO explicit db.commit() before this story (Drift/F3
+        finding on task-1245): the deferred get_db commit runs AFTER the handler
+        returns in production, so a naive "invalidate then commit" ordering would
+        let a subsequent request re-cache the pre-write row. The implementation
+        adds an explicit `await db.commit()` BEFORE `delete_pattern`.
 
         This test proves ordering two independent ways:
         1. A call-order spy on db.commit() and cache.delete_pattern() -- fails if
@@ -242,12 +238,11 @@ class TestNewsCacheInvalidationOrdering:
 
         assert response.status_code == 200
 
-        # RED (call-count): admin.py never calls delete_pattern for news today.
         assert mock_delete_pattern.call_count == 1, (
             "Expected delete_pattern('news:list:*') called once after update, "
             f"got {mock_delete_pattern.call_count} call(s)"
         )
-        # RED (ordering, F3): commit must strictly precede delete_pattern.
+        # F3 ordering guard: commit must strictly precede delete_pattern.
         assert call_order == [
             "commit",
             "delete_pattern",
