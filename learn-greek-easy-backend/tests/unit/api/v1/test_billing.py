@@ -1777,3 +1777,158 @@ class TestSubscriptionEndpoints:
                 headers=auth_headers,
             )
         assert response.status_code == 400
+
+
+@pytest.mark.unit
+@pytest.mark.stripe
+class TestSubscriptionEndpointsInvalidateIdentityCache:
+    """PERF-16-02: change-plan/cancel/reactivate bust the identity cache for
+    the current user after mutating billing state, matching the update_me /
+    delete_avatar choke points -- these endpoints commit a User row change
+    (subscription_tier/status feed the cached is_active/is_superuser-adjacent
+    identity projection's staleness surface) but never invalidate today.
+
+    DB-BOUND: the `client` fixture overrides get_db with a real db_session
+    against the test Postgres database. CI-verified only, not runnable
+    against the local no-DB dev setup.
+    """
+
+    @pytest.mark.asyncio
+    async def test_change_plan_invalidates_identity(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        test_user: User,
+        db_session,
+    ):
+        """POST /subscription/change-plan calls invalidate_user_identity once.
+
+        RED reason: change_subscription_plan() never calls the identity
+        invalidation helper today.
+        """
+        test_user.subscription_tier = SubscriptionTier.PREMIUM
+        test_user.subscription_status = SubscriptionStatus.ACTIVE
+        test_user.stripe_subscription_id = "sub_test123"
+        test_user.billing_cycle = BillingCycle.MONTHLY
+        test_user.subscription_cancel_at_period_end = False
+        await db_session.flush()
+
+        from src.schemas.billing import BillingStatusResponse
+
+        mock_cache = AsyncMock()
+        mock_cache.invalidate_user_identity = AsyncMock()
+
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.SubscriptionService") as mock_service_class,
+            patch("src.api.v1.billing._build_billing_status_response") as mock_build,
+            patch("src.api.v1.billing.get_cache", return_value=mock_cache, create=True),
+        ):
+            mock_settings.stripe_configured = True
+            mock_service = AsyncMock()
+            mock_service.change_plan = AsyncMock()
+            mock_service_class.return_value = mock_service
+            mock_build.return_value = BillingStatusResponse(**_make_billing_status_response())
+
+            response = await client.post(
+                "/api/v1/billing/subscription/change-plan",
+                json={"billing_cycle": "quarterly"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200, response.text
+        mock_cache.invalidate_user_identity.assert_awaited_once_with(
+            test_user.supabase_id, test_user.id
+        )
+
+    @pytest.mark.asyncio
+    async def test_cancel_invalidates_identity(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        test_user: User,
+        db_session,
+    ):
+        """POST /subscription/cancel calls invalidate_user_identity once.
+
+        RED reason: cancel_subscription() never calls the identity
+        invalidation helper today.
+        """
+        test_user.subscription_tier = SubscriptionTier.PREMIUM
+        test_user.subscription_status = SubscriptionStatus.ACTIVE
+        test_user.stripe_subscription_id = "sub_test123"
+        test_user.subscription_cancel_at_period_end = False
+        await db_session.flush()
+
+        from src.schemas.billing import BillingStatusResponse
+
+        mock_cache = AsyncMock()
+        mock_cache.invalidate_user_identity = AsyncMock()
+
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.SubscriptionService") as mock_service_class,
+            patch("src.api.v1.billing._build_billing_status_response") as mock_build,
+            patch("src.api.v1.billing.get_cache", return_value=mock_cache, create=True),
+        ):
+            mock_settings.stripe_configured = True
+            mock_service = AsyncMock()
+            mock_service.cancel = AsyncMock()
+            mock_service_class.return_value = mock_service
+            mock_build.return_value = BillingStatusResponse(**_make_billing_status_response())
+
+            response = await client.post(
+                "/api/v1/billing/subscription/cancel",
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200, response.text
+        mock_cache.invalidate_user_identity.assert_awaited_once_with(
+            test_user.supabase_id, test_user.id
+        )
+
+    @pytest.mark.asyncio
+    async def test_reactivate_invalidates_identity(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        test_user: User,
+        db_session,
+    ):
+        """POST /subscription/reactivate calls invalidate_user_identity once.
+
+        RED reason: reactivate_subscription() never calls the identity
+        invalidation helper today.
+        """
+        test_user.subscription_tier = SubscriptionTier.PREMIUM
+        test_user.subscription_status = SubscriptionStatus.ACTIVE
+        test_user.stripe_subscription_id = "sub_test123"
+        test_user.subscription_cancel_at_period_end = True
+        await db_session.flush()
+
+        from src.schemas.billing import BillingStatusResponse
+
+        mock_cache = AsyncMock()
+        mock_cache.invalidate_user_identity = AsyncMock()
+
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.SubscriptionService") as mock_service_class,
+            patch("src.api.v1.billing._build_billing_status_response") as mock_build,
+            patch("src.api.v1.billing.get_cache", return_value=mock_cache, create=True),
+        ):
+            mock_settings.stripe_configured = True
+            mock_service = AsyncMock()
+            mock_service.reactivate = AsyncMock()
+            mock_service_class.return_value = mock_service
+            mock_build.return_value = BillingStatusResponse(**_make_billing_status_response())
+
+            response = await client.post(
+                "/api/v1/billing/subscription/reactivate",
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200, response.text
+        mock_cache.invalidate_user_identity.assert_awaited_once_with(
+            test_user.supabase_id, test_user.id
+        )

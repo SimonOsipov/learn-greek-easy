@@ -258,6 +258,46 @@ class TestDeleteAccount:
         # Sentry should capture the exception
         mock_sentry.capture_exception.assert_called_once()
 
+    @pytest.mark.asyncio
+    async def test_delete_account_invalidates_identity(self, service, mock_user):
+        """delete_account busts the identity cache for the deleted user (PERF-16-02).
+
+        A deleted user's stale identity cache entry is worse than a normal
+        stale entry: get_or_create_user's cache-hit path does db.get(User, id),
+        gets None back (row gone), and falls through to the supabase_id query
+        -- which can re-provision a brand new user row for the deleted
+        supabase_id. Explicit invalidation on delete closes that window.
+
+        RED reason: UserDeletionService.delete_account never calls the identity
+        invalidation helper today.
+        """
+        user_id = mock_user.id
+        supabase_id = mock_user.supabase_id
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        mock_cache = AsyncMock()
+        mock_cache.invalidate_user_identity = AsyncMock()
+
+        with (
+            patch(
+                "src.services.user_deletion_service.get_supabase_admin_client",
+                return_value=None,
+            ),
+            patch(
+                "src.services.user_deletion_service.get_cache",
+                return_value=mock_cache,
+                create=True,
+            ),
+        ):
+            result = await service.delete_account(user_id, supabase_id)
+
+        assert result.success is True
+        mock_cache.invalidate_user_identity.assert_awaited_once_with(supabase_id, user_id)
+
 
 @pytest.mark.unit
 class TestDeletionResult:

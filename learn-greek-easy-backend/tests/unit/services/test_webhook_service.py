@@ -53,6 +53,7 @@ def _make_user(
     stripe_subscription_id: str | None = None,
     trial_start_date=None,
     trial_end_date=None,
+    supabase_id: str | None = None,
 ) -> MagicMock:
     """Build a MagicMock User with realistic subscription field defaults."""
     user = MagicMock(spec=User)
@@ -69,6 +70,8 @@ def _make_user(
     user.stripe_subscription_id = stripe_subscription_id
     user.trial_start_date = trial_start_date
     user.trial_end_date = trial_end_date
+    # PERF-16-02: identity-cache invalidation choke point keys off supabase_id.
+    user.supabase_id = supabase_id or f"sb_{uuid4().hex[:8]}"
     return user
 
 
@@ -1325,3 +1328,160 @@ class TestSubscriptionDeleted:
             result = await svc.process_event(self._make_event())
 
         assert result is True
+
+
+# ---------------------------------------------------------------------------
+# Test: identity-cache invalidation choke point (PERF-16-02, F7)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.stripe
+class TestWebhookIdentityCacheInvalidation:
+    """process_event() must bust the identity cache for any user a handler
+    touched -- on BOTH the success path and the handler-raised path (a
+    try/except in process_event catches handler exceptions, calls
+    mark_failed(), and still returns True/commits, so a stale identity
+    projection would otherwise survive a failed handler run too).
+
+    This matters more now that PERF-16-02 raises the identity TTL from 20s to
+    900s: a stale is_active/is_superuser projection can live for up to 15
+    minutes unless every mutation path busts it.
+
+    Uses customer.subscription.updated as the vehicle event (any user-mutating
+    handler works) and get_cache() as the seam webhook_service.py will add --
+    patched with create=True because that import does not exist in
+    webhook_service.py yet.
+    """
+
+    def _make_event(
+        self,
+        customer: str = "cus_123",
+        stripe_status: str = "active",
+        current_period_end: int = 1800000000,
+        cancel_at_period_end: bool = False,
+        sub_id: str = "sub_123",
+    ) -> dict:
+        return {
+            "id": "evt_identity_cache",
+            "type": "customer.subscription.updated",
+            "data": {
+                "object": {
+                    "id": sub_id,
+                    "customer": customer,
+                    "status": stripe_status,
+                    "current_period_end": current_period_end,
+                    "cancel_at_period_end": cancel_at_period_end,
+                    "items": {"data": []},
+                }
+            },
+        }
+
+    @pytest.mark.asyncio
+    async def test_subscription_updated_triggers_invalidation(self):
+        """Success path: the touched user's identity cache is busted once.
+
+        RED reason: webhook_service.py has no invalidation call at all today,
+        so invalidate_user_identity is never awaited.
+        """
+        user = _make_user(supabase_id="sb_success_user")
+        svc = _make_service()
+        svc.user_repo = _make_mock_user_repo(user=user)
+        svc.webhook_repo = _make_mock_webhook_repo()
+
+        mock_cache = AsyncMock()
+        mock_cache.invalidate_user_identity = AsyncMock()
+
+        with (
+            _patch_settings(),
+            patch("src.services.webhook_service.capture_event"),
+            patch(
+                "src.services.webhook_service.get_cache",
+                return_value=mock_cache,
+                create=True,
+            ),
+        ):
+            result = await svc.process_event(self._make_event())
+
+        assert result is True
+        mock_cache.invalidate_user_identity.assert_awaited_once_with(user.supabase_id, user.id)
+
+    @pytest.mark.asyncio
+    async def test_webhook_handler_failure_still_invalidates(self):
+        """Handler-raised path: process_event still returns True, marks the
+        event failed, AND still busts the identity cache for the user the
+        handler touched before raising (the F7 fix -- get_db() commits a
+        partial mutation on this path today, so a stale cache entry would
+        otherwise linger for the full TTL).
+
+        stripe_status_to_subscription_status is patched to raise so the
+        handler fails AFTER _find_user_by_stripe_customer_id has already
+        loaded (and, per the fix, "touched") the user.
+
+        RED reason: webhook_service.py has no invalidation call at all today,
+        so invalidate_user_identity is never awaited even though the handler
+        does fail and mark_failed does run.
+        """
+        user = _make_user(supabase_id="sb_failure_user")
+        svc = _make_service()
+        svc.user_repo = _make_mock_user_repo(user=user)
+        webhook_repo = _make_mock_webhook_repo()
+        svc.webhook_repo = webhook_repo
+
+        mock_cache = AsyncMock()
+        mock_cache.invalidate_user_identity = AsyncMock()
+
+        with (
+            _patch_settings(),
+            patch("src.services.webhook_service.capture_event"),
+            patch(
+                "src.services.webhook_service.stripe_status_to_subscription_status",
+                side_effect=RuntimeError("boom"),
+            ),
+            patch(
+                "src.services.webhook_service.get_cache",
+                return_value=mock_cache,
+                create=True,
+            ),
+        ):
+            result = await svc.process_event(self._make_event())
+
+        # Pre-existing behavior (already green): always returns True, marks failed.
+        assert result is True
+        webhook_repo.mark_failed.assert_awaited_once()
+
+        # The new behavior under test.
+        mock_cache.invalidate_user_identity.assert_awaited_once_with(user.supabase_id, user.id)
+
+    @pytest.mark.asyncio
+    async def test_webhook_no_user_touched_no_invalidation(self):
+        """An event that never loads a user (unhandled type) must NOT invalidate
+        any identity cache entry -- no false invalidation.
+
+        Note: this assertion already holds today (nothing calls
+        invalidate_user_identity for ANY event yet), so this is a preservation
+        guard rather than a not-implemented red -- it locks in the "only
+        invalidate for a touched user" contract before the F7 wiring lands.
+        """
+        svc = _make_service()
+        svc.user_repo = _make_mock_user_repo()
+        svc.webhook_repo = _make_mock_webhook_repo()
+
+        mock_cache = AsyncMock()
+        mock_cache.invalidate_user_identity = AsyncMock()
+
+        event = {
+            "id": "evt_unhandled",
+            "type": "some.unhandled.event.type",
+            "data": {"object": {}},
+        }
+
+        with patch(
+            "src.services.webhook_service.get_cache",
+            return_value=mock_cache,
+            create=True,
+        ):
+            result = await svc.process_event(event)
+
+        assert result is True
+        mock_cache.invalidate_user_identity.assert_not_awaited()

@@ -1006,6 +1006,59 @@ class TestCacheInvalidation:
         mock_redis.delete.assert_called()
 
 
+class TestCacheInvalidateUserIdentity:
+    """PERF-16-02: CacheService.invalidate_user_identity is the single choke
+    point every identity-mutating write path (webhook, delete_account,
+    update_me, delete_avatar, billing plan changes, repo.deactivate) calls to
+    bust the supabase_id->identity projection and the user:me:{uid} entry.
+
+    Necessary because the identity TTL was raised from 20s to 900s (PERF-16-02):
+    a stale identity/is_active projection can now live for up to 15 minutes
+    unless explicitly busted on every mutation.
+
+    RED reason: CacheService has no invalidate_user_identity method yet --
+    calling it raises AttributeError. Per PERF-16-02 RED discipline this is an
+    acceptable not-implemented red (matches the documented seam problem: the
+    method must exist before any assertion on its call args can even run).
+    """
+
+    @pytest.mark.asyncio
+    async def test_invalidate_user_identity_deletes_both_keys(self):
+        """delete() is called for both cache:user:identity:{sub} and cache:user:me:{uid}."""
+        mock_redis = AsyncMock()
+        supabase_id = "sb-abc-123"
+        user_id = uuid4()
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = "cache"
+            service = CacheService(redis_client=mock_redis)
+
+            await service.invalidate_user_identity(supabase_id, user_id)
+
+        deleted_keys = [call.args[0] for call in mock_redis.delete.call_args_list]
+        assert (
+            f"cache:user:identity:{supabase_id}" in deleted_keys
+        ), f"Expected identity key deleted, got: {deleted_keys}"
+        assert (
+            f"cache:user:me:{user_id}" in deleted_keys
+        ), f"Expected user:me key deleted, got: {deleted_keys}"
+
+    @pytest.mark.asyncio
+    async def test_invalidate_user_identity_noop_redis_down(self):
+        """When Redis is unavailable, invalidate_user_identity must not raise."""
+        supabase_id = "sb-abc-123"
+        user_id = uuid4()
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            service = CacheService(redis_client=None)
+
+            with patch("src.core.cache.get_redis", return_value=None):
+                # Must degrade gracefully -- no exception, no delete attempted.
+                await service.invalidate_user_identity(supabase_id, user_id)
+
+
 class TestCacheInvalidationSweepsDashboardSummary:
     """PERF-15-04: the dashboard-summary cache key must live under the
     progress:user:{uid}:* namespace so invalidate_user_progress() sweeps it
