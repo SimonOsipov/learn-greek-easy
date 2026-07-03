@@ -17,13 +17,18 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import NewsItemNotFoundException
-from src.db.models import ExerciseStatus, ExerciseType, NewsCountry
+from src.db.models import DescriptionSourceType, ExerciseStatus, ExerciseType, NewsCountry
 from src.db.models import NewsItem as NewsItemModel
 from src.db.models import NewsItemStatus
 from src.db.models import Situation as SituationModel
 from src.db.models import SituationStatus
 from src.schemas.news_item import LinkedSituationSummary, NewsItemCreate
 from src.services.news_item_service import NewsItemService
+from tests.factories import (
+    SituationDescriptionFactory,
+    SituationFactory,
+    SituationPictureFactory,
+)
 from tests.factories.news import NewsItemFactory
 
 # =============================================================================
@@ -236,9 +241,35 @@ class TestGetListSlim:
         returns NewsSlimItem instances (no linked_situation/word_timestamps
         attributes exist on the type at all — see the model_fields guard test
         below) — guards get_list_slim's signature parity with get_list.
+
+        `country` lives on SituationDescription (NOT NewsItem), so the two items
+        are seeded via the Situation → SituationDescription(country) → picture →
+        NewsItem chain (mirrors tests/integration/api/test_news_search.py's
+        _make_news_item), constructing NewsItem directly to avoid the factory's
+        else-branch inserting a second SituationDescription against the
+        unique(situation_id) constraint.
         """
-        await NewsItemFactory.create(session=db_session, published=True, country=NewsCountry.CYPRUS)
-        await NewsItemFactory.create(session=db_session, published=True, country=NewsCountry.GREECE)
+
+        async def _seed(country: NewsCountry) -> None:
+            situation = await SituationFactory.create(session=db_session, ready=True)
+            await SituationDescriptionFactory.create(
+                session=db_session,
+                situation_id=situation.id,
+                country=country,
+                source_type=DescriptionSourceType.NEWS,
+            )
+            await SituationPictureFactory.create(session=db_session, situation_id=situation.id)
+            news_item = NewsItemModel(
+                situation_id=situation.id,
+                publication_date=date.today(),
+                original_article_url=f"https://example.com/article-{uuid4().hex[:8]}",
+                status=NewsItemStatus.PUBLISHED,
+            )
+            db_session.add(news_item)
+            await db_session.flush()
+
+        await _seed(NewsCountry.CYPRUS)
+        await _seed(NewsCountry.GREECE)
         service = NewsItemService(db_session, s3_service=mock_s3_service)
 
         result = await service.get_list_slim(page=1, page_size=10, country=NewsCountry.CYPRUS)
