@@ -47,6 +47,24 @@ class ElevenLabsService:
         """
         self._voice_cache: Optional[list[dict]] = None
         self._voice_cache_time: Optional[float] = None
+        self._client: httpx.AsyncClient | None = None
+
+    async def start(self) -> None:
+        """Create the long-lived HTTP client with connection pooling and HTTP/2."""
+        self._client = httpx.AsyncClient(
+            timeout=settings.elevenlabs_timeout,
+            http2=True,
+            limits=httpx.Limits(
+                max_connections=10,
+                max_keepalive_connections=5,
+            ),
+        )
+
+    async def close(self) -> None:
+        """Close the HTTP client and release connection pool."""
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
 
     def _get_headers(self) -> dict[str, str]:
         """Generate authentication headers for ElevenLabs API.
@@ -74,7 +92,7 @@ class ElevenLabsService:
             )
             raise ElevenLabsNotConfiguredError()
 
-    async def list_voices(self) -> list[dict[str, str]]:
+    async def list_voices(self) -> list[dict[str, str]]:  # noqa: C901
         """List available ElevenLabs voices with caching.
 
         Returns cached result if cache is valid (< 300 seconds old).
@@ -99,42 +117,49 @@ class ElevenLabsService:
                 return self._voice_cache
 
         try:
-            async with httpx.AsyncClient(timeout=settings.elevenlabs_timeout) as client:
-                response = await client.get(
+            if self._client is not None:
+                response = await self._client.get(
                     "https://api.elevenlabs.io/v1/voices",
                     params={"voice_type": "saved", "page_size": 100},
                     headers=self._get_headers(),
                 )
-
-                if response.status_code == 401:
-                    raise ElevenLabsAuthenticationError(
-                        f"Authentication failed (list_voices): {response.text[:200]}"
+            else:
+                async with httpx.AsyncClient(timeout=settings.elevenlabs_timeout) as client:
+                    response = await client.get(
+                        "https://api.elevenlabs.io/v1/voices",
+                        params={"voice_type": "saved", "page_size": 100},
+                        headers=self._get_headers(),
                     )
 
-                if response.status_code == 429:
-                    raise ElevenLabsRateLimitError("Rate limit exceeded")
-
-                if response.status_code >= 400:
-                    raise ElevenLabsAPIError(
-                        status_code=response.status_code,
-                        detail=response.text[:200],
-                    )
-
-                data = response.json()
-                voices = data.get("voices", [])
-
-                if not voices:
-                    raise ElevenLabsNoVoicesError()
-
-                voice_list = [{"voice_id": v["voice_id"], "name": v["name"]} for v in voices]
-
-                self._voice_cache = voice_list
-                self._voice_cache_time = time.monotonic()
-                logger.info(
-                    "Cached voices from ElevenLabs",
-                    extra={"voice_count": len(voice_list)},
+            if response.status_code == 401:
+                raise ElevenLabsAuthenticationError(
+                    f"Authentication failed (list_voices): {response.text[:200]}"
                 )
-                return voice_list
+
+            if response.status_code == 429:
+                raise ElevenLabsRateLimitError("Rate limit exceeded")
+
+            if response.status_code >= 400:
+                raise ElevenLabsAPIError(
+                    status_code=response.status_code,
+                    detail=response.text[:200],
+                )
+
+            data = response.json()
+            voices = data.get("voices", [])
+
+            if not voices:
+                raise ElevenLabsNoVoicesError()
+
+            voice_list = [{"voice_id": v["voice_id"], "name": v["name"]} for v in voices]
+
+            self._voice_cache = voice_list
+            self._voice_cache_time = time.monotonic()
+            logger.info(
+                "Cached voices from ElevenLabs",
+                extra={"voice_count": len(voice_list)},
+            )
+            return voice_list
 
         except (
             ElevenLabsAuthenticationError,
@@ -182,8 +207,8 @@ class ElevenLabsService:
             ElevenLabsAPIError: For other API errors.
         """
         try:
-            async with httpx.AsyncClient(timeout=settings.elevenlabs_timeout) as client:
-                response = await client.post(
+            if self._client is not None:
+                response = await self._client.post(
                     f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
                     params={"output_format": settings.elevenlabs_output_format},
                     headers=self._get_headers(),
@@ -193,35 +218,47 @@ class ElevenLabsService:
                         "language_code": "el",
                     },
                 )
-
-                if response.status_code == 404:
-                    raise ElevenLabsVoiceNotFoundError(voice_id=voice_id)
-
-                if response.status_code == 401:
-                    raise ElevenLabsAuthenticationError(
-                        f"Authentication failed (text_to_speech): {response.text[:200]}"
+            else:
+                async with httpx.AsyncClient(timeout=settings.elevenlabs_timeout) as client:
+                    response = await client.post(
+                        f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+                        params={"output_format": settings.elevenlabs_output_format},
+                        headers=self._get_headers(),
+                        json={
+                            "text": text,
+                            "model_id": settings.elevenlabs_model_id,
+                            "language_code": "el",
+                        },
                     )
 
-                if response.status_code == 429:
-                    raise ElevenLabsRateLimitError("Rate limit exceeded")
+            if response.status_code == 404:
+                raise ElevenLabsVoiceNotFoundError(voice_id=voice_id)
 
-                if response.status_code >= 400:
-                    raise ElevenLabsAPIError(
-                        status_code=response.status_code,
-                        detail=response.text[:200],
-                    )
-
-                audio_bytes: bytes = response.content
-                logger.info(
-                    "TTS audio generated",
-                    extra={
-                        "voice_name": voice_name,
-                        "text_length": len(text),
-                        "audio_bytes": len(audio_bytes),
-                        "is_retry": is_retry,
-                    },
+            if response.status_code == 401:
+                raise ElevenLabsAuthenticationError(
+                    f"Authentication failed (text_to_speech): {response.text[:200]}"
                 )
-                return audio_bytes
+
+            if response.status_code == 429:
+                raise ElevenLabsRateLimitError("Rate limit exceeded")
+
+            if response.status_code >= 400:
+                raise ElevenLabsAPIError(
+                    status_code=response.status_code,
+                    detail=response.text[:200],
+                )
+
+            audio_bytes: bytes = response.content
+            logger.info(
+                "TTS audio generated",
+                extra={
+                    "voice_name": voice_name,
+                    "text_length": len(text),
+                    "audio_bytes": len(audio_bytes),
+                    "is_retry": is_retry,
+                },
+            )
+            return audio_bytes
 
         except (
             ElevenLabsVoiceNotFoundError,
@@ -338,8 +375,8 @@ class ElevenLabsService:
         """
         self._check_configured()
         try:
-            async with httpx.AsyncClient(timeout=settings.elevenlabs_timeout) as client:
-                response = await client.post(
+            if self._client is not None:
+                response = await self._client.post(
                     "https://api.elevenlabs.io/v1/text-to-dialogue/with-timestamps",
                     params={"output_format": settings.elevenlabs_output_format},
                     headers=self._get_headers(),
@@ -349,31 +386,43 @@ class ElevenLabsService:
                         "language_code": language_code,
                     },
                 )
-
-                if response.status_code == 401:
-                    raise ElevenLabsAuthenticationError(
-                        f"Authentication failed (text_to_dialogue): {response.text[:200]}"
+            else:
+                async with httpx.AsyncClient(timeout=settings.elevenlabs_timeout) as client:
+                    response = await client.post(
+                        "https://api.elevenlabs.io/v1/text-to-dialogue/with-timestamps",
+                        params={"output_format": settings.elevenlabs_output_format},
+                        headers=self._get_headers(),
+                        json={
+                            "inputs": inputs,
+                            "model_id": settings.elevenlabs_dialog_model_id,
+                            "language_code": language_code,
+                        },
                     )
 
-                if response.status_code == 429:
-                    raise ElevenLabsRateLimitError("Rate limit exceeded")
-
-                if response.status_code >= 400:
-                    raise ElevenLabsAPIError(
-                        status_code=response.status_code,
-                        detail=response.text[:200],
-                    )
-
-                data = cast(dict[str, Any], response.json())
-                logger.info(
-                    "Dialog audio generated via text-to-dialogue",
-                    extra={
-                        "input_count": len(inputs),
-                        "audio_base64_length": len(data.get("audio_base64", "")),
-                        "segments_count": len(data.get("voice_segments", [])),
-                    },
+            if response.status_code == 401:
+                raise ElevenLabsAuthenticationError(
+                    f"Authentication failed (text_to_dialogue): {response.text[:200]}"
                 )
-                return data
+
+            if response.status_code == 429:
+                raise ElevenLabsRateLimitError("Rate limit exceeded")
+
+            if response.status_code >= 400:
+                raise ElevenLabsAPIError(
+                    status_code=response.status_code,
+                    detail=response.text[:200],
+                )
+
+            data = cast(dict[str, Any], response.json())
+            logger.info(
+                "Dialog audio generated via text-to-dialogue",
+                extra={
+                    "input_count": len(inputs),
+                    "audio_base64_length": len(data.get("audio_base64", "")),
+                    "segments_count": len(data.get("voice_segments", [])),
+                },
+            )
+            return data
 
         except (
             ElevenLabsAuthenticationError,
@@ -406,48 +455,56 @@ class ElevenLabsService:
         """
         self._check_configured()
         try:
-            async with httpx.AsyncClient(timeout=settings.elevenlabs_timeout) as client:
-                response = await client.post(
+            if self._client is not None:
+                response = await self._client.post(
                     "https://api.elevenlabs.io/v1/forced-alignment",
                     headers={"xi-api-key": settings.elevenlabs_api_key},
                     files={"file": ("dialog.mp3", audio_bytes, "audio/mpeg")},
                     data={"text": text},
                 )
-
-                if response.status_code == 401:
-                    logger.error(
-                        "Forced alignment 401 response: status={} body={}",
-                        response.status_code,
-                        response.text[:500],
-                    )
-                    raise ElevenLabsAuthenticationError(
-                        f"Authentication failed (forced_alignment): {response.text[:200]}"
+            else:
+                async with httpx.AsyncClient(timeout=settings.elevenlabs_timeout) as client:
+                    response = await client.post(
+                        "https://api.elevenlabs.io/v1/forced-alignment",
+                        headers={"xi-api-key": settings.elevenlabs_api_key},
+                        files={"file": ("dialog.mp3", audio_bytes, "audio/mpeg")},
+                        data={"text": text},
                     )
 
-                if response.status_code == 429:
-                    raise ElevenLabsRateLimitError("Rate limit exceeded")
-
-                if response.status_code >= 400:
-                    logger.error(
-                        "Forced alignment error: status={} body={}",
-                        response.status_code,
-                        response.text[:500],
-                    )
-                    raise ElevenLabsAPIError(
-                        status_code=response.status_code,
-                        detail=response.text[:200],
-                    )
-
-                data = cast(dict[str, Any], response.json())
-                logger.info(
-                    "Forced alignment completed",
-                    extra={
-                        "word_count": len(data.get("words", [])),
-                        "loss": data.get("loss"),
-                        "audio_bytes_length": len(audio_bytes),
-                    },
+            if response.status_code == 401:
+                logger.error(
+                    "Forced alignment 401 response: status={} body={}",
+                    response.status_code,
+                    response.text[:500],
                 )
-                return data
+                raise ElevenLabsAuthenticationError(
+                    f"Authentication failed (forced_alignment): {response.text[:200]}"
+                )
+
+            if response.status_code == 429:
+                raise ElevenLabsRateLimitError("Rate limit exceeded")
+
+            if response.status_code >= 400:
+                logger.error(
+                    "Forced alignment error: status={} body={}",
+                    response.status_code,
+                    response.text[:500],
+                )
+                raise ElevenLabsAPIError(
+                    status_code=response.status_code,
+                    detail=response.text[:200],
+                )
+
+            data = cast(dict[str, Any], response.json())
+            logger.info(
+                "Forced alignment completed",
+                extra={
+                    "word_count": len(data.get("words", [])),
+                    "loss": data.get("loss"),
+                    "audio_bytes_length": len(audio_bytes),
+                },
+            )
+            return data
 
         except (
             ElevenLabsAuthenticationError,
