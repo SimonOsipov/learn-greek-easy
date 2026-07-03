@@ -83,7 +83,20 @@ def _make_mock_db():
 
 
 def _make_mock_request():
-    return MagicMock()
+    """A request double whose request.state.supabase_claims is explicitly
+    None (matching a real, unauthenticated-via-claims Starlette Request,
+    where getattr(state, "supabase_claims", None) returns None for an
+    unset attribute) -- not a bare MagicMock(), whose auto-generated
+    `.state.supabase_claims.auth_provider` is itself a truthy MagicMock,
+    not a str. Tests that exercise the real _build_user_profile_response
+    (not patched away) would otherwise get an unserializable auth_provider
+    on model_dump(mode="json"), fail model_validate() on the read side,
+    and silently fall through to get_me's ValidationError-fallback
+    reload -- masking exactly the cache-hit path they intend to exercise.
+    """
+    request = MagicMock()
+    request.state.supabase_claims = None
+    return request
 
 
 def _make_mock_reload_result(user_id):
@@ -267,3 +280,156 @@ class TestGetMeBodyCacheRed:
             "Expected the direct build() fallback when get_or_set degrades "
             f"to None, got {build_spy.call_count} call(s)"
         )
+
+
+# =============================================================================
+# PERF-16-03: QA adversarial coverage (post-implementation, GREEN)
+# =============================================================================
+
+
+@pytest.mark.unit
+class TestGetMeBodyCacheQAAdversarial:
+    """QA-authored coverage added on top of the RED specs above (which only
+    prove get_me() wires into the cache correctly). These prove the hit
+    path is genuinely ORM-free/DB-free (a stronger MissingGreenlet-adjacent
+    guard than a call-count assertion on a db that would happily respond),
+    that a corrupted cache entry degrades safely instead of 500ing, and
+    that the JSON round-trip preserves the nested settings object exactly.
+    """
+
+    async def test_cache_hit_never_touches_db_or_rebuilds(self):
+        """A pre-warmed cache entry (as if set by a prior, unrelated
+        request) must be served without calling db.execute or
+        _build_user_profile_response at all -- not just "called once
+        across two calls" (test_get_me_second_call_served_from_cache) but
+        "called zero times when the entry is already warm". The db mock
+        raises on any .execute() call, so a real touch fails loudly
+        instead of silently succeeding against a permissive mock.
+        """
+        user_id = uuid4()
+        valid_response = _make_valid_profile_response(user_id)
+        cached_body = valid_response.model_dump(mode="json")
+
+        fake_cache = _StatefulFakeCache()
+        fake_cache._store[f"user:me:{user_id}"] = cached_body
+
+        db = _make_mock_db()
+        db.execute = AsyncMock(side_effect=AssertionError("db.execute must not run on a cache hit"))
+
+        current_user = MagicMock(id=user_id)
+        request = _make_mock_request()
+
+        with (
+            patch("src.api.v1.auth.get_cache", return_value=fake_cache),
+            patch(
+                "src.api.v1.auth._build_user_profile_response",
+                side_effect=AssertionError(
+                    "_build_user_profile_response must not run on a cache hit"
+                ),
+            ) as build_spy,
+        ):
+            result = await get_me(request=request, current_user=current_user, db=db)
+
+        assert db.execute.call_count == 0, "Cache hit touched the DB"
+        assert (
+            build_spy.call_count == 0
+        ), "Cache hit rebuilt the response instead of reusing the cached dict"
+        assert result == valid_response
+
+    async def test_get_me_validation_error_falls_back_to_reload(self):
+        """A malformed cached dict (missing a required field) makes
+        UserProfileResponse.model_validate(cached) raise ValidationError;
+        get_me must catch it and fall back to the real reload+build path,
+        returning a valid body instead of propagating a 500.
+        """
+        user_id = uuid4()
+        malformed_cached = {"id": str(user_id), "email": "malformed@example.com"}
+        # Missing is_active, is_superuser, created_at, updated_at, settings, ...
+        # -> UserProfileResponse.model_validate() raises ValidationError.
+
+        fake_cache = _StatefulFakeCache()
+        fake_cache._store[f"user:me:{user_id}"] = malformed_cached
+
+        db = _make_mock_db()
+        db.execute = AsyncMock(return_value=_make_mock_reload_result(user_id))
+
+        current_user = MagicMock(id=user_id)
+        request = _make_mock_request()
+        valid_response = _make_valid_profile_response(user_id)
+
+        with (
+            patch("src.api.v1.auth.get_cache", return_value=fake_cache),
+            patch(
+                "src.api.v1.auth._build_user_profile_response",
+                return_value=valid_response,
+            ) as build_spy,
+        ):
+            result = await get_me(request=request, current_user=current_user, db=db)
+
+        assert isinstance(result, UserProfileResponse)
+        assert result == valid_response
+        assert build_spy.call_count == 1, (
+            "Expected the ValidationError fallback to reload+rebuild once, "
+            f"got {build_spy.call_count} call(s)"
+        )
+        assert db.execute.call_count == 1
+
+    async def test_cache_round_trip_preserves_settings_fields(self):
+        """First call is a genuine cold miss (real reload+build, no mocked
+        _build_user_profile_response -- same shape as
+        test_get_me_cold_miss_returns_settings_populated); the second call
+        must be served from the SAME fake-cache dict store, reconstructed
+        via model_validate from the model_dump(mode="json") the first call
+        produced. Locks in that the nested UserSettingsResponse survives
+        the JSON round-trip with its exact field values, not just "settings
+        is not None".
+        """
+        user_id = uuid4()
+        settings_id = uuid4()
+        now = datetime.now(timezone.utc)
+
+        user = User(
+            id=user_id,
+            email="roundtrip@example.com",
+            full_name="Round Trip User",
+            is_active=True,
+            is_superuser=False,
+            avatar_url=None,
+            subscription_status=SubscriptionStatus.NONE,
+            created_at=now,
+            updated_at=now,
+        )
+        user.settings = UserSettings(
+            id=settings_id,
+            user_id=user_id,
+            daily_goal=42,
+            email_notifications=False,
+            created_at=now,
+            updated_at=now,
+        )
+
+        db = _make_mock_db()
+        mock_result = MagicMock()
+        mock_result.scalar_one.return_value = user
+        db.execute = AsyncMock(return_value=mock_result)
+
+        request = _make_mock_request()
+        fake_cache = _StatefulFakeCache()
+
+        with (
+            patch("src.api.v1.auth.get_cache", return_value=fake_cache),
+            patch("src.api.v1.auth.get_s3_service") as mock_get_s3,
+        ):
+            mock_get_s3.return_value = MagicMock()
+            first = await get_me(request=request, current_user=user, db=db)
+            second = await get_me(request=request, current_user=user, db=db)
+
+        assert db.execute.call_count == 1, "Expected the second call to be served from cache"
+        assert second.settings is not None
+        assert second.settings.id == settings_id
+        assert second.settings.user_id == user_id
+        assert second.settings.daily_goal == 42
+        assert second.settings.email_notifications is False
+        assert second.settings.created_at == first.settings.created_at
+        assert second.settings.updated_at == first.settings.updated_at
+        assert second == first
