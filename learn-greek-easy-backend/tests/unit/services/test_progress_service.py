@@ -1,6 +1,7 @@
 """Unit tests for ProgressService."""
 
 from datetime import date, datetime, timedelta, timezone
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -16,8 +17,13 @@ def mock_db():
     db = MagicMock()
     # _fetch_streak_union_rows calls await self.db.execute(...) twice.
     # Return a mock result whose .all() yields an empty list (all streaks = 0).
+    # PERF-18-01: _compute_deck_progress_list's Phase A also issues a COUNT(*)
+    # whose result is read via .scalar_one(); default it to 0 so the empty-user
+    # deck-list path yields total=0 without bespoke per-test wiring.
     _empty_result = MagicMock()
     _empty_result.all.return_value = []
+    _empty_result.scalar_one.return_value = 0
+    _empty_result.scalar.return_value = 0
     db.execute = AsyncMock(return_value=_empty_result)
     return db
 
@@ -424,6 +430,26 @@ class TestAggregatedStreak:
 # ============================================================================
 
 
+def _phase_a_row(deck_id, deck_type, last_studied):
+    """One row of the PERF-18-01 Phase-A ordering query (deck_id/type/last_studied)."""
+    return SimpleNamespace(deck_id=deck_id, deck_type=deck_type, last_studied=last_studied)
+
+
+def _wire_phase_a(mock_db, rows, total):
+    """Wire mock_db.execute for _compute_deck_progress_list's two Phase-A queries.
+
+    _compute_deck_progress_list issues exactly two db.execute calls, in this
+    order: (1) the UNION ALL ordering query — result.all() == ``rows``; then
+    (2) the COUNT(*) query — result.scalar_one() == ``total``. The order here
+    must match the implementation's execute order.
+    """
+    ordering_result = MagicMock()
+    ordering_result.all.return_value = rows
+    count_result = MagicMock()
+    count_result.scalar_one.return_value = total
+    mock_db.execute = AsyncMock(side_effect=[ordering_result, count_result])
+
+
 @pytest.mark.unit
 class TestGetDeckProgressList:
     """Tests for get_deck_progress_list including timezone-aware sorting."""
@@ -443,20 +469,25 @@ class TestGetDeckProgressList:
         return deck
 
     async def test_mixed_studied_and_never_studied_decks(self, mock_db, mock_user_id):
-        """Mixing tz-aware last_studied_at and None must not raise TypeError."""
+        """last_studied_at (tz-aware and None) is carried straight from Phase A.
+
+        PERF-18-01: ordering + None handling now happen in SQL (Phase A). This
+        test wires the Phase-A page rows (deck1 studied, deck2 never studied)
+        and verifies Phase B hydrates both and carries their last_studied_at.
+        """
         deck_id1, deck_id2 = uuid4(), uuid4()
         now = datetime.now(tz=timezone.utc)
 
         patches = _make_full_repo_patches()
         with (
             patches[0] as stats_cls,
-            patches[1] as review_cls,
-            patches[2] as culture_stats_cls,
+            patches[1],
+            patches[2],
             patches[3],
             patches[4],
             patches[5] as deck_cls,
             patches[6] as card_rec_cls,
-            patches[7] as culture_deck_cls,
+            patches[7],
         ):
             stats_cls.return_value.get_deck_progress_summaries = AsyncMock(
                 return_value=[
@@ -476,28 +507,37 @@ class TestGetDeckProgressList:
                     },
                 ]
             )
-            review_cls.return_value.get_last_review_by_deck = AsyncMock(
-                return_value={deck_id1: now}
-            )
             deck_cls.return_value.get_by_ids = AsyncMock(
                 return_value=[
                     self._make_deck_mock(deck_id1, "Deck 1"),
                     self._make_deck_mock(deck_id2, "Deck 2"),
                 ]
             )
-            card_rec_cls.return_value.count_by_deck = AsyncMock(return_value=20)
-            culture_deck_cls.return_value.list_active = AsyncMock(return_value=[])
-            culture_stats_cls.return_value.get_batch_deck_stats = AsyncMock(return_value={})
+            card_rec_cls.return_value.count_active_by_decks = AsyncMock(
+                return_value={deck_id1: 20, deck_id2: 20}
+            )
+            _wire_phase_a(
+                mock_db,
+                rows=[
+                    _phase_a_row(deck_id1, "vocabulary", now),
+                    _phase_a_row(deck_id2, "vocabulary", None),
+                ],
+                total=2,
+            )
 
             service = ProgressService(mock_db)
-            result = await service.get_deck_progress_list(mock_user_id)
+            result = await service._compute_deck_progress_list(mock_user_id, page=1, page_size=20)
 
         assert len(result.decks) == 2
         assert result.decks[0].last_studied_at == now
         assert result.decks[1].last_studied_at is None
 
     async def test_all_decks_studied(self, mock_db, mock_user_id):
-        """All decks with tz-aware timestamps sort descending."""
+        """Phase B reassembles the page in Phase A's (newest-first) order.
+
+        PERF-18-01: sorting is done in SQL (Phase A). Feeding rows newest-first
+        (t2 > t1) verifies the hydrated DTOs preserve that order.
+        """
         deck_id1, deck_id2 = uuid4(), uuid4()
         t1 = datetime(2026, 1, 1, tzinfo=timezone.utc)
         t2 = datetime(2026, 2, 1, tzinfo=timezone.utc)
@@ -505,13 +545,13 @@ class TestGetDeckProgressList:
         patches = _make_full_repo_patches()
         with (
             patches[0] as stats_cls,
-            patches[1] as review_cls,
+            patches[1],
             patches[2],
             patches[3],
             patches[4],
             patches[5] as deck_cls,
             patches[6] as card_rec_cls,
-            patches[7] as culture_deck_cls,
+            patches[7],
         ):
             stats_cls.return_value.get_deck_progress_summaries = AsyncMock(
                 return_value=[
@@ -531,20 +571,26 @@ class TestGetDeckProgressList:
                     },
                 ]
             )
-            review_cls.return_value.get_last_review_by_deck = AsyncMock(
-                return_value={deck_id1: t1, deck_id2: t2}
-            )
             deck_cls.return_value.get_by_ids = AsyncMock(
                 return_value=[
                     self._make_deck_mock(deck_id1, "Deck 1"),
                     self._make_deck_mock(deck_id2, "Deck 2"),
                 ]
             )
-            card_rec_cls.return_value.count_by_deck = AsyncMock(return_value=20)
-            culture_deck_cls.return_value.list_active = AsyncMock(return_value=[])
+            card_rec_cls.return_value.count_active_by_decks = AsyncMock(
+                return_value={deck_id1: 20, deck_id2: 20}
+            )
+            _wire_phase_a(
+                mock_db,
+                rows=[
+                    _phase_a_row(deck_id2, "vocabulary", t2),  # newest first
+                    _phase_a_row(deck_id1, "vocabulary", t1),
+                ],
+                total=2,
+            )
 
             service = ProgressService(mock_db)
-            result = await service.get_deck_progress_list(mock_user_id)
+            result = await service._compute_deck_progress_list(mock_user_id, page=1, page_size=20)
 
         assert result.total == 2
         assert result.decks[0].deck_name == "Deck 2"  # t2 > t1
@@ -575,7 +621,11 @@ class TestGetDeckProgressList:
         assert result.decks == []
 
     async def test_sorting_order_most_recent_first(self, mock_db, mock_user_id):
-        """3 decks with known timestamps sort most-recent-first."""
+        """3 decks reassembled in Phase A's most-recent-first page order.
+
+        PERF-18-01: Phase A returns rows already ordered (t3 > t2 > t1); this
+        verifies Phase B hydration keeps that order.
+        """
         ids = [uuid4() for _ in range(3)]
         t1 = datetime(2026, 1, 1, tzinfo=timezone.utc)
         t2 = datetime(2026, 2, 1, tzinfo=timezone.utc)
@@ -584,13 +634,13 @@ class TestGetDeckProgressList:
         patches = _make_full_repo_patches()
         with (
             patches[0] as stats_cls,
-            patches[1] as review_cls,
+            patches[1],
             patches[2],
             patches[3],
             patches[4],
             patches[5] as deck_cls,
             patches[6] as card_rec_cls,
-            patches[7] as culture_deck_cls,
+            patches[7],
         ):
             stats_cls.return_value.get_deck_progress_summaries = AsyncMock(
                 return_value=[
@@ -617,9 +667,6 @@ class TestGetDeckProgressList:
                     },
                 ]
             )
-            review_cls.return_value.get_last_review_by_deck = AsyncMock(
-                return_value={ids[0]: t1, ids[1]: t2, ids[2]: t3}
-            )
             deck_cls.return_value.get_by_ids = AsyncMock(
                 return_value=[
                     self._make_deck_mock(ids[0], "Deck A"),
@@ -627,16 +674,31 @@ class TestGetDeckProgressList:
                     self._make_deck_mock(ids[2], "Deck C"),
                 ]
             )
-            card_rec_cls.return_value.count_by_deck = AsyncMock(return_value=10)
-            culture_deck_cls.return_value.list_active = AsyncMock(return_value=[])
+            card_rec_cls.return_value.count_active_by_decks = AsyncMock(
+                return_value={ids[0]: 10, ids[1]: 10, ids[2]: 10}
+            )
+            _wire_phase_a(
+                mock_db,
+                rows=[
+                    _phase_a_row(ids[2], "vocabulary", t3),  # newest first
+                    _phase_a_row(ids[1], "vocabulary", t2),
+                    _phase_a_row(ids[0], "vocabulary", t1),
+                ],
+                total=3,
+            )
 
             service = ProgressService(mock_db)
-            result = await service.get_deck_progress_list(mock_user_id)
+            result = await service._compute_deck_progress_list(mock_user_id, page=1, page_size=20)
 
         assert [d.deck_name for d in result.decks] == ["Deck C", "Deck B", "Deck A"]
 
     async def test_vocab_and_culture_decks_combined(self, mock_db, mock_user_id):
-        """Both vocab and culture decks appear with correct deck_type."""
+        """Both vocab and culture decks are hydrated with the correct deck_type.
+
+        PERF-18-01: culture decks are hydrated via culture_deck_repo.get_by_ids
+        (page-scoped) rather than list_active(). Phase A returns vocab before
+        culture (t_vocab=March > t_culture=Feb); Phase B keeps that order.
+        """
         vocab_id = uuid4()
         culture_id = uuid4()
         t_vocab = datetime(2026, 3, 1, tzinfo=timezone.utc)
@@ -645,7 +707,7 @@ class TestGetDeckProgressList:
         patches = _make_full_repo_patches()
         with (
             patches[0] as stats_cls,
-            patches[1] as review_cls,
+            patches[1],
             patches[2] as culture_stats_cls,
             patches[3],
             patches[4],
@@ -664,18 +726,15 @@ class TestGetDeckProgressList:
                     },
                 ]
             )
-            review_cls.return_value.get_last_review_by_deck = AsyncMock(
-                return_value={vocab_id: t_vocab}
-            )
             deck_cls.return_value.get_by_ids = AsyncMock(
                 return_value=[
                     self._make_deck_mock(vocab_id, "Vocab Deck"),
                 ]
             )
-            card_rec_cls.return_value.count_by_deck = AsyncMock(return_value=20)
+            card_rec_cls.return_value.count_active_by_decks = AsyncMock(return_value={vocab_id: 20})
 
             culture_mock = self._make_culture_deck_mock(culture_id, "Culture Deck")
-            culture_deck_cls.return_value.list_active = AsyncMock(return_value=[culture_mock])
+            culture_deck_cls.return_value.get_by_ids = AsyncMock(return_value=[culture_mock])
             culture_deck_cls.return_value.get_batch_question_counts = AsyncMock(
                 return_value={culture_id: 15}
             )
@@ -689,9 +748,17 @@ class TestGetDeckProgressList:
                     },
                 }
             )
+            _wire_phase_a(
+                mock_db,
+                rows=[
+                    _phase_a_row(vocab_id, "vocabulary", t_vocab),  # March, first
+                    _phase_a_row(culture_id, "culture", t_culture),  # Feb, second
+                ],
+                total=2,
+            )
 
             service = ProgressService(mock_db)
-            result = await service.get_deck_progress_list(mock_user_id)
+            result = await service._compute_deck_progress_list(mock_user_id, page=1, page_size=20)
 
         assert result.total == 2
         types = {d.deck_type for d in result.decks}
@@ -959,12 +1026,20 @@ def _make_cache_settings_patch():
 def _wire_empty_deck_progress_repos(
     stats_cls, review_cls, deck_cls, card_rec_cls, culture_deck_cls
 ):
-    """Wire all repos needed by get_deck_progress_list to return empty results."""
+    """Wire all repos used by _compute_deck_progress_list to empty results.
+
+    PERF-18-01: Phase A now paginates in SQL via mock_db.execute (the mock_db
+    fixture yields an empty ordering result + scalar_one()==0), so for an empty
+    user no Phase-B repo method is reached. These stubs keep the repos harmless
+    regardless. The former list-path stubs (get_last_review_by_deck,
+    count_by_deck, list_active) are replaced by count_active_by_decks and the
+    additive culture get_by_ids. (review_cls kept in the signature for the
+    stable call sites; it has no list-path stub anymore.)
+    """
     stats_cls.return_value.get_deck_progress_summaries = AsyncMock(return_value=[])
-    review_cls.return_value.get_last_review_by_deck = AsyncMock(return_value={})
     deck_cls.return_value.get_by_ids = AsyncMock(return_value=[])
-    card_rec_cls.return_value.count_by_deck = AsyncMock(return_value=0)
-    culture_deck_cls.return_value.list_active = AsyncMock(return_value=[])
+    card_rec_cls.return_value.count_active_by_decks = AsyncMock(return_value={})
+    culture_deck_cls.return_value.get_by_ids = AsyncMock(return_value=[])
 
 
 # =============================================================================
@@ -1322,8 +1397,9 @@ class TestDeckProgressListCache:
             result = await service.get_deck_progress_list(mock_user_id)
 
         assert isinstance(result, DeckProgressListResponse)
-        # Repo must be called (direct compute executed)
-        assert stats_cls.return_value.get_deck_progress_summaries.call_count >= 1
+        # Compute path must have run (Phase A always issues its ordering +
+        # COUNT queries on cache-miss, regardless of user data — PERF-18-01).
+        assert mock_db.execute.call_count >= 1
 
     async def test_deck_progress_key_includes_page_and_page_size(self, mock_db, mock_user_id):
         """Cache key must encode page and page_size: :decks:3:50 and :decks:1:20.

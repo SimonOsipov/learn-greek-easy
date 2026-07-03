@@ -37,6 +37,7 @@ from src.schemas.exercise_queue import (
 from src.services.picture_match_service import (
     InsufficientDistractorPoolError,
     assemble_picture_match_payload,
+    load_distractor_pool,
 )
 from src.services.s3_service import get_s3_service
 
@@ -350,6 +351,18 @@ class ExerciseSM2Service:
         result = await self.db.execute(stmt)
         exercises_by_id = {e.id: e for e in result.scalars().all()}
 
+        # Batch the distractor pool once per distinct exercise-type present among
+        # the picture items (≤2 types → ≤2 queries), instead of a per-item
+        # ORDER BY random() scan. (PERF-18-03)
+        distinct_exercise_types = {
+            e.picture_exercise.exercise_type
+            for e in exercises_by_id.values()
+            if e.picture_exercise is not None
+        }
+        pool_by_type = {
+            et: await load_distractor_pool(self.db, et) for et in distinct_exercise_types
+        }
+
         to_drop: set[UUID] = set()
 
         for item in picture_items:
@@ -366,7 +379,10 @@ class ExerciseSM2Service:
 
             try:
                 payload = await assemble_picture_match_payload(
-                    self.db, picture_exercise, picture_exercise.exercise_type
+                    self.db,
+                    picture_exercise,
+                    picture_exercise.exercise_type,
+                    pool=pool_by_type[picture_exercise.exercise_type],
                 )
             except InsufficientDistractorPoolError:
                 logger.info(

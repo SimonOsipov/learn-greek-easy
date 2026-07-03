@@ -7,15 +7,21 @@ from typing import Any
 from uuid import UUID
 
 from pydantic import ValidationError
-from sqlalchemy import func, literal, select, union_all
+from sqlalchemy import and_, func, literal, select, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings  # noqa: F401 (may already be imported transitively)
 from src.core.cache import get_cache
 from src.db.models import (
+    CardRecord,
     CardRecordReview,
+    CardRecordStatistics,
     CardStatus,
     CultureAnswerHistory,
+    CultureDeck,
+    CultureQuestion,
+    CultureQuestionStats,
+    Deck,
     ExerciseReview,
     MockExamSession,
 )
@@ -54,8 +60,6 @@ from src.services.gamification.streak import (  # noqa: F401
     compute_vocabulary_streak,
 )
 from src.utils.heatmap import bucket_heatmap_intensity
-
-_DATETIME_MIN_UTC = datetime.min.replace(tzinfo=timezone.utc)
 
 
 class ProgressService:
@@ -535,32 +539,145 @@ class ProgressService:
         page: int = 1,
         page_size: int = 20,
     ) -> DeckProgressListResponse:
-        # Fetch vocab deck summaries from stats
-        vocab_summaries = await self.card_stats_repo.get_deck_progress_summaries(user_id)
-        vocab_deck_ids = [s["deck_id"] for s in vocab_summaries]
+        # Two-phase SQL design (PERF-18-01): Phase A runs one deterministic
+        # UNION ALL ordering query (vocab ∪ capped culture) + a COUNT, both
+        # paginated in SQL; Phase B hydrates ONLY the returned page ids via the
+        # existing batch aggregates plus additive batched repo methods. This
+        # replaces the former per-vocab-deck count_by_deck N+1 loop and the
+        # Python sort/slice, keeping DTO output byte-identical to before.
+        skip = (page - 1) * page_size
 
-        # Batch fetch: last review per deck and deck info
-        last_review_by_deck = await self.card_review_repo.get_last_review_by_deck(user_id)
-        decks_info = await self.deck_repo.get_by_ids(vocab_deck_ids) if vocab_deck_ids else []
+        # ── Phase A — ordering query (scalar columns only; lazy="raise" safe) ─
+        # Vocab branch: distinct active decks the user has studied (active
+        # cards), mirroring get_deck_progress_summaries ∩ get_by_ids(active).
+        studied_vocab_decks = (
+            select(CardRecord.deck_id.label("deck_id"))
+            .join(CardRecordStatistics, CardRecordStatistics.card_record_id == CardRecord.id)
+            .where(
+                CardRecordStatistics.user_id == user_id,
+                CardRecord.is_active.is_(True),
+            )
+            .distinct()
+            .subquery("studied_vocab_decks")
+        )
+        vocab_last_review = (
+            select(
+                CardRecord.deck_id.label("deck_id"),
+                func.max(CardRecordReview.reviewed_at).label("last_studied"),
+            )
+            .join(CardRecordReview, CardRecordReview.card_record_id == CardRecord.id)
+            .where(CardRecordReview.user_id == user_id)
+            .group_by(CardRecord.deck_id)
+            .subquery("vocab_last_review")
+        )
+        vocab_branch = (
+            select(
+                studied_vocab_decks.c.deck_id.label("deck_id"),
+                literal("vocabulary").label("deck_type"),
+                vocab_last_review.c.last_studied.label("last_studied"),
+            )
+            .select_from(studied_vocab_decks)
+            .join(
+                Deck,
+                and_(Deck.id == studied_vocab_decks.c.deck_id, Deck.is_active.is_(True)),
+            )
+            .join(
+                vocab_last_review,
+                vocab_last_review.c.deck_id == studied_vocab_decks.c.deck_id,
+                isouter=True,
+            )
+        )
 
-        # Build deck info lookup (id -> Deck)
-        deck_info_map = {deck.id: deck for deck in decks_info}
+        # Culture branch: newest 100 active decks by created_at DESC — reproduces
+        # list_active()'s default limit=100 (culture_deck.py) BEFORE the sort (D13).
+        capped_culture = (
+            select(CultureDeck.id.label("deck_id"))
+            .where(CultureDeck.is_active.is_(True))
+            .order_by(CultureDeck.created_at.desc())
+            .limit(100)
+            .subquery("capped_culture")
+        )
+        culture_last_practiced = (
+            select(
+                CultureQuestion.deck_id.label("deck_id"),
+                func.max(CultureQuestionStats.updated_at).label("last_studied"),
+            )
+            .join(CultureQuestion, CultureQuestion.id == CultureQuestionStats.question_id)
+            .where(CultureQuestionStats.user_id == user_id)
+            .group_by(CultureQuestion.deck_id)
+            .subquery("culture_last_practiced")
+        )
+        culture_branch = (
+            select(
+                capped_culture.c.deck_id.label("deck_id"),
+                literal("culture").label("deck_type"),
+                culture_last_practiced.c.last_studied.label("last_studied"),
+            )
+            .select_from(capped_culture)
+            .join(
+                culture_last_practiced,
+                culture_last_practiced.c.deck_id == capped_culture.c.deck_id,
+                isouter=True,
+            )
+        )
 
-        # Build vocab deck summaries
-        vocab_deck_summaries = []
-        for s in vocab_summaries:
-            deck_id = s["deck_id"]
-            deck = deck_info_map.get(deck_id)
-            if deck is None:
-                continue
-            total_cards = await self.card_record_repo.count_by_deck(deck_id, is_active=True)
-            cards_mastered = s["cards_mastered"]
-            cards_studied = s["cards_studied"]
-            mastery_pct = round(cards_mastered / total_cards * 100, 1) if total_cards > 0 else 0.0
-            completion_pct = round(cards_studied / total_cards * 100, 1) if total_cards > 0 else 0.0
-            deck_level = deck.level.value if hasattr(deck.level, "value") else str(deck.level)
-            vocab_deck_summaries.append(
-                DeckProgressSummary(
+        candidates = union_all(vocab_branch, culture_branch).subquery("deck_candidates")
+
+        # Deterministic order (D1): NULLS LAST reproduces the former
+        # `... or _DATETIME_MIN_UTC`; deck_id ASC is the unique tiebreaker.
+        ordering_query = (
+            select(
+                candidates.c.deck_id,
+                candidates.c.deck_type,
+                candidates.c.last_studied,
+            )
+            .order_by(
+                candidates.c.last_studied.desc().nullslast(),
+                candidates.c.deck_id.asc(),
+            )
+            .limit(page_size)
+            .offset(skip)
+        )
+        page_rows = (await self.db.execute(ordering_query)).all()
+
+        # Total over the same capped union (culture ≤ 100 ⇒ matches former len()).
+        count_query = select(func.count()).select_from(candidates)
+        total = (await self.db.execute(count_query)).scalar_one()
+
+        # last_studied is carried straight from Phase A — identical by
+        # construction to get_last_review_by_deck (vocab) / get_batch_deck_stats
+        # last_practiced (culture), so no re-query is needed.
+        last_studied_by_deck = {row.deck_id: row.last_studied for row in page_rows}
+        vocab_page_ids = [row.deck_id for row in page_rows if row.deck_type == "vocabulary"]
+        culture_page_ids = [row.deck_id for row in page_rows if row.deck_type == "culture"]
+
+        # ── Phase B — hydrate ONLY the page ids ──────────────────────────────
+        vocab_summary_by_id: dict[UUID, DeckProgressSummary] = {}
+        if vocab_page_ids:
+            page_id_set = set(vocab_page_ids)
+            vocab_summaries = await self.card_stats_repo.get_deck_progress_summaries(user_id)
+            deck_info_map = {
+                deck.id: deck for deck in await self.deck_repo.get_by_ids(vocab_page_ids)
+            }
+            total_cards_by_deck = await self.card_record_repo.count_active_by_decks(vocab_page_ids)
+            for s in vocab_summaries:
+                deck_id = s["deck_id"]
+                if deck_id not in page_id_set:
+                    continue
+                deck = deck_info_map.get(deck_id)
+                if deck is None:
+                    continue
+                total_cards = total_cards_by_deck.get(deck_id, 0)
+                cards_mastered = s["cards_mastered"]
+                cards_studied = s["cards_studied"]
+                mastery_pct = (
+                    round(cards_mastered / total_cards * 100, 1) if total_cards > 0 else 0.0
+                )
+                completion_pct = (
+                    round(cards_studied / total_cards * 100, 1) if total_cards > 0 else 0.0
+                )
+                deck_level = deck.level.value if hasattr(deck.level, "value") else str(deck.level)
+                vocab_summary_by_id[deck_id] = DeckProgressSummary(
                     deck_id=deck_id,
                     deck_name=deck.name_en,
                     deck_level=deck_level,
@@ -570,40 +687,38 @@ class ProgressService:
                     cards_due=s["cards_due"],
                     mastery_percentage=mastery_pct,
                     completion_percentage=completion_pct,
-                    last_studied_at=last_review_by_deck.get(deck_id),
+                    last_studied_at=last_studied_by_deck.get(deck_id),
                     average_easiness_factor=s["avg_ef"],
                     estimated_review_time_minutes=max(1, s["cards_due"] * 2 // 60),
                     deck_type="vocabulary",
                 )
-            )
 
-        # Culture decks
-        culture_decks = await self.culture_deck_repo.list_active()
-        culture_deck_ids = [d.id for d in culture_decks]
-        if culture_deck_ids:
+        culture_summary_by_id: dict[UUID, DeckProgressSummary] = {}
+        if culture_page_ids:
             # Sequential on the shared AsyncSession (INFRA-01).
             culture_stats_batch = await self.culture_stats_repo.get_batch_deck_stats(
-                user_id, culture_deck_ids
+                user_id, culture_page_ids
             )
             culture_question_counts = await self.culture_deck_repo.get_batch_question_counts(
-                culture_deck_ids
+                culture_page_ids
             )
-        else:
-            culture_stats_batch = {}
-            culture_question_counts = {}
-
-        culture_deck_summaries = []
-        for cdeck in culture_decks:
-            stats = culture_stats_batch.get(cdeck.id, {})
-            total_cards = culture_question_counts.get(cdeck.id, 0)
-            mastered = stats.get("mastered", 0)
-            studied = mastered + stats.get("learning", 0)
-            due = stats.get("due_count", 0)
-            mastery_pct = round(mastered / total_cards * 100, 1) if total_cards > 0 else 0.0
-            completion_pct = round(studied / total_cards * 100, 1) if total_cards > 0 else 0.0
-            culture_deck_summaries.append(
-                DeckProgressSummary(
-                    deck_id=cdeck.id,
+            culture_deck_map = {
+                cdeck.id: cdeck
+                for cdeck in await self.culture_deck_repo.get_by_ids(culture_page_ids)
+            }
+            for deck_id in culture_page_ids:
+                cdeck = culture_deck_map.get(deck_id)
+                if cdeck is None:
+                    continue
+                stats = culture_stats_batch.get(deck_id, {})
+                total_cards = culture_question_counts.get(deck_id, 0)
+                mastered = stats.get("mastered", 0)
+                studied = mastered + stats.get("learning", 0)
+                due = stats.get("due_count", 0)
+                mastery_pct = round(mastered / total_cards * 100, 1) if total_cards > 0 else 0.0
+                completion_pct = round(studied / total_cards * 100, 1) if total_cards > 0 else 0.0
+                culture_summary_by_id[deck_id] = DeckProgressSummary(
+                    deck_id=deck_id,
                     deck_name=cdeck.name_en,
                     deck_level=cdeck.category,
                     total_cards=total_cards,
@@ -612,27 +727,28 @@ class ProgressService:
                     cards_due=due,
                     mastery_percentage=mastery_pct,
                     completion_percentage=completion_pct,
-                    last_studied_at=stats.get("last_practiced"),
+                    last_studied_at=last_studied_by_deck.get(deck_id),
                     average_easiness_factor=None,
                     estimated_review_time_minutes=max(1, due * 2 // 60),
                     deck_type="culture",
                 )
-            )
 
-        all_decks = sorted(
-            vocab_deck_summaries + culture_deck_summaries,
-            key=lambda x: x.last_studied_at or _DATETIME_MIN_UTC,
-            reverse=True,
-        )
-        total = len(all_decks)
-        skip = (page - 1) * page_size
-        paginated = all_decks[skip : skip + page_size]
+        # Reassemble the page in Phase A's exact order.
+        decks: list[DeckProgressSummary] = []
+        for row in page_rows:
+            summary = (
+                vocab_summary_by_id.get(row.deck_id)
+                if row.deck_type == "vocabulary"
+                else culture_summary_by_id.get(row.deck_id)
+            )
+            if summary is not None:
+                decks.append(summary)
 
         return DeckProgressListResponse(
             total=total,
             page=page,
             page_size=page_size,
-            decks=paginated,
+            decks=decks,
         )
 
     # ── Deck Detail ───────────────────────────────────────────────────────

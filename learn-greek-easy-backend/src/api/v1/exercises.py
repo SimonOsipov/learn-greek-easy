@@ -32,6 +32,7 @@ from src.services.exercise_sm2_service import ExerciseSM2Service
 from src.services.picture_match_service import (
     InsufficientDistractorPoolError,
     assemble_picture_match_payload,
+    load_distractor_pool,
 )
 from src.tasks import invalidate_cache_task
 
@@ -177,9 +178,10 @@ async def get_exercise(
     if picture_exercise is None:
         raise HTTPException(status_code=404, detail="exercise not found")
 
+    pool = await load_distractor_pool(db, picture_exercise.exercise_type)
     try:
         payload = await assemble_picture_match_payload(
-            db, picture_exercise, picture_exercise.exercise_type
+            db, picture_exercise, picture_exercise.exercise_type, pool=pool
         )
     except InsufficientDistractorPoolError as e:
         raise InsufficientDistractorPoolException() from e
