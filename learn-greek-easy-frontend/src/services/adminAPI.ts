@@ -1484,6 +1484,20 @@ export const adminAPI = {
   },
 
   /**
+   * Get a single news item by id (public feed, full detail)
+   *
+   * Public endpoint (no auth). Returns the full NewsItemResponse including the
+   * heavy per-word karaoke timings (word_timestamps / word_timestamps_a2) that
+   * the slim list route omits (PERF-17-01). The reader fetches this on open to
+   * hydrate karaoke highlighting (PERF-17-04).
+   *
+   * @param id - News item id
+   * @returns The full news item
+   */
+  getNewsItem: async (id: string): Promise<NewsItemResponse> =>
+    api.get<NewsItemResponse>(`/api/v1/news/${id}`),
+
+  /**
    * Get a paginated list of news items for the admin News tab (superuser)
    *
    * Unlike the public feed, this includes drafts so admin can review and publish

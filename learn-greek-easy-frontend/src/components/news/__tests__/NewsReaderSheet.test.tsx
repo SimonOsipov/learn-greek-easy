@@ -126,14 +126,22 @@ function renderReader(
     onOpenChange = vi.fn(),
     onLevelChange = vi.fn(),
   } = overrides;
+  // PERF-17-04: the reader now fires a useQuery(adminAPI.getNewsItem) on open, so
+  // these ~50 prop-driven tests need (a) a QueryClientProvider ancestor and (b) a
+  // default stub so no real HTTP call happens. Resolve the detail to the same prop
+  // item — the reader's prop-fallback merge (detail ?? prop) keeps every existing
+  // prop-driven assertion (incl. karaoke) green.
+  vi.mocked(adminAPI.getNewsItem).mockResolvedValue(article ?? createArticle());
   return render(
-    <NewsReaderSheet
-      article={article}
-      open={open}
-      onOpenChange={onOpenChange}
-      level={level}
-      onLevelChange={onLevelChange}
-    />
+    <QueryClientProvider client={createTestQueryClient()}>
+      <NewsReaderSheet
+        article={article}
+        open={open}
+        onOpenChange={onOpenChange}
+        level={level}
+        onLevelChange={onLevelChange}
+      />
+    </QueryClientProvider>
   );
 }
 

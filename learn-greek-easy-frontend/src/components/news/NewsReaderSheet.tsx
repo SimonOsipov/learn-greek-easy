@@ -14,6 +14,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, ExternalLink, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -32,7 +33,7 @@ import { track } from '@/lib/analytics';
 import { buildSrcSet, recoverDerivativeError } from '@/lib/imageVariants';
 import { clearActivePlayer, registerActivePlayer } from '@/lib/newsAudioCoordinator';
 import { cn } from '@/lib/utils';
-import type { NewsCountry, NewsItemResponse } from '@/services/adminAPI';
+import { adminAPI, type NewsCountry, type NewsItemResponse } from '@/services/adminAPI';
 import { formatPublicationDate, safeExternalHref } from '@/utils/newsFormat';
 import type { NewsLevel } from '@/utils/newsLevel';
 
@@ -68,12 +69,28 @@ export const NewsReaderSheet: React.FC<NewsReaderSheetProps> = ({
     : article?.audio_duration_seconds;
   const hasAudio = !!audioUrl;
 
+  // PERF-17-04: the slim /news list no longer ships word_timestamps, so fetch the
+  // full detail (GET /news/{id}) on open, keyed by article.id. Title/body/image/
+  // audio keep rendering immediately from the slim prop; only karaoke timing is
+  // hydrated from this. retry:false so a rejection settles once (AC#5 graceful
+  // degrade) instead of spinning.
+  const detailQuery = useQuery({
+    queryKey: ['news-detail', article?.id],
+    queryFn: () => adminAPI.getNewsItem(article!.id),
+    enabled: open && !!article?.id,
+    retry: false,
+  });
+  const detailItem = detailQuery.data;
+
   // Karaoke word-level highlighting (reuses the Situations primitive). The same
   // forced-alignment timestamps the backend stores for Situations are now exposed
   // on the news API; pick the set that matches the displayed level + its audio.
+  // Prop-fallback merge: prefer the hydrated detail; fall back to the prop (kept
+  // for any caller that still passes full items) then empty. When detail is
+  // absent/rejected, this yields [] → karaoke stays off, audio + body unaffected.
   const wordTimestamps = useA2Content
-    ? (article?.word_timestamps_a2 ?? [])
-    : (article?.word_timestamps ?? []);
+    ? (detailItem?.word_timestamps_a2 ?? article?.word_timestamps_a2 ?? [])
+    : (detailItem?.word_timestamps ?? article?.word_timestamps ?? []);
   const karaokeEnabled = hasAudio && wordTimestamps.length > 0;
 
   // Container wrapping the WaveformPlayer's <audio>; the hook polls it for currentTime.
