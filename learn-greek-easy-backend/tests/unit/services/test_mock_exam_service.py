@@ -865,3 +865,147 @@ class TestMockExamBatchPresigning:
         result = service._build_question_data(question, url_map={})
 
         assert result["image_url"] is None
+
+
+# =============================================================================
+# PERF-21-03: QA Verify (Mode B) adversarial/edge coverage
+# =============================================================================
+
+
+class TestMockExamBatchPresigningEdgeCases:
+    """QA Verify (Mode B) adversarial/edge coverage for PERF-21-03, added on
+    top of the 4 architect-authored AC/trap tests in `TestMockExamBatchPresigning`
+    above.
+
+    All DB-free by construction (unpersisted `CultureQuestion`, no session/
+    flush; `_batch_sign_image_urls` itself never touches `self.db`), matching
+    `test_mock_exam_image_url_unchanged` / `test_mock_exam_no_image_is_none` --
+    these run with zero Postgres dependency locally and in CI alike.
+    """
+
+    def test_build_question_data_distributes_correct_url_from_shared_map(self, batched_s3_service):
+        """Distribution correctness: given a url_map covering several keys (as
+        it would across a whole 25-question exam), this item's image_url pulls
+        exactly its own key's URL -- not another key's, not a stale/None value
+        for a key that is genuinely present and signed.
+        """
+        service = MockExamService(db=MagicMock(), s3_service=batched_s3_service)
+        question = CultureQuestion(
+            id=uuid4(),
+            deck_id=None,
+            question_text={"en": "Q?", "el": "Ε;"},
+            option_a={"en": "A", "el": "Α"},
+            option_b={"en": "B", "el": "Β"},
+            correct_option=1,
+            order_index=0,
+            image_key="imgB",
+        )
+        url_map = batched_s3_service.generate_presigned_urls(
+            [
+                ("imgA", IMAGE_PRESIGN_EXPIRY_SECONDS),
+                ("imgB", IMAGE_PRESIGN_EXPIRY_SECONDS),
+                ("imgC", IMAGE_PRESIGN_EXPIRY_SECONDS),
+            ]
+        )
+
+        result = service._build_question_data(question, url_map)
+
+        assert result["image_url"] == url_map["imgB"]
+        assert result["image_url"] != url_map["imgA"]
+        assert result["image_url"] != url_map["imgC"]
+
+    def test_build_question_data_key_missing_from_url_map_resolves_to_none(
+        self, batched_s3_service
+    ):
+        """Defensive coverage: the question references a real key, but the
+        supplied `url_map` doesn't include it (e.g. it was signed for a
+        different, narrower collection pass -- one of the other two
+        `_get_session_questions` branches). `.get()` must degrade to None
+        rather than raise KeyError.
+        """
+        service = MockExamService(db=MagicMock(), s3_service=batched_s3_service)
+        question = CultureQuestion(
+            id=uuid4(),
+            deck_id=None,
+            question_text={"en": "Q?", "el": "Ε;"},
+            option_a={"en": "A", "el": "Α"},
+            option_b={"en": "B", "el": "Β"},
+            correct_option=1,
+            order_index=0,
+            image_key="imgNotInMap",
+        )
+
+        # url_map deliberately omits the key the question references.
+        result = service._build_question_data(question, url_map={"otherKey": "https://x/other"})
+
+        assert result["image_url"] is None
+
+    def test_build_question_data_no_image_key_ignores_populated_map(self, batched_s3_service):
+        """A question with `image_key=None` must resolve to `image_url=None`
+        even when the supplied `url_map` is non-empty and contains other
+        questions' keys -- proving the guard is `if question.image_key` (never
+        falls through to `url_map.get(None)` accidentally matching a sentinel
+        entry some other caller stashed under a falsy key).
+        """
+        service = MockExamService(db=MagicMock(), s3_service=batched_s3_service)
+        question = CultureQuestion(
+            id=uuid4(),
+            deck_id=None,
+            question_text={"en": "Q?", "el": "Ε;"},
+            option_a={"en": "A", "el": "Α"},
+            option_b={"en": "B", "el": "Β"},
+            correct_option=1,
+            order_index=0,
+            image_key=None,
+        )
+        url_map = batched_s3_service.generate_presigned_urls(
+            [("someOtherQuestionsImage", IMAGE_PRESIGN_EXPIRY_SECONDS)]
+        )
+
+        result = service._build_question_data(question, url_map)
+
+        assert result["image_url"] is None
+
+    @pytest.mark.asyncio
+    async def test_batch_sign_image_urls_empty_question_list_returns_empty_dict(
+        self, batched_s3_service
+    ):
+        """`_batch_sign_image_urls([])` (e.g. an all-answered session with zero
+        questions, or a deck with no rows) must return `{}` without error --
+        the batch method still gets exactly one dispatch, just with an empty
+        pairs list, rather than being skipped/short-circuited in a way that
+        could raise downstream.
+        """
+        service = MockExamService(db=MagicMock(), s3_service=batched_s3_service)
+
+        url_map = await service._batch_sign_image_urls([])
+
+        assert url_map == {}
+        assert batched_s3_service.generate_presigned_urls.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_batch_sign_image_urls_all_questions_missing_image_key(self, batched_s3_service):
+        """A non-empty question list where every question has `image_key=None`
+        must still batch-sign cleanly to `{}` -- the truthy-filter comprehension
+        in `_batch_sign_image_urls` excludes every question, so the dispatched
+        pairs list is empty, not a crash from `None` being passed as a key.
+        """
+        service = MockExamService(db=MagicMock(), s3_service=batched_s3_service)
+        questions = [
+            CultureQuestion(
+                id=uuid4(),
+                deck_id=None,
+                question_text={"en": f"Q{i}?", "el": f"Ε{i};"},
+                option_a={"en": "A", "el": "Α"},
+                option_b={"en": "B", "el": "Β"},
+                correct_option=1,
+                order_index=i,
+                image_key=None,
+            )
+            for i in range(3)
+        ]
+
+        url_map = await service._batch_sign_image_urls(questions)
+
+        assert url_map == {}
+        assert batched_s3_service.generate_presigned_urls.call_count == 1
