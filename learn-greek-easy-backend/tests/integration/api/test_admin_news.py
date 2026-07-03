@@ -122,6 +122,28 @@ class TestListNewsItemsAdminEndpoint:
 
         assert response.status_code in (401, 403)
 
+    @pytest.mark.asyncio
+    async def test_admin_list_items_still_full_shape(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """PERF-17-01 T01-4 (AC#4) — the public /news list was slimmed, but
+        the admin list must stay on the full NewsItemResponse: items still
+        carry word_timestamps and linked_situation (admin.py::list_news_items_admin
+        calls the unchanged NewsItemService.get_list, not get_list_slim).
+        """
+        await NewsItemFactory.create(session=db_session, published=True)
+
+        response = await client.get("/api/v1/admin/news", headers=superuser_auth_headers)
+
+        assert response.status_code == 200
+        item = response.json()["items"][0]
+        assert "word_timestamps" in item
+        assert "linked_situation" in item
+        assert item["linked_situation"] is not None
+
 
 class TestCreateNewsItemEndpoint:
     """Test suite for POST /api/v1/admin/news endpoint."""

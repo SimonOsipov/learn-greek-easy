@@ -176,6 +176,130 @@ class TestGetList:
 
 
 # =============================================================================
+# Test Get List Slim (PERF-17-01)
+# =============================================================================
+
+
+class TestGetListSlim:
+    """Tests for get_list_slim (PERF-17-01) — card-only slim list DTO.
+
+    Adversarial/edge coverage added in QA (Mode B) on top of the Stage 2.5 RED
+    endpoint tests in tests/integration/api/test_news.py::TestListNewsSlimShape.
+    """
+
+    @pytest.mark.asyncio
+    async def test_returns_paginated_slim_items(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        multiple_news_items,
+    ):
+        """Envelope (total/page/page_size) and item count mirror get_list (AC#2)."""
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        result = await service.get_list_slim(page=1, page_size=3)
+
+        assert result.total == 5
+        assert result.page == 1
+        assert result.page_size == 3
+        assert len(result.items) == 3
+
+    @pytest.mark.asyncio
+    async def test_slim_item_title_el_matches_scenario_el_byte_parity(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item,
+    ):
+        """AC#6 byte-parity guard: NewsSlimItem.title_el must equal
+        situation.scenario_el (NOT situation.title_el), exactly like
+        _to_response, so /dashboard/summary stays byte-identical after the
+        D2 repoint of _gather_news onto get_list_slim.
+        """
+        situation = await db_session.get(SituationModel, sample_news_item.situation_id)
+        assert situation is not None
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        result = await service.get_list_slim(page=1, page_size=10)
+
+        item = next(i for i in result.items if i.id == sample_news_item.id)
+        assert item.title_el == situation.scenario_el
+        assert item.title_el != situation.title_el  # title_el (dedicated field) is unset by default
+
+    @pytest.mark.asyncio
+    async def test_slim_item_country_filter_still_returns_slim_shape(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """A country-filtered call still exercises get_list_slim end-to-end and
+        returns NewsSlimItem instances (no linked_situation/word_timestamps
+        attributes exist on the type at all — see the model_fields guard test
+        below) — guards get_list_slim's signature parity with get_list.
+        """
+        await NewsItemFactory.create(session=db_session, published=True, country=NewsCountry.CYPRUS)
+        await NewsItemFactory.create(session=db_session, published=True, country=NewsCountry.GREECE)
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        result = await service.get_list_slim(page=1, page_size=10, country=NewsCountry.CYPRUS)
+
+        assert len(result.items) == 1
+        assert result.items[0].country == "cyprus"
+
+    @pytest.mark.asyncio
+    async def test_slim_item_null_audio_and_image_do_not_crash(
+        self,
+        db_session: AsyncSession,
+        sample_news_item,
+    ):
+        """Null audio_s3_key / audio_a2_s3_key / source_image_s3_key (default
+        factory state — neither is set) must serialize to None fields, not
+        raise. Uses a conditional mock (unlike mock_s3_service's unconditional
+        canned string) so a None key genuinely round-trips to a None field,
+        mirroring the real S3Service.generate_presigned_url contract.
+        """
+        conditional_s3 = MagicMock()
+        conditional_s3.generate_presigned_url.side_effect = lambda key, expiry_seconds=None: (
+            f"https://s3.example.com/{key}" if key else None
+        )
+        conditional_s3.get_derivative_presigned_urls.return_value = {}
+        service = NewsItemService(db_session, s3_service=conditional_s3)
+
+        result = await service.get_list_slim(page=1, page_size=10)
+
+        item = next(i for i in result.items if i.id == sample_news_item.id)
+        assert item.image_url is None
+        assert item.image_variants is None
+        assert item.audio_url is None
+        assert item.audio_a2_url is None
+
+    def test_slim_item_schema_omits_heavy_and_admin_only_fields(self):
+        """Type-level guard (no DB needed): NewsSlimItem must not declare
+        word_timestamps/word_timestamps_a2/linked_situation/status/created_at/
+        updated_at/alt_text/photo_credit/description_en/description_ru as
+        fields at all — stronger than an endpoint 'key not in dict' check,
+        since it can't pass by the field merely being None/omitted.
+        """
+        from src.schemas.news_item import NewsSlimItem
+
+        for dropped in (
+            "word_timestamps",
+            "word_timestamps_a2",
+            "linked_situation",
+            "status",
+            "created_at",
+            "updated_at",
+            "alt_text",
+            "photo_credit",
+            "description_en",
+            "description_ru",
+        ):
+            assert (
+                dropped not in NewsSlimItem.model_fields
+            ), f"NewsSlimItem must not declare dropped field: {dropped}"
+
+
+# =============================================================================
 # Test A2 Schema Validation (Pydantic-only, no DB)
 # =============================================================================
 
