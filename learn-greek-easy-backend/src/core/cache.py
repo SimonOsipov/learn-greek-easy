@@ -248,8 +248,14 @@ class CacheService:
     ) -> Optional[Any]:
         """Get a value from cache, or compute and cache it if not found.
 
-        This implements the cache-aside pattern: check cache first, if miss
-        call the factory function to compute the value, cache it, and return.
+        This implements the cache-aside pattern with a single-flight guard
+        (PERF-16-01): on a cache miss, only one caller (the "leader") computes
+        the value while holding a short-lived Redis lock (atomic `SET NX PX`).
+        Concurrent callers ("followers") poll for the leader's published value
+        instead of each recomputing it independently, which is what causes a
+        thundering herd against the DB on a cold/expired key. If the leader
+        stalls past the lock TTL, a follower gives up waiting and computes its
+        own value so it never blocks forever.
 
         Args:
             key: The cache key (without prefix)
@@ -259,12 +265,60 @@ class CacheService:
         Returns:
             The cached or computed value, or None if both fail.
         """
-        # Try to get from cache first
+        # Try to get from cache first (fast path - no lock involved)
         cached_value = await self.get(key)
         if cached_value is not None:
             return cached_value
 
-        # Cache miss - compute the value
+        redis = self.redis
+        if not settings.cache_enabled or redis is None:
+            # Redis unavailable - nothing to lock against, compute directly
+            return await self._compute_and_cache(key, factory, ttl)
+
+        lock_key = self._build_key(f"{key}:lock")
+        lock_ttl_ms = settings.cache_single_flight_lock_ttl_ms
+        poll_ms = settings.cache_single_flight_poll_ms
+
+        try:
+            acquired = await redis.set(lock_key, b"1", nx=True, px=lock_ttl_ms)
+        except Exception as e:
+            # Lock backend degraded - degrade to leader behavior, never block
+            logger.error(f"Single-flight lock acquisition failed for '{key}': {e}")
+            acquired = True
+
+        if acquired:
+            try:
+                return await self._compute_and_cache(key, factory, ttl)
+            finally:
+                try:
+                    await redis.delete(lock_key)
+                except Exception as e:
+                    logger.error(f"Failed to release single-flight lock for '{key}': {e}")
+
+        # Follower: poll for the leader's published value up to the lock TTL budget
+        elapsed_ms = 0
+        while elapsed_ms < lock_ttl_ms:
+            await asyncio.sleep(poll_ms / 1000)
+            elapsed_ms += poll_ms
+            value = await self.get(key)
+            if value is not None:
+                return value
+
+        # Leader stalled past the lock TTL - self-serve rather than deadlock
+        return await self._compute_and_cache(key, factory, ttl)
+
+    async def _compute_and_cache(
+        self,
+        key: str,
+        factory: Callable[[], Union[T, Awaitable[T]]],
+        ttl: Optional[int],
+    ) -> Optional[Any]:
+        """Run factory (sync or async), cache non-None results.
+
+        Shared by the single-flight leader path and the no-Redis degrade path
+        in get_or_set(). Swallows factory exceptions and returns None, same
+        as the pre-PERF-16-01 get_or_set behavior.
+        """
         try:
             result = factory()
             if asyncio.iscoroutine(result):

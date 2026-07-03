@@ -117,6 +117,16 @@ class Settings(BaseSettings):
         gt=0,
         description="TTL (seconds) for the supabase_id→identity user lookup cache (PERF-05-05)",
     )
+    cache_single_flight_lock_ttl_ms: int = Field(
+        default=5000,
+        gt=0,
+        description="get_or_set single-flight lock TTL in ms (PERF-16)",
+    )
+    cache_single_flight_poll_ms: int = Field(
+        default=50,
+        gt=0,
+        description="get_or_set single-flight follower poll interval in ms (PERF-16)",
+    )
 
     # =========================================================================
     # Authentication & Security
