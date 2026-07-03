@@ -9,7 +9,7 @@ Tests use real database fixtures and mock S3Service where needed.
 """
 
 from datetime import date, timedelta
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.exceptions import CultureDeckNotFoundException, CultureQuestionNotFoundException
 from src.db.models import CardStatus, CultureDeck, CultureQuestion, CultureQuestionStats, User
 from src.services.culture_question_service import CultureQuestionService
+from src.services.s3_service import IMAGE_PRESIGN_EXPIRY_SECONDS
 
 # =============================================================================
 # Test Fixtures
@@ -137,8 +138,50 @@ async def due_question_stats(
 
 @pytest.fixture
 def mock_s3_service():
-    """Create a mock S3 service."""
+    """Create a mock S3 service.
+
+    `generate_presigned_urls` (the PERF-21-02 batch entry point that
+    `get_question_queue` now dispatches via `asyncio.to_thread`) returns a REAL
+    dict keyed by object key, mirroring `S3Service.generate_presigned_urls`
+    (skip empty keys, dedupe by key). Without this, the auto-mock would return a
+    bare `MagicMock`, so `url_map.get(key)` would feed a `MagicMock` into
+    `CultureQuestionQueueItem(image_url=...)` and raise pydantic ValidationError.
+    Every present key resolves to the same constant URL as the singular
+    `generate_presigned_url`, so the existing queue tests keep asserting
+    `image_url == "https://s3.example.com/presigned-url"`; a key never collected
+    (e.g. a null image_key) is simply absent, so `url_map.get(...)` -> None.
+    """
     mock = MagicMock()
+    mock.generate_presigned_url.return_value = "https://s3.example.com/presigned-url"
+    mock.generate_presigned_urls.side_effect = lambda pairs: {
+        key: "https://s3.example.com/presigned-url" for key, _expiry in pairs if key
+    }
+    return mock
+
+
+@pytest.fixture
+def batched_s3_service():
+    """S3 service mock with a real-dict-returning `generate_presigned_urls` (PERF-21-02).
+
+    `mock_s3_service` above is unusable for the batch-wiring tests: its
+    `generate_presigned_urls` is auto-mocked, so it returns a bare `MagicMock`
+    instead of a `dict` — `url_map.get(key)` on that would yield a `MagicMock`,
+    not `None`/a URL string, silently corrupting `_build_queue_item`'s output
+    instead of failing loudly (Round-2 debate Finding 7). This fixture's batch
+    method dedupes by key exactly like the real `S3Service.generate_presigned_urls`
+    and returns a genuine `dict`, matching production shape.
+    """
+    mock = MagicMock()
+
+    def _fake_batch(keys_with_expiry):
+        result: dict[str, str | None] = {}
+        for key, expiry in keys_with_expiry:
+            if not key or key in result:
+                continue
+            result[key] = f"https://s3.example.com/presigned/{key}?exp={expiry}"
+        return result
+
+    mock.generate_presigned_urls.side_effect = _fake_batch
     mock.generate_presigned_url.return_value = "https://s3.example.com/presigned-url"
     return mock
 
@@ -848,7 +891,7 @@ class TestBuildQueueItem:
         question = culture_questions[0]
         stats = due_question_stats[0]
 
-        result = service._build_queue_item(question, stats)
+        result = service._build_queue_item(question, stats, url_map={})
 
         assert result.is_new is False
         assert result.status == stats.status.value
@@ -865,48 +908,62 @@ class TestBuildQueueItem:
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
         question = culture_questions[0]
 
-        result = service._build_queue_item(question, stats=None)
+        result = service._build_queue_item(question, stats=None, url_map={})
 
         assert result.is_new is True
         assert result.status == CardStatus.NEW.value
         assert result.due_date is None
 
     @pytest.mark.asyncio
-    async def test_generates_presigned_url_for_image(
+    async def test_image_url_from_url_map(
         self,
         db_session: AsyncSession,
         culture_questions: list[CultureQuestion],
         mock_s3_service,
     ):
-        """Should generate presigned URL when image_key exists."""
+        """image_url should be resolved from the batch-signed url_map for image_key.
+
+        PERF-21-02 moved presigning out of `_build_queue_item` and into the batch
+        step (`get_question_queue` -> `generate_presigned_urls`); the builder now
+        distributes URLs from the supplied `url_map`. This asserts the map value
+        lands on `image_url` (distribution correctness) rather than that the
+        singular `generate_presigned_url` was called -- it no longer is, by design
+        (that batch wiring is covered by `TestQueueBatchPresigning`).
+        """
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
         # Find a question with image_key (every 3rd in fixture, index 0, 3, 6, 9)
         question = culture_questions[0]  # Has image_key
+        assert question.image_key  # fixture invariant: index 0 has an image_key
 
-        result = service._build_queue_item(question, stats=None)
+        url_map = {question.image_key: "https://s3.example.com/presigned-url"}
+        result = service._build_queue_item(question, stats=None, url_map=url_map)
 
-        if question.image_key:
-            assert result.image_url == "https://s3.example.com/presigned-url"
-            mock_s3_service.generate_presigned_url.assert_called_with(
-                question.image_key, expiry_seconds=2592000
-            )
+        assert result.image_url == "https://s3.example.com/presigned-url"
 
     @pytest.mark.asyncio
-    async def test_generates_presigned_url_for_audio(
+    async def test_audio_url_from_url_map(
         self,
         db_session: AsyncSession,
         culture_questions: list[CultureQuestion],
         mock_s3_service,
     ):
-        """Should generate presigned URL when audio_s3_key exists."""
+        """audio_url should be resolved from the batch-signed url_map for audio_s3_key.
+
+        PERF-21-02 moved presigning into the batch step; `_build_queue_item` now
+        reads the audio URL from `url_map` instead of calling the singular
+        `generate_presigned_url`.
+        """
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
         question = culture_questions[0]
         question.audio_s3_key = "culture/audio/test.mp3"
 
-        result = service._build_queue_item(question, stats=None)
+        url_map = {
+            question.image_key: "https://s3.example.com/presigned-url",
+            question.audio_s3_key: "https://s3.example.com/presigned-url",
+        }
+        result = service._build_queue_item(question, stats=None, url_map=url_map)
 
         assert result.audio_url == "https://s3.example.com/presigned-url"
-        mock_s3_service.generate_presigned_url.assert_any_call("culture/audio/test.mp3")
 
     @pytest.mark.asyncio
     async def test_audio_url_none_when_no_audio(
@@ -919,7 +976,7 @@ class TestBuildQueueItem:
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
         question = culture_questions[1]  # No audio_s3_key
 
-        result = service._build_queue_item(question, stats=None)
+        result = service._build_queue_item(question, stats=None, url_map={})
 
         assert result.audio_url is None
 
@@ -1523,7 +1580,7 @@ class TestVariableAnswerCount:
         """2-option question should return options array of length 2."""
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
 
-        result = service._build_queue_item(two_option_question, stats=None)
+        result = service._build_queue_item(two_option_question, stats=None, url_map={})
 
         assert len(result.options) == 2
         assert result.option_count == 2
@@ -1540,7 +1597,7 @@ class TestVariableAnswerCount:
         """3-option question should return options array of length 3."""
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
 
-        result = service._build_queue_item(three_option_question, stats=None)
+        result = service._build_queue_item(three_option_question, stats=None, url_map={})
 
         assert len(result.options) == 3
         assert result.option_count == 3
@@ -2510,3 +2567,408 @@ class TestGetCrossDeckMap:
         result = await service._get_cross_deck_map([q1.id], culture_deck.id, locale="ru")
 
         assert result[q1.id] == ["No Russian"]
+
+
+# =============================================================================
+# PERF-21-02: Dedupe + off-loop the culture question queue builder (Test-Spec)
+# =============================================================================
+
+
+class TestQueueBatchPresigning:
+    """PERF-21-02 Test Specs (Mode A / RED): dedupe + off-loop the queue builder.
+
+    RED (Test-Spec / RALPH Mode A): `get_question_queue` still signs one URL per
+    item per media field inline (`_build_queue_item(question, stats)` — no
+    `url_map` param yet). These tests are authored from the PERF-21-02
+    acceptance criteria BEFORE the batching implementation and are expected to
+    fail until Step 4 collects `(key, expiry)` pairs across all queued
+    questions, dispatches `S3Service.generate_presigned_urls` via
+    `asyncio.to_thread`, and `_build_queue_item` gains a `url_map` parameter.
+
+    DB note: `get_question_queue` (the AC1/AC2/guard tests below) requires the
+    real Postgres test DB, per this file's existing convention — locally this
+    errors with "Cannot connect to test database" regardless of RED/GREEN
+    status (documented no-local-DB-verification convention); those three are
+    RED-by-construction here and will run for real in CI. The two
+    `_build_queue_item`-level tests (AC3, trap4) deliberately construct
+    `CultureQuestion` objects WITHOUT a session/flush so they run — and their
+    RED is confirmed — with zero DB dependency, locally and in CI alike.
+    """
+
+    @pytest.mark.asyncio
+    async def test_queue_batches_signing_by_unique_key(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        culture_deck: CultureDeck,
+        batched_s3_service,
+    ):
+        """AC1: 2 of 3 queued questions share an image_key -> the builder signs
+        NOTHING per-item (`generate_presigned_url.call_count == 0`) and the batch
+        method `generate_presigned_urls` is called exactly once, covering the
+        deduped-by-object-key set of `(key, expiry)` pairs collected across the
+        whole queue (Finding 7 — assert on the singular method's call count, not
+        a boto call count the per-instance `_url_cache` would mask).
+        """
+        q1 = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={"en": "Q1?", "el": "Ε1;", "ru": "В1?"},
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+            image_key="imgA",
+            audio_s3_key="audioA",
+        )
+        q2 = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={"en": "Q2?", "el": "Ε2;", "ru": "В2?"},
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=1,
+            image_key="imgA",  # shared with q1
+            audio_s3_key="audioB",
+        )
+        q3 = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={"en": "Q3?", "el": "Ε3;", "ru": "В3?"},
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=2,
+            image_key="imgC",
+            audio_s3_key="audioC",
+        )
+        db_session.add_all([q1, q2, q3])
+        await db_session.flush()
+        for q in (q1, q2, q3):
+            await db_session.refresh(q)
+
+        service = CultureQuestionService(db_session, s3_service=batched_s3_service)
+
+        with patch.object(batched_s3_service, "generate_presigned_url") as spy_single:
+            queue = await service.get_question_queue(
+                user_id=test_user.id,
+                deck_id=culture_deck.id,
+                limit=10,
+                include_new=True,
+                new_questions_limit=10,
+            )
+
+        assert queue.total_in_queue == 3
+        assert spy_single.call_count == 0, (
+            "_build_queue_item must no longer call the singular generate_presigned_url "
+            f"per item; got {spy_single.call_count} calls"
+        )
+        assert batched_s3_service.generate_presigned_urls.call_count == 1, (
+            "Batch signing must run exactly once per queue build, not once per item "
+            f"(got {batched_s3_service.generate_presigned_urls.call_count})"
+        )
+        called_pairs = batched_s3_service.generate_presigned_urls.call_args[0][0]
+        called_keys = {key for key, _expiry in called_pairs}
+        assert called_keys == {
+            "imgA",
+            "audioA",
+            "audioB",
+            "imgC",
+            "audioC",
+        }, f"Expected the 5 unique object keys across the 3 questions, got {called_keys}"
+        image_expiries = {expiry for key, expiry in called_pairs if key == "imgA"}
+        assert image_expiries == {
+            IMAGE_PRESIGN_EXPIRY_SECONDS
+        }, "image_key pairs must carry IMAGE_PRESIGN_EXPIRY_SECONDS as their expiry"
+
+    @pytest.mark.asyncio
+    async def test_queue_signs_off_event_loop(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        culture_deck: CultureDeck,
+        batched_s3_service,
+    ):
+        """AC2: batch signing is dispatched via `asyncio.to_thread`, not run
+        inline on the event loop.
+
+        Patch target: `"asyncio.to_thread"` (global), matching the codebase's
+        established off-loop convention (`import asyncio` + call
+        `asyncio.to_thread(...)` as a module attribute — see
+        `situation_picture_service.py:172,182`, `news_item_service.py:475`).
+        Patching the real `asyncio` module's `to_thread` attribute intercepts
+        the call regardless of which module makes it. The alternative form,
+        `from asyncio import to_thread` + calling the bare name, would instead
+        require a per-module patch target
+        (`"src.services.culture_question_service.to_thread"`) — but
+        `culture_question_service.py` does not import `asyncio` at all yet
+        (grep-confirmed pre-implementation), and every existing to_thread call
+        site in this codebase uses the `asyncio.to_thread(...)` module-attribute
+        form, so the global patch is the correct target once PERF-21-02 adds
+        `import asyncio` here.
+
+        The side_effect executes the wrapped callable synchronously and returns
+        its real return value (a `dict`), so `_build_queue_item` downstream
+        receives a genuine `url_map` instead of a bare `Mock` (Finding 8).
+        """
+        question = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={"en": "Q?", "el": "Ε;", "ru": "В?"},
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+            image_key="img1",
+            audio_s3_key="aud1",
+        )
+        db_session.add(question)
+        await db_session.flush()
+        await db_session.refresh(question)
+
+        service = CultureQuestionService(db_session, s3_service=batched_s3_service)
+
+        with patch(
+            "asyncio.to_thread",
+            new=AsyncMock(side_effect=lambda func, *a, **kw: func(*a, **kw)),
+        ) as mock_to_thread:
+            queue = await service.get_question_queue(
+                user_id=test_user.id,
+                deck_id=culture_deck.id,
+                limit=10,
+                include_new=True,
+                new_questions_limit=10,
+            )
+
+        assert queue.total_in_queue == 1
+        assert (
+            mock_to_thread.await_count >= 1
+        ), "get_question_queue must dispatch batch signing via asyncio.to_thread"
+        dispatched_targets = [call.args[0] for call in mock_to_thread.await_args_list]
+        assert batched_s3_service.generate_presigned_urls in dispatched_targets, (
+            "asyncio.to_thread must be invoked with s3_service.generate_presigned_urls "
+            f"as the dispatched function; got {dispatched_targets}"
+        )
+        dispatch_call = next(
+            call
+            for call in mock_to_thread.await_args_list
+            if call.args[0] is batched_s3_service.generate_presigned_urls
+        )
+        dispatched_pairs = dispatch_call.args[1]
+        dispatched_keys = {key for key, _expiry in dispatched_pairs}
+        assert dispatched_keys == {"img1", "aud1"}
+
+    def test_queue_item_urls_unchanged(self, batched_s3_service):
+        """AC3: item URLs for image + audio + A2 audio are byte-identical to
+        what the batched map yields for those exact keys/expiries.
+
+        Deliberately DB-free: `_build_queue_item` is a synchronous pure builder
+        over its `question`/`stats`/`url_map` arguments and never touches
+        `self.db`, so this constructs an unpersisted `CultureQuestion` directly
+        (no session, no flush) instead of going through the DB-backed
+        `culture_questions` fixture — this test runs with zero Postgres
+        dependency, locally and in CI alike.
+
+        Calling with 3 args (`question, stats, url_map`) against today's 2-arg
+        `_build_queue_item(self, question, stats)` signature IS the expected RED
+        here: a `TypeError` for the extra keyword argument, not an
+        import/collection error — confirming the `url_map` parameter genuinely
+        doesn't exist yet.
+        """
+        service = CultureQuestionService(db=MagicMock(), s3_service=batched_s3_service)
+        question = CultureQuestion(
+            id=uuid4(),
+            deck_id=None,
+            question_text={"en": "Q?", "el": "Ε;", "ru": "В?"},
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+            image_key="imgX",
+            audio_s3_key="audX",
+            audio_a2_s3_key="a2X",
+        )
+        url_map = batched_s3_service.generate_presigned_urls(
+            [
+                ("imgX", IMAGE_PRESIGN_EXPIRY_SECONDS),
+                ("audX", None),
+                ("a2X", None),
+            ]
+        )
+
+        result = service._build_queue_item(question, stats=None, url_map=url_map)
+
+        assert result.image_url == url_map["imgX"]
+        assert result.audio_url == url_map["audX"]
+        assert result.audio_a2_url == url_map["a2X"]
+
+    def test_queue_item_no_media_is_none(self, batched_s3_service):
+        """trap4: a question with image_key/audio_s3_key/audio_a2_s3_key all
+        None yields None for all three URL fields, with no exception — degraded
+        handling is unchanged by the batching refactor. Same DB-free
+        construction as test_queue_item_urls_unchanged (see its docstring);
+        same expected TypeError RED for the not-yet-existing `url_map` param.
+        """
+        service = CultureQuestionService(db=MagicMock(), s3_service=batched_s3_service)
+        question = CultureQuestion(
+            id=uuid4(),
+            deck_id=None,
+            question_text={"en": "Q?", "el": "Ε;", "ru": "В?"},
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+            image_key=None,
+            audio_s3_key=None,
+            audio_a2_s3_key=None,
+        )
+
+        result = service._build_queue_item(question, stats=None, url_map={})
+
+        assert result.image_url is None
+        assert result.audio_url is None
+        assert result.audio_a2_url is None
+
+    @pytest.mark.asyncio
+    async def test_queue_ordering_and_counts_unchanged(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        culture_deck: CultureDeck,
+        culture_questions: list[CultureQuestion],
+        due_question_stats: list[CultureQuestionStats],
+        batched_s3_service,
+    ):
+        """Scope guard: queue order and total_due/total_new/total_in_queue are
+        unaffected by the dedupe+off-loop refactor (media mocked). SM-2
+        selection/ordering is explicitly out of scope for this story.
+
+        NOTE: unlike the other 4 specs in this class, this guard is NOT expected
+        to turn RED today — it protects behavior (queue assembly order + counts)
+        that the batching refactor must NOT change, so it holds both before and
+        after PERF-21-02 lands (it mirrors the pre-existing
+        `test_get_question_queue_returns_due_questions_first` baseline, just
+        with the new `batched_s3_service` fixture). It is still DB-gated
+        (errors locally without Postgres) so it cannot be run-confirmed outside
+        CI either way — included per the architect's Test Specs table as a
+        regression net, not an AC-derived failing assertion.
+        """
+        service = CultureQuestionService(db_session, s3_service=batched_s3_service)
+
+        queue = await service.get_question_queue(
+            user_id=test_user.id,
+            deck_id=culture_deck.id,
+            limit=10,
+            include_new=True,
+            new_questions_limit=5,
+        )
+
+        assert queue.total_due == 4
+        assert queue.total_new == 5
+        assert queue.total_in_queue == 9
+        for item in queue.questions[:4]:
+            assert item.is_new is False
+        for item in queue.questions[4:]:
+            assert item.is_new is True
+
+
+class TestQueueBatchPresigningEdgeCases:
+    """QA Verify (Mode B) adversarial/edge coverage for PERF-21-02, added on top
+    of the 5 architect-authored AC tests in `TestQueueBatchPresigning` above.
+
+    All DB-free by construction (unpersisted `CultureQuestion`, no session/
+    flush), matching `test_queue_item_urls_unchanged` / `test_queue_item_no_media_is_none`
+    — these exercise `_build_queue_item` directly rather than the DB-gated
+    `get_question_queue`, so they run with zero Postgres dependency locally
+    and in CI alike.
+    """
+
+    def test_queue_item_mixed_media_only_image_present(self, batched_s3_service):
+        """A question with an image but no audio/A2 audio must still get its
+        image signed and resolved — a mixed-media item isn't all-or-nothing.
+        image_url comes from the map; audio_url/audio_a2_url are None because
+        their keys were never in the map (not merely absent-but-falsy).
+        """
+        service = CultureQuestionService(db=MagicMock(), s3_service=batched_s3_service)
+        question = CultureQuestion(
+            id=uuid4(),
+            deck_id=None,
+            question_text={"en": "Q?", "el": "Ε;", "ru": "В?"},
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+            image_key="imgOnly",
+            audio_s3_key=None,
+            audio_a2_s3_key=None,
+        )
+        url_map = batched_s3_service.generate_presigned_urls(
+            [("imgOnly", IMAGE_PRESIGN_EXPIRY_SECONDS)]
+        )
+
+        result = service._build_queue_item(question, stats=None, url_map=url_map)
+
+        assert result.image_url == url_map["imgOnly"]
+        assert result.audio_url is None
+        assert result.audio_a2_url is None
+
+    def test_queue_item_key_missing_from_url_map_resolves_to_none(self, batched_s3_service):
+        """Defensive coverage: the question references a real key, but the
+        supplied `url_map` doesn't include it (e.g. it was signed for a
+        different, narrower collection pass). `.get()` must degrade to None
+        rather than raise KeyError -- proving the builder tolerates a url_map
+        that didn't cover every key the question references.
+        """
+        service = CultureQuestionService(db=MagicMock(), s3_service=batched_s3_service)
+        question = CultureQuestion(
+            id=uuid4(),
+            deck_id=None,
+            question_text={"en": "Q?", "el": "Ε;", "ru": "В?"},
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+            image_key="imgNotInMap",
+            audio_s3_key="audNotInMap",
+            audio_a2_s3_key="a2NotInMap",
+        )
+
+        # url_map deliberately omits all three keys the question references.
+        result = service._build_queue_item(question, stats=None, url_map={})
+
+        assert result.image_url is None
+        assert result.audio_url is None
+        assert result.audio_a2_url is None
+
+    def test_queue_item_url_distributed_correctly_from_shared_map(self, batched_s3_service):
+        """Distribution correctness: given a url_map covering several keys
+        (as it would across a whole queue), each field on THIS item pulls
+        exactly its own key's URL -- not another key's, not a stale/None
+        value for a key that is genuinely present and signed.
+        """
+        service = CultureQuestionService(db=MagicMock(), s3_service=batched_s3_service)
+        question = CultureQuestion(
+            id=uuid4(),
+            deck_id=None,
+            question_text={"en": "Q?", "el": "Ε;", "ru": "В?"},
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+            image_key="imgShared",
+            audio_s3_key="audShared",
+            audio_a2_s3_key=None,
+        )
+        # Map covers this item's keys plus an unrelated key from another
+        # queued question, mirroring the real whole-queue url_map shape.
+        url_map = batched_s3_service.generate_presigned_urls(
+            [
+                ("imgShared", IMAGE_PRESIGN_EXPIRY_SECONDS),
+                ("audShared", None),
+                ("someoneElsesImage", IMAGE_PRESIGN_EXPIRY_SECONDS),
+            ]
+        )
+
+        result = service._build_queue_item(question, stats=None, url_map=url_map)
+
+        assert result.image_url == url_map["imgShared"]
+        assert result.audio_url == url_map["audShared"]
+        assert result.audio_a2_url is None
+        assert result.image_url != url_map["someoneElsesImage"]

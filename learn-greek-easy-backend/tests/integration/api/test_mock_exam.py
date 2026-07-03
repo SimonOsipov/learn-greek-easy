@@ -11,7 +11,7 @@ All tests use real database connections via the db_session fixture.
 All endpoints require authentication.
 """
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -109,6 +109,59 @@ async def few_questions_deck(db_session: AsyncSession) -> tuple[CultureDeck, lis
     return deck, questions
 
 
+@pytest.fixture
+async def culture_deck_with_questions_and_images(
+    db_session: AsyncSession,
+) -> tuple[CultureDeck, list[CultureQuestion]]:
+    """30 active-deck questions all sharing ONE image_key (PERF-21-03 AC4).
+
+    Every question carries the same `image_key` so the queue endpoint's
+    5-question random sample always references exactly 1 unique key,
+    regardless of which 5 rows `func.random()` picks -- keeping the
+    batched-signing assertions in `TestMockExamQueueBatchedSigning`
+    deterministic and non-flaky.
+    """
+    deck = CultureDeck(
+        name_en="Greek History",
+        name_el="Greek History",
+        name_ru="Greek History",
+        description_en="Learn about Greek history",
+        description_el="Learn about Greek history",
+        description_ru="Learn about Greek history",
+        category="history",
+        is_active=True,
+    )
+    db_session.add(deck)
+    await db_session.flush()
+    await db_session.refresh(deck)
+
+    questions = []
+    for i in range(30):
+        question = CultureQuestion(
+            deck_id=deck.id,
+            question_text={
+                "en": f"Question {i + 1}?",
+                "el": f"Ερώτηση {i + 1};",
+                "ru": f"Вопрос {i + 1}?",
+            },
+            option_a={"en": "Option A", "el": "Επιλογή Α", "ru": "Вариант А"},
+            option_b={"en": "Option B", "el": "Επιλογή Β", "ru": "Вариант Б"},
+            option_c={"en": "Option C", "el": "Επιλογή Γ", "ru": "Вариант В"},
+            option_d={"en": "Option D", "el": "Επιλογή Δ", "ru": "Вариант Г"},
+            correct_option=(i % 4) + 1,
+            order_index=i,
+            image_key="examSharedImg",
+        )
+        db_session.add(question)
+        questions.append(question)
+
+    await db_session.flush()
+    for q in questions:
+        await db_session.refresh(q)
+
+    return deck, questions
+
+
 # =============================================================================
 # Test Mock Exam Queue Endpoint
 # =============================================================================
@@ -179,6 +232,104 @@ class TestMockExamQueueEndpoint:
         assert data["total_questions"] == 0
         assert data["can_start_exam"] is False
         assert data["sample_questions"] == []
+
+
+# =============================================================================
+# PERF-21-03: Dedupe + off-loop the /mock-exam/queue sample presigning
+# (Test-Spec)
+# =============================================================================
+
+
+class TestMockExamQueueBatchedSigning:
+    """PERF-21-03 Test Specs (Mode A / RED): batch-sign the queue endpoint's
+    <=5 sample image keys off the event loop.
+
+    RED (Test-Spec / RALPH Mode A): `get_mock_exam_queue` still signs each
+    sample question's image inline via a per-item list comprehension calling
+    `service.s3_service.generate_presigned_url(...)`. This test is authored
+    from the PERF-21-03 AC4 acceptance criterion BEFORE the batching
+    implementation and is expected to fail until the endpoint collects
+    `(image_key, IMAGE_PRESIGN_EXPIRY_SECONDS)` pairs across the <=5 sample
+    questions, dispatches `S3Service.generate_presigned_urls` via
+    `asyncio.to_thread`, and builds each `MockExamQuestionResponse.image_url`
+    from the resulting map instead of calling `generate_presigned_url`
+    per-item.
+
+    DB-gated: this is a full-stack integration test (real DB + auth), so
+    locally (no Postgres) it errors with "Cannot connect to test database"
+    regardless of RED/GREEN status (documented no-local-DB-verification
+    convention) -- RED-by-construction here, runs for real in CI.
+    """
+
+    @pytest.mark.asyncio
+    async def test_mock_exam_queue_endpoint_batched(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        culture_deck_with_questions_and_images: tuple,
+    ):
+        """AC4: the queue endpoint's sample build makes ZERO direct
+        `generate_presigned_url` calls, routes through `generate_presigned_urls`
+        exactly once (called with the deduped set of unique image keys across
+        the sample -- here always `{"examSharedImg"}` since every seeded
+        question shares one key), dispatches that batch call via
+        `asyncio.to_thread`, and leaves the 1000-row availability count
+        query's observable behavior (the `total_questions` field) unchanged
+        (Finding 7/8 -- assert on the singular method's call count and the
+        explicit `to_thread` patch target, not a boto count masked by the
+        per-instance `_url_cache`).
+        """
+        deck, questions = culture_deck_with_questions_and_images
+
+        mock_s3 = MagicMock()
+
+        def _fake_batch(keys_with_expiry):
+            result: dict[str, str | None] = {}
+            for key, expiry in keys_with_expiry:
+                if not key or key in result:
+                    continue
+                result[key] = f"https://s3.example.com/presigned/{key}?exp={expiry}"
+            return result
+
+        mock_s3.generate_presigned_urls.side_effect = _fake_batch
+        mock_s3.generate_presigned_url.return_value = "https://s3.example.com/presigned-url"
+
+        with (
+            patch("src.services.mock_exam_service.get_s3_service", return_value=mock_s3),
+            patch(
+                "asyncio.to_thread",
+                new=AsyncMock(side_effect=lambda func, *a, **kw: func(*a, **kw)),
+            ) as mock_to_thread,
+        ):
+            response = await client.get("/api/v1/culture/mock-exam/queue", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        # Scope guard: the 1000-row availability count query is untouched --
+        # all 30 seeded questions are still counted as available.
+        assert data["total_questions"] >= 25
+        assert len(data["sample_questions"]) == 5
+        assert all(
+            q["image_url"] is not None for q in data["sample_questions"]
+        ), "every sampled question shares examSharedImg and must resolve a URL"
+
+        assert mock_s3.generate_presigned_url.call_count == 0, (
+            "get_mock_exam_queue must no longer call the singular "
+            f"generate_presigned_url per sample item; got "
+            f"{mock_s3.generate_presigned_url.call_count} calls"
+        )
+        assert mock_s3.generate_presigned_urls.call_count == 1, (
+            "Sample image signing must run in one batched call, not once per "
+            f"sample item (got {mock_s3.generate_presigned_urls.call_count})"
+        )
+        called_pairs = mock_s3.generate_presigned_urls.call_args[0][0]
+        called_keys = {key for key, _expiry in called_pairs}
+        assert called_keys == {"examSharedImg"}
+
+        dispatched_targets = [call.args[0] for call in mock_to_thread.await_args_list]
+        assert (
+            mock_s3.generate_presigned_urls in dispatched_targets
+        ), "get_mock_exam_queue must dispatch batch signing via asyncio.to_thread"
 
 
 # =============================================================================

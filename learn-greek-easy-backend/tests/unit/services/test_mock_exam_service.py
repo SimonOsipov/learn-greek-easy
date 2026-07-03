@@ -11,7 +11,7 @@ Tests use real database fixtures and mock S3Service where needed.
 """
 
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.exceptions import MockExamNotFoundException, MockExamSessionExpiredException
 from src.db.models import CultureDeck, CultureQuestion, MockExamSession, MockExamStatus, User
 from src.services.mock_exam_service import MockExamService
+from src.services.s3_service import IMAGE_PRESIGN_EXPIRY_SECONDS
 
 # =============================================================================
 # Test Fixtures
@@ -142,6 +143,80 @@ def mock_s3_service():
     mock = MagicMock()
     mock.generate_presigned_url.return_value = "https://s3.example.com/presigned-url"
     return mock
+
+
+@pytest.fixture
+def batched_s3_service():
+    """S3 service mock with a real-dict-returning `generate_presigned_urls` (PERF-21-03).
+
+    `mock_s3_service` above is unusable for the batch-wiring tests below: its
+    `generate_presigned_urls` is auto-mocked, so it returns a bare `MagicMock`
+    instead of a `dict` -- `url_map.get(key)` on that would yield a `MagicMock`,
+    not `None`/a URL string, silently corrupting `_build_question_data`'s output
+    instead of failing loudly (Round-2 debate Finding 7, mirrored from
+    PERF-21-02's identical fixture in test_culture_question_service.py). This
+    fixture's batch method dedupes by key exactly like the real
+    `S3Service.generate_presigned_urls` and returns a genuine `dict`, matching
+    production shape.
+    """
+    mock = MagicMock()
+
+    def _fake_batch(keys_with_expiry):
+        result: dict[str, str | None] = {}
+        for key, expiry in keys_with_expiry:
+            if not key or key in result:
+                continue
+            result[key] = f"https://s3.example.com/presigned/{key}?exp={expiry}"
+        return result
+
+    mock.generate_presigned_urls.side_effect = _fake_batch
+    mock.generate_presigned_url.return_value = "https://s3.example.com/presigned-url"
+    return mock
+
+
+@pytest.fixture
+async def culture_questions_shared_image(
+    db_session: AsyncSession, culture_deck: CultureDeck
+) -> list[CultureQuestion]:
+    """Create exactly 25 culture questions for mock-exam batching tests (PERF-21-03).
+
+    Questions 0-9 share `image_key="examImgShared"` (dedupe target); questions
+    10-19 each have a unique `image_key`; questions 20-24 have no image
+    (`image_key=None`, trap4 coverage). Exactly 25 so `create_mock_exam`'s
+    `get_random_questions(count=25)` query (`ORDER BY random() LIMIT 25` over
+    exactly 25 rows) deterministically returns the full set -- order varies
+    with the PRNG, membership doesn't -- keeping the signing-count assertions
+    below independent of random sampling.
+    """
+    questions = []
+    for i in range(25):
+        if i < 10:
+            image_key = "examImgShared"
+        elif i < 20:
+            image_key = f"examImgUniq{i}"
+        else:
+            image_key = None
+        question = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={
+                "en": f"Question {i + 1}?",
+                "el": f"Ερώτηση {i + 1};",
+            },
+            option_a={"en": "Option A", "el": "Επιλογή Α"},
+            option_b={"en": "Option B", "el": "Επιλογή Β"},
+            option_c={"en": "Option C", "el": "Επιλογή Γ"},
+            option_d={"en": "Option D", "el": "Επιλογή Δ"},
+            correct_option=(i % 4) + 1,
+            order_index=i,
+            image_key=image_key,
+        )
+        db_session.add(question)
+        questions.append(question)
+
+    await db_session.flush()
+    for q in questions:
+        await db_session.refresh(q)
+    return questions
 
 
 # =============================================================================
@@ -658,3 +733,334 @@ class TestSubmitAllAnswers:
         assert result["new_answers_count"] == 1
         assert result["duplicate_answers_count"] == 0
         assert result["score"] == 1
+
+
+# =============================================================================
+# PERF-21-03: Dedupe + off-loop the mock-exam presign paths (Test-Spec)
+# =============================================================================
+
+
+class TestMockExamBatchPresigning:
+    """PERF-21-03 Test Specs (Mode A / RED): batch-sign + off-loop the
+    mock-exam presign paths (`create_mock_exam` / `_build_question_data`).
+
+    RED (Test-Spec / RALPH Mode A): `create_mock_exam` still signs one image
+    URL per question inline via `_build_question_data(question)` (no
+    `url_map` param yet, no `asyncio.to_thread` dispatch). These tests are
+    authored from the PERF-21-03 acceptance criteria BEFORE the batching
+    implementation and are expected to fail until: (a) `create_mock_exam`
+    collects `(image_key, IMAGE_PRESIGN_EXPIRY_SECONDS)` pairs across all 25
+    questions, dispatches `S3Service.generate_presigned_urls` via
+    `asyncio.to_thread`, and (b) `_build_question_data` gains a `url_map`
+    parameter and stops calling `generate_presigned_url` itself.
+
+    DB note: `create_mock_exam` (the AC1/AC2 tests below) requires the real
+    Postgres test DB, per this file's existing convention -- locally this
+    errors with "Cannot connect to test database" regardless of RED/GREEN
+    status (documented no-local-DB-verification convention); those two are
+    RED-by-construction here and will run for real in CI. The two
+    `_build_question_data`-level tests (AC3, trap4) deliberately construct a
+    `CultureQuestion` object WITHOUT a session/flush so they run -- and their
+    RED is confirmed -- with zero DB dependency, locally and in CI alike.
+    """
+
+    @pytest.mark.asyncio
+    async def test_create_mock_exam_batches_signing(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        culture_questions_shared_image: list[CultureQuestion],
+        batched_s3_service,
+    ):
+        """AC1/AC4: 10 of the 25 questions share `image_key="examImgShared"`
+        -> `_build_question_data` makes NOTHING per-item
+        (`generate_presigned_url.call_count == 0`) and the batch method
+        `generate_presigned_urls` is called exactly once, covering the
+        deduped-by-object-key set of `(key, expiry)` pairs collected across
+        the whole 25-question exam (Finding 7 -- assert on the singular
+        method's call count, not a boto count masked by the per-instance
+        `_url_cache`).
+        """
+        service = MockExamService(db_session, s3_service=batched_s3_service)
+
+        with patch.object(batched_s3_service, "generate_presigned_url") as spy_single:
+            result = await service.create_mock_exam(test_user.id)
+
+        assert len(result["questions"]) == 25
+        assert spy_single.call_count == 0, (
+            "_build_question_data must no longer call the singular "
+            f"generate_presigned_url per item; got {spy_single.call_count} calls"
+        )
+        assert batched_s3_service.generate_presigned_urls.call_count == 1, (
+            "Batch signing must run exactly once per create_mock_exam call, "
+            f"not once per question (got "
+            f"{batched_s3_service.generate_presigned_urls.call_count})"
+        )
+        called_pairs = batched_s3_service.generate_presigned_urls.call_args[0][0]
+        called_keys = {key for key, _expiry in called_pairs}
+        expected_keys = {"examImgShared"} | {f"examImgUniq{i}" for i in range(10, 20)}
+        assert called_keys == expected_keys, (
+            "Expected the 11 unique image keys (1 shared + 10 distinct) across "
+            f"the 25 questions, got {called_keys}"
+        )
+        image_expiries = {expiry for _key, expiry in called_pairs}
+        assert image_expiries == {
+            IMAGE_PRESIGN_EXPIRY_SECONDS
+        }, "image_key pairs must carry IMAGE_PRESIGN_EXPIRY_SECONDS as their expiry"
+
+    @pytest.mark.asyncio
+    async def test_mock_exam_signs_off_event_loop(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        culture_questions_shared_image: list[CultureQuestion],
+        batched_s3_service,
+    ):
+        """AC2: batch signing is dispatched via `asyncio.to_thread`, not run
+        inline on the event loop.
+
+        Patch target: `"asyncio.to_thread"` (global), matching the codebase's
+        established off-loop convention and the PERF-21-01/-02 precedent
+        (`import asyncio` + call `asyncio.to_thread(...)` as a module
+        attribute -- see `culture_question_service.py`,
+        `situation_picture_service.py:172,182`, `news_item_service.py:475`).
+        `mock_exam_service.py` does NOT `import asyncio` yet (grep-confirmed
+        pre-implementation), so once PERF-21-03 adds it, the call site becomes
+        `asyncio.to_thread(...)` and this global patch target is correct.
+
+        The side_effect executes the wrapped callable synchronously and
+        returns its real return value (a `dict`), so `_build_question_data`
+        downstream receives a genuine `url_map` instead of a bare `Mock`
+        (Finding 8).
+        """
+        service = MockExamService(db_session, s3_service=batched_s3_service)
+
+        with patch(
+            "asyncio.to_thread",
+            new=AsyncMock(side_effect=lambda func, *a, **kw: func(*a, **kw)),
+        ) as mock_to_thread:
+            result = await service.create_mock_exam(test_user.id)
+
+        assert len(result["questions"]) == 25
+        assert (
+            mock_to_thread.await_count >= 1
+        ), "create_mock_exam must dispatch batch signing via asyncio.to_thread"
+        dispatched_targets = [call.args[0] for call in mock_to_thread.await_args_list]
+        assert batched_s3_service.generate_presigned_urls in dispatched_targets, (
+            "asyncio.to_thread must be invoked with s3_service.generate_presigned_urls "
+            f"as the dispatched function; got {dispatched_targets}"
+        )
+        dispatch_call = next(
+            call
+            for call in mock_to_thread.await_args_list
+            if call.args[0] is batched_s3_service.generate_presigned_urls
+        )
+        dispatched_pairs = dispatch_call.args[1]
+        dispatched_keys = {key for key, _expiry in dispatched_pairs}
+        expected_keys = {"examImgShared"} | {f"examImgUniq{i}" for i in range(10, 20)}
+        assert dispatched_keys == expected_keys
+
+    def test_mock_exam_image_url_unchanged(self, batched_s3_service):
+        """AC3: `image_url` on the built question dict is byte-identical to
+        what the batched map yields for that exact key/expiry.
+
+        Deliberately DB-free: once PERF-21-03 lands, `_build_question_data`
+        must become a pure sync builder over its `question`/`url_map`
+        arguments and never touch `self.db` (mirroring `_build_queue_item`
+        from PERF-21-02) -- so this constructs an unpersisted `CultureQuestion`
+        directly (no session, no flush) instead of going through a DB-backed
+        fixture. This test runs with zero Postgres dependency, locally and in
+        CI alike.
+
+        Calling with 2 positional args (`question, url_map`) against today's
+        1-arg `_build_question_data(self, question)` signature IS the
+        expected RED here: a `TypeError` for the unexpected extra positional
+        argument, not an import/collection error -- confirming the `url_map`
+        parameter genuinely doesn't exist yet.
+        """
+        service = MockExamService(db=MagicMock(), s3_service=batched_s3_service)
+        question = CultureQuestion(
+            id=uuid4(),
+            deck_id=None,
+            question_text={"en": "Q?", "el": "Ε;"},
+            option_a={"en": "A", "el": "Α"},
+            option_b={"en": "B", "el": "Β"},
+            correct_option=1,
+            order_index=0,
+            image_key="imgX",
+        )
+        url_map = batched_s3_service.generate_presigned_urls(
+            [("imgX", IMAGE_PRESIGN_EXPIRY_SECONDS)]
+        )
+
+        result = service._build_question_data(question, url_map)
+
+        assert result["image_url"] == url_map["imgX"]
+        assert result["image_url"] is not None
+
+    def test_mock_exam_no_image_is_none(self, batched_s3_service):
+        """trap4: a question with `image_key=None` yields `image_url=None`,
+        with no exception -- degraded handling is unchanged by the batching
+        refactor. Same DB-free construction as
+        `test_mock_exam_image_url_unchanged` (see its docstring); same
+        expected `TypeError` RED for the not-yet-existing `url_map` param.
+        """
+        service = MockExamService(db=MagicMock(), s3_service=batched_s3_service)
+        question = CultureQuestion(
+            id=uuid4(),
+            deck_id=None,
+            question_text={"en": "Q?", "el": "Ε;"},
+            option_a={"en": "A", "el": "Α"},
+            option_b={"en": "B", "el": "Β"},
+            correct_option=1,
+            order_index=0,
+            image_key=None,
+        )
+
+        result = service._build_question_data(question, url_map={})
+
+        assert result["image_url"] is None
+
+
+# =============================================================================
+# PERF-21-03: QA Verify (Mode B) adversarial/edge coverage
+# =============================================================================
+
+
+class TestMockExamBatchPresigningEdgeCases:
+    """QA Verify (Mode B) adversarial/edge coverage for PERF-21-03, added on
+    top of the 4 architect-authored AC/trap tests in `TestMockExamBatchPresigning`
+    above.
+
+    All DB-free by construction (unpersisted `CultureQuestion`, no session/
+    flush; `_batch_sign_image_urls` itself never touches `self.db`), matching
+    `test_mock_exam_image_url_unchanged` / `test_mock_exam_no_image_is_none` --
+    these run with zero Postgres dependency locally and in CI alike.
+    """
+
+    def test_build_question_data_distributes_correct_url_from_shared_map(self, batched_s3_service):
+        """Distribution correctness: given a url_map covering several keys (as
+        it would across a whole 25-question exam), this item's image_url pulls
+        exactly its own key's URL -- not another key's, not a stale/None value
+        for a key that is genuinely present and signed.
+        """
+        service = MockExamService(db=MagicMock(), s3_service=batched_s3_service)
+        question = CultureQuestion(
+            id=uuid4(),
+            deck_id=None,
+            question_text={"en": "Q?", "el": "Ε;"},
+            option_a={"en": "A", "el": "Α"},
+            option_b={"en": "B", "el": "Β"},
+            correct_option=1,
+            order_index=0,
+            image_key="imgB",
+        )
+        url_map = batched_s3_service.generate_presigned_urls(
+            [
+                ("imgA", IMAGE_PRESIGN_EXPIRY_SECONDS),
+                ("imgB", IMAGE_PRESIGN_EXPIRY_SECONDS),
+                ("imgC", IMAGE_PRESIGN_EXPIRY_SECONDS),
+            ]
+        )
+
+        result = service._build_question_data(question, url_map)
+
+        assert result["image_url"] == url_map["imgB"]
+        assert result["image_url"] != url_map["imgA"]
+        assert result["image_url"] != url_map["imgC"]
+
+    def test_build_question_data_key_missing_from_url_map_resolves_to_none(
+        self, batched_s3_service
+    ):
+        """Defensive coverage: the question references a real key, but the
+        supplied `url_map` doesn't include it (e.g. it was signed for a
+        different, narrower collection pass -- one of the other two
+        `_get_session_questions` branches). `.get()` must degrade to None
+        rather than raise KeyError.
+        """
+        service = MockExamService(db=MagicMock(), s3_service=batched_s3_service)
+        question = CultureQuestion(
+            id=uuid4(),
+            deck_id=None,
+            question_text={"en": "Q?", "el": "Ε;"},
+            option_a={"en": "A", "el": "Α"},
+            option_b={"en": "B", "el": "Β"},
+            correct_option=1,
+            order_index=0,
+            image_key="imgNotInMap",
+        )
+
+        # url_map deliberately omits the key the question references.
+        result = service._build_question_data(question, url_map={"otherKey": "https://x/other"})
+
+        assert result["image_url"] is None
+
+    def test_build_question_data_no_image_key_ignores_populated_map(self, batched_s3_service):
+        """A question with `image_key=None` must resolve to `image_url=None`
+        even when the supplied `url_map` is non-empty and contains other
+        questions' keys -- proving the guard is `if question.image_key` (never
+        falls through to `url_map.get(None)` accidentally matching a sentinel
+        entry some other caller stashed under a falsy key).
+        """
+        service = MockExamService(db=MagicMock(), s3_service=batched_s3_service)
+        question = CultureQuestion(
+            id=uuid4(),
+            deck_id=None,
+            question_text={"en": "Q?", "el": "Ε;"},
+            option_a={"en": "A", "el": "Α"},
+            option_b={"en": "B", "el": "Β"},
+            correct_option=1,
+            order_index=0,
+            image_key=None,
+        )
+        url_map = batched_s3_service.generate_presigned_urls(
+            [("someOtherQuestionsImage", IMAGE_PRESIGN_EXPIRY_SECONDS)]
+        )
+
+        result = service._build_question_data(question, url_map)
+
+        assert result["image_url"] is None
+
+    @pytest.mark.asyncio
+    async def test_batch_sign_image_urls_empty_question_list_returns_empty_dict(
+        self, batched_s3_service
+    ):
+        """`_batch_sign_image_urls([])` (e.g. an all-answered session with zero
+        questions, or a deck with no rows) must return `{}` without error --
+        the batch method still gets exactly one dispatch, just with an empty
+        pairs list, rather than being skipped/short-circuited in a way that
+        could raise downstream.
+        """
+        service = MockExamService(db=MagicMock(), s3_service=batched_s3_service)
+
+        url_map = await service._batch_sign_image_urls([])
+
+        assert url_map == {}
+        assert batched_s3_service.generate_presigned_urls.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_batch_sign_image_urls_all_questions_missing_image_key(self, batched_s3_service):
+        """A non-empty question list where every question has `image_key=None`
+        must still batch-sign cleanly to `{}` -- the truthy-filter comprehension
+        in `_batch_sign_image_urls` excludes every question, so the dispatched
+        pairs list is empty, not a crash from `None` being passed as a key.
+        """
+        service = MockExamService(db=MagicMock(), s3_service=batched_s3_service)
+        questions = [
+            CultureQuestion(
+                id=uuid4(),
+                deck_id=None,
+                question_text={"en": f"Q{i}?", "el": f"Ε{i};"},
+                option_a={"en": "A", "el": "Α"},
+                option_b={"en": "B", "el": "Β"},
+                correct_option=1,
+                order_index=i,
+                image_key=None,
+            )
+            for i in range(3)
+        ]
+
+        url_map = await service._batch_sign_image_urls(questions)
+
+        assert url_map == {}
+        assert batched_s3_service.generate_presigned_urls.call_count == 1

@@ -27,6 +27,7 @@ Example Usage:
         response = await service.bulk_create_questions(deck_id, questions)
 """
 
+import asyncio
 import hashlib
 from datetime import date, datetime, timedelta
 from typing import Optional
@@ -129,7 +130,7 @@ class CultureQuestionService:
     # Question Queue Methods
     # =========================================================================
 
-    async def get_question_queue(
+    async def get_question_queue(  # noqa: C901
         self,
         user_id: UUID,
         deck_id: UUID,
@@ -216,22 +217,39 @@ class CultureQuestionService:
                 },
             )
 
-        # Step 4: Build queue items with presigned image URLs
+        # Step 4: Batch-sign presigned URLs for every queued question's media in a
+        # single off-event-loop hop (dedupe by object key happens in the S3 service).
+        queued_questions: list[CultureQuestion] = [stats.question for stats in due_stats]
+        queued_questions.extend(new_questions)
+        queued_questions.extend(stats.question for stats in weakest_stats)
+
+        presign_pairs: list[tuple[str, Optional[int]]] = []
+        for question in queued_questions:
+            if question.image_key:
+                presign_pairs.append((question.image_key, IMAGE_PRESIGN_EXPIRY_SECONDS))
+            if question.audio_s3_key:
+                presign_pairs.append((question.audio_s3_key, None))
+            if question.audio_a2_s3_key:
+                presign_pairs.append((question.audio_a2_s3_key, None))
+
+        url_map = await asyncio.to_thread(self.s3_service.generate_presigned_urls, presign_pairs)
+
+        # Build queue items using the pre-signed URL map
         queue_items: list[CultureQuestionQueueItem] = []
 
         # Add due questions first (have statistics)
         for stats in due_stats:
             question = stats.question  # Eager loaded
-            queue_items.append(self._build_queue_item(question, stats))
+            queue_items.append(self._build_queue_item(question, stats, url_map))
 
         # Add new questions (no statistics yet)
         for question in new_questions:
-            queue_items.append(self._build_queue_item(question, stats=None))
+            queue_items.append(self._build_queue_item(question, stats=None, url_map=url_map))
 
         # Add weakest questions (for force_practice mode)
         for stats in weakest_stats:
             question = stats.question  # Eager loaded
-            queue_items.append(self._build_queue_item(question, stats))
+            queue_items.append(self._build_queue_item(question, stats, url_map))
 
         # Step 5: Enrich queue items with cross-deck info
         if queue_items:
@@ -1520,32 +1538,23 @@ class CultureQuestionService:
         self,
         question: CultureQuestion,
         stats: Optional[CultureQuestionStats],
+        url_map: dict[str, Optional[str]],
     ) -> CultureQuestionQueueItem:
         """Build queue item with presigned image and audio URLs.
 
         Args:
             question: The culture question
             stats: Optional statistics (None for new questions)
+            url_map: Batch-signed {object_key: presigned_url} map for the whole
+                queue; a missing/None media key resolves to None (degraded).
 
         Returns:
             CultureQuestionQueueItem with all fields populated
         """
-        # Generate presigned URL if image exists
-        image_url = None
-        if question.image_key:
-            image_url = self.s3_service.generate_presigned_url(
-                question.image_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
-            )
-
-        # Generate presigned URL if audio exists
-        audio_url = None
-        if question.audio_s3_key:
-            audio_url = self.s3_service.generate_presigned_url(question.audio_s3_key)
-
-        # Generate presigned URL if A2 audio exists
-        audio_a2_url = None
-        if question.audio_a2_s3_key:
-            audio_a2_url = self.s3_service.generate_presigned_url(question.audio_a2_s3_key)
+        # Resolve presigned URLs from the batch-signed map (missing key -> None)
+        image_url = url_map.get(question.image_key) if question.image_key else None
+        audio_url = url_map.get(question.audio_s3_key) if question.audio_s3_key else None
+        audio_a2_url = url_map.get(question.audio_a2_s3_key) if question.audio_a2_s3_key else None
 
         # Build dynamic options array (2-4 options)
         options = [question.option_a, question.option_b]
