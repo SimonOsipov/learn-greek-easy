@@ -1,21 +1,34 @@
-"""Integration tests for PERF-18-04: mock-exam submit-all one-IN-query batching.
+"""Integration tests for PERF-18-04: mock-exam submit-all question-read batching.
 
 RED status per test (pre-implementation, current code =
 `mock_exam_service.py:178-387`):
 
   TRUE RED (mechanism does not exist today, fails on the target assertion):
-    - test_submit_all_fetches_questions_in_one_in_query (AC1)
+    - test_submit_all_batches_question_reads (AC1)
         Today's per-answer loop (mock_exam_service.py:247) calls
         `_get_question(question_id)` (mock_exam_service.py:535-546) once per
         NEW answer via the main-branch call site (mock_exam_service.py:279).
         For a 25-new-answer submission (no duplicates in this fixture) that's
         25 single-row `culture_questions.id = <param>` SELECTs and 0
-        `IN (...)` SELECTs — so both "exactly 1 IN query" and "0 single-id
-        SELECTs" fail today. GREEN after: executor replaces both
+        `IN (...)` SELECTs — so both "0 single-id SELECTs" and the batched
+        `IN (...)` count fail today. GREEN after: executor replaces both
         `_get_question` call sites (mock_exam_service.py:262, :279) with a
         `questions_by_id.get(question_id)` dict lookup fed by one
         `_get_questions_by_ids` (mock_exam_service.py:587-604) IN-query
         issued before the loop.
+
+        NOTE — post-verification correction: the batched prefetch is not the
+        *only* `culture_questions IN (...)` query on this path. `MockExamAnswer.
+        question` is declared `relationship(lazy="selectin")`
+        (src/db/models.py:2556), and the final `get_session_answers(session_id)`
+        re-load (mock_exam_service.py:346, used to compute the score summary)
+        triggers that selectin loader whenever answers were actually saved —
+        firing a second, pre-existing `culture_questions.id IN (...)` SELECT
+        that PERF-18-04 did not introduce and does not own. So the correct,
+        invariant-to-answer-count total for any submission that saves at least
+        one answer is **2** IN queries (prefetch + selectin re-load), not 1.
+        See the all-unknown-ids test below for the contrasting 1-IN-query case
+        (nothing saved -> no selectin re-load).
 
   GOLDEN-SNAPSHOT / REGRESSION LOCK (byte-identical to today per story D9 —
   expected to pass under BOTH the current per-answer implementation and the
@@ -218,13 +231,13 @@ async def active_mock_exam(db_session: AsyncSession, test_user: User) -> MockExa
 
 
 # ---------------------------------------------------------------------------
-# AC1 — test_submit_all_fetches_questions_in_one_in_query (TRUE RED)
+# AC1 — test_submit_all_batches_question_reads (TRUE RED)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 @pytest.mark.integration
-async def test_submit_all_fetches_questions_in_one_in_query(
+async def test_submit_all_batches_question_reads(
     db_session: AsyncSession,
     db_engine: AsyncEngine,
     test_user: User,
@@ -232,15 +245,25 @@ async def test_submit_all_fetches_questions_in_one_in_query(
     culture_questions: list[CultureQuestion],
     mock_s3_service,
 ) -> None:
-    """AC1 — questions fetched via one IN query; zero single-id question SELECTs.
+    """AC1 — questions fetched via a batched IN query; zero single-id question SELECTs.
 
     RED reason: today's per-answer loop (mock_exam_service.py:247) calls
     `_get_question(question_id)` once per NEW answer at the main-branch call
     site (mock_exam_service.py:279). For 25 NEW answers (no duplicates in
     this payload) that's 25 single-id `culture_questions.id = <param>`
-    SELECTs and 0 `IN (...)` SELECTs — so both `len(in_selects) == 1` and
+    SELECTs and 0 `IN (...)` SELECTs — so both the batched-IN-query count and
     `single_id_selects == []` fail today. GREEN after: the executor's
     `_get_questions_by_ids` prefetch lands.
+
+    Expected IN-query count is 2, not 1: IN#1 is the PERF-18-04 batched
+    prefetch (`_get_questions_by_ids`, non-aliased columns); IN#2 is a
+    pre-existing, out-of-scope `culture_questions.id IN (...)` SELECT fired
+    by `MockExamAnswer.question`'s `lazy="selectin"` relationship
+    (src/db/models.py:2556) when the final `get_session_answers(session_id)`
+    re-load (mock_exam_service.py:346) loads the 25 just-saved answers to
+    build the score summary. This count is invariant to answer count — see
+    `test_submit_all_single_answer_batches_reads` below, which also asserts 2
+    for a single saved answer.
     """
     service = MockExamService(db_session, s3_service=mock_s3_service)
 
@@ -274,8 +297,13 @@ async def test_submit_all_fetches_questions_in_one_in_query(
         f"the per-answer N+1 `_get_question` loop is still present:\n"
         + "\n---\n".join(single_id_selects)
     )
-    assert len(in_selects) == 1, (
-        f"Expected exactly 1 batched `IN (...)` question SELECT, found {len(in_selects)}. "
+    # 2 = IN#1 (PERF-18-04 batched prefetch, `_get_questions_by_ids`) + IN#2 (the
+    # pre-existing `MockExamAnswer.question` selectin re-load fired by the final
+    # `get_session_answers(session_id)` call once 25 answers exist to reload).
+    # Invariant to answer count — see the single-answer boundary test below.
+    assert len(in_selects) == 2, (
+        f"Expected exactly 2 batched `IN (...)` question SELECTs (prefetch + "
+        f"selectin re-load), found {len(in_selects)}. "
         f"Captured statements ({len(stmts)}):\n" + "\n---\n".join(stmts)
     )
 
@@ -469,6 +497,16 @@ async def test_submit_all_all_unknown_question_ids_still_one_in_query(
       2. The session still completes cleanly with a 0 score — no crash on a
          wholly-unresolved payload.
 
+    Contrast with the saved-answer tests above (which correctly assert 2 IN
+    queries): here NOTHING gets saved, so the final `get_session_answers(
+    session_id)` re-load (mock_exam_service.py:346) returns zero rows and
+    `MockExamAnswer.question`'s `lazy="selectin"` relationship
+    (src/db/models.py:2556) has no collection to eager-load — it never fires.
+    That's why this all-miss case sees only 1 IN query (the prefetch alone)
+    while every case with at least one saved answer sees 2 (prefetch +
+    selectin re-load). This test is what anchors "prefetch alone = 1 IN
+    query" as a fact, independent of the selectin re-load's contribution.
+
     `culture_questions` is seeded (30 rows exist) purely to prove the misses
     are genuine lookups against a populated table, not an empty one.
     """
@@ -513,7 +551,7 @@ async def test_submit_all_all_unknown_question_ids_still_one_in_query(
 
 @pytest.mark.asyncio
 @pytest.mark.integration
-async def test_submit_all_single_answer_one_in_query(
+async def test_submit_all_single_answer_batches_reads(
     db_session: AsyncSession,
     db_engine: AsyncEngine,
     test_user: User,
@@ -521,14 +559,22 @@ async def test_submit_all_single_answer_one_in_query(
     culture_questions: list[CultureQuestion],
     mock_s3_service,
 ) -> None:
-    """Boundary — a one-answer payload still issues exactly ONE IN query.
+    """Boundary — a one-answer payload still batches its question read (no fan-out).
 
-    The smallest non-empty batch (`q_ids` length 1). Confirms the read is
-    batched even at size 1 (no degenerate per-answer fan-out) and that the
-    single valid answer is processed normally. The old per-answer
+    The smallest non-empty prefetch batch (`q_ids` length 1). Confirms the
+    read is batched even at size 1 (no degenerate per-answer fan-out) and
+    that the single valid answer is processed normally. The old per-answer
     `_get_question` loop would also have issued exactly one query here — but a
-    *single-id* one — so the `_is_in_query_question_select` / zero-single-id
-    pair still discriminates old shape from new at this boundary.
+    *single-id* one — so `single_id_selects == []` still discriminates old
+    shape from new at this boundary.
+
+    IN-query count is 2, same as the 25-answer case above: IN#1 is the
+    prefetch (`_get_questions_by_ids`), IN#2 is the pre-existing
+    `MockExamAnswer.question` selectin re-load (src/db/models.py:2556) fired
+    by the final `get_session_answers(session_id)` call now that 1 answer
+    exists to reload. The count is invariant to answer count (1 vs 25 both
+    yield 2) because the selectin loader fires once per re-load query
+    regardless of how many rows it returns.
     """
     service = MockExamService(db_session, s3_service=mock_s3_service)
 
@@ -559,7 +605,9 @@ async def test_submit_all_single_answer_one_in_query(
         f"Found {len(single_id_selects)} single-id `culture_questions.id =` SELECT(s) for a "
         f"one-answer payload — read is not batched:\n" + "\n---\n".join(single_id_selects)
     )
-    assert len(in_selects) == 1, (
-        f"Expected exactly 1 batched `IN (...)` question SELECT for a one-answer payload, "
-        f"found {len(in_selects)}. Captured statements ({len(stmts)}):\n" + "\n---\n".join(stmts)
+    # 2 = IN#1 (prefetch) + IN#2 (selectin re-load) — see docstring above.
+    assert len(in_selects) == 2, (
+        f"Expected exactly 2 batched `IN (...)` question SELECTs (prefetch + "
+        f"selectin re-load) for a one-answer payload, found {len(in_selects)}. "
+        f"Captured statements ({len(stmts)}):\n" + "\n---\n".join(stmts)
     )
