@@ -179,12 +179,14 @@ export const ExercisePreSessionPage = () => {
   // Fetch the full queue once, unfiltered; filter client-side per D8
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['exerciseDashboardQueue'],
-    queryFn: () => exerciseAPI.getQueue({}),
+    queryFn: () => exerciseAPI.getQueue({ summary: true }),
   });
 
   const { streak } = useStudyStreak();
 
-  const totalInQueue = data ? data.total_due + data.total_new : 0;
+  // D10: gate on the canonical total_in_queue (equals the dashboard's queue_count).
+  // total_due + total_new drops early-practice and over-counts on picture-match drops (F4).
+  const totalInQueue = data ? data.total_in_queue : 0;
 
   // Client-side filter by selected modality
   const filteredExercises: ExerciseQueueItem[] =

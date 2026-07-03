@@ -127,6 +127,14 @@ export interface ExerciseQueueParams {
   new_limit?: number;
   include_early_practice?: boolean;
   early_practice_limit?: number;
+  /**
+   * PERF-17-05: request slim summary payload — heavy per-item fields
+   * (items, word_timestamps, description_*) are nulled/emptied by the backend
+   * while counts stay accurate. Serialized as `?summary=true`.
+   * Pass ONLY from the hub; omit elsewhere (buildQueryString serializes
+   * `false` → `summary=false`, so leaving it undefined keeps the full path).
+   */
+  summary?: boolean;
 }
 
 export const exerciseAPI = {
