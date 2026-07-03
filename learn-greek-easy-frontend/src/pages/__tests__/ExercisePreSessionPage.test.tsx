@@ -377,3 +377,240 @@ describe('completion banner (PRACT2-12-06)', () => {
     expect(banner.textContent).not.toMatch(/-\d+/);
   });
 });
+
+// ─── PERF-17-05: summary mode + unified queue total (RED specs) ────────────
+//
+// Stage 2.5 (Mode A) — authored BEFORE implementation. Current code
+// (ExercisePreSessionPage.tsx as of this commit):
+//   - calls exerciseAPI.getQueue({}) (line 182)              → T05-1 is RED
+//   - gate reads data.total_due + data.total_new (line 187)  → T05-2/T05-4 RED
+// D10/F4: total_in_queue is the canonical count (equals the dashboard's
+// queue_count for the same user); it can be LOWER than total_due+total_new
+// when a picture-match item is dropped for an insufficient distractor pool,
+// and it INCLUDES early-practice which total_due+total_new drops. Because
+// the gate is a boolean disable, the divergence is only observable at the
+// empty-queue boundary — the "distinguishing fixture" below (sum > 0 but
+// total_in_queue === 0) is what makes T05-2/T05-4 a true regression guard
+// rather than a fixture that happens to agree with both old and new code.
+
+/** Build a slim ExerciseQueueItem (PERF-17-03 shape): light fields populated,
+ * heavy fields nulled/emptied in place (items: [], word_timestamps: null, etc). */
+function makeSlimItem(overrides: Record<string, unknown>) {
+  return {
+    exercise_id: 'ex-default',
+    source_type: 'description' as const,
+    exercise_type: 'select_correct_answer' as const,
+    modality: 'reading' as const,
+    audio_level: 'A1' as const,
+    status: 'new' as const,
+    is_new: true,
+    is_early_practice: false,
+    due_date: null,
+    easiness_factor: null,
+    interval: null,
+    situation_id: null,
+    scenario_el: null,
+    scenario_en: 'Default scenario',
+    scenario_ru: null,
+    // Heavy fields — slim mode nulls/empties these in place, never omits keys
+    description_text_el: null,
+    description_audio_url: null,
+    description_audio_duration: null,
+    word_timestamps: null,
+    items: [],
+    ...overrides,
+  };
+}
+
+describe('PERF-17-05: summary mode + total_in_queue gate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // Gate assertions MUST NOT run while isLoading is still true: disabled={totalInQueue===0 ||
+  // isLoading} means the button is disabled during the initial fetch regardless of the fixture
+  // — asserting toBeDisabled() without first waiting for load-complete would pass vacuously on
+  // every fixture (it only observes the loading state, not the totalInQueue-based gate). Waiting
+  // for the recommended panel's loaded signal (empty vs. grid) proves isLoading has settled.
+  async function waitForQueueLoaded(expectEmpty: boolean) {
+    await waitFor(() => {
+      if (expectEmpty) {
+        expect(screen.getByTestId('recommended-empty')).toBeInTheDocument();
+      } else {
+        expect(screen.getByTestId('recommended-grid')).toBeInTheDocument();
+      }
+    });
+  }
+
+  // ── T05-1: hub opts into summary mode ───────────────────────────────────
+  it('T05-1: hub calls exerciseAPI.getQueue with { summary: true }', async () => {
+    mockGetQueue.mockResolvedValue(emptyQueue);
+
+    renderPage();
+
+    // RED today: current code calls getQueue({}) (ExercisePreSessionPage.tsx:182)
+    await waitFor(() => {
+      expect(mockGetQueue).toHaveBeenCalledWith({ summary: true });
+    });
+  });
+
+  // ── T05-2: gate disable/enable pair, using the DISTINGUISHING fixture ───
+  it('T05-2: Start daily mix is DISABLED when total_in_queue is 0, even though total_due + total_new > 0', async () => {
+    // Distinguishing fixture: sum(total_due, total_new) = 3 > 0, but the
+    // canonical total_in_queue = 0 (all items dropped, e.g. picture-match
+    // insufficient-distractor-pool). Old gate (sum) would ENABLE; new gate
+    // (total_in_queue) must DISABLE.
+    mockGetQueue.mockResolvedValue({
+      total_due: 2,
+      total_new: 1,
+      total_early_practice: 0,
+      total_in_queue: 0,
+      exercises: [],
+    });
+
+    renderPage();
+
+    await waitForQueueLoaded(/* expectEmpty */ true);
+    expect(screen.getByTestId('start-daily-mix-btn')).toBeDisabled();
+  });
+
+  it('T05-2: Start daily mix is ENABLED when total_in_queue is > 0', async () => {
+    mockGetQueue.mockResolvedValue({
+      total_due: 3,
+      total_new: 0,
+      total_early_practice: 0,
+      total_in_queue: 3,
+      exercises: [makeSlimItem({ exercise_id: 'ex-1' })],
+    });
+
+    renderPage();
+
+    await waitForQueueLoaded(/* expectEmpty */ false);
+    expect(screen.getByTestId('start-daily-mix-btn')).not.toBeDisabled();
+  });
+
+  // ── T05-4: regression guard — gate reads total_in_queue, not total_due+total_new ─
+  it('T05-4: gate reads total_in_queue (not total_due + total_new) — disabled at the distinguishing empty boundary', async () => {
+    // Same distinguishing fixture as T05-2: sum > 0, total_in_queue === 0.
+    // This is the direct regression guard for §8/F4 — if a future change
+    // reverts the gate to read total_due + total_new, this fails.
+    mockGetQueue.mockResolvedValue({
+      total_due: 2,
+      total_new: 1,
+      total_early_practice: 0,
+      total_in_queue: 0,
+      exercises: [],
+    });
+
+    renderPage();
+
+    await waitForQueueLoaded(/* expectEmpty */ true);
+    expect(screen.getByTestId('start-daily-mix-btn')).toBeDisabled();
+  });
+
+  it('T05-4: gate still ENABLES when total_in_queue > 0 despite being LOWER than total_due + total_new (picture-match drop)', async () => {
+    // total_due + total_new = 5, but a picture-match item was dropped so
+    // total_in_queue = 4 (still > 0). Gate must read total_in_queue and
+    // enable — this guards against a naive "min()" or "always disable when
+    // divergent" fix as much as against the old sum-based gate.
+    mockGetQueue.mockResolvedValue({
+      total_due: 3,
+      total_new: 2,
+      total_early_practice: 0,
+      total_in_queue: 4,
+      exercises: [
+        makeSlimItem({ exercise_id: 'ex-1' }),
+        makeSlimItem({ exercise_id: 'ex-2' }),
+        makeSlimItem({ exercise_id: 'ex-3' }),
+        makeSlimItem({ exercise_id: 'ex-4' }),
+      ],
+    });
+
+    renderPage();
+
+    await waitForQueueLoaded(/* expectEmpty */ false);
+    expect(screen.getByTestId('start-daily-mix-btn')).not.toBeDisabled();
+  });
+
+  // ── T05-3: recommended cards render from slim items (guard — likely passes today) ─
+  it('T05-3: renders at most 4 recommended cards from 6 slim mixed-modality items, with correct fields, and the modality filter still works', async () => {
+    const sixSlimItems = [
+      makeSlimItem({
+        exercise_id: 'ex-1',
+        modality: 'reading',
+        audio_level: 'A1',
+        scenario_en: 'At home',
+      }),
+      makeSlimItem({
+        exercise_id: 'ex-2',
+        modality: 'listening',
+        audio_level: 'A2',
+        scenario_en: 'At the market',
+      }),
+      makeSlimItem({
+        exercise_id: 'ex-3',
+        modality: 'reading',
+        audio_level: 'B1',
+        scenario_en: 'At school',
+      }),
+      makeSlimItem({
+        exercise_id: 'ex-4',
+        modality: 'listening',
+        audio_level: 'B2',
+        scenario_en: 'At the office',
+      }),
+      makeSlimItem({
+        exercise_id: 'ex-5',
+        modality: 'reading',
+        audio_level: 'A1',
+        scenario_en: 'At the doctor',
+      }),
+      makeSlimItem({
+        exercise_id: 'ex-6',
+        modality: 'listening',
+        audio_level: 'A2',
+        scenario_en: 'At the beach',
+      }),
+    ];
+    mockGetQueue.mockResolvedValue({
+      total_due: 6,
+      total_new: 0,
+      total_early_practice: 0,
+      total_in_queue: 6,
+      exercises: sixSlimItems,
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('recommended-grid')).toBeInTheDocument();
+    });
+
+    // At most 4 cards render (slice(0,4)), from a 6-item mixed-modality response
+    const cards = screen.getAllByTestId('recommended-card');
+    expect(cards).toHaveLength(4);
+
+    // First two cards show correct family/level/title from the slim fields
+    expect(cards[0]).toHaveTextContent('reading');
+    expect(cards[0]).toHaveTextContent('A1');
+    expect(cards[0]).toHaveTextContent('At home');
+
+    expect(cards[1]).toHaveTextContent('listening');
+    expect(cards[1]).toHaveTextContent('A2');
+    expect(cards[1]).toHaveTextContent('At the market');
+
+    // Modality pill filter still works over the (now slim) returned items:
+    // of the 6 items, exactly 3 are 'listening' (ex-2, ex-4, ex-6) — all
+    // fit under the slice(0,4) cap, so all 3 (not 4) should render.
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Listening' }));
+
+    await waitFor(() => {
+      const filteredCards = screen.getAllByTestId('recommended-card');
+      expect(filteredCards).toHaveLength(3);
+      filteredCards.forEach((card) => {
+        expect(card).toHaveTextContent('listening');
+      });
+    });
+  });
+});
