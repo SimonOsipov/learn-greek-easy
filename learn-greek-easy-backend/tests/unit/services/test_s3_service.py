@@ -941,3 +941,117 @@ class TestImagePresignExpiry:
             f"X-Amz-Date changed after 24h: {p0['date']!r} -> {p1['date']!r}. "
             "The 30-day window must not rotate on a 24-hour boundary."
         )
+
+
+# ============================================================================
+# PERF-21-01: S3Service.generate_presigned_urls() batch/dedup seam
+# ============================================================================
+#
+# RED (Test-Spec / RALPH Mode A): generate_presigned_urls() does not exist yet.
+# These tests are authored from the PERF-21-01 acceptance criteria BEFORE the
+# implementation and are expected to fail with AttributeError until the method
+# is added to S3Service.
+
+
+class TestS3ServiceBatchPresign:
+    """Tests for S3Service.generate_presigned_urls() (PERF-21-01)."""
+
+    def test_batch_signs_each_unique_key_once(self, mock_settings_configured, mock_boto3_client):
+        """Repeated key in the batch input is signed exactly once (AC1, Finding 6 fix).
+
+        CRITICAL: assert on the SINGULAR method (service.generate_presigned_url),
+        NOT on the boto client. The per-instance _url_cache (s3_service.py:225 read /
+        :271 write) already collapses a repeated key to a single boto call even for a
+        naive *non*-deduping loop (`for k, e in pairs: self.generate_presigned_url(k, e)`)
+        — asserting `mock_client.generate_presigned_url.call_count` would be a
+        false-green. Only a wrap-spy on the singular method isolates the new
+        `if key in result: continue` dedup skip added by generate_presigned_urls.
+        """
+        from src.services.s3_service import S3Service
+
+        mock_client = MagicMock()
+        mock_client.generate_presigned_url.side_effect = (
+            lambda op, Params, ExpiresIn: f"https://signed/{Params['Key']}?exp={ExpiresIn}"
+        )
+        mock_boto3_client.return_value = mock_client
+
+        service = S3Service()
+
+        with patch.object(
+            service, "generate_presigned_url", wraps=service.generate_presigned_url
+        ) as spy:
+            result = service.generate_presigned_urls([("k1", 1800), ("k1", 1800), ("k2", 1800)])
+
+        assert spy.call_count == 2, (
+            f"Expected generate_presigned_url invoked once per UNIQUE key (2 unique "
+            f"keys: k1, k2), got {spy.call_count}. A non-deduping implementation would "
+            "call it 3 times (once per input pair)."
+        )
+        assert set(result.keys()) == {"k1", "k2"}
+        # Both occurrences of "k1" in the input collapse to the same single dict entry —
+        # confirm it is the real signed value (not a stale/overwritten placeholder).
+        assert result["k1"] == "https://signed/k1?exp=1800"
+        assert result["k2"] == "https://signed/k2?exp=1800"
+
+    def test_batch_url_byte_identical_to_single(self, mock_settings_24h):
+        """Batch-signed URL is byte-identical to generate_presigned_url() in the same window.
+
+        (AC3 / trap1 — window-stable determinism must be preserved because the batch
+        path delegates to the existing singular routine rather than reimplementing
+        signing.) Reuses the module's clock-window harness (mock_settings_24h, _KEY,
+        _EXPIRY, _FIXED_EPOCH) — no boto client mock needed, matching
+        TestClockWindowDeterminism: botocore's generate_presigned_url is pure local
+        HMAC signing, no network call.
+        """
+        from src.services.s3_service import S3Service
+
+        svc_single = S3Service()
+        svc_batch = S3Service()
+
+        url_single = _gen_url_with_clock(svc_single, _FIXED_EPOCH)
+
+        svc_batch._url_cache.clear()
+        with patch("src.services.s3_service.time") as t:
+            t.time.return_value = _FIXED_EPOCH
+            t.monotonic.return_value = 9_999_999  # always cache-miss
+            batch_result = svc_batch.generate_presigned_urls([(_KEY, _EXPIRY)])
+
+        assert url_single is not None
+        assert batch_result[_KEY] == url_single, (
+            "Batch-signed URL must be byte-identical to the singular "
+            "generate_presigned_url() output in the same signing window"
+        )
+
+    def test_batch_skips_empty_and_none_keys(self, mock_settings_configured, mock_boto3_client):
+        """Empty string and None keys are skipped, absent from the result, no exception (trap4)."""
+        from src.services.s3_service import S3Service
+
+        mock_client = MagicMock()
+        mock_client.generate_presigned_url.return_value = "https://signed/k1"
+        mock_boto3_client.return_value = mock_client
+
+        service = S3Service()
+        result = service.generate_presigned_urls([("", 1800), (None, 1800), ("k1", 1800)])
+
+        assert set(result.keys()) == {"k1"}
+        assert result["k1"] == "https://signed/k1"
+
+    def test_batch_passes_per_key_expiry(self, mock_settings_configured, mock_boto3_client):
+        """Per-key expiry is passed through to the underlying signing call (image 30d vs audio default)."""
+        from src.services.s3_service import S3Service
+
+        mock_client = MagicMock()
+        mock_client.generate_presigned_url.return_value = "https://signed"
+        mock_boto3_client.return_value = mock_client
+
+        service = S3Service()
+        service.generate_presigned_urls([("img", 2592000), ("aud", None)])
+
+        calls_by_key = {
+            call.kwargs["Params"]["Key"]: call.kwargs["ExpiresIn"]
+            for call in mock_client.generate_presigned_url.call_args_list
+        }
+        assert calls_by_key["img"] == 2592000
+        assert (
+            calls_by_key["aud"] == 3600
+        ), "None expiry must fall through to settings.s3_presigned_url_expiry (3600 in mock_settings_configured)"
