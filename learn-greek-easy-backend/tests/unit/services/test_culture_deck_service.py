@@ -147,31 +147,32 @@ class TestCultureDeckServiceList:
                 service.deck_repo, "get_batch_question_counts", new_callable=AsyncMock
             ) as mock_batch_counts,
             patch.object(
-                service.stats_repo, "has_user_started_deck", new_callable=AsyncMock
-            ) as mock_started,
-            patch.object(
-                service.stats_repo, "get_deck_progress", new_callable=AsyncMock
-            ) as mock_progress,
-            patch.object(
-                service.stats_repo, "get_last_practiced_at", new_callable=AsyncMock
-            ) as mock_last,
+                service.stats_repo, "get_batch_deck_progress", new_callable=AsyncMock
+            ) as mock_batch_progress,
         ):
             mock_list.return_value = [mock_deck]
             mock_count.return_value = 1
             mock_batch_counts.return_value = {mock_deck.id: 30}
-            mock_started.return_value = True
-            mock_progress.return_value = {
-                "questions_total": 30,
-                "questions_mastered": 10,
-                "questions_learning": 5,
-                "questions_new": 15,
+            # PERF-18-02: list_decks now derives progress from the page-wide
+            # get_batch_deck_progress batch (mastered/learning/review/last_practiced),
+            # not the per-deck has_user_started_deck/get_deck_progress/get_last_practiced_at.
+            mock_batch_progress.return_value = {
+                mock_deck.id: {
+                    "mastered": 10,
+                    "learning": 5,
+                    "review": 0,
+                    "last_practiced": datetime(2024, 1, 15, 10, 30),
+                }
             }
-            mock_last.return_value = datetime(2024, 1, 15, 10, 30)
 
             result = await service.list_decks(user_id=user_id)
 
+            mock_batch_progress.assert_awaited_once()
             assert result.decks[0].progress is not None
             assert result.decks[0].progress.questions_mastered == 10
+            # questions_total (30) - (mastered 10 + learning 5 + review 0) = 15
+            assert result.decks[0].progress.questions_new == 15
+            assert result.decks[0].progress.questions_learning == 5
             assert result.decks[0].progress.last_practiced_at == datetime(2024, 1, 15, 10, 30)
 
     @pytest.mark.asyncio
