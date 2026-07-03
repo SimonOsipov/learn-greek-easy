@@ -123,7 +123,10 @@ class TestListNewsEndpoint:
         client: AsyncClient,
         db_session: AsyncSession,
     ):
-        """Test that response has all expected fields including audio_count."""
+        """Slim list items carry every card-render field and the envelope's
+        audio_count, and DROP the reader/admin-only heavy + metadata fields
+        (PERF-17-01 F1 migration — was the full-shape assertion).
+        """
         await NewsItemFactory.create(published=True)
 
         response = await client.get("/api/v1/news")
@@ -133,7 +136,7 @@ class TestListNewsEndpoint:
         assert "audio_count" in data
         item = data["items"][0]
 
-        # Check all expected fields
+        # Card-render fields kept on the slim item.
         assert "id" in item
         assert "title_el" in item
         assert "title_en" in item
@@ -142,16 +145,24 @@ class TestListNewsEndpoint:
         assert "publication_date" in item
         assert "original_article_url" in item
         assert "image_url" in item
-        assert "created_at" in item
-        assert "updated_at" in item
-        # description_en and description_ru come from old model — now None
-        assert item["description_en"] is None
-        assert item["description_ru"] is None
-        # Audio metadata fields (may be null if no audio generated)
+        # Audio metadata the inline mini-player renders (may be null if no audio).
         assert "audio_url" in item
-        assert "audio_generated_at" in item
         assert "audio_duration_seconds" in item
-        assert "audio_file_size_bytes" in item
+
+        # Reader/admin-only heavy fields + card-unused metadata are dropped.
+        for dropped in (
+            "word_timestamps",
+            "word_timestamps_a2",
+            "linked_situation",
+            "status",
+            "created_at",
+            "updated_at",
+            "description_en",
+            "description_ru",
+            "audio_generated_at",
+            "audio_file_size_bytes",
+        ):
+            assert dropped not in item, f"Slim list item still carries dropped field: {dropped}"
 
     @pytest.mark.asyncio
     async def test_list_news_page_size_validation(
@@ -465,12 +476,15 @@ class TestGetNewsItemEndpoint:
         assert data["linked_situation"]["id"] == str(news_item.situation_id)
 
     @pytest.mark.asyncio
-    async def test_list_news_items_linked_situation_present(
+    async def test_list_news_items_linked_situation_absent(
         self,
         client: AsyncClient,
         db_session: AsyncSession,
     ):
-        """List response items must also include linked_situation (zero aggregates)."""
+        """Slim list items DROP linked_situation (PERF-17-01 F1 migration — was
+        the full-shape "linked_situation present" assertion). The dialog-graph
+        aggregates live only on the detail endpoint GET /news/{id}.
+        """
         await NewsItemFactory.create(published=True)
 
         response = await client.get("/api/v1/news")
@@ -479,8 +493,7 @@ class TestGetNewsItemEndpoint:
         data = response.json()
         assert len(data["items"]) >= 1
         item = data["items"][0]
-        assert "linked_situation" in item
-        assert item["linked_situation"] is not None
+        assert "linked_situation" not in item
 
 
 # =============================================================================
@@ -513,19 +526,21 @@ class TestLinkedSituationPictureFields:
     """
 
     @pytest.mark.asyncio
-    async def test_linked_situation_includes_picture_url_when_present_list(
+    async def test_slim_list_drops_linked_situation_and_picture_fields(
         self,
         client: AsyncClient,
         db_session: AsyncSession,
     ):
-        """List path: linked_situation exposes picture_image_url and has_picture=True
-        when the linked SituationPicture has image_s3_key set.
+        """Slim list drops linked_situation entirely — including the picture
+        fields (picture_image_url / has_picture) it used to expose on the list
+        path (PERF-17-01 F1 migration — was
+        test_linked_situation_includes_picture_url_when_present_list). The
+        picture fields remain on the DETAIL path (see the _detail sibling below).
 
         Given: a published news item whose situation has a SituationPicture
                with image_s3_key set (generated trait).
-        When:  GET /api/v1/news (list path).
-        Then:  item.linked_situation.picture_image_url is non-null,
-               item.linked_situation.has_picture is True.
+        When:  GET /api/v1/news (slim list path).
+        Then:  the list item has no linked_situation key.
         """
         # Build situation with a generated picture (image_s3_key set).
         # NewsItemFactory.create(situation_id=...) creates the SituationDescription itself
@@ -549,14 +564,10 @@ class TestLinkedSituationPictureFields:
         assert response.status_code == 200
         items = response.json()["items"]
         target = next(i for i in items if i["id"] == str(news_item.id))
-        linked = target["linked_situation"]
 
         assert (
-            linked["picture_image_url"] is not None
-        ), "picture_image_url must be non-null when SituationPicture.image_s3_key is set"
-        assert (
-            linked["has_picture"] is True
-        ), "has_picture must be True when SituationPicture.image_s3_key is set"
+            "linked_situation" not in target
+        ), "slim list item must not carry linked_situation (dropped in PERF-17-01)"
 
     @pytest.mark.asyncio
     async def test_linked_situation_includes_picture_url_when_present_detail(
@@ -613,17 +624,18 @@ class TestLinkedSituationPictureFields:
         client: AsyncClient,
         db_session: AsyncSession,
     ):
-        """linked_situation.picture_image_url is null and has_picture is False when
-        the SituationPicture has no image_s3_key set (draft picture, no generated image).
-
-        Covers both the list and detail code paths.
+        """DETAIL path: linked_situation.picture_image_url is null and
+        has_picture is False when the SituationPicture has no image_s3_key set
+        (draft picture, no generated image). The slim LIST path no longer
+        carries linked_situation at all (PERF-17-01 F1 migration — the list-half
+        picture assertions were removed; the detail half is unchanged).
 
         Given: a published news item whose SituationPicture has image_s3_key = None
                (default factory state, no generated trait).
-        When:  GET /api/v1/news (list) AND GET /api/v1/news/{id} (detail).
-        Then:  linked_situation.picture_image_url is null,
-               linked_situation.has_picture is False,
-               no exception is raised.
+        When:  GET /api/v1/news (slim list) AND GET /api/v1/news/{id} (detail).
+        Then:  the slim list item has no linked_situation key;
+               on detail, linked_situation.picture_image_url is null and
+               has_picture is False; no exception is raised.
         """
         # NewsItemFactory already creates a SituationPicture with status=DRAFT,
         # image_s3_key=None by default — no overrides needed.
@@ -637,14 +649,10 @@ class TestLinkedSituationPictureFields:
 
         items = response_list.json()["items"]
         target = next(i for i in items if i["id"] == str(news_item.id))
-        linked_list = target["linked_situation"]
         linked_detail = response_detail.json()["linked_situation"]
 
-        # List path
-        assert (
-            linked_list["picture_image_url"] is None
-        ), "picture_image_url must be null when SituationPicture.image_s3_key is None"
-        assert linked_list["has_picture"] is False, "has_picture must be False when no image_s3_key"
+        # Slim list path: linked_situation is dropped entirely.
+        assert "linked_situation" not in target
 
         # Detail path
         assert (
@@ -664,8 +672,11 @@ class TestLinkedSituationPictureFields:
         client: AsyncClient,
         db_session: AsyncSession,
     ):
-        """picture_image_url is non-null and has_picture is True even when S3 returns no
-        derivatives (get_derivative_presigned_urls returns None).
+        """DETAIL path: picture_image_url is non-null and has_picture is True
+        even when S3 returns no derivatives (get_derivative_presigned_urls
+        returns None). The slim LIST path no longer carries linked_situation
+        (PERF-17-01 F1 migration — the list branch of the assertion loop was
+        removed; the detail branch is unchanged).
 
         Guards the dict-guard branch in _to_response:
             picture_image_variants = _raw_pic_variants if isinstance(_raw_pic_variants, dict) else None
@@ -673,11 +684,11 @@ class TestLinkedSituationPictureFields:
         Given:  SituationPicture with image_s3_key set (generated trait).
                 S3 mock: generate_presigned_url → URL string,
                          get_derivative_presigned_urls → None  (no derivatives yet).
-        When:   GET /api/v1/news (list) AND GET /api/v1/news/{id} (detail).
-        Then:   picture_image_url is non-null (presign worked),
+        When:   GET /api/v1/news (slim list) AND GET /api/v1/news/{id} (detail).
+        Then:   the slim list item has no linked_situation key;
+                on detail, picture_image_url is non-null (presign worked),
                 picture_image_variants is null (no derivatives),
-                has_picture is True,
-                no exception is raised.
+                has_picture is True; no exception is raised.
         """
         situation = await SituationFactory.create(session=db_session, ready=True)
         await SituationPictureFactory.create(
@@ -705,20 +716,22 @@ class TestLinkedSituationPictureFields:
 
         items = response_list.json()["items"]
         target = next(i for i in items if i["id"] == str(news_item.id))
-        linked_list = target["linked_situation"]
         linked_detail = response_detail.json()["linked_situation"]
 
-        for label, linked in [("list", linked_list), ("detail", linked_detail)]:
-            assert (
-                linked["picture_image_url"] is not None
-            ), f"[{label}] picture_image_url must be non-null when image_s3_key is set"
-            assert linked["picture_image_variants"] is None, (
-                f"[{label}] picture_image_variants must be None when get_derivative_presigned_urls "
-                "returns None"
-            )
-            assert (
-                linked["has_picture"] is True
-            ), f"[{label}] has_picture must be True when image_s3_key is set"
+        # Slim list path: linked_situation is dropped entirely.
+        assert "linked_situation" not in target
+
+        # Detail path
+        assert (
+            linked_detail["picture_image_url"] is not None
+        ), "detail picture_image_url must be non-null when image_s3_key is set"
+        assert linked_detail["picture_image_variants"] is None, (
+            "detail picture_image_variants must be None when get_derivative_presigned_urls "
+            "returns None"
+        )
+        assert (
+            linked_detail["has_picture"] is True
+        ), "detail has_picture must be True when image_s3_key is set"
 
     @pytest.mark.asyncio
     async def test_detail_model_copy_preserves_all_preexisting_fields(
@@ -726,30 +739,34 @@ class TestLinkedSituationPictureFields:
         client: AsyncClient,
         db_session: AsyncSession,
     ):
-        """model_copy(update={picture fields}) on the detail path must NOT clobber any of
-        the fields computed by _build_linked_situation_summary.
+        """model_copy(update={picture fields}) on the DETAIL path must NOT clobber
+        any of the fields computed by _build_linked_situation_summary.
 
         The risk: model_copy with a partial update dict could inadvertently zero-out
         fields that share a default (e.g. role_count=0, turn_count=0) if it rebuilds
         from defaults instead of copying. Pydantic v2 model_copy(update=) is safe —
         this test is the regression guard.
 
-        We need a situation WITH a dialog (so role_count/turn_count are non-zero and
-        the assertion is load-bearing) — but that requires a ListeningDialog, which is
-        heavy. The cheaper approach: we only need to verify the fields are present and
-        consistent on both list and detail paths. The list path builds the summary
-        inline (no model_copy). The detail path uses model_copy. If they agree on
-        id/title/status/levels/country, the copy is faithful.
+        PERF-17-01 F1 migration: this used to compare the list-vs-detail
+        linked_situation, but the slim list no longer carries linked_situation, so
+        it now asserts the detail fields directly against known/factory values.
+        `id` and `status` (READY — non-default, factory `ready` trait) are the
+        load-bearing clobber guards: if model_copy rebuilt from defaults they would
+        be wrong. The picture fields (has_picture / picture_image_url) prove the
+        update dict was applied on top.
 
-        Given:  a published news item with a known situation (title_en, title_el,
-                levels, country, status all set), and a SituationPicture with
-                image_s3_key set.
-        When:   GET /api/v1/news (list) AND GET /api/v1/news/{id} (detail).
-        Then:   For every non-picture field in linked_situation, the detail path
-                returns the identical value as the list path (model_copy did not
-                clobber anything).
+        Given:  a published news item with a known situation (status=READY via the
+                `ready` trait) and a SituationPicture with image_s3_key set.
+        When:   GET /api/v1/news/{id} (detail).
+        Then:   every _build_linked_situation_summary field is present; id and
+                status match the source situation (not clobbered to defaults); the
+                picture update was applied (has_picture True, picture_image_url set).
         """
         situation = await SituationFactory.create(session=db_session, ready=True)
+        # Capture the known non-default oracle values before the request so no
+        # lazy-load happens on the ORM object mid-assertion.
+        expected_id = str(situation.id)
+        expected_status = situation.status.value
         await SituationPictureFactory.create(
             session=db_session,
             situation_id=situation.id,
@@ -763,18 +780,12 @@ class TestLinkedSituationPictureFields:
 
         fake_s3 = _make_fake_s3()
         with patch("src.services.news_item_service.get_s3_service", return_value=fake_s3):
-            response_list = await client.get("/api/v1/news")
             response_detail = await client.get(f"/api/v1/news/{news_item.id}")
 
-        assert response_list.status_code == 200
         assert response_detail.status_code == 200
-
-        items = response_list.json()["items"]
-        target = next(i for i in items if i["id"] == str(news_item.id))
-        linked_list = target["linked_situation"]
         linked_detail = response_detail.json()["linked_situation"]
 
-        # Fields that _build_linked_situation_summary sets — must survive model_copy intact.
+        # Fields that _build_linked_situation_summary sets — must survive model_copy.
         PREEXISTING_FIELDS = [
             "id",
             "title_en",
@@ -788,12 +799,17 @@ class TestLinkedSituationPictureFields:
             "exercise_count",
             "audio_seconds",
         ]
-
         for field in PREEXISTING_FIELDS:
             assert (
                 field in linked_detail
             ), f"model_copy dropped field '{field}' from linked_situation on detail path"
-            assert linked_detail[field] == linked_list[field], (
-                f"model_copy clobbered '{field}': "
-                f"detail={linked_detail[field]!r} != list={linked_list[field]!r}"
-            )
+
+        # Known non-default values must survive the model_copy(update=) merge.
+        assert linked_detail["id"] == expected_id, "model_copy clobbered linked_situation.id"
+        assert (
+            linked_detail["status"] == expected_status
+        ), "model_copy clobbered linked_situation.status (should stay READY, not reset to default)"
+
+        # The picture update dict was applied on top of the preserved fields.
+        assert linked_detail["has_picture"] is True
+        assert linked_detail["picture_image_url"] is not None

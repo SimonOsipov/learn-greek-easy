@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import NewsCountry
-from src.schemas.news_item import NewsItemListResponse, NewsItemResponse
+from src.schemas.news_item import NewsItemResponse, NewsSlimListResponse
 from src.services.news_item_service import NewsItemService
 
 logger = get_logger(__name__)
@@ -26,12 +26,16 @@ router = APIRouter()
 
 @router.get(
     "",
-    response_model=NewsItemListResponse,
+    response_model=NewsSlimListResponse,
     summary="List news items",
-    description="Get a paginated list of news items ordered by publication date (newest first).",
+    description=(
+        "Get a paginated list of news items ordered by publication date (newest first). "
+        "List items are the card-only slim shape (PERF-17-01); the full tree "
+        "(word_timestamps, linked_situation) is available on GET /news/{id}."
+    ),
     responses={
         200: {
-            "description": "Paginated list of news items",
+            "description": "Paginated list of slim news items",
             "content": {
                 "application/json": {
                     "example": {
@@ -43,31 +47,23 @@ router = APIRouter()
                         "items": [
                             {
                                 "id": "550e8400-e29b-41d4-a716-446655440000",
+                                "situation_id": "660e8400-e29b-41d4-a716-446655440001",
                                 "title_el": "Ελληνικός Τίτλος",
                                 "title_en": "English Title",
                                 "title_ru": "Русский заголовок",
+                                "title_el_a2": None,
                                 "description_el": "Ελληνική περιγραφή",
-                                "description_en": "English description",
-                                "description_ru": "Русское описание",
+                                "description_el_a2": None,
+                                "has_a2_content": False,
                                 "publication_date": "2024-01-15",
+                                "country": "cyprus",
                                 "original_article_url": "https://example.com/article",
                                 "image_url": "https://s3.amazonaws.com/...",
-                                "created_at": "2024-01-15T10:30:00Z",
-                                "updated_at": "2024-01-15T10:30:00Z",
-                            },
-                            {
-                                "id": "880e8400-e29b-41d4-a716-446655440003",
-                                "title_el": "Άλλος τίτλος",
-                                "title_en": "Another title",
-                                "title_ru": "Другой заголовок",
-                                "description_el": "Άλλη περιγραφή",
-                                "description_en": "Another description",
-                                "description_ru": "Другο описание",
-                                "publication_date": "2024-01-14",
-                                "original_article_url": "https://example.com/article2",
-                                "image_url": "https://s3.amazonaws.com/...",
-                                "created_at": "2024-01-14T10:30:00Z",
-                                "updated_at": "2024-01-14T10:30:00Z",
+                                "image_variants": None,
+                                "audio_url": None,
+                                "audio_duration_seconds": None,
+                                "audio_a2_url": None,
+                                "audio_a2_duration_seconds": None,
                             },
                         ],
                     }
@@ -91,10 +87,12 @@ async def list_news_items(
         ),
     ),
     db: AsyncSession = Depends(get_db),
-) -> NewsItemListResponse:
-    """Get paginated list of news items (public, no auth required).
+) -> NewsSlimListResponse:
+    """Get paginated list of news items in the card-only slim shape (public, no auth).
 
-    Returns news items ordered by publication date (newest first).
+    Returns news items ordered by publication date (newest first). Slim items
+    drop the reader-only word_timestamps / linked_situation and card-unused
+    metadata (PERF-17-01); the reader fetches those from GET /news/{id}.
 
     Args:
         page: Page number (1-indexed)
@@ -104,10 +102,10 @@ async def list_news_items(
         db: Database session (injected)
 
     Returns:
-        NewsItemListResponse with paginated news items
+        NewsSlimListResponse with paginated slim news items
     """
     service = NewsItemService(db)
-    return await service.get_list(page=page, page_size=page_size, country=country, q=q)
+    return await service.get_list_slim(page=page, page_size=page_size, country=country, q=q)
 
 
 @router.get(

@@ -32,7 +32,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
-    from src.schemas.news_item import NewsItemResponse
+    from src.schemas.news_item import NewsItemResponse, NewsSlimItem
 
 
 class WeekHeat(BaseModel):
@@ -120,13 +120,16 @@ class SlimNews(BaseModel):
     original_article_url: str | None = None
 
     @classmethod
-    def from_full(cls, full: "NewsItemResponse") -> "SlimNews":
-        """Map a full ``NewsItemResponse`` onto this slim dashboard-feed DTO.
+    def from_full(cls, full: Union["NewsItemResponse", "NewsSlimItem"]) -> "SlimNews":
+        """Map a full ``NewsItemResponse`` or slim ``NewsSlimItem`` onto this
+        dashboard-feed DTO.
 
         Carries only the card-rendering fields (id/situation_id/title_*/
         publication_date/country/audio_duration_seconds/image_url/
         image_variants/original_article_url); drops the heavy reader-only
-        fields per the class docstring.
+        fields per the class docstring. The 11 read fields are present on BOTH
+        source shapes, so PERF-17-01's D2 repoint of ``_gather_news`` onto
+        ``get_list_slim`` keeps ``/dashboard/summary`` byte-identical.
         """
         return cls(
             id=full.id,
