@@ -1028,3 +1028,251 @@ async def test_deck_list_reproduces_culture_100_cap(
     assert (
         culture_ids_surfaced == newest_100_ids
     ), "Surfaced culture decks are not exactly the newest 100 by created_at DESC"
+
+
+# ===========================================================================
+# QA ADVERSARIAL / EDGE COVERAGE (PERF-18-01, Mode B — beyond the 6 AC tests)
+#
+# These guard boundary and empty-page behaviours the AC tests do not exercise:
+# the exact 100/101 culture-cap boundary, a partial last page, an all-NULL
+# ordering that must fall through purely to `deck_id ASC`, a cross-type tie
+# where the VOCAB id is lower (guarding against a hidden "culture-first" or
+# type-priority sort that the AC tiebreaker test cannot distinguish because
+# there the culture deck always held the lowest id), a `skip` past `total`
+# (empty page, total still correct), and `page_size` > total.
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_deck_list_culture_cap_boundary_exactly_100(
+    db_session: AsyncSession,
+) -> None:
+    """Edge — exactly 100 active culture decks: none are dropped (cap not off-by-one low).
+
+    The AC 105-cap test proves ">100 drops the oldest"; this guards the other
+    side of the boundary — a full set of *exactly* 100 must all surface and
+    `total` must equal 100 (culture-only, no vocab). A cap implemented as
+    `< 100` or `LIMIT 99` would fail here while still passing the 105 test.
+    """
+    base = datetime(2026, 9, 1, tzinfo=timezone.utc)
+    culture_decks = await _seed_many_culture_decks(
+        db_session,
+        count=100,
+        suffix_prefix="cap100",
+        created_at_fn=lambda i: base + timedelta(minutes=i),
+    )
+    all_ids = {d.id for d in culture_decks}
+
+    service = ProgressService(db_session)
+    result = await service._compute_deck_progress_list(user_id=uuid4(), page=1, page_size=150)
+
+    assert (
+        result.total == 100
+    ), f"Expected total=100 for exactly-100 culture decks, got {result.total}"
+    surfaced = {d.deck_id for d in result.decks}
+    assert surfaced == all_ids, "Not all 100 culture decks surfaced — cap dropped some erroneously"
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_deck_list_culture_cap_boundary_101_drops_exactly_the_oldest(
+    db_session: AsyncSession,
+) -> None:
+    """Edge — 101 active culture decks: exactly ONE (the single oldest) is dropped.
+
+    Tightens the AC 105-cap test to the precise boundary: with 101 candidates
+    the cap must keep the newest 100 and drop the single oldest by
+    `created_at` — not 2, not 0. `total` must be 100.
+    """
+    base = datetime(2026, 10, 1, tzinfo=timezone.utc)
+    culture_decks = await _seed_many_culture_decks(
+        db_session,
+        count=101,
+        suffix_prefix="cap101",
+        created_at_fn=lambda i: base + timedelta(minutes=i),  # i=0 oldest ... i=100 newest
+    )
+    oldest_id = culture_decks[0].id
+    newest_100_ids = {culture_decks[i].id for i in range(1, 101)}
+
+    service = ProgressService(db_session)
+    result = await service._compute_deck_progress_list(user_id=uuid4(), page=1, page_size=150)
+
+    assert result.total == 100, f"Expected total=100 (101 capped to 100), got {result.total}"
+    surfaced = {d.deck_id for d in result.decks}
+    assert oldest_id not in surfaced, "The single oldest culture deck leaked past the 100 cap"
+    assert (
+        surfaced == newest_100_ids
+    ), "Surfaced set is not exactly the newest 100 by created_at DESC"
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_deck_list_last_page_is_partial(
+    db_session: AsyncSession,
+) -> None:
+    """Edge — a non-divisible total yields a correct partial final page.
+
+    7 vocab decks, page_size=3 → pages of 3, 3, 1. The last page must hold the
+    single oldest deck (newest-first ordering) with `total` still 7 — guards
+    against an off-by-one in SQL LIMIT/OFFSET on the tail page.
+    """
+    user = await _seed_user(db_session)
+    base = datetime(2026, 11, 1, tzinfo=timezone.utc)
+    decks = await _seed_many_vocab_decks_studied(
+        db_session,
+        user,
+        count=7,
+        suffix_prefix="tail",
+        last_studied_fn=lambda i: base + timedelta(hours=i),  # i=6 newest ... i=0 oldest
+    )
+    oldest_deck_id = decks[0].id  # lowest last_studied → sorts last
+
+    service = ProgressService(db_session)
+    page3 = await service._compute_deck_progress_list(user.id, page=3, page_size=3)
+
+    assert page3.total == 7, f"Expected total=7, got {page3.total}"
+    assert (
+        len(page3.decks) == 1
+    ), f"Expected 1 deck on the partial last page, got {len(page3.decks)}"
+    assert (
+        page3.decks[0].deck_id == oldest_deck_id
+    ), "Partial last page did not contain the single oldest (last-ordered) deck"
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_deck_list_all_null_last_studied_orders_by_deck_id(
+    db_session: AsyncSession,
+) -> None:
+    """Edge — when every last_studied is NULL, order falls through to `deck_id ASC`.
+
+    The AC tiebreaker test mixes a real-timestamp group with a NULL group; this
+    isolates the all-NULL case so the secondary key is the *only* thing that can
+    order the rows. Decks are inserted in a scrambled order with explicit
+    ascending ids to prove the result is `deck_id ASC`, not insertion/PK order.
+    """
+    user = await _seed_user(db_session)
+    # Insertion order scrambled (19, 17, 18, 16); expected result 16,17,18,19.
+    for n in (0x13, 0x11, 0x12, 0x10):
+        await _seed_vocab_deck_studied(
+            db_session,
+            user,
+            suffix=f"null-{n:x}",
+            last_studied=None,
+            deck_id=UUID(int=n),
+        )
+    expected_order = [UUID(int=0x10), UUID(int=0x11), UUID(int=0x12), UUID(int=0x13)]
+
+    service = ProgressService(db_session)
+    result = await service._compute_deck_progress_list(user.id, page=1, page_size=20)
+
+    ids = [d.deck_id for d in result.decks]
+    assert result.total == 4, f"Expected total=4, got {result.total}"
+    assert ids == expected_order, (
+        f"All-NULL last_studied did not order by deck_id ASC:\ngot:      {ids}\n"
+        f"expected: {expected_order}"
+    )
+    assert all(
+        d.last_studied_at is None for d in result.decks
+    ), "Expected every last_studied_at None"
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_deck_list_cross_type_tie_breaks_by_deck_id_not_type(
+    db_session: AsyncSession,
+) -> None:
+    """Edge — a vocab/culture tie with the VOCAB id lower resolves to [vocab, culture].
+
+    The AC tiebreaker test always assigned the culture deck the lowest id, so a
+    latent "culture-first, then id" sort would pass it. Here the vocab deck's id
+    is lower than the culture deck's at an identical last_studied, so only a true
+    `deck_id ASC` tiebreaker (independent of deck_type) yields [vocab, culture].
+    """
+    user = await _seed_user(db_session)
+    t = datetime(2026, 12, 1, 9, tzinfo=timezone.utc)
+
+    vocab = await _seed_vocab_deck_studied(
+        db_session,
+        user,
+        suffix="xtie-vocab-low",
+        last_studied=t,
+        deck_id=UUID(int=0x100),
+    )
+    culture = await _seed_culture_deck_studied(
+        db_session,
+        user,
+        suffix="xtie-culture-high",
+        last_studied=t,
+        deck_id=UUID(int=0x200),
+    )
+
+    service = ProgressService(db_session)
+    result = await service._compute_deck_progress_list(user.id, page=1, page_size=20)
+
+    ids = [d.deck_id for d in result.decks]
+    assert ids == [vocab.id, culture.id], (
+        f"Cross-type tie not resolved by deck_id ASC (vocab id < culture id):\n"
+        f"got:      {ids}\nexpected: {[vocab.id, culture.id]}"
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_deck_list_skip_beyond_total_returns_empty_page_with_correct_total(
+    db_session: AsyncSession,
+) -> None:
+    """Edge — requesting a page past the end returns [] but the correct total.
+
+    Phase A's ordering query returns no rows (OFFSET past the union size) and
+    Phase B is skipped, yet the independent COUNT must still report the true
+    total — guards against `total` being derived from the (empty) page.
+    """
+    user = await _seed_user(db_session)
+    base = datetime(2027, 1, 1, tzinfo=timezone.utc)
+    for i in range(3):
+        await _seed_vocab_deck_studied(
+            db_session,
+            user,
+            suffix=f"beyond-{i}",
+            last_studied=base + timedelta(hours=i),
+        )
+
+    service = ProgressService(db_session)
+    result = await service._compute_deck_progress_list(user.id, page=10, page_size=20)
+
+    assert result.decks == [], f"Expected empty page past the end, got {len(result.decks)} decks"
+    assert result.total == 3, f"Expected total=3 even on an out-of-range page, got {result.total}"
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_deck_list_page_size_larger_than_total_returns_all(
+    db_session: AsyncSession,
+) -> None:
+    """Edge — page_size greater than total returns every deck exactly once.
+
+    Guards the LIMIT > row-count path: all seeded decks appear, no duplicates,
+    total matches the deck count.
+    """
+    user = await _seed_user(db_session)
+    base = datetime(2027, 2, 1, tzinfo=timezone.utc)
+    seeded_ids = set()
+    for i in range(3):
+        d = await _seed_vocab_deck_studied(
+            db_session,
+            user,
+            suffix=f"big-page-{i}",
+            last_studied=base + timedelta(hours=i),
+        )
+        seeded_ids.add(d.id)
+
+    service = ProgressService(db_session)
+    result = await service._compute_deck_progress_list(user.id, page=1, page_size=100)
+
+    ids = [d.deck_id for d in result.decks]
+    assert result.total == 3, f"Expected total=3, got {result.total}"
+    assert len(ids) == 3, f"Expected all 3 decks on one page, got {len(ids)}"
+    assert set(ids) == seeded_ids, "Returned deck ids do not match the seeded set"
+    assert len(set(ids)) == len(ids), "Duplicate deck_id returned"
