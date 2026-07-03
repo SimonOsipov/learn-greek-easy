@@ -120,6 +120,11 @@ class Settings(BaseSettings):
             "event-invalidated (PERF-16)"
         ),
     )
+    cache_auth_me_body_ttl: int = Field(
+        default=120,
+        gt=0,
+        description="TTL (seconds) for the cached GET /auth/me response body; event-invalidated via user:me:{id} (PERF-16)",
+    )
     cache_single_flight_lock_ttl_ms: int = Field(
         default=5000,
         gt=0,

@@ -512,9 +512,22 @@ class CacheService:
         the ORM level and some callers (e.g. account deletion) pass it
         through unchecked; a None/absent supabase_id degrades to a harmless
         no-op delete rather than skipping the (always-safe) user:me bust.
+
+        Never raises: callers include webhook_service.process_event, which
+        must always return True regardless of cache backend health, so
+        each delete is individually guarded and logged rather than allowed
+        to propagate.
         """
-        await self.delete(f"user:identity:{supabase_id}")
-        await self.delete(f"user:me:{user_id}")
+        try:
+            await self.delete(f"user:identity:{supabase_id}")
+        except Exception as e:
+            logger.warning(
+                f"Failed to invalidate identity cache for supabase_id {supabase_id}: {e}"
+            )
+        try:
+            await self.delete(f"user:me:{user_id}")
+        except Exception as e:
+            logger.warning(f"Failed to invalidate /auth/me cache for user {user_id}: {e}")
 
 
 # =============================================================================
