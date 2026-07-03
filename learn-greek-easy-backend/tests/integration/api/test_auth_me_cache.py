@@ -33,6 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.cache import get_cache
 from src.core.dependencies import get_current_user
+from src.core.redis import close_redis, get_redis, init_redis
 from src.core.supabase_auth import SupabaseUserClaims
 from src.db.models import SubscriptionStatus, SubscriptionTier, User
 from src.main import app
@@ -250,6 +251,29 @@ class TestDeactivationEnforcedWithWarmIdentityCache:
 # ============================================================================
 
 
+@pytest.fixture
+async def live_redis():
+    """Wire a real Redis connection so get_cache() is enabled for the
+    duration of the test.
+
+    The default `client` fixture (tests/conftest.py) mounts the app via
+    plain ASGITransport with no lifespan, so init_redis() never runs and
+    the endpoint's cache stays inert. These body-cache tests need the
+    /auth/me handler's cache writes (and this test's own cache reads) to
+    actually hit Redis, so they wire it directly -- same pattern as
+    tests/integration/test_cache_integration.py's `redis_client` fixture.
+
+    Skips (rather than failing) if no Redis is reachable, matching the
+    project convention that these tests require CI's Redis and are not
+    runnable against a bare local environment.
+    """
+    await init_redis()
+    if get_redis() is None:
+        pytest.skip("Redis not available (no local Redis; CI provides one)")
+    yield
+    await close_redis()
+
+
 @pytest.mark.integration
 @pytest.mark.auth
 class TestGetMeBodyCacheKeyIsolation:
@@ -267,6 +291,7 @@ class TestGetMeBodyCacheKeyIsolation:
         client: AsyncClient,
         test_user: User,
         auth_headers: dict[str, str],
+        live_redis: None,
     ) -> None:
         """Setup clears user:me:{user_id} on the real shared CI Redis
         before the first request (proving no cross-test bleed), then the
@@ -303,6 +328,7 @@ class TestPatchMeInvalidatesBodyCache:
         client: AsyncClient,
         test_user: User,
         auth_headers: dict[str, str],
+        live_redis: None,
     ) -> None:
         """GET /auth/me caches full_name="Regular Test User"; PATCH /me
         changes it; the next GET must reflect the new value.
@@ -348,6 +374,7 @@ class TestSubscriptionChangeInvalidatesBodyCache:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
+        live_redis: None,
     ) -> None:
         """Cache /auth/me with effective_role="free" (FREE/NONE
         subscription), then drive a customer.subscription.updated webhook
@@ -376,6 +403,7 @@ class TestSubscriptionChangeInvalidatesBodyCache:
         remainder of the TTL.
         """
         user = await UserFactory.create_with_settings(
+            session=db_session,
             subscription_tier=SubscriptionTier.FREE,
             subscription_status=SubscriptionStatus.NONE,
             stripe_customer_id="cus_perf16_03_role_test",
