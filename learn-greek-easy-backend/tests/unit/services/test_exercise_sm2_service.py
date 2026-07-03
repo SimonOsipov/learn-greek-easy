@@ -481,3 +481,219 @@ class TestGetStudyQueueSummaryMode:
         remaining_ids = {item.exercise_id for item in queue_full.exercises}
         assert due_record.exercise.id in remaining_ids
         assert picture_source_exercise.id not in remaining_ids
+
+    @pytest.mark.asyncio
+    async def test_summary_true_call_does_not_leak_into_subsequent_summary_false_call(
+        self, mock_db_session
+    ):
+        """Adversarial (AC#4): summary=True and summary=False must build fully
+        independent item lists per call. Calls summary=True FIRST, then
+        summary=False SECOND -- the reverse of T03-1/T03-5's ordering -- so an
+        in-place-mutation-across-calls/requests bug could not hide behind
+        "the full call always runs first". Guards against a future caching or
+        object-reuse change letting a summary=True response leak nulled heavy
+        fields into the summary=False (practice-session) path.
+        """
+        user_id = uuid4()
+        due_record = _make_mock_record(status=CardStatus.REVIEW)
+        due_record.exercise = _make_mock_exercise(source_type=ExerciseSourceType.DESCRIPTION)
+        due_record.next_review_date = date.today()
+
+        service = ExerciseSM2Service(mock_db_session)
+        service.record_repo.get_due_exercises = AsyncMock(return_value=[due_record])
+        service.record_repo.get_new_exercises = AsyncMock(return_value=[])
+        service.record_repo.get_early_practice_exercises = AsyncMock(return_value=[])
+        service.load_description_enrichment = AsyncMock(
+            return_value={
+                due_record.exercise.id: {
+                    "situation_id": uuid4(),
+                    "scenario_el": "Σκηνή",
+                    "scenario_en": "Scene",
+                    "scenario_ru": "Сцена",
+                    "description_text_el": "Ο Γιάννης.",
+                    "description_audio_url": "https://cdn/b1/audio.mp3",
+                    "description_audio_duration": 12.5,
+                    "word_timestamps": [{"word": "Ο", "start": 0.0, "end": 0.2}],
+                    "items": [ExerciseItemPayload(item_index=0, payload={"a": 1})],
+                    "exercise_type": ExerciseType.FILL_GAPS,
+                    "modality": ExerciseModality.READING,
+                    "audio_level_value": DeckLevel.B1,
+                }
+            }
+        )
+
+        queue_summary_first = await service.get_study_queue(user_id, summary=True)
+        queue_full_second = await service.get_study_queue(user_id, summary=False)
+
+        # First call: heavy fields nulled as expected.
+        assert queue_summary_first.exercises[0].items == []
+        assert queue_summary_first.exercises[0].word_timestamps is None
+
+        # Second call (summary=False, made AFTER the summary=True call): must
+        # get the full, un-nulled payload -- proves items are rebuilt fresh
+        # per call, not shared/cached/mutated-in-place across requests.
+        full_item = queue_full_second.exercises[0]
+        assert full_item.items != []
+        assert full_item.word_timestamps == [{"word": "Ο", "start": 0.0, "end": 0.2}]
+        assert full_item.description_text_el == "Ο Γιάννης."
+        assert full_item.description_audio_url == "https://cdn/b1/audio.mp3"
+
+    @pytest.mark.asyncio
+    async def test_summary_false_default_path_leaves_heavy_fields_exactly_as_assembled(
+        self, mock_db_session
+    ):
+        """Adversarial (AC#4, highest-risk): summary=False (default, unrequested)
+        must return items whose heavy fields are UNCHANGED -- byte-identical to
+        what enrichment/assembly produced, not merely "non-empty". Guards
+        against any future refactor of _slim_to_summary's early-return branch
+        partially nulling fields even when summary=False.
+        """
+        user_id = uuid4()
+        due_record = _make_mock_record(status=CardStatus.REVIEW)
+        due_record.exercise = _make_mock_exercise(source_type=ExerciseSourceType.DESCRIPTION)
+        due_record.next_review_date = date.today()
+
+        items_payload = [ExerciseItemPayload(item_index=0, payload={"a": 1})]
+        word_timestamps_payload = [{"word": "Καλημέρα", "start": 0.0, "end": 0.5}]
+
+        service = ExerciseSM2Service(mock_db_session)
+        service.record_repo.get_due_exercises = AsyncMock(return_value=[due_record])
+        service.record_repo.get_new_exercises = AsyncMock(return_value=[])
+        service.record_repo.get_early_practice_exercises = AsyncMock(return_value=[])
+        service.load_description_enrichment = AsyncMock(
+            return_value={
+                due_record.exercise.id: {
+                    "situation_id": uuid4(),
+                    "scenario_el": "Σκηνή",
+                    "scenario_en": "Scene",
+                    "scenario_ru": "Сцена",
+                    "description_text_el": "Ο Γιάννης πήγε σχολείο.",
+                    "description_audio_url": "https://cdn/b1/audio.mp3",
+                    "description_audio_duration": 12.5,
+                    "word_timestamps": word_timestamps_payload,
+                    "items": items_payload,
+                    "exercise_type": ExerciseType.FILL_GAPS,
+                    "modality": ExerciseModality.LISTENING,
+                    "audio_level_value": DeckLevel.B1,
+                }
+            }
+        )
+
+        queue = await service.get_study_queue(user_id, summary=False)
+
+        item = queue.exercises[0]
+        assert item.items == items_payload
+        assert item.word_timestamps == word_timestamps_payload
+        assert item.description_text_el == "Ο Γιάννης πήγε σχολείο."
+        assert item.description_audio_url == "https://cdn/b1/audio.mp3"
+        assert item.description_audio_duration == 12.5
+
+    @pytest.mark.asyncio
+    async def test_summary_true_mixed_modalities_no_truncation_all_light_fields_kept(
+        self, mock_db_session
+    ):
+        """Adversarial (AC#2/AC#5, D7): summary=True on a queue mixing a
+        non-description (WORD_ORDER, due-tier) item with two description
+        items of DIFFERENT modalities (READING new-tier, LISTENING
+        early-practice-tier) must (a) keep ALL three items -- no server-side
+        truncation, since the exercises hub client-filters by modality then
+        slices -- and (b) keep every item's modality/scenario_* fields so the
+        client-side filter can still distinguish them after slimming.
+        """
+        user_id = uuid4()
+
+        due_record = _make_mock_record(status=CardStatus.REVIEW)
+        due_record.exercise = _make_mock_exercise(source_type=ExerciseSourceType.WORD_ORDER)
+        due_record.next_review_date = date.today()
+
+        new_exercise = _make_mock_exercise(source_type=ExerciseSourceType.DESCRIPTION)
+        early_record = _make_mock_record(status=CardStatus.REVIEW)
+        early_record.exercise = _make_mock_exercise(source_type=ExerciseSourceType.DESCRIPTION)
+        early_record.next_review_date = date.today() + timedelta(days=3)
+
+        service = ExerciseSM2Service(mock_db_session)
+        service.record_repo.get_due_exercises = AsyncMock(return_value=[due_record])
+        service.record_repo.get_new_exercises = AsyncMock(return_value=[new_exercise])
+        service.record_repo.get_early_practice_exercises = AsyncMock(return_value=[early_record])
+        service.load_description_enrichment = AsyncMock(
+            return_value={
+                new_exercise.id: {
+                    "situation_id": uuid4(),
+                    "scenario_el": "Διάβασμα",
+                    "scenario_en": "Reading",
+                    "scenario_ru": "Чтение",
+                    "description_text_el": "Κείμενο ανάγνωσης.",
+                    "description_audio_url": None,
+                    "description_audio_duration": None,
+                    "word_timestamps": None,
+                    "items": [ExerciseItemPayload(item_index=0, payload={"kind": "reading"})],
+                    "exercise_type": ExerciseType.FILL_GAPS,
+                    "modality": ExerciseModality.READING,
+                    "audio_level_value": DeckLevel.A2,
+                },
+                early_record.exercise.id: {
+                    "situation_id": uuid4(),
+                    "scenario_el": "Ακρόαση",
+                    "scenario_en": "Listening",
+                    "scenario_ru": "Аудирование",
+                    "description_text_el": None,
+                    "description_audio_url": "https://cdn/a1/audio.mp3",
+                    "description_audio_duration": 8.0,
+                    "word_timestamps": [{"word": "Καλησπέρα", "start": 0.0, "end": 0.4}],
+                    "items": [ExerciseItemPayload(item_index=0, payload={"kind": "listening"})],
+                    "exercise_type": ExerciseType.FILL_GAPS,
+                    "modality": ExerciseModality.LISTENING,
+                    "audio_level_value": DeckLevel.A1,
+                },
+            }
+        )
+
+        queue = await service.get_study_queue(user_id, include_early_practice=True, summary=True)
+
+        # D7: slim, never truncate -- all 3 items present.
+        assert queue.total_in_queue == 3
+        items_by_id = {item.exercise_id: item for item in queue.exercises}
+        assert due_record.exercise.id in items_by_id
+        assert new_exercise.id in items_by_id
+        assert early_record.exercise.id in items_by_id
+
+        word_order_item = items_by_id[due_record.exercise.id]
+        reading_item = items_by_id[new_exercise.id]
+        listening_item = items_by_id[early_record.exercise.id]
+
+        # Light fields survive slimming, including the modality/scenario_*
+        # fields the hub's client-side filter depends on.
+        assert word_order_item.source_type == ExerciseSourceType.WORD_ORDER
+        assert reading_item.modality == ExerciseModality.READING
+        assert reading_item.scenario_el == "Διάβασμα"
+        assert listening_item.modality == ExerciseModality.LISTENING
+        assert listening_item.scenario_el == "Ακρόαση"
+        assert listening_item.is_early_practice is True
+
+        # Heavy fields nulled/empty on every item regardless of modality.
+        for item in (word_order_item, reading_item, listening_item):
+            assert item.items == []
+            assert item.word_timestamps is None
+            assert item.description_text_el is None
+            assert item.description_audio_url is None
+
+    @pytest.mark.asyncio
+    async def test_summary_true_empty_queue_returns_empty_items_zero_counts(self, mock_db_session):
+        """Edge case: an empty queue in summary=True mode must not crash and
+        must report all-zero counts with an empty items list (no
+        ZeroDivision/IndexError/AttributeError from _slim_to_summary iterating
+        an empty list, and no accidental non-zero count).
+        """
+        user_id = uuid4()
+        service = ExerciseSM2Service(mock_db_session)
+        service.record_repo.get_due_exercises = AsyncMock(return_value=[])
+        service.record_repo.get_new_exercises = AsyncMock(return_value=[])
+        service.record_repo.get_early_practice_exercises = AsyncMock(return_value=[])
+
+        queue = await service.get_study_queue(user_id, include_early_practice=True, summary=True)
+
+        assert queue.total_due == 0
+        assert queue.total_new == 0
+        assert queue.total_early_practice == 0
+        assert queue.total_in_queue == 0
+        assert queue.exercises == []
