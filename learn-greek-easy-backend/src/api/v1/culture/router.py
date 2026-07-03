@@ -23,6 +23,7 @@ Admin Endpoints (superuser only):
 - DELETE /culture/questions/{question_id} - Delete a question
 """
 
+import asyncio
 import hashlib
 from typing import Optional
 from uuid import UUID
@@ -953,7 +954,7 @@ async def upload_culture_deck_cover_image(
 
     old_key = deck.cover_image_s3_key if deck.cover_image_s3_key != s3_key else None
 
-    uploaded = s3.upload_object(s3_key, data, file.content_type)
+    uploaded = await asyncio.to_thread(s3.upload_object, s3_key, data, file.content_type)
     if not uploaded:
         raise HTTPException(status_code=500, detail="Failed to upload cover image")
 
@@ -967,7 +968,7 @@ async def upload_culture_deck_cover_image(
 
     # Delete old key only after commit — if commit fails, the row still
     # references the old object and we must not orphan it.
-    if old_key and not s3.delete_object(old_key):
+    if old_key and not await asyncio.to_thread(s3.delete_object, old_key):
         logger.warning(
             "Failed to delete prior culture deck cover image from S3",
             extra={"prior_key": old_key, "deck_id": str(deck_id)},
@@ -1014,7 +1015,7 @@ async def delete_culture_deck_cover_image(
         raise HTTPException(status_code=404, detail="Deck has no cover image")
 
     s3 = get_s3_service()
-    deleted = s3.delete_object(deck.cover_image_s3_key)
+    deleted = await asyncio.to_thread(s3.delete_object, deck.cover_image_s3_key)
     if not deleted:
         raise HTTPException(status_code=500, detail="Failed to delete cover image")
 
@@ -1109,7 +1110,9 @@ async def create_culture_question(
             try:
                 audio_bytes = await get_elevenlabs_service().generate_speech(greek_text)
                 s3_key = f"culture/audio/{question.id}.mp3"
-                upload_success = get_s3_service().upload_object(s3_key, audio_bytes, "audio/mpeg")
+                upload_success = await asyncio.to_thread(
+                    get_s3_service().upload_object, s3_key, audio_bytes, "audio/mpeg"
+                )
                 if not upload_success:
                     raise HTTPException(
                         status_code=status.HTTP_502_BAD_GATEWAY,

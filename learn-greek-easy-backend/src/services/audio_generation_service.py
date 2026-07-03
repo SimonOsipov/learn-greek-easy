@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 from dataclasses import dataclass
 from io import BytesIO
@@ -329,7 +330,9 @@ class AudioGenerationService:
         if on_progress is not None:
             await on_progress("upload")
 
-        upload_ok = self._s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
+        upload_ok = await asyncio.to_thread(
+            self._s3.upload_object, s3_key, audio_bytes, "audio/mpeg"
+        )
         if not upload_ok:
             raise RuntimeError("S3 upload failed")
 
@@ -438,7 +441,9 @@ class AudioGenerationService:
         if on_progress is not None:
             await on_progress("upload")
 
-        upload_ok = self._s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
+        upload_ok = await asyncio.to_thread(
+            self._s3.upload_object, s3_key, audio_bytes, "audio/mpeg"
+        )
         if not upload_ok:
             raise RuntimeError("S3 upload failed")
 

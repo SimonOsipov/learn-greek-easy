@@ -7,6 +7,7 @@ Endpoints include logout acknowledgments (client-side token clearing), user prof
 retrieval and updates, and avatar management (S3 presigned URLs).
 """
 
+import asyncio
 import uuid as uuid_module
 from typing import Any
 
@@ -453,7 +454,7 @@ async def update_me(
 
         # Delete old avatar from S3 if replacing
         if current_user.avatar_url and current_user.avatar_url != new_avatar_url:
-            s3_service.delete_object(current_user.avatar_url)
+            await asyncio.to_thread(s3_service.delete_object, current_user.avatar_url)
 
     # Update user if there are user field changes
     if user_updates:
@@ -562,7 +563,7 @@ async def delete_avatar(
 
     # Delete from S3 if exists
     if current_user.avatar_url:
-        s3_service.delete_object(current_user.avatar_url)
+        await asyncio.to_thread(s3_service.delete_object, current_user.avatar_url)
 
     # Clear avatar_url
     current_user.avatar_url = None
