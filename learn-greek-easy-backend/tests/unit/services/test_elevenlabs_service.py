@@ -834,3 +834,172 @@ class TestPooledClientLifecycle:
         mock_cls.assert_called_once()
         mock_client.post.assert_called_once()
         assert result == b"audio_fallback"
+
+
+class TestPooledClientEdgeCases:
+    """QA adversarial coverage for PERF-19-02 (task-1259) beyond the 4 AC specs.
+
+    The AC tests (TestPooledClientLifecycle) only exercise start()/close()
+    lifecycle and the _call_tts_api pooled-vs-fallback branch. These tests
+    guard the regression risks the AC specs don't cover:
+      1. close() is safe to call on a service that was never start()-ed.
+      2. The pooled-vs-fallback branch is wired at the OTHER 3 call sites
+         (list_voices, generate_dialog_audio, forced_align), not just TTS --
+         a silent revert of any one site would only be caught here.
+      3. Network errors (httpx.RequestError) raised by the POOLED client are
+         still converted to ElevenLabsAPIError by the existing except-wrapper
+         (the wrapper was written for the `async with` fallback shape; the
+         restructure must not have broken it for the pooled path).
+    """
+
+    @pytest.mark.asyncio
+    async def test_close_when_never_started_is_noop(self, mock_settings_configured: None) -> None:
+        """close() on a fresh (never start()-ed) service must not raise.
+
+        __init__ sets self._client = None; close() must guard on that (no
+        AttributeError from calling .aclose() on None).
+        """
+        service = ElevenLabsService()
+
+        await service.close()  # must not raise
+
+        assert service._client is None
+
+    @pytest.mark.asyncio
+    async def test_list_voices_uses_pooled_client_when_present(
+        self, mock_settings_configured: None
+    ) -> None:
+        """list_voices() must use the pooled client and build no per-call client.
+
+        Locks the pooled branch at the list_voices call site independently of
+        the TTS-only AC test -- a revert here would not otherwise be caught.
+        """
+        service = ElevenLabsService()
+
+        pooled_response = MagicMock()
+        pooled_response.status_code = 200
+        pooled_response.json.return_value = {"voices": [{"voice_id": "v1", "name": "Alice"}]}
+        pooled_client = AsyncMock()
+        pooled_client.get.return_value = pooled_response
+        service._client = pooled_client
+
+        with patch("src.services.elevenlabs_service.httpx.AsyncClient") as mock_cls:
+            result = await service.list_voices()
+
+        mock_cls.assert_not_called()
+        pooled_client.get.assert_called_once()
+        assert result == [{"voice_id": "v1", "name": "Alice"}]
+
+    @pytest.mark.asyncio
+    async def test_generate_dialog_audio_uses_pooled_client_when_present(
+        self, mock_settings_configured: None
+    ) -> None:
+        """generate_dialog_audio() must use the pooled client when present.
+
+        Locks the pooled branch at this call site independently of the
+        TTS-only AC test -- a revert here would not otherwise be caught.
+        """
+        service = ElevenLabsService()
+
+        pooled_response = MagicMock()
+        pooled_response.status_code = 200
+        pooled_response.json.return_value = {
+            "audio_base64": "abc123",
+            "voice_segments": [],
+        }
+        pooled_client = AsyncMock()
+        pooled_client.post.return_value = pooled_response
+        service._client = pooled_client
+
+        inputs = [{"text": "Γεια σας!", "voice_id": "voice-1"}]
+
+        with patch("src.services.elevenlabs_service.httpx.AsyncClient") as mock_cls:
+            result = await service.generate_dialog_audio(inputs)
+
+        mock_cls.assert_not_called()
+        pooled_client.post.assert_called_once()
+        assert result == {"audio_base64": "abc123", "voice_segments": []}
+
+    @pytest.mark.asyncio
+    async def test_forced_align_uses_pooled_client_when_present(
+        self, mock_settings_configured: None
+    ) -> None:
+        """forced_align() must use the pooled client and preserve the
+        files=/data=/header-override request shape when using it.
+
+        Locks the pooled branch at this call site independently of the
+        TTS-only AC test -- a revert here would not otherwise be caught.
+        """
+        service = ElevenLabsService()
+
+        pooled_response = MagicMock()
+        pooled_response.status_code = 200
+        pooled_response.json.return_value = {"words": [], "loss": 0.01}
+        pooled_client = AsyncMock()
+        pooled_client.post.return_value = pooled_response
+        service._client = pooled_client
+
+        with patch("src.services.elevenlabs_service.httpx.AsyncClient") as mock_cls:
+            result = await service.forced_align(b"audio-bytes", "some text")
+
+        mock_cls.assert_not_called()
+        pooled_client.post.assert_called_once()
+        call_kwargs = pooled_client.post.call_args.kwargs
+        assert call_kwargs["headers"] == {"xi-api-key": "test-api-key-12345"}
+        assert call_kwargs["files"] == {"file": ("dialog.mp3", b"audio-bytes", "audio/mpeg")}
+        assert call_kwargs["data"] == {"text": "some text"}
+        assert result == {"words": [], "loss": 0.01}
+
+    @pytest.mark.asyncio
+    async def test_pooled_client_network_error_still_raises_api_error(
+        self, mock_settings_configured: None
+    ) -> None:
+        """A RequestError raised by the POOLED client must still be converted
+        to ElevenLabsAPIError(status_code=0) by the existing except-wrapper.
+
+        Guards that the request-in-branch / body-read-after-branch restructure
+        did not move the pooled call outside the try/except httpx.RequestError
+        wrapper (which was written when the request always sat inside the
+        `async with` block).
+        """
+        service = ElevenLabsService()
+
+        pooled_client = AsyncMock()
+        pooled_client.post.side_effect = httpx.RequestError("boom")
+        service._client = pooled_client
+
+        with pytest.raises(ElevenLabsAPIError) as exc_info:
+            await service._call_tts_api("text", "v1", "Alice")
+
+        assert exc_info.value.status_code == 0
+        pooled_client.post.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_start_called_twice_replaces_client_without_closing_previous(
+        self, mock_settings_configured: None
+    ) -> None:
+        """Documents current start() idempotence: calling start() twice
+        overwrites self._client with a new client; the previous client's
+        aclose() is NOT awaited (no double-start guard).
+
+        This mirrors OpenRouterService.start() (also unguarded) -- not a
+        regression introduced here. Locked as a regression test so any future
+        divergence between the two services' lifecycle semantics is caught
+        (in practice lifespan calls start() exactly once, so this is not
+        exercised in production).
+        """
+        service = ElevenLabsService()
+
+        with patch("src.services.elevenlabs_service.httpx.AsyncClient") as mock_cls:
+            first_client = AsyncMock()
+            mock_cls.return_value = first_client
+            await service.start()
+            first_client_ref = service._client
+
+            second_client = AsyncMock()
+            mock_cls.return_value = second_client
+            await service.start()
+
+        assert service._client is second_client
+        assert service._client is not first_client_ref
+        first_client_ref.aclose.assert_not_awaited()
