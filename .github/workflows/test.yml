@@ -457,6 +457,8 @@ jobs:
   e2e-tests:
     name: E2E Tests (${{ matrix.browser }}, shard ${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
+    # webkit p95 14.3 min × 1.5 ≈ 21.5 → 22 (measured 2026-07-02, n=182 shard jobs; PERF-23-02)
+    timeout-minutes: 22
     needs: [frontend-lint, backend-lint, alembic-check]
     env:
       VITE_ENVIRONMENT: test
