@@ -717,3 +717,120 @@ class TestGenerateSpeech:
 
         mock_list.assert_called_once()  # list_voices WAS called
         assert result == b"audio"
+
+
+# ============================================================================
+# PERF-19-02: Pooled AsyncClient Lifecycle (start/close) + Fallback Lock
+# ============================================================================
+
+
+class TestPooledClientLifecycle:
+    """Tests for PERF-19-02: pooled httpx.AsyncClient singleton + fallback.
+
+    Mirrors OpenRouterService's start()/close() + pooled-vs-fallback pattern
+    (see openrouter_service.py). Test Specs from Backlog task-1259:
+      1. start() builds a pooled client with http2=True + httpx.Limits.
+      2. close() awaits aclose() and nulls _client.
+      3. A TTS call uses the pooled client when present (no per-call client
+         construction).
+      4. A TTS call falls back to the existing per-call client when no pooled
+         client is set (LOCKS current behavior so the refactor can't drop it).
+    """
+
+    @pytest.mark.asyncio
+    async def test_start_creates_pooled_client(self, mock_settings_configured: None) -> None:
+        """start() builds and stores a pooled AsyncClient with http2 + Limits.
+
+        Pre-impl: ElevenLabsService has no start() -> AttributeError.
+        """
+        service = ElevenLabsService()
+
+        with patch("src.services.elevenlabs_service.httpx.AsyncClient") as mock_cls:
+            await service.start()
+
+        assert service._client is mock_cls.return_value
+        call_kwargs = mock_cls.call_args.kwargs
+        assert call_kwargs["http2"] is True
+        assert call_kwargs["timeout"] == 30
+        assert call_kwargs["limits"] == httpx.Limits(
+            max_connections=10, max_keepalive_connections=5
+        )
+
+    @pytest.mark.asyncio
+    async def test_close_closes_and_nulls_client(self, mock_settings_configured: None) -> None:
+        """close() awaits the pooled client's aclose() and nulls _client.
+
+        Pre-impl: ElevenLabsService has no close() -> AttributeError.
+        """
+        service = ElevenLabsService()
+        mock_client = AsyncMock()
+        service._client = mock_client
+
+        await service.close()
+
+        mock_client.aclose.assert_awaited_once()
+        assert service._client is None
+
+    @pytest.mark.asyncio
+    async def test_tts_call_uses_pooled_client_when_present(
+        self, mock_settings_configured: None
+    ) -> None:
+        """When self._client is set, the TTS call uses it and builds no per-call client.
+
+        Pre-impl: _call_tts_api ignores self._client entirely and always opens
+        a per-call `async with httpx.AsyncClient(...)`, so `mock_cls` IS
+        called and `mock_cls.assert_not_called()` fails (AssertionError).
+        """
+        service = ElevenLabsService()
+
+        pooled_response = MagicMock()
+        pooled_response.status_code = 200
+        pooled_response.content = b"audio_pooled"
+        pooled_client = AsyncMock()
+        pooled_client.post.return_value = pooled_response
+        service._client = pooled_client
+
+        # If the fallback path is (mistakenly, pre-impl) taken, give it a
+        # working mocked chain so the test fails cleanly on the
+        # "AsyncClient not constructed" assertion instead of crashing.
+        fallback_response = MagicMock()
+        fallback_response.status_code = 200
+        fallback_response.content = b"audio_fallback"
+        fallback_client = AsyncMock()
+        fallback_client.post.return_value = fallback_response
+
+        with patch("src.services.elevenlabs_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = fallback_client
+            result = await service._call_tts_api("text", "v1", "Alice")
+
+        mock_cls.assert_not_called()
+        pooled_client.post.assert_called_once()
+        assert result == b"audio_pooled"
+
+    @pytest.mark.asyncio
+    async def test_tts_call_falls_back_when_client_absent(
+        self, mock_settings_configured: None
+    ) -> None:
+        """LOCKS the existing per-call fallback when no pooled client is set.
+
+        Passes today (pre-impl there is no self._client at all) and must keep
+        passing post-impl once self._client exists but is None -- guards
+        against the refactor accidentally deleting the fallback branch.
+        """
+        service = ElevenLabsService()
+        if hasattr(service, "_client"):
+            service._client = None
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.content = b"audio_fallback"
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+
+        with patch("src.services.elevenlabs_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = mock_client
+            result = await service._call_tts_api("text", "v1", "Alice")
+
+        mock_cls.assert_called_once()
+        mock_client.post.assert_called_once()
+        assert result == b"audio_fallback"
