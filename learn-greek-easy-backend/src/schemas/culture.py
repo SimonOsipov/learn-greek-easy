@@ -363,7 +363,7 @@ class CategoryReadiness(BaseModel):
         None,
         ge=0,
         le=100,
-        description="Per-category accuracy from last 30 days. Null if no answers in window.",
+        description="All-time per-category accuracy (correct ÷ attempted). Null if no answers.",
     )
     needs_reinforcement: bool = Field(
         default=False,
@@ -391,6 +391,11 @@ class CultureReadinessResponse(BaseModel):
     )
     total_answers: int = Field(
         ..., ge=0, description="Total answers submitted across included categories"
+    )
+    current_streak: int = Field(
+        ...,
+        ge=0,
+        description="Current culture study streak (culture answers + mock exams), 1-day UTC grace",
     )
     categories: list[CategoryReadiness] = Field(
         default_factory=list,

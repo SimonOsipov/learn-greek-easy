@@ -231,14 +231,26 @@ function CategoryPanel({ categories }: { categories: CategoryReadiness[] }) {
 
   return (
     <div className="dx-action">
-      <div className="dx-action-head">
-        <div className="dx-section-eyebrow">
-          <Kicker tone="violet">{t('readiness.catEyebrow', "Where you're weakest")}</Kicker>
-          <h2 className="dx-action-h">{t('readiness.catTitle', 'Progress by category')}</h2>
+      <div className="cx-cat-head">
+        <div className="dx-action-head">
+          <div className="dx-section-eyebrow">
+            <Kicker tone="violet">{t('readiness.catEyebrow', "Where you're weakest")}</Kicker>
+            <h2 className="dx-action-h">{t('readiness.catTitle', 'Progress by category')}</h2>
+          </div>
+          <span className="dx-action-pct">
+            {t('readiness.catMeta', 'red bars are below 30% · pass-mark 60%')}
+          </span>
         </div>
-        <span className="dx-action-pct">
-          {t('readiness.catMeta', 'red bars are below 30% · pass-mark 60%')}
-        </span>
+        {/* One-line legend: distinguishes the three figures in each row —
+            Readiness + Mastered are the coverage side, Accuracy is the
+            correctness side — so a low readiness % next to a real mastered
+            count and an Accuracy % no longer reads as a bug. */}
+        <p className="cx-cat-legend">
+          {t('readiness.legend', {
+            defaultValue:
+              "Readiness = how far through the whole question bank you are. Mastered = how many you've fully locked in. Accuracy = how often you're right on the ones you've tried.",
+          })}
+        </p>
       </div>
 
       <div className="cx-cat-list">
@@ -254,7 +266,27 @@ function CategoryPanel({ categories }: { categories: CategoryReadiness[] }) {
                 <span style={{ width: `${Math.max(cat.readiness_percentage, 1)}%` }} />
               </div>
               <div className="cx-cat-meta">
-                <span className="cx-cat-pct">{Math.round(cat.readiness_percentage)}%</span>
+                {/* PRIMARY: the mastered count leads — it's the row's most
+                    prominent figure, so a low readiness % reads as "N of many"
+                    rather than a broken 1%. */}
+                <span className="cx-cat-mastered" data-testid={`cat-mastered-${cat.category}`}>
+                  {t('readiness.catMastered', {
+                    mastered: cat.questions_mastered,
+                    total: cat.questions_total,
+                    defaultValue: '{{mastered}} / {{total}} mastered',
+                  })}
+                </span>
+                {/* SECONDARY: readiness % kept but demoted to the muted
+                    accuracy style (untoned so it stays quiet vs. the count) and
+                    now explicitly labeled — an unlabeled % sitting next to
+                    "Accuracy: X%" reintroduced the readiness-vs-accuracy
+                    ambiguity this task exists to fix (CodeRabbit). */}
+                <span className="cx-cat-accuracy">
+                  {t('readiness.catReadiness', {
+                    pct: Math.round(cat.readiness_percentage),
+                    defaultValue: 'Readiness: {{pct}}%',
+                  })}
+                </span>
                 <span
                   className="cx-cat-accuracy"
                   data-tone={cat.accuracy_percentage !== null ? tone : undefined}
@@ -297,12 +329,13 @@ function CategoryPanel({ categories }: { categories: CategoryReadiness[] }) {
  * Curated set = Accuracy · Learned · Best score · Streak. The readiness donut
  * (hero) owns Readiness%, so it is NOT repeated here; the exam-volume stats
  * (Total exams / Pass rate / Average) are demoted to the recent-attempts meta
- * line, so they are not repeated as cards either (AC-4). Streak stays the
- * unwired `—` placeholder — there is no streak endpoint (AC-8 / Decision 4).
+ * line, so they are not repeated as cards either (AC-4). Streak is now wired to
+ * `readiness.current_streak` (DASH2-02-04) — a real 0 renders "0", and a
+ * readiness failure degrades it to `—` like the other readiness-derived cards.
  *
- * Accuracy / Learned / category count come from readiness; Best score comes
- * from the mock-exam statistics. Both sources can be null (a readiness or stats
- * failure must not block the page, AC-6) — each metric degrades to `—`.
+ * Accuracy / Learned / Streak / category count come from readiness; Best score
+ * comes from the mock-exam statistics. Both sources can be null (a readiness or
+ * stats failure must not block the page, AC-6) — each metric degrades to `—`.
  *
  * NOTE: labels resolve via the `mockExam` namespace — the whole `readiness` key
  * block (including `metricBestScore`) was migrated culture → mockExam in
@@ -350,10 +383,10 @@ const CuratedMetricStrip: React.FC<CuratedMetricStripProps> = ({ readiness, best
     {
       icon: <Flame aria-hidden="true" />,
       label: t('readiness.metricStreak', 'Streak'),
-      value: '—',
+      // `??` (not `||`) so a real 0-day streak renders "0", not the `—`
+      // placeholder. When readiness is null (query failed) this degrades to `—`.
+      value: readiness?.current_streak ?? '—',
       sub: t('readiness.days', 'days'),
-      unwired: true,
-      unwiredLabel: 'Streak — not yet connected to backend data.',
       tone: 'primary',
     },
   ];
@@ -512,6 +545,19 @@ export const MockExamPage: React.FC = () => {
 
   const canStartExam = queueInfo?.can_start_exam ?? false;
 
+  // Resolve + interpolate the motivation copy from its i18n key. An unresolved
+  // key (no translation entry) resolves to '' via defaultValue, which hides the
+  // nudge below — the raw message_key must never reach the DOM (DASH2-02-03).
+  const motivationText = readiness?.motivation
+    ? // message_key is a backend-provided i18n key (runtime-dynamic string), which
+      // cannot satisfy strictKeyChecks' literal-key constraint statically — call t()
+      // through a loosened signature. defaultValue: '' resolves an unknown key to ''.
+      (t as (key: string, opts: Record<string, unknown>) => string)(
+        readiness.motivation.message_key,
+        { ...readiness.motivation.params, defaultValue: '' }
+      )
+    : '';
+
   return (
     <div className="space-y-6 pb-8" data-testid="mock-exam-page">
       {/* Breadcrumb */}
@@ -551,13 +597,13 @@ export const MockExamPage: React.FC = () => {
           {/* Readiness hero (only when readiness data is present) */}
           {readiness && <ReadinessHero readiness={readiness} />}
 
-          {/* Motivation nudge (only when set) */}
-          {readiness?.motivation && (
+          {/* Motivation nudge (only when set AND the copy resolves non-empty) */}
+          {readiness?.motivation && motivationText && (
             <div className="cx-nudge" role="note">
               <span className="cx-nudge-icon">
                 <Zap aria-hidden="true" />
               </span>
-              <span>{readiness.motivation.message_key}</span>
+              <span>{motivationText}</span>
             </div>
           )}
 

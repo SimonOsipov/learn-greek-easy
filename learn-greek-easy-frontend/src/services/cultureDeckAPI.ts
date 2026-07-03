@@ -176,6 +176,8 @@ export interface CultureReadinessResponse {
   total_answers: number;
   categories: CategoryReadiness[];
   motivation: MotivationMessage | null;
+  /** Consecutive-day study streak (DASH2-02-04) — wires the Streak metric tile. */
+  current_streak: number;
 }
 
 // ============================================
