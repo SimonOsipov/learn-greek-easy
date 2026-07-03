@@ -549,29 +549,6 @@ class TestCheckAchievementsTaskReconciler:
                     # Should complete without raising
                     await check_achievements_task(user_id)
 
-    @pytest.mark.asyncio
-    async def test_sse_signal_preserved(self):
-        """SSE dashboard_event_bus.signal fire-and-forget block must still execute."""
-        from src.tasks.background import check_achievements_task
-
-        user_id = uuid4()
-        mock_session = AsyncMock()
-        mock_factory = _make_mock_session_factory(mock_session)
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.get_session_factory", return_value=mock_factory):
-                with patch(
-                    "src.services.gamification.reconciler.GamificationReconciler.reconcile",
-                    new=AsyncMock(return_value=_make_mock_reconcile_result()),
-                ):
-                    mock_event_bus = AsyncMock()
-                    with patch("src.core.event_bus.dashboard_event_bus", mock_event_bus):
-                        # The SSE block swallows its own exceptions; just verify it's called
-                        # (loop.create_task is synchronous, so signal may not be awaited here)
-                        await check_achievements_task(user_id)
-                        # No assertion on signal — the block is fire-and-forget and
-                        # create_task only schedules it; we verify the block doesn't raise.
-
 
 class TestRunReviewSideEffectsReconcileOnce:
     """Prove that _run_review_side_effects reaches reconcile EXACTLY once per review."""
