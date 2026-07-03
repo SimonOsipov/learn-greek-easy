@@ -9,12 +9,13 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
-from src.db.models import User
+from src.db.models import ExerciseModality, User
 from src.tasks import invalidate_cache_task
 from tests.factories.exercise import ExerciseFactory, ExerciseRecordFactory
 from tests.factories.situation import SituationFactory
 from tests.factories.situation_description import (
     DescriptionExerciseFactory,
+    DescriptionExerciseItemFactory,
     SituationDescriptionFactory,
 )
 
@@ -325,6 +326,159 @@ class TestExerciseQueueSituationFilter:
         exercise_ids = [e["exercise_id"] for e in data["exercises"]]
         assert str(exercise_listening.id) in exercise_ids
         assert data["total_in_queue"] >= 1
+
+
+@pytest.mark.integration
+class TestExerciseQueueSummaryMode:
+    """Tests for GET /api/v1/exercises/queue?summary=true (PERF-17-03).
+
+    [CI-deferred: requires Postgres via db_session/client fixtures — not
+    locally runnable in this sandbox; confirmed collection-clean only
+    (`pytest --collect-only`), actual pass/fail must be observed in CI.]
+
+    test_queue_summary_true_returns_slim_items (T03-3) is RED today for the
+    right reason: `summary` is not yet a Query param on the endpoint, so
+    `?summary=true` is silently ignored (FastAPI does not 422 on unknown
+    query params) and the endpoint returns full, unslimmed items -> the
+    slim-field assertions fail.
+
+    test_queue_without_summary_keeps_full_item_payload (T03-4) is a
+    regression guard, not a RED spec: it asserts pre-existing default-path
+    behavior (no summary param at all) that already holds today and must
+    keep holding once summary mode is added -- it is expected to PASS now.
+    """
+
+    @pytest.mark.asyncio
+    async def test_queue_summary_true_returns_slim_items(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+    ) -> None:
+        """T03-3: GET /exercises/queue?summary=true -> 200 ExerciseQueue with
+        slim items: heavy fields (items, word_timestamps, description_text_el,
+        description_audio_url) nulled/empty on every item, while light fields
+        (exercise_type, modality, audio_level) stay populated.
+
+        Covers both branches of the modality-driven heavy-field split so all
+        four heavy fields get a real (non-incidentally-null) value to null:
+        a READING exercise carries description_text_el + items; a LISTENING
+        exercise carries description_audio_url + word_timestamps + items.
+        """
+        # READING exercise: description_text_el + items populated in full mode
+        situation_reading = await SituationFactory.create(session=db_session, ready=True)
+        desc_reading = await SituationDescriptionFactory.create(
+            session=db_session,
+            situation_id=situation_reading.id,
+            audio_ready=True,
+            text_el="Ο Γιάννης πήγε σχολείο.",
+        )
+        de_reading = await DescriptionExerciseFactory.create(
+            session=db_session,
+            description_id=desc_reading.id,
+            modality=ExerciseModality.READING,
+        )
+        await DescriptionExerciseItemFactory.create(
+            session=db_session, description_exercise_id=de_reading.id
+        )
+        exercise_reading = await ExerciseFactory.create(
+            session=db_session, description_exercise_id=de_reading.id
+        )
+
+        # LISTENING exercise: description_audio_url + word_timestamps + items
+        # populated in full mode
+        situation_listening = await SituationFactory.create(session=db_session, ready=True)
+        desc_listening = await SituationDescriptionFactory.create(
+            session=db_session,
+            situation_id=situation_listening.id,
+            audio_ready=True,
+            audio_s3_key="b1/audio.mp3",
+            word_timestamps=[{"word": "Καλημέρα", "start": 0.0, "end": 0.5}],
+        )
+        de_listening = await DescriptionExerciseFactory.create(
+            session=db_session,
+            description_id=desc_listening.id,
+            modality=ExerciseModality.LISTENING,
+        )
+        await DescriptionExerciseItemFactory.create(
+            session=db_session, description_exercise_id=de_listening.id
+        )
+        exercise_listening = await ExerciseFactory.create(
+            session=db_session, description_exercise_id=de_listening.id
+        )
+
+        await db_session.commit()
+
+        with patch("src.services.exercise_sm2_service.get_s3_service") as mock_s3:
+            mock_s3.return_value.generate_presigned_url.side_effect = lambda k, **kwargs: (
+                f"https://cdn/{k}" if k else None
+            )
+            response = await client.get(QUEUE_URL, params={"summary": "true"}, headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        exercises_by_id = {e["exercise_id"]: e for e in data["exercises"]}
+        assert str(exercise_reading.id) in exercises_by_id
+        assert str(exercise_listening.id) in exercises_by_id
+
+        for item in (
+            exercises_by_id[str(exercise_reading.id)],
+            exercises_by_id[str(exercise_listening.id)],
+        ):
+            # Heavy fields: nulled/empty
+            assert item["items"] == []
+            assert item["word_timestamps"] is None
+            assert item["description_text_el"] is None
+            assert item["description_audio_url"] is None
+            # Light fields: still populated
+            assert item["exercise_type"] is not None
+            assert item["modality"] is not None
+            assert item["source_type"] == "description"
+
+    @pytest.mark.asyncio
+    async def test_queue_without_summary_keeps_full_item_payload(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+    ) -> None:
+        """T03-4: GET /exercises/queue (no summary param) is byte-for-byte
+        unchanged -- a description item still carries its full items payload
+        and audio url. Practice-session regression guard: the default path
+        must not be affected by adding the opt-in summary mode.
+        """
+        situation = await SituationFactory.create(session=db_session, ready=True)
+        description = await SituationDescriptionFactory.create(
+            session=db_session,
+            situation_id=situation.id,
+            audio_ready=True,
+            audio_s3_key="b1/audio.mp3",
+        )
+        description_exercise = await DescriptionExerciseFactory.create(
+            session=db_session,
+            description_id=description.id,
+            modality=ExerciseModality.LISTENING,
+        )
+        await DescriptionExerciseItemFactory.create(
+            session=db_session, description_exercise_id=description_exercise.id
+        )
+        exercise = await ExerciseFactory.create(
+            session=db_session, description_exercise_id=description_exercise.id
+        )
+        await db_session.commit()
+
+        with patch("src.services.exercise_sm2_service.get_s3_service") as mock_s3:
+            mock_s3.return_value.generate_presigned_url.side_effect = lambda k, **kwargs: (
+                f"https://cdn/{k}" if k else None
+            )
+            response = await client.get(QUEUE_URL, headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        item = next(e for e in data["exercises"] if e["exercise_id"] == str(exercise.id))
+        assert item["items"] != []
+        assert item["description_audio_url"] is not None
+        assert "b1/audio.mp3" in item["description_audio_url"]
 
 
 # =============================================================================

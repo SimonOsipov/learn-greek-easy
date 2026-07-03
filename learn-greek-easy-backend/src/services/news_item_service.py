@@ -39,6 +39,8 @@ from src.schemas.news_item import (
     NewsItemListResponse,
     NewsItemResponse,
     NewsItemUpdate,
+    NewsSlimItem,
+    NewsSlimListResponse,
 )
 from src.services.picture_prompt import resolve_picture_style_en
 from src.services.s3_service import (
@@ -259,6 +261,64 @@ class NewsItemService:
             page=page,
             page_size=page_size,
             items=[self._to_response(row[0], row[1], row[2], row[3]) for row in rows],
+            country_counts=country_counts,
+            audio_count=audio_count,
+            b1_audio_count=b1_audio_count,
+            b1_pending_regen_count=b1_pending_regen_count,
+        )
+
+    async def get_list_slim(
+        self,
+        *,
+        page: int = 1,
+        page_size: int = 20,
+        country: NewsCountry | None = None,
+        published_only: bool = True,
+        q: str | None = None,
+    ) -> NewsSlimListResponse:
+        """Get a paginated list of news items in the card-only slim shape (PERF-17-01).
+
+        Mirrors ``get_list`` exactly — SAME repo rows and SAME count queries, so
+        the envelope (``total``/``country_counts``/``audio_count``/
+        ``b1_audio_count``/``b1_pending_regen_count``) is byte-identical — but
+        serializes each row via ``_to_slim_item`` instead of ``_to_response``,
+        dropping the reader-only ``word_timestamps``/``word_timestamps_a2`` and
+        the ``linked_situation`` dialog-graph assembly. Backs the public
+        ``GET /news`` feed and PERF-15's dashboard-summary news gather (D1/D2);
+        the admin list stays on the full ``get_list``.
+
+        Args:
+            page: Page number (1-indexed)
+            page_size: Number of items per page
+            country: Optional country filter
+            published_only: Exclude drafts (default True, for the public feed).
+            q: Optional search term (accent+case-insensitive substring across
+               title, body, a2-body, and source URL).
+
+        Returns:
+            NewsSlimListResponse with paginated slim news items and country counts
+        """
+        skip = (page - 1) * page_size
+        rows = await self.repo.get_list(
+            skip=skip, limit=page_size, country=country, published_only=published_only, q=q
+        )
+        total = await self.repo.count_all(country=country, published_only=published_only, q=q)
+        audio_count = await self.repo.count_with_audio(
+            country=country, published_only=published_only
+        )
+        # F2: count_by_country is filtered by q ONLY — not by the selected country —
+        # so country pills show per-country totals within the q-filtered set.
+        country_counts = await self.repo.count_by_country(published_only=published_only, q=q)
+        b1_audio_count = await self.repo.count_with_b1_audio(published_only=published_only)
+        b1_pending_regen_count = await self.repo.count_b1_pending_regen(
+            published_only=published_only
+        )
+
+        return NewsSlimListResponse(
+            total=total,
+            page=page,
+            page_size=page_size,
+            items=[self._to_slim_item(row[0], row[1], row[2]) for row in rows],
             country_counts=country_counts,
             audio_count=audio_count,
             b1_audio_count=b1_audio_count,
@@ -579,6 +639,60 @@ class NewsItemService:
             linked_situation=linked_situation,
             created_at=news_item.created_at,
             updated_at=news_item.updated_at,
+        )
+
+    def _to_slim_item(
+        self,
+        news_item: NewsItem,
+        situation: Situation,
+        description: SituationDescription,
+    ) -> NewsSlimItem:
+        """Assemble a card-only ``NewsSlimItem`` from JOIN data (PERF-17-01).
+
+        Presigns only the image + audio URLs the ``/news`` ``NewsCard`` renders
+        inline and SKIPS ``word_timestamps``/``word_timestamps_a2`` plus the
+        ``linked_situation`` dialog-graph assembly (reader-only / unused by the
+        card). Every kept field maps IDENTICALLY to ``_to_response`` for
+        byte-parity — notably ``title_el`` maps to ``situation.scenario_el``
+        (NOT ``situation.title_el``), matching the full list DTO and keeping
+        ``/dashboard/summary`` unchanged (D2). The ``picture`` row (row[3]) is
+        deliberately ignored — the card does not render picture fields.
+
+        Args:
+            news_item: The NewsItem ORM object.
+            situation: The linked Situation ORM object.
+            description: The linked SituationDescription ORM object.
+        """
+        image_url = self.s3_service.generate_presigned_url(
+            situation.source_image_s3_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
+        )
+        _raw_image_variants = (
+            self.s3_service.get_derivative_presigned_urls(situation.source_image_s3_key)
+            if situation.source_image_s3_key
+            else None
+        )
+        image_variants = _raw_image_variants if isinstance(_raw_image_variants, dict) else None
+        audio_url = self.s3_service.generate_presigned_url(description.audio_s3_key)
+        audio_a2_url = self.s3_service.generate_presigned_url(description.audio_a2_s3_key)
+
+        return NewsSlimItem(
+            id=news_item.id,
+            situation_id=news_item.situation_id,
+            title_el=situation.scenario_el or "",
+            title_en=situation.scenario_en or "",
+            title_ru=situation.scenario_ru or "",
+            title_el_a2=situation.scenario_el_a2,
+            description_el=description.text_el or "",
+            description_el_a2=description.text_el_a2,
+            publication_date=news_item.publication_date,
+            country=description.country.value if description.country else "cyprus",
+            original_article_url=news_item.original_article_url,
+            image_url=image_url,
+            image_variants=image_variants or None,
+            audio_url=audio_url,
+            audio_duration_seconds=description.audio_duration_seconds,
+            audio_a2_url=audio_a2_url,
+            audio_a2_duration_seconds=description.audio_a2_duration_seconds,
         )
 
 

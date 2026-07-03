@@ -101,7 +101,11 @@ class DashboardSummaryService:
         core stats/decks composed in ``build()`` stay hard-failing.
         """
         try:
-            news_response = await NewsItemService(self.db).get_list(page_size=_NEWS_PAGE_SIZE)
+            # PERF-17-01 (D2): the slim path drops word_timestamps/linked_situation
+            # from the DB-read + serialize for these 6 items, which _gather_news
+            # discarded anyway. SlimNews.from_full maps the shared card fields, so
+            # the /dashboard/summary response stays byte-identical.
+            news_response = await NewsItemService(self.db).get_list_slim(page_size=_NEWS_PAGE_SIZE)
             return [SlimNews.from_full(item) for item in news_response.items]
         except Exception:
             logger.opt(exception=True).warning(

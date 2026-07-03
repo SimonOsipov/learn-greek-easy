@@ -280,6 +280,87 @@ class NewsItemListResponse(BaseModel):
     )
 
 
+class NewsSlimItem(BaseModel):
+    """Card-only slim news item for the public `/news` list (PERF-17-01).
+
+    Carries every field the `/news` `NewsCard` renders inline (title + A2
+    title, 3-line description body + A2 body, inline mini audio-player, image
+    + WebP variants, country/date/source link) but deliberately DROPS the
+    reader-only heavy fields the full ``NewsItemResponse`` ships for every
+    list row: ``word_timestamps``/``word_timestamps_a2`` (the dominant bytes),
+    the ``linked_situation`` dialog-graph, ``description_en/ru``, ``status``,
+    ``alt_text``/``photo_credit``, and the audio/created/updated metadata. The
+    in-app reader hydrates the dropped karaoke timings from ``GET /news/{id}``
+    (which stays on the full ``NewsItemResponse``). This slim item is a
+    superset of the dashboard-feed ``SlimNews`` (see D1).
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    situation_id: UUID
+    title_el: str
+    title_en: str
+    title_ru: str
+    title_el_a2: Optional[str] = None
+    description_el: str
+    description_el_a2: Optional[str] = None
+    publication_date: date
+    country: str = Field(..., description="Country/region this news item belongs to")
+    original_article_url: str
+    image_url: Optional[str] = Field(None, description="Presigned S3 URL for the image")
+    image_variants: Optional[dict[int, str]] = Field(None, description="WebP derivatives by width")
+    audio_url: Optional[str] = Field(None, description="Presigned S3 URL for the audio narration")
+    audio_duration_seconds: Optional[float] = Field(
+        None, description="Duration of audio narration in seconds"
+    )
+    audio_a2_url: Optional[str] = Field(None, description="Presigned S3 URL for A2 audio narration")
+    audio_a2_duration_seconds: Optional[float] = Field(
+        None, description="Duration of A2 audio narration in seconds"
+    )
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def has_a2_content(self) -> bool:
+        """Whether this news item has A2-level content (both A2 fields present)."""
+        return bool(self.title_el_a2 and self.description_el_a2)
+
+
+class NewsSlimListResponse(BaseModel):
+    """Paginated list of slim news items (PERF-17-01).
+
+    Same envelope as ``NewsItemListResponse`` (``total``/``page``/``page_size``/
+    ``country_counts``/``audio_count``/``b1_audio_count``/``b1_pending_regen_count``)
+    — only ``items`` is the card-only ``NewsSlimItem`` instead of the full
+    ``NewsItemResponse``.
+    """
+
+    total: int = Field(..., ge=0)
+    page: int = Field(..., ge=1)
+    page_size: int = Field(..., ge=1, le=50)
+    items: list[NewsSlimItem]
+    country_counts: CountryCounts = Field(
+        default_factory=CountryCounts, description="Count of news items per country"
+    )
+    audio_count: int = Field(0, ge=0, description="Total number of news items with audio")
+    b1_audio_count: int = Field(
+        0,
+        ge=0,
+        description=(
+            "Number of news items whose linked Situation has 'B1' in levels "
+            "AND SituationDescription.audio_s3_key is non-null (B1 audio generated)."
+        ),
+    )
+    b1_pending_regen_count: int = Field(
+        0,
+        ge=0,
+        description=(
+            "Number of news items whose linked Situation has 'B1' in levels "
+            "BUT SituationDescription.audio_s3_key is null (B1 audio not yet generated)."
+        ),
+    )
+
+
 # ============================================================================
 # Module Exports
 # ============================================================================
@@ -293,4 +374,6 @@ __all__ = [
     "NewsItemUpdate",
     "NewsItemResponse",
     "NewsItemListResponse",
+    "NewsSlimItem",
+    "NewsSlimListResponse",
 ]
