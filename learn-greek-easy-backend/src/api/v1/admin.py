@@ -33,6 +33,7 @@ from sqlalchemy.orm import selectinload
 from starlette.responses import StreamingResponse
 
 from src.config import settings
+from src.core.cache import get_cache
 from src.core.dependencies import SSEAuthResult, get_current_superuser, get_sse_auth
 from src.core.exceptions import (
     ConflictException,
@@ -1944,6 +1945,10 @@ async def create_news_item(
     # if the request session hasn't committed, the BG task either races or sees no row.
     await db.commit()
 
+    # Invalidate the public news:list:* cache AFTER the commit so a concurrent
+    # GET /news can't re-cache the pre-commit state (D11/F3).
+    await get_cache().delete_pattern("news:list:*")
+
     if settings.feature_background_tasks:
         background_tasks.add_task(
             generate_picture_task,
@@ -2009,6 +2014,12 @@ async def update_news_item(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+    # Explicit commit before invalidation: get_db defers its commit until AFTER
+    # the handler returns, so without this a concurrent GET /news could re-cache
+    # the pre-write row between delete_pattern and the deferred commit (D11/F3).
+    await db.commit()
+    await get_cache().delete_pattern("news:list:*")
+
     return result
 
 
@@ -2039,6 +2050,12 @@ async def delete_news_item(
     """
     service = NewsItemService(db)
     await service.delete(news_item_id)
+
+    # Explicit commit before invalidation: get_db defers its commit until AFTER
+    # the handler returns, so without this a concurrent GET /news could re-cache
+    # the pre-delete row between delete_pattern and the deferred commit (D11/F3).
+    await db.commit()
+    await get_cache().delete_pattern("news:list:*")
 
 
 # ============================================================================

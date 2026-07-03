@@ -92,6 +92,10 @@ class Settings(BaseSettings):
         default=300,
         description="Deck list cache TTL in seconds (5 minutes)",
     )
+    cache_news_list_ttl: int = Field(
+        default=300,
+        description="Public news list cache TTL in seconds (5 minutes)",
+    )
     cache_deck_detail_ttl: int = Field(
         default=600,
         description="Individual deck cache TTL in seconds (10 minutes)",

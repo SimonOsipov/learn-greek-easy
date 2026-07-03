@@ -7,12 +7,17 @@ This module provides public endpoints for news items:
 All endpoints are public (no authentication required).
 """
 
+import hashlib
+import json
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request, Response
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import settings
+from src.core.cache import get_cache
 from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import NewsCountry
@@ -22,6 +27,41 @@ from src.services.news_item_service import NewsItemService
 logger = get_logger(__name__)
 
 router = APIRouter()
+
+_NEWS_CACHE_CONTROL = "public, max-age=300"
+
+
+def _news_cache_key(
+    country: Optional[NewsCountry],
+    q: Optional[str],
+    page: int,
+    page_size: int,
+) -> str:
+    """Build the shared Redis key for the public news list.
+
+    The free-text ``q`` is HASHED (never embedded verbatim) so two distinct
+    colon-laden values can't collide against the ``:`` key separator (F5); a
+    blank/whitespace-only or absent ``q`` collapses to the literal ``none``
+    segment, and an absent country to ``all`` (mirrors the deck-list precedent
+    at ``src/api/v1/decks.py``).
+    """
+    country_seg = country.value if country else "all"
+    if q and q.strip():
+        q_hash = hashlib.sha1(q.strip().lower().encode()).hexdigest()[:16]
+    else:
+        q_hash = "none"
+    return f"news:list:{country_seg}:{q_hash}:{page}:{page_size}"
+
+
+def _news_etag(body: dict) -> str:
+    """Compute a strong ETag over the serialized slim-list body.
+
+    Uses a stable canonical JSON dump (sorted keys, no whitespace) so the ETag
+    is deterministic for identical content within a TTL window (presigned URLs
+    are floor-stable, so the body/ETag don't churn — D8).
+    """
+    canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), default=str)
+    return '"' + hashlib.sha1(canonical.encode()).hexdigest() + '"'
 
 
 @router.get(
@@ -73,6 +113,8 @@ router = APIRouter()
     },
 )
 async def list_news_items(
+    request: Request,
+    response: Response,
     page: int = Query(default=1, ge=1, description="Page number"),
     page_size: int = Query(default=10, ge=1, le=50, description="Items per page"),
     country: Optional[NewsCountry] = Query(
@@ -87,14 +129,24 @@ async def list_news_items(
         ),
     ),
     db: AsyncSession = Depends(get_db),
-) -> NewsSlimListResponse:
+) -> NewsSlimListResponse | Response:
     """Get paginated list of news items in the card-only slim shape (public, no auth).
 
     Returns news items ordered by publication date (newest first). Slim items
     drop the reader-only word_timestamps / linked_situation and card-unused
     metadata (PERF-17-01); the reader fetches those from GET /news/{id}.
 
+    HTTP + Redis cacheable (PERF-17-02): the public (published-only) list is
+    served through a shared Redis entry keyed by
+    ``news:list:{country}:{q_hash}:{page}:{page_size}`` and carries
+    ``Cache-Control: public, max-age=300`` plus a strong ETag. A matching
+    ``If-None-Match`` short-circuits to a 304 with an empty body. No ``Vary``
+    header — the slim item carries all locales, so the body is
+    locale-independent (D6).
+
     Args:
+        request: Incoming request (read for If-None-Match — injected)
+        response: Outgoing response (Cache-Control/ETag headers — injected)
         page: Page number (1-indexed)
         page_size: Number of items per page (max 50)
         country: Optional country filter (cyprus, greece, or world)
@@ -105,7 +157,38 @@ async def list_news_items(
         NewsSlimListResponse with paginated slim news items
     """
     service = NewsItemService(db)
-    return await service.get_list_slim(page=page, page_size=page_size, country=country, q=q)
+    cache = get_cache()
+    key = _news_cache_key(country=country, q=q, page=page, page_size=page_size)
+
+    async def _factory() -> dict:
+        result = await service.get_list_slim(page=page, page_size=page_size, country=country, q=q)
+        return result.model_dump(mode="json")
+
+    cached = await cache.get_or_set(key, _factory, ttl=settings.cache_news_list_ttl)  # type: ignore[arg-type]
+
+    if cached is not None:
+        try:
+            body = NewsSlimListResponse.model_validate(cached)
+            body_dict = cached
+        except ValidationError:
+            body = await service.get_list_slim(page=page, page_size=page_size, country=country, q=q)
+            body_dict = body.model_dump(mode="json")
+    else:
+        body = await service.get_list_slim(page=page, page_size=page_size, country=country, q=q)
+        body_dict = body.model_dump(mode="json")
+
+    etag = _news_etag(body_dict)
+
+    # If-None-Match match -> 304 with empty body (bypasses response_model).
+    if request.headers.get("if-none-match") == etag:
+        return Response(
+            status_code=304,
+            headers={"ETag": etag, "Cache-Control": _NEWS_CACHE_CONTROL},
+        )
+
+    response.headers["Cache-Control"] = _NEWS_CACHE_CONTROL
+    response.headers["ETag"] = etag
+    return body
 
 
 @router.get(
