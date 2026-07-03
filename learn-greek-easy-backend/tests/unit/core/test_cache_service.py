@@ -1089,6 +1089,49 @@ class TestCacheInvalidateUserIdentity:
         )
 
 
+class TestCacheInvalidateUserIdentityNeverRaises:
+    """PERF-16-03 hardening (QA bug#1 carried over from PERF-16-02):
+    invalidate_user_identity must never propagate an exception, even if
+    self.delete's own contract changes -- e.g. a caller/test patches
+    delete() directly (bypassing delete()'s own internal try/except
+    entirely, not just breaking the underlying Redis client it wraps).
+
+    This matters because invalidate_user_identity is the single choke
+    point webhook_service.process_event calls post-commit (see
+    src/services/webhook_service.py ~line 120), and process_event
+    contracts to always return True -- never raise -- even when a
+    handler itself fails. An unguarded raise inside
+    invalidate_user_identity would break that always-return-True Stripe
+    webhook contract.
+
+    RED reason: invalidate_user_identity has no try/except of its own
+    today -- it merely calls self.delete() twice and relies entirely on
+    delete()'s internal error handling. Patching self.delete directly
+    (not the redis layer underneath it) bypasses that internal handling,
+    so the patched exception propagates straight out of
+    invalidate_user_identity, uncaught.
+    """
+
+    @pytest.mark.asyncio
+    async def test_invalidate_user_identity_never_raises_if_delete_raises(self):
+        """A raising self.delete must not propagate out of
+        invalidate_user_identity -- it should degrade to a no-op (return
+        None) rather than crash the caller.
+        """
+        mock_redis = AsyncMock()
+        service = CacheService(redis_client=mock_redis)
+        supabase_id = "sb-never-raise"
+        user_id = uuid4()
+
+        with patch.object(service, "delete", AsyncMock(side_effect=RuntimeError("boom"))):
+            result = await service.invalidate_user_identity(supabase_id, user_id)
+
+        assert result is None, (
+            "Expected invalidate_user_identity to swallow the error from a "
+            f"raising delete() and return None, got {result!r}"
+        )
+
+
 class TestCacheInvalidationSweepsDashboardSummary:
     """PERF-15-04: the dashboard-summary cache key must live under the
     progress:user:{uid}:* namespace so invalidate_user_progress() sweeps it
