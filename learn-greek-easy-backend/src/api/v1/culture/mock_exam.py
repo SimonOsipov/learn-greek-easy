@@ -14,6 +14,7 @@ Endpoints:
 All endpoints require authentication.
 """
 
+import asyncio
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Response, status
@@ -117,6 +118,12 @@ async def get_mock_exam_queue(
     sample_questions = await service.repository.get_random_questions(count=5)
     total_available = len(await service.repository.get_random_questions(count=1000))
 
+    # Batch-sign the <=5 sample image keys in one off-event-loop hop
+    presign_pairs = [
+        (q.image_key, IMAGE_PRESIGN_EXPIRY_SECONDS) for q in sample_questions if q.image_key
+    ]
+    url_map = await asyncio.to_thread(service.s3_service.generate_presigned_urls, presign_pairs)
+
     # Build sample question responses
     sample_data = [
         MockExamQuestionResponse(
@@ -126,13 +133,7 @@ async def get_mock_exam_queue(
             + ([q.option_c] if q.option_c else [])
             + ([q.option_d] if q.option_d else []),
             option_count=q.option_count,
-            image_url=(
-                service.s3_service.generate_presigned_url(
-                    q.image_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
-                )
-                if q.image_key
-                else None
-            ),
+            image_url=url_map.get(q.image_key) if q.image_key else None,
             order_index=q.order_index,
         )
         for q in sample_questions

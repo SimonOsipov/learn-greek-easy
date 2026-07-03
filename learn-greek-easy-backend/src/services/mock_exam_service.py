@@ -27,6 +27,7 @@ Example Usage:
         )
 """
 
+import asyncio
 from datetime import date
 from typing import Any, Optional
 from uuid import UUID
@@ -153,10 +154,11 @@ class MockExamService:
             total_questions=len(random_questions),
         )
 
-        # Build question data with presigned URLs
-        question_data: list[dict[str, Any]] = []
-        for question in random_questions:
-            question_data.append(self._build_question_data(question))
+        # Build question data with batched presigned URLs (one off-loop hop)
+        url_map = await self._batch_sign_image_urls(random_questions)
+        question_data: list[dict[str, Any]] = [
+            self._build_question_data(question, url_map) for question in random_questions
+        ]
 
         await self.db.commit()
 
@@ -501,20 +503,47 @@ class MockExamService:
     # Private Helper Methods
     # =========================================================================
 
-    def _build_question_data(self, question: CultureQuestion) -> dict[str, Any]:
-        """Build question data dict with presigned image URL.
+    async def _batch_sign_image_urls(
+        self,
+        questions: list[CultureQuestion],
+    ) -> dict[str, Optional[str]]:
+        """Batch-sign every question's image key off the event loop in one hop.
+
+        Collects the truthy image keys across the given questions (dedupe by
+        object key happens inside the S3 service) and dispatches a single
+        ``generate_presigned_urls`` call via ``asyncio.to_thread``, so the whole
+        lock-serialized signing loop runs off the event loop instead of blocking
+        it once per question.
+
+        Args:
+            questions: CultureQuestion models to collect image keys from
+
+        Returns:
+            Mapping of each unique non-empty image key to its presigned URL
+        """
+        presign_pairs: list[tuple[str, Optional[int]]] = [
+            (question.image_key, IMAGE_PRESIGN_EXPIRY_SECONDS)
+            for question in questions
+            if question.image_key
+        ]
+        return await asyncio.to_thread(self.s3_service.generate_presigned_urls, presign_pairs)
+
+    def _build_question_data(
+        self,
+        question: CultureQuestion,
+        url_map: dict[str, Optional[str]],
+    ) -> dict[str, Any]:
+        """Build question data dict from a pre-signed URL map.
 
         Args:
             question: CultureQuestion model
+            url_map: Pre-signed URL map keyed by object key (from batch signing);
+                a missing key reads as "no URL"
 
         Returns:
             Dict with question data for API response
         """
-        image_url = None
-        if question.image_key:
-            image_url = self.s3_service.generate_presigned_url(
-                question.image_key, expiry_seconds=IMAGE_PRESIGN_EXPIRY_SECONDS
-            )
+        image_url = url_map.get(question.image_key) if question.image_key else None
 
         # Build options array
         options = [question.option_a, question.option_b]
@@ -568,7 +597,8 @@ class MockExamService:
         # If all questions answered, just return those questions
         if len(answered_question_ids) >= session.total_questions:
             questions = await self._get_questions_by_ids(answered_question_ids)
-            return [self._build_question_data(q) for q in questions]
+            url_map = await self._batch_sign_image_urls(questions)
+            return [self._build_question_data(q, url_map) for q in questions]
 
         # Get the questions that were answered
         answered_questions = await self._get_questions_by_ids(answered_question_ids)
@@ -582,7 +612,8 @@ class MockExamService:
             )
             answered_questions.extend(additional)
 
-        return [self._build_question_data(q) for q in answered_questions]
+        url_map = await self._batch_sign_image_urls(answered_questions)
+        return [self._build_question_data(q, url_map) for q in answered_questions]
 
     async def _get_questions_by_ids(
         self,
