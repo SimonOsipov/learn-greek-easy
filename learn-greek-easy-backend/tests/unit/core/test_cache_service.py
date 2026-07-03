@@ -5,7 +5,7 @@ import asyncio
 import json
 import time
 from typing import Any, Dict
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 from uuid import uuid4
 
 import pytest
@@ -1057,6 +1057,36 @@ class TestCacheInvalidateUserIdentity:
             with patch("src.core.cache.get_redis", return_value=None):
                 # Must degrade gracefully -- no exception, no delete attempted.
                 await service.invalidate_user_identity(supabase_id, user_id)
+
+    @pytest.mark.asyncio
+    async def test_invalidate_user_identity_deletes_exactly_two_keys_in_order(self):
+        """QA adversarial: exactly two redis.delete calls, identity key first
+        then user:me key -- not a superset/membership check like
+        test_invalidate_user_identity_deletes_both_keys above, which would
+        pass even if the method issued extra/duplicate deletes.
+
+        Also confirms a UUID (not str) user_id -- the type every real caller
+        passes (User.id) -- builds the user:me:{uuid} key via plain str()
+        interpolation, matching what callers would independently expect.
+        """
+        mock_redis = AsyncMock()
+        supabase_id = "sb-order-check"
+        user_id = uuid4()
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = "cache"
+            service = CacheService(redis_client=mock_redis)
+
+            await service.invalidate_user_identity(supabase_id, user_id)
+
+        assert mock_redis.delete.await_count == 2
+        mock_redis.delete.assert_has_awaits(
+            [
+                call(f"cache:user:identity:{supabase_id}"),
+                call(f"cache:user:me:{user_id}"),
+            ]
+        )
 
 
 class TestCacheInvalidationSweepsDashboardSummary:

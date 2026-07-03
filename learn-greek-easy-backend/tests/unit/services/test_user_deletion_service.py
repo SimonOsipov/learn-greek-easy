@@ -298,6 +298,45 @@ class TestDeleteAccount:
         assert result.success is True
         mock_cache.invalidate_user_identity.assert_awaited_once_with(supabase_id, user_id)
 
+    @pytest.mark.asyncio
+    async def test_delete_account_invalidates_identity_with_none_supabase_id(
+        self, service, mock_user
+    ):
+        """QA adversarial: delete_account(supabase_id=None) must still call
+        invalidate_user_identity (with supabase_id=None) and must not crash.
+
+        User.supabase_id is nullable at the ORM level, and callers of
+        delete_account pass the Optional[str] straight through unchecked
+        (per the invalidate_user_identity docstring). This covers the path
+        where a user has no linked Supabase identity: the helper must still
+        bust user:me:{user_id} rather than skip invalidation entirely.
+        """
+        user_id = mock_user.id
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        mock_cache = AsyncMock()
+        mock_cache.invalidate_user_identity = AsyncMock()
+
+        with (
+            patch(
+                "src.services.user_deletion_service.get_supabase_admin_client",
+                return_value=None,
+            ),
+            patch(
+                "src.services.user_deletion_service.get_cache",
+                return_value=mock_cache,
+                create=True,
+            ),
+        ):
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        assert result.success is True
+        mock_cache.invalidate_user_identity.assert_awaited_once_with(None, user_id)
+
 
 @pytest.mark.unit
 class TestDeletionResult:

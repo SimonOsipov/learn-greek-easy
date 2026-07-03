@@ -1485,3 +1485,56 @@ class TestWebhookIdentityCacheInvalidation:
 
         assert result is True
         mock_cache.invalidate_user_identity.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_touched_user_does_not_leak_across_sequential_events(self):
+        """QA adversarial: _touched_user must not leak from one process_event
+        call to the next on the SAME WebhookService instance.
+
+        A production WebhookService instance is constructed once per request
+        (one per webhook delivery), so in practice there is only ever one
+        process_event call per instance. This test still locks in the entry
+        reset (`self._touched_user = None` at the top of process_event,
+        webhook_service.py:66) as a structural invariant: if a future
+        refactor reused a service instance across events, or moved the
+        reset, a user touched by event N would wrongly have their identity
+        cache busted again on event N+1 even though N+1's own handler found
+        no user (early "user not found" return -- which reaches the
+        post-dispatch invalidation check, unlike an unhandled-type event
+        which exits before it).
+        """
+        user = _make_user(supabase_id="sb_first_event_user")
+        svc = _make_service()
+        svc.user_repo = _make_mock_user_repo(user=user)
+        svc.webhook_repo = _make_mock_webhook_repo()
+
+        mock_cache = AsyncMock()
+        mock_cache.invalidate_user_identity = AsyncMock()
+
+        with (
+            _patch_settings(),
+            patch("src.services.webhook_service.capture_event"),
+            patch(
+                "src.services.webhook_service.get_cache",
+                return_value=mock_cache,
+                create=True,
+            ),
+        ):
+            # Event 1: touches a user -> invalidation fires once.
+            first_result = await svc.process_event(self._make_event(sub_id="sub_first"))
+
+            # Event 2 on the SAME instance: a HANDLED type whose handler
+            # dispatches through the try/except (reaching the post-dispatch
+            # invalidation check) but finds no user for this customer, so it
+            # must never call self._touched_user = user.
+            svc.user_repo = _make_mock_user_repo(user=None)
+            second_result = await svc.process_event(
+                self._make_event(customer="cus_unknown_second_event", sub_id="sub_second")
+                | {"id": "evt_second_no_user"}
+            )
+
+        assert first_result is True
+        assert second_result is True
+        # Exactly one invalidation total (from event 1) -- event 2 must NOT
+        # re-fire for the stale _touched_user left over from event 1.
+        mock_cache.invalidate_user_identity.assert_awaited_once_with(user.supabase_id, user.id)
