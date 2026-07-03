@@ -1055,3 +1055,102 @@ class TestS3ServiceBatchPresign:
         assert (
             calls_by_key["aud"] == 3600
         ), "None expiry must fall through to settings.s3_presigned_url_expiry (3600 in mock_settings_configured)"
+
+    # ------------------------------------------------------------------
+    # QA-added adversarial / edge coverage (PERF-21-01, Mode B)
+    # ------------------------------------------------------------------
+
+    def test_batch_empty_input_returns_empty_dict(self):
+        """No keys at all → empty dict, no error, no S3 client ever touched."""
+        from src.services.s3_service import S3Service
+
+        service = S3Service()
+        assert service.generate_presigned_urls([]) == {}
+
+    def test_batch_all_none_or_empty_keys_returns_empty_dict(self):
+        """Input made entirely of None/empty keys → empty dict, no error (trap4 boundary)."""
+        from src.services.s3_service import S3Service
+
+        service = S3Service()
+        result = service.generate_presigned_urls([(None, None), ("", 1800)])
+        assert result == {}
+
+    def test_batch_key_that_fails_to_sign_is_included_with_none_value(
+        self, mock_settings_not_configured
+    ):
+        """A valid (non-empty) key that fails to sign is a DIFFERENT case from trap4.
+
+        trap4 (empty/None *input* key) omits the key entirely. Here the key itself is
+        valid but S3 is not configured, so the delegated generate_presigned_url(key)
+        returns None. generate_presigned_urls must still record ``key -> None`` in the
+        result (it always does ``result[key] = self.generate_presigned_url(...)``
+        unconditionally for any truthy, not-yet-seen key) — it must NOT silently drop
+        the key, which would make a degraded key indistinguishable from one that was
+        never requested.
+        """
+        from src.services.s3_service import S3Service
+
+        service = S3Service()
+        result = service.generate_presigned_urls([("k1", 1800)])
+
+        assert "k1" in result, (
+            "A valid key that failed to sign must still appear in the result "
+            "(mapped to None) — omitting it conflates 'never requested' with "
+            "'signing degraded', which callers rely on to distinguish."
+        )
+        assert result["k1"] is None
+
+    def test_batch_duplicate_key_different_expiry_first_wins(
+        self, mock_settings_configured, mock_boto3_client
+    ):
+        """Same key repeated with DIFFERENT expiries → first-seen expiry wins (Decision #3).
+
+        Guards against a future change to last-wins: the singular method must be
+        invoked exactly once, with the FIRST expiry (1800), never the second (999).
+        """
+        from src.services.s3_service import S3Service
+
+        mock_client = MagicMock()
+        mock_client.generate_presigned_url.side_effect = (
+            lambda op, Params, ExpiresIn: f"https://signed/{Params['Key']}?exp={ExpiresIn}"
+        )
+        mock_boto3_client.return_value = mock_client
+
+        service = S3Service()
+
+        with patch.object(
+            service, "generate_presigned_url", wraps=service.generate_presigned_url
+        ) as spy:
+            result = service.generate_presigned_urls([("k", 1800), ("k", 999)])
+
+        assert spy.call_count == 1, (
+            "The second occurrence of a duplicate key must be skipped before ever "
+            "reaching generate_presigned_url, regardless of its expiry"
+        )
+        spy.assert_called_once_with("k", expiry_seconds=1800)
+        assert result == {"k": "https://signed/k?exp=1800"}, (
+            "First-seen expiry (1800) must be the one actually signed with — "
+            "999 must be ignored entirely, not merely unused for a second sign"
+        )
+
+    def test_batch_return_shape_is_plain_dict_of_unique_nonempty_keys(
+        self, mock_settings_configured, mock_boto3_client
+    ):
+        """Result is a plain dict whose keys are EXACTLY the unique non-empty input keys."""
+        from src.services.s3_service import S3Service
+
+        mock_client = MagicMock()
+        mock_client.generate_presigned_url.side_effect = (
+            lambda op, Params, ExpiresIn: f"https://signed/{Params['Key']}"
+        )
+        mock_boto3_client.return_value = mock_client
+
+        service = S3Service()
+        result = service.generate_presigned_urls(
+            [("a", 1800), ("b", 1800), ("", 1800), (None, 1800), ("a", 1800)]
+        )
+
+        assert type(result) is dict
+        assert set(result.keys()) == {"a", "b"}
+        assert result["a"] == "https://signed/a"
+        assert result["b"] == "https://signed/b"
