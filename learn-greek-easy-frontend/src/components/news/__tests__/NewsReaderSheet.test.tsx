@@ -821,3 +821,141 @@ describe('detail fetch on open (PERF-17-04)', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------
+// PERF-17-04 (Mode B QA adversarial coverage): guards against a level-in-key
+// refetch regression, stale-article carryover across a close/open cycle, and
+// a detail response that explicitly resolves with no karaoke data.
+//
+// These rerender via a manually-preserved <QueryClientProvider> (same client
+// instance across `rerender` calls) rather than the file's `renderReader`
+// helper, because two PRE-EXISTING tests in this file call the raw RTL
+// `rerender(<NewsReaderSheet .../>)` without re-wrapping the provider — that
+// drops the QueryClientProvider ancestor on rerender and throws "No
+// QueryClient set" (see "level switch swaps body text AND audio" and "audio
+// coordinator > clears audio coordinator when sheet closes"). Flagged
+// separately for an executor fix; not fixed here.
+// ---------------------------------------------------------------------------
+describe('detail fetch on open (PERF-17-04) — QA adversarial coverage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('T04-5: switching CEFR level (B1 → A2) on an open reader does NOT trigger a second getNewsItem call (guards AC#1 against a level-in-key regression)', async () => {
+    const article = createArticle({ has_a2_content: true });
+    const getNewsItemMock = vi.mocked(adminAPI.getNewsItem);
+    getNewsItemMock.mockResolvedValue(article);
+
+    const queryClient = createTestQueryClient();
+    const onLevelChange = vi.fn();
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <NewsReaderSheet
+          article={article}
+          open={true}
+          onOpenChange={vi.fn()}
+          level="b1"
+          onLevelChange={onLevelChange}
+        />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(getNewsItemMock).toHaveBeenCalledTimes(1);
+    });
+
+    // Same article, same query key (level is NOT part of it) — only the level prop changes.
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <NewsReaderSheet
+          article={article}
+          open={true}
+          onOpenChange={vi.fn()}
+          level="a2"
+          onLevelChange={onLevelChange}
+        />
+      </QueryClientProvider>
+    );
+
+    // Let the A2 segment settle (and give an incorrect refetch a chance to fire)
+    // before asserting the call count is unchanged.
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /a2/i })).toHaveAttribute('aria-pressed', 'true');
+    });
+    expect(getNewsItemMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("T04-6: opening article A, closing, then opening article B fetches B's id (not a stale A)", async () => {
+    const articleA = createArticle({ id: 'article-a' });
+    const articleB = createArticle({ id: 'article-b' });
+    const getNewsItemMock = vi.mocked(adminAPI.getNewsItem);
+    getNewsItemMock.mockImplementation((id: string) => Promise.resolve(createArticle({ id })));
+
+    const queryClient = createTestQueryClient();
+    const onOpenChange = vi.fn();
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <NewsReaderSheet
+          article={articleA}
+          open={true}
+          onOpenChange={onOpenChange}
+          level="b1"
+          onLevelChange={vi.fn()}
+        />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(getNewsItemMock).toHaveBeenCalledWith('article-a');
+    });
+
+    // Close — mirrors NewsPage's onOpenChange handler (setOpenArticle(null) + open=false).
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <NewsReaderSheet
+          article={null}
+          open={false}
+          onOpenChange={onOpenChange}
+          level="b1"
+          onLevelChange={vi.fn()}
+        />
+      </QueryClientProvider>
+    );
+
+    // Open a different article.
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <NewsReaderSheet
+          article={articleB}
+          open={true}
+          onOpenChange={onOpenChange}
+          level="b1"
+          onLevelChange={vi.fn()}
+        />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(getNewsItemMock).toHaveBeenCalledWith('article-b');
+    });
+    // Never asked for A again after the initial open.
+    expect(getNewsItemMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('T04-7: detail response resolving with word_timestamps: null leaves karaoke off but body + audio still render (edge of AC#3/AC#5)', async () => {
+    const article = createArticle(); // slim prop: word_timestamps null
+    const detail = createArticle({ word_timestamps: null }); // detail explicitly has no karaoke data either
+    const getNewsItemMock = vi.mocked(adminAPI.getNewsItem);
+    getNewsItemMock.mockResolvedValue(detail);
+
+    renderReaderWithQuery({ article, open: true, level: 'b1' });
+
+    await waitFor(() => {
+      expect(getNewsItemMock).toHaveBeenCalledTimes(1);
+    });
+
+    // Plain paragraph renders — no karaoke spans, no crash, audio unaffected.
+    expect(await screen.findByText('B1 Ελληνική περιγραφή για ανάγνωση.')).toBeInTheDocument();
+    expect(screen.getByTestId('waveform-player')).toBeInTheDocument();
+  });
+});
