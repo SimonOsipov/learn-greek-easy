@@ -49,50 +49,30 @@ module.exports = {
       },
     },
 
-    // Per-URL LCP scoping via assertMatrix (NOT a single top-level `assertions`
-    // block). LHCI assertMatrix entries are ADDITIVE across matching URLs, so the
-    // two matchingUrlPatterns are complementary (each URL matches exactly one
-    // entry) to demote /register without a residual `error` leaking onto it. Every
-    // entry must carry the FULL assertion set (4 categories + LCP), not just the
-    // LCP delta. See PERF-23 story + tracking issue #679.
     assert: {
-      assertMatrix: [
-        {
-          // /register only — mobile LCP demoted to warn pending the real fix,
-          // tracked in https://github.com/SimonOsipov/learn-greek-easy/issues/679.
-          // /register mobile LCP has been the sole persistent red on
-          // release-verify.yml since 2026-06-21; warn (not removed) keeps it
-          // measured so the tracking issue accumulates data.
-          matchingUrlPattern: '.*/register$',
-          assertions: {
-            // Category thresholds (lower performance threshold for mobile)
-            'categories:performance': ['warn', { minScore: 0.7 }],
-            'categories:accessibility': ['error', { minScore: 0.9 }],
-            'categories:best-practices': ['warn', { minScore: 0.8 }],
-            'categories:seo': ['warn', { minScore: 0.8 }],
+      assertions: {
+        // Category thresholds (lower performance threshold for mobile)
+        'categories:performance': ['warn', { minScore: 0.7 }],
+        'categories:accessibility': ['error', { minScore: 0.9 }],
+        'categories:best-practices': ['warn', { minScore: 0.8 }],
+        'categories:seo': ['warn', { minScore: 0.8 }],
 
-            'largest-contentful-paint': ['warn', { maxNumericValue: 4000 }], // demoted — see #679
-          },
-        },
-        {
-          // Everything EXCEPT /register — LCP stays a hard error floor.
-          matchingUrlPattern: '^(?!.*/register$).*$',
-          assertions: {
-            // Category thresholds (lower performance threshold for mobile)
-            'categories:performance': ['warn', { minScore: 0.7 }],
-            'categories:accessibility': ['error', { minScore: 0.9 }],
-            'categories:best-practices': ['warn', { minScore: 0.8 }],
-            'categories:seo': ['warn', { minScore: 0.8 }],
-
-            // LCP gate floor = 4000ms = the "poor" boundary (matches parse-lighthouse-results.cjs
-            // lcp.poor and the Web Vitals poor line). This is the failing FLOOR, not the 2.5s
-            // "good" target — error@2500 would flake on single-run lab noise (numberOfRuns:1,
-            // mobile 4xCPU/4G) and tempt re-adding `|| true`. The 2.5s target is tracked as a
-            // FIELD metric, not enforced as a lab gate.
-            'largest-contentful-paint': ['error', { maxNumericValue: 4000 }],
-          },
-        },
-      ],
+        // LCP gate = error @ 7000ms on ALL three URLs. This is a dev-environment
+        // regression TRIPWIRE (USER decision 2026-07-03), NOT a Web Vitals line:
+        // the observed stable LCP band on shared dev is 5.3-6.3s across all
+        // retained runs (Jun 23 - Jul 2, 2026), so 7000 ≈ observed max + headroom.
+        // The Web Vitals "poor" floor (4000, chosen by PERF-09) is the restore
+        // target once the real LCP fix lands — tracked in the PERF-24 story
+        // (Obsidian: User Stories/PERF/PERF-24 "Get Pre-Auth Mobile LCP Under the
+        // Web Vitals Poor Line"). The 2.5s "good" target stays a FIELD metric, not
+        // enforced as a lab gate — error@2500 would flake on single-run lab noise
+        // (numberOfRuns:1, mobile 4xCPU/4G) and tempt re-adding `|| true`.
+        // NOTE: scripts/parse-lighthouse-results.cjs still uses lcp.poor=4000 to
+        // color the PR-comment bands, so mobile LCP values between 4000-7000ms
+        // will render as "poor" there — informational only, this assertion
+        // (not that script) is what gates the CI job.
+        'largest-contentful-paint': ['error', { maxNumericValue: 7000 }],
+      },
     },
 
     upload: {
