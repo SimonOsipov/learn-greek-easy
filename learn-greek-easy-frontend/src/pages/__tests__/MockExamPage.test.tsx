@@ -121,15 +121,61 @@ vi.mock('react-i18next', async () => {
               'readiness.catCta': `Practice ${opts?.category} — ${opts?.pct}% ready`,
               'readiness.catNoAttempts': 'No attempts yet',
               'readiness.catAccuracy': `Accuracy: ${opts?.pct}%`,
+              'readiness.catReadiness': `Readiness: ${opts?.pct}%`,
+              'readiness.catMastered': `${opts?.mastered} / ${opts?.total} mastered`,
+              'readiness.legend':
+                "Readiness = how far through the whole question bank you are. Mastered = how many you've fully locked in. Accuracy = how often you're right on the ones you've tried.",
               'readiness.verdictNotReady': 'Not Ready',
               'readiness.verdictGettingThere': 'Getting There',
               'readiness.verdictReady': 'Ready',
               'readiness.verdictThoroughlyPrepared': 'Thoroughly Prepared',
               'readiness.donutLabel': 'Ready',
+              // cultureMotivation.* — DASH2-02-03: MockExamPage resolves
+              // readiness.motivation.message_key via
+              // t(message_key, { ...params, defaultValue: '' }). These entries
+              // are written as raw i18next-style templates (`{{param}}`
+              // placeholders), interpolated below — NOT pre-baked with `opts`
+              // like the entries above — so tests can assert real interpolation
+              // and hide-on-unresolved-key behaviour, not just presence of a key.
+              'cultureMotivation.newUser.1':
+                "You've got {{questionsTotal}} questions waiting — let's get started!",
+              'cultureMotivation.improving.ready.1':
+                "You're up to {{currentPercent}}% (from {{previousPercent}}%, +{{delta}}pp) — {{questionsLearned}} of {{questionsTotal}} learned. Keep it up!",
+              // QA (DASH2-02-03 adversarial): a non-"improving" direction, to
+              // guard against a render path that only handles the happy-path
+              // direction exercised by the executor's own tests.
+              'cultureMotivation.stagnant.notReady.1':
+                "You're at {{currentPercent}}% readiness. A short session this week is the quickest way to start climbing toward the pass mark.",
             };
             const val = map[key];
             if (typeof val === 'function') return val(opts);
-            return val ?? key;
+            const isOptsObject = typeof opts === 'object' && opts !== null;
+            // Honor i18next's `defaultValue` option for unmapped keys so callers
+            // that call t(key, { ...params, defaultValue: '' }) resolve an
+            // unknown key to '' instead of the raw key (DASH2-02-03 hide-on-empty).
+            // Guarded on isOptsObject because some callers pass a plain string as
+            // the second arg (e.g. t('breadcrumb.culture', 'Culture')), and `in`
+            // throws on a non-object right-hand side.
+            if (
+              val === undefined &&
+              isOptsObject &&
+              'defaultValue' in (opts as Record<string, unknown>)
+            ) {
+              return String((opts as { defaultValue?: unknown }).defaultValue ?? '');
+            }
+            const resolved = val ?? key;
+            // Interpolate {{paramName}} placeholders using opts, like real
+            // i18next (only the cultureMotivation.* templates above use this
+            // syntax — pre-existing entries are already pre-baked and contain
+            // no {{...}}, so this is a no-op for them).
+            if (isOptsObject) {
+              return resolved.replace(/\{\{(\w+)\}\}/g, (_match, name: string) =>
+                name in (opts as Record<string, unknown>)
+                  ? String((opts as Record<string, unknown>)[name])
+                  : `{{${name}}}`
+              );
+            }
+            return resolved;
           },
           i18n: { language: 'en' },
         };
@@ -181,6 +227,9 @@ function makeReadiness(overrides?: Partial<CultureReadinessResponse>): CultureRe
     total_answers: 0,
     categories: [],
     motivation: null,
+    // DASH2-02-04: Streak tile reads this field. Default 0 matches the rest of
+    // this "empty" fixture's zeroed-out shape.
+    current_streak: 0,
     ...overrides,
   };
 }
@@ -230,6 +279,9 @@ function makeRichReadiness(
       },
     ],
     motivation: null,
+    // DASH2-02-04: non-zero default so tests using the plain (no-override)
+    // fixture exercise the "real streak value" path, not the zero/empty edge.
+    current_streak: 4,
     ...overrides,
   };
 }
@@ -510,8 +562,9 @@ describe('MockExamPage', () => {
       // PRACT2-11-02 removed the old StatsGrid; the page now shows the curated
       // CultureMetricStrip (Accuracy · Learned · Best · Streak). When stats fails
       // but readiness + queue succeed: the launcher still renders, Best degrades
-      // to `—` (best score comes from stats), Streak stays `—` (unwired, no
-      // endpoint), and Accuracy / Learned come from readiness (AC-6).
+      // to `—` (best score comes from stats), Streak is wired to
+      // readiness.current_streak (DASH2-02-04), and Accuracy / Learned come
+      // from readiness (AC-6).
       mockGetStatistics.mockRejectedValue(new Error('Stats unavailable'));
       mockGetReadiness.mockResolvedValue(makeRichReadiness());
       mockGetQuestionQueue.mockResolvedValue(makeQueue({ can_start_exam: true }));
@@ -528,8 +581,9 @@ describe('MockExamPage', () => {
       expect(within(screen.getByTestId('culture-metric-1')).getByText('220')).toBeInTheDocument();
       // Best degrades to `—` because the stats source failed (no best_score).
       expect(within(screen.getByTestId('culture-metric-2')).getByText('—')).toBeInTheDocument();
-      // Streak is the permanently-unwired placeholder `—`.
-      expect(within(screen.getByTestId('culture-metric-3')).getByText('—')).toBeInTheDocument();
+      // Streak is wired to readiness.current_streak (DASH2-02-04) — 4 here from
+      // the rich fixture default, independent of the stats failure above.
+      expect(within(screen.getByTestId('culture-metric-3')).getByText('4')).toBeInTheDocument();
       // Sanity: there is no leftover StatsGrid — the strip is the only metric block.
       expect(strip).toBeInTheDocument();
     });
@@ -603,11 +657,12 @@ describe('MockExamPage', () => {
       render(<MockExamPage />);
 
       await screen.findByTestId('culture-metric-strip');
-      // 0 Accuracy → 72 · 1 Learned → 220 · 2 Best → 88 (stats) · 3 Streak → `—`.
+      // 0 Accuracy → 72 · 1 Learned → 220 · 2 Best → 88 (stats) · 3 Streak → 4
+      // (readiness.current_streak, DASH2-02-04).
       expect(within(screen.getByTestId('culture-metric-0')).getByText('72')).toBeInTheDocument();
       expect(within(screen.getByTestId('culture-metric-1')).getByText('220')).toBeInTheDocument();
       expect(within(screen.getByTestId('culture-metric-2')).getByText('88')).toBeInTheDocument();
-      expect(within(screen.getByTestId('culture-metric-3')).getByText('—')).toBeInTheDocument();
+      expect(within(screen.getByTestId('culture-metric-3')).getByText('4')).toBeInTheDocument();
     });
 
     it('renders category rows weakest-first with a "Practice {weakest}" CTA to its deck', async () => {
@@ -628,6 +683,15 @@ describe('MockExamPage', () => {
 
       // A category with null accuracy shows the "No attempts yet" fallback.
       expect(screen.getByText('No attempts yet')).toBeInTheDocument();
+
+      // DASH2-02-05: each row leads with a "X / Y mastered" figure sourced
+      // from questions_mastered / questions_total (history = 25 / 110).
+      expect(screen.getByTestId('cat-mastered-history')).toHaveTextContent('25 / 110 mastered');
+      // The one-line legend distinguishing the three row figures (Readiness +
+      // Mastered = coverage, Accuracy = correctness) renders once.
+      expect(
+        screen.getByText(/Readiness = how far through the whole question bank/i)
+      ).toBeInTheDocument();
     });
 
     it('renders the hero ghost "Practice {weakest}" CTA pointing at the weakest deck', async () => {
@@ -641,21 +705,165 @@ describe('MockExamPage', () => {
     });
 
     it('renders the motivation nudge when motivation is set', async () => {
+      // DASH2-02-03: message_key is an i18n key resolved (+ interpolated) via
+      // t(), not raw display text — mock resolves 'cultureMotivation.newUser.1'
+      // to a template containing {{questionsTotal}}.
       mockGetReadiness.mockResolvedValue(
         makeRichReadiness({
           motivation: {
-            message_key: 'You are making great progress!',
-            params: {},
-            delta_direction: 'improving',
-            delta_percentage: 5,
+            message_key: 'cultureMotivation.newUser.1',
+            params: { questionsTotal: 490 },
+            delta_direction: 'new_user',
+            delta_percentage: 0,
           },
         })
       );
 
       render(<MockExamPage />);
 
-      const nudge = await screen.findByText('You are making great progress!');
-      expect(nudge).toBeInTheDocument();
+      const nudge = await screen.findByRole('note');
+      expect(nudge).toHaveTextContent("You've got 490 questions waiting — let's get started!");
+    });
+
+    // DASH2-02-03: message_key must be resolved + interpolated via t(), never
+    // rendered as the raw i18n key.
+    it('renders interpolated motivation copy, never the raw key', async () => {
+      mockGetReadiness.mockResolvedValue(
+        makeRichReadiness({
+          motivation: {
+            message_key: 'cultureMotivation.newUser.1',
+            params: { questionsTotal: 490 },
+            delta_direction: 'new_user',
+            delta_percentage: 0,
+          },
+        })
+      );
+
+      render(<MockExamPage />);
+
+      const nudge = await screen.findByRole('note');
+      expect(nudge).toHaveTextContent('490');
+      expect(document.body.textContent).not.toContain('cultureMotivation.');
+    });
+
+    it('interpolates returning-user motivation params', async () => {
+      mockGetReadiness.mockResolvedValue(
+        makeRichReadiness({
+          motivation: {
+            message_key: 'cultureMotivation.improving.ready.1',
+            params: {
+              currentPercent: 62,
+              previousPercent: 55,
+              delta: 7,
+              questionsTotal: 490,
+              questionsLearned: 300,
+            },
+            delta_direction: 'improving',
+            delta_percentage: 7,
+          },
+        })
+      );
+
+      render(<MockExamPage />);
+
+      const nudge = await screen.findByRole('note');
+      expect(nudge).toHaveTextContent('62');
+      expect(nudge).toHaveTextContent('55');
+      expect(nudge).toHaveTextContent('300');
+      expect(nudge).toHaveTextContent('490');
+      expect(nudge.textContent).not.toContain('{{');
+    });
+
+    // QA (DASH2-02-03 adversarial): the executor's own tests only exercise
+    // 'new_user' and 'improving' delta_direction motivation copy. Guard that a
+    // 'stagnant' direction — a real authored key, not a happy-path pick — also
+    // resolves + interpolates correctly, not just the directions the executor
+    // happened to test.
+    it('renders interpolated motivation copy for a stagnant (non-improving) direction', async () => {
+      mockGetReadiness.mockResolvedValue(
+        makeRichReadiness({
+          motivation: {
+            message_key: 'cultureMotivation.stagnant.notReady.1',
+            params: { currentPercent: 58 },
+            delta_direction: 'stagnant',
+            delta_percentage: 0,
+          },
+        })
+      );
+
+      render(<MockExamPage />);
+
+      const nudge = await screen.findByRole('note');
+      expect(nudge).toHaveTextContent('58');
+      expect(nudge.textContent).not.toContain('{{');
+      expect(document.body.textContent).not.toContain('cultureMotivation.');
+    });
+
+    // QA (DASH2-02-03 adversarial): the motivation nudge and the "not enough
+    // questions" warning share the exact same markup shape (`className="cx-nudge"
+    // role="note"`), so when both conditions hold simultaneously
+    // (!canStartExam && queueInfo, AND readiness?.motivation set) two role="note"
+    // elements coexist on the page. A caller using the singular
+    // `getByRole('note')` would throw "found multiple elements" here — assert
+    // both render independently, with no cross-contamination of content.
+    it('renders both the motivation nudge and the not-enough-questions warning without collision', async () => {
+      mockGetQuestionQueue.mockResolvedValue(
+        makeQueue({ can_start_exam: false, available_questions: 10 })
+      );
+      mockGetReadiness.mockResolvedValue(
+        makeRichReadiness({
+          motivation: {
+            message_key: 'cultureMotivation.newUser.1',
+            params: { questionsTotal: 490 },
+            delta_direction: 'new_user',
+            delta_percentage: 0,
+          },
+        })
+      );
+
+      render(<MockExamPage />);
+
+      await screen.findByLabelText('45% readiness');
+
+      const notes = screen.getAllByRole('note');
+      expect(notes).toHaveLength(2);
+
+      const motivationNote = notes.find((n) => n.textContent?.includes('490'));
+      const warningNote = notes.find((n) => n.textContent?.includes('Not enough questions'));
+
+      expect(motivationNote).toBeDefined();
+      expect(warningNote).toBeDefined();
+      expect(motivationNote).not.toBe(warningNote);
+      // Neither nudge's content leaks into the other.
+      expect(motivationNote?.textContent).not.toContain('Not enough questions');
+      expect(warningNote?.textContent).not.toContain('cultureMotivation.');
+      // The disabled start button confirms canStartExam is actually false here
+      // (not a false-positive from a queue mock that didn't take effect).
+      expect(screen.getByTestId('start-exam-button')).toBeDisabled();
+    });
+
+    it('hides the nudge when the motivation key is unresolved', async () => {
+      // message_key has no entry in the i18n map, so t(key, { defaultValue: '' })
+      // resolves to '' — the nudge must not render at all (not even empty).
+      mockGetReadiness.mockResolvedValue(
+        makeRichReadiness({
+          motivation: {
+            message_key: 'cultureMotivation.unmapped.999',
+            params: {},
+            delta_direction: 'stagnant',
+            delta_percentage: 0,
+          },
+        })
+      );
+
+      render(<MockExamPage />);
+
+      // Wait for the page to settle on the readiness hero before asserting
+      // absence (avoids a false-negative from asserting during the loading
+      // skeleton, before the motivation block would have rendered at all).
+      await screen.findByLabelText('45% readiness');
+      expect(screen.queryByRole('note')).not.toBeInTheDocument();
+      expect(document.body.textContent).not.toContain('cultureMotivation.');
     });
 
     it('hides the motivation nudge when motivation is null', async () => {
@@ -678,6 +886,118 @@ describe('MockExamPage', () => {
       // Hero still renders (readiness present), but no category panel.
       await screen.findByLabelText('10% readiness');
       expect(screen.queryByText(/where you're weakest/i)).not.toBeInTheDocument();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Streak tile wired to readiness.current_streak (DASH2-02-04)
+  //
+  // RED as of this commit: the tile still hardcodes value: '—' + unwired: true
+  // in MockExamPage.tsx's CuratedMetricStrip (~L350-358), ignoring
+  // current_streak entirely. These fail today for the right reason —
+  // assertion mismatches ("expected 4 (or 0), found —" / "expected no
+  // unwired-dot, found one") — not compile or collection errors. They go
+  // green once the executor wires value to readiness?.current_streak ?? '—'
+  // and deletes unwired/unwiredLabel from the streak metric object.
+  // ---------------------------------------------------------------------------
+
+  describe('streak tile reflects readiness.current_streak (DASH2-02-04)', () => {
+    it('shows the real current_streak value with the days suffix, not the unwired placeholder', async () => {
+      mockGetStatistics.mockResolvedValue(makeStats());
+      mockGetQuestionQueue.mockResolvedValue(makeQueue());
+      mockGetReadiness.mockResolvedValue(makeRichReadiness({ current_streak: 4 }));
+
+      render(<MockExamPage />);
+
+      const streakTile = await screen.findByTestId('culture-metric-3');
+      expect(within(streakTile).getByText('4')).toBeInTheDocument();
+      expect(within(streakTile).getByText('days')).toBeInTheDocument();
+      // Streak is now a real, wired metric — the "not yet connected to
+      // backend data" danger dot must be gone.
+      expect(within(streakTile).queryByTestId('unwired-dot')).not.toBeInTheDocument();
+    });
+
+    it('shows 0, not the — placeholder, for a real zero-day streak', async () => {
+      mockGetStatistics.mockResolvedValue(makeStats());
+      mockGetQuestionQueue.mockResolvedValue(makeQueue());
+      mockGetReadiness.mockResolvedValue(makeRichReadiness({ current_streak: 0 }));
+
+      render(<MockExamPage />);
+
+      const streakTile = await screen.findByTestId('culture-metric-3');
+      // A real 0-day streak must render as "0", not fall through to the `—`
+      // placeholder — guards a `value || '—'` regression (0 is falsy) as
+      // opposed to the correct `value ?? '—'`.
+      expect(within(streakTile).getByText('0')).toBeInTheDocument();
+      expect(within(streakTile).queryByText('—')).not.toBeInTheDocument();
+    });
+
+    it('degrades the streak tile to — (no unwired marker) when the readiness query fails, without blocking the launcher (AC-6)', async () => {
+      mockGetReadiness.mockRejectedValue(new Error('Readiness unavailable'));
+      mockGetStatistics.mockResolvedValue(makeStats());
+      mockGetQuestionQueue.mockResolvedValue(makeQueue({ can_start_exam: true }));
+
+      render(<MockExamPage />);
+
+      // A readiness failure must not block the page (AC-6) — launcher renders.
+      const startButton = await screen.findByTestId('start-exam-button');
+      expect(startButton).not.toBeDisabled();
+
+      const streakTile = screen.getByTestId('culture-metric-3');
+      expect(within(streakTile).getByText('—')).toBeInTheDocument();
+      // Distinguishes the new graceful-degradation `—` (readiness?.current_streak
+      // ?? '—', no unwired flag) from the old permanent "unwired" placeholder —
+      // the danger dot must not render even in this degraded state.
+      expect(within(streakTile).queryByTestId('unwired-dot')).not.toBeInTheDocument();
+    });
+
+    // QA adversarial (DASH2-02-04): large values render without truncation or
+    // formatting surprises — guards against e.g. a hidden width/overflow rule
+    // on .dx-metric-v clipping multi-digit values.
+    it('renders a large streak value (365) in full, unformatted and untruncated', async () => {
+      mockGetStatistics.mockResolvedValue(makeStats());
+      mockGetQuestionQueue.mockResolvedValue(makeQueue());
+      mockGetReadiness.mockResolvedValue(makeRichReadiness({ current_streak: 365 }));
+
+      render(<MockExamPage />);
+
+      const streakTile = await screen.findByTestId('culture-metric-3');
+      // Exact text match (not a substring/regex) — rules out truncation
+      // ("36…"), thousands-separator insertion ("3,65"), or any other
+      // formatting surprise on a 3-digit value.
+      expect(within(streakTile).getByText('365')).toBeInTheDocument();
+      expect(within(streakTile).queryByTestId('unwired-dot')).not.toBeInTheDocument();
+    });
+
+    // QA adversarial (DASH2-02-04): sibling-tile regression guard. The pre-
+    // existing "renders the curated metric strip with readiness-derived
+    // Accuracy + Learned and stats-derived Best" test (above, ~L650) already
+    // asserts all 4 tiles (culture-metric-0..3) together in a rich-readiness +
+    // stats render and was flipped in this task's RED commit — Accuracy=72,
+    // Learned=220, Best=88, Streak=4, at their original indices. That test is
+    // confirmed green (see MockExamPage test run) and stands in for this
+    // check; no separate duplicate is added here (Simplicity First).
+
+    // QA adversarial (DASH2-02-04): defensive `??` also covers `undefined`,
+    // not just the documented "readiness null" case. The BE field is
+    // required, so this can't happen through normal typed usage — the cast
+    // simulates a malformed/partial payload slipping past the type system
+    // (e.g. an older cached response) to prove the tile can't render "NaN" or
+    // literal "undefined".
+    it('degrades to — (not NaN/undefined) if current_streak were undefined despite the required type', async () => {
+      mockGetStatistics.mockResolvedValue(makeStats());
+      mockGetQuestionQueue.mockResolvedValue(makeQueue());
+      mockGetReadiness.mockResolvedValue(
+        makeRichReadiness({ current_streak: undefined as unknown as number })
+      );
+
+      render(<MockExamPage />);
+
+      const streakTile = await screen.findByTestId('culture-metric-3');
+      expect(within(streakTile).getByText('—')).toBeInTheDocument();
+      expect(within(streakTile).queryByText('NaN')).not.toBeInTheDocument();
+      expect(within(streakTile).queryByText('undefined')).not.toBeInTheDocument();
+      expect(within(streakTile).queryByTestId('unwired-dot')).not.toBeInTheDocument();
     });
   });
 

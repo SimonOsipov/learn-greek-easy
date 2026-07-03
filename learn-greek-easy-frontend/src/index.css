@@ -6398,6 +6398,21 @@ html.theme-transition *::after {
   }
 }
 
+/* DASH2-02-05: groups the panel head with its one-line legend so the legend
+   sits tight under the title (the panel's own 16px gap is too loose for it). */
+.cx-cat-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cx-cat-legend {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: hsl(var(--fg-3));
+  font-family: 'Inter Tight', sans-serif;
+}
+
 /* Category bar list inside the action panel */
 .cx-cat-list {
   display: flex;
@@ -6485,6 +6500,14 @@ html.theme-transition *::after {
 .cx-cat-pct {
   font-size: 16px;
   font-weight: 700;
+  color: hsl(var(--fg));
+}
+/* DASH2-02-05: the mastered count is the row's PRIMARY figure (bold, full fg),
+   sitting above the demoted readiness % + accuracy lines (.cx-cat-accuracy). */
+.cx-cat-mastered {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
   color: hsl(var(--fg));
 }
 .cx-cat-accuracy {
