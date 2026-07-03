@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.core.cache import get_cache
 from src.db.models import User, UserSettings
 from src.repositories.base import BaseRepository
 
@@ -80,6 +81,7 @@ class UserRepository(BaseRepository[User]):
         user.is_active = False
         self.db.add(user)
         await self.db.flush()
+        await get_cache().invalidate_user_identity(user.supabase_id, user.id)
         return user
 
 

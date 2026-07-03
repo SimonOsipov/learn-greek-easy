@@ -241,3 +241,41 @@ class TestResetAllProgress:
         # Total: 10 + 5 + 8 + 4 + 3 + 12 + 6 + 7 + 3 = 58
         expected_total = 10 + 5 + 8 + 4 + 3 + 12 + 6 + 7 + 3
         assert result.total_deleted == expected_total
+
+    @pytest.mark.asyncio
+    async def test_reset_progress_does_not_invalidate_identity(self, service, mock_db_session):
+        """reset_all_progress must NOT bust the identity cache (PERF-16-02 guard).
+
+        Progress reset doesn't change supabase_id/is_active/is_superuser, so the
+        identity projection stays valid -- only invalidate_all_user_data()
+        (existing behavior, asserted elsewhere in this file) should run. This
+        guards against a future refactor accidentally routing reset through the
+        identity-invalidation choke point (UserDeletionService.delete_account
+        reuses this service, so an over-eager invalidation here would be
+        harmless there but wasteful/misleading for a plain progress reset).
+
+        NOTE: this assertion already holds against the current implementation
+        -- it's a regression guard, not a not-implemented red.
+        """
+        user_id = uuid4()
+
+        service.card_record_review_repo.delete_all_by_user_id = AsyncMock(return_value=0)
+        service.card_record_stats_repo.delete_all_by_user_id = AsyncMock(return_value=0)
+        service.culture_history_repo.delete_all_by_user_id = AsyncMock(return_value=0)
+        service.culture_stats_repo.delete_all_by_user_id = AsyncMock(return_value=0)
+        service.mock_exam_repo.delete_all_by_user_id = AsyncMock(return_value=(0, 0))
+        service.notification_repo.delete_all_by_user = AsyncMock(return_value=0)
+
+        mock_result = MagicMock()
+        mock_result.rowcount = 0
+        mock_db_session.execute.return_value = mock_result
+
+        with patch("src.services.user_progress_reset_service.get_cache") as mock_get_cache:
+            mock_cache = MagicMock()
+            mock_cache.invalidate_all_user_data = AsyncMock(return_value=0)
+            mock_cache.invalidate_user_identity = AsyncMock()
+            mock_get_cache.return_value = mock_cache
+
+            await service.reset_all_progress(user_id)
+
+        mock_cache.invalidate_user_identity.assert_not_awaited()

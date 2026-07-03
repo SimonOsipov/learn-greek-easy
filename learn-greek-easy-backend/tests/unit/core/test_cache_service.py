@@ -1,13 +1,22 @@
 # -*- coding: utf-8 -*-
 """Unit tests for CacheService (Redis-based caching layer)."""
 
+import asyncio
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+import time
+from typing import Any, Dict
+from unittest.mock import AsyncMock, MagicMock, call, patch
 from uuid import uuid4
 
 import pytest
 
-from src.core.cache import CacheService, cached, get_cache, reset_cache
+from src.core.cache import (
+    _SINGLE_FLIGHT_RELEASE_LUA,
+    CacheService,
+    cached,
+    get_cache,
+    reset_cache,
+)
 
 
 class TestCacheServiceAvailability:
@@ -446,6 +455,475 @@ class TestCacheGetOrSet:
         mock_redis.setex.assert_not_called()
 
 
+class _FakeAsyncRedis:
+    """Minimal dict-backed async fake Redis with REAL SET-NX semantics.
+
+    PERF-16-01: dedup tests need genuine "only one caller wins" contention
+    across concurrently-scheduled coroutines. `AsyncMock` can't model that --
+    it just returns a canned value on every call regardless of prior state --
+    so this tiny fake tracks actual key presence for `get`/`set(nx=...)`/
+    `setex`/`delete`, matching the subset of the redis-asyncio client
+    `CacheService` touches.
+    """
+
+    def __init__(self) -> None:
+        self.store: Dict[str, Any] = {}
+
+    async def get(self, name: str) -> Any:
+        return self.store.get(name)
+
+    async def set(
+        self,
+        name: str,
+        value: Any,
+        *,
+        nx: bool = False,
+        px: Any = None,
+        ex: Any = None,
+        **kwargs: Any,
+    ) -> Any:
+        if nx and name in self.store:
+            return None
+        self.store[name] = value
+        return True
+
+    async def setex(self, name: str, ttl: int, value: Any) -> bool:
+        self.store[name] = value
+        return True
+
+    async def delete(self, *names: str) -> int:
+        count = 0
+        for name in names:
+            if name in self.store:
+                del self.store[name]
+                count += 1
+        return count
+
+    async def eval(self, script: str, numkeys: int, *keys_and_args: Any) -> int:
+        """Supports the single-flight release CAD (`_SINGLE_FLIGHT_RELEASE_LUA`
+        in src.core.cache): deletes `key` iff its stored value == `token`,
+        mirroring the real Lua script's ownership check."""
+        key = keys_and_args[0]
+        token = keys_and_args[1]
+        if self.store.get(key) == token:
+            del self.store[key]
+            return 1
+        return 0
+
+
+class TestCacheGetOrSetSingleFlight:
+    """PERF-16-01: single-flight `SET NX PX` guard for `get_or_set`.
+
+    `get_or_set` currently has no dedup -- every concurrent caller on a cold
+    key runs its own factory. These specs pin the target behavior: only one
+    caller ("the leader") computes the value while it holds a Redis lock;
+    everyone else ("followers") either observes the leader's result or, if
+    the leader stalls past the lock TTL, falls through and computes their
+    own value. All of them are RED against the current implementation.
+    """
+
+    @pytest.mark.asyncio
+    async def test_get_or_set_single_flight_single_loader(self):
+        """N concurrent cold misses on the same key run the factory exactly once."""
+        fake_redis = _FakeAsyncRedis()
+        call_count = 0
+
+        async def factory():
+            nonlocal call_count
+            call_count += 1
+            await asyncio.sleep(0.05)
+            return {"value": "computed"}
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = "cache"
+            mock_settings.cache_default_ttl = 300
+            mock_settings.cache_single_flight_lock_ttl_ms = 5000
+            mock_settings.cache_single_flight_poll_ms = 50
+            service = CacheService(redis_client=fake_redis)
+
+            results = await asyncio.wait_for(
+                asyncio.gather(*[service.get_or_set("sf:key", factory, ttl=30) for _ in range(5)]),
+                timeout=10,
+            )
+
+        assert call_count == 1, (
+            f"expected the factory to run exactly once across 5 concurrent "
+            f"cold callers, but it ran {call_count} times"
+        )
+        assert results == [{"value": "computed"}] * 5
+
+    @pytest.mark.asyncio
+    async def test_get_or_set_follower_returns_leader_value(self):
+        """A follower that loses the lock race returns the leader's value
+        once it appears in the cache -- it must never run its own factory."""
+        mock_redis = AsyncMock()
+        leader_value = {"value": "from_leader"}
+        # 1st call: get_or_set's initial cache check (miss). 2nd call: first
+        # poll while the leader is still computing (miss). 3rd call: the
+        # leader has finished and published its value.
+        mock_redis.get.side_effect = [None, None, json.dumps(leader_value)]
+        mock_redis.set.return_value = None  # lock already held by the leader
+
+        async def follower_factory():
+            raise AssertionError(
+                "follower factory must not run when the leader's value becomes available"
+            )
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = "cache"
+            mock_settings.cache_default_ttl = 300
+            mock_settings.cache_single_flight_lock_ttl_ms = 5000
+            mock_settings.cache_single_flight_poll_ms = 10
+            service = CacheService(redis_client=mock_redis)
+
+            result = await asyncio.wait_for(
+                service.get_or_set("follower:key", follower_factory, ttl=30),
+                timeout=5,
+            )
+
+        assert result == leader_value, (
+            f"expected the follower to return the leader's published value "
+            f"{leader_value!r}, got {result!r}"
+        )
+        mock_redis.set.assert_called()  # a lock acquisition was attempted
+
+    @pytest.mark.asyncio
+    async def test_get_or_set_follower_falls_through_on_stall(self):
+        """If the lock is contended and the leader's value never appears
+        before lock_ttl elapses, the follower gives up waiting and computes
+        its own value instead of hanging forever."""
+        mock_redis = AsyncMock()
+        mock_redis.get.return_value = None  # value never appears (leader stalled)
+        mock_redis.set.return_value = None  # lock always contended
+
+        call_count = 0
+
+        async def own_factory():
+            nonlocal call_count
+            call_count += 1
+            return {"value": "fallback"}
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = "cache"
+            mock_settings.cache_default_ttl = 300
+            mock_settings.cache_single_flight_lock_ttl_ms = 100
+            mock_settings.cache_single_flight_poll_ms = 10
+            service = CacheService(redis_client=mock_redis)
+
+            result = await asyncio.wait_for(
+                service.get_or_set("stall:key", own_factory, ttl=30),
+                timeout=5,
+            )
+
+        assert result == {"value": "fallback"}
+        assert call_count == 1, (
+            f"expected the stalled follower's own factory to run exactly "
+            f"once, ran {call_count} times"
+        )
+        assert mock_redis.set.called, (
+            "expected the follower to have attempted a SET NX lock acquisition "
+            "before falling through to its own factory"
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_or_set_degrades_when_redis_none(self):
+        """With no Redis available at all, get_or_set must still degrade
+        gracefully: run the factory once and return its value, without
+        attempting any lock acquisition (there's nothing to lock against)."""
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = "cache"
+            mock_settings.cache_default_ttl = 300
+            mock_settings.cache_single_flight_lock_ttl_ms = 5000
+            mock_settings.cache_single_flight_poll_ms = 50
+            service = CacheService(redis_client=None)
+
+            call_count = 0
+
+            async def factory():
+                nonlocal call_count
+                call_count += 1
+                return {"value": "no_redis"}
+
+            with patch("src.core.cache.get_redis", return_value=None):
+                result = await service.get_or_set("noredis:key", factory, ttl=30)
+
+        assert call_count == 1
+        assert result == {"value": "no_redis"}
+
+    @pytest.mark.asyncio
+    async def test_get_or_set_releases_lock_on_factory_error(self):
+        """If the leader's factory raises, the lock it acquired must be
+        released in a finally block -- not leaked until PX expiry.
+
+        Asserted behaviorally (lock key gone from the store / a subsequent
+        SET NX succeeds immediately) rather than via a `redis.delete`
+        call-spy, since the release now goes through an ownership-checked
+        compare-and-delete (`eval`), not a bare `delete` (PERF-16 CodeRabbit
+        fix: the lock's value is a per-leader token, not a fixed sentinel)."""
+        fake_redis = _FakeAsyncRedis()
+
+        async def failing_factory():
+            raise RuntimeError("boom")
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = "cache"
+            mock_settings.cache_default_ttl = 300
+            mock_settings.cache_single_flight_lock_ttl_ms = 5000
+            mock_settings.cache_single_flight_poll_ms = 50
+            service = CacheService(redis_client=fake_redis)
+
+            result = await service.get_or_set("errkey:lock", failing_factory, ttl=30)
+
+        assert result is None
+
+        lock_key = "cache:errkey:lock:lock"
+        assert lock_key not in fake_redis.store, (
+            "expected the single-flight lock key to be released after the "
+            "factory raised, not leaked until PX expiry"
+        )
+        # Prove the lock is genuinely free, not just absent from a call log:
+        # a fresh SET NX must succeed immediately.
+        reacquired = await fake_redis.set(lock_key, "new-leader-token", nx=True, px=5000)
+        assert reacquired is True, "expected a subsequent SET NX to succeed on the freed lock"
+
+    @pytest.mark.asyncio
+    async def test_get_or_set_hit_skips_lock(self):
+        """A cache hit returns immediately -- no lock is ever attempted and
+        the factory never runs."""
+        mock_redis = AsyncMock()
+        cached_value = {"name": "Already Cached"}
+        mock_redis.get.return_value = json.dumps(cached_value)
+
+        async def factory():
+            raise AssertionError("factory should not run on a cache hit")
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = "cache"
+            mock_settings.cache_default_ttl = 300
+            mock_settings.cache_single_flight_lock_ttl_ms = 5000
+            mock_settings.cache_single_flight_poll_ms = 50
+            service = CacheService(redis_client=mock_redis)
+
+            result = await service.get_or_set("hit:key", factory, ttl=30)
+
+        assert result == cached_value
+        mock_redis.set.assert_not_called()
+
+
+class TestCacheGetOrSetSingleFlightAdversarial:
+    """QA (PERF-16-01): adversarial/edge coverage beyond the architect's
+    RED specs in TestCacheGetOrSetSingleFlight -- sync factories, a
+    lock-backend outage on acquisition, a legitimately-None leader result,
+    and follower poll latency (must return promptly, not after the full
+    lock TTL budget).
+    """
+
+    @pytest.mark.asyncio
+    async def test_get_or_set_single_flight_sync_factory(self):
+        """A plain sync (non-coroutine) factory must work through the
+        leader path exactly like an async factory: get_or_set supports
+        both via asyncio.iscoroutine, and the single-flight lock wraps
+        either kind transparently."""
+        fake_redis = _FakeAsyncRedis()
+        call_count = 0
+
+        def sync_factory() -> Dict[str, str]:
+            nonlocal call_count
+            call_count += 1
+            return {"value": "sync_computed"}
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = "cache"
+            mock_settings.cache_default_ttl = 300
+            mock_settings.cache_single_flight_lock_ttl_ms = 5000
+            mock_settings.cache_single_flight_poll_ms = 50
+            service = CacheService(redis_client=fake_redis)
+
+            result = await asyncio.wait_for(
+                service.get_or_set("sync:key", sync_factory, ttl=30), timeout=5
+            )
+
+        assert result == {"value": "sync_computed"}
+        assert call_count == 1
+        # Leader path must have cached the sync result under the real key
+        # (not the lock key) via setex.
+        assert fake_redis.store.get("cache:sync:key") == json.dumps({"value": "sync_computed"})
+        # Lock must be released, not leaked until PX expiry.
+        assert "cache:sync:key:lock" not in fake_redis.store
+
+    @pytest.mark.asyncio
+    async def test_get_or_set_lock_acquisition_error_falls_through_to_leader(self):
+        """If the lock backend itself errors on SET NX (e.g. a Redis blip),
+        get_or_set must degrade to leader behavior -- run the factory once
+        and return/cache its value -- rather than propagating the error or
+        silently returning None."""
+        mock_redis = AsyncMock()
+        mock_redis.get.return_value = None  # cold cache
+        mock_redis.set.side_effect = Exception("connection reset")
+
+        call_count = 0
+
+        async def factory():
+            nonlocal call_count
+            call_count += 1
+            return {"value": "degraded_leader"}
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = "cache"
+            mock_settings.cache_default_ttl = 300
+            mock_settings.cache_single_flight_lock_ttl_ms = 5000
+            mock_settings.cache_single_flight_poll_ms = 50
+            service = CacheService(redis_client=mock_redis)
+
+            result = await asyncio.wait_for(
+                service.get_or_set("lockerr:key", factory, ttl=30), timeout=5
+            )
+
+        assert result == {"value": "degraded_leader"}
+        assert call_count == 1
+        mock_redis.setex.assert_called_once()
+        # Lock release is still attempted in finally even though the lock
+        # was never really held (harmless no-op against a real backend).
+        # Release now goes through the ownership-checked eval() CAD, not a
+        # bare delete() (PERF-16 CodeRabbit fix).
+        assert mock_redis.eval.called
+
+    @pytest.mark.asyncio
+    async def test_get_or_set_leader_none_result_no_hang_no_permanent_dogpile(self):
+        """A factory that legitimately returns None must not be cached (per
+        existing get_or_set contract), and the lock must still be released.
+        A concurrent follower must NOT hang or spin forever waiting for a
+        value that will never appear -- it must fall through to self-serve
+        once the (short, test-tuned) lock TTL budget elapses, bounded and
+        deterministic, not a permanent deadlock."""
+        fake_redis = _FakeAsyncRedis()
+        call_count = 0
+
+        async def none_factory():
+            nonlocal call_count
+            call_count += 1
+            await asyncio.sleep(0.01)
+            return None
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = "cache"
+            mock_settings.cache_default_ttl = 300
+            mock_settings.cache_single_flight_lock_ttl_ms = 60
+            mock_settings.cache_single_flight_poll_ms = 10
+            service = CacheService(redis_client=fake_redis)
+
+            results = await asyncio.wait_for(
+                asyncio.gather(
+                    service.get_or_set("none:key", none_factory, ttl=30),
+                    service.get_or_set("none:key", none_factory, ttl=30),
+                ),
+                timeout=5,  # generous bound -- proves it terminates, not a hang
+            )
+
+        # Both callers resolve to None -- no crash, no hang.
+        assert results == [None, None]
+        # Nothing was ever cached for a None result.
+        assert "cache:none:key" not in fake_redis.store
+        # The lock is released, not leaked.
+        assert "cache:none:key:lock" not in fake_redis.store
+        # NOTE (known design tradeoff, not a hang/leak): because a None
+        # result is indistinguishable from "not computed yet" in the cache,
+        # the follower cannot short-circuit on the leader's (None) result --
+        # it still waits out the poll budget and self-serves, so the
+        # factory runs twice here (once per caller) rather than once. This
+        # is bounded by lock_ttl_ms per follower, never unbounded.
+        assert call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_get_or_set_follower_returns_promptly_not_after_full_budget(self):
+        """A follower must return as soon as the leader's value appears in
+        the cache, not after waiting out the entire lock_ttl_ms budget --
+        i.e. the poll loop must actually observe the value on an early
+        iteration rather than always draining the full window."""
+        fake_redis = _FakeAsyncRedis()
+        leader_started = asyncio.Event()
+
+        async def leader_factory():
+            leader_started.set()
+            await asyncio.sleep(0.03)  # leader takes ~30ms
+            return {"value": "prompt_leader"}
+
+        async def follower_factory():
+            raise AssertionError(
+                "follower must observe the leader's value and must not "
+                "self-serve after only ~30ms against a 5s lock_ttl_ms budget"
+            )
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = "cache"
+            mock_settings.cache_default_ttl = 300
+            # Lock TTL budget is generous (5s); poll is fine-grained (10ms).
+            # If the follower correctly observes the leader's value shortly
+            # after ~30ms, the test finishes in well under a second. If it
+            # were (incorrectly) waiting out the full budget, this would
+            # take ~5s and trip the tight wait_for below.
+            mock_settings.cache_single_flight_lock_ttl_ms = 5000
+            mock_settings.cache_single_flight_poll_ms = 10
+            service = CacheService(redis_client=fake_redis)
+
+            start = time.monotonic()
+            leader_task = asyncio.ensure_future(
+                service.get_or_set("prompt:key", leader_factory, ttl=30)
+            )
+            await leader_started.wait()
+            follower_task = asyncio.ensure_future(
+                service.get_or_set("prompt:key", follower_factory, ttl=30)
+            )
+
+            results = await asyncio.wait_for(asyncio.gather(leader_task, follower_task), timeout=2)
+            elapsed = time.monotonic() - start
+
+        assert results == [{"value": "prompt_leader"}, {"value": "prompt_leader"}]
+        assert elapsed < 1.0, (
+            f"expected the follower to return promptly after the leader "
+            f"published (~30ms), but the call took {elapsed:.3f}s -- "
+            f"suggests it drained the full lock_ttl_ms budget instead of "
+            f"observing the value on an early poll"
+        )
+
+    @pytest.mark.asyncio
+    async def test_single_flight_release_is_ownership_checked(self):
+        """PERF-16 CodeRabbit fix: a leader's release must only delete the
+        lock if it still holds the value the leader itself wrote. If the
+        leader's factory overran lock_ttl_ms, the lock could have expired
+        and been re-acquired by a second leader by the time the first
+        leader's `finally` runs -- a bare `delete(lock_key)` would blow away
+        the SECOND leader's lock and reopen the dogpile. The ownership token
+        + compare-and-delete must prevent that: releasing with a stale token
+        is a no-op, and the current owner's lock survives untouched."""
+        fake_redis = _FakeAsyncRedis()
+        lock_key = "cache:ownership:key:lock"
+
+        # Simulate: leader 1's token expired/was superseded, leader 2 has
+        # since acquired the SAME lock key with a different token.
+        token_1 = "leader-1-token"
+        token_2 = "leader-2-token"
+        fake_redis.store[lock_key] = token_2
+
+        result = await fake_redis.eval(_SINGLE_FLIGHT_RELEASE_LUA, 1, lock_key, token_1)
+
+        assert result == 0, "a release with a stale/foreign token must not report a deletion"
+        assert fake_redis.store[lock_key] == token_2, (
+            "leader 1's release must not delete leader 2's lock -- doing so "
+            "would reopen the dogpile the single-flight guard exists to prevent"
+        )
+
+
 class TestCacheExists:
     """Test suite for cache exists operation."""
 
@@ -576,6 +1054,132 @@ class TestCacheInvalidation:
         mock_redis.scan.assert_called()
         # Should delete due cards and stats
         mock_redis.delete.assert_called()
+
+
+class TestCacheInvalidateUserIdentity:
+    """PERF-16-02: CacheService.invalidate_user_identity is the single choke
+    point every identity-mutating write path (webhook, delete_account,
+    update_me, delete_avatar, billing plan changes, repo.deactivate) calls to
+    bust the supabase_id->identity projection and the user:me:{uid} entry.
+
+    Necessary because the identity TTL was raised from 20s to 900s (PERF-16-02):
+    a stale identity/is_active projection can now live for up to 15 minutes
+    unless explicitly busted on every mutation.
+
+    RED reason: CacheService has no invalidate_user_identity method yet --
+    calling it raises AttributeError. Per PERF-16-02 RED discipline this is an
+    acceptable not-implemented red (matches the documented seam problem: the
+    method must exist before any assertion on its call args can even run).
+    """
+
+    @pytest.mark.asyncio
+    async def test_invalidate_user_identity_deletes_both_keys(self):
+        """delete() is called for both cache:user:identity:{sub} and cache:user:me:{uid}."""
+        mock_redis = AsyncMock()
+        supabase_id = "sb-abc-123"
+        user_id = uuid4()
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = "cache"
+            service = CacheService(redis_client=mock_redis)
+
+            await service.invalidate_user_identity(supabase_id, user_id)
+
+        deleted_keys = [call.args[0] for call in mock_redis.delete.call_args_list]
+        assert (
+            f"cache:user:identity:{supabase_id}" in deleted_keys
+        ), f"Expected identity key deleted, got: {deleted_keys}"
+        assert (
+            f"cache:user:me:{user_id}" in deleted_keys
+        ), f"Expected user:me key deleted, got: {deleted_keys}"
+
+    @pytest.mark.asyncio
+    async def test_invalidate_user_identity_noop_redis_down(self):
+        """When Redis is unavailable, invalidate_user_identity must not raise."""
+        supabase_id = "sb-abc-123"
+        user_id = uuid4()
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            service = CacheService(redis_client=None)
+
+            with patch("src.core.cache.get_redis", return_value=None):
+                # Must degrade gracefully -- no exception, no delete attempted.
+                await service.invalidate_user_identity(supabase_id, user_id)
+
+    @pytest.mark.asyncio
+    async def test_invalidate_user_identity_deletes_exactly_two_keys_in_order(self):
+        """QA adversarial: exactly two redis.delete calls, identity key first
+        then user:me key -- not a superset/membership check like
+        test_invalidate_user_identity_deletes_both_keys above, which would
+        pass even if the method issued extra/duplicate deletes.
+
+        Also confirms a UUID (not str) user_id -- the type every real caller
+        passes (User.id) -- builds the user:me:{uuid} key via plain str()
+        interpolation, matching what callers would independently expect.
+        """
+        mock_redis = AsyncMock()
+        supabase_id = "sb-order-check"
+        user_id = uuid4()
+
+        with patch("src.core.cache.settings") as mock_settings:
+            mock_settings.cache_enabled = True
+            mock_settings.cache_key_prefix = "cache"
+            service = CacheService(redis_client=mock_redis)
+
+            await service.invalidate_user_identity(supabase_id, user_id)
+
+        assert mock_redis.delete.await_count == 2
+        mock_redis.delete.assert_has_awaits(
+            [
+                call(f"cache:user:identity:{supabase_id}"),
+                call(f"cache:user:me:{user_id}"),
+            ]
+        )
+
+
+class TestCacheInvalidateUserIdentityNeverRaises:
+    """PERF-16-03 hardening (QA bug#1 carried over from PERF-16-02):
+    invalidate_user_identity must never propagate an exception, even if
+    self.delete's own contract changes -- e.g. a caller/test patches
+    delete() directly (bypassing delete()'s own internal try/except
+    entirely, not just breaking the underlying Redis client it wraps).
+
+    This matters because invalidate_user_identity is the single choke
+    point webhook_service.process_event calls post-commit (see
+    src/services/webhook_service.py ~line 120), and process_event
+    contracts to always return True -- never raise -- even when a
+    handler itself fails. An unguarded raise inside
+    invalidate_user_identity would break that always-return-True Stripe
+    webhook contract.
+
+    RED reason: invalidate_user_identity has no try/except of its own
+    today -- it merely calls self.delete() twice and relies entirely on
+    delete()'s internal error handling. Patching self.delete directly
+    (not the redis layer underneath it) bypasses that internal handling,
+    so the patched exception propagates straight out of
+    invalidate_user_identity, uncaught.
+    """
+
+    @pytest.mark.asyncio
+    async def test_invalidate_user_identity_never_raises_if_delete_raises(self):
+        """A raising self.delete must not propagate out of
+        invalidate_user_identity -- it should degrade to a no-op (return
+        None) rather than crash the caller.
+        """
+        mock_redis = AsyncMock()
+        service = CacheService(redis_client=mock_redis)
+        supabase_id = "sb-never-raise"
+        user_id = uuid4()
+
+        with patch.object(service, "delete", AsyncMock(side_effect=RuntimeError("boom"))):
+            result = await service.invalidate_user_identity(supabase_id, user_id)
+
+        assert result is None, (
+            "Expected invalidate_user_identity to swallow the error from a "
+            f"raising delete() and return None, got {result!r}"
+        )
 
 
 class TestCacheInvalidationSweepsDashboardSummary:

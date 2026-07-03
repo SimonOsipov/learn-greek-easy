@@ -352,3 +352,49 @@ class TestDatabasePoolWarmMin:
         assert (
             pool_size_default == 15
         ), f"Expected Field default pool_size=15, got {pool_size_default}"
+
+
+class TestCacheUserIdentityTTLDefault:
+    """PERF-16-02: identity cache TTL raised from 20s (PERF-05-05) to 900s (15 min).
+
+    A 20s TTL meant the supabase_id->identity cache expired almost immediately,
+    forcing a DB read on nearly every authenticated request (PERF-16 root cause).
+    Reading the Field default directly (not instantiating Settings()) makes this
+    immune to .env overrides, matching test_field_defaults_not_regressed above.
+
+    RED reason: src/config.py currently declares cache_user_identity_ttl with
+    default=20; this test pins the new default=900.
+    """
+
+    def test_identity_ttl_default_is_900(self):
+        from src.config import Settings
+
+        ttl_default = Settings.model_fields["cache_user_identity_ttl"].default
+        assert (
+            ttl_default == 900
+        ), f"Expected Field default cache_user_identity_ttl=900, got {ttl_default}"
+
+
+class TestCacheAuthMeBodyTTLDefault:
+    """PERF-16-03: GET /auth/me's response body is cached (read-through,
+    cache-aside via CacheService.get_or_set) at key user:me:{user_id} for
+    cache_auth_me_body_ttl seconds -- distinct from cache_user_identity_ttl
+    (900s), which only caches the lightweight supabase_id->identity
+    projection get_current_user uses, not the full profile response body.
+
+    Reading the Field default directly (not instantiating Settings())
+    makes this immune to .env overrides, matching
+    test_field_defaults_not_regressed / test_identity_ttl_default_is_900
+    above.
+
+    RED reason: src/config.py does not declare cache_auth_me_body_ttl yet
+    -- reading it from Settings.model_fields raises KeyError.
+    """
+
+    def test_auth_me_body_ttl_default_is_120(self):
+        from src.config import Settings
+
+        ttl_default = Settings.model_fields["cache_auth_me_body_ttl"].default
+        assert (
+            ttl_default == 120
+        ), f"Expected Field default cache_auth_me_body_ttl=120, got {ttl_default}"
