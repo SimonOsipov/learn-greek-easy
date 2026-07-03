@@ -115,6 +115,46 @@ class CultureDeckService:
             last_practiced_at=last_practiced,
         )
 
+    def _build_progress_from_batch(
+        self,
+        deck_id: UUID,
+        questions_total: int,
+        batch: dict[UUID, dict],
+    ) -> Optional[CultureDeckProgress]:
+        """Assemble CultureDeckProgress for the LIST path from batched data.
+
+        Byte-identical arithmetic to ``_get_deck_progress`` (the single-deck
+        detail helper), but fed from the page-wide
+        ``CultureQuestionStatsRepository.get_batch_deck_progress`` result plus
+        the already-batched ``get_batch_question_counts`` total, instead of
+        firing per-deck queries. Returns None when ``deck_id`` is absent from
+        ``batch`` — mirroring today's ``has_user_started_deck() == False``
+        short-circuit in ``_get_deck_progress``.
+
+        Args:
+            deck_id: Deck UUID.
+            questions_total: Total questions in the deck (from
+                get_batch_question_counts).
+            batch: Result of get_batch_deck_progress for the whole page.
+
+        Returns:
+            CultureDeckProgress if the user has started the deck, else None.
+        """
+        stats = batch.get(deck_id)
+        if stats is None:
+            return None
+
+        mastered = stats["mastered"]
+        learning = stats["learning"]
+        review = stats["review"]
+        return CultureDeckProgress(
+            questions_total=questions_total,
+            questions_mastered=mastered,
+            questions_learning=learning + review,
+            questions_new=questions_total - (mastered + learning + review),
+            last_practiced_at=stats["last_practiced"],
+        )
+
     def _get_localized_text(
         self,
         field_en: Optional[str],
@@ -144,7 +184,7 @@ class CultureDeckService:
         deck: "CultureDeck",
         question_count: int,
         locale: str,
-        user_id: Optional[UUID] = None,
+        progress: Optional[CultureDeckProgress] = None,
     ) -> CultureDeckResponse:
         """Build a localized CultureDeckResponse from a deck model.
 
@@ -153,19 +193,13 @@ class CultureDeckService:
             question_count: Precomputed question count (caller must batch via
                 get_batch_question_counts before the loop to avoid N+1).
             locale: Target locale (en, el, ru)
-            user_id: Optional user UUID for progress
+            progress: Precomputed per-deck progress (caller batches via
+                get_batch_deck_progress before the loop to avoid N+1; None for
+                anonymous users or decks the user hasn't started).
 
         Returns:
             CultureDeckResponse with single-language content
         """
-        # Get progress if user is authenticated.
-        # Progress stays per-deck: no batch helper covers the full
-        # (has_started + count_by_status + last_practiced_at) triple.
-        # The COUNT N+1 is eliminated by the precomputed question_count.
-        progress = None
-        if user_id:
-            progress = await self._get_deck_progress(user_id, deck.id)
-
         cover_image_url = None
         cover_image_variants = None
         if deck.cover_image_s3_key:
@@ -303,12 +337,22 @@ class CultureDeckService:
         deck_ids = [deck.id for deck in decks]
         question_counts = await self.deck_repo.get_batch_question_counts(deck_ids)
 
+        # Batch-fetch per-deck progress in ONE query to avoid the per-deck
+        # _get_deck_progress N+1 (PERF-18-02). Only needed for authenticated
+        # users; anonymous callers get progress=None everywhere.
+        deck_progress: dict[UUID, dict] = {}
+        if user_id:
+            deck_progress = await self.stats_repo.get_batch_deck_progress(user_id, deck_ids)
+
         # Build response for each deck with locale
         deck_responses = []
         for deck in decks:
             count = question_counts.get(deck.id, 0)
+            progress = (
+                self._build_progress_from_batch(deck.id, count, deck_progress) if user_id else None
+            )
             response = await self._build_localized_deck_response(
-                deck, count, normalized_locale, user_id
+                deck, count, normalized_locale, progress
             )
             deck_responses.append(response)
 

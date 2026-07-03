@@ -14,8 +14,9 @@ from __future__ import annotations
 import random
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import load_only
 
 from src.core.logging import get_logger
 from src.db.models import (
@@ -48,24 +49,64 @@ class InsufficientDistractorPoolError(Exception):
     """
 
 
+async def load_distractor_pool(db: AsyncSession, exercise_type: ExerciseType) -> list[_Candidate]:
+    """Load the full eligible distractor pool for ``exercise_type`` in one query.
+
+    Returns every eligible (SituationPicture, SituationDescription) pair for the
+    given exercise-type — the same eligibility filters as the former per-item
+    distractor query MINUS the anchor-situation exclusion and MINUS
+    ``ORDER BY random()``/``LIMIT``. The caller fetches this once per distinct
+    exercise-type per queue build and passes it into ``assemble_picture_match_payload``
+    via the ``pool`` kwarg, so no per-item distractor query is issued.
+
+    Uses a full-entity ``select(SituationPicture, SituationDescription)`` with
+    ``load_only`` (not raw columns) so the returned rows honour the ``_Candidate``
+    tuple contract and the payload builders' ORM attribute access
+    (``sp.image_s3_key`` / ``sd.text_el``) keeps working unchanged. ``load_only``
+    trims to just the columns those builders read (avoiding a full-row fetch),
+    mirroring the house pattern in ``card_record.py`` ``get_by_deck`` — so no
+    relationship IO happens in the per-item loop.
+    """
+    stmt = (
+        select(SituationPicture, SituationDescription)
+        .join(Situation, SituationPicture.situation_id == Situation.id)
+        .join(SituationDescription, SituationDescription.situation_id == Situation.id)
+        .join(PictureExercise, PictureExercise.picture_id == SituationPicture.id)
+        .where(
+            SituationPicture.status == PictureStatus.GENERATED,
+            SituationDescription.status == DescriptionStatus.AUDIO_READY,
+            PictureExercise.exercise_type == exercise_type,
+            PictureExercise.status == ExerciseStatus.APPROVED,
+        )
+        .options(
+            load_only(SituationPicture.image_s3_key, SituationPicture.situation_id),
+            load_only(SituationDescription.text_el, SituationDescription.situation_id),
+        )
+    )
+
+    result = await db.execute(stmt)
+    return [(sp, sd) for sp, sd in result.all()]
+
+
 async def assemble_picture_match_payload(
     db: AsyncSession,
     exercise: PictureExercise,
     exercise_type: ExerciseType,
+    *,
+    pool: list[_Candidate],
 ) -> SelectPictureFromDescriptionPayload | SelectDescriptionFromPicturePayload:
     """Assemble a 4-option picture-match payload for the given anchor PictureExercise.
 
     Caller must eager-load ``exercise.picture``, ``exercise.picture.situation``,
-    and ``exercise.picture.situation.description`` before calling this function.
+    and ``exercise.picture.situation.description`` before calling this function,
+    and pass the pre-fetched distractor ``pool`` (see ``load_distractor_pool``)
+    for this exercise-type so no per-item distractor query is issued.
 
     Algorithm:
-    1. Pull 3 random distractor Situations via ORDER BY random() (excludes anchor).
+    1. Select 3 random distractor Situations from ``pool`` (excludes the anchor).
     2. Insert the anchor at a random position 0–3.
     3. Resolve presigned image URLs for picture options.
     4. Return the appropriate Pydantic payload model.
-
-    TODO(perf): When eligible pool exceeds ~10k Situations, replace ORDER BY random()
-    with TABLESAMPLE SYSTEM or a randomized-offset strategy to avoid O(N) full scan.
 
     Raises:
         ValueError: For unsupported exercise_type values.
@@ -89,9 +130,7 @@ async def assemble_picture_match_payload(
             f"anchor situation {anchor_situation_id} has no description"
         )
 
-    candidates = await _fetch_candidates(
-        db, anchor_situation_id, anchor_picture, anchor_description, exercise_type
-    )
+    candidates = _fetch_candidates(pool, anchor_situation_id, anchor_picture, anchor_description)
     correct_index = candidates.index((anchor_picture, anchor_description))
 
     if exercise_type == ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION:
@@ -114,14 +153,19 @@ async def assemble_picture_match_payload(
     return payload
 
 
-async def _fetch_candidates(
-    db: AsyncSession,
+def _fetch_candidates(
+    pool: list[_Candidate],
     anchor_situation_id: UUID,
     anchor_picture: SituationPicture,
     anchor_description: SituationDescription,
-    exercise_type: ExerciseType,
 ) -> list[_Candidate]:
-    """Fetch 3 random distractor pairs, then insert the anchor at a random slot.
+    """Pick 3 random distractor pairs from ``pool``, then insert the anchor at a random slot.
+
+    ``pool`` is the pre-fetched eligible (SituationPicture, SituationDescription)
+    set for this exercise-type (see ``load_distractor_pool``). The anchor's own
+    situation is excluded here in Python — the pool query is anchor-agnostic — and
+    3 distractors are chosen via ``random.sample``, replacing the former per-item
+    ``ORDER BY random()`` distractor query.
 
     Returns a 4-element list of (SituationPicture, SituationDescription) pairs
     where exactly one entry is the anchor.
@@ -129,44 +173,28 @@ async def _fetch_candidates(
     Raises:
         InsufficientDistractorPoolError: Fewer than 3 eligible distractors found.
     """
-    # TODO(perf): When eligible pool exceeds ~10k Situations, replace ORDER BY random()
-    # with TABLESAMPLE SYSTEM or a randomized-offset strategy to avoid O(N) full scan.
-    stmt = (
-        select(SituationPicture, SituationDescription)
-        .join(Situation, SituationPicture.situation_id == Situation.id)
-        .join(SituationDescription, SituationDescription.situation_id == Situation.id)
-        .join(PictureExercise, PictureExercise.picture_id == SituationPicture.id)
-        .where(
-            SituationPicture.status == PictureStatus.GENERATED,
-            SituationDescription.status == DescriptionStatus.AUDIO_READY,
-            PictureExercise.exercise_type == exercise_type,
-            PictureExercise.status == ExerciseStatus.APPROVED,
-            Situation.id != anchor_situation_id,
-        )
-        .order_by(func.random())
-        .limit(3)
-    )
+    eligible: list[_Candidate] = [
+        (sp, sd) for (sp, sd) in pool if sp.situation_id != anchor_situation_id
+    ]
 
-    result = await db.execute(stmt)
-    rows = result.all()
-
-    if len(rows) < 3:
+    if len(eligible) < 3:
         logger.warning(
             "insufficient_distractor_pool",
             extra={
                 "anchor_situation_id": str(anchor_situation_id),
-                "exercise_type": exercise_type.value,
-                "candidate_count": len(rows),
+                "candidate_count": len(eligible),
             },
         )
         raise InsufficientDistractorPoolError(
-            f"only {len(rows)} eligible distractors for anchor {anchor_situation_id}"
+            f"only {len(eligible)} eligible distractors for anchor {anchor_situation_id}"
         )
+
+    distractors = random.sample(eligible, 3)
 
     # Insert anchor at a random slot among the 4 positions.
     correct_index = random.randint(0, 3)
     candidates: list[_Candidate] = []
-    distractor_iter = iter(rows)
+    distractor_iter = iter(distractors)
     for slot in range(4):
         if slot == correct_index:
             candidates.append((anchor_picture, anchor_description))

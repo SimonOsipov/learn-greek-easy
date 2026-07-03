@@ -682,6 +682,79 @@ class CultureQuestionStatsRepository(BaseRepository[CultureQuestionStats]):
             for row in result.all()
         }
 
+    async def get_batch_deck_progress(
+        self, user_id: UUID, deck_ids: list[UUID]
+    ) -> dict[UUID, dict]:
+        """Per-deck SM-2 status breakdown for the culture deck-LIST progress DTO.
+
+        One ``GROUP BY (CultureQuestion.deck_id, CultureQuestionStats.status)``
+        over the user's stats scoped to ``deck_ids``, carrying
+        ``max(updated_at)`` per group so the caller can derive both the
+        mastered/learning/review breakdown and the per-deck ``last_practiced``
+        timestamp in a single round-trip — replacing the per-deck N+1 that
+        ``CultureDeckService._get_deck_progress`` fires in the list loop.
+
+        Mirrors ``CultureDeckRepository.get_batch_question_counts``'s shape
+        (single query, ``deck_id IN (...)``, keyed by ``deck_id``, absent key
+        ⇒ caller treats as unstarted).
+
+        D3 (hard constraint): this is a NEW method — do NOT fold it into
+        ``get_batch_deck_stats``. That method is shared with
+        ``/progress/decks`` (``ProgressService._compute_deck_progress_list``,
+        PERF-18-01) and deliberately returns no ``learning`` key; adding one
+        there would silently change that endpoint's output.
+
+        Args:
+            user_id: User UUID.
+            deck_ids: Culture deck UUIDs on the current page.
+
+        Returns:
+            Dict mapping ``deck_id`` to
+            ``{mastered, learning, review, last_practiced}`` — populated ONLY
+            for decks the user has started (has >=1 stats row for any status).
+            A ``deck_id`` absent from the dict means the user has not started
+            it (mirrors ``has_user_started_deck() == False`` — the caller
+            renders ``progress=None``). ``questions_new`` is derived by the
+            caller from the deck's total question count, not here.
+        """
+        if not deck_ids:
+            return {}
+
+        query = (
+            select(
+                CultureQuestion.deck_id,
+                CultureQuestionStats.status,
+                func.count(CultureQuestionStats.id).label("count"),
+                func.max(CultureQuestionStats.updated_at).label("last_practiced"),
+            )
+            .join(CultureQuestion, CultureQuestionStats.question_id == CultureQuestion.id)
+            .where(CultureQuestionStats.user_id == user_id)
+            .where(CultureQuestion.deck_id.in_(deck_ids))
+            .group_by(CultureQuestion.deck_id, CultureQuestionStats.status)
+        )
+        result = await self.db.execute(query)
+
+        progress: dict[UUID, dict] = {}
+        for row in result.all():
+            bucket = progress.setdefault(
+                row.deck_id,
+                {"mastered": 0, "learning": 0, "review": 0, "last_practiced": None},
+            )
+            if row.status == CardStatus.MASTERED:
+                bucket["mastered"] = row.count
+            elif row.status == CardStatus.LEARNING:
+                bucket["learning"] = row.count
+            elif row.status == CardStatus.REVIEW:
+                bucket["review"] = row.count
+            # Per-deck last_practiced = max(updated_at) across all status groups
+            # (matches get_last_practiced_at, which is status-agnostic).
+            if row.last_practiced is not None:
+                current = bucket["last_practiced"]
+                if current is None or row.last_practiced > current:
+                    bucket["last_practiced"] = row.last_practiced
+
+        return progress
+
 
 # ============================================================================
 # Module Exports

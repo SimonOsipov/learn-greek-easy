@@ -18,6 +18,7 @@ from src.schemas.culture import (
     CultureDeckProgress,
 )
 from src.services.culture_deck_service import CultureDeckService
+from src.services.s3_service import S3Service
 
 
 class TestCultureDeckServiceList:
@@ -146,31 +147,32 @@ class TestCultureDeckServiceList:
                 service.deck_repo, "get_batch_question_counts", new_callable=AsyncMock
             ) as mock_batch_counts,
             patch.object(
-                service.stats_repo, "has_user_started_deck", new_callable=AsyncMock
-            ) as mock_started,
-            patch.object(
-                service.stats_repo, "get_deck_progress", new_callable=AsyncMock
-            ) as mock_progress,
-            patch.object(
-                service.stats_repo, "get_last_practiced_at", new_callable=AsyncMock
-            ) as mock_last,
+                service.stats_repo, "get_batch_deck_progress", new_callable=AsyncMock
+            ) as mock_batch_progress,
         ):
             mock_list.return_value = [mock_deck]
             mock_count.return_value = 1
             mock_batch_counts.return_value = {mock_deck.id: 30}
-            mock_started.return_value = True
-            mock_progress.return_value = {
-                "questions_total": 30,
-                "questions_mastered": 10,
-                "questions_learning": 5,
-                "questions_new": 15,
+            # PERF-18-02: list_decks now derives progress from the page-wide
+            # get_batch_deck_progress batch (mastered/learning/review/last_practiced),
+            # not the per-deck has_user_started_deck/get_deck_progress/get_last_practiced_at.
+            mock_batch_progress.return_value = {
+                mock_deck.id: {
+                    "mastered": 10,
+                    "learning": 5,
+                    "review": 0,
+                    "last_practiced": datetime(2024, 1, 15, 10, 30),
+                }
             }
-            mock_last.return_value = datetime(2024, 1, 15, 10, 30)
 
             result = await service.list_decks(user_id=user_id)
 
+            mock_batch_progress.assert_awaited_once()
             assert result.decks[0].progress is not None
             assert result.decks[0].progress.questions_mastered == 10
+            # questions_total (30) - (mastered 10 + learning 5 + review 0) = 15
+            assert result.decks[0].progress.questions_new == 15
+            assert result.decks[0].progress.questions_learning == 5
             assert result.decks[0].progress.last_practiced_at == datetime(2024, 1, 15, 10, 30)
 
     @pytest.mark.asyncio
@@ -982,3 +984,113 @@ class TestCultureDeckCoverImageVariants:
                 800: "u800",
                 1600: "u1600",
             }, f"Expected cover_image_variants dict on CultureDeckDetailResponse, got: {variants!r}"
+
+
+# =============================================================================
+# PERF-18-02 Part B: presign dedup regression lock for the culture LIST path.
+#
+# D11: the S3Service._url_cache already dedupes presigned URLs by key across a
+# request/process lifetime (s3_service.py:225-229), and
+# _build_localized_deck_response (culture_deck_service.py:171-177) signs each
+# of a cover's 4 keys (1 main + 3 WebP derivatives, DERIVATIVE_WIDTHS=(400,
+# 800, 1600)) exactly once per deck per call. This test is a REGRESSION LOCK
+# (green today, independent of Part A's progress-batching change — Part A
+# does not touch the signing path at all). It guards against a future
+# regression (e.g. someone bypassing _url_cache or calling the signer twice
+# per key).
+# =============================================================================
+
+
+class TestCultureDeckListPresignDedup:
+    """Tests locking in "no S3 key signed more than once per list_decks() call"."""
+
+    @pytest.mark.asyncio
+    async def test_culture_list_cover_signed_once_per_request(self, mock_db_session: MagicMock):
+        """AC4 — no S3 key is signed more than once across one list_decks() call;
+        the 4-URL (1 main + 3 variants) set per cover is preserved.
+
+        Spies on `S3Service.generate_presigned_url` (the terminal signing call
+        that both the main cover URL and each WebP derivative funnel through —
+        `get_derivative_presigned_urls` calls `self.generate_presigned_url` per
+        width, s3_service.py:644-648) using a REAL `S3Service` instance so
+        `get_derivative_presigned_urls`'s actual `<base>_<width>w.webp` key
+        construction runs unmocked. This observes every raw S3 key that
+        crosses the signing boundary during one `list_decks` call across
+        multiple decks with distinct covers.
+        """
+        service = CultureDeckService(mock_db_session)
+
+        cover_keys = [
+            "culture/decks/aaa/cover.jpg",
+            "culture/decks/bbb/cover.png",
+            "culture/decks/ccc/cover.webp",
+        ]
+        mock_decks = []
+        for i, key in enumerate(cover_keys):
+            d = MagicMock()
+            d.id = uuid4()
+            d.name_en = f"Deck {i}"
+            d.name_el = f"Τράπουλα {i}"
+            d.name_ru = f"Колода {i}"
+            d.description_en = f"Desc {i}"
+            d.description_el = f"Περιγραφή {i}"
+            d.description_ru = f"Описание {i}"
+            d.category = "history"
+            d.is_active = True
+            d.is_premium = False
+            d.cover_image_s3_key = key
+            mock_decks.append(d)
+
+        counts_map = {d.id: 5 for d in mock_decks}
+
+        # Real S3Service instance (no AWS creds needed — only
+        # `generate_presigned_url` is patched, so `_get_client()` is never
+        # reached) so `get_derivative_presigned_urls` exercises its actual
+        # key-construction logic instead of being stubbed away.
+        s3 = S3Service()
+        signed_keys: list[str] = []
+
+        def _fake_sign(image_key: str, expiry_seconds: int | None = None) -> str | None:
+            if not image_key:
+                return None
+            signed_keys.append(image_key)
+            return f"https://signed.example/{image_key}"
+
+        with (
+            patch.object(service.deck_repo, "list_active", new_callable=AsyncMock) as mock_list,
+            patch.object(service.deck_repo, "count_active", new_callable=AsyncMock) as mock_count,
+            patch.object(
+                service.deck_repo, "get_batch_question_counts", new_callable=AsyncMock
+            ) as mock_batch,
+            patch.object(s3, "generate_presigned_url", side_effect=_fake_sign) as mock_sign,
+            patch("src.services.culture_deck_service.get_s3_service", return_value=s3),
+        ):
+            mock_list.return_value = mock_decks
+            mock_count.return_value = len(mock_decks)
+            mock_batch.return_value = counts_map
+
+            result = await service.list_decks()
+
+        # No S3 key signed more than once, regardless of deck count.
+        assert len(signed_keys) == len(
+            set(signed_keys)
+        ), f"A cover key was signed more than once: {signed_keys}"
+
+        # Exactly 1 main + 3 derivatives per deck, nothing more/less.
+        expected_sign_count = len(mock_decks) * 4
+        assert mock_sign.call_count == expected_sign_count, (
+            f"Expected {expected_sign_count} sign calls "
+            f"({len(mock_decks)} decks x 4 keys), got {mock_sign.call_count}"
+        )
+        assert len(signed_keys) == expected_sign_count
+
+        # Response shape unchanged: 1 main URL + 3-entry variant dict per cover.
+        assert len(result.decks) == len(mock_decks)
+        for deck_resp, key in zip(result.decks, cover_keys):
+            assert deck_resp.cover_image_url == f"https://signed.example/{key}"
+            base_without_ext = key.rsplit(".", 1)[0]
+            assert deck_resp.cover_image_variants == {
+                400: f"https://signed.example/{base_without_ext}_400w.webp",
+                800: f"https://signed.example/{base_without_ext}_800w.webp",
+                1600: f"https://signed.example/{base_without_ext}_1600w.webp",
+            }

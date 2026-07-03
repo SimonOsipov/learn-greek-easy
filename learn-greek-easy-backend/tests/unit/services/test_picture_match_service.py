@@ -1,18 +1,22 @@
 """Unit tests for picture_match_service.
 
 Covers:
-- assemble_picture_match_payload: anchor excluded, 4 options, randomized position
-- InsufficientDistractorPoolError: raised when pool < 3
-- _fetch_candidates internals via mocked DB
+- assemble_picture_match_payload (pool-based API): 4 options when pool sufficient,
+  unsupported exercise_type, missing description, anchor presign failure,
+  description-from-picture text options
+- InsufficientDistractorPoolError: exception type
 
-All DB and S3 calls are mocked — no real database required.
+Anchor-exclusion, insufficient-pool, and correct-index randomisation coverage
+lives in tests/unit/services/test_picture_match_distractor_pool.py (PERF-18-03).
+
+All S3 calls are mocked and distractors are passed in via `pool=` — no real
+database required.
 
 SIT-26 PMATCH-13
 """
 
 from __future__ import annotations
 
-from collections import Counter
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -74,16 +78,6 @@ def _make_anchor_exercise(picture, situation, description):
     return exercise
 
 
-def _make_db_session_with_candidates(candidates: list) -> AsyncMock:
-    """Return a mock AsyncSession whose execute() yields the given candidate rows."""
-    execute_result = MagicMock()
-    execute_result.all.return_value = candidates
-
-    session = AsyncMock()
-    session.execute = AsyncMock(return_value=execute_result)
-    return session
-
-
 # ---------------------------------------------------------------------------
 # Helpers for 3 distractor rows
 # ---------------------------------------------------------------------------
@@ -137,7 +131,7 @@ class TestAssemblePictureMatchPayload:
 
         db = AsyncMock()
         with pytest.raises(ValueError, match="unsupported exercise_type"):
-            await assemble_picture_match_payload(db, exercise, ExerciseType.FILL_GAPS)
+            await assemble_picture_match_payload(db, exercise, ExerciseType.FILL_GAPS, pool=[])
 
     @pytest.mark.asyncio
     async def test_raises_when_description_is_none(self) -> None:
@@ -150,25 +144,7 @@ class TestAssemblePictureMatchPayload:
         db = AsyncMock()
         with pytest.raises(InsufficientDistractorPoolError):
             await assemble_picture_match_payload(
-                db, exercise, ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION
-            )
-
-    @pytest.mark.asyncio
-    async def test_raises_when_fewer_than_3_distractors(self) -> None:
-        """InsufficientDistractorPoolError raised when DB returns < 3 distractor rows."""
-        anchor_sit = MagicMock()
-        anchor_sit.id = uuid4()
-        anchor_pic = _make_picture(situation_id=anchor_sit.id)
-        anchor_desc = _make_description(situation_id=anchor_sit.id, text_el="Anchor text")
-        exercise = _make_anchor_exercise(anchor_pic, anchor_sit, anchor_desc)
-
-        # Only 2 distractors returned — one fewer than required
-        two_rows = _make_three_distractor_rows()[:2]
-        db = _make_db_session_with_candidates(two_rows)
-
-        with pytest.raises(InsufficientDistractorPoolError):
-            await assemble_picture_match_payload(
-                db, exercise, ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION
+                db, exercise, ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION, pool=[]
             )
 
     @pytest.mark.asyncio
@@ -180,94 +156,18 @@ class TestAssemblePictureMatchPayload:
         anchor_desc = _make_description(situation_id=anchor_sit.id, text_el="Anchor description")
         exercise = _make_anchor_exercise(anchor_pic, anchor_sit, anchor_desc)
 
-        rows = _make_three_distractor_rows()
-        db = _make_db_session_with_candidates(rows)
+        pool = _make_three_distractor_rows()
+        db = AsyncMock()
 
         mock_s3 = MagicMock()
         mock_s3.generate_presigned_url.return_value = "https://cdn.example.com/image.jpg"
 
         with patch("src.services.picture_match_service.get_s3_service", return_value=mock_s3):
             payload = await assemble_picture_match_payload(
-                db, exercise, ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION
+                db, exercise, ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION, pool=pool
             )
 
         assert len(payload.options) == 4
-
-    @pytest.mark.asyncio
-    async def test_anchor_excluded_from_distractors(self) -> None:
-        """Anchor picture/description must not appear in the distractor slots
-        — only in the correct_index slot.
-        SELECT_PICTURE_FROM_DESCRIPTION: prompt is anchor description,
-        options are images, correct option's image_url matches anchor.
-        """
-        anchor_sit = MagicMock()
-        anchor_sit.id = uuid4()
-        anchor_pic = _make_picture(situation_id=anchor_sit.id, image_s3_key="situations/anchor.jpg")
-        anchor_desc = _make_description(situation_id=anchor_sit.id, text_el="Anchor text")
-        exercise = _make_anchor_exercise(anchor_pic, anchor_sit, anchor_desc)
-
-        rows = _make_three_distractor_rows()
-        db = _make_db_session_with_candidates(rows)
-
-        anchor_url = "https://cdn.example.com/anchor.jpg"
-        distractor_url = "https://cdn.example.com/distractor.jpg"
-
-        def presign(key: str, **kwargs: object) -> str:
-            return anchor_url if key == "situations/anchor.jpg" else distractor_url
-
-        mock_s3 = MagicMock()
-        mock_s3.generate_presigned_url.side_effect = presign
-
-        with patch("src.services.picture_match_service.get_s3_service", return_value=mock_s3):
-            payload = await assemble_picture_match_payload(
-                db, exercise, ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION
-            )
-
-        # Prompt is anchor description text
-        assert payload.prompt_description == "Anchor text"
-        # Anchor URL appears exactly once at correct_index
-        anchor_options = [opt for opt in payload.options if opt.image_url == anchor_url]
-        assert len(anchor_options) == 1
-        assert payload.correct_index == anchor_options[0].option_index
-
-    @pytest.mark.asyncio
-    async def test_correct_index_randomization_covers_all_positions(self) -> None:
-        """Over N iterations, correct_index covers all 4 positions (0-3).
-
-        Statistical coverage assertion: with N=200 draws from a uniform
-        distribution over {0,1,2,3}, the probability that any position is
-        missed is 4 * (3/4)^200 < 1e-24 — so a position miss means the
-        randomisation is broken.
-        """
-        N = 200
-
-        anchor_sit = MagicMock()
-        anchor_sit.id = uuid4()
-        anchor_pic = _make_picture(situation_id=anchor_sit.id, image_s3_key="situations/anchor.jpg")
-        anchor_desc = _make_description(situation_id=anchor_sit.id, text_el="Anchor text")
-        exercise = _make_anchor_exercise(anchor_pic, anchor_sit, anchor_desc)
-
-        mock_s3 = MagicMock()
-        mock_s3.generate_presigned_url.return_value = "https://cdn.example.com/img.jpg"
-
-        position_counts: Counter[int] = Counter()
-
-        with patch("src.services.picture_match_service.get_s3_service", return_value=mock_s3):
-            for _ in range(N):
-                rows = _make_three_distractor_rows()
-                db = _make_db_session_with_candidates(rows)
-                payload = await assemble_picture_match_payload(
-                    db, exercise, ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION
-                )
-                position_counts[payload.correct_index] += 1
-
-        # All 4 positions must appear at least once
-        assert set(position_counts.keys()) == {
-            0,
-            1,
-            2,
-            3,
-        }, f"Not all positions covered: {dict(position_counts)}"
 
     @pytest.mark.asyncio
     async def test_select_description_from_picture_returns_text_options(self) -> None:
@@ -278,15 +178,15 @@ class TestAssemblePictureMatchPayload:
         anchor_desc = _make_description(situation_id=anchor_sit.id, text_el="Anchor text")
         exercise = _make_anchor_exercise(anchor_pic, anchor_sit, anchor_desc)
 
-        rows = _make_three_distractor_rows()
-        db = _make_db_session_with_candidates(rows)
+        pool = _make_three_distractor_rows()
+        db = AsyncMock()
 
         mock_s3 = MagicMock()
         mock_s3.generate_presigned_url.return_value = "https://cdn.example.com/anchor.jpg"
 
         with patch("src.services.picture_match_service.get_s3_service", return_value=mock_s3):
             payload = await assemble_picture_match_payload(
-                db, exercise, ExerciseType.SELECT_DESCRIPTION_FROM_PICTURE
+                db, exercise, ExerciseType.SELECT_DESCRIPTION_FROM_PICTURE, pool=pool
             )
 
         # Anchor image URL is the prompt
@@ -306,8 +206,8 @@ class TestAssemblePictureMatchPayload:
         anchor_desc = _make_description(situation_id=anchor_sit.id, text_el="Anchor text")
         exercise = _make_anchor_exercise(anchor_pic, anchor_sit, anchor_desc)
 
-        rows = _make_three_distractor_rows()
-        db = _make_db_session_with_candidates(rows)
+        pool = _make_three_distractor_rows()
+        db = AsyncMock()
 
         mock_s3 = MagicMock()
         # Return None (falsy) for ALL keys → presign fails
@@ -316,5 +216,5 @@ class TestAssemblePictureMatchPayload:
         with patch("src.services.picture_match_service.get_s3_service", return_value=mock_s3):
             with pytest.raises(InsufficientDistractorPoolError):
                 await assemble_picture_match_payload(
-                    db, exercise, ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION
+                    db, exercise, ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION, pool=pool
                 )

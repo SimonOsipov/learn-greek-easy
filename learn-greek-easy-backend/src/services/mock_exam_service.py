@@ -244,6 +244,11 @@ class MockExamService:
         new_answers_count = 0
         duplicate_answers_count = 0
 
+        # PERF-18-04: prefetch all answered questions in one IN query instead of
+        # a per-answer single-row SELECT inside the loop below.
+        q_ids = [answer["question_id"] for answer in answers]
+        questions_by_id = {q.id: q for q in await self._get_questions_by_ids(q_ids)}
+
         for answer in answers:
             question_id = answer["question_id"]
             selected_option = answer["selected_option"]
@@ -259,7 +264,7 @@ class MockExamService:
                     },
                 )
                 # Find the existing answer to get correct_option
-                question = await self._get_question(question_id)
+                question = questions_by_id.get(question_id)
                 correct_option = question.correct_option if question else selected_option
 
                 answer_results.append(
@@ -276,7 +281,7 @@ class MockExamService:
                 continue
 
             # Get the question
-            question = await self._get_question(question_id)
+            question = questions_by_id.get(question_id)
             if question is None:
                 logger.warning(
                     "Question not found in submit-all",
@@ -531,19 +536,6 @@ class MockExamService:
             "image_url": image_url,
             "order_index": question.order_index,
         }
-
-    async def _get_question(self, question_id: UUID) -> Optional[CultureQuestion]:
-        """Get a question by ID.
-
-        Args:
-            question_id: Question UUID
-
-        Returns:
-            CultureQuestion if found, None otherwise
-        """
-        query = select(CultureQuestion).where(CultureQuestion.id == question_id)
-        result = await self.db.execute(query)
-        return result.scalar_one_or_none()
 
     async def _get_session_questions(
         self,

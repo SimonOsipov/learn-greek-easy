@@ -603,3 +603,58 @@ class TestSubmitAllAnswers:
 
         assert perfect_result["xp_earned"] == 15  # Bonus XP for perfect recall
         assert normal_result["xp_earned"] == 10  # Normal XP
+
+    @pytest.mark.asyncio
+    async def test_submit_all_handles_missing_question(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        active_mock_exam: MockExamSession,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """PERF-18-04 AC2 — an answer whose question_id is absent from the DB
+        is silently skipped; a sibling valid answer is still processed.
+
+        Parity lock: holds today via `_get_question` returning None
+        (mock_exam_service.py:535-546, `scalar_one_or_none()`) hitting the
+        `if question is None: continue` branch (mock_exam_service.py:280-289);
+        must continue to hold after PERF-18-04 batches the read via
+        `questions_by_id.get(question_id)`, which returns None for a key
+        absent from the dict for the identical reason (dict.get default).
+        """
+        service = MockExamService(db_session, s3_service=mock_s3_service)
+
+        missing_question_id = uuid4()
+        valid_question = culture_questions[0]
+
+        answers = [
+            {
+                "question_id": missing_question_id,
+                "selected_option": 1,
+                "time_taken_seconds": 10,
+            },
+            {
+                "question_id": valid_question.id,
+                "selected_option": valid_question.correct_option,
+                "time_taken_seconds": 10,
+            },
+        ]
+
+        result = await service.submit_all_answers(
+            user_id=test_user.id,
+            session_id=active_mock_exam.id,
+            answers=answers,
+            total_time_seconds=20,
+        )
+
+        # The missing question produced no crash and no answer_results entry.
+        assert len(result["answer_results"]) == 1
+        assert result["answer_results"][0]["question_id"] == valid_question.id
+        assert result["answer_results"][0]["is_correct"] is True
+
+        # Only the valid answer counted as "new"; the missing one is neither
+        # a duplicate nor a processed answer.
+        assert result["new_answers_count"] == 1
+        assert result["duplicate_answers_count"] == 0
+        assert result["score"] == 1

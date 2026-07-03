@@ -161,6 +161,27 @@ class CultureDeckRepository(BaseRepository[CultureDeck]):
         result = await self.db.execute(query)
         return {row[0]: row[1] for row in result.all()}
 
+    async def get_by_ids(self, deck_ids: list[UUID]) -> list[CultureDeck]:
+        """Get multiple active culture decks by their IDs.
+
+        Additive helper for the ``/progress/decks`` list path (PERF-18-01),
+        mirroring ``DeckRepository.get_by_ids`` — active-only filter, used to
+        hydrate only the culture decks on the current page.
+
+        Args:
+            deck_ids: List of culture deck UUIDs to fetch.
+
+        Returns:
+            List of active CultureDeck objects matching the provided IDs.
+        """
+        if not deck_ids:
+            return []
+        query = select(CultureDeck).where(
+            CultureDeck.id.in_(deck_ids), CultureDeck.is_active.is_(True)
+        )
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
 
 # ============================================================================
 # Module Exports
