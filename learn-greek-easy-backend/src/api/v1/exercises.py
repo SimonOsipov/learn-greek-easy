@@ -62,6 +62,13 @@ async def get_exercise_queue(
     early_practice_limit: int = Query(
         default=5, ge=0, le=50, description="Max early practice exercises"
     ),
+    summary: bool = Query(
+        default=False,
+        description=(
+            "Return slim items (heavy per-item content nulled/empty) with identical "
+            "counts and selection. For metadata-only callers (e.g. the exercises hub)."
+        ),
+    ),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> ExerciseQueue:
@@ -81,6 +88,7 @@ async def get_exercise_queue(
         new_limit=new_limit,
         include_early_practice=include_early_practice,
         early_practice_limit=early_practice_limit,
+        summary=summary,
     )
 
 

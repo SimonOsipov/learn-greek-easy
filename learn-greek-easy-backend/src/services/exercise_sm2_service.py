@@ -64,8 +64,18 @@ class ExerciseSM2Service:
         new_limit: int = 10,
         include_early_practice: bool = False,
         early_practice_limit: int = 5,
+        summary: bool = False,
     ) -> ExerciseQueue:
-        """Assemble a prioritized exercise study queue: due → new → early practice."""
+        """Assemble a prioritized exercise study queue: due → new → early practice.
+
+        When ``summary`` is True the queue is assembled identically (same tier
+        fetches, same picture-match drop, same counts), then each item is slimmed:
+        heavy per-item content fields are nulled/emptied while light scheduling and
+        metadata fields are kept. Counts and selection/ordering are unchanged, so
+        callers that only need per-item metadata (e.g. the exercises hub) avoid the
+        heavy audio/items/word-timestamp payload. When False the behaviour is
+        byte-for-byte unchanged (practice session path).
+        """
         # Tier 1: Due exercises
         due_records = await self.record_repo.get_due_exercises(
             user_id,
@@ -159,6 +169,11 @@ class ExerciseSM2Service:
         if to_drop:
             all_items = [i for i in all_items if i.exercise_id not in to_drop]
 
+        # Summary mode (PERF-17-03, D7/D9): slim heavy per-item content after the
+        # drop filter. Count-invariant (never truncates the list) so the hub's
+        # client-side modality filter still sees every item. No-op when summary=False.
+        all_items = self._slim_to_summary(all_items, summary=summary)
+
         return ExerciseQueue(
             total_due=len(due_records),
             total_new=len(new_exercises),
@@ -166,6 +181,31 @@ class ExerciseSM2Service:
             total_in_queue=len(all_items),
             exercises=all_items,
         )
+
+    @staticmethod
+    def _slim_to_summary(
+        items: list[ExerciseQueueItem],
+        *,
+        summary: bool,
+    ) -> list[ExerciseQueueItem]:
+        """Null/empty heavy per-item content in place for summary mode (PERF-17-03).
+
+        No-op unless ``summary`` is True. Mutates each item, nulling the heavy
+        content fields (items, word_timestamps, description_text_el,
+        description_audio_url, description_audio_duration) while leaving every
+        light scheduling/metadata field untouched. The list length is never
+        changed, so queue counts stay identical to the full path. Returns the
+        same list for call-site readability.
+        """
+        if not summary:
+            return items
+        for item in items:
+            item.items = []
+            item.word_timestamps = None
+            item.description_text_el = None
+            item.description_audio_url = None
+            item.description_audio_duration = None
+        return items
 
     def _build_item_from_record(
         self,
