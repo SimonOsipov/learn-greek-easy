@@ -7,6 +7,10 @@
  * - mapSupabaseError key mapping (incl. unknown fallthrough)
  * - return-to redirect honored via location.state.from
  * - authAPI.getProfile is NOT called directly from LoginForm (uses store.checkAuth)
+ * - client-side validation (empty/invalid email, empty/short password)
+ * - accessibility (input ARIA attrs, error association via aria-describedby)
+ * - password-visibility eye-icon toggle (salvaged from the deleted
+ *   Login.integration.test.tsx, INFRA-13-04)
  *
  * Supabase client is globally mocked in src/lib/test-setup.ts; authAPI is
  * mocked per-file so we can verify getProfile call counts.
@@ -290,6 +294,127 @@ describe('LoginForm', () => {
         expect(screen.getByText('Decks Destination')).toBeInTheDocument();
       });
       expect(screen.queryByText('Dashboard Destination')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('form validation', () => {
+    it('shows an error when email is empty', async () => {
+      const user = userEvent.setup();
+      renderLoginForm();
+
+      await user.type(screen.getByTestId('password-input'), 'password123');
+      await user.click(screen.getByTestId('login-submit'));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(i18n.t('login.errors.emailRequired', { ns: 'auth' }))
+        ).toBeInTheDocument();
+      });
+      expect(signInWithPassword).not.toHaveBeenCalled();
+    });
+
+    it('shows an error for an invalid email format', async () => {
+      const user = userEvent.setup();
+      renderLoginForm();
+
+      const emailInput = screen.getByTestId('email-input') as HTMLInputElement;
+      await user.type(emailInput, 'invalid@');
+      await user.type(screen.getByTestId('password-input'), 'password123');
+      await user.click(screen.getByTestId('login-submit'));
+
+      // Depending on whether the browser's native type="email" validity or
+      // zod's stricter .email() catches it first, either the zod error
+      // message shows or the input is marked invalid (mirrors the same
+      // hedge used in ForgotPassword.integration.test.tsx for this exact
+      // 'invalid@' value).
+      await waitFor(() => {
+        const zodError = screen.queryByText(i18n.t('login.errors.emailInvalid', { ns: 'auth' }));
+        expect(zodError || emailInput.validity.valid === false).toBeTruthy();
+      });
+      expect(signInWithPassword).not.toHaveBeenCalled();
+    });
+
+    it('shows an error when password is empty', async () => {
+      const user = userEvent.setup();
+      renderLoginForm();
+
+      await user.type(screen.getByTestId('email-input'), 'demo@learngreekeasy.com');
+      await user.click(screen.getByTestId('login-submit'));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(i18n.t('login.errors.passwordRequired', { ns: 'auth' }))
+        ).toBeInTheDocument();
+      });
+      expect(signInWithPassword).not.toHaveBeenCalled();
+    });
+
+    it('shows an error when password is shorter than 8 characters', async () => {
+      const user = userEvent.setup();
+      renderLoginForm();
+
+      await user.type(screen.getByTestId('email-input'), 'demo@learngreekeasy.com');
+      await user.type(screen.getByTestId('password-input'), 'short');
+      await user.click(screen.getByTestId('login-submit'));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(i18n.t('login.errors.passwordMinLength', { ns: 'auth' }))
+        ).toBeInTheDocument();
+      });
+      expect(signInWithPassword).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('accessibility', () => {
+    it('exposes proper ARIA attributes on the email and password inputs', () => {
+      renderLoginForm();
+
+      const emailInput = screen.getByTestId('email-input');
+      const passwordInput = screen.getByTestId('password-input');
+
+      expect(emailInput).toHaveAttribute('type', 'email');
+      expect(emailInput).toHaveAttribute('autoComplete', 'email');
+      expect(passwordInput).toHaveAttribute('autoComplete', 'current-password');
+    });
+
+    it('associates the email validation error via aria-invalid and aria-describedby', async () => {
+      const user = userEvent.setup();
+      renderLoginForm();
+
+      await user.type(screen.getByTestId('password-input'), 'password123');
+      await user.click(screen.getByTestId('login-submit'));
+
+      await waitFor(() => {
+        const emailInput = screen.getByTestId('email-input');
+        expect(emailInput).toHaveAttribute('aria-invalid', 'true');
+        expect(emailInput).toHaveAttribute('aria-describedby', 'email-error');
+        expect(
+          screen.getByText(i18n.t('login.errors.emailRequired', { ns: 'auth' }))
+        ).toHaveAttribute('id', 'email-error');
+      });
+    });
+  });
+
+  describe('password visibility toggle', () => {
+    it('flips the password input type between password and text', async () => {
+      const user = userEvent.setup();
+      renderLoginForm();
+
+      const passwordInput = screen.getByTestId('password-input') as HTMLInputElement;
+      expect(passwordInput.type).toBe('password');
+
+      const showButton = screen.getByRole('button', {
+        name: i18n.t('passwordVisibility.show', { ns: 'auth' }),
+      });
+      await user.click(showButton);
+      expect(passwordInput.type).toBe('text');
+
+      const hideButton = screen.getByRole('button', {
+        name: i18n.t('passwordVisibility.hide', { ns: 'auth' }),
+      });
+      await user.click(hideButton);
+      expect(passwordInput.type).toBe('password');
     });
   });
 });
