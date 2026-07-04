@@ -13,7 +13,8 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import { render, screen, waitFor } from '@/lib/test-utils';
+import { queryKeys } from '@/lib/queryKeys';
+import { render, screen, waitFor, act } from '@/lib/test-utils';
 import userEvent from '@testing-library/user-event';
 
 import { ExercisePracticePage } from '../ExercisePracticePage';
@@ -33,6 +34,39 @@ vi.mock('react-router-dom', async () => {
     useSearchParams: () => [mockSearchParams, vi.fn()],
   };
 });
+
+// PERF-22-03: exercise-session finish must invalidate queryKeys.exerciseQueue(userId)
+// (mirrors the PERF-22-02 flashcard-finish invalidation pattern in
+// V2FlashcardPracticePage.tsx). A single stable object — NOT a fresh literal
+// per call — since the real useQueryClient() returns the same client
+// instance via context on every render (see PERF-22-02 QA note in
+// V2FlashcardPracticePage.test.tsx: a per-call mock gives `queryClient` a new
+// identity every render, masking a spurious-refetch regression in a
+// [sessionSummary, queryClient, userId]-keyed effect).
+const mockInvalidateQueries = vi.fn();
+const mockQueryClient = { invalidateQueries: mockInvalidateQueries };
+
+vi.mock('@tanstack/react-query', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-query')>();
+  return {
+    ...actual,
+    useQueryClient: () => mockQueryClient,
+  };
+});
+
+// PERF-22-03 / Decision 11: mock a real, non-undefined user id (pattern per
+// Dashboard.test.tsx:51-60) so the invalidation assertion below proves the
+// per-user key is used, not queryKeys.exerciseQueue(undefined).
+const mockAuthState = {
+  user: { id: 'u1', name: 'Test User', email: 'test@test.com' },
+  isAuthenticated: true,
+};
+
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: vi.fn((selector?: (s: Record<string, unknown>) => unknown) =>
+    selector ? selector(mockAuthState) : mockAuthState
+  ),
+}));
 
 vi.mock('posthog-js', () => ({
   default: { capture: vi.fn() },
@@ -417,6 +451,36 @@ describe('ExercisePracticePage', () => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       });
       expect(mockNavigate).not.toHaveBeenCalled();
+    });
+  });
+
+  // ------------------------------------------
+  // PERF-22-03: exercise-session finish invalidates queryKeys.exerciseQueue(userId)
+  // ------------------------------------------
+  //
+  // RED reason: ExercisePracticePage.tsx has no invalidation effect at all
+  // today, so mockInvalidateQueries is never called and the final assertion
+  // fails (toHaveBeenCalledWith on a mock with zero calls) — a genuine
+  // assertion failure, not a collection/import error.
+  describe('session-finish invalidation (PERF-22-03)', () => {
+    it("invalidates queryKeys.exerciseQueue('u1') when sessionSummary transitions from null to populated", async () => {
+      mockStoreState = { ...defaultStoreState, sessionSummary: null };
+      const { rerender } = render(<ExercisePracticePage />);
+      await waitFor(() => expect(mockStartSession).toHaveBeenCalled());
+
+      expect(mockInvalidateQueries).not.toHaveBeenCalled();
+
+      await act(async () => {
+        mockStoreState = {
+          ...mockStoreState,
+          sessionSummary: { total: 5, correct: 4, accuracy_pct: 80, duration_seconds: 120 },
+        };
+        rerender(<ExercisePracticePage />);
+      });
+
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: queryKeys.exerciseQueue('u1'),
+      });
     });
   });
 });

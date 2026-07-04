@@ -39,6 +39,23 @@ vi.mock('react-router-dom', async () => {
   return { ...actual, useNavigate: () => vi.fn() };
 });
 
+// PERF-22-03 / Decision 11: once the hub gates its useQuery on
+// `enabled: !!userId`, an un-mocked authStore resolves to `user: null` ->
+// `userId` undefined -> `enabled` false -> getQueue never fires -> total
+// permanently 0 -> every "Start ENABLED" assertion below (T05-2/T05-4/
+// early-practice-only) would fail. Mock a real, non-undefined user id
+// (pattern per Dashboard.test.tsx:51-60) so the gate fires.
+const mockAuthState = {
+  user: { id: 'u1', name: 'Test User', email: 'test@test.com' },
+  isAuthenticated: true,
+};
+
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: vi.fn((selector?: (s: Record<string, unknown>) => unknown) =>
+    selector ? selector(mockAuthState) : mockAuthState
+  ),
+}));
+
 // exerciseAPI.getQueue — returns an empty queue by default
 const mockGetQueue = vi.fn();
 vi.mock('@/services/exerciseAPI', () => ({
