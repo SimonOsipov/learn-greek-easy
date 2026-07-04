@@ -22,9 +22,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Kicker } from '@/components/ui/kicker';
 import { UnwiredDot } from '@/features/decks/dx/atoms/UnwiredDot';
 import { useStudyStreak } from '@/hooks/useStudyStreak';
+import { queryKeys } from '@/lib/queryKeys';
 import { exerciseAPI } from '@/services/exerciseAPI';
 import type { ExerciseModality, ExerciseQueueItem } from '@/services/exerciseAPI';
+import { useAuthStore } from '@/stores/authStore';
 import { useExercisePracticeStore } from '@/stores/exercisePracticeStore';
+import { selectExerciseQueueTotal } from '@/stores/exerciseQueueSelectors';
 
 import './exercise-dashboard.css';
 
@@ -176,17 +179,24 @@ export const ExercisePreSessionPage = () => {
 
   const showBanner = fromFinish && sessionSummary !== null;
 
+  // PERF-22-03: registry key (deliberate cross-navigation reuse) + explicit
+  // staleTime (was silently inheriting the 5-min global default) + enabled
+  // gate (mirrors useDashboardSummary.ts:24).
+  const userId = useAuthStore((s) => s.user?.id);
+
   // Fetch the full queue once, unfiltered; filter client-side per D8
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['exerciseDashboardQueue'],
+    queryKey: queryKeys.exerciseQueue(userId),
     queryFn: () => exerciseAPI.getQueue({ summary: true }),
+    staleTime: 30_000,
+    enabled: !!userId,
   });
 
   const { streak } = useStudyStreak();
 
   // D10: gate on the canonical total_in_queue (equals the dashboard's queue_count).
   // total_due + total_new drops early-practice and over-counts on picture-match drops (F4).
-  const totalInQueue = data ? data.total_in_queue : 0;
+  const totalInQueue = data ? selectExerciseQueueTotal(data) : 0;
 
   // Client-side filter by selected modality
   const filteredExercises: ExerciseQueueItem[] =
