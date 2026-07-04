@@ -18,7 +18,6 @@ import React, { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff } from 'lucide-react';
-import posthog from 'posthog-js';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -41,6 +40,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { tDynamic } from '@/i18n/tDynamic';
+import { getPosthogInstance, track } from '@/lib/analytics';
 import log from '@/lib/logger';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAuthStore } from '@/stores/authStore';
@@ -144,17 +144,11 @@ export const LoginForm: React.FC = () => {
       // Step 3: PostHog tracking (identify already done inside checkAuth)
       const storeUser = useAuthStore.getState().user;
       if (storeUser) {
-        if (typeof posthog?.identify === 'function') {
-          posthog.identify(storeUser.id, {
-            email: storeUser.email,
-            created_at: storeUser.createdAt.toISOString(),
-          });
-        }
-        if (typeof posthog?.capture === 'function') {
-          posthog.capture('user_logged_in', {
-            method: 'email',
-          });
-        }
+        getPosthogInstance()?.identify(storeUser.id, {
+          email: storeUser.email,
+          created_at: storeUser.createdAt.toISOString(),
+        });
+        track('user_logged_in', { method: 'email' });
       }
 
       log.info('[LoginForm] Successfully authenticated via Supabase');

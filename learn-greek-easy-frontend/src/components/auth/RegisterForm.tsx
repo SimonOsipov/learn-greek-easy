@@ -23,7 +23,6 @@ import React, { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Mail, ArrowLeft, RefreshCw } from 'lucide-react';
-import posthog from 'posthog-js';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
@@ -47,6 +46,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { tDynamic } from '@/i18n/tDynamic';
+import { getPosthogInstance, track } from '@/lib/analytics';
 import log from '@/lib/logger';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAuthStore } from '@/stores/authStore';
@@ -167,17 +167,11 @@ export const RegisterForm: React.FC = () => {
         const storeUser = useAuthStore.getState().user;
         if (storeUser) {
           // Track with PostHog (identify already done inside checkAuth)
-          if (typeof posthog?.identify === 'function') {
-            posthog.identify(storeUser.id, {
-              email: storeUser.email,
-              created_at: storeUser.createdAt.toISOString(),
-            });
-          }
-          if (typeof posthog?.capture === 'function') {
-            posthog.capture('user_signed_up', {
-              method: 'email',
-            });
-          }
+          getPosthogInstance()?.identify(storeUser.id, {
+            email: storeUser.email,
+            created_at: storeUser.createdAt.toISOString(),
+          });
+          track('user_signed_up', { method: 'email' });
         }
 
         log.info('[RegisterForm] Successfully registered and logged in');
