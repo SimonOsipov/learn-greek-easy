@@ -1,5 +1,5 @@
 /**
- * LoginForm PostHog Analytics Tests (PERF-24-02, Mode A — RED)
+ * LoginForm PostHog Analytics Tests (PERF-24-02, Mode B — verified GREEN)
  *
  * AC-2 requires that once a user logs in successfully, LoginForm identifies
  * and tracks the user through the DEFERRED @/lib/analytics seam
@@ -8,15 +8,14 @@
  * resolves post-paint — rather than a statically-imported `posthog-js`
  * singleton.
  *
- * On the CURRENT implementation, LoginForm calls `posthog.identify(...)` /
- * `posthog.capture(...)` on the STATIC `import posthog from 'posthog-js'`
- * (globally mocked once, module-wide, in test-setup.ts). That static-mocked
- * object is a completely different object than the one we inject here via
- * __setPosthogInstance(), so the assertions below fail today — they are
- * expected to go GREEN once the executor migrates LoginForm onto the seam.
+ * LoginForm now routes identify/capture through the injected seam
+ * (`getPosthogInstance()?.identify(...)` / `track('user_logged_in', ...)`),
+ * confirmed meaningful by QA: reverting to a static
+ * `import posthog from 'posthog-js'` + direct `posthog.identify/capture`
+ * calls reproduces the original RED failure on the assertion below.
  *
- * AC-3 (no-throw when posthog is null) is included for completeness; see the
- * note on that test for why it does not gate on current behavior.
+ * AC-3 (no-throw when posthog is null) is a real regression guard now that
+ * getPosthogInstance() can genuinely return null pre-hydration.
  */
 
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
@@ -130,9 +129,6 @@ describe('LoginForm PostHog analytics via the deferred seam', () => {
       expect(screen.getByText('Dashboard Destination')).toBeInTheDocument();
     });
 
-    // FAILS today: LoginForm's identify/capture calls hit the statically
-    // imported posthog-js mock (test-setup.ts), never the object injected
-    // here via __setPosthogInstance.
     expect(mockIdentify).toHaveBeenCalledWith(
       'user-123',
       expect.objectContaining({ email: 'demo@learngreekeasy.com' })
@@ -140,13 +136,40 @@ describe('LoginForm PostHog analytics via the deferred seam', () => {
     expect(mockCapture).toHaveBeenCalledWith('user_logged_in', { method: 'email' });
   });
 
+  it('locks the identify/capture contract shape exactly: { email, created_at } and { method: "email" } (QA adversarial)', async () => {
+    const mockIdentify = vi.fn();
+    const mockCapture = vi.fn();
+    __setPosthogInstance({
+      identify: mockIdentify,
+      capture: mockCapture,
+    } as unknown as import('posthog-js').PostHog);
+
+    const user = userEvent.setup();
+    renderLoginForm();
+
+    await fillAndSubmit(user);
+
+    await waitFor(() => {
+      expect(screen.getByText('Dashboard Destination')).toBeInTheDocument();
+    });
+
+    // Exact shape, not just a subset — pins the contract so a future refactor
+    // that adds/renames a property is caught.
+    expect(mockIdentify).toHaveBeenCalledWith('user-123', {
+      email: 'demo@learngreekeasy.com',
+      created_at: '2025-01-01T00:00:00.000Z',
+    });
+    expect(mockCapture).toHaveBeenCalledWith('user_logged_in', { method: 'email' });
+    expect(mockIdentify).toHaveBeenCalledTimes(1);
+    // mockCapture also observes ThemeContext's own mount-time
+    // track('theme_preference_loaded', ...) call, since both go through the
+    // same shared @/lib/analytics seam — so we assert on the specific
+    // 'user_logged_in' event count, not the spy's total call count.
+    const loginCaptures = mockCapture.mock.calls.filter(([event]) => event === 'user_logged_in');
+    expect(loginCaptures).toHaveLength(1);
+  });
+
   it('does not throw and still navigates when the deferred posthog instance is null (AC-3)', async () => {
-    // NOTE: on CURRENT code this assertion does not gate red/green — the
-    // static `import posthog from 'posthog-js'` is always the test-setup.ts
-    // mock object (never actually null), so __setPosthogInstance(null) has no
-    // effect on today's code path and this test currently PASSES. It becomes
-    // a real regression guard once LoginForm is migrated onto the seam,
-    // where getPosthogInstance() really can return null pre-hydration.
     __setPosthogInstance(null);
 
     const user = userEvent.setup();

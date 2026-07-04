@@ -1,5 +1,5 @@
 /**
- * RegisterForm PostHog Analytics Tests (PERF-24-02, Mode A — RED)
+ * RegisterForm PostHog Analytics Tests (PERF-24-02, Mode B — verified GREEN)
  *
  * AC-2 requires that on the auto-confirm signup success path (signUp resolves
  * with a session — no email-verification step), RegisterForm identifies and
@@ -7,12 +7,17 @@
  * (getPosthogInstance() / track()) rather than a statically-imported
  * `posthog-js` singleton.
  *
- * On the CURRENT implementation, RegisterForm calls `posthog.identify(...)` /
- * `posthog.capture('user_signed_up', ...)` on the STATIC
- * `import posthog from 'posthog-js'` (globally mocked once, module-wide, in
- * test-setup.ts) — a different object than the one injected here via
- * __setPosthogInstance(). The assertion below fails today; it is expected to
- * go GREEN once the executor migrates RegisterForm onto the seam.
+ * RegisterForm now routes identify/capture through the injected seam
+ * (`getPosthogInstance()?.identify(...)` / `track('user_signed_up', ...)`),
+ * confirmed meaningful by QA: reverting to a static
+ * `import posthog from 'posthog-js'` + direct `posthog.identify/capture`
+ * calls reproduces the original RED failure on the assertions below.
+ *
+ * QA adversarial additions (not part of the original RED spec): the exact
+ * identify/capture payload-shape lock, the null-instance no-throw guard
+ * (mirroring LoginForm AC-3), and the email-confirmation branch below (no
+ * session returned) asserting analytics stay silent outside the auto-confirm
+ * guard.
  */
 
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
@@ -137,13 +142,110 @@ describe('RegisterForm PostHog analytics via the deferred seam (auto-confirm pat
       expect(screen.getByText('Dashboard Destination')).toBeInTheDocument();
     });
 
-    // FAILS today: RegisterForm's identify/capture calls hit the statically
-    // imported posthog-js mock (test-setup.ts), never the object injected
-    // here via __setPosthogInstance.
     expect(mockIdentify).toHaveBeenCalledWith(
       'user-123',
       expect.objectContaining({ email: 'demo@learngreekeasy.com' })
     );
     expect(mockCapture).toHaveBeenCalledWith('user_signed_up', { method: 'email' });
+  });
+
+  it('locks the identify/capture contract shape exactly: { email, created_at } and { method: "email" } (QA adversarial)', async () => {
+    const mockIdentify = vi.fn();
+    const mockCapture = vi.fn();
+    __setPosthogInstance({
+      identify: mockIdentify,
+      capture: mockCapture,
+    } as unknown as import('posthog-js').PostHog);
+
+    const user = userEvent.setup();
+    renderRegisterForm();
+
+    await fillAndSubmit(user);
+
+    await waitFor(() => {
+      expect(screen.getByText('Dashboard Destination')).toBeInTheDocument();
+    });
+
+    // Exact shape, not just a subset — pins the contract so a future refactor
+    // that adds/renames a property is caught.
+    expect(mockIdentify).toHaveBeenCalledWith('user-123', {
+      email: 'demo@learngreekeasy.com',
+      created_at: '2025-01-01T00:00:00.000Z',
+    });
+    expect(mockCapture).toHaveBeenCalledWith('user_signed_up', { method: 'email' });
+    expect(mockIdentify).toHaveBeenCalledTimes(1);
+    // mockCapture also observes ThemeContext's own mount-time
+    // track('theme_preference_loaded', ...) call, since both go through the
+    // same shared @/lib/analytics seam — so we assert on the specific
+    // 'user_signed_up' event count, not the spy's total call count.
+    const signupCaptures = mockCapture.mock.calls.filter(([event]) => event === 'user_signed_up');
+    expect(signupCaptures).toHaveLength(1);
+  });
+
+  it('does not throw and still navigates when the deferred posthog instance is null (QA adversarial, mirrors LoginForm AC-3)', async () => {
+    __setPosthogInstance(null);
+
+    const user = userEvent.setup();
+    renderRegisterForm();
+
+    await fillAndSubmit(user);
+
+    await waitFor(() => {
+      expect(screen.getByText('Dashboard Destination')).toBeInTheDocument();
+    });
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+  });
+});
+
+describe('RegisterForm PostHog analytics — email-confirmation branch (QA adversarial)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+    });
+    // Email confirmation required: signUp resolves with a user but NO session.
+    signUp.mockResolvedValue({
+      data: { user: { id: 'test-user-id' }, session: null },
+      error: null,
+    });
+    getSession.mockResolvedValue({ data: { session: stubSession } });
+    getProfile.mockResolvedValue(baseProfile);
+  });
+
+  afterEach(() => {
+    signUp.mockReset();
+    __setPosthogInstance(null);
+  });
+
+  it('fires no identify/capture and shows the verification screen when signUp returns no session', async () => {
+    const mockIdentify = vi.fn();
+    const mockCapture = vi.fn();
+    __setPosthogInstance({
+      identify: mockIdentify,
+      capture: mockCapture,
+    } as unknown as import('posthog-js').PostHog);
+
+    const user = userEvent.setup();
+    renderRegisterForm();
+
+    await fillAndSubmit(user);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('verification-card')).toBeInTheDocument();
+    });
+
+    // Guards against the identify/capture calls accidentally moving outside
+    // the `if (authData.session)` auto-confirm guard in RegisterForm.
+    // identify has no other caller in this render tree, so a blanket
+    // not-called assertion is safe. capture is also driven by ThemeContext's
+    // own mount-time track('theme_preference_loaded', ...) call through the
+    // same shared seam, so we assert the signup event specifically was never
+    // captured rather than asserting capture was never called at all.
+    expect(mockIdentify).not.toHaveBeenCalled();
+    expect(mockCapture).not.toHaveBeenCalledWith('user_signed_up', expect.anything());
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
   });
 });
