@@ -231,5 +231,24 @@ describe('getAnalytics', () => {
       // with retry:false, or this would be called twice.
       expect(progressAPI.getDeckProgressList).toHaveBeenCalledTimes(1);
     });
+
+    // QA adversarial addition: none of the pre-authored specs actually pin
+    // that getAnalytics threads its OWN userId argument into
+    // fetchDeckProgressList — they only assert on the fixed request params
+    // and call counts. Because fetchDeckProgressList is backed by the real
+    // singleton cache here (only progressAPI is mocked), if getAnalytics
+    // hardcoded/dropped the userId (e.g. called fetchDeckProgressList
+    // (undefined) for every user), two different users within the same
+    // (uncleared) cache window would collapse onto the same cache entry and
+    // the second call would be served from cache — this test would then
+    // observe ONE API call instead of TWO and fail, proving the thread.
+    it('threads userId into the deck-progress cache key — distinct users each hit the API', async () => {
+      setupHappyPath();
+
+      await getAnalytics('user-1', 'last30');
+      await getAnalytics('user-2', 'last30');
+
+      expect(progressAPI.getDeckProgressList).toHaveBeenCalledTimes(2);
+    });
   });
 });

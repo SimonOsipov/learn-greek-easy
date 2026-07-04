@@ -80,4 +80,46 @@ describe('fetchDeckProgressList', () => {
     // here would mean fetchDeckProgressList forgot to override retry:false.
     expect(progressAPI.getDeckProgressList).toHaveBeenCalledTimes(1);
   });
+
+  // ── QA adversarial/edge additions (not in the architect's Test Specs) ──────
+
+  it('fetchDeckProgressList(undefined) resolves without throwing (logged-out/no-user)', async () => {
+    vi.mocked(progressAPI.getDeckProgressList).mockResolvedValue(stubDeckProgress);
+
+    await expect(fetchDeckProgressList(undefined)).resolves.toEqual(stubDeckProgress);
+    // Confirms it lands under the undefined-scoped key, not silently dropped
+    // or coerced to some other cache entry.
+    expect(queryClient.getQueryData(queryKeys.progressDecks(undefined))).toEqual(stubDeckProgress);
+  });
+
+  it('dedups concurrent (non-sequential) calls for the same user to a single network call', async () => {
+    vi.mocked(progressAPI.getDeckProgressList).mockResolvedValue(stubDeckProgress);
+
+    // Fire both without awaiting the first — exercises TanStack Query's
+    // in-flight promise sharing, a different code path from the
+    // already-resolved-cache dedup covered by the staleTime test above.
+    const [first, second] = await Promise.all([
+      fetchDeckProgressList('u1'),
+      fetchDeckProgressList('u1'),
+    ]);
+
+    expect(progressAPI.getDeckProgressList).toHaveBeenCalledTimes(1);
+    expect(first).toEqual(stubDeckProgress);
+    expect(second).toEqual(stubDeckProgress);
+  });
+
+  it('refetches once staleTime (30s) has elapsed', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.mocked(progressAPI.getDeckProgressList).mockResolvedValue(stubDeckProgress);
+
+      await fetchDeckProgressList('u1');
+      vi.advanceTimersByTime(30_001);
+      await fetchDeckProgressList('u1');
+
+      expect(progressAPI.getDeckProgressList).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
