@@ -487,5 +487,31 @@ describe('ExercisePracticePage', () => {
         queryKey: queryKeys.exerciseQueue('u1'),
       });
     });
+
+    // QA adversarial (PERF-22-03 Mode B): the finish effect must NOT fire on
+    // mount, and must NOT fire on unrelated re-renders while sessionSummary
+    // stays null (e.g. answers accumulating mid-session) — only a genuine
+    // null -> populated transition should invalidate. Guards against an
+    // effect with an over-broad condition (e.g. missing the `if (sessionSummary)`
+    // guard, or keying off `answers`/`currentIndex` instead of `sessionSummary`).
+    it('does NOT invalidate on mount, nor on unrelated re-renders while sessionSummary stays null', async () => {
+      mockStoreState = { ...defaultStoreState, sessionSummary: null };
+      const { rerender } = render(<ExercisePracticePage />);
+      await waitFor(() => expect(mockStartSession).toHaveBeenCalled());
+
+      expect(mockInvalidateQueries).not.toHaveBeenCalled();
+
+      // Mid-session re-render: answers/currentIndex change, sessionSummary stays null.
+      await act(async () => {
+        mockStoreState = {
+          ...mockStoreState,
+          currentIndex: 1,
+          answers: { 'ex-1': { selectedIndex: 0, correct: true } },
+        };
+        rerender(<ExercisePracticePage />);
+      });
+
+      expect(mockInvalidateQueries).not.toHaveBeenCalled();
+    });
   });
 });

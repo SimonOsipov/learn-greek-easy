@@ -46,4 +46,22 @@ describe('selectExerciseQueueTotal', () => {
 
     expect(selectExerciseQueueTotal(queue)).toBe(2);
   });
+
+  // QA adversarial (PERF-22-03 Mode B): the selector is a direct property
+  // read with no `?? 0` fallback. A malformed API response (field missing at
+  // runtime despite the static ExerciseQueue contract) must not silently
+  // coerce to a truthy/incorrect value — it should surface as `undefined`,
+  // NOT as a falsy-looking 0 masking a real backend contract violation.
+  // Documents current behavior; the hub already guards the undefined case
+  // separately at the call site (`data ? selectExerciseQueueTotal(data) : 0`).
+  it('returns undefined (not 0, not a thrown error) when total_in_queue is missing at runtime', () => {
+    const malformedQueue = {
+      total_due: 1,
+      total_new: 1,
+      total_early_practice: 0,
+      exercises: [],
+    } as unknown as ExerciseQueue;
+
+    expect(selectExerciseQueueTotal(malformedQueue)).toBeUndefined();
+  });
 });

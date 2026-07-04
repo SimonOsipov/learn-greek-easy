@@ -574,6 +574,23 @@ describe('PERF-17-05: summary mode + total_in_queue gate', () => {
     expect(screen.getByTestId('start-daily-mix-btn')).not.toBeDisabled();
   });
 
+  // ── QA adversarial (PERF-22-03 Mode B): `data` undefined while the query is
+  // still loading. The hub reads `data ? selectExerciseQueueTotal(data) : 0`
+  // (ExercisePreSessionPage.tsx) — this guards against a regression where a
+  // future edit calls the selector unconditionally on `data` and crashes on
+  // `undefined.total_in_queue` before the fetch resolves.
+  it('QA: total is 0 and Start is disabled (no crash) while the queue query is still loading', async () => {
+    // A promise that never resolves during this test — isLoading stays true.
+    mockGetQueue.mockReturnValue(new Promise(() => {}));
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('exercise-pre-session-page')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('start-daily-mix-btn')).toBeDisabled();
+  });
+
   // ── T05-3: recommended cards render from slim items (guard — likely passes today) ─
   it('T05-3: renders at most 4 recommended cards from 6 slim mixed-modality items, with correct fields, and the modality filter still works', async () => {
     const sixSlimItems = [
