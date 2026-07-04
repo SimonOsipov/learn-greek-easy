@@ -27,20 +27,9 @@ vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
 
-/**
- * NOTE: These tests are skipped due to zustand persist middleware
- * incompatibility with test environment. The persist middleware
- * captures localStorage at module load time, before mocks are set up.
- *
- * TODO: Consider using msw or similar to mock storage at a lower level,
- * or test these hooks via integration tests instead of unit tests.
- */
-describe.skip('useAuth Hook', () => {
+describe('useAuth Hook', () => {
   beforeEach(() => {
-    // Clear localStorage
-    localStorage.clear();
-
-    // Reset auth store (this triggers persist middleware)
+    // Reset auth store
     useAuthStore.setState({
       user: null,
       isAuthenticated: false,
@@ -251,7 +240,7 @@ describe.skip('useAuth Hook', () => {
 
       renderHook(() => useRedirectIfAuth());
 
-      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
     });
 
     it('should not redirect when not authenticated', () => {
@@ -312,7 +301,7 @@ describe.skip('useAuth Hook', () => {
 
       renderHook(() => useRequireRole('premium'));
 
-      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
     });
 
     it('should allow admin users to access premium features', () => {
@@ -350,7 +339,7 @@ describe.skip('useAuth Hook', () => {
 
       renderHook(() => useRequireRole('admin'));
 
-      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
     });
 
     it('should use custom redirect path when access denied', () => {
@@ -362,6 +351,20 @@ describe.skip('useAuth Hook', () => {
       renderHook(() => useRequireRole('premium', '/pricing'));
 
       expect(mockNavigate).toHaveBeenCalledWith('/pricing', { replace: true });
+    });
+
+    it('should redirect (not crash) when authenticated but user is null (divergent store state)', () => {
+      // isAuthenticated:true with user:null shouldn't normally happen, but the
+      // hook must not throw on it - hasAccess should fall through to false
+      // via the null?.role optional chain rather than reading a role off null.
+      useAuthStore.setState({
+        user: null,
+        isAuthenticated: true,
+      });
+
+      renderHook(() => useRequireRole('premium'));
+
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
     });
 
     it('should return hasAccess based on user role', () => {

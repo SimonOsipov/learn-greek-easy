@@ -40,7 +40,7 @@ vi.mock('@/services/authAPI', () => ({
   clearAuthTokens: vi.fn(),
 }));
 
-// Helper to set authenticated state directly (since login is handled by Auth0)
+// Helper to set authenticated state directly (since login is handled by Supabase Auth)
 const setAuthenticatedUser = (email: string, role: 'free' | 'admin' = 'free') => {
   useAuthStore.setState({
     user: {
