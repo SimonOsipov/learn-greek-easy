@@ -1,3 +1,4 @@
+import { fetchDeckProgressList } from '@/lib/queryKeys';
 import { progressAPI } from '@/services/progressAPI';
 import type { DateRangeType } from '@/stores/dateRangeStore';
 import type { AnalyticsDashboardData } from '@/types/analytics';
@@ -32,7 +33,7 @@ export const getAnalytics = async (
   const [dashboard, trends, deckProgress] = await Promise.all([
     progressAPI.getDashboard(),
     progressAPI.getTrends({ period }),
-    progressAPI.getDeckProgressList({ page: 1, page_size: 50 }),
+    fetchDeckProgressList(userId),
   ]);
 
   return transformToAnalyticsDashboardData(userId, dateRange, dashboard, trends, deckProgress);
