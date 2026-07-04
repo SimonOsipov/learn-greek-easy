@@ -16,10 +16,12 @@ import { create } from 'zustand';
 import { createJSONStorage, devtools, persist } from 'zustand/middleware';
 
 import { reportAPIError } from '@/lib/errorReporting';
+import { fetchDeckProgressList } from '@/lib/queryKeys';
 import { deckAPI } from '@/services/deckAPI';
 import type { DeckDetailResponse, DeckLevel, DeckResponse } from '@/services/deckAPI';
 import { progressAPI } from '@/services/progressAPI';
 import type { DeckProgressDetailResponse, DeckProgressSummary } from '@/services/progressAPI';
+import { useAuthStore } from '@/stores/authStore';
 import type { Deck, DeckFilters, DeckProgress } from '@/types/deck';
 
 import type { PersistOptions } from 'zustand/middleware';
@@ -319,12 +321,14 @@ export const useDeckStore = create<DeckState>()(
               params.search = filters.search;
             }
 
-            // Fetch vocabulary decks and progress in parallel
+            // Fetch vocabulary decks and progress in parallel. userId is read via
+            // useAuthStore.getState() because this store is non-React (mirrors
+            // exercisePracticeStore.ts:77); the shared fetcher is user-scoped so
+            // TanStack Query dedups/caches this list with any other caller.
+            const userId = useAuthStore.getState().user?.id;
             const [deckResponse, progressResponse] = await Promise.all([
               deckAPI.getList(params),
-              progressAPI
-                .getDeckProgressList({ page: 1, page_size: 50 })
-                .catch(() => ({ decks: [] })),
+              fetchDeckProgressList(userId).catch(() => ({ decks: [] })),
             ]);
 
             // Update progress cache
