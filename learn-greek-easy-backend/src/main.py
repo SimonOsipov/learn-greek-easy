@@ -60,6 +60,27 @@ async def _close_openrouter_client() -> None:
         logger.warning("OpenRouter client shutdown failed: {error}", error=str(exc))
 
 
+async def _start_elevenlabs_client() -> None:
+    """Initialize ElevenLabs HTTP client (connection pooling + HTTP/2)."""
+    try:
+        from src.services.elevenlabs_service import get_elevenlabs_service
+
+        await get_elevenlabs_service().start()
+        logger.info("ElevenLabs HTTP client initialized")
+    except Exception as exc:
+        logger.warning("ElevenLabs client initialization failed: {error}", error=str(exc))
+
+
+async def _close_elevenlabs_client() -> None:
+    """Close ElevenLabs HTTP client and release connection pool."""
+    try:
+        from src.services.elevenlabs_service import get_elevenlabs_service
+
+        await get_elevenlabs_service().close()
+    except Exception as exc:
+        logger.warning("ElevenLabs client shutdown failed: {error}", error=str(exc))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager."""
@@ -123,6 +144,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
 
     await _start_openrouter_client()
+    await _start_elevenlabs_client()
 
     # Auto-seed on deploy (local dev only)
     if settings.seed_on_deploy and settings.can_seed_database():
@@ -156,6 +178,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     shutdown_posthog()
 
     await _close_openrouter_client()
+    await _close_elevenlabs_client()
 
     # Close Redis connection
     await close_redis()

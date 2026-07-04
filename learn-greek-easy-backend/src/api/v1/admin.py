@@ -859,7 +859,7 @@ async def upload_deck_cover_image(
 
     old_key = deck.cover_image_s3_key if deck.cover_image_s3_key != s3_key else None
 
-    uploaded = s3.upload_object(s3_key, data, file.content_type)
+    uploaded = await asyncio.to_thread(s3.upload_object, s3_key, data, file.content_type)
     if not uploaded:
         raise HTTPException(status_code=500, detail="Failed to upload cover image")
 
@@ -884,7 +884,7 @@ async def upload_deck_cover_image(
 
     # Delete old key only after commit — if commit fails, the row still
     # references the old object and we must not orphan it.
-    if old_key and not s3.delete_object(old_key):
+    if old_key and not await asyncio.to_thread(s3.delete_object, old_key):
         logger.warning(
             "Failed to delete prior deck cover image from S3",
             extra={"prior_key": old_key, "deck_id": str(deck_id)},
@@ -918,7 +918,7 @@ async def delete_deck_cover_image(
         raise HTTPException(status_code=404, detail="Deck has no cover image")
 
     s3 = get_s3_service()
-    deleted = s3.delete_object(deck.cover_image_s3_key)
+    deleted = await asyncio.to_thread(s3.delete_object, deck.cover_image_s3_key)
     if not deleted:
         raise HTTPException(status_code=500, detail="Failed to delete cover image")
 
@@ -3758,11 +3758,11 @@ async def delete_word_entry(
         },
     )
 
-    # Best-effort S3 cleanup (do NOT await — synchronous method)
+    # Best-effort S3 cleanup (off-loaded to a thread — synchronous method)
     s3 = get_s3_service()
     for key in s3_keys:
         try:
-            s3.delete_object(key)
+            await asyncio.to_thread(s3.delete_object, key)
         except Exception:
             logger.warning(
                 "Failed to delete S3 audio during word entry deletion",
@@ -3847,7 +3847,7 @@ async def delete_listening_dialog(
         )
         s3 = get_s3_service()
         try:
-            s3.delete_object(dialog.audio_s3_key)
+            await asyncio.to_thread(s3.delete_object, dialog.audio_s3_key)
         except Exception:
             logger.warning(
                 "Failed to delete S3 audio during dialog deletion",
@@ -4156,7 +4156,7 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
         # Best-effort deletion of the prior audio object now that persist succeeded.
         if prior_audio_key and prior_audio_key != audio_result.s3_key:
             try:
-                get_s3_service().delete_object(prior_audio_key)
+                await asyncio.to_thread(get_s3_service().delete_object, prior_audio_key)
             except Exception:
                 logger.warning(
                     "Failed to delete prior dialog audio from S3",
@@ -4297,7 +4297,7 @@ async def _description_audio_sse_pipeline(
         # b1 and a2 are independent — only ever delete the level being regenerated.
         if prior_description_key and prior_description_key != s3_key:
             try:
-                get_s3_service().delete_object(prior_description_key)
+                await asyncio.to_thread(get_s3_service().delete_object, prior_description_key)
             except Exception:
                 logger.warning(
                     "Failed to delete prior description audio from S3",
@@ -4416,7 +4416,7 @@ async def _picture_sse_pipeline(situation_id: UUID) -> AsyncGenerator[str, None]
 
         if prior_key and prior_key != s3_key:
             try:
-                get_s3_service().delete_object(prior_key)
+                await asyncio.to_thread(get_s3_service().delete_object, prior_key)
             except Exception:
                 logger.warning(
                     "Failed to delete prior S3 picture object",
@@ -4658,7 +4658,7 @@ async def upload_situation_picture(
 
     if prior_key and prior_key != s3_key:
         try:
-            s3.delete_object(prior_key)
+            await asyncio.to_thread(s3.delete_object, prior_key)
         except Exception:
             logger.warning(
                 "Failed to delete prior S3 picture object on manual upload",
@@ -4713,7 +4713,7 @@ async def delete_situation(
         s3 = get_s3_service()
         for key in keys:
             try:
-                s3.delete_object(key)
+                await asyncio.to_thread(s3.delete_object, key)
             except Exception:
                 logger.warning(
                     "Failed to delete S3 object during situation deletion",

@@ -378,7 +378,7 @@ class NewsItemService:
         new_s3_key = await self._upload_image_to_s3(image_bytes, content_type)
         situation.source_image_s3_key = new_s3_key
         if old_s3_key:
-            self.s3_service.delete_object(old_s3_key)
+            await asyncio.to_thread(self.s3_service.delete_object, old_s3_key)
 
     @staticmethod
     def _patch_situation(situation: Situation, data: NewsItemUpdate) -> None:
@@ -466,7 +466,9 @@ class NewsItemService:
         """
         ext = S3Service.get_extension_for_content_type(content_type) or "jpg"
         s3_key = f"situations/images/{uuid4()}.{ext}"
-        success = self.s3_service.upload_object(s3_key, image_bytes, content_type)
+        success = await asyncio.to_thread(
+            self.s3_service.upload_object, s3_key, image_bytes, content_type
+        )
         if not success:
             raise ValueError("Failed to upload image to S3")
         # Generate WebP derivatives alongside the original (PERF-10).

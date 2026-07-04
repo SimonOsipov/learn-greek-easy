@@ -147,23 +147,6 @@ async def check_achievements_task(user_id: UUID) -> None:
                 },
             )
 
-        # Signal event bus for SSE dashboard refresh
-        try:
-            import asyncio
-
-            from src.core.event_bus import dashboard_event_bus
-
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                loop.create_task(
-                    dashboard_event_bus.signal(
-                        f"dashboard:{user_id}",
-                        {"reason": "achievement_unlocked"},
-                    )
-                )
-        except Exception:
-            pass  # Fire-and-forget: never let signaling break the task
-
     except Exception as e:
         logger.error(
             "Reconcile failed in check_achievements_task",

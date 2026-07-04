@@ -115,8 +115,10 @@ class TestInitRedis:
                     # Client should be None (degraded mode)
                     assert get_redis() is None
 
-                    # Warning should be logged
-                    mock_logger.warning.assert_called()
+                    # Error should be logged (crosses Sentry event_level=ERROR)
+                    mock_logger.error.assert_called()
+                    # Failure path must fully move to ERROR, not double-log at WARNING
+                    mock_logger.warning.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_init_redis_pool_configuration(self, mock_redis_client):

@@ -125,10 +125,17 @@ class S3Service:
         """Initialize S3 service with AWS credentials from settings."""
         self._client: Optional["S3Client"] = None
         self._initialized = False
+        self._init_lock = threading.Lock()
         self._url_cache: dict[str, tuple[str, float]] = {}  # key -> (url, valid_until)
 
     def _get_client(self) -> Optional["S3Client"]:
         """Get or create S3 client lazily.
+
+        Thread-safe via double-checked locking: with `asyncio.to_thread` call
+        sites, multiple worker threads can race into this method concurrently.
+        Without the lock, a second thread could observe `_initialized=True`
+        after the first thread sets it but before `_client` is assigned,
+        returning a premature `None`.
 
         Returns:
             S3 client if configured, None otherwise
@@ -136,61 +143,65 @@ class S3Service:
         if self._initialized:
             return self._client
 
-        self._initialized = True
+        with self._init_lock:
+            if self._initialized:
+                return self._client
 
-        if not settings.s3_configured:
-            logger.warning(
-                "S3 not configured - credentials or bucket name missing",
-                extra={
-                    "has_access_key": bool(settings.effective_s3_access_key_id),
-                    "has_secret_key": bool(settings.effective_s3_secret_access_key),
-                    "has_bucket": bool(settings.effective_s3_bucket_name),
-                    "has_endpoint": bool(settings.effective_s3_endpoint_url),
-                },
-            )
-            return None
+            self._initialized = True
 
-        try:
-            config = Config(
-                signature_version="s3v4",
-                retries={"max_attempts": 3, "mode": "standard"},
-            )
-
-            # Create S3 client - endpoint_url is optional (Railway needs it, AWS doesn't)
-            if settings.effective_s3_endpoint_url:
-                self._client = boto3.client(
-                    "s3",
-                    aws_access_key_id=settings.effective_s3_access_key_id,
-                    aws_secret_access_key=settings.effective_s3_secret_access_key,
-                    region_name=settings.effective_s3_region,
-                    config=config,
-                    endpoint_url=settings.effective_s3_endpoint_url,
+            if not settings.s3_configured:
+                logger.warning(
+                    "S3 not configured - credentials or bucket name missing",
+                    extra={
+                        "has_access_key": bool(settings.effective_s3_access_key_id),
+                        "has_secret_key": bool(settings.effective_s3_secret_access_key),
+                        "has_bucket": bool(settings.effective_s3_bucket_name),
+                        "has_endpoint": bool(settings.effective_s3_endpoint_url),
+                    },
                 )
-            else:
-                self._client = boto3.client(
-                    "s3",
-                    aws_access_key_id=settings.effective_s3_access_key_id,
-                    aws_secret_access_key=settings.effective_s3_secret_access_key,
-                    region_name=settings.effective_s3_region,
-                    config=config,
+                return None
+
+            try:
+                config = Config(
+                    signature_version="s3v4",
+                    retries={"max_attempts": 3, "mode": "standard"},
                 )
 
-            logger.info(
-                "S3 client initialized",
-                extra={
-                    "region": settings.effective_s3_region,
-                    "bucket": settings.effective_s3_bucket_name,
-                    "endpoint": settings.effective_s3_endpoint_url or "AWS default",
-                    "provider": "Railway" if settings.effective_s3_endpoint_url else "AWS",
-                },
-            )
-            return self._client
-        except Exception as e:
-            logger.error(
-                "Failed to initialize S3 client",
-                extra={"error": str(e)},
-            )
-            return None
+                # Create S3 client - endpoint_url is optional (Railway needs it, AWS doesn't)
+                if settings.effective_s3_endpoint_url:
+                    self._client = boto3.client(
+                        "s3",
+                        aws_access_key_id=settings.effective_s3_access_key_id,
+                        aws_secret_access_key=settings.effective_s3_secret_access_key,
+                        region_name=settings.effective_s3_region,
+                        config=config,
+                        endpoint_url=settings.effective_s3_endpoint_url,
+                    )
+                else:
+                    self._client = boto3.client(
+                        "s3",
+                        aws_access_key_id=settings.effective_s3_access_key_id,
+                        aws_secret_access_key=settings.effective_s3_secret_access_key,
+                        region_name=settings.effective_s3_region,
+                        config=config,
+                    )
+
+                logger.info(
+                    "S3 client initialized",
+                    extra={
+                        "region": settings.effective_s3_region,
+                        "bucket": settings.effective_s3_bucket_name,
+                        "endpoint": settings.effective_s3_endpoint_url or "AWS default",
+                        "provider": "Railway" if settings.effective_s3_endpoint_url else "AWS",
+                    },
+                )
+                return self._client
+            except Exception as e:
+                logger.error(
+                    "Failed to initialize S3 client",
+                    extra={"error": str(e)},
+                )
+                return None
 
     def generate_presigned_url(
         self,

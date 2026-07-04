@@ -1,4 +1,3 @@
-import asyncio
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -6,7 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.core.dependencies import get_current_user
-from src.core.event_bus import dashboard_event_bus
 from src.core.logging import get_logger
 from src.core.subscription import check_premium_deck_access
 from src.db.dependencies import get_db
@@ -76,17 +74,5 @@ async def submit_v2_review(
         )
     else:
         await service.persist_review(context)
-
-    # Step 8: Signal dashboard SSE
-    try:
-        loop = asyncio.get_running_loop()
-        loop.create_task(
-            dashboard_event_bus.signal(
-                f"dashboard:{current_user.id}",
-                {"reason": "review_completed"},
-            )
-        )
-    except RuntimeError:
-        pass
 
     return result

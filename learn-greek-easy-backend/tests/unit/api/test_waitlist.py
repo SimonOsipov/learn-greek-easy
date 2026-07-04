@@ -125,6 +125,30 @@ class TestWaitlistSubscribe:
         assert response.status_code == 502
         assert response.json()["detail"] == "Failed to process signup"
 
+    async def test_subscribe_endpoint_defers_send(
+        self, client: AsyncClient, mock_service_subscribe_success: MagicMock
+    ) -> None:
+        """PERF-19-03: endpoint threads a BackgroundTasks into WaitlistService.subscribe
+        so the confirmation email send is scheduled off the request path.
+
+        Pre-impl RED: endpoint calls `service.subscribe(str(body.email))` with a single
+        str arg — no BackgroundTasks instance is ever passed.
+        """
+        from fastapi import BackgroundTasks
+
+        response = await client.post(
+            "/api/v1/waitlist/subscribe",
+            json={"email": "user@example.com"},
+        )
+        assert response.status_code == 201
+
+        mock_service_subscribe_success.subscribe.assert_called_once()
+        call_args = mock_service_subscribe_success.subscribe.call_args
+        all_args = list(call_args.args) + list(call_args.kwargs.values())
+        assert any(
+            isinstance(arg, BackgroundTasks) for arg in all_args
+        ), f"Expected a BackgroundTasks instance passed to subscribe(), got: {call_args}"
+
 
 # =============================================================================
 # POST /confirm Tests
