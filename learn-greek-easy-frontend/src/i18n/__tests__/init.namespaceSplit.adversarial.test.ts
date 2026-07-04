@@ -4,7 +4,7 @@
  * The RED specs (init.namespaceSplit.test.ts, i18n.test.ts) already prove the
  * headline behavior: the critical trio (common/auth/landing) loads
  * synchronously and a sampled non-critical namespace ('deck') is deferred.
- * These tests close three gaps those specs leave open:
+ * These tests close gaps those specs leave open:
  *
  *   1. "exactly the 14" — the deferred loader must inject ALL 17 NAMESPACES
  *      (not a subset that happens to include 'deck'), verified against the
@@ -15,6 +15,10 @@
  *      underlying dynamic imports throws — the `void` call site in main.tsx
  *      has no .catch(), so an unswallowed rejection would be an unhandled
  *      promise rejection in production.
+ *   2b. Partial success (CodeRabbit fix, PERF-24 Phase 3): loadDeferredEnglish
+ *      Namespaces() uses Promise.allSettled, so the ONE rejected import above
+ *      must not take the other 13 namespaces down with it — they still get
+ *      added even though 'deck' didn't.
  *   3. FOUC-safety: a representative key from EACH of the 3 critical
  *      namespaces (not just auth+landing, as the RED spec covers) resolves to
  *      a real string synchronously after initI18n() resolves.
@@ -119,6 +123,51 @@ describe('PERF-24-01: QA adversarial coverage (fresh instance)', () => {
 
     expect(warnSpy).toHaveBeenCalled();
     expect(warnSpy.mock.calls[0][0]).toContain('deferred English namespaces');
+  });
+
+  // ---------------------------------------------------------------------------
+  // 2b. Partial success (CodeRabbit fix, PERF-24 Phase 3): Promise.allSettled
+  //     means one rejected import must NOT take the other 13 namespaces down
+  //     with it. Before the fix (Promise.all), a single rejection short-
+  //     circuited the whole batch and NONE of the 14 namespaces were added —
+  //     this test would fail on the "present" assertions below without the
+  //     fix, since 'achievements'/'admin' would also be absent.
+  // ---------------------------------------------------------------------------
+  it('partial failure: the other 13 namespaces are still added when one deferred import rejects', async () => {
+    // initI18n() must run first: it's what actually resets the fresh
+    // instance's resourceStore to just the critical trio via i18next's own
+    // .init() (addResourceBundle alone does not reset prior state, and this
+    // suite's shared-singleton pre-seed — see file header — would otherwise
+    // leave a stale 'deck' bundle in place from before this test ran).
+    localStorage.setItem('i18nextLng', 'en');
+    vi.resetModules();
+
+    vi.doMock('@/lib/logger', () => ({
+      default: { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() },
+    }));
+    vi.doMock('../locales/en/deck.json', () => {
+      throw new Error('Simulated deck.json chunk load failure');
+    });
+
+    const freshInit = await import('../init');
+    freshInit.resetI18nInit();
+    const { default: freshI18n } = await import('i18next');
+
+    await freshInit.initI18n();
+
+    // Pre-deferred: every non-critical namespace, including 'deck', starts absent.
+    expect(freshI18n.hasResourceBundle('en', 'deck')).toBe(false);
+    expect(freshI18n.hasResourceBundle('en', 'achievements')).toBe(false);
+
+    await freshInit.loadDeferredEnglishNamespaces();
+
+    // The failing namespace never gets added...
+    expect(freshI18n.hasResourceBundle('en', 'deck')).toBe(false);
+    // ...but every other namespace still is (sampling a couple, not the whole
+    // set — the "exactly the 14 on all-success" case is covered above).
+    expect(freshI18n.hasResourceBundle('en', 'achievements')).toBe(true);
+    expect(freshI18n.hasResourceBundle('en', 'admin')).toBe(true);
+    expect(freshI18n.hasResourceBundle('en', 'waitlist')).toBe(true);
   });
 
   // ---------------------------------------------------------------------------

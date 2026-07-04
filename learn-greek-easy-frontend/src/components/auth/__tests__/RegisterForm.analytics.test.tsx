@@ -195,6 +195,36 @@ describe('RegisterForm PostHog analytics via the deferred seam (auto-confirm pat
     });
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
   });
+
+  it('still navigates to /dashboard and shows no auth-failure error when the posthog instance throws (CodeRabbit fix regression guard)', async () => {
+    // capture() only throws for the signup-success event — ThemeContext also
+    // calls track('theme_preference_loaded', ...) through this same seam on
+    // mount, and that unrelated call must keep succeeding (it isn't guarded,
+    // and isn't part of the Fix 2 isolation this test targets).
+    __setPosthogInstance({
+      identify: () => {
+        throw new Error('boom');
+      },
+      capture: (event: string) => {
+        if (event === 'user_signed_up') {
+          throw new Error('boom');
+        }
+      },
+    } as unknown as import('posthog-js').PostHog);
+
+    const user = userEvent.setup();
+    renderRegisterForm();
+
+    await fillAndSubmit(user);
+
+    // Without the fix, the throw inside the analytics block bubbles to the
+    // outer try/catch, which sets a form error and never navigates.
+    await waitFor(() => {
+      expect(screen.getByText('Dashboard Destination')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('form-error')).not.toBeInTheDocument();
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+  });
 });
 
 describe('RegisterForm PostHog analytics — email-confirmation branch (QA adversarial)', () => {

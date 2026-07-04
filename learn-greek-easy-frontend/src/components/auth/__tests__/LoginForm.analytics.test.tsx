@@ -182,4 +182,34 @@ describe('LoginForm PostHog analytics via the deferred seam', () => {
     });
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
   });
+
+  it('still navigates to the destination and shows no auth-failure error when the posthog instance throws (CodeRabbit fix regression guard)', async () => {
+    // capture() only throws for the login-success event — ThemeContext also
+    // calls track('theme_preference_loaded', ...) through this same seam on
+    // mount, and that unrelated call must keep succeeding (it isn't guarded,
+    // and isn't part of the Fix 1 isolation this test targets).
+    __setPosthogInstance({
+      identify: () => {
+        throw new Error('boom');
+      },
+      capture: (event: string) => {
+        if (event === 'user_logged_in') {
+          throw new Error('boom');
+        }
+      },
+    } as unknown as import('posthog-js').PostHog);
+
+    const user = userEvent.setup();
+    renderLoginForm();
+
+    await fillAndSubmit(user);
+
+    // Without the fix, the throw inside the analytics block bubbles to the
+    // outer try/catch, which sets a form error and never navigates.
+    await waitFor(() => {
+      expect(screen.getByText('Dashboard Destination')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('form-error')).not.toBeInTheDocument();
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+  });
 });

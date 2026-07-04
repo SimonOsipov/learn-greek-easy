@@ -141,14 +141,21 @@ export const LoginForm: React.FC = () => {
       // on logout (ensured in authStore), so after a fresh login this always fetches.
       await useAuthStore.getState().checkAuth();
 
-      // Step 3: PostHog tracking (identify already done inside checkAuth)
+      // Step 3: PostHog tracking (identify already done inside checkAuth).
+      // Isolated in its own try/catch: analytics must never block auth — a
+      // PostHog throw here must not surface as a login failure when the user
+      // has already successfully authenticated.
       const storeUser = useAuthStore.getState().user;
       if (storeUser) {
-        getPosthogInstance()?.identify(storeUser.id, {
-          email: storeUser.email,
-          created_at: storeUser.createdAt.toISOString(),
-        });
-        track('user_logged_in', { method: 'email' });
+        try {
+          getPosthogInstance()?.identify(storeUser.id, {
+            email: storeUser.email,
+            created_at: storeUser.createdAt.toISOString(),
+          });
+          track('user_logged_in', { method: 'email' });
+        } catch (analyticsErr) {
+          log.warn('[LoginForm] Analytics tracking failed (non-blocking):', analyticsErr);
+        }
       }
 
       log.info('[LoginForm] Successfully authenticated via Supabase');

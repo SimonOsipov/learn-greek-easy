@@ -216,16 +216,39 @@ export async function initI18n(): Promise<typeof i18n> {
  * re-render once each bundle arrives, so any already-mounted post-auth screen
  * swaps from the raw key path to the real string with no user action.
  *
- * The import failure is swallowed (log.warn) so callers can invoke this
- * fire-and-forget (`void loadDeferredEnglishNamespaces()`) without risking an
- * unhandled rejection; a reload retries the load.
+ * Uses Promise.allSettled (not Promise.all) so ONE failed chunk (e.g. a flaky
+ * connection dropping deck.json) never takes the other 13 down with it — each
+ * import is added independently as soon as it resolves, and only the
+ * namespace(s) that actually failed are logged and left for a reload to
+ * retry. The import failures are swallowed (log.warn) so callers can invoke
+ * this fire-and-forget (`void loadDeferredEnglishNamespaces()`) without
+ * risking an unhandled rejection.
  *
- * @returns Promise that resolves once all 14 namespaces are injected (or after
- *          a load failure is logged — this never rejects).
+ * @returns Promise that resolves once every successfully-loaded namespace is
+ *          injected (failures are logged, not thrown — this never rejects).
  */
 export async function loadDeferredEnglishNamespaces(): Promise<void> {
+  // Parallel to the import list below; index i in `results` corresponds to
+  // namespaces[i].
+  const namespaces = [
+    'achievements',
+    'admin',
+    'changelog',
+    'culture',
+    'deck',
+    'feedback',
+    'mockExam',
+    'profile',
+    'review',
+    'settings',
+    'statistics',
+    'subscription',
+    'upgrade',
+    'waitlist',
+  ];
+
   try {
-    const modules = await Promise.all([
+    const results = await Promise.allSettled([
       import('./locales/en/achievements.json'),
       import('./locales/en/admin.json'),
       import('./locales/en/changelog.json'),
@@ -242,31 +265,25 @@ export async function loadDeferredEnglishNamespaces(): Promise<void> {
       import('./locales/en/waitlist.json'),
     ]);
 
-    // Parallel to the import list above; Promise.all preserves order.
-    const namespaces = [
-      'achievements',
-      'admin',
-      'changelog',
-      'culture',
-      'deck',
-      'feedback',
-      'mockExam',
-      'profile',
-      'review',
-      'settings',
-      'statistics',
-      'subscription',
-      'upgrade',
-      'waitlist',
-    ];
+    const failedNamespaces: string[] = [];
 
-    modules.forEach((mod, i) => {
-      i18n.addResourceBundle('en', namespaces[i], mod.default, true, true);
+    results.forEach((result, i) => {
+      if (result.status === 'fulfilled') {
+        i18n.addResourceBundle('en', namespaces[i], result.value.default, true, true);
+      } else {
+        failedNamespaces.push(namespaces[i]);
+      }
     });
+
+    if (failedNamespaces.length > 0) {
+      // Partial degradation: the namespaces below fall back to the raw key
+      // path until a reload retries; every other namespace was still added.
+      log.warn('[i18n] Some deferred English namespaces failed to load:', failedNamespaces);
+    }
   } catch (err: unknown) {
-    // Deferred EN namespaces failed to load — post-auth screens fall back to
-    // the raw key path until a reload retries. Graceful degradation; do NOT
-    // let the rejection propagate (main.tsx calls this fire-and-forget).
+    // Unexpected failure outside the per-namespace handling above (e.g.
+    // addResourceBundle itself throwing). Graceful degradation; do NOT let
+    // the rejection propagate (main.tsx calls this fire-and-forget).
     log.warn('[i18n] Failed to load deferred English namespaces:', err);
   }
 }

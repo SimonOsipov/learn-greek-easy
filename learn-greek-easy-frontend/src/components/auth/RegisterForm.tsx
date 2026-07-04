@@ -166,12 +166,19 @@ export const RegisterForm: React.FC = () => {
 
         const storeUser = useAuthStore.getState().user;
         if (storeUser) {
-          // Track with PostHog (identify already done inside checkAuth)
-          getPosthogInstance()?.identify(storeUser.id, {
-            email: storeUser.email,
-            created_at: storeUser.createdAt.toISOString(),
-          });
-          track('user_signed_up', { method: 'email' });
+          // Track with PostHog (identify already done inside checkAuth).
+          // Isolated in its own try/catch: analytics must never block auth —
+          // a PostHog throw here must not surface as a signup failure when
+          // the user has already successfully registered.
+          try {
+            getPosthogInstance()?.identify(storeUser.id, {
+              email: storeUser.email,
+              created_at: storeUser.createdAt.toISOString(),
+            });
+            track('user_signed_up', { method: 'email' });
+          } catch (analyticsErr) {
+            log.warn('[RegisterForm] Analytics tracking failed (non-blocking):', analyticsErr);
+          }
         }
 
         log.info('[RegisterForm] Successfully registered and logged in');
