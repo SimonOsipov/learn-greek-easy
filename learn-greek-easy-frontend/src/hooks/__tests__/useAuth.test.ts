@@ -353,6 +353,20 @@ describe('useAuth Hook', () => {
       expect(mockNavigate).toHaveBeenCalledWith('/pricing', { replace: true });
     });
 
+    it('should redirect (not crash) when authenticated but user is null (divergent store state)', () => {
+      // isAuthenticated:true with user:null shouldn't normally happen, but the
+      // hook must not throw on it - hasAccess should fall through to false
+      // via the null?.role optional chain rather than reading a role off null.
+      useAuthStore.setState({
+        user: null,
+        isAuthenticated: true,
+      });
+
+      renderHook(() => useRequireRole('premium'));
+
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+    });
+
     it('should return hasAccess based on user role', () => {
       useAuthStore.setState({
         user: makeUser({

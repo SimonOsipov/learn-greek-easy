@@ -3,7 +3,7 @@
  * Tests premium access detection based on user role
  */
 
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 
 import { usePremiumAccess } from '@/hooks/usePremiumAccess';
@@ -79,31 +79,54 @@ describe('usePremiumAccess Hook', () => {
     expect(result.current).toBe(false);
 
     // User upgrades to premium
-    useAuthStore.setState({
-      user: makeUser({
-        id: '4',
-        email: 'upgraded@example.com',
-        name: 'Upgraded User',
-        role: 'premium',
-      }),
-      isAuthenticated: true,
+    act(() => {
+      useAuthStore.setState({
+        user: makeUser({
+          id: '4',
+          email: 'upgraded@example.com',
+          name: 'Upgraded User',
+          role: 'premium',
+        }),
+        isAuthenticated: true,
+      });
     });
 
     rerender();
     expect(result.current).toBe(true);
 
     // User downgrades to free
-    useAuthStore.setState({
-      user: makeUser({
-        id: '4',
-        email: 'upgraded@example.com',
-        name: 'Upgraded User',
-        role: 'free',
-      }),
-      isAuthenticated: true,
+    act(() => {
+      useAuthStore.setState({
+        user: makeUser({
+          id: '4',
+          email: 'upgraded@example.com',
+          name: 'Upgraded User',
+          role: 'free',
+        }),
+        isAuthenticated: true,
+      });
     });
 
     rerender();
     expect(result.current).toBe(false);
+  });
+
+  it('should key off role alone, independent of isAuthenticated (documents current hook contract)', () => {
+    // The hook body only reads user?.role - it never consults isAuthenticated.
+    // A stale/premium user object with isAuthenticated:false is a divergent
+    // store state that shouldn't normally occur, but this locks in today's
+    // observed behavior so a future change to the gating logic is caught here.
+    useAuthStore.setState({
+      user: makeUser({
+        id: '5',
+        email: 'stale@example.com',
+        name: 'Stale Premium User',
+        role: 'premium',
+      }),
+      isAuthenticated: false,
+    });
+
+    const { result } = renderHook(() => usePremiumAccess());
+    expect(result.current).toBe(true);
   });
 });
