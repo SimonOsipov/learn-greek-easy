@@ -19,6 +19,8 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+import { fetchDeckProgressList } from '@/lib/queryKeys';
+import { useAuthStore } from '@/stores/authStore';
 import type { Deck, DeckFilters } from '@/types/deck';
 
 // Mock the API modules so we can drive transformDeckResponse via the public
@@ -27,9 +29,58 @@ import type { Deck, DeckFilters } from '@/types/deck';
 vi.mock('@/services/deckAPI', () => ({
   deckAPI: { getById: vi.fn(), getList: vi.fn() },
 }));
-vi.mock('@/services/progressAPI', () => ({
-  progressAPI: { getDeckProgressDetail: vi.fn(), getDeckProgressList: vi.fn() },
+
+// Hoisted so the @/lib/queryKeys mock factory below can delegate to the same
+// mock instance (PERF-22-02: deckStore routes the /progress/decks LIST through
+// the shared fetchDeckProgressList instead of calling this directly).
+const mockProgressAPI = vi.hoisted(() => ({
+  getDeckProgressDetail: vi.fn(),
+  getDeckProgressList: vi.fn(),
 }));
+vi.mock('@/services/progressAPI', () => ({
+  progressAPI: mockProgressAPI,
+}));
+
+// PERF-22-02: fetchDecks/_refetchVocabOnly must obtain the deck-progress LIST
+// via the shared, cache-backed fetchDeckProgressList — not by calling
+// progressAPI.getDeckProgressList directly. The default implementation below
+// delegates to the (mocked) raw API, so every test that only configures
+// progressAPI.getDeckProgressList's resolved value keeps working unchanged
+// once deckStore is rewired — see the global beforeEach below, which
+// re-establishes this default before every test in the file.
+vi.mock('@/lib/queryKeys', () => ({
+  queryKeys: {
+    progressDecks: (userId: string | undefined) => ['progress-decks', userId] as const,
+  },
+  fetchDeckProgressList: vi.fn((_userId: string | undefined) =>
+    mockProgressAPI.getDeckProgressList({ page: 1, page_size: 50 })
+  ),
+}));
+
+// PERF-22-02: fetchDecks reads userId via useAuthStore.getState().user?.id
+// (deckStore is non-React — mirrors exercisePracticeStore.ts:77).
+vi.mock('@/stores/authStore');
+
+// Global default so every describe block in this file — including the
+// pre-existing ensureDecksFresh/cover-persistence tests below, which know
+// nothing about fetchDeckProgressList or authStore — stays crash-free once
+// deckStore is rewired: a real user id is available, and the shared fetcher
+// transparently delegates to the raw API mock. Individual tests override
+// either mock as needed.
+beforeEach(() => {
+  vi.mocked(mockProgressAPI.getDeckProgressList).mockResolvedValue({
+    total: 0,
+    page: 1,
+    page_size: 50,
+    decks: [],
+  });
+  vi.mocked(fetchDeckProgressList).mockImplementation((_userId: string | undefined) =>
+    mockProgressAPI.getDeckProgressList({ page: 1, page_size: 50 })
+  );
+  vi.mocked(useAuthStore.getState).mockReturnValue({
+    user: { id: 'u1' },
+  } as ReturnType<typeof useAuthStore.getState>);
+});
 
 // ---------------------------------------------------------------------------
 // Minimal Deck fixture factory
@@ -239,7 +290,11 @@ import { useDeckStore } from '@/stores/deckStore';
 import { deckAPI } from '@/services/deckAPI';
 import { progressAPI } from '@/services/progressAPI';
 import type { DeckDetailResponse, DeckListResponse } from '@/services/deckAPI';
-import type { DeckProgressDetailResponse, DeckProgressListResponse } from '@/services/progressAPI';
+import type {
+  DeckProgressDetailResponse,
+  DeckProgressListResponse,
+  DeckProgressSummary,
+} from '@/services/progressAPI';
 
 const WORD_COUNT = 37;
 const SRS_CARD_COUNT = 555; // 37 words x ~15 SRS cards each
@@ -329,79 +384,82 @@ describe('transformDeckResponse — cardCount uses word count, not SRS count (#5
 });
 
 // ---------------------------------------------------------------------------
-// deckStore — parallel dispatch / no auth gate (PERF-02-05)
+// deckStore — shared-fetcher routing / no auth gate (PERF-22-02)
 //
-// Regression guards that lock the parallel-dispatch and no-auth-gate
-// properties of fetchDecks(). These tests will fail under two specific
-// regressions:
+// fetchDecks() must obtain the progress LIST via the shared, cache-backed
+// fetchDeckProgressList(userId) — not by calling progressAPI.getDeckProgressList
+// directly. These tests will fail under three specific regressions:
 //
 //   A) Sequential-await regression: if fetchDecks() is rewritten to
-//      `await deckAPI.getList(...); await progressAPI.getDeckProgressList(...)`
-//      then while the first promise is pending the second call will NOT have
-//      been made yet, so `getDeckProgressList.mock.calls.length` would be 0
-//      when asserted synchronously — the test fails.
+//      `await deckAPI.getList(...); await fetchDeckProgressList(...)` then
+//      while the first promise is pending the second call will NOT have been
+//      made yet, so `fetchDeckProgressList.mock.calls.length` would be 0 when
+//      asserted synchronously — the test fails.
 //
-//   B) Auth-gate regression: if someone adds `if (!isAuthenticated) return;`
+//   B) Not-yet-rewired regression (the RED state before PERF-22-02 lands):
+//      fetchDecks() still calls progressAPI.getDeckProgressList directly
+//      instead of fetchDeckProgressList — `fetchDeckProgressList` is never
+//      called, and `progressAPI.getDeckProgressList` IS called — the test
+//      fails on both counts.
+//
+//   C) Auth-gate regression: if someone adds `if (!isAuthenticated) return;`
 //      or `if (!authInitialized) return;` at the top of fetchDecks(), the
 //      store in its default Zustand state (no auth properties set) would
 //      early-return before ever calling deckAPI.getList(), and
 //      `getList.mock.calls.length` would be 0 — the test fails.
 // ---------------------------------------------------------------------------
 
-describe('deckStore — parallel dispatch / no auth gate (PERF-02-05)', () => {
+describe('deckStore — shared-fetcher routing / no auth gate (PERF-22-02)', () => {
   beforeEach(() => {
-    // Reset all mocks between tests
+    // Reset call counts between tests. progressAPI.getDeckProgressList is left
+    // alone (its safe empty-list default from the file-level beforeEach stays
+    // in place) since fetchDeckProgressList's delegate default depends on it.
     vi.mocked(deckAPI.getList).mockReset();
-    vi.mocked(progressAPI.getDeckProgressList).mockReset();
+    vi.mocked(fetchDeckProgressList).mockReset();
     vi.mocked(deckAPI.getById).mockReset();
     vi.mocked(progressAPI.getDeckProgressDetail).mockReset();
   });
 
   // -------------------------------------------------------------------------
-  // Guard A: Promise.all parallel dispatch — both APIs called before either
-  // resolves. This would fail if the impl used sequential awaits:
-  //   await deckAPI.getList(...)          ← pending forever
-  //   await progressAPI.getDeckProgressList(...)  ← never reached
+  // Guard A: parallel dispatch through the shared fetcher — both calls fired
+  // before either resolves, and the progress leg goes through
+  // fetchDeckProgressList (not a duplicate direct call to the raw API).
   // -------------------------------------------------------------------------
 
-  it('calls deckAPI.getList and progressAPI.getDeckProgressList synchronously before either resolves', () => {
+  it('fires deckAPI.getList and fetchDeckProgressList in parallel, not a raw duplicate call', () => {
     // Never-resolving promises simulate long-latency calls.
     // We assert BOTH were called before we give the event loop a tick.
     vi.mocked(deckAPI.getList).mockReturnValue(new Promise(() => {}));
-    vi.mocked(progressAPI.getDeckProgressList).mockReturnValue(new Promise(() => {}));
+    vi.mocked(fetchDeckProgressList).mockReturnValue(new Promise(() => {}));
 
     // Invoke without await — we only care about synchronous dispatch
     useDeckStore.getState().fetchDecks();
 
     // Both must have been called already (synchronously, inside Promise.all)
     expect(deckAPI.getList).toHaveBeenCalledTimes(1);
-    expect(progressAPI.getDeckProgressList).toHaveBeenCalledTimes(1);
-  });
-
-  it('dispatches both API calls with the expected params shape', () => {
-    vi.mocked(deckAPI.getList).mockReturnValue(new Promise(() => {}));
-    vi.mocked(progressAPI.getDeckProgressList).mockReturnValue(new Promise(() => {}));
-
-    useDeckStore.getState().fetchDecks();
-
-    // deckAPI.getList receives pagination params
     expect(deckAPI.getList).toHaveBeenCalledWith(
       expect.objectContaining({ page: 1, page_size: 50 })
     );
-    // progressAPI.getDeckProgressList receives pagination params
-    expect(progressAPI.getDeckProgressList).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 1, page_size: 50 })
-    );
+    expect(fetchDeckProgressList).toHaveBeenCalledTimes(1);
+    // Routed through the shared, user-scoped fetcher (userId from
+    // useAuthStore) — NOT a second, direct call to the raw list endpoint.
+    expect(fetchDeckProgressList).toHaveBeenCalledWith('u1');
+    expect(progressAPI.getDeckProgressList).not.toHaveBeenCalled();
   });
 
   // -------------------------------------------------------------------------
-  // Guard B: No auth gate — fetchDecks() does NOT read any auth state before
-  // calling the API. The store in its default Zustand initial state has no
-  // auth-related flags set. If an `if (!isAuthenticated) return;` guard were
-  // added, getList would never be called.
+  // Guard B: No auth gate — fetchDecks() does NOT read any auth state as a
+  // precondition before calling the API (it still reads userId to pass along,
+  // but never gates on it). The store in its default Zustand initial state
+  // has no auth-related flags set. If an `if (!isAuthenticated) return;`
+  // guard were added, getList would never be called.
   // -------------------------------------------------------------------------
 
-  it('fires deckAPI.getList even with no auth state initialised (no auth gate)', () => {
+  it('fires deckAPI.getList even with no user set (no auth gate), still via fetchDeckProgressList', () => {
+    vi.mocked(useAuthStore.getState).mockReturnValue({
+      user: null,
+    } as ReturnType<typeof useAuthStore.getState>);
+
     // Confirm store has no auth-gating fields (it never did — this documents
     // the contract). Default store state is what Zustand initialises with.
     const storeState = useDeckStore.getState();
@@ -410,12 +468,15 @@ describe('deckStore — parallel dispatch / no auth gate (PERF-02-05)', () => {
     expect('isAuthenticated' in storeState).toBe(false);
 
     vi.mocked(deckAPI.getList).mockReturnValue(new Promise(() => {}));
-    vi.mocked(progressAPI.getDeckProgressList).mockReturnValue(new Promise(() => {}));
+    vi.mocked(fetchDeckProgressList).mockReturnValue(new Promise(() => {}));
 
-    // Invoke fetchDecks() — must reach the API call with no precondition
+    // Invoke fetchDecks() — must reach the API calls with no precondition
     useDeckStore.getState().fetchDecks();
 
     expect(deckAPI.getList).toHaveBeenCalledTimes(1);
+    // Still routes to the shared fetcher, with userId=undefined (no gate) —
+    // not the legacy direct progressAPI call.
+    expect(fetchDeckProgressList).toHaveBeenCalledWith(undefined);
   });
 });
 
@@ -542,5 +603,69 @@ describe('deckStore — ensureDecksFresh + cover persistence (deck-covers-always
     const persistedDeck = stored.state.rawDecks[0];
     expect(persistedDeck.coverImageUrl).toBe(COVER_URL);
     expect(persistedDeck.progress).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// fetchDecks — progress merge survives the shared-fetcher routing (PERF-22-02)
+//
+// Confirms the merge behavior (rawDecks[i].progress derived from the matching
+// deck-progress summary) still works when the progress LIST comes from
+// fetchDeckProgressList instead of a direct progressAPI.getDeckProgressList
+// call. The direct API mock is deliberately configured to resolve EMPTY here
+// so that if fetchDecks regresses to reading from the raw call again, the
+// merge silently produces no progress — a real, observable assertion failure,
+// not a crash.
+// ---------------------------------------------------------------------------
+
+describe('fetchDecks — progress merge via the shared fetcher (PERF-22-02)', () => {
+  beforeEach(() => {
+    vi.mocked(deckAPI.getList).mockReset();
+    vi.mocked(fetchDeckProgressList).mockReset();
+  });
+
+  it('merges the fetchDeckProgressList summary onto the matching deck', async () => {
+    vi.mocked(deckAPI.getList).mockResolvedValue(
+      deckList([makeDeckResponse({ id: 'deck-merge-1' })])
+    );
+
+    const progressSummary: DeckProgressSummary = {
+      deck_id: 'deck-merge-1',
+      deck_name: 'Greetings',
+      deck_level: 'a1',
+      deck_type: 'vocabulary',
+      total_cards: 20,
+      cards_studied: 10,
+      cards_mastered: 4,
+      cards_due: 3,
+      mastery_percentage: 20,
+      completion_percentage: 50,
+      last_studied_at: null,
+      average_easiness_factor: 2.5,
+      estimated_review_time_minutes: 5,
+    };
+    vi.mocked(fetchDeckProgressList).mockResolvedValue({
+      total: 1,
+      page: 1,
+      page_size: 50,
+      decks: [progressSummary],
+    });
+    // Direct call resolves EMPTY — proves the merge depends on
+    // fetchDeckProgressList, not a residual direct call to the raw API.
+    vi.mocked(progressAPI.getDeckProgressList).mockResolvedValue({
+      total: 0,
+      page: 1,
+      page_size: 50,
+      decks: [],
+    });
+
+    await useDeckStore.getState().fetchDecks();
+
+    const { rawDecks } = useDeckStore.getState();
+    expect(rawDecks).toHaveLength(1);
+    expect(rawDecks[0].progress).toBeDefined();
+    expect(rawDecks[0].progress?.status).toBe('in-progress');
+    expect(rawDecks[0].progress?.dueToday).toBe(3);
+    expect(rawDecks[0].progress?.cardsMastered).toBe(4);
   });
 });

@@ -8,6 +8,7 @@
 import i18n from 'i18next';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+import { queryKeys } from '@/lib/queryKeys';
 import { render, screen, act } from '@/lib/test-utils';
 
 import { V2FlashcardPracticePage } from '../V2FlashcardPracticePage';
@@ -61,6 +62,22 @@ vi.mock('@/hooks/useDeck', () => ({
     isLoading: false,
     isError: false,
   }),
+}));
+
+// PERF-22-02 / Decision 11: this file previously mocked ZERO auth state, so a
+// userId-scoped invalidation key would silently resolve to progressDecks(undefined)
+// even if the real wiring broke. Mock a real, non-undefined user id (pattern
+// per Dashboard.test.tsx:51-60) so the invalidation assertion below is
+// genuinely proving the per-user key is used.
+const mockAuthState = {
+  user: { id: 'u1', name: 'Test User', email: 'test@test.com' },
+  isAuthenticated: true,
+};
+
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: vi.fn((selector?: (s: Record<string, unknown>) => unknown) =>
+    selector ? selector(mockAuthState) : mockAuthState
+  ),
 }));
 
 // Default store state (uses `cards` — renamed from `queue` in PRACT2-1-02)
@@ -399,7 +416,7 @@ describe('V2FlashcardPracticePage', () => {
     expect(keycaps?.[1]?.textContent).toBe('4');
   });
 
-  it('invalidates analytics cache exactly once when sessionSummary becomes populated', async () => {
+  it('invalidates analytics AND progressDecks(userId) when sessionSummary becomes populated (PERF-22-02)', async () => {
     // Start with no sessionSummary
     mockStoreState = { ...defaultStoreState, startSession: mockStartSession, sessionSummary: null };
     const { rerender } = render(<V2FlashcardPracticePage />);
@@ -424,8 +441,13 @@ describe('V2FlashcardPracticePage', () => {
       rerender(<V2FlashcardPracticePage />);
     });
 
-    expect(mockInvalidateQueries).toHaveBeenCalledTimes(1);
+    // Both invalidations fire: the existing analytics cache AND the deck-progress
+    // list, keyed by the REAL authenticated user id ('u1') — not
+    // progressDecks(undefined), which would pass even if userId wiring silently
+    // broke (Decision 11 / AC#6).
+    expect(mockInvalidateQueries).toHaveBeenCalledTimes(2);
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['analytics'] });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: queryKeys.progressDecks('u1') });
   });
 
   // ── Gloss-reactivity: i18n.language drives cardLang → Answer lang prop ──────
