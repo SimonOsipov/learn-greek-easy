@@ -6,10 +6,11 @@
  */
 
 import i18n from 'i18next';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { queryKeys } from '@/lib/queryKeys';
 import { render, screen, act } from '@/lib/test-utils';
+import { useAuthStore } from '@/stores/authStore';
 
 import { V2FlashcardPracticePage } from '../V2FlashcardPracticePage';
 
@@ -22,11 +23,19 @@ const mockStartSession = vi.fn();
 const mockInvalidateQueries = vi.fn();
 let mockParams: Record<string, string> = { deckId: 'deck-123' };
 
+// A single stable object, NOT a fresh literal per call — the real
+// useQueryClient() returns the same client instance via context on every
+// render (QA / PERF-22-02 adversarial: a per-call `() => ({...})` mock here
+// previously gave `queryClient` a new identity every render, which would
+// silently mask a spurious-refetch regression in the session-finish effect's
+// dependency array ([sessionSummary, queryClient, userId]).
+const mockQueryClient = { invalidateQueries: mockInvalidateQueries };
+
 vi.mock('@tanstack/react-query', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-query')>();
   return {
     ...actual,
-    useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
+    useQueryClient: () => mockQueryClient,
   };
 });
 
@@ -448,6 +457,99 @@ describe('V2FlashcardPracticePage', () => {
     expect(mockInvalidateQueries).toHaveBeenCalledTimes(2);
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['analytics'] });
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: queryKeys.progressDecks('u1') });
+  });
+
+  // ── QA adversarial coverage (PERF-22-02 Mode B) ─────────────────────────────
+
+  it('does not invalidate on initial mount while sessionSummary is null (no spurious refetch)', () => {
+    mockStoreState = { ...defaultStoreState, startSession: mockStartSession, sessionSummary: null };
+    render(<V2FlashcardPracticePage />);
+
+    expect(mockInvalidateQueries).not.toHaveBeenCalled();
+  });
+
+  it('does not re-invalidate on an unrelated re-render once sessionSummary is already populated', async () => {
+    const summary = {
+      sessionId: 'sess-123',
+      deckId: 'deck-123',
+      cardsReviewed: 5,
+      totalTimeSeconds: 120,
+      avgTimePerCard: 24,
+      ratingBreakdown: { again: 0, hard: 1, good: 3, easy: 1 },
+      newStarted: 2,
+      cardsMastered: 1,
+    };
+    mockStoreState = {
+      ...defaultStoreState,
+      startSession: mockStartSession,
+      sessionSummary: summary,
+    };
+    const { rerender } = render(<V2FlashcardPracticePage />);
+
+    expect(mockInvalidateQueries).toHaveBeenCalledTimes(2);
+
+    // Re-render with the SAME sessionSummary object reference (an unrelated
+    // prop/state change elsewhere) — the effect's dependency array
+    // ([sessionSummary, queryClient, userId]) must not fire again since
+    // none of those three actually changed identity.
+    await act(async () => {
+      mockStoreState = { ...mockStoreState, sessionSummary: summary };
+      rerender(<V2FlashcardPracticePage />);
+    });
+
+    expect(mockInvalidateQueries).toHaveBeenCalledTimes(2);
+  });
+
+  describe('logged-out edge case (no auth gate on invalidation)', () => {
+    // Temporarily override the module-level authStore mock (user.id: 'u1')
+    // for this one test, then restore it — vi.clearAllMocks() in the outer
+    // beforeEach clears call counts but does NOT reset a reassigned
+    // mockImplementation, so an explicit restore avoids leaking into the
+    // other tests in this file that rely on the real 'u1' default.
+    afterEach(() => {
+      vi.mocked(useAuthStore).mockImplementation(((
+        selector?: (s: Record<string, unknown>) => unknown
+      ) => (selector ? selector(mockAuthState) : mockAuthState)) as typeof useAuthStore);
+    });
+
+    it('still invalidates progressDecks(undefined) when userId is undefined (no `if (!userId) return` gate)', async () => {
+      vi.mocked(useAuthStore).mockImplementation(((
+        selector?: (s: Record<string, unknown>) => unknown
+      ) =>
+        selector
+          ? selector({ user: undefined, isAuthenticated: false })
+          : { user: undefined }) as typeof useAuthStore);
+
+      mockStoreState = {
+        ...defaultStoreState,
+        startSession: mockStartSession,
+        sessionSummary: null,
+      };
+      const { rerender } = render(<V2FlashcardPracticePage />);
+
+      await act(async () => {
+        mockStoreState = {
+          ...mockStoreState,
+          sessionSummary: {
+            sessionId: 'sess-123',
+            deckId: 'deck-123',
+            cardsReviewed: 5,
+            totalTimeSeconds: 120,
+            avgTimePerCard: 24,
+            ratingBreakdown: { again: 0, hard: 1, good: 3, easy: 1 },
+            newStarted: 2,
+            cardsMastered: 1,
+          },
+        };
+        rerender(<V2FlashcardPracticePage />);
+      });
+
+      expect(mockInvalidateQueries).toHaveBeenCalledTimes(2);
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['analytics'] });
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: queryKeys.progressDecks(undefined),
+      });
+    });
   });
 
   // ── Gloss-reactivity: i18n.language drives cardLang → Answer lang prop ──────

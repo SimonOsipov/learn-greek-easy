@@ -481,6 +481,69 @@ describe('deckStore — shared-fetcher routing / no auth gate (PERF-22-02)', () 
 });
 
 // ---------------------------------------------------------------------------
+// deckStore — fetchDecks resilience (PERF-22-02 QA adversarial coverage)
+//
+// Two failure classes the Guard-A/B tests above don't reach because they use
+// never-resolving promises: (1) a fully logged-out round trip must actually
+// complete, not just fire the calls; (2) a rejected fetchDeckProgressList
+// must be swallowed by the `.catch(() => ({ decks: [] }))` wrapper (Decision
+// 10) so the deck list still renders (without progress), instead of throwing
+// or leaving fetchDecks() permanently pending.
+// ---------------------------------------------------------------------------
+
+describe('fetchDecks — resilience (PERF-22-02 adversarial)', () => {
+  beforeEach(() => {
+    vi.mocked(deckAPI.getList).mockReset();
+    vi.mocked(fetchDeckProgressList).mockReset();
+  });
+
+  it('logged-out (userId undefined) full round trip resolves without throwing', async () => {
+    vi.mocked(useAuthStore.getState).mockReturnValue({
+      user: null,
+    } as ReturnType<typeof useAuthStore.getState>);
+
+    vi.mocked(deckAPI.getList).mockResolvedValue(
+      deckList([makeDeckResponse({ id: 'deck-logged-out' })])
+    );
+    vi.mocked(fetchDeckProgressList).mockResolvedValue({
+      total: 0,
+      page: 1,
+      page_size: 50,
+      decks: [],
+    });
+
+    await expect(useDeckStore.getState().fetchDecks()).resolves.toBeUndefined();
+
+    const { rawDecks, error } = useDeckStore.getState();
+    expect(error).toBeNull();
+    expect(rawDecks).toHaveLength(1);
+    expect(fetchDeckProgressList).toHaveBeenCalledWith(undefined);
+  });
+
+  it('swallows a REJECTED fetchDeckProgressList into an empty progress list (Decision 10)', async () => {
+    vi.mocked(useAuthStore.getState).mockReturnValue({
+      user: { id: 'u1' },
+    } as ReturnType<typeof useAuthStore.getState>);
+
+    vi.mocked(deckAPI.getList).mockResolvedValue(
+      deckList([makeDeckResponse({ id: 'deck-progress-down' })])
+    );
+    // A real rejection (not a pre-shaped { decks: [] } resolved value) —
+    // proves the store's own .catch() wrapper does the swallowing, not a
+    // lucky mock shape.
+    vi.mocked(fetchDeckProgressList).mockRejectedValue(new Error('progress service down'));
+
+    await expect(useDeckStore.getState().fetchDecks()).resolves.toBeUndefined();
+
+    const { rawDecks, error } = useDeckStore.getState();
+    expect(error).toBeNull();
+    expect(rawDecks).toHaveLength(1);
+    // No progress merged for this deck — the summary map stayed empty.
+    expect(rawDecks[0].progress?.status ?? 'not-started').toBe('not-started');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // deckStore — ensureDecksFresh + cover persistence (deck-covers-always-available)
 //
 // ensureDecksFresh() warms/refreshes the deck list once per session so covers
