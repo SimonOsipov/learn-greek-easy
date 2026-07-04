@@ -5,8 +5,8 @@ Three-tier send logic:
 2. resend_api_key empty → log payload at INFO level, no API call
 3. Both conditions pass → call Resend SDK
 
-All Resend API errors are caught and logged as WARNING, never re-raised
-(fire-and-forget pattern).
+All Resend API errors are caught and logged as ERROR (Sentry-visible), never
+re-raised (fire-and-forget pattern).
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ class EmailService:
         - resend_api_key empty: log the email payload at INFO, return
         - Otherwise: call Resend API
 
-        All Resend errors are caught, logged as WARNING, and swallowed.
+        All Resend errors are caught, logged as ERROR, and swallowed.
 
         Args:
             to: Recipient email address(es).
@@ -90,7 +90,7 @@ class EmailService:
                 },
             )
         except Exception:
-            logger.warning(
+            logger.error(
                 "Failed to send email via Resend",
                 extra={
                     "recipient_count": len(recipients),

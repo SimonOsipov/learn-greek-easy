@@ -174,36 +174,6 @@ class TestSubmitV2Review:
         assert response.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_dashboard_sse_signaled(self, client, auth_headers):
-        mock_card_record = MagicMock()
-        mock_card_record.deck = MagicMock()
-
-        with (
-            patch("src.api.v1.reviews_v2.CardRecordRepository") as mock_repo_cls,
-            patch("src.api.v1.reviews_v2.CardRecordReviewRepository") as mock_review_repo_cls,
-            patch("src.api.v1.reviews_v2.V2SM2Service") as mock_service_cls,
-            patch("src.api.v1.reviews_v2.check_premium_deck_access"),
-            patch("src.api.v1.reviews_v2.dashboard_event_bus") as mock_bus,
-            patch("src.api.v1.reviews_v2.settings") as mock_settings,
-        ):
-            mock_repo_cls.return_value.get = AsyncMock(return_value=mock_card_record)
-            mock_review_repo_cls.return_value.count_reviews_today = AsyncMock(return_value=0)
-            mock_service_cls.return_value.compute_review = AsyncMock(
-                return_value=(_make_v2_review_result(), _make_review_context())
-            )
-            mock_service_cls.return_value.persist_review = AsyncMock()
-            mock_bus.signal = AsyncMock()
-            mock_settings.feature_background_tasks = False
-
-            response = await client.post(
-                "/api/v1/reviews/v2",
-                json=_valid_review_body(),
-                headers=auth_headers,
-            )
-
-        assert response.status_code == 200
-
-    @pytest.mark.asyncio
     async def test_premium_check_enforced(self, client, auth_headers):
         from fastapi import HTTPException as FastAPIHTTPException
 

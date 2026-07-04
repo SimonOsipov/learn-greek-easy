@@ -48,7 +48,7 @@ async def init_redis() -> None:
         logger.info("Redis connection successful")
 
     except Exception as e:
-        logger.warning(f"Redis connection failed: {e}. Application will run in degraded mode.")
+        logger.error(f"Redis connection failed: {e}. Application will run in degraded mode.")
         _redis_client = None
         _connection_pool = None
 

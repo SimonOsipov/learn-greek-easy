@@ -16,6 +16,7 @@ import hashlib
 import secrets
 
 import resend
+from fastapi import BackgroundTasks
 
 from src.config import settings
 from src.core.logging import get_logger
@@ -66,7 +67,7 @@ class WaitlistService:
     def __init__(self) -> None:
         """Initialize. Stateless — no heavy setup."""
 
-    async def subscribe(self, email: str) -> dict[str, str]:
+    async def subscribe(self, email: str, background_tasks: BackgroundTasks) -> dict[str, str]:
         """Create a Resend contact, store token in first_name, send confirmation email.
 
         Returns:
@@ -122,8 +123,12 @@ class WaitlistService:
         # Build confirmation URL pointing to the frontend
         confirm_url = f"{settings.waitlist_frontend_base_url}/waitlist/confirm?token={token}"
 
-        # Send confirmation email via shared EmailService (not resend.Emails.send directly)
-        get_email_service().send(
+        # Send confirmation email via shared EmailService (not resend.Emails.send directly).
+        # Deliberately NOT gated behind settings.feature_background_tasks: Starlette runs
+        # BackgroundTasks unconditionally (no infra dependency), and gating this send would
+        # make it run inline whenever that flag is off (its default), defeating the point.
+        background_tasks.add_task(
+            get_email_service().send,
             to=email,
             subject="Confirm your spot on the Greeklish waitlist",
             html=_build_confirmation_email(confirm_url),

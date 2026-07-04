@@ -5,7 +5,7 @@ Both endpoints are public (no authentication required).
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from pydantic import BaseModel, EmailStr
 
 from src.core.logging import get_logger
@@ -40,11 +40,13 @@ class WaitlistConfirmRequest(BaseModel):
         502: {"description": "Failed to process signup"},
     },
 )
-async def subscribe(body: WaitlistSubscribeRequest) -> WaitlistSubscribeResponse:
+async def subscribe(
+    body: WaitlistSubscribeRequest, background_tasks: BackgroundTasks
+) -> WaitlistSubscribeResponse:
     """Create a Resend contact and send confirmation email."""
     service = WaitlistService()
     try:
-        result = await service.subscribe(str(body.email))
+        result = await service.subscribe(str(body.email), background_tasks)
         return WaitlistSubscribeResponse(message=result["message"])
     except WaitlistDuplicateError:
         raise HTTPException(status_code=409, detail="Email already registered")
