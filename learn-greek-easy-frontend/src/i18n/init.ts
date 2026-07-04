@@ -28,50 +28,27 @@ import {
   NAMESPACES,
   SUPPORTED_LANGUAGES,
 } from './constants';
-// Only English resources are loaded synchronously (default language)
-import enAchievements from './locales/en/achievements.json';
-import enAdmin from './locales/en/admin.json';
+// Only the 3 CRITICAL English namespaces load synchronously — these back the
+// pre-auth LCP surface (landing page / login / register). The other 14 EN
+// namespaces are deferred post-paint via loadDeferredEnglishNamespaces().
 import enAuth from './locales/en/auth.json';
-import enChangelog from './locales/en/changelog.json';
 import enCommon from './locales/en/common.json';
-import enCulture from './locales/en/culture.json';
-import enDeck from './locales/en/deck.json';
-import enFeedback from './locales/en/feedback.json';
 import enLanding from './locales/en/landing.json';
-import enMockExam from './locales/en/mockExam.json';
-import enProfile from './locales/en/profile.json';
-import enReview from './locales/en/review.json';
-import enSettings from './locales/en/settings.json';
-import enStatistics from './locales/en/statistics.json';
-import enSubscription from './locales/en/subscription.json';
-import enUpgrade from './locales/en/upgrade.json';
-import enWaitlist from './locales/en/waitlist.json';
 import { makeMissingKeyHandler } from './missingKeyHandler';
 
 import type { SupportedLanguage } from './constants';
 
 /**
- * English resources bundled synchronously (always available).
+ * Critical English resources bundled synchronously (always available at first
+ * paint). These 3 namespaces back the pre-auth LCP surface (landing / login /
+ * register). The remaining 14 EN namespaces are post-auth only and load
+ * fire-and-forget via loadDeferredEnglishNamespaces() after createRoot().
  */
 const englishResources = {
   en: {
-    achievements: enAchievements,
-    admin: enAdmin,
-    auth: enAuth,
-    changelog: enChangelog,
     common: enCommon,
-    upgrade: enUpgrade,
-    subscription: enSubscription,
-    waitlist: enWaitlist,
-    culture: enCulture,
-    deck: enDeck,
-    feedback: enFeedback,
+    auth: enAuth,
     landing: enLanding,
-    mockExam: enMockExam,
-    profile: enProfile,
-    review: enReview,
-    settings: enSettings,
-    statistics: enStatistics,
   },
 };
 
@@ -223,6 +200,75 @@ export async function initI18n(): Promise<typeof i18n> {
 
   initialized = true;
   return i18n;
+}
+
+/**
+ * Fire-and-forget loader for the 14 non-critical English namespaces.
+ *
+ * initI18n() ships only the 3 critical namespaces (common/auth/landing) needed
+ * for the pre-auth LCP surface. The remaining namespaces are post-auth only, so
+ * they are imported lazily and injected into the live i18next store AFTER first
+ * paint — mirroring the RU fire-and-forget pattern (Step 3 above). Called from
+ * src/main.tsx right after createRoot(...).render(...), NOT behind
+ * requestIdleCallback.
+ *
+ * bindI18nStore:'added removed' (see init config) triggers a react-i18next
+ * re-render once each bundle arrives, so any already-mounted post-auth screen
+ * swaps from the raw key path to the real string with no user action.
+ *
+ * The import failure is swallowed (log.warn) so callers can invoke this
+ * fire-and-forget (`void loadDeferredEnglishNamespaces()`) without risking an
+ * unhandled rejection; a reload retries the load.
+ *
+ * @returns Promise that resolves once all 14 namespaces are injected (or after
+ *          a load failure is logged — this never rejects).
+ */
+export async function loadDeferredEnglishNamespaces(): Promise<void> {
+  try {
+    const modules = await Promise.all([
+      import('./locales/en/achievements.json'),
+      import('./locales/en/admin.json'),
+      import('./locales/en/changelog.json'),
+      import('./locales/en/culture.json'),
+      import('./locales/en/deck.json'),
+      import('./locales/en/feedback.json'),
+      import('./locales/en/mockExam.json'),
+      import('./locales/en/profile.json'),
+      import('./locales/en/review.json'),
+      import('./locales/en/settings.json'),
+      import('./locales/en/statistics.json'),
+      import('./locales/en/subscription.json'),
+      import('./locales/en/upgrade.json'),
+      import('./locales/en/waitlist.json'),
+    ]);
+
+    // Parallel to the import list above; Promise.all preserves order.
+    const namespaces = [
+      'achievements',
+      'admin',
+      'changelog',
+      'culture',
+      'deck',
+      'feedback',
+      'mockExam',
+      'profile',
+      'review',
+      'settings',
+      'statistics',
+      'subscription',
+      'upgrade',
+      'waitlist',
+    ];
+
+    modules.forEach((mod, i) => {
+      i18n.addResourceBundle('en', namespaces[i], mod.default, true, true);
+    });
+  } catch (err: unknown) {
+    // Deferred EN namespaces failed to load — post-auth screens fall back to
+    // the raw key path until a reload retries. Graceful degradation; do NOT
+    // let the rejection propagate (main.tsx calls this fire-and-forget).
+    log.warn('[i18n] Failed to load deferred English namespaces:', err);
+  }
 }
 
 /**
