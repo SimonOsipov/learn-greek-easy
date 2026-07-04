@@ -343,6 +343,21 @@ describe('RegisterForm Supabase signup error mapping', () => {
       expect(screen.getByTestId('form-error')).toHaveTextContent('Some unexpected backend failure');
     });
   });
+
+  it('maps a rejected signUp call (e.g. network failure) via the same catch path — distinct from a resolved {error}', async () => {
+    // Unlike the cases above (signUp resolves with an `error` field), here the
+    // promise itself rejects — simulating a network failure (fetch throwing)
+    // rather than a well-formed Supabase auth error response.
+    signUp.mockRejectedValue(new Error('Failed to fetch'));
+    const user = userEvent.setup();
+    render(<RegisterForm />);
+
+    await fillAndSubmit(user);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('form-error')).toHaveTextContent('Failed to fetch');
+    });
+  });
 });
 
 describe('RegisterForm accessibility', () => {

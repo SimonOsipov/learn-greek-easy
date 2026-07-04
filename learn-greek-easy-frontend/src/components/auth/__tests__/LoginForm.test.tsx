@@ -364,6 +364,25 @@ describe('LoginForm', () => {
       });
       expect(signInWithPassword).not.toHaveBeenCalled();
     });
+
+    it('accepts a password of exactly 8 characters (min-length boundary)', async () => {
+      const user = userEvent.setup();
+      renderLoginForm();
+
+      await user.type(screen.getByTestId('email-input'), 'demo@learngreekeasy.com');
+      await user.type(screen.getByTestId('password-input'), '12345678');
+      await user.click(screen.getByTestId('login-submit'));
+
+      await waitFor(() => {
+        expect(signInWithPassword).toHaveBeenCalledWith({
+          email: 'demo@learngreekeasy.com',
+          password: '12345678',
+        });
+      });
+      expect(
+        screen.queryByText(i18n.t('login.errors.passwordMinLength', { ns: 'auth' }))
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe('accessibility', () => {
