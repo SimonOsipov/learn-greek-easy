@@ -30,9 +30,11 @@
  *
  * Tests run serial and share the seeded learner's exercise queue (single CI
  * worker, one /api/v1/test/seed/all per run — see docs/e2e-seeding.md).
- * AC-5 consumes the queue to completion, mirroring the already-accepted
- * pattern in picture-match-practice.spec.ts's PMATCH-E2E-03. AC-2 runs first
- * since it only asserts on request counts and is agnostic to queue content.
+ * AC-5 consumes the queue to completion via `driveSessionToCompletion` below
+ * (see its doc comment for renderer coverage and why the seed needed a fix
+ * — PERF-22-04 — for two of its legacy-typed items to be answerable at all).
+ * AC-2 runs first since it only asserts on request counts and is agnostic to
+ * queue content.
  */
 
 import { test, expect } from '@playwright/test';
@@ -59,35 +61,96 @@ async function waitForHubReady(page: Page): Promise<void> {
 
 /**
  * Drive the active exercise session to completion by repeatedly answering
- * whichever renderer is on screen and clicking Continue. Mirrors
- * picture-match-practice.spec.ts's PMATCH-E2E-03 loop (the one proven,
- * already-in-suite pattern for exhausting this learner's exercise queue).
+ * whichever renderer is on screen and clicking Continue.
+ *
+ * NOTE: this does NOT mirror picture-match-practice.spec.ts's PMATCH-E2E-03 —
+ * that entire describe block is `test.describe.skip`ped ("seeder does not yet
+ * produce picture-match queue items"), so it never runs in CI and was never
+ * validated against a real seed. Treat it as inspiration only, not a proven
+ * pattern.
+ *
+ * ExercisePracticePage.tsx's renderer switch has exactly 3 branches:
+ * `select_picture_from_description` -> spfd-renderer, `select_description_
+ * from_picture` -> sdfp-renderer, and everything else (including the
+ * `fill_gaps` / `select_heard` legacy types seeded for the coffee-shop/bus
+ * situations' comprehension signal, see seed_service.py) -> sca-renderer
+ * (SelectCorrectAnswerRenderer). The seeded daily-mix queue never contains
+ * picture-match items (no PictureExercise row is seeded anywhere), so in
+ * practice every item renders via sca-renderer today — but this loop still
+ * probes all three so it keeps working if that changes.
+ *
+ * Each iteration waits for either the next renderer to appear or the session
+ * to finish and navigate back to the hub (both can happen from the same
+ * Continue click on the last exercise — see ExercisePracticePage.tsx's
+ * finish-invalidation effect). If neither shows up within the timeout, OR a
+ * renderer-less, non-hub state is reached, this fails fast with a diagnostic
+ * dump (current testids + progress text) instead of letting the caller's
+ * `waitForURL` time out 15s later with no clue why.
  */
-async function driveSessionToCompletion(page: Page, maxIterations = 40): Promise<void> {
+async function driveSessionToCompletion(page: Page, maxIterations = 20): Promise<void> {
+  const isOnHub = () => /\/practice\/exercises$/.test(new URL(page.url()).pathname);
+
+  const spfd = page.getByTestId('spfd-renderer');
+  const sdfp = page.getByTestId('sdfp-renderer');
+  const sca = page.getByTestId('sca-renderer');
+  const anyRenderer = spfd.or(sdfp).or(sca);
+
   for (let i = 0; i < maxIterations; i++) {
-    const spfd = page.getByTestId('spfd-renderer');
-    const sdfp = page.getByTestId('sdfp-renderer');
-    const sca = page.getByTestId('sca-renderer');
+    if (isOnHub()) return; // already navigated back — session finished
+
+    // Wait for either the next question to mount or the session to finish and
+    // navigate away, whichever happens first.
+    await Promise.race([
+      page.waitForURL(/\/practice\/exercises$/, { timeout: 10000 }).catch(() => undefined),
+      anyRenderer
+        .first()
+        .waitFor({ state: 'visible', timeout: 10000 })
+        .catch(() => undefined),
+    ]);
+
+    if (isOnHub()) return; // finished during the wait above
 
     const isSpfd = await spfd.isVisible().catch(() => false);
     const isSdfp = await sdfp.isVisible().catch(() => false);
     const isSca = await sca.isVisible().catch(() => false);
 
-    if (!isSpfd && !isSdfp && !isSca) break; // session complete / navigated away
-
     if (isSpfd) {
       await page.getByTestId('spfd-option-0').click();
     } else if (isSdfp) {
       await page.getByTestId('sdfp-option-0').click();
-    } else {
+    } else if (isSca) {
       await page.getByTestId('sca-option-0').click();
+    } else {
+      // Neither a known renderer nor the hub: dump enough to diagnose a future
+      // unknown exercise type rather than silently hanging for 15s.
+      const visibleTestIds = await page
+        .evaluate(() =>
+          Array.from(document.querySelectorAll('[data-testid]'))
+            .filter((el) => (el as HTMLElement).offsetParent !== null)
+            .map((el) => el.getAttribute('data-testid'))
+            .join(', ')
+        )
+        .catch(() => '<unavailable>');
+      const progressText = await page
+        .getByTestId('progress-indicator')
+        .textContent()
+        .catch(() => null);
+      throw new Error(
+        `driveSessionToCompletion: iteration ${i} — none of spfd-renderer/` +
+          `sdfp-renderer/sca-renderer is visible, and the page has not navigated ` +
+          `back to the hub (url: ${page.url()}; progress: ${progressText ?? '<none>'}). ` +
+          `Visible data-testid elements: ${visibleTestIds}`
+      );
     }
 
-    const resultPanel = page.getByTestId('xd-result');
-    await expect(resultPanel).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('xd-result')).toBeVisible({ timeout: 8000 });
     await page.getByRole('button', { name: /continue/i }).click();
-    await page.waitForTimeout(300);
   }
+
+  throw new Error(
+    `driveSessionToCompletion: exceeded ${maxIterations} iterations without the ` +
+      `session completing (still on ${page.url()})`
+  );
 }
 
 test.describe('Exercise Hub Queue Network Contract (PERF-22-04)', () => {
