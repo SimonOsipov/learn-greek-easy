@@ -139,7 +139,12 @@ const defaultStoreState = {
   error: null,
   feedbackState: null as { exerciseId: string; selectedIndex: number; correctIndex: number } | null,
   phase: 'question' as 'question' | 'result',
-  sessionSummary: null,
+  sessionSummary: null as {
+    total: number;
+    correct: number;
+    accuracy_pct: number;
+    duration_seconds: number;
+  } | null,
   answers: {} as Record<string, { selectedIndex: number; correct: boolean }>,
   exerciseStartTime: null as number | null,
   sessionStartTime: null as number | null,
