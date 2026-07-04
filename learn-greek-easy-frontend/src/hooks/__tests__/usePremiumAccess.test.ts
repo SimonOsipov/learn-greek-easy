@@ -21,20 +21,9 @@ function makeUser(overrides: { id: string; email: string; name: string; role: Us
   };
 }
 
-/**
- * NOTE: These tests are skipped due to zustand persist middleware
- * incompatibility with test environment. The persist middleware
- * captures localStorage at module load time, before mocks are set up.
- *
- * TODO: Consider using msw or similar to mock storage at a lower level,
- * or test these hooks via integration tests instead of unit tests.
- */
-describe.skip('usePremiumAccess Hook', () => {
+describe('usePremiumAccess Hook', () => {
   beforeEach(() => {
-    // Clear localStorage
-    localStorage.clear();
-
-    // Reset auth store (this triggers persist middleware)
+    // Reset auth store
     useAuthStore.setState({
       user: null,
       isAuthenticated: false,
