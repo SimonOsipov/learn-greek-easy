@@ -106,10 +106,30 @@ def _evict_scheduled():
                 sys.modules.pop(key, None)
 
 
-def _restore_scheduled():
-    """Re-import src.tasks.scheduled for real so subsequent tests use the true module."""
+def _restore_scheduled(original_module=None):
+    """Restore src.tasks.scheduled so subsequent tests keep the SAME module object.
+
+    Identity — not just importability — matters here. Any test that did
+    ``from src.tasks.scheduled import <fn>`` at COLLECTION time holds a function
+    whose ``__globals__`` IS the original module's ``__dict__``. A later
+    ``patch("src.tasks.scheduled.<x>")`` resolves its target through
+    ``sys.modules[...]``. If teardown merely RE-IMPORTS (a NEW module object),
+    those two diverge: the patch mutates the new module's dict while the captured
+    function still reads the old one, so the patch silently MISSES the callee.
+    Under xdist that surfaced as ``RuntimeError: Database not initialized`` in the
+    scheduler integration tests, whose ``get_session_factory`` patch reached the
+    real (uninitialised) factory instead of the test's session
+    (test_scheduled_tasks_aggregation.py).
+
+    Restoring the exact ``original_module`` object keeps patch-target and callee on
+    one namespace. If it is missing (module was never imported before this test),
+    fall back to a fresh import.
+    """
     _evict_scheduled()
-    importlib.import_module(_SCHEDULED_MODULE)
+    if original_module is not None:
+        sys.modules[_SCHEDULED_MODULE] = original_module
+    else:
+        importlib.import_module(_SCHEDULED_MODULE)
 
 
 def _tasks_dir() -> Path:
@@ -287,6 +307,10 @@ class TestHeartbeatMonitorSlugAndConfig:
         factory_spy = MagicMock()
         factory_spy.return_value = lambda fn: fn  # inner decorator: transparent
 
+        # Capture the LIVE module object BEFORE eviction so teardown can restore
+        # this exact object (identity-preserving) rather than a re-imported clone.
+        original_module = sys.modules.get(_SCHEDULED_MODULE)
+
         _evict_scheduled()
         try:
             with patch("sentry_sdk.crons.monitor", factory_spy):
@@ -329,10 +353,25 @@ class TestHeartbeatMonitorSlugAndConfig:
                 f"got {config.get('timezone')!r}"
             )
         finally:
-            # Restore the real (unpatched) module so later tests are unaffected.
+            # Restore the ORIGINAL module object so later tests are unaffected.
             # This MUST run even if assertions fail to prevent module-state
             # contamination that would cascade failures to other test modules.
-            _restore_scheduled()
+            # Identity — not just importability — is what matters: a re-imported
+            # clone splits a collection-time `from src.tasks.scheduled import <fn>`
+            # callee from a later `patch("src.tasks.scheduled.<x>")` string target,
+            # which surfaced as "Database not initialized" in the scheduler
+            # integration tests under xdist (see _restore_scheduled docstring).
+            _restore_scheduled(original_module)
+
+        # Regression guard: teardown must have restored the EXACT original object.
+        # Skipped when the module was not imported before this test (isolated run
+        # of only this file), where there is no prior identity to preserve.
+        if original_module is not None:
+            assert sys.modules[_SCHEDULED_MODULE] is original_module, (
+                "reload teardown must restore the ORIGINAL src.tasks.scheduled object; "
+                "a re-imported clone splits collection-time imported callees from later "
+                "string-target patches (the 'Database not initialized' xdist contamination)."
+            )
 
 
 # ---------------------------------------------------------------------------
