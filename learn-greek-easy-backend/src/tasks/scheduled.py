@@ -64,7 +64,7 @@ async def streak_reset_task() -> None:
                 SELECT
                     user_id,
                     MAX(DATE(reviewed_at)) as last_review_date
-                FROM reviews
+                FROM card_record_reviews
                 GROUP BY user_id
                 HAVING MAX(DATE(reviewed_at)) < :yesterday
             """
@@ -287,8 +287,8 @@ async def stats_aggregate_task() -> None:
                     COUNT(*) as review_count,
                     ROUND(AVG(r.quality)::numeric, 2) as avg_quality,
                     COALESCE(SUM(r.time_taken), 0) as total_time_seconds,
-                    COUNT(DISTINCT r.card_id) as unique_cards
-                FROM reviews r
+                    COUNT(DISTINCT r.card_record_id) as unique_cards
+                FROM card_record_reviews r
                 WHERE DATE(r.reviewed_at) = :target_date
                 GROUP BY r.user_id
                 ORDER BY review_count DESC
@@ -305,7 +305,7 @@ async def stats_aggregate_task() -> None:
                 SELECT
                     cs.user_id,
                     COUNT(*) as cards_mastered
-                FROM card_statistics cs
+                FROM card_record_statistics cs
                 WHERE cs.status = 'MASTERED'
                   AND DATE(cs.updated_at) = :target_date
                 GROUP BY cs.user_id
