@@ -37,7 +37,7 @@ async def streak_reset_task() -> None:
     - Future: Could update a cached streak value for performance
 
     Note: The Greeklish app calculates streaks in real-time from the
-    `reviews` table. This task is for monitoring/logging purposes and future
+    `card_record_reviews` table. This task is for monitoring/logging purposes and future
     cached streak support.
     """
     logger.info(
@@ -208,7 +208,20 @@ async def _cleanup_orphaned_session_refs(redis: "Redis") -> tuple[int, int]:
     return deleted_orphaned, deleted_empty_sets
 
 
-@monitor(monitor_slug="scheduler-session-cleanup")
+@monitor(
+    monitor_slug="scheduler-heartbeat",
+    monitor_config={
+        "schedule": {"type": "interval", "value": 5, "unit": "minute"},
+        "checkin_margin": 2,
+        "max_runtime": 1,
+        "timezone": "UTC",
+    },
+)
+async def heartbeat_task() -> None:
+    """No-op liveness beat: its Sentry check-in is the scheduler's dead-man's-switch (OPS-01-02)."""
+    logger.debug("Scheduler heartbeat")
+
+
 async def session_cleanup_task() -> None:
     """Clean up expired and orphaned sessions from Redis.
 
