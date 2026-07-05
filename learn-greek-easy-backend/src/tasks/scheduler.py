@@ -43,6 +43,7 @@ import sentry_sdk
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, JobExecutionEvent
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 from src.config import settings
 from src.core.logging import get_logger
@@ -111,6 +112,7 @@ def setup_scheduler() -> None:
     # Register scheduled jobs (implemented in 12.07-12.09)
     # Import here to avoid circular imports
     from src.tasks.scheduled import (
+        heartbeat_task,
         session_cleanup_task,
         stats_aggregate_task,
         streak_reset_task,
@@ -155,6 +157,15 @@ def setup_scheduler() -> None:
         CronTrigger(hour=3, minute=0),
         id="gamification_reconcile_active_users",
         name="Daily Gamification Reconcile (SUMMARY, active users)",
+    )
+
+    # Liveness heartbeat every 5 minutes — its Sentry cron check-in is the
+    # scheduler's dead-man's-switch (OPS-01-02).
+    _scheduler.add_job(
+        heartbeat_task,
+        IntervalTrigger(minutes=5),
+        id="heartbeat",
+        name="Scheduler Heartbeat",
     )
 
     _scheduler.start()

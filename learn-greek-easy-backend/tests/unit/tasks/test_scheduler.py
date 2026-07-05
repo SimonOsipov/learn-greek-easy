@@ -96,8 +96,9 @@ class TestSchedulerSetup:
 
             setup_scheduler()
 
-            # Should have 5 add_job calls (4 original + gamification reconcile)
-            assert mock_scheduler_instance.add_job.call_count == 5
+            # Should have 6 add_job calls (4 original + gamification reconcile + heartbeat)
+            # OPS-01-02: heartbeat_task added on IntervalTrigger(minutes=5) → 5 → 6.
+            assert mock_scheduler_instance.add_job.call_count == 6
 
             # Verify all job IDs are registered
             job_ids = [call[1]["id"] for call in mock_scheduler_instance.add_job.call_args_list]
