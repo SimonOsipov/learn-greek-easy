@@ -86,10 +86,26 @@ def _capture_heartbeat_monitor_config():
     """Reload src.tasks.scheduled under a spy on sentry_sdk.crons.monitor.
 
     Returns the monitor_config dict passed to the sole @monitor at import time.
-    Restores the real module in a finally so no other test sees the spied reload.
+    Restores the ORIGINAL module object in a finally so no other test sees the
+    spied reload.
+
+    Identity — not just importability — matters here. Any test that did
+    ``from src.tasks.scheduled import <fn>`` at COLLECTION time (e.g.
+    test_scheduled_tasks_aggregation.py) holds a function whose ``__globals__``
+    IS the original module's ``__dict__``. A teardown that merely RE-IMPORTS
+    (a NEW module object) splits that callee from a later
+    ``patch("src.tasks.scheduled.<x>")`` string target, which resolves through
+    ``sys.modules[...]`` — the new object. The patch then silently MISSES the
+    callee, which surfaced as ``RuntimeError: Database not initialized`` in the
+    scheduler integration tests under xdist (same root cause documented in
+    test_session_cleanup_monitor.py's ``_restore_scheduled``).
     """
     factory_spy = MagicMock()
     factory_spy.return_value = lambda fn: fn  # transparent inner decorator
+
+    # Capture the LIVE module object BEFORE eviction so teardown can restore
+    # this exact object (identity-preserving) rather than a re-imported clone.
+    original_module = sys.modules.get(_SCHEDULED_MODULE)
 
     # Evict only the scheduled module (see test_session_cleanup_monitor.py for why
     # we must NOT evict the src.tasks package or src.tasks.scheduler).
@@ -108,13 +124,29 @@ def _capture_heartbeat_monitor_config():
         config = call.kwargs.get("monitor_config")
         if config is None and len(call.args) >= 2:
             config = call.args[1]
-        return config
     finally:
-        # Re-import the real (unspied) module so subsequent tests use it.
+        # Restore the ORIGINAL module object so subsequent tests use the same
+        # namespace their collection-time imports were bound to. Fall back to a
+        # fresh import only if there was no prior module (isolated single-file run).
         for key in list(sys.modules.keys()):
             if key == _SCHEDULED_MODULE or key.startswith(_SCHEDULED_MODULE + "."):
                 sys.modules.pop(key, None)
-        importlib.import_module(_SCHEDULED_MODULE)
+        if original_module is not None:
+            sys.modules[_SCHEDULED_MODULE] = original_module
+        else:
+            importlib.import_module(_SCHEDULED_MODULE)
+
+    # Regression guard: teardown must have restored the EXACT original object.
+    # Skipped when the module was not imported before this call (isolated run of
+    # only this file), where there is no prior identity to preserve.
+    if original_module is not None:
+        assert sys.modules[_SCHEDULED_MODULE] is original_module, (
+            "reload teardown must restore the ORIGINAL src.tasks.scheduled object; "
+            "a re-imported clone splits collection-time imported callees from later "
+            "string-target patches (the 'Database not initialized' xdist contamination)."
+        )
+
+    return config
 
 
 # ---------------------------------------------------------------------------
