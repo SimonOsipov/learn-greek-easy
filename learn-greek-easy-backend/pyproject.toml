@@ -22,7 +22,7 @@ psycopg2-binary = "^2.9.9"
 asyncpg = ">=0.30,<0.32"
 redis = ">=5.0.8,<9.0.0"
 python-dateutil = "^2.9.0"
-pytz = "^2024.1"
+pytz = ">=2024.1,<2027.0"
 httpx = {version = ">=0.27,<0.29", extras = ["http2"]}
 gunicorn = "^22.0.0"
 greenlet = "^3.2.4"
