@@ -1182,6 +1182,65 @@ class TestHealthResponseSchemaTrim:
 
 
 # ============================================================================
+# OPS-03-02: QA Mode B adversarial coverage — extra-field leak guard
+# ============================================================================
+#
+# Pydantic v2 BaseModel defaults to `extra="ignore"`: passing an unknown
+# kwarg to the constructor is silently dropped rather than raising. That
+# means a caller who still passes version=/environment=/memory= (as this
+# repo's own test fixtures in test_health.py / v1/test_health.py still do --
+# only their assertions were adapted by the trim, not their constructor
+# calls) would not error, which could mask an incomplete trim if a future
+# edit re-introduced these as `extra="allow"` fields or similar. This test
+# proves the actual serialized key set stays exactly the trimmed set even
+# when the old removed kwargs are still passed in.
+
+
+class TestHealthResponseSchemaTrimAdversarial:
+    """Guards against the trimmed fields leaking back in via model_dump."""
+
+    def test_extra_kwargs_do_not_leak_into_serialized_health_response(self):
+        import json
+        from datetime import datetime, timezone
+
+        from src.schemas.health import (
+            ComponentHealth,
+            ComponentStatus,
+            HealthChecks,
+            HealthResponse,
+            HealthStatus,
+        )
+
+        response = HealthResponse(
+            status=HealthStatus.HEALTHY,
+            version="0.1.0",  # removed field -- must be dropped, not leaked
+            environment="test",  # removed field -- must be dropped, not leaked
+            timestamp=datetime.now(timezone.utc),
+            uptime_seconds=1.0,
+            checks=HealthChecks(
+                database=ComponentHealth(
+                    status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok"
+                ),
+                redis=ComponentHealth(status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok"),
+                memory={  # removed field -- must be dropped, not leaked
+                    "status": "healthy",
+                    "used_mb": 1.0,
+                    "percent": 1.0,
+                    "message": "ok",
+                },
+            ),
+        )
+
+        dumped = response.model_dump()
+        assert set(dumped.keys()) == {"status", "timestamp", "uptime_seconds", "checks"}
+        assert set(dumped["checks"].keys()) == {"database", "redis", "stripe"}
+
+        json_dumped = json.loads(response.model_dump_json())
+        assert set(json_dumped.keys()) == {"status", "timestamp", "uptime_seconds", "checks"}
+        assert set(json_dumped["checks"].keys()) == {"database", "redis", "stripe"}
+
+
+# ============================================================================
 # get_uptime_seconds() Tests
 # ============================================================================
 
