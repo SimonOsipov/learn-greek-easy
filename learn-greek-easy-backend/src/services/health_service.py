@@ -4,7 +4,7 @@ import asyncio
 import os
 import time
 from datetime import datetime, timezone
-from typing import Optional, Tuple
+from typing import Awaitable, Callable, Generic, Optional, Tuple, TypeVar
 
 import psutil
 from sqlalchemy import text
@@ -37,6 +37,82 @@ _start_time: float = time.time()
 def get_uptime_seconds() -> float:
     """Get application uptime in seconds."""
     return time.time() - _start_time
+
+
+# ---------------------------------------------------------------------------
+# Health/readiness result cache (OPS-03-01)
+#
+# A tiny async single-flight TTL memo sits in front of get_readiness_status()
+# and get_health_status() so that a burst of health pings collapses onto at
+# most one DB + Redis round-trip per TTL window, regardless of concurrency.
+# This protects the single-worker <=30-connection Supavisor budget (D3): N
+# concurrent misses queue on one lock, only the first computes while the rest
+# await and then read the freshly-cached value (single-flight, not a
+# thundering memo). Both healthy AND unhealthy results are cached identically
+# for the full window, so the connection budget also holds during an outage (a
+# just-died dependency still flips within <=1 TTL). Uses time.monotonic() (not
+# wall-clock) so a clock adjustment cannot extend the window.
+# ---------------------------------------------------------------------------
+
+_HEALTH_CACHE_TTL_SECONDS: float = 5.0
+
+_T = TypeVar("_T")
+
+
+class _AsyncSingleFlightTTL(Generic[_T]):
+    """Async single-flight TTL cache holding one ``(value, monotonic-expiry)``.
+
+    ``get(factory)`` serves the cached value while it is still fresh; on a miss
+    it acquires a lock, double-checks freshness (a concurrent awaiter may have
+    just filled the cache), and otherwise awaits ``factory()`` exactly once.
+    """
+
+    def __init__(self, ttl_seconds: float) -> None:
+        self._ttl = ttl_seconds
+        self._lock = asyncio.Lock()
+        self._value: Optional[_T] = None
+        self._expiry: float = 0.0
+
+    async def get(self, factory: Callable[[], Awaitable[_T]]) -> _T:
+        # Fast path: serve a still-fresh cached value without taking the lock.
+        if time.monotonic() < self._expiry:
+            assert self._value is not None
+            return self._value
+
+        async with self._lock:
+            # Double-check: a concurrent awaiter may have filled the cache
+            # while we were waiting for the lock.
+            if time.monotonic() < self._expiry:
+                assert self._value is not None
+                return self._value
+
+            value = await factory()
+            self._value = value
+            self._expiry = time.monotonic() + self._ttl
+            return value
+
+    def reset(self) -> None:
+        """Drop the cached value so the next ``get()`` recomputes."""
+        self._value = None
+        self._expiry = 0.0
+
+
+_readiness_cache: "_AsyncSingleFlightTTL[Tuple[ReadinessResponse, int]]" = _AsyncSingleFlightTTL(
+    _HEALTH_CACHE_TTL_SECONDS
+)
+_health_cache: "_AsyncSingleFlightTTL[Tuple[HealthResponse, int]]" = _AsyncSingleFlightTTL(
+    _HEALTH_CACHE_TTL_SECONDS
+)
+
+
+def _reset_health_caches() -> None:
+    """Reset both health-service caches so the next call recomputes.
+
+    Used by the service test module's autouse fixture to prevent a cached
+    result from one test leaking into the next.
+    """
+    _readiness_cache.reset()
+    _health_cache.reset()
 
 
 async def check_database_health(timeout: Optional[float] = None) -> ComponentHealth:
@@ -189,6 +265,16 @@ async def check_stripe_health(timeout: Optional[float] = None) -> StripeHealth:
 
 
 async def get_health_status() -> Tuple[HealthResponse, int]:
+    """Return the comprehensive health check, cached ~5s (single-flight).
+
+    Thin wrapper over :func:`_compute_health_status`; see the module-level
+    cache note. Both routers call this, so one cache covers all public health
+    surfaces.
+    """
+    return await _health_cache.get(_compute_health_status)
+
+
+async def _compute_health_status() -> Tuple[HealthResponse, int]:
     """
     Perform comprehensive health check of all components.
 
@@ -276,6 +362,16 @@ async def get_liveness_status() -> LivenessResponse:
 
 
 async def get_readiness_status() -> Tuple[ReadinessResponse, int]:
+    """Return the readiness probe status, cached ~5s (single-flight).
+
+    Thin wrapper over :func:`_compute_readiness_status`; see the module-level
+    cache note. Both routers call this, so one cache covers all public
+    readiness surfaces.
+    """
+    return await _readiness_cache.get(_compute_readiness_status)
+
+
+async def _compute_readiness_status() -> Tuple[ReadinessResponse, int]:
     """
     Get readiness probe status.
 
