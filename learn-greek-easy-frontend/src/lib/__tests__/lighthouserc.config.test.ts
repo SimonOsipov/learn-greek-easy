@@ -15,6 +15,16 @@
  * ("Get Pre-Auth Mobile LCP Under the Web Vitals Poor Line"). GitHub issue
  * #679 (the prior tracker) was deleted; PERF-24 is the sole tracker now.
  *
+ * PERF-24 (2026-07-04) measured post-optimization mobile LCP after landing
+ * the i18n namespace split (PERF-24-01) and the deferred posthog import
+ * (PERF-24-02): `/` 5891ms, `/login` 5501ms, `/register` 5475ms — unchanged
+ * from the pre-optimization band above. The LHR shows a render-timing
+ * bottleneck (a ~3-4s FCP-to-LCP gap on lazy-route text elements behind an
+ * opacity-0 entrance animation), not a byte-budget one, so the 7000 tripwire
+ * asserted below is RETAINED deliberately and the 4000 Web Vitals floor is
+ * DEFERRED to follow-up story PERF-25. See `lighthouserc.mobile.cjs`'s
+ * assertion comment for the full writeup.
+ *
  * CJS loading: package.json declares "type": "module", so `require` is not a
  * global. We use `createRequire(import.meta.url)` from Node's built-in
  * `module` package to load the `.cjs` config files.

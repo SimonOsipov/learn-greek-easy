@@ -3,7 +3,7 @@
  * Tests premium access detection based on user role
  */
 
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 
 import { usePremiumAccess } from '@/hooks/usePremiumAccess';
@@ -21,20 +21,9 @@ function makeUser(overrides: { id: string; email: string; name: string; role: Us
   };
 }
 
-/**
- * NOTE: These tests are skipped due to zustand persist middleware
- * incompatibility with test environment. The persist middleware
- * captures localStorage at module load time, before mocks are set up.
- *
- * TODO: Consider using msw or similar to mock storage at a lower level,
- * or test these hooks via integration tests instead of unit tests.
- */
-describe.skip('usePremiumAccess Hook', () => {
+describe('usePremiumAccess Hook', () => {
   beforeEach(() => {
-    // Clear localStorage
-    localStorage.clear();
-
-    // Reset auth store (this triggers persist middleware)
+    // Reset auth store
     useAuthStore.setState({
       user: null,
       isAuthenticated: false,
@@ -90,31 +79,54 @@ describe.skip('usePremiumAccess Hook', () => {
     expect(result.current).toBe(false);
 
     // User upgrades to premium
-    useAuthStore.setState({
-      user: makeUser({
-        id: '4',
-        email: 'upgraded@example.com',
-        name: 'Upgraded User',
-        role: 'premium',
-      }),
-      isAuthenticated: true,
+    act(() => {
+      useAuthStore.setState({
+        user: makeUser({
+          id: '4',
+          email: 'upgraded@example.com',
+          name: 'Upgraded User',
+          role: 'premium',
+        }),
+        isAuthenticated: true,
+      });
     });
 
     rerender();
     expect(result.current).toBe(true);
 
     // User downgrades to free
-    useAuthStore.setState({
-      user: makeUser({
-        id: '4',
-        email: 'upgraded@example.com',
-        name: 'Upgraded User',
-        role: 'free',
-      }),
-      isAuthenticated: true,
+    act(() => {
+      useAuthStore.setState({
+        user: makeUser({
+          id: '4',
+          email: 'upgraded@example.com',
+          name: 'Upgraded User',
+          role: 'free',
+        }),
+        isAuthenticated: true,
+      });
     });
 
     rerender();
     expect(result.current).toBe(false);
+  });
+
+  it('should key off role alone, independent of isAuthenticated (documents current hook contract)', () => {
+    // The hook body only reads user?.role - it never consults isAuthenticated.
+    // A stale/premium user object with isAuthenticated:false is a divergent
+    // store state that shouldn't normally occur, but this locks in today's
+    // observed behavior so a future change to the gating logic is caught here.
+    useAuthStore.setState({
+      user: makeUser({
+        id: '5',
+        email: 'stale@example.com',
+        name: 'Stale Premium User',
+        role: 'premium',
+      }),
+      isAuthenticated: false,
+    });
+
+    const { result } = renderHook(() => usePremiumAccess());
+    expect(result.current).toBe(true);
   });
 });

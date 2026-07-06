@@ -55,7 +55,6 @@ class HealthChecks(BaseModel):
 
     database: ComponentHealth
     redis: ComponentHealth
-    memory: MemoryHealth
     stripe: Optional[StripeHealth] = Field(
         default=None,
         description="Stripe API connectivity status",
@@ -66,8 +65,6 @@ class HealthResponse(BaseModel):
     """Full health check response."""
 
     status: HealthStatus = Field(description="Overall health status")
-    version: str = Field(description="Application version")
-    environment: str = Field(description="Current environment")
     timestamp: datetime = Field(description="Health check timestamp")
     uptime_seconds: float = Field(description="Application uptime in seconds")
     checks: HealthChecks = Field(description="Individual component checks")
@@ -76,8 +73,6 @@ class HealthResponse(BaseModel):
         "json_schema_extra": {
             "example": {
                 "status": "healthy",
-                "version": "0.1.0",
-                "environment": "development",
                 "timestamp": "2024-12-02T10:30:00Z",
                 "uptime_seconds": 3600,
                 "checks": {
@@ -87,12 +82,6 @@ class HealthResponse(BaseModel):
                         "message": "Connection successful",
                     },
                     "redis": {"status": "healthy", "latency_ms": 1.1, "message": "PONG received"},
-                    "memory": {
-                        "status": "healthy",
-                        "used_mb": 128.5,
-                        "percent": 45.2,
-                        "message": "Memory usage normal",
-                    },
                     "stripe": {
                         "status": "ok",
                         "message": "Stripe API reachable",

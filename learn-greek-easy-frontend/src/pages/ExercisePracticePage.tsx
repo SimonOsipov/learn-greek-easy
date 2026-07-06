@@ -13,6 +13,7 @@
 
 import { useEffect, useCallback, useState, useRef } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, CheckCircle2, Flame, BarChart2, Layers } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -34,7 +35,9 @@ import { usePracticeKeyboard } from '@/hooks/usePracticeKeyboard';
 import { usePracticeSession } from '@/hooks/usePracticeSession';
 import { useStudyStreak } from '@/hooks/useStudyStreak';
 import { track } from '@/lib/analytics/track';
+import { queryKeys } from '@/lib/queryKeys';
 import type { ExerciseModality, ExerciseQueueItem } from '@/services/exerciseAPI';
+import { useAuthStore } from '@/stores/authStore';
 import { useExercisePracticeStore } from '@/stores/exercisePracticeStore';
 import { useQuestionLanguageStore } from '@/stores/questionLanguageStore';
 import { selectLiveStats, selectStepperStatus } from '@/stores/sessionSelectors';
@@ -350,6 +353,8 @@ export const ExercisePracticePage = () => {
 
   const { language, setLanguage } = useQuestionLanguageStore();
   const { streak } = useStudyStreak();
+  const queryClient = useQueryClient();
+  const userId = useAuthStore((s) => s.user?.id);
 
   const currentExercise = queue[currentIndex] ?? null;
   const sessionComplete = sessionSummary !== null;
@@ -381,6 +386,15 @@ export const ExercisePracticePage = () => {
   useEffect(() => {
     startSession(modality).catch(() => {});
   }, [modality]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Invalidate the hub's queue cache when the session finishes (Decision 7:
+  // once on finish, NOT per submitReview — per-answer is fire-and-forget and
+  // would refetch mid-session). Mirrors V2FlashcardPracticePage.tsx:145-150.
+  useEffect(() => {
+    if (sessionSummary) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.exerciseQueue(userId) });
+    }
+  }, [sessionSummary, queryClient, userId]);
 
   // Live stats + stepper from pure selectors
   const liveStats = selectLiveStats({ queue, currentIndex, answers });

@@ -216,14 +216,104 @@ class TestV1HealthEndpoint:
             data = response.json()
 
             assert "status" in data
-            assert "version" in data
-            assert "environment" in data
             assert "timestamp" in data
             assert "uptime_seconds" in data
             assert "checks" in data
             assert "database" in data["checks"]
             assert "redis" in data["checks"]
-            assert "memory" in data["checks"]
+
+    # ------------------------------------------------------------------
+    # OPS-03-02: public /api/v1/health payload trim (Mode A — RED before
+    # implementation). Twin of the root-router RED spec in
+    # tests/unit/api/test_health.py — currently FAILS because
+    # HealthResponse/HealthChecks still declare version/environment/memory.
+    # ------------------------------------------------------------------
+
+    def test_v1_public_health_payload_omits_version_env_memory(
+        self, client: TestClient, healthy_health_response: HealthResponse
+    ):
+        """RED: public /api/v1/health must not expose version, environment,
+        or checks.memory once OPS-03-02 trims them. Fails today
+        (AssertionError) because both fields are still present."""
+        with patch(
+            "src.api.v1.health.get_health_status",
+            return_value=(healthy_health_response, 200),
+        ):
+            response = client.get("/api/v1/health")
+            data = response.json()
+
+            assert "version" not in data
+            assert "environment" not in data
+            assert "memory" not in data["checks"]
+
+
+# ============================================================================
+# OPS-03-02: QA Mode B adversarial coverage for the public /api/v1/health
+# payload trim
+# ============================================================================
+#
+# Mirrors the root-router adversarial coverage in
+# tests/unit/api/test_health.py: the RED spec only checked the healthy
+# fixture on this router too, and readiness must stay untouched by the trim.
+
+
+class TestV1HealthPayloadTrimAdversarial:
+    """Adversarial coverage for the OPS-03-02 trim on the v1 router."""
+
+    def test_degraded_and_unhealthy_payloads_also_omit_trimmed_fields(
+        self,
+        client: TestClient,
+        degraded_health_response: HealthResponse,
+        unhealthy_health_response: HealthResponse,
+    ):
+        """Degraded and unhealthy responses must be trimmed identically to
+        the healthy fixture, alongside their existing status codes (200 /
+        503)."""
+        with patch(
+            "src.api.v1.health.get_health_status",
+            return_value=(degraded_health_response, 200),
+        ):
+            response = client.get("/api/v1/health")
+            assert response.status_code == 200
+            data = response.json()
+            assert "version" not in data
+            assert "environment" not in data
+            assert "memory" not in data["checks"]
+
+        with patch(
+            "src.api.v1.health.get_health_status",
+            return_value=(unhealthy_health_response, 503),
+        ):
+            response = client.get("/api/v1/health")
+            assert response.status_code == 503
+            data = response.json()
+            assert "version" not in data
+            assert "environment" not in data
+            assert "memory" not in data["checks"]
+
+    def test_readiness_payload_unaffected_by_health_trim(self, client: TestClient):
+        """/api/v1/health/ready is a distinct schema (ReadinessResponse/
+        ReadinessChecks) untouched by OPS-03-02 -- guard against the trim
+        spilling over."""
+        mock_response = ReadinessResponse(
+            status="ready",
+            timestamp=datetime.now(timezone.utc),
+            checks=ReadinessChecks(database=True, redis=True),
+        )
+
+        with patch(
+            "src.api.v1.health.get_readiness_status",
+            return_value=(mock_response, 200),
+        ):
+            response = client.get("/api/v1/health/ready")
+            data = response.json()
+
+            assert response.status_code == 200
+            assert data["status"] == "ready"
+            assert data["checks"] == {"database": True, "redis": True}
+            assert "version" not in data
+            assert "environment" not in data
+            assert "memory" not in data["checks"]
 
 
 # ============================================================================
@@ -360,46 +450,6 @@ class TestV1ReadinessEndpoint:
 
 class TestV1HealthEdgeCases:
     """Tests for edge cases in /api/v1/health endpoints."""
-
-    def test_health_with_memory_warning(self, client: TestClient):
-        """Test health response with memory warning."""
-        response = HealthResponse(
-            status=HealthStatus.HEALTHY,
-            version="0.1.0",
-            environment="test",
-            timestamp=datetime.now(timezone.utc),
-            uptime_seconds=100.0,
-            checks=HealthChecks(
-                database=ComponentHealth(
-                    status=ComponentStatus.HEALTHY,
-                    latency_ms=5.0,
-                    message="Connection successful",
-                ),
-                redis=ComponentHealth(
-                    status=ComponentStatus.HEALTHY,
-                    latency_ms=2.0,
-                    message="PONG received",
-                ),
-                memory=MemoryHealth(
-                    status=ComponentStatus.WARNING,
-                    used_mb=512.0,
-                    percent=85.0,
-                    message="High memory usage",
-                ),
-            ),
-        )
-
-        with patch(
-            "src.api.v1.health.get_health_status",
-            return_value=(response, 200),
-        ):
-            resp = client.get("/api/v1/health")
-
-            assert resp.status_code == 200
-            data = resp.json()
-            # Memory warning doesn't affect overall status
-            assert data["status"] == "healthy"
-            assert data["checks"]["memory"]["status"] == "warning"
 
     def test_health_response_timestamp_format(
         self, client: TestClient, healthy_health_response: HealthResponse

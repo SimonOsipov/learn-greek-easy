@@ -441,6 +441,97 @@ class SeedService:
         },
     ]
 
+    # PERF-22-04: answerable SelectCorrectAnswerPayload-shaped items for the coffee
+    # shop (index 0) / bus (index 1) FILL_GAPS + SELECT_HEARD exercises above — see
+    # the comment at their construction site in seed_situations() for why these
+    # legacy-labeled exercise_types need a select-correct-answer-shaped item.
+    COFFEE_BUS_EXERCISE_ITEMS: dict[tuple[int, "ExerciseType"], dict[str, object]] = {
+        (0, ExerciseType.FILL_GAPS): {
+            "prompt": {
+                "el": "Τι παραγγέλνει ο Γιάννης στην καφετέρια;",
+                "en": "What does Yannis order at the coffee shop?",
+                "ru": "Что заказывает Янис в кафе?",
+            },
+            "options": [
+                {
+                    "el": "Ελληνικό καφέ και τυρόπιτα",
+                    "en": "A Greek coffee and a cheese pie",
+                    "ru": "Греческий кофе и сырный пирог",
+                },
+                {
+                    "el": "Φραπέ και κρουασάν",
+                    "en": "A frappé and a croissant",
+                    "ru": "Фраппе и круассан",
+                },
+                {"el": "Τσάι και κέικ", "en": "Tea and cake", "ru": "Чай и торт"},
+                {
+                    "el": "Χυμό πορτοκάλι και τοστ",
+                    "en": "Orange juice and toast",
+                    "ru": "Апельсиновый сок и тост",
+                },
+            ],
+            "correct_answer_index": 0,
+        },
+        (0, ExerciseType.SELECT_HEARD): {
+            "prompt": {
+                "el": "Πού κάθεται ο Γιάννης;",
+                "en": "Where does Yannis sit?",
+                "ru": "Где сидит Янис?",
+            },
+            "options": [
+                {"el": "Δίπλα στο παράθυρο", "en": "Near the window", "ru": "У окна"},
+                {"el": "Δίπλα στην πόρτα", "en": "Near the door", "ru": "У двери"},
+                {"el": "Στο μπαρ", "en": "At the bar", "ru": "У барной стойки"},
+                {"el": "Έξω", "en": "Outside", "ru": "На улице"},
+            ],
+            "correct_answer_index": 0,
+        },
+        (1, ExerciseType.FILL_GAPS): {
+            "prompt": {
+                "el": "Πώς πληρώνει η Μαρία στο λεωφορείο;",
+                "en": "How does Maria pay on the bus?",
+                "ru": "Как Мария платит в автобусе?",
+            },
+            "options": [
+                {
+                    "el": "Χτυπάει την κάρτα της",
+                    "en": "She taps her card",
+                    "ru": "Прикладывает карту",
+                },
+                {
+                    "el": "Πληρώνει μετρητά",
+                    "en": "She pays with cash",
+                    "ru": "Платит наличными",
+                },
+                {
+                    "el": "Αγοράζει εισιτήριο από τον οδηγό",
+                    "en": "She buys a ticket from the driver",
+                    "ru": "Покупает билет у водителя",
+                },
+                {
+                    "el": "Χρησιμοποιεί εφαρμογή κινητού",
+                    "en": "She uses a phone app",
+                    "ru": "Использует мобильное приложение",
+                },
+            ],
+            "correct_answer_index": 0,
+        },
+        (1, ExerciseType.SELECT_HEARD): {
+            "prompt": {
+                "el": "Μετά από πόσες στάσεις κατεβαίνει η Μαρία;",
+                "en": "After how many stops does Maria get off?",
+                "ru": "После скольких остановок Мария выходит?",
+            },
+            "options": [
+                {"el": "Τρεις στάσεις", "en": "Three stops", "ru": "Три остановки"},
+                {"el": "Πέντε στάσεις", "en": "Five stops", "ru": "Пять остановок"},
+                {"el": "Μία στάση", "en": "One stop", "ru": "Одна остановка"},
+                {"el": "Δέκα στάσεις", "en": "Ten stops", "ru": "Десять остановок"},
+            ],
+            "correct_answer_index": 0,
+        },
+    }
+
     # Announcement campaigns for E2E testing (4 scenarios with varied states)
     ANNOUNCEMENT_CAMPAIGNS: list[AnnouncementCampaignSeedData] = [
         {
@@ -4292,6 +4383,28 @@ class SeedService:
                     )
                     self.db.add(de)
                     await self.db.flush()
+
+                    # PERF-22-04: these two situations were only ever wired for the
+                    # comprehension-overview signal (SIT-27-11) — the FILL_GAPS/
+                    # SELECT_HEARD exercise_type was picked purely for topic-source
+                    # variety (topic is derived from modality, not exercise_type; see
+                    # core/exercise_topic.py) and never needed an answerable item.
+                    # The exercise practice SESSION page has no dedicated renderer for
+                    # these legacy types — every non-picture-match exercise_type falls
+                    # through to SelectCorrectAnswerRenderer (ExercisePracticePage.tsx),
+                    # which needs a `{prompt, options, correct_answer_index}` item.
+                    # Without one it renders nothing, so a driven session (e2e
+                    # exercise-hub-queue-network-contract.spec.ts AC-5) hangs forever
+                    # on whichever of these is due first. Give each a real item in that
+                    # shape so the (still FILL_GAPS/SELECT_HEARD-labeled) exercise is
+                    # actually answerable; the label itself stays unchanged.
+                    self.db.add(
+                        DescriptionExerciseItem(
+                            description_exercise_id=de.id,
+                            item_index=0,
+                            payload=self.COFFEE_BUS_EXERCISE_ITEMS[(sit_index, ex_type)],
+                        )
+                    )
 
                     ex = Exercise(
                         source_type=ExerciseSourceType.DESCRIPTION,

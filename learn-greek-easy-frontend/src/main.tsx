@@ -10,7 +10,7 @@ import { StrictMode } from 'react';
 import { HelmetProvider } from '@dr.pogodin/react-helmet';
 import { createRoot } from 'react-dom/client';
 
-import { initI18n } from '@/i18n/init';
+import { initI18n, loadDeferredEnglishNamespaces } from '@/i18n/init';
 import { initSentryAsync } from '@/lib/sentry-queue';
 
 import App from './App.tsx';
@@ -41,6 +41,14 @@ async function bootstrap() {
       </HelmetProvider>
     </StrictMode>
   );
+
+  // Fire-and-forget the 14 non-critical EN namespaces now that React owns the
+  // screen. Pre-auth screens (/, /login, /register) use only the synchronous
+  // critical trio (common/auth/landing) already loaded behind `await
+  // initI18n()`, so this post-paint load never blocks first paint. Deliberately
+  // NOT behind requestIdleCallback — post-auth screens need these promptly, and
+  // the load is cheap and off the critical path. (PERF-24-01)
+  void loadDeferredEnglishNamespaces();
 
   // Defer Sentry initialization until after first paint
   // This reduces render-blocking time by ~200-300ms

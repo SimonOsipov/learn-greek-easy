@@ -2,6 +2,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import { queryClient } from '@/lib/queryClient';
 import type {
   DashboardStatsResponse,
   LearningTrendsResponse,
@@ -105,6 +106,11 @@ function setupHappyPath() {
 describe('getAnalytics', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // PERF-22-01 (AC5): getAnalytics's deck-progress leg is routed through
+    // fetchDeckProgressList, which is backed by the SINGLETON queryClient.
+    // Clear it so cache carry-over from a previous test can't mask a
+    // missing/duplicate call.
+    queryClient.clear();
   });
 
   // ── mapDateRangeToPeriod: indirect coverage via getTrends call arg ─────────
@@ -193,6 +199,56 @@ describe('getAnalytics', () => {
 
       // The mock transform returns { userId, dateRange } — verify wiring.
       expect(result).toMatchObject({ userId: 'user-42', dateRange: 'last30' });
+    });
+  });
+
+  // ── PERF-22-01: shared deck-progress fetcher wiring ──────────────────────
+  //
+  // These two guard the AC3/AC4 invariants (unchanged params, unchanged
+  // single-attempt reject semantics) once getAnalytics is switched to source
+  // its deck-progress leg from fetchDeckProgressList(userId) instead of
+  // calling progressAPI.getDeckProgressList directly. They assert on the
+  // observable boundary (progressAPI.getDeckProgressList, the innermost API
+  // call) rather than on fetchDeckProgressList itself, so they hold true
+  // both before AND after the executor's swap — the swap must not change
+  // what params reach the API, nor how many times it's invoked on failure.
+
+  describe('PERF-22-01 — shared deck-progress fetcher wiring', () => {
+    it('getAnalytics still requests page 1 size 50', async () => {
+      setupHappyPath();
+      await getAnalytics('user-1', 'last30');
+
+      expect(progressAPI.getDeckProgressList).toHaveBeenCalledWith({ page: 1, page_size: 50 });
+    });
+
+    it('getAnalytics rejects (single attempt) when deck-progress rejects', async () => {
+      vi.mocked(progressAPI.getDashboard).mockResolvedValue(stubDashboard);
+      vi.mocked(progressAPI.getTrends).mockResolvedValue(stubTrends);
+      vi.mocked(progressAPI.getDeckProgressList).mockRejectedValue(new Error('decks API down'));
+
+      await expect(getAnalytics('user-1', 'last30')).rejects.toThrow();
+      // Singleton default is retry:1 — fetchDeckProgressList must override
+      // with retry:false, or this would be called twice.
+      expect(progressAPI.getDeckProgressList).toHaveBeenCalledTimes(1);
+    });
+
+    // QA adversarial addition: none of the pre-authored specs actually pin
+    // that getAnalytics threads its OWN userId argument into
+    // fetchDeckProgressList — they only assert on the fixed request params
+    // and call counts. Because fetchDeckProgressList is backed by the real
+    // singleton cache here (only progressAPI is mocked), if getAnalytics
+    // hardcoded/dropped the userId (e.g. called fetchDeckProgressList
+    // (undefined) for every user), two different users within the same
+    // (uncleared) cache window would collapse onto the same cache entry and
+    // the second call would be served from cache — this test would then
+    // observe ONE API call instead of TWO and fail, proving the thread.
+    it('threads userId into the deck-progress cache key — distinct users each hit the API', async () => {
+      setupHappyPath();
+
+      await getAnalytics('user-1', 'last30');
+      await getAnalytics('user-2', 'last30');
+
+      expect(progressAPI.getDeckProgressList).toHaveBeenCalledTimes(2);
     });
   });
 });

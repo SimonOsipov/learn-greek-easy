@@ -43,7 +43,9 @@ import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useDeck } from '@/hooks/useDeck';
 import { usePracticeKeyboard } from '@/hooks/usePracticeKeyboard';
 import { tDynamic } from '@/i18n/tDynamic';
+import { queryKeys } from '@/lib/queryKeys';
 import type { CardRecordType } from '@/services/wordEntryAPI';
+import { useAuthStore } from '@/stores/authStore';
 import {
   useV2PracticeStore,
   v2QueueCardToCardRecord,
@@ -61,6 +63,7 @@ export function V2FlashcardPracticePage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const userId = useAuthStore((s) => s.user?.id);
 
   const cardType = (searchParams.get('cardType') ?? undefined) as CardRecordType | undefined;
 
@@ -136,12 +139,15 @@ export function V2FlashcardPracticePage() {
     }
   }, [deckId, cardType, wordId, startSession]);
 
-  // Invalidate analytics cache when session completes
+  // Invalidate analytics + cached deck-progress list when session completes
+  // (PERF-22-02: /progress/decks is now a cached entry via fetchDeckProgressList,
+  // so it must be explicitly refreshed on progress change or it goes stale).
   useEffect(() => {
     if (sessionSummary) {
       queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.progressDecks(userId) });
     }
-  }, [sessionSummary, queryClient]);
+  }, [sessionSummary, queryClient, userId]);
 
   // Audio: resolve URL from current cards card.
   // displayIndex is used for rendering (lags 320ms for slide-out animation);

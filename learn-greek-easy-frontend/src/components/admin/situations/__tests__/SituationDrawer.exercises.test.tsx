@@ -217,8 +217,10 @@ describe('SituationDrawerExercises — auto-select populated source on load', ()
       expect(pressedBtns[0].textContent).toContain('From dialog');
     });
 
-    // Empty state is shown
-    expect(screen.getByTestId('situation-drawer-exercises-empty')).toBeInTheDocument();
+    // Empty state is shown. It renders only after the async data load fires
+    // onDataLoaded → setExercisesData (the `exercisesData && activeCount === 0`
+    // gate), so await it with findByTestId rather than a synchronous getByTestId.
+    expect(await screen.findByTestId('situation-drawer-exercises-empty')).toBeInTheDocument();
     expect(screen.getByText('No exercises yet')).toBeInTheDocument();
   });
 

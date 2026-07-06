@@ -20,7 +20,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { DEFAULT_LANGUAGE, NAMESPACES } from '../constants';
+import { DEFAULT_LANGUAGE } from '../constants';
 import i18n from '../index';
 import { initI18n, resetI18nInit } from '../init';
 
@@ -28,8 +28,18 @@ import { initI18n, resetI18nInit } from '../init';
 // Shared-instance helpers
 // ---------------------------------------------------------------------------
 
-function enResourcesPresent(): boolean {
-  return NAMESPACES.every((ns) => i18n.hasResourceBundle('en', ns));
+// PERF-24-01: the SHARED singleton is pre-seeded with all 17 EN namespaces by
+// src/lib/test-setup.ts regardless of what init.ts loads synchronously vs.
+// defers, so this helper can only meaningfully check the critical trio
+// (common/auth/landing) that init.ts guarantees on ANY instance — checking a
+// deferrable namespace here would not exercise the split at all (it would
+// read back the test-setup.ts pre-seed, not init.ts's real behavior). The
+// fresh-instance version of this guarantee lives in
+// init.namespaceSplit.test.ts (AC-1).
+const CRITICAL_EN_NAMESPACES = ['common', 'auth', 'landing'] as const;
+
+function criticalEnResourcesPresent(): boolean {
+  return CRITICAL_EN_NAMESPACES.every((ns) => i18n.hasResourceBundle('en', ns));
 }
 
 // ---------------------------------------------------------------------------
@@ -58,18 +68,18 @@ describe('PERF-09-01: adversarial coverage', () => {
   // production fresh-init this is guaranteed by the synchronous `resources`
   // parameter passed to i18n.init().
   // -------------------------------------------------------------------------
-  it('AC-3 corollary: EN strings accessible synchronously at first initI18n() resolution', async () => {
+  it('AC-3 corollary: critical EN namespaces accessible synchronously at first initI18n() resolution', async () => {
     localStorage.setItem('i18nextLng', 'en');
     resetI18nInit();
 
-    let enBundleAtResolution = false;
+    let criticalEnBundleAtResolution = false;
 
     await initI18n().then(() => {
       // Check INSIDE the .then() callback — no extra microtask flush.
-      enBundleAtResolution = enResourcesPresent();
+      criticalEnBundleAtResolution = criticalEnResourcesPresent();
     });
 
-    expect(enBundleAtResolution).toBe(true);
+    expect(criticalEnBundleAtResolution).toBe(true);
     // Spot-check a real translation key to confirm data integrity.
     expect(i18n.t('common:loading')).toBe('Loading...');
   });
