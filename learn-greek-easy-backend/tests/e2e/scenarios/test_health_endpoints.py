@@ -32,8 +32,6 @@ class TestHealthEndpoints(E2ETestCase):
         assert response.status_code in [200, 503]
         data = response.json()
         assert data["status"] in ["healthy", "degraded", "unhealthy"]
-        assert "version" in data
-        assert "environment" in data
         assert "timestamp" in data
         assert "uptime_seconds" in data
         assert "checks" in data
@@ -41,7 +39,7 @@ class TestHealthEndpoints(E2ETestCase):
     @pytest.mark.asyncio
     @pytest.mark.e2e
     async def test_health_response_includes_all_component_checks(self, client: AsyncClient) -> None:
-        """Test that /health response includes database, redis, and memory checks."""
+        """Test that /health response includes database and redis checks."""
         response = await client.get("/health")
 
         # Accept both 200 and 503 (depends on service availability)
@@ -52,7 +50,6 @@ class TestHealthEndpoints(E2ETestCase):
         # Verify all component checks are present
         assert "database" in checks
         assert "redis" in checks
-        assert "memory" in checks
 
         # Verify database check structure
         db_check = checks["database"]
@@ -66,13 +63,6 @@ class TestHealthEndpoints(E2ETestCase):
         assert "status" in redis_check
         assert "message" in redis_check
         assert "latency_ms" in redis_check
-
-        # Verify memory check structure
-        memory_check = checks["memory"]
-        assert "status" in memory_check
-        assert "message" in memory_check
-        assert "used_mb" in memory_check
-        assert "percent" in memory_check
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
@@ -90,36 +80,6 @@ class TestHealthEndpoints(E2ETestCase):
         assert "latency_ms" in db_check  # Can be None or number
         assert "message" in db_check
         assert isinstance(db_check["message"], str)
-
-    @pytest.mark.asyncio
-    @pytest.mark.e2e
-    async def test_health_response_memory_stats(self, client: AsyncClient) -> None:
-        """Test that memory check returns valid statistics."""
-        response = await client.get("/health")
-
-        assert response.status_code in [200, 503]
-        data = response.json()
-        memory_check = data["checks"]["memory"]
-
-        # Memory should be healthy or warning (high usage)
-        assert memory_check["status"] in ["healthy", "warning"]
-        assert isinstance(memory_check["used_mb"], (int, float))
-        assert memory_check["used_mb"] >= 0
-        assert isinstance(memory_check["percent"], (int, float))
-        assert memory_check["percent"] >= 0
-        assert memory_check["percent"] <= 100
-
-    @pytest.mark.asyncio
-    @pytest.mark.e2e
-    async def test_health_response_includes_version(self, client: AsyncClient) -> None:
-        """Test that /health response includes app version."""
-        response = await client.get("/health")
-
-        assert response.status_code in [200, 503]
-        data = response.json()
-        assert "version" in data
-        assert isinstance(data["version"], str)
-        assert len(data["version"]) > 0
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
@@ -263,20 +223,6 @@ class TestHealthEndpoints(E2ETestCase):
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_health_check_environment_value(self, client: AsyncClient) -> None:
-        """Test that health check includes environment value."""
-        response = await client.get("/health")
-
-        assert response.status_code in [200, 503]
-        data = response.json()
-
-        assert "environment" in data
-        assert isinstance(data["environment"], str)
-        # Environment should be one of the expected values
-        assert data["environment"] in ["development", "staging", "production", "testing", "test"]
-
-    @pytest.mark.asyncio
-    @pytest.mark.e2e
     async def test_health_check_latency_values_reasonable(self, client: AsyncClient) -> None:
         """Test that health check latency values are reasonable when present."""
         response = await client.get("/health")
@@ -334,11 +280,9 @@ class TestHealthEndpoints(E2ETestCase):
         # All responses should have the same structure
         for data in responses:
             assert "status" in data
-            assert "version" in data
             assert "checks" in data
             assert "database" in data["checks"]
             assert "redis" in data["checks"]
-            assert "memory" in data["checks"]
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
