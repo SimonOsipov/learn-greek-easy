@@ -25,7 +25,7 @@ router = APIRouter(prefix="/health", tags=["Health"])
     "",
     response_model=HealthResponse,
     summary="Comprehensive health check",
-    description="Perform comprehensive health check including database, Redis, and memory status.",
+    description="Perform comprehensive health check including database and Redis status.",
     responses={
         200: {
             "description": "System is healthy or degraded",
@@ -62,7 +62,6 @@ async def health_check(response: Response) -> HealthResponse:
     This endpoint checks the health of all critical components:
     - Database connectivity and latency
     - Redis connectivity and latency
-    - Memory usage
 
     Returns:
         HealthResponse with overall status and component details.

@@ -101,7 +101,6 @@ async def health_check(response: Response) -> HealthResponse:
     This endpoint checks:
     - **Database**: PostgreSQL connectivity via simple query
     - **Redis**: Cache connectivity via PING command
-    - **Memory**: Application memory usage statistics
 
     Status meanings:
     - **healthy**: All components operational
