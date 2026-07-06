@@ -296,7 +296,7 @@ def identify_user(
             merged_properties.update(properties)
 
         # posthog-python v7 removed the module-level identify(); the
-        # equivalent is a "$identify" event whose "$set" applies the person
+        # equivalent is a "$identify" event whose "$set" upserts the person
         # properties (matches the capture() usage above).
         posthog.capture(
             distinct_id=distinct_id,
