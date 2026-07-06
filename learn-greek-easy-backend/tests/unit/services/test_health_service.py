@@ -16,6 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from sqlalchemy.exc import OperationalError
 
+import src.services.health_service as health_service
 from src.schemas.health import ComponentStatus, HealthStatus
 
 # ============================================================================
@@ -719,6 +720,274 @@ class TestGetReadinessStatus:
                 assert status_code == 503
                 # Database check failed, so it's not ready
                 assert response.checks.database is False
+
+
+# ============================================================================
+# OPS-03-01: async single-flight TTL cache for readiness/health (Mode A — RED)
+# ============================================================================
+#
+# These specs are authored RED, before the cache exists (RALPH Mode A). Two
+# symbols they need — `_reset_health_caches` and `_HEALTH_CACHE_TTL_SECONDS` —
+# are NOT yet defined on `src.services.health_service`. They are referenced
+# via the `health_service` MODULE OBJECT (imported at the top of this file)
+# rather than a top-level `from src.services.health_service import ...`, so a
+# missing symbol raises a clean AttributeError only in the test that touches
+# it, instead of an ImportError that would break collection of this entire
+# file (which would also turn the concurrency tests below into collection
+# errors instead of their intended assertion-based RED).
+
+
+@pytest.fixture(autouse=True)
+def reset_health_caches():
+    """Reset the health-service TTL caches before every test in this module.
+
+    OPS-03-01 adds a module-level single-flight TTL cache in front of
+    `get_readiness_status` / `get_health_status`; without a reset, a cached
+    result from one test would leak into the next. Guarded via `getattr`
+    because `_reset_health_caches` does not exist until OPS-03-01 implements
+    the cache — during this RED phase the call is a no-op, so it does not
+    break collection or any of the pre-existing tests in this module.
+    """
+    getattr(health_service, "_reset_health_caches", lambda: None)()
+
+
+class TestReadinessHealthCache:
+    """RED specs for the OPS-03-01 async single-flight TTL cache.
+
+    Covers: N-concurrent-calls-collapse-to-one-compute (readiness + health),
+    sequential-call-within-TTL-is-cached, reset-forces-recheck, real
+    `time.monotonic()` crossing expiry, the TTL constant itself, and that
+    unhealthy results are cached too (not just healthy ones).
+    """
+
+    @pytest.mark.asyncio
+    async def test_readiness_concurrent_calls_check_runs_once(self, monkeypatch):
+        """AC C-a: 10 concurrent get_readiness_status() calls -> the DB/Redis
+        checks each run EXACTLY once (single-flight, not a thundering memo).
+
+        Stubs are real `async def`s installed via monkeypatch.setattr (never
+        an AsyncMock whose side_effect just sleeps and implicitly returns
+        None) so a wrong-reason 503 (from `isinstance(db_check, ComponentHealth)`
+        being False) can't masquerade as this test's intended RED.
+        """
+        from src.schemas.health import ComponentHealth
+        from src.services.health_service import get_readiness_status
+
+        db_calls = {"count": 0}
+        redis_calls = {"count": 0}
+
+        async def fake_db_check(timeout=None):
+            db_calls["count"] += 1
+            await asyncio.sleep(0.05)
+            return ComponentHealth(status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok")
+
+        async def fake_redis_check(timeout=None):
+            redis_calls["count"] += 1
+            await asyncio.sleep(0.05)
+            return ComponentHealth(status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok")
+
+        monkeypatch.setattr(health_service, "check_database_health", fake_db_check)
+        monkeypatch.setattr(health_service, "check_redis_health_component", fake_redis_check)
+
+        results = await asyncio.gather(*[get_readiness_status() for _ in range(10)])
+
+        assert db_calls["count"] == 1
+        assert redis_calls["count"] == 1
+        for response, status_code in results:
+            assert status_code == 200
+            assert response.status == "ready"
+
+    @pytest.mark.asyncio
+    async def test_health_concurrent_calls_check_runs_once(self, monkeypatch):
+        """AC C-a: 5 concurrent get_health_status() calls -> the DB/Redis
+        checks each run EXACTLY once."""
+        from src.schemas.health import ComponentHealth
+        from src.services.health_service import get_health_status
+
+        db_calls = {"count": 0}
+        redis_calls = {"count": 0}
+
+        async def fake_db_check(timeout=None):
+            db_calls["count"] += 1
+            await asyncio.sleep(0.05)
+            return ComponentHealth(status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok")
+
+        async def fake_redis_check(timeout=None):
+            redis_calls["count"] += 1
+            await asyncio.sleep(0.05)
+            return ComponentHealth(status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok")
+
+        monkeypatch.setattr(health_service, "check_database_health", fake_db_check)
+        monkeypatch.setattr(health_service, "check_redis_health_component", fake_redis_check)
+
+        results = await asyncio.gather(*[get_health_status() for _ in range(5)])
+
+        assert db_calls["count"] == 1
+        assert redis_calls["count"] == 1
+        for response, status_code in results:
+            assert status_code == 200
+            assert response.status == HealthStatus.HEALTHY
+
+    @pytest.mark.asyncio
+    async def test_readiness_second_call_within_ttl_skips_recheck(self, monkeypatch):
+        """AC C-cache: two SEQUENTIAL get_readiness_status() calls within one
+        TTL window -> checks run once total; the 2nd response equals the 1st
+        (served from cache, not recomputed)."""
+        from src.schemas.health import ComponentHealth
+        from src.services.health_service import get_readiness_status
+
+        db_calls = {"count": 0}
+        redis_calls = {"count": 0}
+
+        async def fake_db_check(timeout=None):
+            db_calls["count"] += 1
+            return ComponentHealth(status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok")
+
+        async def fake_redis_check(timeout=None):
+            redis_calls["count"] += 1
+            return ComponentHealth(status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok")
+
+        monkeypatch.setattr(health_service, "check_database_health", fake_db_check)
+        monkeypatch.setattr(health_service, "check_redis_health_component", fake_redis_check)
+
+        first = await get_readiness_status()
+        second = await get_readiness_status()
+
+        assert db_calls["count"] == 1
+        assert redis_calls["count"] == 1
+        assert first == second
+
+    @pytest.mark.asyncio
+    async def test_readiness_recheck_after_reset_reflects_new_state(self, monkeypatch):
+        """AC C-freshness: a healthy call caches `(ready, 200)`; after
+        `_reset_health_caches()` and repatching DB to unhealthy, the next
+        call must reflect the new state as `(not_ready, 503)`."""
+        from src.schemas.health import ComponentHealth
+        from src.services.health_service import get_readiness_status
+
+        async def healthy_db(timeout=None):
+            return ComponentHealth(status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok")
+
+        async def healthy_redis(timeout=None):
+            return ComponentHealth(status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok")
+
+        monkeypatch.setattr(health_service, "check_database_health", healthy_db)
+        monkeypatch.setattr(health_service, "check_redis_health_component", healthy_redis)
+
+        response, status_code = await get_readiness_status()
+        assert response.status == "ready"
+        assert status_code == 200
+
+        # Not-implemented until OPS-03-01: attribute doesn't exist yet -> AttributeError.
+        health_service._reset_health_caches()
+
+        async def unhealthy_db(timeout=None):
+            return ComponentHealth(
+                status=ComponentStatus.UNHEALTHY, latency_ms=None, message="down"
+            )
+
+        monkeypatch.setattr(health_service, "check_database_health", unhealthy_db)
+
+        response, status_code = await get_readiness_status()
+        assert response.status == "not_ready"
+        assert status_code == 503
+
+    @pytest.mark.asyncio
+    async def test_readiness_flips_to_503_after_monotonic_crosses_expiry(self, monkeypatch):
+        """AC C-freshness (F3): drives a real `time.monotonic()` crossing of
+        the cache expiry via a controllable fake clock — the only spec that
+        exercises the actual `now >= expiry` branch (guards against a `<`/`<=`
+        inversion, or an `expiry = TTL` bug instead of `monotonic() + TTL`).
+
+        Given t0: a healthy call caches the result (expiry = t0 + TTL).
+        When a second call happens still at t0 (within the window): it must
+        be served from cache (no recompute) — this is where "no cache today"
+        fails, since without caching every call recomputes regardless of the
+        clock.
+        Then the fake clock advances past the TTL and DB flips unhealthy:
+        the next call must re-run the check and return 503.
+        """
+        from src.schemas.health import ComponentHealth
+        from src.services.health_service import get_readiness_status
+
+        fake_time = {"now": 1_000.0}
+        monkeypatch.setattr(health_service.time, "monotonic", lambda: fake_time["now"])
+
+        db_calls = {"count": 0}
+
+        async def healthy_db(timeout=None):
+            db_calls["count"] += 1
+            return ComponentHealth(status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok")
+
+        async def healthy_redis(timeout=None):
+            return ComponentHealth(status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok")
+
+        monkeypatch.setattr(health_service, "check_database_health", healthy_db)
+        monkeypatch.setattr(health_service, "check_redis_health_component", healthy_redis)
+
+        # t0: first call caches the healthy result (expiry = t0 + TTL).
+        response, status_code = await get_readiness_status()
+        assert status_code == 200
+        assert db_calls["count"] == 1
+
+        # Still at t0 (within the TTL window): must be served from cache.
+        response, status_code = await get_readiness_status()
+        assert status_code == 200
+        assert db_calls["count"] == 1  # fails today: no cache -> recomputes -> count == 2
+
+        # Advance the fake clock past the ~5s TTL and flip DB unhealthy.
+        fake_time["now"] += 6.0
+
+        async def unhealthy_db(timeout=None):
+            db_calls["count"] += 1
+            return ComponentHealth(
+                status=ComponentStatus.UNHEALTHY, latency_ms=None, message="down"
+            )
+
+        monkeypatch.setattr(health_service, "check_database_health", unhealthy_db)
+
+        response, status_code = await get_readiness_status()
+        assert db_calls["count"] == 2  # re-ran after expiry, not still (incorrectly) cached
+        assert status_code == 503
+        assert response.status == "not_ready"
+
+    def test_health_cache_ttl_is_short(self):
+        """AC C-freshness: the TTL constant must be short (<=5s) so a
+        genuinely-just-died dependency still surfaces within ~one window."""
+        assert health_service._HEALTH_CACHE_TTL_SECONDS <= 5
+
+    @pytest.mark.asyncio
+    async def test_readiness_unhealthy_result_cached_within_window(self, monkeypatch):
+        """AC C (unhealthy cached): an UNHEALTHY result must also be cached
+        for the full TTL window — two calls within the window -> checks run
+        once; both return 503. Caching failures too prevents health-check
+        amplification against an already-struggling dependency (D3 budget)."""
+        from src.schemas.health import ComponentHealth
+        from src.services.health_service import get_readiness_status
+
+        db_calls = {"count": 0}
+        redis_calls = {"count": 0}
+
+        async def unhealthy_db(timeout=None):
+            db_calls["count"] += 1
+            return ComponentHealth(
+                status=ComponentStatus.UNHEALTHY, latency_ms=None, message="down"
+            )
+
+        async def healthy_redis(timeout=None):
+            redis_calls["count"] += 1
+            return ComponentHealth(status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok")
+
+        monkeypatch.setattr(health_service, "check_database_health", unhealthy_db)
+        monkeypatch.setattr(health_service, "check_redis_health_component", healthy_redis)
+
+        first = await get_readiness_status()
+        second = await get_readiness_status()
+
+        assert db_calls["count"] == 1
+        assert redis_calls["count"] == 1
+        assert first[1] == 503
+        assert second[1] == 503
 
 
 # ============================================================================
