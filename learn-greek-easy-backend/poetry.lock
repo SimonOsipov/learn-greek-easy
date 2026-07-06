@@ -2936,18 +2936,6 @@ files = [
 ]
 
 [[package]]
-name = "monotonic"
-version = "1.6"
-description = "An implementation of time.monotonic() for Python 2 & < 3.3"
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "monotonic-1.6-py2.py3-none-any.whl", hash = "sha256:68687e19a14f11f26d140dd5c86f3dba4bf5df58003000ed467e0e2a69bca96c"},
-    {file = "monotonic-1.6.tar.gz", hash = "sha256:3a55207bcfed53ddd5c5bae174524062935efed17792e9de2ad0205ce9ad63f7"},
-]
-
-[[package]]
 name = "msgpack"
 version = "1.2.1"
 description = "MessagePack serializer"
@@ -3616,29 +3604,27 @@ testing = ["coverage", "pytest", "pytest-benchmark"]
 
 [[package]]
 name = "posthog"
-version = "3.25.0"
+version = "7.21.3"
 description = "Integrate PostHog into any python application."
 optional = false
-python-versions = "*"
+python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "posthog-3.25.0-py2.py3-none-any.whl", hash = "sha256:85db78c13d1ecb11aed06fad53759c4e8fb3633442c2f3d0336bc0ce8a585d30"},
-    {file = "posthog-3.25.0.tar.gz", hash = "sha256:9168f3e7a0a5571b6b1065c41b3c171fbc68bfe72c3ac0bfd6e3d2fcdb7df2ca"},
+    {file = "posthog-7.21.3-py3-none-any.whl", hash = "sha256:eb6ad7e1704c0797e9cbfe0518bfb40bc3a56e3f140fd565d2a1d854c9615710"},
+    {file = "posthog-7.21.3.tar.gz", hash = "sha256:2192497210bb1291587c51bdd6edc475043aebe03072d718431e710360fcd329"},
 ]
 
 [package.dependencies]
 backoff = ">=1.10.0"
 distro = ">=1.5.0"
-monotonic = ">=1.5"
-python-dateutil = ">2.1"
 requests = ">=2.7,<3.0"
-six = ">=1.5"
+typing-extensions = ">=4.2.0"
 
 [package.extras]
-dev = ["black", "django-stubs", "flake8", "flake8-print", "isort", "lxml", "mypy", "mypy-baseline", "pre-commit", "pydantic", "types-mock", "types-python-dateutil", "types-requests", "types-setuptools", "types-six"]
+dev = ["django-stubs", "griffe", "lxml", "mypy", "mypy-baseline", "packaging", "pre-commit", "pydantic (>=2.12.0)", "ruff", "setuptools", "tomli", "tomli_w", "twine", "types-requests", "types-setuptools", "wheel"]
 langchain = ["langchain (>=0.2.0)"]
-sentry = ["django", "sentry-sdk"]
-test = ["anthropic", "coverage", "django", "flake8", "freezegun (==1.5.1)", "langchain-anthropic (>=0.2.0)", "langchain-community (>=0.2.0)", "langchain-openai (>=0.2.0)", "langgraph", "mock (>=2.0.0)", "openai", "parameterized (>=0.8.1)", "pydantic", "pylint", "pytest", "pytest-asyncio", "pytest-timeout"]
+otel = ["opentelemetry-exporter-otlp-proto-http (>=1.20.0)", "opentelemetry-sdk (>=1.20.0)"]
+test = ["anthropic (>=0.72)", "claude-agent-sdk", "coverage", "django (>=5.2.8,<6.0)", "fastmcp (>=2.0)", "freezegun (==1.5.1)", "google-genai", "langchain-anthropic (>=1.0)", "langchain-community (>=0.4)", "langchain-core (>=1.0)", "langchain-openai (>=1.0)", "langgraph (>=1.0)", "langgraph-checkpoint (>=4.1.1)", "mcp (>=1.26.0)", "openai (>=2.0)", "opentelemetry-exporter-otlp-proto-http (>=1.20.0)", "opentelemetry-sdk (>=1.20.0)", "parameterized (>=0.8.1)", "pydantic (>=2.12.0)", "pytest", "pytest-asyncio", "pytest-bdd (>=8.1.0)", "pytest-timeout", "python-dateutil (>=2.9.0.post0)", "tiktoken (>=0.12.0)", "tzdata"]
 
 [[package]]
 name = "preshed"
@@ -6136,4 +6122,4 @@ dev = ["pytest", "setuptools"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.13"
-content-hash = "92ec6304955ccac11e82e925b3187252342359d27bb2cadddb5748618e7931a6"
+content-hash = "dbb729b328bb331477057e361160470f1528b14bb267814145c005252ac26e24"
