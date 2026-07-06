@@ -335,10 +335,11 @@ class TestIdentifyUser:
 
         identify_user("user-123", {"email": "user@example.com"}, user_email="user@example.com")
 
-        mock_posthog.identify.assert_called_once()
-        call_kwargs = mock_posthog.identify.call_args.kwargs
+        mock_posthog.capture.assert_called_once()
+        call_kwargs = mock_posthog.capture.call_args.kwargs
         assert call_kwargs["distinct_id"] == "user-123"
-        assert "email" in call_kwargs["properties"]
+        assert call_kwargs["event"] == "$identify"
+        assert "email" in call_kwargs["properties"]["$set"]
 
     @patch("src.core.posthog.posthog")
     @patch("src.core.posthog.settings")
@@ -350,10 +351,10 @@ class TestIdentifyUser:
 
         identify_user("user-123", {"name": "Test User"}, user_email=None)
 
-        call_kwargs = mock_posthog.identify.call_args.kwargs
-        assert call_kwargs["properties"]["environment"] == "development"
-        assert call_kwargs["properties"]["app_version"] == "2.0.0"
-        assert call_kwargs["properties"]["name"] == "Test User"
+        call_kwargs = mock_posthog.capture.call_args.kwargs
+        assert call_kwargs["properties"]["$set"]["environment"] == "development"
+        assert call_kwargs["properties"]["$set"]["app_version"] == "2.0.0"
+        assert call_kwargs["properties"]["$set"]["name"] == "Test User"
 
     @patch("src.core.posthog.posthog")
     def test_filters_test_users_by_distinct_id(self, mock_posthog):
@@ -362,7 +363,7 @@ class TestIdentifyUser:
 
         identify_user("e2e_user", {}, user_email=None)
 
-        mock_posthog.identify.assert_not_called()
+        mock_posthog.capture.assert_not_called()
 
     @patch("src.core.posthog.posthog")
     def test_filters_test_users_by_email(self, mock_posthog):
@@ -371,7 +372,7 @@ class TestIdentifyUser:
 
         identify_user("user-123", {}, user_email="e2e@test.com")
 
-        mock_posthog.identify.assert_not_called()
+        mock_posthog.capture.assert_not_called()
 
     @patch("src.core.posthog.posthog")
     def test_filters_test_prefix_users(self, mock_posthog):
@@ -380,7 +381,7 @@ class TestIdentifyUser:
 
         identify_user("test_user", {"email": "test@example.com"}, user_email="test@example.com")
 
-        mock_posthog.identify.assert_not_called()
+        mock_posthog.capture.assert_not_called()
 
     @patch("src.core.posthog.posthog")
     def test_no_op_when_not_initialized(self, mock_posthog):
@@ -389,7 +390,7 @@ class TestIdentifyUser:
 
         identify_user("user-123", {}, user_email=None)
 
-        mock_posthog.identify.assert_not_called()
+        mock_posthog.capture.assert_not_called()
 
     @patch("src.core.posthog.posthog")
     def test_skips_empty_distinct_id(self, mock_posthog):
@@ -398,7 +399,7 @@ class TestIdentifyUser:
 
         identify_user("", {}, user_email=None)
 
-        mock_posthog.identify.assert_not_called()
+        mock_posthog.capture.assert_not_called()
 
     @patch("src.core.posthog.posthog")
     @patch("src.core.posthog.settings")
@@ -408,7 +409,7 @@ class TestIdentifyUser:
         posthog_module._posthog_initialized = True
         mock_settings.app_env = "dev"
         mock_settings.app_version = "1.0"
-        mock_posthog.identify.side_effect = Exception("Network error")
+        mock_posthog.capture.side_effect = Exception("Network error")
 
         # Should not raise
         identify_user("user-123", {"email": "test@example.com"}, user_email=None)
