@@ -96,8 +96,87 @@ continuous monitoring.
   `/health/ready` for parity.
 
 The Railway dashboard paths and the Sentry uptime monitor are **owner-gated
-prod-infra writes** — the click-for-click runbook is in **OPS-03-04** (same
+prod-infra writes** — the click-for-click runbook is the section below (same
 guardrail as OPS-01's DSN flip). Continuous death detection = the Sentry uptime
-monitor on `https://greeklish.eu/health/ready` (OPS-03-04) + the OPS-01 scheduler
+monitor on `https://greeklish.eu/health/ready` + the OPS-01 scheduler
 heartbeat + the OPS-02 alert rules. The end-to-end kill-service fire drill that
 proves it pages a human is **OPS-10**.
+
+## Runbook — Owner Actions (not done by CI)
+
+> **These four steps are owner-gated production-infra writes** — the same
+> guardrail that made OPS-01's DSN flip and OPS-02's alert rules no-PR console
+> work. CI cannot perform them and the Sentry MCP is read-only for alerts/uptime,
+> so they are documented here for the owner to execute by hand. Each step is
+> flagged **OWNER ACTION**. Every value below is kept consistent with what
+> OPS-03-03 shipped: the uptime target and the backend deploy-gate are
+> `/health/ready`; the frontend deploy-gate is the Caddy-local `/healthz`.
+
+### 1. Sentry Uptime monitor (AC-A) — OWNER ACTION
+
+Create the org's **single free** uptime monitor, pointed at the deepest public
+synthetic.
+
+1. Sentry → left sidebar **Insights → Uptime Monitors** (on older UIs: **Alerts →
+   Create Alert → Uptime Monitor**) → **Add Uptime Monitor** / **Create Monitor**.
+2. **Name:** `greeklish-health-ready` (project: the backend/`greeklish` project).
+3. **URL to monitor:** `https://greeklish.eu/health/ready` — pinged *through the
+   public proxy* so one check exercises **DNS → Cloudflare → Caddy → backend → DB
+   → Redis**. `/health/ready` returns **503 if the database OR Redis is down**, so
+   this single URL is the deepest synthetic available. Do **not** point it at the
+   raw backend URL (it is private, Railway-internal) or at the root SPA
+   `https://greeklish.eu` (that layer is already covered by the frontend
+   deploy-gate healthcheck + the frontend Sentry project — see step 2).
+4. **Method:** `GET`. **Expected response:** **HTTP 200**. Any non-200 — including
+   the `503` the readiness probe returns when a dependency is dead — is a failed
+   check.
+5. **Interval:** leave at the **Sentry default of 1 minute**. Both a **failed**
+   check and a **missed** check must alert (configure the alert in step 6).
+6. **Attach a missed/failed-check EMAIL alert, reusing the OPS-02 channel.** OPS-03
+   adds no new alert vendor — route the uptime failure to the **same email
+   notification action OPS-02's issue-alert rules use** (delivered to the org
+   owner's email, `osipov.simon@gmail.com`).
+   - **Primary path:** in the monitor's **Notify / Owner / recipients** field, set
+     the recipient to the owner (the same recipient OPS-02 routes to). Modern
+     Sentry Uptime alerts notify the monitor's configured owner/team on downtime.
+   - **Fallback (if the monitor exposes no direct recipient field):** add an
+     **issue-alert rule** (Alerts → Create Alert → Issues) on the same project,
+     condition = *a new issue is created* filtered to the **Uptime** issue
+     category (an uptime failure raises an `uptime_domain_failure` issue), action
+     = **Send an email notification** to the same address OPS-02 uses. This
+     mirrors OPS-02's BE any-error rule, scoped to uptime issues.
+7. **Do NOT create a second monitor.** The free Developer plan caps at **1 uptime
+   monitor** with no PAYG. The root-SPA (`https://greeklish.eu`) monitor is
+   **deferred** (needs a 2nd, paid monitor) — do not add it here.
+
+### 2. Railway Frontend service — healthcheck path (AC-B) — OWNER ACTION
+
+Railway dashboard → project → **Frontend** service → **Settings → Deploy →
+Healthcheck Path** → set to **`/healthz`**.
+
+- `/healthz` is the **Caddy-local static `200`** shipped in OPS-03-03 (a dedicated
+  `handle /healthz { respond 200 }` block that **never proxies** to the backend).
+- Do **not** use `/health` or `/health/ready` here — those proxy through to the
+  backend, so a backend outage would fail the *frontend's* deploy gate and couple
+  the two services. `/healthz` decouples them: it only proves Caddy itself is
+  serving.
+- **Effect:** a broken Caddy config or SPA build can't take traffic; a backend
+  outage does not block an otherwise-healthy frontend deploy.
+
+### 3. Railway Backend service — healthcheck path (AC-B) — OWNER ACTION
+
+Railway dashboard → project → **Backend** service → **Settings → Deploy →
+Healthcheck Path** → **confirm (or set)** to **`/health/ready`**.
+
+- Reconciles with the Dockerfile `HEALTHCHECK` repointed to `/health/ready` in
+  OPS-03-03. `/health/ready` is the strict both-deps gate (**503 if DB *or* Redis
+  is down**) — a cleaner deploy gate than the heavy comprehensive `/health`.
+- This is a **deploy-time gate only** — Railway queries it until it returns 200,
+  then makes the deployment active and does **not** poll it afterwards.
+  Continuous death detection is the Sentry uptime monitor from step 1.
+
+### 4. End-to-end drill — deferred to OPS-10 — OWNER ACTION (later)
+
+The end-to-end proof that a **stopped service actually pages an email** (kill a
+service → watch the uptime monitor fail → confirm the email lands) is the
+fire-drill deferred to **OPS-10**. It is **not** performed as part of OPS-03.
