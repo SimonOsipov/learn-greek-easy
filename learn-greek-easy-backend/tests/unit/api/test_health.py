@@ -221,6 +221,77 @@ class TestHealthEndpoint:
             assert "redis" in data["checks"]
             assert "memory" in data["checks"]
 
+    # ------------------------------------------------------------------
+    # OPS-03-02: public /health payload trim (Mode A — RED before
+    # implementation). The two tests below assert the trimmed shape and
+    # currently FAIL because HealthResponse/HealthChecks still declare
+    # version/environment/memory (the trim lands in OPS-03-02). The guard
+    # test after them locks the fields that must survive the trim and
+    # PASSES today (and must keep passing after the trim lands).
+    # ------------------------------------------------------------------
+
+    def test_public_health_payload_omits_version_env_memory(
+        self, client: TestClient, healthy_health_response: HealthResponse
+    ):
+        """RED: public /health must not expose version, environment, or
+        checks.memory once OPS-03-02 trims them from HealthResponse/
+        HealthChecks. Fails today (AssertionError) because both fields are
+        still present in the serialized payload."""
+        with patch(
+            "src.api.health.get_health_status",
+            return_value=(healthy_health_response, 200),
+        ):
+            response = client.get("/health")
+            data = response.json()
+
+            assert "version" not in data
+            assert "environment" not in data
+            assert "memory" not in data["checks"]
+
+    def test_public_health_payload_keeps_status_and_db_redis(
+        self,
+        client: TestClient,
+        healthy_health_response: HealthResponse,
+        degraded_health_response: HealthResponse,
+        unhealthy_health_response: HealthResponse,
+    ):
+        """GUARD (passes today AND after the OPS-03-02 trim): /health must
+        keep status, timestamp, uptime_seconds, checks.database,
+        checks.redis, and the existing status-code semantics (degraded ->
+        200, db-down -> 503) must be unchanged by the version/environment/
+        memory trim. This is a contract lock, not a RED spec."""
+        with patch(
+            "src.api.health.get_health_status",
+            return_value=(healthy_health_response, 200),
+        ):
+            response = client.get("/health")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert "status" in data
+            assert "timestamp" in data
+            assert "uptime_seconds" in data
+            assert "database" in data["checks"]
+            assert "redis" in data["checks"]
+
+        with patch(
+            "src.api.health.get_health_status",
+            return_value=(degraded_health_response, 200),
+        ):
+            response = client.get("/health")
+
+            assert response.status_code == 200
+            assert response.json()["status"] == "degraded"
+
+        with patch(
+            "src.api.health.get_health_status",
+            return_value=(unhealthy_health_response, 503),
+        ):
+            response = client.get("/health")
+
+            assert response.status_code == 503
+            assert response.json()["status"] == "unhealthy"
+
 
 # ============================================================================
 # /health/live Endpoint Tests

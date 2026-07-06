@@ -1196,6 +1196,32 @@ class TestAsyncSingleFlightTTLAdversarial:
 
 
 # ============================================================================
+# OPS-03-02: public /health payload trim — schema contract (Mode A — RED)
+# ============================================================================
+#
+# HealthResponse.version/.environment and HealthChecks.memory are trimmed
+# from the publicly-reachable /health and /api/v1/health payloads by
+# OPS-03-02. This spec asserts the Pydantic model definitions directly (the
+# schema-level half of the contract; the router-level half lives in
+# tests/unit/api/test_health.py + tests/unit/api/v1/test_health.py). It fails
+# RED today because both fields are still declared on the models.
+
+
+class TestHealthResponseSchemaTrim:
+    """RED spec for the OPS-03-02 schema trim."""
+
+    def test_health_response_schema_drops_trimmed_fields(self):
+        """AC C-trim: HealthResponse must not define version/environment;
+        HealthChecks must not define memory. Fails today (AssertionError) —
+        both fields are still present in `model_fields` pre-trim."""
+        from src.schemas.health import HealthChecks, HealthResponse
+
+        assert "version" not in HealthResponse.model_fields
+        assert "environment" not in HealthResponse.model_fields
+        assert "memory" not in HealthChecks.model_fields
+
+
+# ============================================================================
 # get_uptime_seconds() Tests
 # ============================================================================
 

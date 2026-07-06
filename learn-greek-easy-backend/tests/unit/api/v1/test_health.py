@@ -225,6 +225,30 @@ class TestV1HealthEndpoint:
             assert "redis" in data["checks"]
             assert "memory" in data["checks"]
 
+    # ------------------------------------------------------------------
+    # OPS-03-02: public /api/v1/health payload trim (Mode A — RED before
+    # implementation). Twin of the root-router RED spec in
+    # tests/unit/api/test_health.py — currently FAILS because
+    # HealthResponse/HealthChecks still declare version/environment/memory.
+    # ------------------------------------------------------------------
+
+    def test_v1_public_health_payload_omits_version_env_memory(
+        self, client: TestClient, healthy_health_response: HealthResponse
+    ):
+        """RED: public /api/v1/health must not expose version, environment,
+        or checks.memory once OPS-03-02 trims them. Fails today
+        (AssertionError) because both fields are still present."""
+        with patch(
+            "src.api.v1.health.get_health_status",
+            return_value=(healthy_health_response, 200),
+        ):
+            response = client.get("/api/v1/health")
+            data = response.json()
+
+            assert "version" not in data
+            assert "environment" not in data
+            assert "memory" not in data["checks"]
+
 
 # ============================================================================
 # /api/v1/health/live Endpoint Tests
