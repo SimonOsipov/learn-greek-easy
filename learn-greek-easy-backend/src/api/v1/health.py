@@ -33,8 +33,6 @@ router = APIRouter(prefix="/health", tags=["Health"])
                 "application/json": {
                     "example": {
                         "status": "healthy",
-                        "version": "0.1.0",
-                        "environment": "production",
                         "timestamp": "2024-12-02T10:30:00Z",
                         "uptime_seconds": 3600,
                         "checks": {
@@ -47,12 +45,6 @@ router = APIRouter(prefix="/health", tags=["Health"])
                                 "status": "healthy",
                                 "latency_ms": 1.1,
                                 "message": "PONG received",
-                            },
-                            "memory": {
-                                "status": "healthy",
-                                "used_mb": 128.5,
-                                "percent": 45.2,
-                                "message": "Memory usage normal",
                             },
                         },
                     }

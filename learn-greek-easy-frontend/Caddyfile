@@ -10,6 +10,16 @@ log {
 	level INFO
 }
 
+# Frontend deploy-gate healthcheck — Caddy-local static 200, NEVER proxied.
+# Railway's Frontend healthcheck path points here (OPS-03-04 runbook) so the
+# frontend's deploy gate stays decoupled from backend health: a backend outage
+# must not fail the frontend's deploy. handle blocks sort by matcher
+# specificity, so the literal /healthz wins over the /health* glob below (same
+# mechanism /api/v1/* uses to beat /api/*) and never reaches reverse_proxy.
+handle /healthz {
+	respond 200
+}
+
 # Health check endpoints - proxy to backend for real health data
 # Matches /health, /health/live, /health/ready
 handle /health* {

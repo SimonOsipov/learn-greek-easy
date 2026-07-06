@@ -29,8 +29,6 @@ router = APIRouter(tags=["Health"])
                             "summary": "All systems operational",
                             "value": {
                                 "status": "healthy",
-                                "version": "0.1.0",
-                                "environment": "production",
                                 "timestamp": "2024-12-02T10:30:00Z",
                                 "uptime_seconds": 3600,
                                 "checks": {
@@ -44,12 +42,6 @@ router = APIRouter(tags=["Health"])
                                         "latency_ms": 1.1,
                                         "message": "PONG received",
                                     },
-                                    "memory": {
-                                        "status": "healthy",
-                                        "used_mb": 128.5,
-                                        "percent": 45.2,
-                                        "message": "Memory usage normal",
-                                    },
                                 },
                             },
                         },
@@ -57,8 +49,6 @@ router = APIRouter(tags=["Health"])
                             "summary": "Non-critical service unavailable",
                             "value": {
                                 "status": "degraded",
-                                "version": "0.1.0",
-                                "environment": "production",
                                 "timestamp": "2024-12-02T10:30:00Z",
                                 "uptime_seconds": 3600,
                                 "checks": {
@@ -71,12 +61,6 @@ router = APIRouter(tags=["Health"])
                                         "status": "unhealthy",
                                         "latency_ms": None,
                                         "message": "Connection timeout after 3s",
-                                    },
-                                    "memory": {
-                                        "status": "healthy",
-                                        "used_mb": 128.5,
-                                        "percent": 45.2,
-                                        "message": "Memory usage normal",
                                     },
                                 },
                             },
@@ -91,8 +75,6 @@ router = APIRouter(tags=["Health"])
                 "application/json": {
                     "example": {
                         "status": "unhealthy",
-                        "version": "0.1.0",
-                        "environment": "production",
                         "timestamp": "2024-12-02T10:30:00Z",
                         "uptime_seconds": 3600,
                         "checks": {
@@ -105,12 +87,6 @@ router = APIRouter(tags=["Health"])
                                 "status": "healthy",
                                 "latency_ms": 1.1,
                                 "message": "PONG received",
-                            },
-                            "memory": {
-                                "status": "healthy",
-                                "used_mb": 128.5,
-                                "percent": 45.2,
-                                "message": "Memory usage normal",
                             },
                         },
                     }
