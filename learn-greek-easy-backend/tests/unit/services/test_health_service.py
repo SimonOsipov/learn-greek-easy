@@ -383,17 +383,15 @@ class TestGetHealthStatus:
     """Tests for get_health_status function."""
 
     @pytest.mark.asyncio
-    @patch("src.services.health_service.check_memory_health")
     @patch("src.services.health_service.check_redis_health_component")
     @patch("src.services.health_service.check_database_health")
     async def test_get_health_status_all_healthy(
         self,
         mock_db: MagicMock,
         mock_redis: MagicMock,
-        mock_memory: MagicMock,
     ):
         """Test health status when all components are healthy."""
-        from src.schemas.health import ComponentHealth, MemoryHealth
+        from src.schemas.health import ComponentHealth
         from src.services.health_service import get_health_status
 
         mock_db.return_value = ComponentHealth(
@@ -406,12 +404,6 @@ class TestGetHealthStatus:
             latency_ms=2.0,
             message="PONG received",
         )
-        mock_memory.return_value = MemoryHealth(
-            status=ComponentStatus.HEALTHY,
-            used_mb=128.0,
-            percent=25.0,
-            message="Memory usage normal",
-        )
 
         response, status_code = await get_health_status()
 
@@ -419,17 +411,15 @@ class TestGetHealthStatus:
         assert status_code == 200
 
     @pytest.mark.asyncio
-    @patch("src.services.health_service.check_memory_health")
     @patch("src.services.health_service.check_redis_health_component")
     @patch("src.services.health_service.check_database_health")
     async def test_get_health_status_db_unhealthy_returns_503(
         self,
         mock_db: MagicMock,
         mock_redis: MagicMock,
-        mock_memory: MagicMock,
     ):
         """Test health status returns 503 when DB is unhealthy."""
-        from src.schemas.health import ComponentHealth, MemoryHealth
+        from src.schemas.health import ComponentHealth
         from src.services.health_service import get_health_status
 
         mock_db.return_value = ComponentHealth(
@@ -442,12 +432,6 @@ class TestGetHealthStatus:
             latency_ms=2.0,
             message="PONG received",
         )
-        mock_memory.return_value = MemoryHealth(
-            status=ComponentStatus.HEALTHY,
-            used_mb=128.0,
-            percent=25.0,
-            message="Memory usage normal",
-        )
 
         response, status_code = await get_health_status()
 
@@ -455,17 +439,15 @@ class TestGetHealthStatus:
         assert status_code == 503
 
     @pytest.mark.asyncio
-    @patch("src.services.health_service.check_memory_health")
     @patch("src.services.health_service.check_redis_health_component")
     @patch("src.services.health_service.check_database_health")
     async def test_get_health_status_redis_unhealthy_returns_degraded(
         self,
         mock_db: MagicMock,
         mock_redis: MagicMock,
-        mock_memory: MagicMock,
     ):
         """Test health status returns degraded when Redis is unhealthy."""
-        from src.schemas.health import ComponentHealth, MemoryHealth
+        from src.schemas.health import ComponentHealth
         from src.services.health_service import get_health_status
 
         mock_db.return_value = ComponentHealth(
@@ -478,12 +460,6 @@ class TestGetHealthStatus:
             latency_ms=None,
             message="Connection refused",
         )
-        mock_memory.return_value = MemoryHealth(
-            status=ComponentStatus.HEALTHY,
-            used_mb=128.0,
-            percent=25.0,
-            message="Memory usage normal",
-        )
 
         response, status_code = await get_health_status()
 
@@ -491,17 +467,15 @@ class TestGetHealthStatus:
         assert status_code == 200  # Degraded is still OK for health checks
 
     @pytest.mark.asyncio
-    @patch("src.services.health_service.check_memory_health")
     @patch("src.services.health_service.check_redis_health_component")
     @patch("src.services.health_service.check_database_health")
     async def test_get_health_status_handles_check_exceptions(
         self,
         mock_db: MagicMock,
         mock_redis: MagicMock,
-        mock_memory: MagicMock,
     ):
         """Test health status handles exceptions from checks."""
-        from src.schemas.health import ComponentHealth, MemoryHealth
+        from src.schemas.health import ComponentHealth
         from src.services.health_service import get_health_status
 
         mock_db.side_effect = Exception("DB check failed")
@@ -509,12 +483,6 @@ class TestGetHealthStatus:
             status=ComponentStatus.HEALTHY,
             latency_ms=2.0,
             message="PONG received",
-        )
-        mock_memory.return_value = MemoryHealth(
-            status=ComponentStatus.HEALTHY,
-            used_mb=128.0,
-            percent=25.0,
-            message="Memory usage normal",
         )
 
         with patch("src.services.health_service.logger"):
@@ -526,14 +494,12 @@ class TestGetHealthStatus:
 
     @pytest.mark.asyncio
     @patch("src.services.health_service.check_stripe_health")
-    @patch("src.services.health_service.check_memory_health")
     @patch("src.services.health_service.check_redis_health_component")
     @patch("src.services.health_service.check_database_health")
     async def test_get_health_status_stripe_not_called_in_aggregate(
         self,
         mock_db: MagicMock,
         mock_redis: MagicMock,
-        mock_memory: MagicMock,
         mock_stripe: MagicMock,
     ):
         """Stripe health check must NOT be called in the aggregate health poll (PERF-01).
@@ -542,7 +508,7 @@ class TestGetHealthStatus:
         aggregate would add latency and external-service dependency to every health probe.
         The response should carry stripe=None when called via the aggregate path.
         """
-        from src.schemas.health import ComponentHealth, MemoryHealth
+        from src.schemas.health import ComponentHealth
         from src.services.health_service import get_health_status
 
         mock_db.return_value = ComponentHealth(
@@ -554,12 +520,6 @@ class TestGetHealthStatus:
             status=ComponentStatus.HEALTHY,
             latency_ms=2.0,
             message="PONG received",
-        )
-        mock_memory.return_value = MemoryHealth(
-            status=ComponentStatus.HEALTHY,
-            used_mb=128.0,
-            percent=25.0,
-            message="Memory usage normal",
         )
 
         response, status_code = await get_health_status()

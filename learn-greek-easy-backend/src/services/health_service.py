@@ -306,13 +306,9 @@ async def _compute_health_status() -> Tuple[HealthResponse, int]:
             message=f"Check failed: {str(redis_check)}",
         )
 
-    # Get memory status (synchronous)
-    memory_check = check_memory_health()
-
     # Determine overall status
     # Database is critical - if unhealthy, system is unhealthy
     # Redis is non-critical - if unhealthy, system is degraded
-    # Memory warning doesn't affect overall status
 
     # At this point, checks are guaranteed to be their respective types
     assert isinstance(db_check, ComponentHealth)
@@ -330,14 +326,11 @@ async def _compute_health_status() -> Tuple[HealthResponse, int]:
 
     response = HealthResponse(
         status=overall_status,
-        version=settings.app_version,
-        environment=settings.app_env,
         timestamp=datetime.now(timezone.utc),
         uptime_seconds=round(get_uptime_seconds(), 2),
         checks=HealthChecks(
             database=db_check,
             redis=redis_check,
-            memory=memory_check,
             stripe=None,  # Not polled in the aggregate; call check_stripe_health() explicitly if needed
         ),
     )

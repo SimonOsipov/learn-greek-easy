@@ -212,14 +212,11 @@ class TestHealthEndpoint:
             data = response.json()
 
             assert "status" in data
-            assert "version" in data
-            assert "environment" in data
             assert "timestamp" in data
             assert "uptime_seconds" in data
             assert "checks" in data
             assert "database" in data["checks"]
             assert "redis" in data["checks"]
-            assert "memory" in data["checks"]
 
     # ------------------------------------------------------------------
     # OPS-03-02: public /health payload trim (Mode A — RED before
@@ -427,46 +424,6 @@ class TestReadinessEndpoint:
 
 class TestHealthEdgeCases:
     """Tests for edge cases in health endpoints."""
-
-    def test_health_with_memory_warning(self, client: TestClient):
-        """Test health response with memory warning."""
-        response = HealthResponse(
-            status=HealthStatus.HEALTHY,
-            version="0.1.0",
-            environment="test",
-            timestamp=datetime.now(timezone.utc),
-            uptime_seconds=100.0,
-            checks=HealthChecks(
-                database=ComponentHealth(
-                    status=ComponentStatus.HEALTHY,
-                    latency_ms=5.0,
-                    message="Connection successful",
-                ),
-                redis=ComponentHealth(
-                    status=ComponentStatus.HEALTHY,
-                    latency_ms=2.0,
-                    message="PONG received",
-                ),
-                memory=MemoryHealth(
-                    status=ComponentStatus.WARNING,
-                    used_mb=512.0,
-                    percent=85.0,
-                    message="High memory usage",
-                ),
-            ),
-        )
-
-        with patch(
-            "src.api.health.get_health_status",
-            return_value=(response, 200),
-        ):
-            resp = client.get("/health")
-
-            assert resp.status_code == 200
-            data = resp.json()
-            # Memory warning doesn't affect overall status
-            assert data["status"] == "healthy"
-            assert data["checks"]["memory"]["status"] == "warning"
 
     def test_health_response_timestamp_format(
         self, client: TestClient, healthy_health_response: HealthResponse
