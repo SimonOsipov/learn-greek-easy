@@ -134,8 +134,9 @@ synthetic.
    check and a **missed** check must alert (configure the alert in step 6).
 6. **Attach a missed/failed-check EMAIL alert, reusing the OPS-02 channel.** OPS-03
    adds no new alert vendor — route the uptime failure to the **same email
-   notification action OPS-02's issue-alert rules use** (delivered to the org
-   owner's email, `osipov.simon@gmail.com`).
+   notification action OPS-02's issue-alert rules already use** (delivered to the
+   org owner's email — the address is configured there, so there is no need to
+   re-enter it).
    - **Primary path:** in the monitor's **Notify / Owner / recipients** field, set
      the recipient to the owner (the same recipient OPS-02 routes to). Modern
      Sentry Uptime alerts notify the monitor's configured owner/team on downtime.
