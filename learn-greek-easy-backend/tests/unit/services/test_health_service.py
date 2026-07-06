@@ -991,6 +991,211 @@ class TestReadinessHealthCache:
 
 
 # ============================================================================
+# OPS-03-01: QA adversarial coverage (Mode B) for the single-flight TTL cache
+# ============================================================================
+#
+# The AC specs above (TestReadinessHealthCache) prove the happy-path
+# single-flight/TTL contract. These add the risk cases the AC table didn't
+# name: a raising factory, cache independence between the two public
+# entrypoints, TTL-driven recovery (not just TTL-driven death), and object
+# identity across concurrent waiters (proving a *shared* result, not merely
+# an equal-by-value one).
+
+
+class TestAsyncSingleFlightTTLAdversarial:
+    """Adversarial coverage for `_AsyncSingleFlightTTL` and the two public
+    cached entrypoints it backs."""
+
+    @pytest.mark.asyncio
+    async def test_factory_exception_does_not_poison_cache_and_lock_releases(self):
+        """Highest-value missing case: a factory that raises must not wedge
+        the cache. `async with self._lock` releases on ANY exit path
+        (including via exception), and the cache must stay empty (the
+        failure itself must not be "cached") so the very next call retries
+        the factory instead of deadlocking on a still-held lock or replaying
+        a stale/partial value."""
+        cache = health_service._AsyncSingleFlightTTL(5.0)
+        calls = {"n": 0}
+
+        async def raising_factory():
+            calls["n"] += 1
+            raise RuntimeError("boom")
+
+        with pytest.raises(RuntimeError, match="boom"):
+            await cache.get(raising_factory)
+
+        assert calls["n"] == 1
+        # No poisoned/partial value was captured.
+        assert cache._value is None
+        assert cache._expiry == 0.0
+
+        # The lock must be released -- a subsequent get() must neither
+        # deadlock nor serve a false-cached hit; it must retry the factory.
+        async def good_factory():
+            calls["n"] += 1
+            return "ok"
+
+        result = await asyncio.wait_for(cache.get(good_factory), timeout=1.0)
+        assert result == "ok"
+        assert calls["n"] == 2
+
+    @pytest.mark.asyncio
+    async def test_concurrent_callers_all_surface_factory_exception_without_deadlock(self):
+        """N concurrent misses against an always-raising factory must all
+        complete (no deadlock) with the exception surfaced to every caller --
+        guards against a bug where an exception mid-critical-section leaves
+        the lock permanently held for the remaining waiters."""
+        cache = health_service._AsyncSingleFlightTTL(5.0)
+        calls = {"n": 0}
+
+        async def raising_factory():
+            calls["n"] += 1
+            await asyncio.sleep(0.01)
+            raise RuntimeError("still down")
+
+        results = await asyncio.wait_for(
+            asyncio.gather(*[cache.get(raising_factory) for _ in range(5)], return_exceptions=True),
+            timeout=1.0,
+        )
+
+        assert len(results) == 5
+        for r in results:
+            assert isinstance(r, RuntimeError)
+        assert calls["n"] >= 1
+        assert cache._value is None
+        assert cache._expiry == 0.0
+
+    @pytest.mark.asyncio
+    async def test_readiness_and_health_caches_are_independent(self, monkeypatch):
+        """Readiness and health each wrap a distinct compute fn behind a
+        distinct cache instance -- a readiness call must not warm the health
+        cache (or vice versa). A shared/aliased cache would skip the second
+        recompute below."""
+        from src.schemas.health import ComponentHealth
+        from src.services.health_service import get_health_status, get_readiness_status
+
+        db_calls = {"count": 0}
+        redis_calls = {"count": 0}
+
+        async def fake_db(timeout=None):
+            db_calls["count"] += 1
+            return ComponentHealth(status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok")
+
+        async def fake_redis(timeout=None):
+            redis_calls["count"] += 1
+            return ComponentHealth(status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok")
+
+        monkeypatch.setattr(health_service, "check_database_health", fake_db)
+        monkeypatch.setattr(health_service, "check_redis_health_component", fake_redis)
+
+        readiness_response, readiness_status_code = await get_readiness_status()
+        assert db_calls["count"] == 1
+        assert redis_calls["count"] == 1
+
+        health_response, health_status_code = await get_health_status()
+        # Independent caches must re-run the underlying checks for the
+        # health compute rather than serving the readiness-shaped result.
+        assert db_calls["count"] == 2
+        assert redis_calls["count"] == 2
+        assert health_status_code == 200
+        assert health_response.status == HealthStatus.HEALTHY
+        assert readiness_response.status == "ready"
+        assert readiness_status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_concurrent_callers_receive_identical_cached_object(self, monkeypatch):
+        """Single-flight must return one SHARED result object to every
+        waiter -- not merely an equal-by-value copy. Also stages a "late
+        arrival": a caller dispatched after the in-flight compute has
+        already started must still be served the one shared result rather
+        than triggering a second compute."""
+        from src.schemas.health import ComponentHealth
+        from src.services.health_service import get_readiness_status
+
+        db_calls = {"count": 0}
+
+        async def fake_db(timeout=None):
+            db_calls["count"] += 1
+            await asyncio.sleep(0.05)
+            return ComponentHealth(status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok")
+
+        async def fake_redis(timeout=None):
+            await asyncio.sleep(0.05)
+            return ComponentHealth(status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok")
+
+        monkeypatch.setattr(health_service, "check_database_health", fake_db)
+        monkeypatch.setattr(health_service, "check_redis_health_component", fake_redis)
+
+        async def late_arrival():
+            # Head start for the first wave so this arrives mid-compute,
+            # while the factory is still awaiting inside the critical section.
+            await asyncio.sleep(0.01)
+            return await get_readiness_status()
+
+        tasks = [asyncio.create_task(get_readiness_status()) for _ in range(4)]
+        tasks.append(asyncio.create_task(late_arrival()))
+        results = await asyncio.gather(*tasks)
+
+        assert db_calls["count"] == 1
+        first = results[0]
+        for r in results[1:]:
+            assert r is first  # identical object, not an equal-but-distinct copy
+
+    @pytest.mark.asyncio
+    async def test_health_recovers_healthy_after_ttl_expiry_following_unhealthy_window(
+        self, monkeypatch
+    ):
+        """Recovery path in the OTHER direction from the AC spec (which only
+        drove healthy->unhealthy): an unhealthy result cached for a window
+        must, once the fake clock crosses the TTL and the dependency comes
+        back, flip to healthy on the very next call -- guards against a
+        recheck bug that only triggers on failure transitions, not recovery."""
+        from src.schemas.health import ComponentHealth
+        from src.services.health_service import get_health_status
+
+        fake_time = {"now": 2_000.0}
+        monkeypatch.setattr(health_service.time, "monotonic", lambda: fake_time["now"])
+
+        db_calls = {"count": 0}
+
+        async def unhealthy_db(timeout=None):
+            db_calls["count"] += 1
+            return ComponentHealth(
+                status=ComponentStatus.UNHEALTHY, latency_ms=None, message="down"
+            )
+
+        async def healthy_redis(timeout=None):
+            return ComponentHealth(status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok")
+
+        monkeypatch.setattr(health_service, "check_database_health", unhealthy_db)
+        monkeypatch.setattr(health_service, "check_redis_health_component", healthy_redis)
+
+        response, status_code = await get_health_status()
+        assert status_code == 503
+        assert response.status == HealthStatus.UNHEALTHY
+        assert db_calls["count"] == 1
+
+        # Still within the window: must be served from cache, not recomputed.
+        response, status_code = await get_health_status()
+        assert status_code == 503
+        assert db_calls["count"] == 1  # would be 2 without caching
+
+        # Advance past the TTL and let the dependency recover.
+        fake_time["now"] += 6.0
+
+        async def healthy_db(timeout=None):
+            db_calls["count"] += 1
+            return ComponentHealth(status=ComponentStatus.HEALTHY, latency_ms=1.0, message="ok")
+
+        monkeypatch.setattr(health_service, "check_database_health", healthy_db)
+
+        response, status_code = await get_health_status()
+        assert db_calls["count"] == 2  # re-ran after expiry, recovered
+        assert status_code == 200
+        assert response.status == HealthStatus.HEALTHY
+
+
+# ============================================================================
 # get_uptime_seconds() Tests
 # ============================================================================
 
