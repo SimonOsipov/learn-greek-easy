@@ -68,10 +68,49 @@ describe('i18n configuration', () => {
       expect(i18n.hasResourceBundle('ru', 'common')).toBe(true);
     });
 
-    it('should have all namespaces loaded for English', () => {
-      NAMESPACES.forEach((ns) => {
-        expect(i18n.hasResourceBundle('en', ns)).toBe(true);
-      });
+    // PERF-24-01: The SHARED singleton used elsewhere in this describe block
+    // is pre-seeded with all 17 EN namespaces by src/lib/test-setup.ts,
+    // independent of init.ts. That makes it unsuitable for asserting what
+    // initI18n() itself loads synchronously vs. defers. This test therefore
+    // uses a FRESH i18next instance (vi.resetModules() + dynamic import,
+    // mirroring the pattern at this file's PERF-09-01 describe block below)
+    // to assert the real invariant: only the critical trio (common/auth/
+    // landing) loads synchronously; a non-critical namespace (deck) does not
+    // — it ships via the deferred, post-paint loader instead.
+    it('should load critical EN namespaces synchronously and defer a non-critical one (fresh instance)', async () => {
+      localStorage.setItem('i18nextLng', 'en');
+      vi.resetModules();
+
+      const freshInit = await import('../init');
+      freshInit.resetI18nInit();
+      const { default: freshI18n } = await import('i18next');
+
+      // IMPORTANT: in this repo's Vitest setup, `vi.resetModules()` does not
+      // actually yield an isolated i18next package instance (node_modules
+      // deps are not re-evaluated per reset) — `freshI18n` above IS the same
+      // real i18next singleton the whole file shares. Calling
+      // `freshInit.initI18n()` rebuilds i18next's internal ResourceStore from
+      // scratch (i18next internals: `this.store = new
+      // ResourceStore(this.options.resources, this.options)`), which wipes
+      // the RU bundle this describe block's `beforeAll` loaded. The
+      // try/finally restores it so later tests in this file (which rely on
+      // the shared singleton having RU loaded) still pass, even if the
+      // assertions below throw (the RED case, pre-split).
+      try {
+        await freshInit.initI18n();
+
+        ['common', 'auth', 'landing'].forEach((ns) => {
+          expect(freshI18n.hasResourceBundle('en', ns)).toBe(true);
+        });
+
+        // Non-critical namespace must NOT be present synchronously.
+        expect(freshI18n.hasResourceBundle('en', 'deck')).toBe(false);
+      } finally {
+        vi.resetModules();
+        resetI18nInit();
+        await initI18n();
+        await loadLanguageResources('ru');
+      }
     });
 
     it('should have all namespaces loaded for Russian', () => {
@@ -171,6 +210,14 @@ describe('i18n configuration', () => {
       });
     });
 
+    // PERF-24-01: this test runs on the SHARED singleton, which
+    // src/lib/test-setup.ts always pre-seeds with all 17 EN namespaces
+    // regardless of init.ts's synchronous/deferred split — so checking
+    // 'deck'/'settings' (both now deferrable) here would not actually
+    // exercise or guard the split's synchronous-availability invariant.
+    // Retargeted to the critical trio (common/auth/landing), which init.ts
+    // guarantees synchronously on ANY instance. Deferred-namespace access is
+    // covered on a fresh instance in init.namespaceSplit.test.ts (AC-2).
     it('should access translations from different namespaces', async () => {
       // Ensure we're testing in English
       await i18n.changeLanguage('en');
@@ -182,11 +229,8 @@ describe('i18n configuration', () => {
       // "Kalos irthate!" means "Welcome!" in Greek
       expect(i18n.t('auth:login.title')).toBeTruthy();
 
-      // Deck namespace
-      expect(i18n.t('deck:list.title')).toBe('Available Decks');
-
-      // Settings namespace
-      expect(i18n.t('settings:page.title')).toBe('Settings');
+      // Landing namespace (critical — PERF-24-01)
+      expect(i18n.t('hero.title', { ns: 'landing' })).toBe('Your Greek Practice');
     });
   });
 });
