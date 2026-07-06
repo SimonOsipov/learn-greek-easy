@@ -683,18 +683,18 @@ class TestGetReadinessStatus:
 
 
 # ============================================================================
-# OPS-03-01: async single-flight TTL cache for readiness/health (Mode A — RED)
+# OPS-03-01: async single-flight TTL cache for readiness/health (contract-lock)
 # ============================================================================
 #
-# These specs are authored RED, before the cache exists (RALPH Mode A). Two
-# symbols they need — `_reset_health_caches` and `_HEALTH_CACHE_TTL_SECONDS` —
-# are NOT yet defined on `src.services.health_service`. They are referenced
-# via the `health_service` MODULE OBJECT (imported at the top of this file)
-# rather than a top-level `from src.services.health_service import ...`, so a
-# missing symbol raises a clean AttributeError only in the test that touches
-# it, instead of an ImportError that would break collection of this entire
-# file (which would also turn the concurrency tests below into collection
-# errors instead of their intended assertion-based RED).
+# These specs lock in the OPS-03-01 async single-flight TTL cache. They
+# reference two module-level symbols — `_reset_health_caches` and
+# `_HEALTH_CACHE_TTL_SECONDS` — via the `health_service` MODULE OBJECT
+# (imported at the top of this file) rather than a top-level
+# `from src.services.health_service import ...`. That indirection is a relic of
+# when they were authored ahead of the cache: a not-yet-defined symbol then
+# raised a clean per-test AttributeError instead of an ImportError that would
+# break collection of this whole file. It is harmless now that the cache exists
+# and both symbols are defined.
 
 
 @pytest.fixture(autouse=True)
@@ -703,16 +703,15 @@ def reset_health_caches():
 
     OPS-03-01 adds a module-level single-flight TTL cache in front of
     `get_readiness_status` / `get_health_status`; without a reset, a cached
-    result from one test would leak into the next. Guarded via `getattr`
-    because `_reset_health_caches` does not exist until OPS-03-01 implements
-    the cache — during this RED phase the call is a no-op, so it does not
-    break collection or any of the pre-existing tests in this module.
+    result from one test would leak into the next. Called via `getattr` with a
+    no-op fallback — a defensive relic from when `_reset_health_caches` did not
+    yet exist; now that the cache is implemented the real reset always runs.
     """
     getattr(health_service, "_reset_health_caches", lambda: None)()
 
 
 class TestReadinessHealthCache:
-    """RED specs for the OPS-03-01 async single-flight TTL cache.
+    """Contract-lock specs for the OPS-03-01 async single-flight TTL cache.
 
     Covers: N-concurrent-calls-collapse-to-one-compute (readiness + health),
     sequential-call-within-TTL-is-cached, reset-forces-recheck, real
@@ -728,7 +727,7 @@ class TestReadinessHealthCache:
         Stubs are real `async def`s installed via monkeypatch.setattr (never
         an AsyncMock whose side_effect just sleeps and implicitly returns
         None) so a wrong-reason 503 (from `isinstance(db_check, ComponentHealth)`
-        being False) can't masquerade as this test's intended RED.
+        being False) can't masquerade as a genuine single-flight pass.
         """
         from src.schemas.health import ComponentHealth
         from src.services.health_service import get_readiness_status
@@ -861,9 +860,9 @@ class TestReadinessHealthCache:
 
         Given t0: a healthy call caches the result (expiry = t0 + TTL).
         When a second call happens still at t0 (within the window): it must
-        be served from cache (no recompute) — this is where "no cache today"
-        fails, since without caching every call recomputes regardless of the
-        clock.
+        be served from cache (no recompute) — the cache short-circuits the
+        recompute that an uncached implementation would run on every call
+        regardless of the clock.
         Then the fake clock advances past the TTL and DB flips unhealthy:
         the next call must re-run the check and return 503.
         """
@@ -893,7 +892,7 @@ class TestReadinessHealthCache:
         # Still at t0 (within the TTL window): must be served from cache.
         response, status_code = await get_readiness_status()
         assert status_code == 200
-        assert db_calls["count"] == 1  # fails today: no cache -> recomputes -> count == 2
+        assert db_calls["count"] == 1  # cached: single compute (would be 2 without the cache)
 
         # Advance the fake clock past the ~5s TTL and flip DB unhealthy.
         fake_time["now"] += 6.0
@@ -1156,24 +1155,25 @@ class TestAsyncSingleFlightTTLAdversarial:
 
 
 # ============================================================================
-# OPS-03-02: public /health payload trim — schema contract (Mode A — RED)
+# OPS-03-02: public /health payload trim — schema contract (contract-lock)
 # ============================================================================
 #
 # HealthResponse.version/.environment and HealthChecks.memory are trimmed
 # from the publicly-reachable /health and /api/v1/health payloads by
 # OPS-03-02. This spec asserts the Pydantic model definitions directly (the
 # schema-level half of the contract; the router-level half lives in
-# tests/unit/api/test_health.py + tests/unit/api/v1/test_health.py). It fails
-# RED today because both fields are still declared on the models.
+# tests/unit/api/test_health.py + tests/unit/api/v1/test_health.py). It passes
+# now that the trim shipped and locks it in — it would fail again only if those
+# fields were re-declared on the models.
 
 
 class TestHealthResponseSchemaTrim:
-    """RED spec for the OPS-03-02 schema trim."""
+    """Contract-lock spec for the OPS-03-02 schema trim."""
 
     def test_health_response_schema_drops_trimmed_fields(self):
         """AC C-trim: HealthResponse must not define version/environment;
-        HealthChecks must not define memory. Fails today (AssertionError) —
-        both fields are still present in `model_fields` pre-trim."""
+        HealthChecks must not define memory. Green post-trim — these fields
+        were removed from `model_fields`; this test locks them out."""
         from src.schemas.health import HealthChecks, HealthResponse
 
         assert "version" not in HealthResponse.model_fields
