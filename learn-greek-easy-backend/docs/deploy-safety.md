@@ -55,7 +55,7 @@ Railway variable:
 
 | Side | Setting | Value | Owner |
 |---|---|---|---|
-| App (repo) | uvicorn `--timeout-graceful-shutdown` | `25` (seconds) — `learn-greek-easy-backend/Dockerfile:117` | shipped in OPS-08-01 |
+| App (repo) | uvicorn `--timeout-graceful-shutdown` | `25` (seconds) — `learn-greek-easy-backend/Dockerfile:121` | shipped in OPS-08-01 |
 | Infra (Railway) | `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` | `30` (seconds) — Backend service Variables | **owner action**, see [Drain drill & owner residuals](#drain-drill--owner-residuals) |
 
 **Invariant: `25 < 30`.** Railway's kill-grace — how long it waits between
@@ -282,7 +282,7 @@ Set it on **both**:
   production is fine).
 
 Invariant: this value (`30`) must stay **greater than** the uvicorn
-`--timeout-graceful-shutdown` flag (`25`, `learn-greek-easy-backend/Dockerfile:117`).
+`--timeout-graceful-shutdown` flag (`25`, `learn-greek-easy-backend/Dockerfile:121`).
 Without this variable set, the OPS-08-01 uvicorn flag is inert — Railway's
 default kill-grace is `0`s.
 
