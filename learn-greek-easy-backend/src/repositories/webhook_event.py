@@ -75,21 +75,3 @@ class WebhookEventRepository(BaseRepository[WebhookEvent]):
         self.db.add(event)
         await self.db.flush()
         return event
-
-    async def mark_failed(self, event: WebhookEvent, error_message: str) -> WebhookEvent:
-        """Mark a webhook event as failed.
-
-        Args:
-            event: WebhookEvent instance to mark failed
-            error_message: Description of what went wrong
-
-        Returns:
-            Updated WebhookEvent with processing_status=FAILED, error_message,
-            processed_at set
-        """
-        event.processing_status = WebhookProcessingStatus.FAILED
-        event.error_message = error_message
-        event.processed_at = datetime.now(timezone.utc)
-        self.db.add(event)
-        await self.db.flush()
-        return event

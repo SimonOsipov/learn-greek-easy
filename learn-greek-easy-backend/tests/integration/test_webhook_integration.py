@@ -11,22 +11,118 @@ All other layers (routing, service, repositories, DB) are real.
 
 import json
 import time
+from collections.abc import AsyncGenerator
 from unittest.mock import MagicMock, patch
+from uuid import uuid4
 
 import pytest
-from httpx import AsyncClient
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from src.db.models import (
     SubscriptionStatus,
     SubscriptionTier,
+    User,
     WebhookEvent,
     WebhookProcessingStatus,
 )
 from tests.factories.auth import UserFactory
 
 WEBHOOK_URL = "/api/v1/webhooks/stripe"
+
+
+# =============================================================================
+# Real get_db Commit/Rollback Boundary Fixtures (OPS-04-03)
+# =============================================================================
+#
+# The shared `client` fixture (tests/conftest.py:376-401) overrides get_db
+# with a bare `yield db_session` -- it never calls commit()/rollback(), so it
+# cannot exercise the production get_db boundary (src/db/dependencies.py)
+# where a matched-handler failure must roll back BOTH the user mutation and
+# the webhook_events row. Both `db_session` and `db_session_with_savepoint`
+# (tests/fixtures/database.py) use a single `connection.begin_nested()` with
+# no restart mechanism, so a REAL `session.rollback()` inside a request would
+# roll back the seeded fixture data too (or leave the savepoint consumed).
+#
+# The fixtures below implement the SQLAlchemy 2.0 canonical recipe for
+# "Joining a Session into an External Transaction" (verified against
+# Context7 / docs.sqlalchemy.org/en/20/orm/session_transaction.html): bind a
+# Session/AsyncSession to a connection that already has an open,
+# never-committed outer transaction, using
+# join_transaction_mode="create_savepoint". This supersedes the older
+# pre-1.4 recipe of a manual
+# `@event.listens_for(session.sync_session, "after_transaction_end")`
+# listener that re-opens a SAVEPOINT by hand -- join_transaction_mode builds
+# the same "restart savepoint on every autobegin" behavior directly into the
+# Session (confirmed via `AsyncSession.__init__`'s `**kw` passthrough to the
+# sync `Session.__init__`, which exposes `join_transaction_mode` in
+# SQLAlchemy 2.0.51, the version pinned in this repo), so code under test
+# can call commit()/rollback() any number of times while the connection's
+# outer transaction still isolates everything from the real database.
+
+
+@pytest_asyncio.fixture
+async def real_commit_session(db_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
+    """AsyncSession bound to a connection with join_transaction_mode="create_savepoint".
+
+    Unlike db_session/db_session_with_savepoint (single begin_nested(), no
+    restart), every session.commit()/rollback() here only ends the CURRENT
+    SAVEPOINT -- the next operation on the session autobegins a FRESH
+    SAVEPOINT nested under the same still-open, still-uncommitted outer
+    transaction. Rolling back that outer transaction at teardown discards
+    everything (no durable writes; xdist/NullPool-safe, same guarantee as
+    db_session).
+
+    Callers that seed data with this session and then drive an HTTP request
+    through it (see real_commit_client) MUST commit() after seeding --
+    otherwise the seed insert shares the SAME savepoint as the request's own
+    mutations, and a real rollback() inside the request would undo the seed
+    too (exactly the trap this fixture exists to avoid).
+    """
+    connection = await db_engine.connect()
+    transaction = await connection.begin()  # outer transaction, NEVER committed
+
+    session = AsyncSession(
+        bind=connection,
+        expire_on_commit=False,
+        join_transaction_mode="create_savepoint",
+    )
+
+    try:
+        yield session
+    finally:
+        await session.close()
+        await transaction.rollback()
+        await connection.close()
+
+
+@pytest_asyncio.fixture
+async def real_commit_client(
+    real_commit_session: AsyncSession,
+) -> AsyncGenerator[AsyncClient, None]:
+    """AsyncClient wired to a get_db override that mirrors production
+    src/db/dependencies.py::get_db EXACTLY: commit() on success, rollback()
+    on any exception. This is what lets the failure-path test below observe
+    the real commit/rollback boundary -- the shared `client` fixture's bare
+    `yield db_session` override never calls either.
+    """
+    from src.db.dependencies import get_db
+    from src.main import app
+
+    async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
+        try:
+            yield real_commit_session
+            await real_commit_session.commit()
+        except Exception:
+            await real_commit_session.rollback()
+            raise
+
+    app.dependency_overrides[get_db] = override_get_db
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        yield ac
+    app.dependency_overrides.clear()
 
 
 @pytest.mark.integration
@@ -236,3 +332,172 @@ class TestWebhookIntegration:
         webhook_event = result.scalar_one()
         assert webhook_event.processing_status == WebhookProcessingStatus.COMPLETED
         assert webhook_event.event_type == "customer.subscription.deleted"
+
+    @pytest.mark.asyncio
+    async def test_webhook_handler_failure_returns_500_and_rolls_back(
+        self,
+        real_commit_client: AsyncClient,
+        real_commit_session: AsyncSession,
+    ):
+        """A matched handler that raises AFTER mutating the user must leave
+        NOTHING committed: no partial user mutation, no webhook_events row --
+        exercising the REAL get_db commit/rollback boundary
+        (src/db/dependencies.py), which the shared `client` fixture's bare
+        `yield db_session` override cannot observe (D7).
+
+        Expected RED on pre-OPS-04-01 code (git a0594416^, i.e.
+        5603f383 and earlier): the except-block inside process_event
+        persisted a FAILED webhook_events row via the now-deleted
+        failure-marking repo method and ALWAYS returned True; the route had
+        no HTTPException-on-failure path and always returned 200. Because the
+        route's real get_db then commits on that always-non-raising path,
+        ALL THREE assertions below would fail on that code:
+        (a) response.status_code would be 200, not 500;
+        (b) fresh_user.stripe_subscription_id would be the NEW subscription
+        id (the pre-exception mutation was committed), not None;
+        (c) webhook_event would exist with processing_status=FAILED (via that
+        now-deleted method), not None.
+        """
+        user = await UserFactory.create(
+            session=real_commit_session,
+            subscription_tier=SubscriptionTier.FREE,
+            subscription_status=SubscriptionStatus.NONE,
+            stripe_customer_id=f"cus_ops0403_fail_{uuid4().hex[:12]}",
+            stripe_subscription_id=None,
+        )
+        # Checkpoint the seed into the outer transaction (release its
+        # SAVEPOINT) BEFORE the request runs, so the request's own
+        # rollback() cannot undo it too.
+        await real_commit_session.commit()
+        customer_id = user.stripe_customer_id
+        user_id = user.id
+
+        event_id = f"evt_ops0403_fail_{uuid4().hex[:12]}"
+        new_subscription_id = f"sub_ops0403_fail_{uuid4().hex[:12]}"
+        payload = {
+            "id": event_id,
+            "object": "event",
+            "type": "customer.subscription.updated",
+            "data": {
+                "object": {
+                    "id": new_subscription_id,
+                    "customer": customer_id,
+                    "status": "active",
+                    "items": {"data": [{"price": {"id": "price_test"}}]},
+                    "current_period_end": int(time.time()),
+                    "cancel_at_period_end": False,
+                }
+            },
+        }
+        raw_body = json.dumps(payload).encode()
+
+        with (
+            patch("stripe.Webhook.construct_event") as mock_construct,
+            patch("src.api.v1.webhooks.settings") as mock_settings,
+            patch(
+                "src.services.webhook_service.stripe_status_to_subscription_status",
+                side_effect=RuntimeError("boom"),
+            ),
+        ):
+            mock_construct.return_value = MagicMock()
+            mock_settings.stripe_webhook_secret = "whsec_test"
+
+            response = await real_commit_client.post(
+                WEBHOOK_URL,
+                content=raw_body,
+                headers={
+                    "stripe-signature": "t=123,v1=fakesig",
+                    "content-type": "application/json",
+                },
+            )
+
+        assert response.status_code == 500
+
+        # Re-observe via a FRESH select, not an expired-attribute read on the
+        # pre-seeded `user` object -- this session's transaction has been
+        # rolled back and restarted (join_transaction_mode) since `user` was
+        # loaded, so touching a stale attribute on it risks MissingGreenlet.
+        fresh_user = await real_commit_session.scalar(select(User).where(User.id == user_id))
+        assert fresh_user is not None
+        assert fresh_user.stripe_subscription_id is None
+
+        webhook_event = await real_commit_session.scalar(
+            select(WebhookEvent).where(WebhookEvent.event_id == event_id)
+        )
+        assert webhook_event is None
+
+    @pytest.mark.asyncio
+    async def test_webhook_success_commits_via_restart_savepoint_fixture(
+        self,
+        real_commit_client: AsyncClient,
+        real_commit_session: AsyncSession,
+    ):
+        """Non-tautology guard for the failure test above: proves
+        real_commit_session/real_commit_client are NOT blind to all writes.
+
+        Sends a SUCCESSFUL customer.subscription.updated (no patched raise)
+        through the SAME fixture and asserts the mutation IS visible via a
+        fresh select, and a COMPLETED WebhookEvent row exists. If this test
+        failed, the failure test's "None / no row" assertions would be
+        meaningless -- they could pass simply because the fixture never lets
+        ANY write become visible, not because the rollback boundary
+        actually works.
+        """
+        user = await UserFactory.create(
+            session=real_commit_session,
+            subscription_tier=SubscriptionTier.PREMIUM,
+            subscription_status=SubscriptionStatus.ACTIVE,
+            stripe_customer_id=f"cus_ops0403_ok_{uuid4().hex[:12]}",
+            stripe_subscription_id=f"sub_ops0403_old_{uuid4().hex[:12]}",
+        )
+        await real_commit_session.commit()
+        customer_id = user.stripe_customer_id
+        user_id = user.id
+
+        event_id = f"evt_ops0403_ok_{uuid4().hex[:12]}"
+        new_subscription_id = f"sub_ops0403_new_{uuid4().hex[:12]}"
+        payload = {
+            "id": event_id,
+            "object": "event",
+            "type": "customer.subscription.updated",
+            "data": {
+                "object": {
+                    "id": new_subscription_id,
+                    "customer": customer_id,
+                    "status": "active",
+                    "items": {"data": [{"price": {"id": "price_test"}}]},
+                    "current_period_end": int(time.time()),
+                    "cancel_at_period_end": False,
+                }
+            },
+        }
+        raw_body = json.dumps(payload).encode()
+
+        with (
+            patch("stripe.Webhook.construct_event") as mock_construct,
+            patch("src.api.v1.webhooks.settings") as mock_settings,
+        ):
+            mock_construct.return_value = MagicMock()
+            mock_settings.stripe_webhook_secret = "whsec_test"
+
+            response = await real_commit_client.post(
+                WEBHOOK_URL,
+                content=raw_body,
+                headers={
+                    "stripe-signature": "t=123,v1=fakesig",
+                    "content-type": "application/json",
+                },
+            )
+
+        assert response.status_code == 200
+        assert response.json() == {"received": True}
+
+        fresh_user = await real_commit_session.scalar(select(User).where(User.id == user_id))
+        assert fresh_user is not None
+        assert fresh_user.stripe_subscription_id == new_subscription_id
+
+        webhook_event = await real_commit_session.scalar(
+            select(WebhookEvent).where(WebhookEvent.event_id == event_id)
+        )
+        assert webhook_event is not None
+        assert webhook_event.processing_status == WebhookProcessingStatus.COMPLETED

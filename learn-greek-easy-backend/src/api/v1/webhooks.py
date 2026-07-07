@@ -28,7 +28,9 @@ async def stripe_webhook(
     """Handle incoming Stripe webhook events.
 
     Reads raw body, verifies Stripe signature, delegates to WebhookService.
-    Returns 200 for all successfully verified events.
+    Returns 200 for successfully processed events (including duplicates and
+    unhandled event types); returns 500 when a matched handler fails, so
+    Stripe retries the event.
     """
     # Read raw body - MUST happen before any JSON parsing
     payload = await request.body()
@@ -70,6 +72,11 @@ async def stripe_webhook(
     )
 
     webhook_service = WebhookService(db)
-    await webhook_service.process_event(event_dict)
+    success = await webhook_service.process_event(event_dict)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Webhook processing failed",
+        )
 
     return {"received": True}

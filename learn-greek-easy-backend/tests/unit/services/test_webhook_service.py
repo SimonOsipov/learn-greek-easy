@@ -86,6 +86,9 @@ def _make_webhook_event(
 def _make_service() -> WebhookService:
     """Create a WebhookService with a mocked DB session (repos overridden per test)."""
     db = MagicMock()
+    # OPS-04-01: rollback() is awaited on the handler-raised path (Design B),
+    # so it must be an AsyncMock, not the default MagicMock (unawaitable).
+    db.rollback = AsyncMock()
     return WebhookService(db)
 
 
@@ -105,7 +108,6 @@ def _make_mock_webhook_repo(existing: MagicMock | None = None) -> MagicMock:
     repo.mark_completed = AsyncMock(
         return_value=_make_webhook_event(WebhookProcessingStatus.COMPLETED)
     )
-    repo.mark_failed = AsyncMock(return_value=_make_webhook_event(WebhookProcessingStatus.FAILED))
     return repo
 
 
@@ -1339,14 +1341,14 @@ class TestSubscriptionDeleted:
 @pytest.mark.stripe
 class TestWebhookIdentityCacheInvalidation:
     """process_event() must bust the identity cache for any user a handler
-    touched -- on BOTH the success path and the handler-raised path (a
-    try/except in process_event catches handler exceptions, calls
-    mark_failed(), and still returns True/commits, so a stale identity
-    projection would otherwise survive a failed handler run too).
+    touched -- but only on the success path. Design B (OPS-04-01) rolls back
+    the mutation and returns False when a handler raises, so there is no
+    committed change to invalidate on that path; the failure test below
+    asserts invalidate_user_identity is NOT awaited.
 
     This matters more now that PERF-16-02 raises the identity TTL from 20s to
     900s: a stale is_active/is_superuser projection can live for up to 15
-    minutes unless every mutation path busts it.
+    minutes unless every successful mutation path busts it.
 
     Uses customer.subscription.updated as the vehicle event (any user-mutating
     handler works) and get_cache() as the seam webhook_service.py will add --
@@ -1407,20 +1409,25 @@ class TestWebhookIdentityCacheInvalidation:
         mock_cache.invalidate_user_identity.assert_awaited_once_with(user.supabase_id, user.id)
 
     @pytest.mark.asyncio
-    async def test_webhook_handler_failure_still_invalidates(self):
-        """Handler-raised path: process_event still returns True, marks the
-        event failed, AND still busts the identity cache for the user the
-        handler touched before raising (the F7 fix -- get_db() commits a
-        partial mutation on this path today, so a stale cache entry would
-        otherwise linger for the full TTL).
+    async def test_webhook_handler_failure_returns_false_and_rolls_back(self):
+        """OPS-04-01 Design B: handler-raised path must roll back the partial
+        mutation and signal failure to the route so Stripe retries, instead
+        of the old "swallow, record a failed row, still commit+return True"
+        contract.
 
         stripe_status_to_subscription_status is patched to raise so the
         handler fails AFTER _find_user_by_stripe_customer_id has already
-        loaded (and, per the fix, "touched") the user.
+        loaded (and set self._touched_user to) the user -- same failure
+        injection as the invalidation test above, reused here because it's
+        the file's established way of forcing a mid-handler raise on
+        customer.subscription.updated.
 
-        RED reason: webhook_service.py has no invalidation call at all today,
-        so invalidate_user_identity is never awaited even though the handler
-        does fail and mark_failed does run.
+        RED reason: process_event() (src/services/webhook_service.py:100-124)
+        used to catch the handler's exception, record a failed row, bust the
+        identity cache for self._touched_user, and return True -- it never
+        called db.rollback() and never returned False. Once the executor
+        restructured this to roll back + return False (Design B), these
+        assertions flipped to green.
         """
         user = _make_user(supabase_id="sb_failure_user")
         svc = _make_service()
@@ -1446,12 +1453,9 @@ class TestWebhookIdentityCacheInvalidation:
         ):
             result = await svc.process_event(self._make_event())
 
-        # Pre-existing behavior (already green): always returns True, marks failed.
-        assert result is True
-        webhook_repo.mark_failed.assert_awaited_once()
-
-        # The new behavior under test.
-        mock_cache.invalidate_user_identity.assert_awaited_once_with(user.supabase_id, user.id)
+        assert result is False
+        svc.db.rollback.assert_awaited_once()
+        mock_cache.invalidate_user_identity.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_webhook_no_user_touched_no_invalidation(self):
@@ -1538,3 +1542,98 @@ class TestWebhookIdentityCacheInvalidation:
         # Exactly one invalidation total (from event 1) -- event 2 must NOT
         # re-fire for the stale _touched_user left over from event 1.
         mock_cache.invalidate_user_identity.assert_awaited_once_with(user.supabase_id, user.id)
+
+
+# ---------------------------------------------------------------------------
+# QA (OPS-04-01): adversarial coverage the pre-authored AC tests didn't
+# include -- mirror-of-failure success path, no-handler non-rollback, and
+# the "PostHog hiccup must not become a Stripe retry" boundary.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.stripe
+class TestWebhookServiceOps0401Adversarial:
+    """QA-added coverage for OPS-04-01 Design B, distinct from the two
+    pre-authored (RED-then-GREEN) AC tests in
+    TestWebhookIdentityCacheInvalidation:
+    - test_subscription_updated_triggers_invalidation (success path, but
+      does not assert db.rollback is untouched or mark_completed fires)
+    - test_webhook_handler_failure_returns_false_and_rolls_back (failure
+      path: already asserts rollback awaited + return False + no bust)
+
+    These tests close the gaps: an explicit mirror-of-failure success
+    assertion (rollback NOT awaited, mark_completed awaited), and the
+    PostHog-swallow boundary that AC-B's wording ("must not become a
+    Stripe retry") implies but neither AC test exercises.
+    """
+
+    def _make_event(self, customer: str = "cus_123") -> dict:
+        return {
+            "id": "evt_adversarial",
+            "type": "customer.subscription.deleted",
+            "data": {"object": {"customer": customer}},
+        }
+
+    @pytest.mark.asyncio
+    async def test_handler_success_does_not_rollback_and_marks_completed(self):
+        """Mirror of test_webhook_handler_failure_returns_false_and_rolls_back:
+        on the success path, db.rollback must NOT be awaited and
+        mark_completed MUST be awaited -- proving the rollback added in
+        Design B is failure-only, not a blanket rollback-then-maybe-commit.
+        """
+        user = _make_user(stripe_customer_id="cus_123")
+        svc = _make_service()
+        svc.user_repo = _make_mock_user_repo(user=user)
+        webhook_repo = _make_mock_webhook_repo()
+        svc.webhook_repo = webhook_repo
+
+        with patch("src.services.webhook_service.capture_event"):
+            result = await svc.process_event(self._make_event())
+
+        assert result is True
+        svc.db.rollback.assert_not_awaited()
+        webhook_repo.mark_completed.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_posthog_capture_failure_does_not_cause_5xx_or_rollback(self):
+        """A PostHog capture_event() exception must stay swallowed inside
+        _track_event's own try/except and never escape into process_event's
+        handler try/except -- otherwise a third-party analytics hiccup would
+        falsely trip Design B's failure path and cause Stripe to retry an
+        event that was actually processed correctly.
+        """
+        user = _make_user(stripe_customer_id="cus_123")
+        svc = _make_service()
+        svc.user_repo = _make_mock_user_repo(user=user)
+        webhook_repo = _make_mock_webhook_repo()
+        svc.webhook_repo = webhook_repo
+
+        with patch(
+            "src.services.webhook_service.capture_event",
+            side_effect=RuntimeError("posthog is down"),
+        ):
+            result = await svc.process_event(self._make_event())
+
+        assert result is True
+        svc.db.rollback.assert_not_awaited()
+        webhook_repo.mark_completed.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_no_handler_path_does_not_rollback(self):
+        """An event with no matched handler must never reach the except
+        block at all, so db.rollback must NOT be awaited (complements the
+        existing test_unknown_type_does_not_mutate_user, which only checks
+        user_repo is untouched)."""
+        svc = _make_service()
+        webhook_event = _make_webhook_event(WebhookProcessingStatus.PROCESSING)
+        webhook_repo = _make_mock_webhook_repo(existing=None)
+        webhook_repo.create_processing = AsyncMock(return_value=webhook_event)
+        svc.webhook_repo = webhook_repo
+        svc.user_repo = _make_mock_user_repo()
+
+        event = {"id": "evt_no_handler", "type": "unknown.event.type", "data": {"object": {}}}
+        result = await svc.process_event(event)
+
+        assert result is True
+        svc.db.rollback.assert_not_awaited()

@@ -26,7 +26,9 @@ class WebhookService:
 
     Handles idempotency via WebhookEventRepository, dispatches events
     to handlers, updates User subscription fields, and fires PostHog events.
-    Always returns True from process_event to prevent Stripe retries.
+    process_event returns True on success/duplicate/no-handler/malformed
+    events (200, no retry) and False when a matched handler raises (route
+    surfaces a 500 so Stripe retries the event).
     """
 
     _EVENT_HANDLERS: dict[str, str] = {
@@ -44,25 +46,28 @@ class WebhookService:
         self.webhook_repo = WebhookEventRepository(db)
         # PERF-16-02: set by a handler as soon as it loads the user it will
         # mutate, so process_event can bust that user's identity cache on
-        # BOTH the success path and the handler-raised (but still committed)
-        # path. Reset at the top of every process_event call.
+        # the success path. Reset at the top of every process_event call.
         self._touched_user: User | None = None
 
     async def process_event(self, event: dict) -> bool:
         """Process a Stripe webhook event.
 
-        Performs idempotency check, records event, dispatches to handler,
-        and always returns True to prevent Stripe retries.
+        Performs idempotency check, records event, dispatches to handler.
+        Returns True for success/duplicate/no-handler/malformed events.
+        Returns False when a matched handler raises, after rolling back
+        the partial mutation -- the route then surfaces a 500 so Stripe
+        retries the event.
 
         Args:
             event: Verified Stripe event dict.
 
         Returns:
-            Always True.
+            True on success/duplicate/no-handler/malformed. False when a
+            matched handler failed (mutation rolled back).
         """
         # PERF-16-02: reset per-call; a handler sets this to the user it
-        # mutates so the identity cache can be busted below regardless of
-        # whether the handler succeeds or raises.
+        # mutates so the identity cache can be busted on the success path
+        # below.
         self._touched_user = None
 
         event_id = event.get("id")
@@ -108,14 +113,13 @@ class WebhookService:
                 event_type=event_type,
                 error=str(e),
             )
-            await self.webhook_repo.mark_failed(webhook_event, str(e))
+            await self.db.rollback()
+            return False
 
-        # PERF-16-02: bust the identity cache for any user a handler touched,
-        # on BOTH the success path above and the handler-raised path (the
-        # except block never re-raises -- it marks the event failed and
-        # falls through here). A partially-committed mutation on the raised
-        # path would otherwise leave a stale identity/is_active projection
-        # cached for up to cache_user_identity_ttl (now 900s).
+        # PERF-16-02: bust the identity cache for any user the handler
+        # touched. Only reached on the success path above -- a handler
+        # failure rolls back the mutation (see except block), so there is
+        # nothing to invalidate.
         if self._touched_user is not None:
             await get_cache().invalidate_user_identity(
                 self._touched_user.supabase_id, self._touched_user.id
