@@ -5,7 +5,6 @@ This module is the sole idempotency gate for Stripe webhooks. It tests:
 - create_processing: creates a row with PROCESSING status
 - mark_completed: PROCESSING -> COMPLETED, stamps processed_at
 - Duplicate event_id raises IntegrityError (unique constraint)
-- Long error_message is stored verbatim (Text column, no truncation)
 
 Tests use real database fixtures to verify SQL queries / constraints work.
 """
