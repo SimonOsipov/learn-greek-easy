@@ -114,4 +114,4 @@ ENTRYPOINT ["docker-entrypoint.sh"]
 
 # Default command: run uvicorn
 # Use shell form to expand PORT variable (Railway sets this dynamically)
-CMD uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1
+CMD uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-graceful-shutdown 25
