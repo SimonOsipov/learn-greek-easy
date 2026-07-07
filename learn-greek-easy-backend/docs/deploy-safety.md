@@ -306,7 +306,7 @@ default kill-grace is `0`s.
      `EventSource`) drops and re-establishes the connection within a few
      seconds of the `retry: 3000` hint (`src/utils/sse.py:148`).
    - **(b) The old container's logs show the lifespan shutdown ran.** Via
-     Railway logs or Sentry `search_events` on the **old** deployment,
+     Sentry `search_events` on the **old** deployment,
      confirm the sequence from
      [Graceful drain on SIGTERM](#graceful-drain-on-sigterm) step 4 appears:
      `"Shutting down Greeklish API"` → Sentry/PostHog flush → `close_redis`
