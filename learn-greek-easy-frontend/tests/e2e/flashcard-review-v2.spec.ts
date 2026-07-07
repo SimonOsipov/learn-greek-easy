@@ -90,6 +90,32 @@ async function navigateToV2Practice(
   await expect(practiceCard.or(emptyState)).toBeVisible({ timeout: 15000 });
 }
 
+/**
+ * Reveal (flip) the current pf-card by dispatching a key ON the card element.
+ *
+ * Uses locator.press (NOT page.keyboard.press): Playwright focuses the
+ * tabIndex=0 pf-card first, then dispatches the key, so the flip is driven by
+ * the card's own onKeyDown (Card.tsx) via React root event-delegation — which
+ * is attached from app boot. page.keyboard.press instead relies on ambient
+ * focus (usually <body>) and the usePracticeKeyboard *window* listener, which
+ * is registered in a useEffect that only commits after the card first paints.
+ * navigateToV2Practice waits for card visibility, not effect commit, so that
+ * ambient first flip keypress could be dropped (firefox-prone): the rating row
+ * never appeared, the test timed out, and because this describe runs in serial
+ * mode the whole suite aborted and retried from the top — re-consuming seed
+ * cards and surfacing as a "rotating card-exhaustion" flake. Pressing on the
+ * card element removes that race. flipCard is an idempotent set(isFlipped:true),
+ * so the window listener also firing for the same event is harmless.
+ *
+ * @param key 'Space' (default) or 'Enter' — both map to the card's reveal handler.
+ */
+async function revealCard(
+  page: import('@playwright/test').Page,
+  key: 'Space' | 'Enter' = 'Space'
+): Promise<void> {
+  await page.locator('[data-testid="pf-card"]').press(key);
+}
+
 let v2NounsDeckId: string;
 
 test.describe.configure({ mode: 'serial' });
@@ -242,7 +268,7 @@ test.describe('V2 Flashcard Review', () => {
       if (foundSentence && foundTranslationDot) break;
 
       // Peek at next card: flip + rate OK (consume card)
-      await page.keyboard.press('Space');
+      await revealCard(page);
       await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
       await page.keyboard.press('3');
       await page.waitForTimeout(300);
@@ -288,7 +314,7 @@ test.describe('V2 Flashcard Review', () => {
     }
 
     // Flip the card
-    await page.keyboard.press('Space');
+    await revealCard(page);
     await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
 
     // Rate OK — toast should appear shortly after (populated from the review API response)
@@ -316,7 +342,7 @@ test.describe('V2 Flashcard Review', () => {
       return;
     }
 
-    await page.keyboard.press('Space');
+    await revealCard(page);
     // After flip, rating row appears; use pf-rating-btn-ok (replaces srs-button-good)
     await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
     await page.locator('[data-testid="pf-rating-btn-ok"]').click();
@@ -343,7 +369,7 @@ test.describe('V2 Flashcard Review', () => {
     }
 
     // Card 1: flip then rate Good (key 3)
-    await page.keyboard.press('Space');
+    await revealCard(page);
     await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
     await page.keyboard.press('3');
     const frontOrSummary1 = page
@@ -358,7 +384,7 @@ test.describe('V2 Flashcard Review', () => {
       .catch(() => false);
     if (isCardVisible) {
       // Card 2: flip via Enter then rate Easy (key 4)
-      await page.keyboard.press('Enter');
+      await revealCard(page, 'Enter');
       await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
       await page.keyboard.press('4');
       const frontOrSummary2 = page
@@ -394,7 +420,7 @@ test.describe('V2 Flashcard Review', () => {
         .catch(() => false);
       if (!isCardVisible) break;
 
-      await page.keyboard.press('Space');
+      await revealCard(page);
       await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
       await page.keyboard.press('3');
       const front = page.locator('[data-testid="pf-card"]');
@@ -440,7 +466,7 @@ test.describe('V2 Flashcard Review', () => {
         .catch(() => false);
       if (!cardFrontVisible) break;
 
-      await page.keyboard.press('Space');
+      await revealCard(page);
       await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
       await page.keyboard.press('3');
       // Small pause to let the card transition or summary begin rendering
@@ -525,7 +551,7 @@ test.describe('V2 Flashcard Review', () => {
         .catch(() => false);
       if (!cardVisible) break;
 
-      await page.keyboard.press('Space');
+      await revealCard(page);
       await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
       await page.keyboard.press('3');
       await page.waitForTimeout(300);
@@ -677,7 +703,7 @@ test.describe('PRACT2-2 Practice Card Sizing & Stability', () => {
       // Advance past this card
       const cv = await page.locator('[data-testid="pf-card"]').isVisible().catch(() => false);
       if (!cv) break;
-      await page.keyboard.press('Space');
+      await revealCard(page);
       await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
       await page.keyboard.press('3');
       await page.waitForTimeout(300);
@@ -696,7 +722,7 @@ test.describe('PRACT2-2 Practice Card Sizing & Stability', () => {
     expect(boxBefore).not.toBeNull();
 
     // Flip the card (reveal answer)
-    await page.keyboard.press('Space');
+    await revealCard(page);
     await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
     // Let layout settle
     await page.waitForTimeout(100);
@@ -756,7 +782,7 @@ test.describe('PRACT2-2 Practice Card Sizing & Stability', () => {
 
       const cv = await page.locator('[data-testid="pf-card"]').isVisible().catch(() => false);
       if (!cv) break;
-      await page.keyboard.press('Space');
+      await revealCard(page);
       await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
       await page.keyboard.press('3');
       await page.waitForTimeout(300);
@@ -872,7 +898,7 @@ test.describe('PRACT2-3 Practice Fidelity Additions', () => {
 
       const cv = await page.locator('[data-testid="pf-card"]').isVisible().catch(() => false);
       if (!cv) break;
-      await page.keyboard.press('Space');
+      await revealCard(page);
       await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
       await page.keyboard.press('3');
       await page.waitForTimeout(300);
@@ -897,7 +923,7 @@ test.describe('PRACT2-3 Practice Fidelity Additions', () => {
     expect(boxBefore).not.toBeNull();
 
     // Flip the card
-    await page.keyboard.press('Space');
+    await revealCard(page);
     await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
     await page.waitForTimeout(100);
 
@@ -941,7 +967,7 @@ test.describe('PRACT2-3 Practice Fidelity Additions', () => {
     }
 
     // Flip the card to reveal the rating row
-    await page.keyboard.press('Space');
+    await revealCard(page);
     await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
 
     // Check for .pf-rating-btn__hint elements — these are populated from rating_previews.
@@ -1007,7 +1033,7 @@ test.describe('PRACT2-3 Practice Fidelity Additions', () => {
 
       const cv = await page.locator('[data-testid="pf-card"]').isVisible().catch(() => false);
       if (!cv) break;
-      await page.keyboard.press('Space');
+      await revealCard(page);
       await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
       await page.keyboard.press('3');
       await page.waitForTimeout(300);
@@ -1029,7 +1055,7 @@ test.describe('PRACT2-3 Practice Fidelity Additions', () => {
     expect(boxBefore).not.toBeNull();
 
     // Flip
-    await page.keyboard.press('Space');
+    await revealCard(page);
     await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
     await page.waitForTimeout(100);
 
@@ -1145,7 +1171,7 @@ test.describe('PRACT2-5 Practice Cleanup Pass', () => {
 
     // Assert (c): best-effort — after reveal, check for RU gloss if the card has sentence_ru
     // Guard: reveal the card and check for pf-answer-example-ru element
-    await page.keyboard.press('Space');
+    await revealCard(page);
     const ratingRowVisible = await page
       .locator('[data-testid="pf-rating-row"]')
       .isVisible({ timeout: 10000 })
@@ -1267,7 +1293,7 @@ test.describe('PRACT2-5 Practice Cleanup Pass', () => {
       if (isSentence) {
         foundSentence = true;
         // Reveal the card
-        await page.keyboard.press('Space');
+        await revealCard(page);
         await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({
           timeout: 10000,
         });
@@ -1300,7 +1326,7 @@ test.describe('PRACT2-5 Practice Cleanup Pass', () => {
       }
 
       // Advance past this non-sentence card
-      await page.keyboard.press('Space');
+      await revealCard(page);
       await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
       await page.keyboard.press('3');
       await page.waitForTimeout(300);
@@ -1342,7 +1368,7 @@ test.describe('PRACT2-5 Practice Cleanup Pass', () => {
       if (!cv) break;
 
       // Flip the card to check for the example block
-      await page.keyboard.press('Space');
+      await revealCard(page);
       const ratingVisible = await page
         .locator('[data-testid="pf-rating-row"]')
         .isVisible({ timeout: 10000 })
@@ -1479,7 +1505,7 @@ test.describe('PRACT2-6 RU Plural-Form Answer', () => {
     console.log('[P26-01] HTML lang switched to RU');
 
     // Reveal the card with Space (mirrors the reveal pattern used by all V2 tests)
-    await page.keyboard.press('Space');
+    await revealCard(page);
     await expect(page.locator('[data-testid="pf-rating-row"]')).toBeVisible({ timeout: 10000 });
 
     // Assert (a): answer text has lang="el" and contains Greek-script characters.
