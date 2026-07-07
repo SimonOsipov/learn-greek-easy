@@ -41,6 +41,17 @@ cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && /User
    poetry run alembic revision --autogenerate -m "description"
    poetry run alembic upgrade head
    ```
+   **Expand/contract for destructive changes.** *Additive* changes (nullable
+   column, new table, new index) may ship in one deploy. *Destructive/narrowing*
+   changes (drop/rename column, add `NOT NULL`, type change) MUST split across
+   two deploys — **expand** (add + backfill + dual-write) now, **contract**
+   (drop the old shape) only once the new code is fully live and won't be
+   rolled back. Why: at 1 replica, the old and new deploy briefly run against
+   the same (already-migrated) DB, and `RUN_MIGRATIONS=true` means every
+   migration auto-applies on deploy — a non-additive migration breaks the
+   still-running old code during that overlap **and** breaks rollback (which
+   never runs `alembic downgrade`). Full reasoning + examples:
+   [deploy-safety.md](learn-greek-easy-backend/docs/deploy-safety.md#expandcontract-migrations).
 
 2. **Test alignment**: When modifying code, verify tests match current interfaces
 

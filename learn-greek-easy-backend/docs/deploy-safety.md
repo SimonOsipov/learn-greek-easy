@@ -159,6 +159,60 @@ The owner re-confirms it is still `true` via a single-key dashboard glance —
 see [Drain drill & owner residuals](#drain-drill--owner-residuals) — never
 via a full `list_variables` dump, which returns every secret on the service.
 
+## Expand/contract migrations
+
+See also: `CLAUDE.md` (root) Critical Rules #1, which states the short
+version of this rule. This section is the full reasoning.
+
+**Why this rule exists**, reasoned back to the two mechanisms above:
+
+- **The overlap window.** During every deploy, the pre-migration ("old")
+  code and the post-migration schema coexist for the duration of the
+  health-check gate. If a migration *removes or narrows* something the old
+  code still reads or writes (a dropped column, a newly-`NOT NULL` column
+  with no default, a changed column type), the old container starts failing
+  requests the moment the migration commits — seconds *before* Railway ever
+  cuts over to the new container.
+- **Rollback.** The [rollback runbook](#rollback-runbook) below re-deploys
+  the last-good *code* SHA but never runs `alembic downgrade` — the schema
+  stays at `head`. If a migration wasn't additive, the rolled-back old code
+  is now permanently incompatible with the (never-downgraded) schema, and
+  the "rollback" doesn't actually restore service.
+
+**The rule:**
+
+| Change type | Examples | Deploys required |
+|---|---|---|
+| **Additive** (safe in one deploy) | New nullable column, new table, new index, new enum value appended | 1 |
+| **Destructive/narrowing** (must split) | Drop column, rename column, add `NOT NULL` without a backfilled default, change a column's type, drop a table | 2 (expand, then contract) |
+
+**The two-deploy sequence for a destructive change:**
+
+1. **Expand** (deploy N): add the new shape alongside the old — add the new
+   nullable column, backfill it, and have the application **dual-write**
+   both old and new columns. The old code (mid-overlap, or a future
+   rollback target) still works unchanged; the new code starts populating
+   the new shape.
+2. **Contract** (deploy N+1, only after deploy N has been live long enough
+   that rolling back to *before* it is no longer a live option): drop the
+   old column/table now that nothing reads it.
+
+**Example** — renaming a column: add the new column as nullable → backfill
+existing rows → deploy application code that dual-writes both columns and
+reads from the new one → once that deploy is confirmed stable (and won't be
+rolled back), ship a follow-up migration that drops the old column.
+
+`RUN_MIGRATIONS=true` means this isn't optional risk-tolerance — every
+migration merged to `main` **will** auto-apply in production on the very
+next deploy, against a database the previous deploy's code is still briefly
+serving. A non-expand/contract destructive migration breaks the still-running
+old code during the overlap **and** breaks the rollback runbook's
+never-downgrade guarantee.
+
+> **Note:** this rule is process, not code — the project-memory capture
+> (topic file + `MEMORY.md` index line) happens at the standard post-merge
+> step for this story, not mid-story.
+
 ## Rollback runbook
 
 **Never run `alembic downgrade`.** Per [expand/contract](#expandcontract-migrations)
