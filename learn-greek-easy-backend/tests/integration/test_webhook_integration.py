@@ -346,16 +346,17 @@ class TestWebhookIntegration:
         `yield db_session` override cannot observe (D7).
 
         Expected RED on pre-OPS-04-01 code (git a0594416^, i.e.
-        5603f383 and earlier): the except-block inside process_event called
-        `await self.webhook_repo.mark_failed(webhook_event, str(e))` and
-        ALWAYS returned True; the route had no HTTPException-on-failure path
-        and always returned 200. Because the route's real get_db then
-        commits on that always-non-raising path, ALL THREE assertions below
-        would fail on that code: (a) response.status_code would be 200, not
-        500; (b) fresh_user.stripe_subscription_id would be the NEW
-        subscription id (the pre-exception mutation was committed), not
-        None; (c) webhook_event would exist with
-        processing_status=FAILED (via mark_failed), not None.
+        5603f383 and earlier): the except-block inside process_event
+        persisted a FAILED webhook_events row via the now-deleted
+        failure-marking repo method and ALWAYS returned True; the route had
+        no HTTPException-on-failure path and always returned 200. Because the
+        route's real get_db then commits on that always-non-raising path,
+        ALL THREE assertions below would fail on that code:
+        (a) response.status_code would be 200, not 500;
+        (b) fresh_user.stripe_subscription_id would be the NEW subscription
+        id (the pre-exception mutation was committed), not None;
+        (c) webhook_event would exist with processing_status=FAILED (via that
+        now-deleted method), not None.
         """
         user = await UserFactory.create(
             session=real_commit_session,
