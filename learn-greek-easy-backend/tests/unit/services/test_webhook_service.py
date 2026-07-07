@@ -1543,3 +1543,100 @@ class TestWebhookIdentityCacheInvalidation:
         # Exactly one invalidation total (from event 1) -- event 2 must NOT
         # re-fire for the stale _touched_user left over from event 1.
         mock_cache.invalidate_user_identity.assert_awaited_once_with(user.supabase_id, user.id)
+
+
+# ---------------------------------------------------------------------------
+# QA (OPS-04-01): adversarial coverage the pre-authored AC tests didn't
+# include -- mirror-of-failure success path, no-handler non-rollback, and
+# the "PostHog hiccup must not become a Stripe retry" boundary.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.stripe
+class TestWebhookServiceOps0401Adversarial:
+    """QA-added coverage for OPS-04-01 Design B, distinct from the two
+    pre-authored (RED-then-GREEN) AC tests in
+    TestWebhookIdentityCacheInvalidation:
+    - test_subscription_updated_triggers_invalidation (success path, but
+      does not assert db.rollback is untouched or mark_completed fires)
+    - test_webhook_handler_failure_returns_false_and_rolls_back (failure
+      path: already asserts rollback awaited + return False + no bust)
+
+    These tests close the gaps: an explicit mirror-of-failure success
+    assertion (rollback NOT awaited, mark_completed awaited), and the
+    PostHog-swallow boundary that AC-B's wording ("must not become a
+    Stripe retry") implies but neither AC test exercises.
+    """
+
+    def _make_event(self, customer: str = "cus_123") -> dict:
+        return {
+            "id": "evt_adversarial",
+            "type": "customer.subscription.deleted",
+            "data": {"object": {"customer": customer}},
+        }
+
+    @pytest.mark.asyncio
+    async def test_handler_success_does_not_rollback_and_marks_completed(self):
+        """Mirror of test_webhook_handler_failure_returns_false_and_rolls_back:
+        on the success path, db.rollback must NOT be awaited and
+        mark_completed MUST be awaited -- proving the rollback added in
+        Design B is failure-only, not a blanket rollback-then-maybe-commit.
+        """
+        user = _make_user(stripe_customer_id="cus_123")
+        svc = _make_service()
+        svc.user_repo = _make_mock_user_repo(user=user)
+        webhook_repo = _make_mock_webhook_repo()
+        svc.webhook_repo = webhook_repo
+
+        with patch("src.services.webhook_service.capture_event"):
+            result = await svc.process_event(self._make_event())
+
+        assert result is True
+        svc.db.rollback.assert_not_awaited()
+        webhook_repo.mark_completed.assert_awaited_once()
+        webhook_repo.mark_failed.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_posthog_capture_failure_does_not_cause_5xx_or_rollback(self):
+        """A PostHog capture_event() exception must stay swallowed inside
+        _track_event's own try/except and never escape into process_event's
+        handler try/except -- otherwise a third-party analytics hiccup would
+        falsely trip Design B's failure path and cause Stripe to retry an
+        event that was actually processed correctly.
+        """
+        user = _make_user(stripe_customer_id="cus_123")
+        svc = _make_service()
+        svc.user_repo = _make_mock_user_repo(user=user)
+        webhook_repo = _make_mock_webhook_repo()
+        svc.webhook_repo = webhook_repo
+
+        with patch(
+            "src.services.webhook_service.capture_event",
+            side_effect=RuntimeError("posthog is down"),
+        ):
+            result = await svc.process_event(self._make_event())
+
+        assert result is True
+        svc.db.rollback.assert_not_awaited()
+        webhook_repo.mark_completed.assert_awaited_once()
+        webhook_repo.mark_failed.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_no_handler_path_does_not_rollback(self):
+        """An event with no matched handler must never reach the except
+        block at all, so db.rollback must NOT be awaited (complements the
+        existing test_unknown_type_does_not_mutate_user, which only checks
+        user_repo is untouched)."""
+        svc = _make_service()
+        webhook_event = _make_webhook_event(WebhookProcessingStatus.PROCESSING)
+        webhook_repo = _make_mock_webhook_repo(existing=None)
+        webhook_repo.create_processing = AsyncMock(return_value=webhook_event)
+        svc.webhook_repo = webhook_repo
+        svc.user_repo = _make_mock_user_repo()
+
+        event = {"id": "evt_no_handler", "type": "unknown.event.type", "data": {"object": {}}}
+        result = await svc.process_event(event)
+
+        assert result is True
+        svc.db.rollback.assert_not_awaited()
