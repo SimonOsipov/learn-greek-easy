@@ -1342,14 +1342,14 @@ class TestSubscriptionDeleted:
 @pytest.mark.stripe
 class TestWebhookIdentityCacheInvalidation:
     """process_event() must bust the identity cache for any user a handler
-    touched -- on BOTH the success path and the handler-raised path (a
-    try/except in process_event catches handler exceptions, calls
-    mark_failed(), and still returns True/commits, so a stale identity
-    projection would otherwise survive a failed handler run too).
+    touched -- but only on the success path. Design B (OPS-04-01) rolls back
+    the mutation and returns False when a handler raises, so there is no
+    committed change to invalidate on that path; the failure test below
+    asserts invalidate_user_identity is NOT awaited.
 
     This matters more now that PERF-16-02 raises the identity TTL from 20s to
     900s: a stale is_active/is_superuser projection can live for up to 15
-    minutes unless every mutation path busts it.
+    minutes unless every successful mutation path busts it.
 
     Uses customer.subscription.updated as the vehicle event (any user-mutating
     handler works) and get_cache() as the seam webhook_service.py will add --
