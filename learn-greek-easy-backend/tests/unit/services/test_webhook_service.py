@@ -108,7 +108,6 @@ def _make_mock_webhook_repo(existing: MagicMock | None = None) -> MagicMock:
     repo.mark_completed = AsyncMock(
         return_value=_make_webhook_event(WebhookProcessingStatus.COMPLETED)
     )
-    repo.mark_failed = AsyncMock(return_value=_make_webhook_event(WebhookProcessingStatus.FAILED))
     return repo
 
 
@@ -1413,7 +1412,8 @@ class TestWebhookIdentityCacheInvalidation:
     async def test_webhook_handler_failure_returns_false_and_rolls_back(self):
         """OPS-04-01 Design B: handler-raised path must roll back the partial
         mutation and signal failure to the route so Stripe retries, instead
-        of the old "swallow, mark_failed, still commit+return True" contract.
+        of the old "swallow, record a failed row, still commit+return True"
+        contract.
 
         stripe_status_to_subscription_status is patched to raise so the
         handler fails AFTER _find_user_by_stripe_customer_id has already
@@ -1423,11 +1423,11 @@ class TestWebhookIdentityCacheInvalidation:
         customer.subscription.updated.
 
         RED reason: process_event() (src/services/webhook_service.py:100-124)
-        catches the handler's exception, calls mark_failed(), busts the
-        identity cache for self._touched_user, and returns True -- it never
-        calls db.rollback() and never returns False. Once the executor
-        restructures this to roll back + return False (Design B), these
-        assertions flip to green.
+        used to catch the handler's exception, record a failed row, bust the
+        identity cache for self._touched_user, and return True -- it never
+        called db.rollback() and never returned False. Once the executor
+        restructured this to roll back + return False (Design B), these
+        assertions flipped to green.
         """
         user = _make_user(supabase_id="sb_failure_user")
         svc = _make_service()
@@ -1456,7 +1456,6 @@ class TestWebhookIdentityCacheInvalidation:
         assert result is False
         svc.db.rollback.assert_awaited_once()
         mock_cache.invalidate_user_identity.assert_not_awaited()
-        webhook_repo.mark_failed.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_webhook_no_user_touched_no_invalidation(self):
@@ -1595,7 +1594,6 @@ class TestWebhookServiceOps0401Adversarial:
         assert result is True
         svc.db.rollback.assert_not_awaited()
         webhook_repo.mark_completed.assert_awaited_once()
-        webhook_repo.mark_failed.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_posthog_capture_failure_does_not_cause_5xx_or_rollback(self):
@@ -1620,7 +1618,6 @@ class TestWebhookServiceOps0401Adversarial:
         assert result is True
         svc.db.rollback.assert_not_awaited()
         webhook_repo.mark_completed.assert_awaited_once()
-        webhook_repo.mark_failed.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_no_handler_path_does_not_rollback(self):

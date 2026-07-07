@@ -4,7 +4,6 @@ This module is the sole idempotency gate for Stripe webhooks. It tests:
 - get_by_event_id: returns None for unknown event, correct row after create
 - create_processing: creates a row with PROCESSING status
 - mark_completed: PROCESSING -> COMPLETED, stamps processed_at
-- mark_failed: PROCESSING -> FAILED, stamps processed_at + error_message
 - Duplicate event_id raises IntegrityError (unique constraint)
 - Long error_message is stored verbatim (Text column, no truncation)
 
@@ -176,47 +175,3 @@ class TestMarkCompleted:
         assert reloaded is not None
         assert reloaded.processing_status == WebhookProcessingStatus.COMPLETED
         assert reloaded.processed_at is not None
-
-
-# =============================================================================
-# Test mark_failed (state-machine transition)
-# =============================================================================
-
-
-class TestMarkFailed:
-    """Tests for mark_failed."""
-
-    @pytest.mark.asyncio
-    async def test_processing_to_failed_stamps_error_and_processed_at(
-        self,
-        db_session: AsyncSession,
-        processing_event: WebhookEvent,
-    ):
-        """PROCESSING -> FAILED sets status, error_message, and processed_at."""
-        repo = WebhookEventRepository(db_session)
-
-        result = await repo.mark_failed(processing_event, "boom: subscription not found")
-
-        assert result.processing_status == WebhookProcessingStatus.FAILED
-        assert result.error_message == "boom: subscription not found"
-        assert result.processed_at is not None
-
-    @pytest.mark.asyncio
-    async def test_long_error_message_stored_verbatim(
-        self,
-        db_session: AsyncSession,
-        processing_event: WebhookEvent,
-    ):
-        """error_message is a Text column: long messages are stored, not truncated."""
-        repo = WebhookEventRepository(db_session)
-        long_message = "x" * 10_000
-
-        await repo.mark_failed(processing_event, long_message)
-
-        reloaded = await db_session.scalar(
-            select(WebhookEvent).where(WebhookEvent.event_id == processing_event.event_id)
-        )
-        assert reloaded is not None
-        assert reloaded.error_message == long_message
-        assert len(reloaded.error_message) == 10_000
-        assert reloaded.processing_status == WebhookProcessingStatus.FAILED
