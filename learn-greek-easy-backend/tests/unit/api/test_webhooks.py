@@ -178,3 +178,42 @@ class TestStripeWebhookEndpoint:
         assert response.status_code == 500
         data = response.json()
         assert "webhook secret" in data["detail"].lower()
+
+    async def test_process_event_false_returns_500(self, client: AsyncClient):
+        """OPS-04-01: when WebhookService.process_event signals a handler
+        failure by returning False, the route must surface a 500 so Stripe
+        retries the event -- instead of always returning 200.
+
+        RED reason: the current route (src/api/v1/webhooks.py:72-73) awaits
+        process_event() and discards its return value, always returning
+        {"received": True} with a 200. This assertion on status_code == 500
+        fails as a plain assertion (actual 200) once that discard is fixed
+        by the executor to raise HTTPException(500) on a False return.
+        """
+        mock_event = MagicMock()
+        mock_event.type = "customer.subscription.updated"
+        mock_event.id = "evt_123"
+
+        with (
+            patch("src.api.v1.webhooks.settings") as mock_settings,
+            patch(
+                "src.api.v1.webhooks.stripe.Webhook.construct_event",
+                return_value=mock_event,
+            ),
+            patch("src.api.v1.webhooks.WebhookService") as mock_service_class,
+        ):
+            mock_settings.stripe_webhook_secret = "whsec_test_secret"
+            mock_service = AsyncMock()
+            mock_service.process_event = AsyncMock(return_value=False)
+            mock_service_class.return_value = mock_service
+
+            response = await client.post(
+                "/api/v1/webhooks/stripe",
+                content=VALID_PAYLOAD,
+                headers={
+                    "content-type": "application/json",
+                    "stripe-signature": "t=123,v1=valid_signature",
+                },
+            )
+
+        assert response.status_code == 500

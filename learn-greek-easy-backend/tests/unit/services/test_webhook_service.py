@@ -86,6 +86,9 @@ def _make_webhook_event(
 def _make_service() -> WebhookService:
     """Create a WebhookService with a mocked DB session (repos overridden per test)."""
     db = MagicMock()
+    # OPS-04-01: rollback() is awaited on the handler-raised path (Design B),
+    # so it must be an AsyncMock, not the default MagicMock (unawaitable).
+    db.rollback = AsyncMock()
     return WebhookService(db)
 
 
@@ -1407,20 +1410,24 @@ class TestWebhookIdentityCacheInvalidation:
         mock_cache.invalidate_user_identity.assert_awaited_once_with(user.supabase_id, user.id)
 
     @pytest.mark.asyncio
-    async def test_webhook_handler_failure_still_invalidates(self):
-        """Handler-raised path: process_event still returns True, marks the
-        event failed, AND still busts the identity cache for the user the
-        handler touched before raising (the F7 fix -- get_db() commits a
-        partial mutation on this path today, so a stale cache entry would
-        otherwise linger for the full TTL).
+    async def test_webhook_handler_failure_returns_false_and_rolls_back(self):
+        """OPS-04-01 Design B: handler-raised path must roll back the partial
+        mutation and signal failure to the route so Stripe retries, instead
+        of the old "swallow, mark_failed, still commit+return True" contract.
 
         stripe_status_to_subscription_status is patched to raise so the
         handler fails AFTER _find_user_by_stripe_customer_id has already
-        loaded (and, per the fix, "touched") the user.
+        loaded (and set self._touched_user to) the user -- same failure
+        injection as the invalidation test above, reused here because it's
+        the file's established way of forcing a mid-handler raise on
+        customer.subscription.updated.
 
-        RED reason: webhook_service.py has no invalidation call at all today,
-        so invalidate_user_identity is never awaited even though the handler
-        does fail and mark_failed does run.
+        RED reason: process_event() (src/services/webhook_service.py:100-124)
+        catches the handler's exception, calls mark_failed(), busts the
+        identity cache for self._touched_user, and returns True -- it never
+        calls db.rollback() and never returns False. Once the executor
+        restructures this to roll back + return False (Design B), these
+        assertions flip to green.
         """
         user = _make_user(supabase_id="sb_failure_user")
         svc = _make_service()
@@ -1446,12 +1453,10 @@ class TestWebhookIdentityCacheInvalidation:
         ):
             result = await svc.process_event(self._make_event())
 
-        # Pre-existing behavior (already green): always returns True, marks failed.
-        assert result is True
-        webhook_repo.mark_failed.assert_awaited_once()
-
-        # The new behavior under test.
-        mock_cache.invalidate_user_identity.assert_awaited_once_with(user.supabase_id, user.id)
+        assert result is False
+        svc.db.rollback.assert_awaited_once()
+        mock_cache.invalidate_user_identity.assert_not_awaited()
+        webhook_repo.mark_failed.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_webhook_no_user_touched_no_invalidation(self):
