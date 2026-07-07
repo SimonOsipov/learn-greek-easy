@@ -258,3 +258,83 @@ a version-skew state (backend succeeded, frontend failed) and fails loudly
 with `::error::` — that is the alarm that should send you to this runbook,
 whether the skew came from a transient failure or from a deploy you need to
 undo.
+
+## Drain drill & owner residuals
+
+> These are **owner-gated production-infra writes and a manual preview-env
+> drill** — the same guardrail as OPS-01's DSN flip and OPS-03's Railway
+> healthcheck-path steps (see
+> [health-and-uptime.md](health-and-uptime.md) "Runbook — Owner Actions").
+> CI cannot perform Railway dashboard writes, and the repo's No-Local-Server
+> rule forbids standing up a local drain test — this drill must run against
+> the Railway preview environment. Each step below is flagged **OWNER
+> ACTION**.
+
+### 1. Set `RAILWAY_DEPLOYMENT_DRAINING_SECONDS = 30` — OWNER ACTION
+
+Railway dashboard → **Backend** service → **Variables** → set
+`RAILWAY_DEPLOYMENT_DRAINING_SECONDS = 30`.
+
+Set it on **both**:
+- the **production** Backend service, and
+- the **dev/preview** Backend service (the drill in step 2 runs on preview —
+  without this, the drill will spuriously show a SIGKILL there even though
+  production is fine).
+
+Invariant: this value (`30`) must stay **greater than** the uvicorn
+`--timeout-graceful-shutdown` flag (`25`, `learn-greek-easy-backend/Dockerfile:117`).
+Without this variable set, the OPS-08-01 uvicorn flag is inert — Railway's
+default kill-grace is `0`s.
+
+### 2. Drain drill (preview env) — OWNER ACTION
+
+1. Open an authenticated SSE session against the **dev/preview** frontend:
+
+   ```bash
+   curl -N "https://<preview-frontend-host>/api/v1/notifications/stream?token=<sse-token>"
+   ```
+
+   (via the preview Caddy proxy, not the internal Railway backend URL — the
+   backend is private.)
+
+2. Trigger a redeploy of the preview **Backend** service (e.g. push a
+   trivial commit to the PR, or `railway up --ci --service Backend` against
+   the preview environment).
+
+3. Observe, during the swap:
+   - **(a) The SSE session reconnects.** The `curl` client (or a browser
+     `EventSource`) drops and re-establishes the connection within a few
+     seconds of the `retry: 3000` hint (`src/utils/sse.py:148`).
+   - **(b) The old container's logs show the lifespan shutdown ran.** Via
+     Railway logs or Sentry `search_events` on the **old** deployment,
+     confirm the sequence from
+     [Graceful drain on SIGTERM](#graceful-drain-on-sigterm) step 4 appears:
+     `"Shutting down Greeklish API"` → Sentry/PostHog flush → `close_redis`
+     → `close_db`. Its presence is the proof the container drained instead
+     of being SIGKILLed mid-shutdown.
+   - **(c) No 5xx spike.** Check Railway's request metrics (or Sentry) for
+     the swap window — in-flight requests against the old container should
+     complete, not error out.
+4. Record the observation date and a short log snippet (no secrets, no PII)
+   in this section once the drill has been run.
+
+### 3. Confirmations to record — OWNER ACTION
+
+- **Re-confirm `RUN_MIGRATIONS` is still `true`** via a **single-key
+  dashboard glance**: Railway → **Backend** service → **Variables** → find
+  the `RUN_MIGRATIONS` row. **Do NOT** re-run `list_variables` (or any
+  full-variable-dump equivalent) — that returns every secret on the service.
+  A single-key glance is sufficient and is the only sanctioned way to
+  re-verify this value.
+- **Confirm the effective `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` is live** on
+  both the production and dev/preview Backend services, post-step-1.
+
+### 4. Optional parallel hardening — not gated
+
+Consider **also** setting `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` on the
+**Frontend** service, to drain its Caddy process on the Frontend's *own*
+redeploys (hardening the proxied SSE hop from that side too — see
+[Frontend/Caddy drain](#frontendcaddy-drain-optional-parallel-hardening)
+above). This is lower-risk (Caddy is stateless — no DB transaction it could
+interrupt) and is **out of this story's backend-scoped Done gate**. Recorded
+here as a follow-up option only — do not block on it.
