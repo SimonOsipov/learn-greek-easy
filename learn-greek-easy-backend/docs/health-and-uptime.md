@@ -18,7 +18,7 @@ monitor's job, not Railway's. Each service has a named continuous-death signal:
 |---|---|---|---|
 | **Backend** | FastAPI (HTTP) | ✅ has one | Sentry uptime monitor on `/health/ready` (OPS-03); Railway deploy-gate on `/health/ready` |
 | **Frontend** | Caddy (HTTP) | ✅ `/healthz` (OPS-03) | Caddy/DNS/edge death → the `/health/ready` ping (which routes through Caddy) fails; a broken SPA build is caught by the `/healthz` deploy gate + the frontend Sentry project |
-| **Scheduler** | APScheduler worker | ❌ no HTTP server | **OPS-01** 5-min self-upserting `scheduler-heartbeat` cron → Sentry missed-check-in email |
+| **Scheduler** | APScheduler worker | ❌ no HTTP server | **OPS-01** 5-min self-upserting `scheduler-heartbeat` cron → Sentry missed-check-in email; **OPS-11** opens the issue only after **2 consecutive misses** (~12 min, still ≤15 min) so a single dropped beat on a scheduler redeploy doesn't page |
 | **Redis** | TCP service | ❌ not HTTP | `/health/ready` returns 503 if Redis is down → Sentry uptime monitor; plus **OPS-02** Redis-degraded alert |
 
 Why not "a Railway healthcheck on all four": the scheduler has no HTTP surface

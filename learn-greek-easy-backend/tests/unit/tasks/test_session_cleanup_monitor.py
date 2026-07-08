@@ -94,6 +94,10 @@ _EXPECTED_HEARTBEAT_CONFIG = {
     "checkin_margin": 2,
     "max_runtime": 1,
     "timezone": "UTC",
+    # OPS-11: 2 consecutive misses before an issue (deploy blips drop 1 beat);
+    # 1 OK beat clears it. Pinned so the dead-man's-switch sensitivity can't drift.
+    "failure_issue_threshold": 2,
+    "recovery_threshold": 1,
 }
 _DEAD_SESSION_CLEANUP_SLUG = "scheduler-session-cleanup"
 
@@ -351,6 +355,21 @@ class TestHeartbeatMonitorSlugAndConfig:
             assert config.get("timezone") == _EXPECTED_HEARTBEAT_CONFIG["timezone"], (
                 f"Expected timezone={_EXPECTED_HEARTBEAT_CONFIG['timezone']!r}, "
                 f"got {config.get('timezone')!r}"
+            )
+            # OPS-11: 2-miss threshold suppresses single-beat deploy blips; a lower
+            # value would re-introduce the redeploy paging noise this fixed.
+            assert (
+                config.get("failure_issue_threshold")
+                == _EXPECTED_HEARTBEAT_CONFIG["failure_issue_threshold"]
+            ), (
+                f"Expected failure_issue_threshold={_EXPECTED_HEARTBEAT_CONFIG['failure_issue_threshold']}, "
+                f"got {config.get('failure_issue_threshold')!r}"
+            )
+            assert (
+                config.get("recovery_threshold") == _EXPECTED_HEARTBEAT_CONFIG["recovery_threshold"]
+            ), (
+                f"Expected recovery_threshold={_EXPECTED_HEARTBEAT_CONFIG['recovery_threshold']}, "
+                f"got {config.get('recovery_threshold')!r}"
             )
         finally:
             # Restore the ORIGINAL module object so later tests are unaffected.

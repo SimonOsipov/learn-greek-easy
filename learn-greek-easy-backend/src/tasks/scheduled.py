@@ -215,6 +215,11 @@ async def _cleanup_orphaned_session_refs(redis: "Redis") -> tuple[int, int]:
         "checkin_margin": 2,
         "max_runtime": 1,
         "timezone": "UTC",
+        # OPS-11: require 2 consecutive misses (~12 min) before Sentry opens an
+        # issue, so a single dropped beat during a scheduler redeploy doesn't page.
+        # Real death (>=2 misses) still alerts well inside the <=15 min target.
+        "failure_issue_threshold": 2,
+        "recovery_threshold": 1,  # one OK beat clears it (fast recovery)
     },
 )
 async def heartbeat_task() -> None:
