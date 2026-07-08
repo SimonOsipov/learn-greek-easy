@@ -31,7 +31,7 @@ The backend service is configured as **private** on Railway, meaning it does not
 
 ### Traffic Flow
 
-1. **Frontend requests**: Users access the frontend at `https://learn-greek-frontend.up.railway.app`
+1. **Frontend requests**: Users access the frontend at `https://greeklish.eu`
 2. **API requests**: The frontend's Caddy server proxies `/api/v1/*` requests to the internal backend; everything else under `/api/*` is answered with a flat 404 at the edge (scanner probe drop-list)
 3. **Health checks**: CI/CD uses `/api/v1/health/*` endpoints through the frontend proxy
 
@@ -182,7 +182,7 @@ DNS → Cloudflare edge → Frontend Caddy → Backend (Railway internal)
 ### Example Health Check
 
 ```bash
-curl https://learn-greek-frontend.up.railway.app/api/v1/health
+curl https://greeklish.eu/api/v1/health
 
 # Expected response (200 OK)
 {
@@ -242,7 +242,7 @@ All CI/CD workflows use the frontend URL to access the backend:
 
 ```yaml
 env:
-  PROD_FRONTEND_URL: https://learn-greek-frontend.up.railway.app
+  PROD_FRONTEND_URL: https://greeklish.eu
 
 - name: Run Health Checks
   run: |
@@ -286,7 +286,7 @@ env:
 
 If `/api/v1/health` returns errors:
 
-1. **Check frontend is running**: `curl https://learn-greek-frontend.up.railway.app/health`
+1. **Check frontend is running**: `curl https://greeklish.eu/health`
 2. **Check backend logs** in Railway dashboard
 3. **Verify internal network**: Backend should be on `backend.railway.internal`
 
