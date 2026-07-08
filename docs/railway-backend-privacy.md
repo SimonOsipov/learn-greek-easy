@@ -17,13 +17,16 @@ The backend service is configured as **private** on Railway, meaning it does not
 ### Architecture
 
 ```
-                                     Railway Internal Network
-                                    +------------------------+
-                                    |                        |
-  Users ──────► Frontend (Public) ──┼──► Backend (Private)   |
-               https://frontend.up  |    backend.railway.internal
-               .railway.app         |                        |
-                                    +------------------------+
+  Users
+    │
+    ▼
+  Cloudflare edge  (proxied / orange-cloud · greeklish.eu)
+    │              static assets cached · /api/* passthrough (DYNAMIC, SSE-safe)
+    ▼
+  ┌──────────────────────── Railway internal network ────────────────────────┐
+  │  Frontend / Caddy (Public, :80) ──► Backend (Private)                     │
+  │                                     backend.railway.internal:8080         │
+  └───────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Traffic Flow
@@ -123,6 +126,39 @@ The Caddy proxy is configured for zero-downtime during backend redeployments:
 
 - **Static asset caching**: `Cache-Control: public, max-age=31536000, immutable`
 - **Security headers**: `X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection`, `Referrer-Policy`, `Document-Policy` (for Sentry profiling)
+
+### Cloudflare Edge (Public Proxy)
+
+`greeklish.eu` is served through Cloudflare's proxy (proxied / orange-cloud DNS
+record), so the full public request path is:
+
+```
+DNS → Cloudflare edge → Frontend Caddy → Backend (Railway internal)
+```
+
+- **Static assets** are cached at the Cloudflare edge (hashed `*.js`/`*.css`/fonts
+  carry `Cache-Control: public, max-age=31536000, immutable` → `cf-cache-status:
+  MISS` on first hit at an edge node, then `HIT`).
+- **API + SSE (`/api/*`)** pass straight through, uncached (`cf-cache-status:
+  DYNAMIC`). Cloudflare does **not** buffer or compress our `text/event-stream`
+  responses — `content-encoding` is absent, and the backend's `Cache-Control:
+  no-cache, no-store` + `X-Accel-Buffering: no` reach the client untouched
+  (`via: 1.1 Caddy`). **No `/api/*` proxy bypass is required.**
+- **SSE survives the edge** — verified 2026-07-08 (OPS-09): an authenticated
+  `/api/v1/notifications/stream` held open **149 s** through the proxy, with the
+  30 s heartbeat delivered in real time at t≈30.4 / 60.4 / 90.4 / 120.4 s and no
+  disconnect. Cloudflare's ~100 s idle-timeout (HTTP 524) cannot fire because the
+  30 s heartbeats keep the connection non-idle.
+- **Rollback**: flip the `greeklish.eu` DNS record back to DNS-only (grey cloud)
+  in the Cloudflare dashboard — one toggle, no code change.
+
+**Edge safety settings** (audited 2026-07-08, OPS-09):
+
+| Setting | State | Notes |
+|---------|-------|-------|
+| SSL/TLS encryption mode | **Full** | CF↔browser and CF↔origin both encrypted (not the insecure "Flexible"). Full (strict) — which also validates the origin cert — is an optional tightening. |
+| Rocket Loader | **Off** | Correct for the React SPA (Rocket Loader reorders/defers JS). |
+| Bot Fight Mode | not challenging traffic | Live authenticated `/api/*` + SSE requests all succeed through the edge, so it is not challenging app traffic (exact toggle state not re-read). |
 
 ## Health Check Endpoints
 
