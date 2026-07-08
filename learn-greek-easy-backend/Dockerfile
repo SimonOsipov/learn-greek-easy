@@ -114,4 +114,8 @@ ENTRYPOINT ["docker-entrypoint.sh"]
 
 # Default command: run uvicorn
 # Use shell form to expand PORT variable (Railway sets this dynamically)
-CMD uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1
+# --timeout-graceful-shutdown 25 bounds uvicorn's drain on SIGTERM so in-flight
+# requests finish and the FastAPI lifespan shutdown runs. INERT unless the Railway
+# Backend service sets RAILWAY_DEPLOYMENT_DRAINING_SECONDS >= 30 (default 0 =
+# immediate SIGKILL). Invariant: 25 < 30. See docs/deploy-safety.md.
+CMD uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-graceful-shutdown 25

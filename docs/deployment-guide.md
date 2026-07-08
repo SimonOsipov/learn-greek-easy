@@ -114,6 +114,11 @@ railway up --ci --service Frontend
 
 ## Rollback Procedure
 
+> For the full reasoning behind these options — why rollback never runs
+> `alembic downgrade`, why Backend must redeploy before Frontend, and how
+> this connects to the deploy overlap window — see
+> [deploy-safety.md](../learn-greek-easy-backend/docs/deploy-safety.md#rollback-runbook).
+
 ### Option 1: Redeploy Previous Commit
 
 ```bash
