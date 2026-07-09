@@ -2972,3 +2972,79 @@ class TestQueueBatchPresigningEdgeCases:
         assert result.audio_url == url_map["audShared"]
         assert result.audio_a2_url is None
         assert result.image_url != url_map["someoneElsesImage"]
+
+
+# =============================================================================
+# WEDGE-01-02: _get_new_questions must stay unaffected by the topic column
+# =============================================================================
+
+
+class TestGetNewQuestionsTopicAgnostic:
+    """AC4 (WEDGE-01-02) guard: `_get_new_questions` must stay unaffected by
+    the new `topic` column — the existing "unstudied questions" query path
+    must not start filtering, grouping, or reordering by topic.
+
+    This is a regression guard, not a topic-classification test: WEDGE-01-02
+    only adds a nullable, unbackfilled `topic` column. If a future change
+    wires `_get_new_questions` to filter/group by topic without an explicit
+    opt-in, this test fails — either fewer than N questions come back (all N
+    have topic=NULL, so any topic filter drops them all) or the order drifts
+    away from `order_index`.
+
+    RED today (Mode A): `CultureQuestion` has no `topic` attribute yet, so
+    accessing `.topic` on a returned entity raises AttributeError — the
+    correct "feature absent" RED signal.
+    GREEN after: executor adds the nullable `topic` column with no backfill
+    (the `culture_questions` fixture never sets it), and leaves
+    `_get_new_questions`'s query shape untouched.
+    """
+
+    @pytest.mark.asyncio
+    async def test_new_questions_select_unaffected_by_topic(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        culture_deck: CultureDeck,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """AC4: `_get_new_questions` returns all N unstudied questions, in
+        `order_index` order, every one with `topic is None` — proving the
+        query neither filters nor reorders on the new topic column.
+
+        GIVEN  10 unstudied culture_questions (the `culture_questions`
+               fixture), none of which have a topic set (WEDGE-01-02 adds no
+               backfill)
+        WHEN   CultureQuestionService._get_new_questions(user_id, deck_id, limit=10)
+        THEN   all 10 CultureQuestion entities are returned
+               AND they are ordered by order_index (matching fixture creation order)
+               AND every returned entity's .topic is None
+        """
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        result = await service._get_new_questions(
+            user_id=test_user.id,
+            deck_id=culture_deck.id,
+            limit=len(culture_questions),
+        )
+
+        assert len(result) == len(culture_questions), (
+            f"Expected all {len(culture_questions)} unstudied questions back, "
+            f"got {len(result)} — a topic filter/group would silently drop rows "
+            "since none have a topic set"
+        )
+
+        # Same identities, same order_index order as the fixture created them --
+        # a topic-based reorder would break this without changing the count.
+        expected_ids = [q.id for q in sorted(culture_questions, key=lambda q: q.order_index)]
+        actual_ids = [q.id for q in result]
+        assert actual_ids == expected_ids, (
+            "_get_new_questions must return questions ordered by order_index only; "
+            f"expected {expected_ids}, got {actual_ids}"
+        )
+
+        for question in result:
+            assert question.topic is None, (
+                f"Question {question.id} must have topic=None (no backfill) -- "
+                f"got {question.topic!r}"
+            )
