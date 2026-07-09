@@ -2248,6 +2248,16 @@ class CultureQuestion(Base, TimestampMixin):
         comment="S3 key for A2-level TTS-generated audio file (e.g., culture/audio/a2/{uuid}.mp3)",
     )
 
+    topic: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        index=True,
+        comment=(
+            "Thematic subject bucket (see CultureTopic): history, geography, "
+            "politics, culture, practical. NULL = untagged (WEDGE-02 tags it)."
+        ),
+    )
+
     # Relationships
     # Note: lazy="raise" prevents N+1 queries by forcing explicit loading.
     # Use selectinload() or joinedload() when you actually need these relationships.
