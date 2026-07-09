@@ -24,6 +24,8 @@ Acceptance Criteria covered (WEDGE-01-01 / Core AC1):
             lowercase value (matching how ``deck.category`` is stored).
 """
 
+import pytest
+
 try:
     from src.core.culture_topic import CultureTopic
 
@@ -116,3 +118,109 @@ class TestCultureTopicIsLowercaseStrEnum:
             assert (
                 member.value == member.value.lower()
             ), f"{member!r} has a non-lowercase value: {member.value!r}"
+
+
+# ===========================================================================
+# Adversarial / edge coverage — added QA Mode B (post-implementation)
+# ===========================================================================
+#
+# The three suites above are the AC-derived RED specs authored in Mode A.
+# They are left untouched. Everything below is additional coverage QA added
+# while verifying the (now green) implementation.
+
+
+class TestCultureTopicRoundTripFromString:
+    """CultureTopic(value) must round-trip back to the matching member.
+
+    WEDGE-02 will likely construct ``CultureTopic(deck.category)`` directly
+    from the DB string column. If value-based construction doesn't resolve
+    to the identical enum member, the taxonomy isn't usable as intended.
+    """
+
+    @pytest.mark.parametrize(
+        ("raw_value", "expected_member"),
+        [
+            ("history", "HISTORY"),
+            ("geography", "GEOGRAPHY"),
+            ("politics", "POLITICS"),
+            ("culture", "CULTURE"),
+            ("practical", "PRACTICAL"),
+        ],
+    )
+    def test_value_construction_round_trips_to_member(
+        self, raw_value: str, expected_member: str
+    ) -> None:
+        _require_culture_topic()
+        constructed = CultureTopic(raw_value)
+        assert constructed is getattr(CultureTopic, expected_member), (
+            f"CultureTopic({raw_value!r}) did not round-trip to "
+            f"CultureTopic.{expected_member}; got {constructed!r}"
+        )
+
+
+class TestCultureTopicNoDuplicateValues:
+    """No two members may share a value (would silently alias in Python enums)."""
+
+    def test_no_duplicate_or_aliased_values(self) -> None:
+        _require_culture_topic()
+        assert len(CultureTopic) == 5, (
+            f"Expected exactly 5 distinct CultureTopic members, got {len(CultureTopic)}. "
+            "A duplicate value would silently alias to an existing member and shrink "
+            "the iteration count below the number of declared members."
+        )
+        distinct_values = {member.value for member in CultureTopic}
+        assert len(distinct_values) == 5, (
+            f"Expected 5 distinct .value strings, got {len(distinct_values)}: "
+            f"{distinct_values}. A typo could create two members with the same value."
+        )
+
+
+class TestCultureTopicUnknownValueRaises:
+    """Constructing from a value outside the closed set must raise ValueError."""
+
+    def test_excluded_seed_key_raises_value_error(self) -> None:
+        """'traditions' is the deliberately-excluded seed category (Architect D3):
+        it exists in the raw culture-deck seed vocabulary but must NOT be a
+        valid CultureTopic member."""
+        _require_culture_topic()
+        with pytest.raises(ValueError):
+            CultureTopic("traditions")
+
+    def test_excluded_seed_key_news_raises_value_error(self) -> None:
+        """'news' is likewise present in the broader seed/category vocabulary
+        (src/schemas/culture.py) but excluded from the closed CultureTopic set."""
+        _require_culture_topic()
+        with pytest.raises(ValueError):
+            CultureTopic("news")
+
+    def test_wrong_case_raises_value_error(self) -> None:
+        """CultureTopic is a closed, lowercase-only set: title-casing a valid
+        value must NOT resolve — construction is case-sensitive."""
+        _require_culture_topic()
+        with pytest.raises(ValueError):
+            CultureTopic("History")
+
+    def test_empty_string_raises_value_error(self) -> None:
+        _require_culture_topic()
+        with pytest.raises(ValueError):
+            CultureTopic("")
+
+
+class TestCultureTopicStrEquality:
+    """str-enum equality must hold for f-string interpolation and direct
+    string comparison, so a future `topic == deck.category` compare works."""
+
+    def test_fstring_interpolation_is_bare_value(self) -> None:
+        _require_culture_topic()
+        assert (
+            f"{CultureTopic.CULTURE}" == "culture"
+        ), f"f-string interpolation of CultureTopic.CULTURE was {f'{CultureTopic.CULTURE}'!r}"
+
+    def test_equality_against_plain_string(self) -> None:
+        _require_culture_topic()
+        assert (
+            CultureTopic.CULTURE == "culture"
+        ), "CultureTopic.CULTURE must compare equal to the plain string 'culture' (str-enum)"
+        assert (
+            CultureTopic.CULTURE != "practical"
+        ), "CultureTopic.CULTURE must not compare equal to an unrelated value"
