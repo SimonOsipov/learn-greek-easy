@@ -1,6 +1,6 @@
 """Integration migration tests for WEDGE-01-02: culture_questions.topic column.
 
-Mode A — RED spec (Alembic round-trip).
+Regression guard for the merged migration (Alembic round-trip).
 
 BACKGROUND
 ----------
@@ -14,19 +14,17 @@ values (WEDGE-01-01), but the closed vocabulary is enforced in Python — not
 via a PostgreSQL native enum (Architect D1) — so this column is a plain
 VARCHAR(50) at the DB level.
 
-The migration MUST have:
+The migration has:
 
-    down_revision = "sit_27_02_situation_domain"  ← the verified current head
-    revision = "wedge_01_02_culture_topic"        ← the planned revision id
+    down_revision = "sit_27_02_situation_domain"  ← the head it was built on
+    revision = "wedge_01_02_culture_topic"
 
 IMPORTANT — MEMORY LESSON (LEXGEN-05 / SIT-27-02):
-    The round-trip test MUST pin `alembic upgrade` to THIS migration's own
+    The round-trip test pins `alembic upgrade` to THIS migration's own
     revision id ("wedge_01_02_culture_topic"), NOT to "head". Pinning to
     "head" would mean a future successor migration breaks this round-trip's
     downgrade -1 assertion (downgrade -1 from the NEW head would undo the
-    successor, not this migration). The executor MUST set the migration
-    file's `revision` to exactly "wedge_01_02_culture_topic" so this test
-    works.
+    successor, not this migration).
 
 WHAT THE ROUND-TRIP VERIFIES
 -----------------------------
@@ -68,21 +66,10 @@ These tests carry ``pytest.mark.integration`` and ``pytest.mark.db``. The
 only, for a genuinely unreachable DB on a dev machine (no PG on :5433). It is
 NOT a reason these tests should be excluded from CI — the `backend-tests` CI
 job provisions a real `pgvector/pgvector:pg17` on port 5433, so these tests
-MUST run (and go green) there once the executor lands the migration.
+run (and must stay green) there.
 
 ``pytest --collect-only`` must pass WITHOUT a running DB (collect-only does
 not execute test bodies).
-
-EXPECTED RED FAILURE MODE
---------------------------
-Before WEDGE-01-02 is implemented:
-    ``alembic upgrade wedge_01_02_culture_topic`` fails with:
-        "Can't locate revision identified by 'wedge_01_02_culture_topic'"
-    → alembic returncode != 0 → AssertionError in the test.
-
-After the executor creates the migration with
-revision="wedge_01_02_culture_topic" and down_revision="sit_27_02_situation_domain":
-    The test goes GREEN.
 """
 
 import os
@@ -142,11 +129,10 @@ def bind_factory_session():  # noqa: PT004 — override conftest's async autouse
 # Constants / paths
 # ---------------------------------------------------------------------------
 
-# Migration BEFORE this one — the verified current head at the time this
-# spec was authored (no successor migration references it as down_revision).
+# Migration BEFORE this one (down_revision of wedge_01_02_culture_topic).
 _PRIOR_REVISION = "sit_27_02_situation_domain"
 
-# Planned revision id — the executor MUST use this exact string.
+# This migration's revision id.
 # See MEMORY.md lesson: pin round-trip to THIS migration's own revision,
 # not head.
 _THIS_REVISION = "wedge_01_02_culture_topic"
@@ -402,15 +388,10 @@ class TestWedge0102CultureTopicMigrationRoundTrip:
     """AC-1/AC-2/AC-4: upgrade to wedge_01_02_culture_topic, then downgrade -1
     round-trips the column and index, with NO backfill of existing rows.
 
-    EXPECTED RED TODAY:
-    - The WEDGE-01-02 migration does not exist yet.
-    - ``alembic upgrade wedge_01_02_culture_topic`` fails:
-      "Can't locate revision identified by 'wedge_01_02_culture_topic'"
-    - returncode != 0 → AssertionError.
-
-    GREEN after: executor creates the migration with
-    ``revision = "wedge_01_02_culture_topic"`` and
-    ``down_revision = "sit_27_02_situation_domain"``.
+    Regression guard: the WEDGE-01-02 migration
+    (``revision = "wedge_01_02_culture_topic"``,
+    ``down_revision = "sit_27_02_situation_domain"``) must keep applying and
+    reversing cleanly.
     """
 
     def test_migration_adds_nullable_indexed_topic_no_backfill(self):

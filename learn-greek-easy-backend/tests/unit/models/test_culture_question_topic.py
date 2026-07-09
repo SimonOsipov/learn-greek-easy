@@ -1,7 +1,7 @@
 """Unit tests for the CultureQuestion.topic column (WEDGE-01-02).
 
-Mode A — RED specs.  These tests lock the schema contract that the executor
-must deliver on `culture_questions.topic`:
+Regression guard.  These tests lock the schema contract for
+`culture_questions.topic`:
 
   AC-1  `topic` is nullable (no NOT NULL constraint) — existing rows and
         future inserts are never forced to classify a topic.
@@ -18,14 +18,14 @@ must deliver on `culture_questions.topic`:
 These tests need NO database — they introspect the SQLAlchemy model
 in-process via `CultureQuestion.__table__`.
 
-RED TODAY: `CultureQuestion` has no `topic` column yet. Each test first
-asserts `"topic" in CultureQuestion.__table__.c` so the failure reads as
-"column missing" (a clear AssertionError) rather than an opaque KeyError
-from indexing `.c.topic` directly.
+Each test first asserts `"topic" in CultureQuestion.__table__.c` so a
+regression that removes the column reads as "column missing" (a clear
+AssertionError) rather than an opaque KeyError from indexing `.c.topic`
+directly.
 
-GREEN after: executor adds
+The column is declared on `CultureQuestion` in `src/db/models.py` as:
     topic: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
-to `CultureQuestion` in `src/db/models.py` (no server_default, no default).
+(no server_default, no default).
 """
 
 from sqlalchemy import Enum as SAEnum
@@ -40,8 +40,7 @@ class TestCultureQuestionTopicColumnContract:
     def test_topic_column_is_nullable(self):
         """AC-1: `topic` must be nullable — no NOT NULL constraint.
 
-        RED today: `topic` is not a column on CultureQuestion.
-        GREEN after: executor declares `nullable=True`.
+        `CultureQuestion` declares the column with `nullable=True`.
         """
         assert "topic" in CultureQuestion.__table__.c, (
             "CultureQuestion.__table__ has no 'topic' column yet — "
@@ -59,9 +58,6 @@ class TestCultureQuestionTopicColumnContract:
         enforced in Python (WEDGE-01-01's CultureTopic constant), not via a
         PostgreSQL ENUM type, so adding a new topic value never requires an
         `ALTER TYPE ... ADD VALUE` migration.
-
-        RED today: `topic` is not a column on CultureQuestion.
-        GREEN after: executor declares `sa.String(50)` (not `sa.Enum(...)`).
         """
         assert "topic" in CultureQuestion.__table__.c, (
             "CultureQuestion.__table__ has no 'topic' column yet — "
@@ -88,9 +84,6 @@ class TestCultureQuestionTopicColumnContract:
         `UPDATE` statement. A server_default (or a Python-side `default=`)
         would mean every pre-existing question silently gets a topic value
         it was never actually classified with.
-
-        RED today: `topic` is not a column on CultureQuestion.
-        GREEN after: executor declares neither `server_default=` nor `default=`.
         """
         assert "topic" in CultureQuestion.__table__.c, (
             "CultureQuestion.__table__ has no 'topic' column yet — "
@@ -112,11 +105,8 @@ class TestCultureQuestionTopicIndex:
         """AC-2: A non-unique index named `ix_culture_questions_topic` must
         exist and cover exactly `(topic)`.
 
-        RED today: `topic` is not a column on CultureQuestion, so no such
-        index can exist either.
-        GREEN after: executor declares `index=True` on the mapped_column
-        (SQLAlchemy auto-names single-column indexes `ix_<table>_<column>`)
-        or an explicit `Index("ix_culture_questions_topic", "topic")`.
+        The column declares `index=True` on the mapped_column (SQLAlchemy
+        auto-names single-column indexes `ix_<table>_<column>`).
         """
         assert "topic" in CultureQuestion.__table__.c, (
             "CultureQuestion.__table__ has no 'topic' column yet — "

@@ -2990,13 +2990,6 @@ class TestGetNewQuestionsTopicAgnostic:
     opt-in, this test fails — either fewer than N questions come back (all N
     have topic=NULL, so any topic filter drops them all) or the order drifts
     away from `order_index`.
-
-    RED today (Mode A): `CultureQuestion` has no `topic` attribute yet, so
-    accessing `.topic` on a returned entity raises AttributeError — the
-    correct "feature absent" RED signal.
-    GREEN after: executor adds the nullable `topic` column with no backfill
-    (the `culture_questions` fixture never sets it), and leaves
-    `_get_new_questions`'s query shape untouched.
     """
 
     @pytest.mark.asyncio

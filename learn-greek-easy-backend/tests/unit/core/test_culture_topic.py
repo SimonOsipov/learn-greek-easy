@@ -1,21 +1,13 @@
-"""RED tests for WEDGE-01-01: CultureTopic taxonomy constant.
+"""Tests for WEDGE-01-01: CultureTopic taxonomy constant.
 
-Mode A — authored RED before implementation (RALPH Stage 2.5 / QA Mode A).
+Regression guard for ``CultureTopic`` in ``src/core/culture_topic.py``: the
+single, canonical five-value topic taxonomy (history, geography, politics,
+culture, practical).
 
-``CultureTopic`` does NOT exist yet in ``src/core/culture_topic.py``. Every
-test that references it is expected to fail with ``ImportError`` /
-``ModuleNotFoundError`` at collection time UNLESS the executor creates a stub
-module first — see "Expected RED Failure Mode" below (pattern mirrors
-``tests/unit/core/test_exercise_topic.py``).
-
-The preferred executor pattern is:
-  1. Create ``src/core/culture_topic.py`` with the ``CultureTopic(str, enum.Enum)``
-     class carrying exactly the five lowercase values and a ``__str__`` override.
-  2. These tests then run against the real enum and pass.
-
-If the executor has not created the module yet, the guarded import below keeps
-``pytest --collect-only`` succeeding; running the tests raises ImportError
-inside each test body (a legitimate RED reason: the feature is absent).
+The import below is guarded so ``pytest --collect-only`` still succeeds if
+the module were ever removed or broken; `_require_culture_topic()` turns a
+missing module into a clear ImportError inside each test body instead of a
+collection-time failure (pattern mirrors ``tests/unit/core/test_exercise_topic.py``).
 
 Acceptance Criteria covered (WEDGE-01-01 / Core AC1):
   Core AC1  ``CultureTopic`` is the single, canonical five-value topic taxonomy
@@ -65,8 +57,6 @@ class TestCultureTopicValuesExact:
 
         This is the no-parallel-taxonomy guard (Core AC1): it must fail if a
         sixth value is added, or if any expected value is missing or renamed.
-
-        RED reason: CultureTopic does not exist yet.
         """
         _require_culture_topic()
         actual_values = {t.value for t in CultureTopic}
@@ -89,8 +79,6 @@ class TestCultureTopicStrIsBareValue:
 
         Guards the __str__ override (Core AC1): CultureTopic must serialize to
         the bare value, matching how deck.category is stored in the DB.
-
-        RED reason: CultureTopic does not exist yet.
         """
         _require_culture_topic()
         assert str(CultureTopic.HISTORY) == "history", (
@@ -109,8 +97,6 @@ class TestCultureTopicIsLowercaseStrEnum:
 
         Guards the lowercase str-enum convention shared with ExerciseTopic-style
         taxonomies in this codebase.
-
-        RED reason: CultureTopic does not exist yet.
         """
         _require_culture_topic()
         for member in CultureTopic:
@@ -124,9 +110,9 @@ class TestCultureTopicIsLowercaseStrEnum:
 # Adversarial / edge coverage — added QA Mode B (post-implementation)
 # ===========================================================================
 #
-# The three suites above are the AC-derived RED specs authored in Mode A.
-# They are left untouched. Everything below is additional coverage QA added
-# while verifying the (now green) implementation.
+# The three suites above are the AC-derived specs authored before the
+# CultureTopic implementation existed. They are left untouched. Everything
+# below is additional coverage QA added while verifying the implementation.
 
 
 class TestCultureTopicRoundTripFromString:
