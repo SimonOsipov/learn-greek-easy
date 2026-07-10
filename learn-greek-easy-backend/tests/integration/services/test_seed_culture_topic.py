@@ -1,28 +1,20 @@
 """Integration tests for WEDGE-02-03: seed sets `topic` at question creation.
 
-RED status (pre-implementation, current code = `SeedService.
-seed_culture_decks_and_questions` at `src/services/seed_service.py:2361`):
+`SeedService.seed_culture_decks_and_questions`
+(`src/services/seed_service.py:2361`) tags every `CultureQuestion` it
+creates with `topic=str(resolve_topic_for_category(category))` in the
+per-category loop (D-A4 — the seed must set `topic` at creation time; a
+data-migration-only backfill would leave freshly-seeded dev rows NULL,
+since `Deploy` (migrations) runs before `Seed Dev Database` in
+release-verify's ordering):
 
-  TRUE RED (mechanism does not exist today, fails on the target assertion):
     - test_seed_tags_every_culture_question_non_null (AC1)
-        `seed_culture_decks_and_questions` constructs every `CultureQuestion`
-        without a `topic=` kwarg (seed_service.py:2361-2371), so the column
-        (nullable, per WEDGE-02-02) stays NULL at INSERT time. The first
-        `assert q.topic is not None` fails for the very first seeded row —
-        a clean assertion failure, not a collection/import error.
+        every seeded row's `topic` is non-NULL and in the closed
+        `CultureTopic` set.
     - test_seed_thematic_decks_tagged_by_category (AC1/AC3)
-        Same root cause: `topic` is always None today, so
-        `assert topic == category` fails immediately for the history deck
-        (topic=None != "history").
+        history/geography/politics decks -> `topic == category`.
     - test_seed_traditions_and_culture_decks_tagged_culture (AC3/D-A2)
-        Same root cause: `assert topic == "culture"` fails immediately for
-        the traditions/culture deck questions (topic=None != "culture").
-
-  This is defeated by seeding `topic=str(resolve_topic_for_category(category))`
-  on each created `CultureQuestion` in the per-category loop (D-A4 — the
-  seed must set `topic` at creation time; a data-migration-only backfill
-  would leave freshly-seeded dev rows NULL, since `Deploy` (migrations) runs
-  before `Seed Dev Database` in release-verify's ordering).
+        traditions/culture decks -> `topic == "culture"` (fold).
 
 Scope note: seed decks are exactly {history, geography, politics, culture,
 traditions} — no `practical` deck and no fixture rows in seed data. Those
@@ -32,7 +24,7 @@ here (per the story's Test Specs scope for this subtask).
 
 DB-backed (real Postgres via `db_session`, nested-transaction rollback per
 test — see tests/fixtures/database.py). No local DB is started to confirm
-RED; this file is confirmed collect-clean locally and RED is verified by CI.
+green; this file is confirmed collect-clean locally and verified by CI.
 """
 
 from __future__ import annotations
