@@ -1,13 +1,9 @@
 """Integration tests for WEDGE-02-01: two-pass topic-tagging DB engine.
 
-RED-state (RALPH Phase 1 Stage 2.5 / Mode A, test-first): ``TaggingReport``,
-``JudgmentRow``, and ``AmbiguousResolution`` (``src/services/culture_topic_tagger.py``)
-are fully-defined data containers already (pure structure), but
-``tag_culture_questions`` itself is a signature-only stub that
-``raise NotImplementedError``. Every test below drives the REAL JOIN+UPDATE
-engine end to end against Postgres and currently fails on NotImplementedError
-(confirmed by ``--collect-only`` — no import/collection error) because the
-executor has not implemented Pass 1 / Pass 2 yet (Stage 3).
+Regression guard for ``tag_culture_questions``
+(``src/services/culture_topic_tagger.py``) — the two-pass JOIN+UPDATE engine
+end to end against Postgres, plus its ``TaggingReport``/``JudgmentRow``/
+``AmbiguousResolution`` review record.
 
 Dev/CI never touches the real 19-row RESIDUE_TOPIC_FIXTURE (that fixture is
 populated in WEDGE-02-02): every test here injects its own small, synthetic
@@ -575,3 +571,260 @@ async def test_four_provenance_classes_sum_to_total(db_session: AsyncSession) ->
     assert report.total_tagged == 5
     assert computed_sum == report.total_tagged
     assert sum(report.per_topic_totals.values()) == report.total_tagged
+
+
+# ===========================================================================
+# Adversarial / edge coverage — added QA Mode B (post-implementation)
+# ===========================================================================
+#
+# The AC-derived specs above were authored in Mode A before the engine
+# existed. They are left untouched. Everything below is additional coverage
+# QA added while verifying the (now green) implementation — see each test's
+# docstring for the specific regression it catches that the AC suite alone
+# would miss. All el text stays synthetic/injected per the module note above
+# — never depends on WEDGE-02-02's real 19-row fixture.
+
+
+@pytest.mark.integration
+async def test_engine_rerun_is_idempotent_across_three_runs(db_session: AsyncSession) -> None:
+    """Adversarial (QA Mode B) — D-A5 strengthened beyond the AC's 2-run check.
+
+    GIVEN a mix of by-deck, by-twin, and fixture rows (same frozen fixture
+          across all three runs)
+    WHEN  the engine runs THREE times on the same db
+    THEN  the full id->topic snapshot is byte-identical after every run (not
+          just run 2 vs run 1) — guards against drift that could only appear
+          on a 3rd+ re-derive (e.g. a bug triggered by the identity map after
+          two prior commits/expires).
+    """
+    history_deck = await CultureDeckFactory.create(session=db_session)
+    culture_deck = await CultureDeckFactory.create(session=db_session, culture=True)
+    shared_el = "three run idempotent twin text shared across two decks"
+
+    await CultureQuestionFactory.create(
+        session=db_session, deck_id=history_deck.id, question_text=_qtext(shared_el)
+    )
+    await CultureQuestionFactory.create(
+        session=db_session, deck_id=culture_deck.id, question_text=_qtext(shared_el)
+    )
+    fixture_el = "three run idempotent fixture text"
+    await CultureQuestionFactory.create(
+        session=db_session, deck_id=culture_deck.id, question_text=_qtext(fixture_el)
+    )
+    fixture = {
+        fixture_el: ReviewedTopic(
+            topic=CultureTopic.GEOGRAPHY, rationale="frozen for three-run idempotency test"
+        )
+    }
+
+    ids_before = set((await db_session.execute(select(CultureQuestion.id))).scalars().all())
+
+    snapshots = []
+    reports = []
+    for _ in range(3):
+        report = await tag_culture_questions(db_session, reviewed_fixture=fixture)
+        reports.append(report)
+        snapshot = dict(
+            (await db_session.execute(select(CultureQuestion.id, CultureQuestion.topic))).all()
+        )
+        snapshots.append(snapshot)
+
+    assert snapshots[0] == snapshots[1] == snapshots[2]
+    assert None not in snapshots[2].values()
+    assert set(snapshots[2].keys()) == ids_before
+    assert reports[0].total_tagged == reports[1].total_tagged == reports[2].total_tagged
+
+
+@pytest.mark.integration
+async def test_pass2_fixture_match_with_no_competing_twin_tags_fixture_topic(
+    db_session: AsyncSession,
+) -> None:
+    """Adversarial (QA Mode B) — D-A11 positive fixture-match path.
+
+    The AC-derived suite only exercises judgment_fixture provenance via
+    "fixture wins over an available twin"
+    (test_pass2_fixture_precedence_over_twin) and an aggregate sum check
+    (test_four_provenance_classes_sum_to_total). Neither isolates the plain
+    case: a culture row whose normalized el is in the fixture and has NO
+    twin at all — the actual shape of the real 19-row residue fixture
+    (D-A11): those rows needed judgment precisely BECAUSE they have no twin.
+
+    GIVEN a culture-deck question whose el is in an injected fixture and has
+          no thematic twin anywhere in scope
+    WHEN  the engine runs
+    THEN  topic == the fixture's topic, counted in judgment_fixture (NOT
+          genuine_culture_default, NOT inherited_by_twin).
+    """
+    culture_deck = await CultureDeckFactory.create(session=db_session, culture=True)
+    fixture_el = "lone fixture match text with no twin anywhere in scope"
+    culture_q = await CultureQuestionFactory.create(
+        session=db_session, deck_id=culture_deck.id, question_text=_qtext(fixture_el)
+    )
+    fixture = {
+        fixture_el: ReviewedTopic(topic=CultureTopic.GEOGRAPHY, rationale="lone fixture match")
+    }
+
+    report = await tag_culture_questions(db_session, reviewed_fixture=fixture)
+
+    topic = await _topic_of(db_session, culture_q.id)
+    assert topic == "geography"
+    assert len(report.judgment_fixture) == 1
+    assert report.judgment_fixture[0].question_id == culture_q.id
+    assert report.judgment_fixture[0].topic == CultureTopic.GEOGRAPHY
+    assert report.inherited_by_twin == 0
+    assert report.genuine_culture_default == 0
+
+
+@pytest.mark.integration
+async def test_pass2_twin_match_robust_to_case_and_whitespace_at_engine_layer(
+    db_session: AsyncSession,
+) -> None:
+    """Adversarial (QA Mode B) — proves normalize_twin_key is actually wired
+    into the engine's twin index, not just correct in isolation.
+
+    The unit suite (test_normalize_twin_key_matches_case_whitespace_variants)
+    proves the pure function is case/whitespace-robust, but never proves the
+    engine's Pass-2 twin lookup actually CALLS that normalization when
+    building/matching keys — a regression that compared raw `el == el`
+    strings instead of normalized keys would pass every other integration
+    test here (they all use byte-identical el strings between a question and
+    its twin) but would silently break AC3 the moment a real exam-paper copy
+    differs from its thematic twin by case/whitespace only (a realistic
+    transcription variance).
+
+    GIVEN a thematic (history) question with a mixed-case, irregularly-
+          spaced el, and a culture-deck copy whose el is the same text
+          lowercased and single-spaced
+    WHEN  the engine runs
+    THEN  the culture-deck copy still inherits topic == "history" via the
+          twin path (inherited_by_twin == 1).
+    """
+    history_deck = await CultureDeckFactory.create(session=db_session)
+    culture_deck = await CultureDeckFactory.create(session=db_session, culture=True)
+
+    await CultureQuestionFactory.create(
+        session=db_session,
+        deck_id=history_deck.id,
+        question_text=_qtext("  Ancient   GREEK  History Overview  "),
+    )
+    culture_copy = await CultureQuestionFactory.create(
+        session=db_session,
+        deck_id=culture_deck.id,
+        question_text=_qtext("ancient greek history overview"),
+    )
+
+    report = await tag_culture_questions(db_session, reviewed_fixture={})
+
+    topic = await _topic_of(db_session, culture_copy.id)
+    assert topic == "history"
+    assert report.inherited_by_twin == 1
+
+
+@pytest.mark.integration
+async def test_dry_run_across_mixed_provenance_writes_nothing(
+    db_session: AsyncSession,
+) -> None:
+    """Adversarial (QA Mode B) — strengthens the AC's dry_run test (a single
+    by-deck row only) to a full mixed-provenance scenario.
+
+    GIVEN a mix of by-deck, by-twin, genuine-culture-default, and fixture
+          rows, all currently NULL
+    WHEN  tag_culture_questions(db, dry_run=True) runs
+    THEN  the report reflects the full would-be partition across all four
+          provenance classes, but EVERY row's topic is still NULL on a fresh
+          read afterward — dry_run must suppress the write for every branch
+          of the two-pass dispatch, not just the simple by-deck case.
+    """
+    history_deck = await CultureDeckFactory.create(session=db_session)
+    culture_deck = await CultureDeckFactory.create(session=db_session, culture=True)
+
+    by_deck_q = await CultureQuestionFactory.create(
+        session=db_session, deck_id=history_deck.id, question_text=_qtext("dry run by deck text")
+    )
+    twin_thematic_q = await CultureQuestionFactory.create(
+        session=db_session,
+        deck_id=history_deck.id,
+        question_text=_qtext("dry run twin shared text"),
+    )
+    twin_copy_q = await CultureQuestionFactory.create(
+        session=db_session,
+        deck_id=culture_deck.id,
+        question_text=_qtext("dry run twin shared text"),
+    )
+    default_q = await CultureQuestionFactory.create(
+        session=db_session,
+        deck_id=culture_deck.id,
+        question_text=_qtext("dry run genuine default text with no twin"),
+    )
+    fixture_el = "dry run fixture text"
+    fixture_q = await CultureQuestionFactory.create(
+        session=db_session, deck_id=culture_deck.id, question_text=_qtext(fixture_el)
+    )
+    fixture = {fixture_el: ReviewedTopic(topic=CultureTopic.POLITICS, rationale="dry run fixture")}
+
+    report = await tag_culture_questions(db_session, reviewed_fixture=fixture, dry_run=True)
+
+    assert report.dry_run is True
+    assert report.total_tagged == 5
+    assert report.assigned_by_deck.get("history") == 2
+    assert report.inherited_by_twin == 1
+    assert report.genuine_culture_default == 1
+    assert len(report.judgment_fixture) == 1
+
+    for question in (by_deck_q, twin_thematic_q, twin_copy_q, default_q, fixture_q):
+        topic = await _topic_of(db_session, question.id)
+        assert topic is None, f"dry_run must not write topic for question {question.id}"
+
+
+@pytest.mark.integration
+async def test_pass2_three_way_multi_topic_twin_falls_to_culture_and_flagged(
+    db_session: AsyncSession,
+) -> None:
+    """Adversarial (QA Mode B) — strengthens the AC's 2-way ambiguous-twin
+    test (history + politics) with a 3-way collision (history + geography +
+    practical).
+
+    The AC-derived test_pass2_multi_topic_twin_falls_to_culture_and_flagged
+    already proves `len(twin_topics) > 1` is handled for exactly 2
+    candidates; a literal duplicate with a different 2-topic pair would
+    exercise the identical code path and add no new regression-catching
+    power (the implementation is a generic `len(set) > 1` check with no
+    per-pair special-casing). A 3-way collision is a strictly stronger
+    adversarial case: it proves the `candidates` frozenset and the twin
+    index scale past a hardcoded 2-element assumption.
+
+    GIVEN a culture-deck question el twinned by history, geography, AND
+          practical questions (defensive — 0 in prod)
+    WHEN  the engine runs
+    THEN  topic == "culture" AND report.ambiguous records it with
+          candidates == {history, geography, practical}.
+    """
+    shared_el = "three way multi topic twin text matched by history geography and practical"
+    history_deck = await CultureDeckFactory.create(session=db_session)
+    geography_deck = await CultureDeckFactory.create(session=db_session, geography=True)
+    practical_deck = await CultureDeckFactory.create(session=db_session, practical=True)
+    culture_deck = await CultureDeckFactory.create(session=db_session, culture=True)
+
+    await CultureQuestionFactory.create(
+        session=db_session, deck_id=history_deck.id, question_text=_qtext(shared_el)
+    )
+    await CultureQuestionFactory.create(
+        session=db_session, deck_id=geography_deck.id, question_text=_qtext(shared_el)
+    )
+    await CultureQuestionFactory.create(
+        session=db_session, deck_id=practical_deck.id, question_text=_qtext(shared_el)
+    )
+    culture_q = await CultureQuestionFactory.create(
+        session=db_session, deck_id=culture_deck.id, question_text=_qtext(shared_el)
+    )
+
+    report = await tag_culture_questions(db_session, reviewed_fixture={})
+
+    topic = await _topic_of(db_session, culture_q.id)
+    assert topic == "culture"
+    assert len(report.ambiguous) == 1
+    assert report.ambiguous[0].question_id == culture_q.id
+    assert report.ambiguous[0].candidates == frozenset(
+        {CultureTopic.HISTORY, CultureTopic.GEOGRAPHY, CultureTopic.PRACTICAL}
+    )
+    assert report.genuine_culture_default == 1

@@ -1,12 +1,9 @@
 """Tests for WEDGE-02-01: pure Pass-1 category mapping + twin-key normalization.
 
-RED-state (RALPH Phase 1 Stage 2.5 / Mode A, test-first): the scaffold module
-``src/core/culture_topic_mapping.py`` exists with real signatures, but both
-``resolve_topic_for_category`` and ``normalize_twin_key`` currently
-``raise NotImplementedError``. Every test below asserts the REAL expected
-Pass-1 / twin-key behavior straight from the WEDGE-02 story System Design and
-currently fails on NotImplementedError (not an import/collection error)
-because the executor has not implemented the logic yet (Stage 3).
+Regression guard for ``resolve_topic_for_category`` and ``normalize_twin_key``
+in ``src/core/culture_topic_mapping.py`` — the two pure functions the
+two-pass tagging engine (``src/services/culture_topic_tagger.py``) is built
+on.
 
 Acceptance Criteria covered (WEDGE-02-01, per the architect's Test Specs
 table — task-1291):
