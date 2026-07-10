@@ -205,19 +205,29 @@ async def run_tagging(
 
     Always probes via ``tag_culture_questions(session, dry_run=True)`` first
     (a SELECT-only pass, no writes) and evaluates the 490-verify guard
-    (``_verify_gate``) on that probe report:
+    (``_verify_gate``) on that probe report to decide whether a write is
+    authorized:
 
       - ``commit=False`` (dry-run): never writes, regardless of guard
-        verdict — the probe report + guard verdict are printed/serialized
-        and returned, exit_code=0.
-      - ``commit=True`` and the guard FAILS: refuses to write — the engine
-        is never called with ``dry_run=False``. Probe report + FAIL verdict
-        + reasons are printed/serialized and returned, exit_code=1.
-      - ``commit=True`` and the guard PASSES: calls
+        verdict — the probe report is printed/serialized and returned,
+        exit_code=0.
+      - ``commit=True`` and the probe guard FAILS: refuses to write — the
+        engine is never called with ``dry_run=False``. Probe report is
+        printed/serialized and returned, exit_code=1.
+      - ``commit=True`` and the probe guard PASSES: calls
         ``tag_culture_questions(session, dry_run=False)`` for real — the
         ONLY call that writes+commits (via the engine's own
         ``await db.commit()``). Post-write report is printed/serialized and
         returned, exit_code=0.
+
+    The guard verdict that is actually INCLUDED IN THE OUTPUT (printed text
+    + JSON artifact's ``guard_passed``/``guard_reasons``) is re-evaluated
+    against ``final_report`` — the report actually being returned — rather
+    than reused from the probe. In the normal case (engine is deterministic/
+    idempotent — same data, same report) this is identical to the probe
+    verdict computed above. It only diverges if the underlying data changed
+    between the probe and a real write, in which case the printed verdict
+    must reflect the post-write state, not the now-stale pre-write probe.
 
     Also writes the JSON run-summary artifact to ``report_path`` on every
     call, regardless of mode.
@@ -227,13 +237,13 @@ async def run_tagging(
     probe_report = await tag_culture_questions(
         session, reviewed_fixture=reviewed_fixture, dry_run=True
     )
-    guard_ok, guard_reasons = _verify_gate(probe_report, expected_count)
+    probe_guard_ok, _probe_guard_reasons = _verify_gate(probe_report, expected_count)
 
     if not commit:
         mode = "dry-run"
         final_report = probe_report
         exit_code = 0
-    elif not guard_ok:
+    elif not probe_guard_ok:
         mode = "refused"
         final_report = probe_report
         exit_code = 1
@@ -243,6 +253,11 @@ async def run_tagging(
             session, reviewed_fixture=reviewed_fixture, dry_run=False
         )
         exit_code = 0
+
+    # Output guard verdict is computed against final_report (the report
+    # actually returned/printed below), not the probe, so a printed
+    # guard_passed/guard_reasons always matches the printed report's fields.
+    guard_ok, guard_reasons = _verify_gate(final_report, expected_count)
 
     text = _format_report(final_report, guard_ok, guard_reasons, mode)
 

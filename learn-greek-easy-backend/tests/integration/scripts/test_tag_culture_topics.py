@@ -158,7 +158,7 @@ async def test_run_tagging_commit_refused_when_count_mismatch(db_session: AsyncS
         question_text=_qtext("commit refused count mismatch text"),
     )
 
-    report, text, exit_code = await run_tagging(
+    _report, text, exit_code = await run_tagging(
         db_session, commit=True, expected_count=2, reviewed_fixture={}
     )
 
@@ -201,7 +201,7 @@ async def test_run_tagging_commit_refused_when_unmapped_nonempty(
         question_text=_qtext("unmapped guard deckless row text"),
     )
 
-    report, text, exit_code = await run_tagging(
+    _report, text, exit_code = await run_tagging(
         db_session, commit=True, expected_count=1, reviewed_fixture={}
     )
 
@@ -246,7 +246,7 @@ async def test_run_tagging_commit_refused_when_ambiguous_nonempty(
         session=db_session, deck_id=culture_deck.id, question_text=_qtext(shared_el)
     )
 
-    report, text, exit_code = await run_tagging(
+    _report, text, exit_code = await run_tagging(
         db_session, commit=True, expected_count=3, reviewed_fixture={}
     )
 
@@ -286,7 +286,7 @@ async def test_run_tagging_commit_refused_when_fixture_unmatched_nonempty(
     unmatched_key = "fixture key matching no seeded row at all"
     fixture = {unmatched_key: ReviewedTopic(topic=CultureTopic.HISTORY, rationale="unused")}
 
-    report, text, exit_code = await run_tagging(
+    _report, text, exit_code = await run_tagging(
         db_session, commit=True, expected_count=1, reviewed_fixture=fixture
     )
 
