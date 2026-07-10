@@ -45,6 +45,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.culture_bank_version import CULTURE_BANK_VERSION
 from src.core.culture_topic import CultureTopic
 from src.core.culture_topic_mapping import normalize_twin_key, resolve_topic_for_category
 from src.core.culture_topic_reviewed_fixture import RESIDUE_TOPIC_FIXTURE, ReviewedTopic
@@ -289,13 +290,11 @@ async def tag_culture_questions(
     total_tagged = len(all_assignments)
 
     return TaggingReport(
-        # bank_version is meant to be the FROZEN CULTURE_BANK_VERSION
-        # constant (D-A7) — that module doesn't exist until WEDGE-02-04, and
-        # the CLI (WEDGE-02-05) is expected to overwrite this field once it
-        # does. Deliberately NOT date.today() here: bank_version is a stable
-        # identifier, not a per-run timestamp, so reusing bank_date's value
-        # would misleadingly imply it's already wired to something frozen.
-        bank_version="unversioned",
+        # bank_version is the FROZEN CULTURE_BANK_VERSION constant (D-A7,
+        # WEDGE-02-04). Deliberately NOT date.today() here: bank_version is a
+        # stable identifier, not a per-run timestamp — see bank_date below
+        # for the per-run timestamp.
+        bank_version=CULTURE_BANK_VERSION,
         bank_date=date.today().isoformat(),
         total_questions=total_questions,
         total_tagged=total_tagged,
