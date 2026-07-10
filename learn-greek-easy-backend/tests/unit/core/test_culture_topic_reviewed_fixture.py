@@ -7,9 +7,8 @@ These tests assert the STRUCTURE of the fixture, not the content of any
 individual rationale — the rationale text is Claude's reviewed judgment from
 an authorized one-time prod content read, not test-derived.
 
-RED now (WEDGE-02-02, pre-population): ``RESIDUE_TOPIC_FIXTURE`` is still the
-empty ``{}`` scaffolded by WEDGE-02-01, so every test below fails on a clean
-assertion (e.g. ``len == 0 != 19``), not an import/collection error.
+``RESIDUE_TOPIC_FIXTURE`` is now populated with the 19 reviewed entries
+(WEDGE-02-02) and every test below is green.
 
 Acceptance Criteria covered (WEDGE-02-02, per the architect's Test Specs
 table — task-1292):
@@ -19,13 +18,16 @@ table — task-1292):
              engine's Pass-2 fixture lookup matches it directly.
   AC4        Every entry has a non-empty one-line rationale.
   D-A11      The 19 keys are distinct (no residue row collides with another).
+
+Plus a QA guard (below) pinning a few representative entries' assigned
+topic, so an accidental future re-categorization is caught specifically.
 """
 
 from __future__ import annotations
 
 from src.core.culture_topic import CultureTopic
 from src.core.culture_topic_mapping import normalize_twin_key
-from src.core.culture_topic_reviewed_fixture import RESIDUE_TOPIC_FIXTURE
+from src.core.culture_topic_reviewed_fixture import RESIDUE_TOPIC_FIXTURE, ReviewedTopic
 
 EXPECTED_RESIDUE_COUNT = 19
 
@@ -52,7 +54,7 @@ class TestFixtureTopicsInClosedSet:
         # member's value.
         assert (
             len(RESIDUE_TOPIC_FIXTURE) > 0
-        ), "fixture is empty — nothing to check yet (expected pre-population)"
+        ), "fixture is empty — vacuous for-loop guard (would otherwise pass trivially)"
         for key, entry in RESIDUE_TOPIC_FIXTURE.items():
             assert isinstance(entry.topic, CultureTopic), (
                 f"entry for key {key!r} has topic {entry.topic!r} which is not "
@@ -72,7 +74,7 @@ class TestFixtureKeysAreNormalized:
         # (idempotent under normalization).
         assert (
             len(RESIDUE_TOPIC_FIXTURE) > 0
-        ), "fixture is empty — nothing to check yet (expected pre-population)"
+        ), "fixture is empty — vacuous for-loop guard (would otherwise pass trivially)"
         for key in RESIDUE_TOPIC_FIXTURE:
             assert normalize_twin_key({"el": key}) == key, (
                 f"key {key!r} is not already in normalize_twin_key form "
@@ -92,7 +94,7 @@ class TestFixtureEntriesHaveRationale:
         # "not falsy") to guard against a rationale of stray whitespace.
         assert (
             len(RESIDUE_TOPIC_FIXTURE) > 0
-        ), "fixture is empty — nothing to check yet (expected pre-population)"
+        ), "fixture is empty — vacuous for-loop guard (would otherwise pass trivially)"
         for key, entry in RESIDUE_TOPIC_FIXTURE.items():
             assert isinstance(
                 entry.rationale, str
@@ -116,3 +118,34 @@ class TestFixtureKeysAreDistinct:
         # below 19 at authoring time).
         keys = list(RESIDUE_TOPIC_FIXTURE.keys())
         assert len(keys) == len(set(keys)) == EXPECTED_RESIDUE_COUNT
+
+
+# ===========================================================================
+# QA guard — representative reviewed-topic assignments (WEDGE-02-02, QA)
+# ===========================================================================
+
+
+class TestRepresentativeFixtureTopicAssignments:
+    """Pin a few representative entries' assigned topic so an accidental
+    future edit to RESIDUE_TOPIC_FIXTURE (e.g. re-categorizing an entry while
+    editing a neighboring rationale) is caught by a specific assertion, not
+    just "is some CultureTopic member". Not exhaustive — the full 19-entry
+    tally/rationale review lives in the module docstring and QA sign-off.
+    """
+
+    @staticmethod
+    def _entry_containing(substring: str) -> ReviewedTopic:
+        matches = [v for k, v in RESIDUE_TOPIC_FIXTURE.items() if substring in k]
+        assert len(matches) == 1, (
+            f"expected exactly one fixture key containing {substring!r}, " f"found {len(matches)}"
+        )
+        return matches[0]
+
+    def test_meze_entry_is_culture(self) -> None:
+        assert self._entry_containing("μεζέ").topic == CultureTopic.CULTURE
+
+    def test_loukoumades_entry_is_culture(self) -> None:
+        assert self._entry_containing("λοκμάδες").topic == CultureTopic.CULTURE
+
+    def test_official_languages_constitution_entry_is_politics(self) -> None:
+        assert self._entry_containing("σύνταγμα").topic == CultureTopic.POLITICS
