@@ -52,7 +52,9 @@ class CultureDeckFactory(BaseFactory):
         geography: Geography category deck
         politics: Politics category deck
         culture: Culture category deck
+        traditions: Traditions category deck
         news: News category deck
+        practical: Practical category deck
 
     Example:
         deck = await CultureDeckFactory.create()
@@ -139,6 +141,17 @@ class CultureDeckFactory(BaseFactory):
             description_el="Ερωτήσεις από ειδήσεις",
             description_en="News-based questions",
             description_ru="Вопросы по новостям",
+        )
+
+        # Practical category deck (WEDGE-02-01: D-A1 anti-fold guard fixture)
+        practical = factory.Trait(
+            category="practical",
+            name_el="Πρακτικά",
+            name_en="Practical",
+            name_ru="Практика",
+            description_el="Ερωτήσεις πρακτικού περιεχομένου",
+            description_en="Practical questions",
+            description_ru="Практические вопросы",
         )
 
 
