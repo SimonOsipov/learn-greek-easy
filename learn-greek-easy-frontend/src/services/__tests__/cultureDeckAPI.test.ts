@@ -16,10 +16,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import type { CultureQuestionBrowseResponse, CultureQuestionQueue } from '@/types/culture';
+import type { CultureQuestionBrowseResponse } from '@/types/culture';
 
 import { api } from '../api';
-import { cultureDeckAPI } from '../cultureDeckAPI';
+import { cultureDeckAPI, type CultureQuestionQueue } from '../cultureDeckAPI';
 
 vi.mock('../api', () => ({
   api: {
@@ -27,6 +27,25 @@ vi.mock('../api', () => ({
     post: vi.fn(),
   },
 }));
+
+// `getQuestionQueue`/`browseQuestions`'s real `options` types don't accept a
+// `topic` key yet (WEDGE-03-02 hasn't landed) -- these widened option types
+// let the RED tests below pass a `topic` without tripping the object-literal
+// excess-property check that `npm run typecheck:test` enforces as a required
+// CI gate. Delete these once the real options types grow `topic?: CultureTopic`.
+interface QueueOptionsWithTopic {
+  limit?: number;
+  include_new?: boolean;
+  new_questions_limit?: number;
+  force_practice?: boolean;
+  topic?: string;
+}
+
+interface BrowseOptionsWithTopic {
+  offset?: number;
+  limit?: number;
+  topic?: string;
+}
 
 const mockQueue: CultureQuestionQueue = {
   deck_id: 'd1',
@@ -57,7 +76,8 @@ describe('cultureDeckAPI topic filter param (WEDGE-03-02)', () => {
     it('appends topic when provided', async () => {
       vi.mocked(api.get).mockResolvedValue(mockQueue);
 
-      await cultureDeckAPI.getQuestionQueue('d1', { topic: 'history' });
+      const options: QueueOptionsWithTopic = { topic: 'history' };
+      await cultureDeckAPI.getQuestionQueue('d1', options);
 
       const calledUrl = vi.mocked(api.get).mock.calls[0][0] as string;
       expect(calledUrl).toContain('topic=history');
@@ -77,7 +97,8 @@ describe('cultureDeckAPI topic filter param (WEDGE-03-02)', () => {
     it('appends topic when provided', async () => {
       vi.mocked(api.get).mockResolvedValue(mockBrowseResponse);
 
-      await cultureDeckAPI.browseQuestions('d1', { topic: 'politics' });
+      const options: BrowseOptionsWithTopic = { topic: 'politics' };
+      await cultureDeckAPI.browseQuestions('d1', options);
 
       const calledUrl = vi.mocked(api.get).mock.calls[0][0] as string;
       expect(calledUrl).toContain('topic=politics');
