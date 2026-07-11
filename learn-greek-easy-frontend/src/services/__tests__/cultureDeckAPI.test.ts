@@ -3,11 +3,10 @@
 /**
  * Culture Deck API Service Tests -- Topic Filter (WEDGE-03-02)
  *
- * [RED] `getQuestionQueue` (cultureDeckAPI.ts:205) and `browseQuestions`
+ * `getQuestionQueue` (cultureDeckAPI.ts:205) and `browseQuestions`
  * (cultureDeckAPI.ts:251) build their query string with URLSearchParams and
- * append it to the path passed into `api.get()`. Neither method's `options`
- * type accepts a `topic` key yet, so it is silently dropped today -- these
- * tests fail on the URL-contains-topic assertion, not at collection time.
+ * append it to the path passed into `api.get()`. Both methods' `options`
+ * types accept a `topic?: CultureTopic` key that gets appended when present.
  *
  * "omits topic" is a regression lock: it passes both before and after the
  * executor wires the param (omitting it must stay a strict no-op), mirroring
@@ -27,25 +26,6 @@ vi.mock('../api', () => ({
     post: vi.fn(),
   },
 }));
-
-// `getQuestionQueue`/`browseQuestions`'s real `options` types don't accept a
-// `topic` key yet (WEDGE-03-02 hasn't landed) -- these widened option types
-// let the RED tests below pass a `topic` without tripping the object-literal
-// excess-property check that `npm run typecheck:test` enforces as a required
-// CI gate. Delete these once the real options types grow `topic?: CultureTopic`.
-interface QueueOptionsWithTopic {
-  limit?: number;
-  include_new?: boolean;
-  new_questions_limit?: number;
-  force_practice?: boolean;
-  topic?: string;
-}
-
-interface BrowseOptionsWithTopic {
-  offset?: number;
-  limit?: number;
-  topic?: string;
-}
 
 const mockQueue: CultureQuestionQueue = {
   deck_id: 'd1',
@@ -76,8 +56,7 @@ describe('cultureDeckAPI topic filter param (WEDGE-03-02)', () => {
     it('appends topic when provided', async () => {
       vi.mocked(api.get).mockResolvedValue(mockQueue);
 
-      const options: QueueOptionsWithTopic = { topic: 'history' };
-      await cultureDeckAPI.getQuestionQueue('d1', options);
+      await cultureDeckAPI.getQuestionQueue('d1', { topic: 'history' });
 
       const calledUrl = vi.mocked(api.get).mock.calls[0][0] as string;
       expect(calledUrl).toContain('topic=history');
@@ -97,8 +76,7 @@ describe('cultureDeckAPI topic filter param (WEDGE-03-02)', () => {
     it('appends topic when provided', async () => {
       vi.mocked(api.get).mockResolvedValue(mockBrowseResponse);
 
-      const options: BrowseOptionsWithTopic = { topic: 'politics' };
-      await cultureDeckAPI.browseQuestions('d1', options);
+      await cultureDeckAPI.browseQuestions('d1', { topic: 'politics' });
 
       const calledUrl = vi.mocked(api.get).mock.calls[0][0] as string;
       expect(calledUrl).toContain('topic=politics');
