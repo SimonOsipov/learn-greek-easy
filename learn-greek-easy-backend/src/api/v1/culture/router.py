@@ -42,6 +42,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.v1.culture.mock_exam import router as mock_exam_router
 from src.config import settings
+from src.core.culture_topic import CultureTopic
 from src.core.dependencies import get_current_superuser, get_current_user, get_locale_from_header
 from src.core.exceptions import ValidationException
 from src.core.logging import get_logger
@@ -413,6 +414,9 @@ async def get_question_queue(
         default=False,
         description="Force practice mode: return weakest questions when no due/new available",
     ),
+    topic: CultureTopic | None = Query(
+        default=None, description="Restrict to one CultureTopic; omit for all topics"
+    ),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     locale: str = Depends(get_locale_from_header),
@@ -429,6 +433,7 @@ async def get_question_queue(
         limit: Maximum total questions to return (1-50)
         include_new: Whether to include new questions
         new_questions_limit: Maximum new questions (0-20)
+        topic: Optional CultureTopic filter, restricting the queue to one topic
         db: Database session (injected)
         current_user: Authenticated user (injected)
         locale: Locale from Accept-Language header (injected)
@@ -458,6 +463,7 @@ async def get_question_queue(
         include_new=include_new,
         new_questions_limit=new_questions_limit,
         force_practice=force_practice,
+        topic=topic,
         locale=locale,
     )
 
@@ -467,13 +473,16 @@ async def browse_deck_questions(
     deck_id: UUID,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=200),
+    topic: CultureTopic | None = Query(
+        default=None, description="Restrict to one CultureTopic; omit for all topics"
+    ),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> CultureQuestionBrowseResponse:
     """Browse all questions in a deck with per-user learning status."""
     service = CultureQuestionService(db)
     return await service.browse_questions(
-        user_id=current_user.id, deck_id=deck_id, offset=offset, limit=limit
+        user_id=current_user.id, deck_id=deck_id, offset=offset, limit=limit, topic=topic
     )
 
 
