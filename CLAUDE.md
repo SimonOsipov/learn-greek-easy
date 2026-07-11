@@ -204,6 +204,7 @@ Update this file when features are merged, phases change, or key decisions are m
 - [Gamification Shadow Rollout](learn-greek-easy-backend/docs/gamification-shadow-rollout.md) - Phase 2 ops guide: enable flag, query diffs in Sentry, triage diff classes
 - [Feature Background Tasks](learn-greek-easy-backend/docs/feature-background-tasks.md) - FEATURE_BACKGROUND_TASKS flag: verified prod values, what it gates (request-path deferred work + scheduler), flip = separate story
 - [Deploy Safety](learn-greek-easy-backend/docs/deploy-safety.md) - Overlap window, graceful SIGTERM drain, RUN_MIGRATIONS behavior, expand/contract migrations, rollback runbook
+- [WEDGE-02 Topic Backfill](learn-greek-easy-backend/docs/wedge-02-topic-backfill.md) - Post-merge, human-authorized culture-question topic backfill CLI + 490-verify gate procedure
 - [PreCompact Hook Setup](docs/precompact-hook-setup.md) - Session continuity configuration
 - [Supabase Database](docs/supabase-database.md) - Database credentials, connectivity, and migration guide
 - [Analytics Events](docs/analytics-events.md) - PostHog event naming, when to create, and implementation patterns

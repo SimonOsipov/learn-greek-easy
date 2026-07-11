@@ -17,6 +17,7 @@ from sqlalchemy import delete, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
+from src.core.culture_topic_mapping import resolve_topic_for_category
 from src.core.logging import get_logger
 from src.core.supabase_admin import get_supabase_admin_client
 from src.db.models import (
@@ -2368,6 +2369,7 @@ class SeedService:
                     correct_option=q_data["correct_option"],
                     image_key=q_data.get("image_key"),
                     order_index=i,
+                    topic=str(resolve_topic_for_category(category)),
                 )
                 self.db.add(question)
                 total_questions += 1
