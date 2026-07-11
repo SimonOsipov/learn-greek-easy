@@ -118,6 +118,10 @@
     "continueExam": "Continue Exam",
     "startFirst": "Start Your First Exam"
   },
+  "topics": {
+    "all": "All topics",
+    "filterGroup": "Filter by topic"
+  },
   "states": {
     "loading": "Loading exam data...",
     "error": "Failed to load exam data",

@@ -5,7 +5,7 @@
  * then the exam launcher, metric strip, category progress, and recent history.
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -21,19 +21,27 @@ import {
   RotateCcw,
   Zap,
 } from 'lucide-react';
+import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { CultureMetricStrip } from '@/components/culture/redesign/CultureMetricStrip';
 import type { CultureMetric } from '@/components/culture/redesign/CultureMetricStrip';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import '@/features/decks/dx/dx.css';
 import { Breadcrumb, DxSvgDefs, Kicker } from '@/features/decks/dx';
+import { tDynamic } from '@/i18n/tDynamic';
 import { track } from '@/lib/analytics';
 import { cultureDeckAPI } from '@/services/cultureDeckAPI';
-import type { CategoryReadiness, CultureReadinessResponse } from '@/services/cultureDeckAPI';
+import type {
+  CategoryReadiness,
+  CultureDeckResponse,
+  CultureReadinessResponse,
+} from '@/services/cultureDeckAPI';
 import { mockExamAPI } from '@/services/mockExamAPI';
 import { useMockExamSessionStore } from '@/stores/mockExamSessionStore';
+import { CULTURE_TOPICS, type CultureTopic } from '@/types/culture';
 import type { MockExamHistoryItem } from '@/types/mockExam';
 
 /**
@@ -91,6 +99,92 @@ function capFirst(s: string): string {
 function catDotTone(index: number): 'amber' | 'primary' | 'green' | undefined {
   const tones: Array<'amber' | 'primary' | 'green'> = ['amber', 'primary', 'green'];
   return tones[index % tones.length];
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Topic filter chips (WEDGE-03-03)
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Resolve a culture topic to a deck id — the deck with the GREATEST
+ * `question_count` among decks whose `category` matches the topic (D-6a),
+ * tie-broken by ascending `id`. Returns `undefined` when there is no
+ * matching deck (or the deck list hasn't resolved yet).
+ */
+function resolveDeckIdForTopic(
+  topic: CultureTopic,
+  decks: CultureDeckResponse[] | undefined
+): string | undefined {
+  if (!decks) return undefined;
+  let best: CultureDeckResponse | undefined;
+  for (const deck of decks) {
+    if (deck.category !== topic) continue;
+    if (
+      !best ||
+      deck.question_count > best.question_count ||
+      (deck.question_count === best.question_count && deck.id < best.id)
+    ) {
+      best = deck;
+    }
+  }
+  return best?.id;
+}
+
+/**
+ * Single-select topic chip row: "All topics" + one chip per CULTURE_TOPICS.
+ *
+ * Selection is applied via `flushSync` — the WEDGE-03-03 Test Specs assert
+ * `aria-pressed` on the SAME synchronous tick as a raw (non-`act()`-wrapped)
+ * `.click()`, which a plain `setState` does not guarantee to have flushed to
+ * the DOM by. `flushSync` forces the resulting re-render to commit before the
+ * click handler returns, matching what the tests observe.
+ */
+function TopicChipRow({
+  selectedTopic,
+  onSelect,
+}: {
+  selectedTopic: CultureTopic | null;
+  onSelect: (topic: CultureTopic | null) => void;
+}) {
+  // Two single-namespace hooks (rather than useTranslation(['mockExam','deck']))
+  // so this stays a plain string `ns` — matching how the rest of MockExamPage
+  // resolves cross-namespace category labels (see the `tDeck` note below).
+  const { t } = useTranslation('mockExam');
+  const { t: tDeck } = useTranslation('deck');
+
+  return (
+    <div
+      className="flex flex-wrap gap-2"
+      role="group"
+      aria-label={t('topics.filterGroup')}
+      data-testid="culture-topic-chips"
+    >
+      <Button
+        variant={selectedTopic === null ? 'default' : 'outline'}
+        size="sm"
+        aria-pressed={selectedTopic === null}
+        onClick={() => flushSync(() => onSelect(null))}
+        data-testid="topic-chip-all"
+      >
+        {t('topics.all')}
+      </Button>
+      {CULTURE_TOPICS.map((topic) => {
+        const isActive = selectedTopic === topic;
+        return (
+          <Button
+            key={topic}
+            variant={isActive ? 'default' : 'outline'}
+            size="sm"
+            aria-pressed={isActive}
+            onClick={() => flushSync(() => onSelect(isActive ? null : topic))}
+            data-testid={`topic-chip-${topic}`}
+          >
+            {tDynamic(tDeck, `culture.categories.${topic}`)}
+          </Button>
+        );
+      })}
+    </div>
+  );
 }
 
 /**
@@ -455,6 +549,11 @@ export const MockExamPage: React.FC = () => {
   // CuratedMetricStrip) read their `t('readiness.*')` copy from the `mockExam`
   // namespace too — the readiness key block was migrated culture → mockExam in
   // PRACT2-11-03.
+  // Separate `deck`-namespace hook (WEDGE-03-03) for the topic-launcher's
+  // `deck:culture.categories.*` label — kept off the primary `t` above so it
+  // stays a plain string `ns` (matching CultureBadge's `useTranslation('deck')`
+  // pattern) rather than the `useTranslation(['mockExam','deck'])` array form.
+  const { t: tDeck } = useTranslation('deck');
   const navigate = useNavigate();
 
   // Store state
@@ -463,6 +562,11 @@ export const MockExamPage: React.FC = () => {
 
   // Ref to prevent duplicate tracking
   const hasTrackedPageView = useRef(false);
+
+  // Topic filter (WEDGE-03-03): single-select, independent of the readiness/
+  // stats/queue initial-load gate below — the chip row and its resolver read
+  // from `decksQuery`, not from `isLoading`.
+  const [selectedTopic, setSelectedTopic] = useState<CultureTopic | null>(null);
 
   // ── Data fetch — TanStack useQuery for all three reads ────────────────────
   // retry: false on all three — the global QueryClient default is retry: 1,
@@ -489,6 +593,18 @@ export const MockExamPage: React.FC = () => {
   const queueQuery = useQuery({
     queryKey: ['mockExamQueue'],
     queryFn: () => mockExamAPI.getQuestionQueue(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    retry: false,
+  });
+
+  // Culture deck list (WEDGE-03-03): feeds the topic→deck resolver (D-6a) for
+  // the topic-scoped practice launcher below. Deliberately NOT part of the
+  // `isLoading` gate — it's additive to the page, so a slow/failed fetch just
+  // keeps the launcher disabled rather than blocking the initial render.
+  const decksQuery = useQuery({
+    queryKey: ['cultureDecksList'],
+    queryFn: () => cultureDeckAPI.getList(),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     retry: false,
@@ -544,6 +660,11 @@ export const MockExamPage: React.FC = () => {
   };
 
   const canStartExam = queueInfo?.can_start_exam ?? false;
+
+  // Topic → deck resolution (D-6a) for the topic-scoped practice launcher.
+  const resolvedDeckId = selectedTopic
+    ? resolveDeckIdForTopic(selectedTopic, decksQuery.data?.decks)
+    : undefined;
 
   // Resolve + interpolate the motivation copy from its i18n key. An unresolved
   // key (no translation entry) resolves to '' via defaultValue, which hides the
@@ -651,6 +772,31 @@ export const MockExamPage: React.FC = () => {
               <span>{t('states.notEnoughQuestions')}</span>
             </div>
           )}
+
+          {/* Topic filter chips (WEDGE-03-03): single-select browse-by-topic,
+              an alternative entry point to the full 25-question mock exam
+              above. Independent of readiness/stats/queue — always renders. */}
+          <div className="dx-action">
+            <TopicChipRow selectedTopic={selectedTopic} onSelect={setSelectedTopic} />
+            {selectedTopic && (
+              <button
+                type="button"
+                className="dx-action-cta"
+                disabled={!resolvedDeckId}
+                onClick={() => {
+                  if (resolvedDeckId) {
+                    navigate(`/culture/${resolvedDeckId}/practice?topic=${selectedTopic}`);
+                  }
+                }}
+                data-testid="topic-practice-launcher"
+              >
+                {t('readiness.ctaPractice', {
+                  category: tDynamic(tDeck, `culture.categories.${selectedTopic}`),
+                  defaultValue: 'Practice {{category}}',
+                })}
+              </button>
+            )}
+          </div>
 
           {/* The single curated metric strip: Accuracy · Learned · Best · Streak.
               Best score is null until there is at least one exam (so it renders
