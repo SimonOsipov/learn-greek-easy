@@ -83,6 +83,40 @@ async def culture_questions(
     return questions
 
 
+@pytest.fixture
+async def mixed_topic_browse_questions(
+    db_session: AsyncSession, culture_deck: CultureDeck
+) -> list[CultureQuestion]:
+    """Create questions split across two topics: 2 history + 3 politics (WEDGE-03-01).
+
+    All questions are non-pending (default `is_pending_review=False`), so
+    they are all eligible for `browse_questions`.
+    """
+    topics = ["history", "history", "politics", "politics", "politics"]
+    questions = []
+    for i, topic in enumerate(topics):
+        question = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={
+                "en": f"Q{i + 1} ({topic})?",
+                "el": f"Ε{i + 1} ({topic});",
+                "ru": f"В{i + 1} ({topic})?",
+            },
+            option_a={"en": "Option A", "el": "Επιλογή Α", "ru": "Вариант А"},
+            option_b={"en": "Option B", "el": "Επιλογή Β", "ru": "Вариант Б"},
+            correct_option=1,
+            order_index=i,
+            topic=topic,
+        )
+        db_session.add(question)
+        questions.append(question)
+
+    await db_session.flush()
+    for q in questions:
+        await db_session.refresh(q)
+    return questions
+
+
 # =============================================================================
 # Test Browse Questions Endpoint
 # =============================================================================
@@ -283,3 +317,70 @@ class TestBrowseQuestionsEndpoint:
 
         order_indices = [q["order_index"] for q in data["questions"]]
         assert order_indices == sorted(order_indices)
+
+
+class TestBrowseQuestionsTopicFilter:
+    """[RED] WEDGE-03-01: `topic` query param on the browse endpoint.
+
+    `browse_deck_questions` (router.py:466) -> `CultureQuestionService.browse_questions`
+    (culture_question_service.py:469) does not accept/validate a `topic`
+    param yet. Today FastAPI silently drops an unrecognized `?topic=...`
+    query string (no 422, no filtering), so `test_browse_topic_filters_and_total`
+    fails at its assertion once the param is wired -- not at collection time.
+    """
+
+    @pytest.mark.asyncio
+    async def test_browse_topic_filters_and_total(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        culture_deck: CultureDeck,
+        mixed_topic_browse_questions: list[CultureQuestion],
+    ):
+        """?topic=politics should return only the 3 politics questions, total==3.
+
+        RED today: the unrecognized `topic` param is ignored, so total==5
+        (all mixed-topic questions) instead of 3.
+        """
+        politics_ids = {str(q.id) for q in mixed_topic_browse_questions if q.topic == "politics"}
+        history_ids = {str(q.id) for q in mixed_topic_browse_questions if q.topic == "history"}
+
+        response = await client.get(
+            f"/api/v1/culture/decks/{culture_deck.id}/questions/browse?topic=politics",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["total"] == 3
+        returned_ids = {q["id"] for q in data["questions"]}
+        assert returned_ids == politics_ids
+        assert not (returned_ids & history_ids)
+
+    @pytest.mark.asyncio
+    async def test_browse_without_topic_unchanged(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        culture_deck: CultureDeck,
+        mixed_topic_browse_questions: list[CultureQuestion],
+    ):
+        """No topic param should return all 5 questions, unchanged.
+
+        Regression lock: passes both before and after the executor wires the
+        `topic` param -- omitting it must be a strict no-op.
+        """
+        all_ids = {str(q.id) for q in mixed_topic_browse_questions}
+
+        response = await client.get(
+            f"/api/v1/culture/decks/{culture_deck.id}/questions/browse",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["total"] == 5
+        returned_ids = {q["id"] for q in data["questions"]}
+        assert returned_ids == all_ids

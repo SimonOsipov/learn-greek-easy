@@ -8,13 +8,17 @@ This module tests:
 Tests use real database fixtures and mock S3Service where needed.
 """
 
+from contextlib import contextmanager
 from datetime import date, timedelta
+from typing import Generator
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import event
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
+from src.core.culture_topic import CultureTopic
 from src.core.exceptions import CultureDeckNotFoundException, CultureQuestionNotFoundException
 from src.db.models import CardStatus, CultureDeck, CultureQuestion, CultureQuestionStats, User
 from src.services.culture_question_service import CultureQuestionService
@@ -416,6 +420,225 @@ class TestGetQuestionQueue:
         due_dates = [q.due_date for q in queue.questions]
         # Should be sorted by date ascending
         assert due_dates == sorted(due_dates)
+
+
+# =============================================================================
+# Test Question Queue Topic Filter (WEDGE-03-01)
+#
+# [RED] `get_question_queue` (culture_question_service.py:133) does not
+# accept a `topic` kwarg yet, so every test in this section fails today with
+# a TypeError (unexpected keyword argument) -- the target behavior does not
+# exist, which is a legitimate RED (not a collection/import error).
+# =============================================================================
+
+
+@contextmanager
+def capture_sql(engine: AsyncEngine) -> Generator[list[str], None, None]:
+    """Capture real SQL statements emitted on *engine* during the block.
+
+    Verbatim copy of the helper in tests/unit/repositories/test_deck_repository.py
+    and tests/integration/services/test_progress_dashboard_batching.py -- not
+    importable, duplicated across the suite by convention.
+    """
+    stmts: list[str] = []
+
+    def _hook(conn, cursor, statement, parameters, context, executemany):
+        stmts.append(statement)
+
+    event.listen(engine.sync_engine, "before_cursor_execute", _hook)
+    try:
+        yield stmts
+    finally:
+        event.remove(engine.sync_engine, "before_cursor_execute", _hook)
+
+
+class TestQuestionQueueTopicFilter:
+    """Tests for the `topic` kwarg on `get_question_queue` (WEDGE-03-01)."""
+
+    @pytest.mark.asyncio
+    async def test_service_new_and_weakest_respect_topic(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        culture_deck: CultureDeck,
+        mock_s3_service,
+    ):
+        """force_practice=True + topic=HISTORY must restrict due/new/weakest to history.
+
+        Fixture: one *studied* history question that is NOT due (next_review
+        in the future, so it is only reachable via the force_practice
+        "weakest" fallback) and zero unstudied history questions -- so due=0
+        and new=0 for a correctly topic-filtered queue, and the weakest
+        fallback is the only path that can produce a result.
+
+        A studied politics question (with a LOWER easiness_factor, i.e.
+        objectively "weaker") and an unstudied politics question also exist
+        in the same deck. If the topic filter leaked on any of the three
+        candidate queries (due/new/weakest), politics_studied would appear
+        in the result (it would sort first in the weakest ordering, being
+        weaker than the history question) or total_due/total_new would be
+        non-zero.
+        """
+        history_question = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={"en": "History Q?", "el": "Ε?", "ru": "В?"},
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+            topic="history",
+        )
+        politics_studied = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={"en": "Politics Q1?", "el": "Ε1?", "ru": "В1?"},
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=1,
+            topic="politics",
+        )
+        politics_new = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={"en": "Politics Q2?", "el": "Ε2?", "ru": "В2?"},
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=2,
+            topic="politics",
+        )
+        db_session.add_all([history_question, politics_studied, politics_new])
+        await db_session.flush()
+        for q in (history_question, politics_studied, politics_new):
+            await db_session.refresh(q)
+
+        history_stats = CultureQuestionStats(
+            user_id=test_user.id,
+            question_id=history_question.id,
+            easiness_factor=2.5,
+            interval=10,
+            repetitions=3,
+            next_review_date=date.today() + timedelta(days=5),
+            status=CardStatus.REVIEW,
+        )
+        politics_stats = CultureQuestionStats(
+            user_id=test_user.id,
+            question_id=politics_studied.id,
+            easiness_factor=1.3,  # weakest possible -- would sort first if it leaked in
+            interval=10,
+            repetitions=3,
+            next_review_date=date.today() + timedelta(days=5),
+            status=CardStatus.REVIEW,
+        )
+        db_session.add_all([history_stats, politics_stats])
+        await db_session.flush()
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        queue = await service.get_question_queue(
+            user_id=test_user.id,
+            deck_id=culture_deck.id,
+            limit=10,
+            include_new=True,
+            force_practice=True,
+            topic=CultureTopic.HISTORY,
+        )
+
+        # No history question is due or new -- due=0, new=0 for a correctly
+        # topic-filtered queue (politics_new is unstudied but a different topic).
+        assert queue.total_due == 0
+        assert queue.total_new == 0
+        # force_practice's weakest fallback must return only the history
+        # question -- never politics_studied, even though it is objectively
+        # weaker and would otherwise sort first.
+        assert queue.total_in_queue == 1
+        assert queue.questions[0].id == history_question.id
+
+    @pytest.mark.asyncio
+    async def test_queue_query_count_invariant_to_topic(
+        self,
+        db_session: AsyncSession,
+        db_engine: AsyncEngine,
+        test_user: User,
+        culture_deck: CultureDeck,
+        mock_s3_service,
+    ):
+        """Adding `topic=` must add a WHERE clause to existing queries, not a new query.
+
+        Per feedback_query_count_test_selectin.md: assert the statement count
+        is invariant (identical between the filtered and unfiltered call),
+        not a hardcoded magic number -- the real count includes pre-existing
+        selectin re-loads (CultureQuestionStats.question /
+        CultureQuestionStats.user, both lazy="selectin" on the model) that
+        are out of scope for this ticket and shouldn't be baked into the
+        assertion as a specific number.
+
+        Both calls are seeded to return a non-empty queue so the optional
+        cross-deck-enrichment query (`_get_cross_deck_map`, only fired when
+        `queue_items` is non-empty) fires identically in both branches --
+        otherwise an empty-vs-non-empty result would itself change the
+        statement count and confound the comparison.
+        """
+        questions = []
+        for i, topic in enumerate(["history", "history", "politics", "politics"]):
+            question = CultureQuestion(
+                deck_id=culture_deck.id,
+                question_text={"en": f"Q{i}?", "el": f"Ε{i}?", "ru": f"В{i}?"},
+                option_a={"en": "A", "el": "Α", "ru": "А"},
+                option_b={"en": "B", "el": "Β", "ru": "Б"},
+                correct_option=1,
+                order_index=i,
+                topic=topic,
+            )
+            db_session.add(question)
+            questions.append(question)
+        await db_session.flush()
+        for q in questions:
+            await db_session.refresh(q)
+
+        # First 2 (history, politics) get overdue "due" stats; last 2
+        # (history, politics) stay unstudied ("new") -- so both due and new
+        # are non-empty for both the filtered and unfiltered call.
+        for question in questions[:2]:
+            stats = CultureQuestionStats(
+                user_id=test_user.id,
+                question_id=question.id,
+                easiness_factor=2.5,
+                interval=1,
+                repetitions=1,
+                next_review_date=date.today() - timedelta(days=1),
+                status=CardStatus.LEARNING,
+            )
+            db_session.add(stats)
+        await db_session.flush()
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        with capture_sql(db_engine) as stmts_no_topic:
+            queue_no_topic = await service.get_question_queue(
+                user_id=test_user.id,
+                deck_id=culture_deck.id,
+                limit=10,
+            )
+        assert (
+            queue_no_topic.total_in_queue > 0
+        ), "fixture invariant: unfiltered queue must be non-empty"
+
+        with capture_sql(db_engine) as stmts_with_topic:
+            queue_with_topic = await service.get_question_queue(
+                user_id=test_user.id,
+                deck_id=culture_deck.id,
+                limit=10,
+                topic=CultureTopic.HISTORY,
+            )
+        assert (
+            queue_with_topic.total_in_queue > 0
+        ), "fixture invariant: history-filtered queue must be non-empty"
+
+        assert len(stmts_with_topic) == len(stmts_no_topic), (
+            f"topic filter changed statement count: {len(stmts_no_topic)} (no topic) vs "
+            f"{len(stmts_with_topic)} (topic=history). topic should add a WHERE clause to "
+            "existing queries, not a new query."
+        )
 
 
 # =============================================================================
