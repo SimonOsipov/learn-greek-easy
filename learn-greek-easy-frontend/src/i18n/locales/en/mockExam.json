@@ -120,7 +120,15 @@
   },
   "topics": {
     "all": "All topics",
-    "filterGroup": "Filter by topic"
+    "filterGroup": "Filter by topic",
+    "practiceCta": "Practice {{topic}}",
+    "accusative": {
+      "history": "History",
+      "geography": "Geography",
+      "politics": "Politics",
+      "culture": "Culture",
+      "practical": "Practical"
+    }
   },
   "states": {
     "loading": "Loading exam data...",

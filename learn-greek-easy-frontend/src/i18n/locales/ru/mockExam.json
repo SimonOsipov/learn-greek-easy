@@ -120,7 +120,15 @@
   },
   "topics": {
     "all": "Все темы",
-    "filterGroup": "Фильтр по теме"
+    "filterGroup": "Фильтр по теме",
+    "practiceCta": "Практиковать {{topic}}",
+    "accusative": {
+      "history": "Историю",
+      "geography": "Географию",
+      "politics": "Политику",
+      "culture": "Культуру",
+      "practical": "Практику"
+    }
   },
   "states": {
     "loading": "Загрузка данных экзамена...",

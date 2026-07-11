@@ -549,11 +549,6 @@ export const MockExamPage: React.FC = () => {
   // CuratedMetricStrip) read their `t('readiness.*')` copy from the `mockExam`
   // namespace too — the readiness key block was migrated culture → mockExam in
   // PRACT2-11-03.
-  // Separate `deck`-namespace hook (WEDGE-03-03) for the topic-launcher's
-  // `deck:culture.categories.*` label — kept off the primary `t` above so it
-  // stays a plain string `ns` (matching CultureBadge's `useTranslation('deck')`
-  // pattern) rather than the `useTranslation(['mockExam','deck'])` array form.
-  const { t: tDeck } = useTranslation('deck');
   const navigate = useNavigate();
 
   // Store state
@@ -791,9 +786,8 @@ export const MockExamPage: React.FC = () => {
                 }}
                 data-testid="topic-practice-launcher"
               >
-                {t('readiness.ctaPractice', {
-                  category: tDynamic(tDeck, `culture.categories.${selectedTopic}`),
-                  defaultValue: 'Practice {{category}}',
+                {t('topics.practiceCta', {
+                  topic: tDynamic(t, `topics.accusative.${selectedTopic}`),
                 })}
               </button>
             )}

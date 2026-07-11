@@ -290,6 +290,36 @@ describe('MockExamPage — topic chips (WEDGE-03-03)', () => {
   });
 
   // ---------------------------------------------------------------------
+  // AC4 (Phase 3.5 regression) — the launcher's own copy key is
+  // grammatically correct in RU (accusative case), not the shared
+  // `readiness.ctaPractice` key (nominative) used by the pre-existing
+  // weakest-category CTAs elsewhere on this page. Missed initially because
+  // no test asserted the launcher's rendered TEXT (only its testid/enabled
+  // state) — this closes that gap.
+  // ---------------------------------------------------------------------
+
+  it('renders grammatically-correct launcher copy in English and Russian', async () => {
+    await renderSettled();
+    let group = screen.getByTestId('culture-topic-chips');
+
+    within(group).getByTestId('topic-chip-history').click();
+    let launcher = await screen.findByTestId('topic-practice-launcher');
+    await waitFor(() => expect(launcher).not.toBeDisabled());
+    expect(launcher).toHaveTextContent('Practice History');
+
+    cleanup();
+    await i18n.changeLanguage('ru');
+    await renderSettled();
+    group = screen.getByTestId('culture-topic-chips');
+
+    within(group).getByTestId('topic-chip-history').click();
+    launcher = await screen.findByTestId('topic-practice-launcher');
+    await waitFor(() => expect(launcher).not.toBeDisabled());
+    // Accusative "Историю", NOT the nominative "История" chip label.
+    expect(launcher).toHaveTextContent('Практиковать Историю');
+  });
+
+  // ---------------------------------------------------------------------
   // D-6a — resolver picks the GREATEST question_count deck, not the first
   // ---------------------------------------------------------------------
 
