@@ -5,6 +5,20 @@
 
 export type CultureLanguage = 'el' | 'en' | 'ru';
 
+/**
+ * Canonical thematic-subject taxonomy for culture-exam questions (WEDGE-01).
+ * Mirrors the backend enum `CultureTopic` (src/core/culture_topic.py).
+ */
+export type CultureTopic = 'history' | 'geography' | 'politics' | 'culture' | 'practical';
+
+export const CULTURE_TOPICS: readonly CultureTopic[] = [
+  'history',
+  'geography',
+  'politics',
+  'culture',
+  'practical',
+];
+
 export type CultureCategory =
   | 'history'
   | 'geography'

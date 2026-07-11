@@ -18,7 +18,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 
 import { AlertCircle, CheckCircle, ChevronLeft, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { MCQComponent, ScoreCard } from '@/components/culture';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
@@ -46,7 +46,12 @@ import { cultureDeckAPI, type LocalizedText } from '@/services/cultureDeckAPI';
 import { useCultureSessionStore } from '@/stores/cultureSessionStore';
 import { useQuestionLanguageStore } from '@/stores/questionLanguageStore';
 import { useXPStore } from '@/stores/xpStore';
-import type { CultureQuestionResponse, CultureAnswerResponse } from '@/types/culture';
+import {
+  CULTURE_TOPICS,
+  type CultureAnswerResponse,
+  type CultureQuestionResponse,
+  type CultureTopic,
+} from '@/types/culture';
 import type { CultureSessionConfig } from '@/types/cultureSession';
 import { DEFAULT_SESSION_CONFIG } from '@/types/cultureSession';
 import { getPersistedNewsLevel, setPersistedNewsLevel, type NewsLevel } from '@/utils/newsLevel';
@@ -85,7 +90,16 @@ export function CulturePracticePage() {
   const { t } = useTranslation(['culture', 'common']);
   const { deckId } = useParams<{ deckId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { track } = useTrackEvent();
+
+  // ?topic= query param scopes the queue to a single thematic subject.
+  // Missing/unrecognized values fall through to undefined (unscoped) --
+  // the backend validates, so an unknown value is just ignored here.
+  const topicParam = searchParams.get('topic');
+  const topic: CultureTopic | undefined = CULTURE_TOPICS.includes(topicParam as CultureTopic)
+    ? (topicParam as CultureTopic)
+    : undefined;
 
   // Store state
   const {
@@ -229,6 +243,7 @@ export function CulturePracticePage() {
         limit: 50,
         include_new: true,
         new_questions_limit: 20,
+        topic,
       });
 
       // Track if user has studied questions (for "Practice Anyway" feature)
@@ -270,7 +285,7 @@ export function CulturePracticePage() {
     } catch (err) {
       reportAPIError(err, { operation: 'initializeSession', endpoint: `/culture/${deckId}/queue` });
     }
-  }, [deckId, startSession]);
+  }, [deckId, topic, startSession]);
 
   /**
    * Handle answer submission
@@ -418,6 +433,7 @@ export function CulturePracticePage() {
         limit: 50,
         include_new: false, // Don't include new questions in practice anyway mode
         force_practice: true,
+        topic,
       });
 
       if (queue.questions.length === 0) {
@@ -461,7 +477,7 @@ export function CulturePracticePage() {
     } finally {
       setIsPracticeAnywayLoading(false);
     }
-  }, [deckId, startSession]);
+  }, [deckId, topic, startSession]);
 
   // Recovery dialog
   if (showRecoveryDialog) {
