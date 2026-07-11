@@ -216,7 +216,7 @@ export function CulturePracticePage() {
       initializeSession();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deckId]);
+  }, [deckId, topic]);
 
   // beforeunload handler for browser close protection
   useEffect(() => {

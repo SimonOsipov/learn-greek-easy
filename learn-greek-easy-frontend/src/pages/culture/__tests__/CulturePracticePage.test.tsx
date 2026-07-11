@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@/lib/test-utils';
+import { act, render, screen, waitFor } from '@/lib/test-utils';
 import userEvent from '@testing-library/user-event';
 import posthog from 'posthog-js';
 import { cultureDeckAPI } from '@/services/cultureDeckAPI';
@@ -638,6 +638,31 @@ describe('CulturePracticePage', () => {
 
       const [, calledOptions] = vi.mocked(cultureDeckAPI.getQuestionQueue).mock.calls[0];
       expect((calledOptions as { topic?: string } | undefined)?.topic).toBeUndefined();
+    });
+
+    // Proves the mount effect's re-init is actually gated on `topic`, not
+    // just `deckId` -- a same-deck topic-only URL change (no remount) must
+    // re-invoke getQuestionQueue with the new topic.
+    it('re-invokes the queue with the new topic on a same-deck ?topic change', async () => {
+      render(<CulturePracticePage />, {
+        initialRoute: '/culture/test-deck-1/practice?topic=history',
+      });
+
+      await waitFor(() => {
+        expect(cultureDeckAPI.getQuestionQueue).toHaveBeenCalledTimes(1);
+      });
+
+      act(() => {
+        window.history.pushState({}, '', '/culture/test-deck-1/practice?topic=politics');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      });
+
+      await waitFor(() => {
+        expect(cultureDeckAPI.getQuestionQueue).toHaveBeenCalledTimes(2);
+      });
+
+      const [, secondCallOptions] = vi.mocked(cultureDeckAPI.getQuestionQueue).mock.calls[1];
+      expect(secondCallOptions).toEqual(expect.objectContaining({ topic: 'politics' }));
     });
   });
 });
