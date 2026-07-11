@@ -523,6 +523,51 @@ class TestQuestionQueueTopicFilter:
         assert data["total_in_queue"] == 0
         assert data["questions"] == []
 
+    @pytest.mark.asyncio
+    async def test_queue_topic_excludes_untagged_questions(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+        culture_deck: CultureDeck,
+        mixed_topic_questions: list[CultureQuestion],
+    ):
+        """?topic=history must exclude untagged (topic IS NULL) questions.
+
+        `WHERE topic = 'history'` is SQL-NULL-unsafe: an untagged row (topic
+        IS NULL) never satisfies `topic = 'history'`, so it must never appear
+        in a topic-filtered queue. This locks that behavior against a
+        reimplementation using e.g. `topic != 'politics'`, which would leak
+        untagged rows in.
+        """
+        untagged = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={"en": "Untagged Q?", "el": "Ε;", "ru": "В?"},
+            option_a={"en": "Option A", "el": "Επιλογή Α", "ru": "Вариант А"},
+            option_b={"en": "Option B", "el": "Επιλογή Β", "ru": "Вариант Б"},
+            correct_option=1,
+            order_index=99,
+            topic=None,
+        )
+        db_session.add(untagged)
+        await db_session.flush()
+        await db_session.refresh(untagged)
+
+        history_ids = {str(q.id) for q in mixed_topic_questions if q.topic == "history"}
+
+        response = await client.get(
+            f"/api/v1/culture/decks/{culture_deck.id}/questions?topic=history",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        returned_ids = {q["id"] for q in data["questions"]}
+        assert str(untagged.id) not in returned_ids, "untagged question leaked into history filter"
+        assert returned_ids == history_ids
+        assert data["total_in_queue"] == len(history_ids)
+
 
 # =============================================================================
 # Test Answer Submission Endpoint
