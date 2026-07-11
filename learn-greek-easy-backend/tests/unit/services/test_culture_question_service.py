@@ -424,11 +424,6 @@ class TestGetQuestionQueue:
 
 # =============================================================================
 # Test Question Queue Topic Filter (WEDGE-03-01)
-#
-# [RED] `get_question_queue` (culture_question_service.py:133) does not
-# accept a `topic` kwarg yet, so every test in this section fails today with
-# a TypeError (unexpected keyword argument) -- the target behavior does not
-# exist, which is a legitimate RED (not a collection/import error).
 # =============================================================================
 
 
@@ -579,7 +574,7 @@ class TestQuestionQueueTopicFilter:
         statement count and confound the comparison.
         """
         questions = []
-        for i, topic in enumerate(["history", "history", "politics", "politics"]):
+        for i, topic in enumerate(["history", "politics", "history", "politics"]):
             question = CultureQuestion(
                 deck_id=culture_deck.id,
                 question_text={"en": f"Q{i}?", "el": f"Ε{i}?", "ru": f"В{i}?"},
@@ -633,6 +628,16 @@ class TestQuestionQueueTopicFilter:
         assert (
             queue_with_topic.total_in_queue > 0
         ), "fixture invariant: history-filtered queue must be non-empty"
+
+        # Topics are interleaved (history, politics, history, politics) across the
+        # due/new split, so this actually exercises the filter on the due path --
+        # not just new/weakest -- unlike a same-topic-only due fixture.
+        assert queue_with_topic.total_due == 1
+        assert queue_with_topic.total_new == 1
+        assert {item.id for item in queue_with_topic.questions} == {
+            questions[0].id,
+            questions[2].id,
+        }
 
         assert len(stmts_with_topic) == len(stmts_no_topic), (
             f"topic filter changed statement count: {len(stmts_no_topic)} (no topic) vs "

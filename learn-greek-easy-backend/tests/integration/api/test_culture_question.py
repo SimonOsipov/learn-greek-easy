@@ -409,15 +409,7 @@ class TestGetQuestionQueueEndpoint:
 
 
 class TestQuestionQueueTopicFilter:
-    """[RED] WEDGE-03-01: `topic` query param on the question-queue endpoint.
-
-    `get_question_queue` (router.py:404 -> CultureQuestionService.get_question_queue,
-    culture_question_service.py:133) does not accept/validate a `topic` param
-    yet. Today FastAPI silently drops an unrecognized `?topic=...` query
-    string (no 422, no filtering), so every test here except
-    `test_queue_without_topic_unchanged` fails at its assertion once the
-    param is wired -- not at import/collection time.
-    """
+    """WEDGE-03-01: `topic` query param on the question-queue endpoint."""
 
     @pytest.mark.asyncio
     async def test_queue_topic_filters_to_single_topic(
@@ -427,11 +419,7 @@ class TestQuestionQueueTopicFilter:
         culture_deck: CultureDeck,
         mixed_topic_questions: list[CultureQuestion],
     ):
-        """?topic=history should return only the 2 history questions.
-
-        RED today: the unrecognized `topic` param is ignored, so the queue
-        returns all 5 mixed-topic questions instead of just the 2 history ones.
-        """
+        """?topic=history should return only the 2 history questions."""
         history_ids = {str(q.id) for q in mixed_topic_questions if q.topic == "history"}
         politics_ids = {str(q.id) for q in mixed_topic_questions if q.topic == "politics"}
 
@@ -485,11 +473,7 @@ class TestQuestionQueueTopicFilter:
         auth_headers: dict,
         culture_deck: CultureDeck,
     ):
-        """An unrecognized topic value must fail validation (422), not 500 or a silent 200.
-
-        RED today: the unknown query param is dropped by FastAPI, so the
-        request succeeds (200) instead of failing validation.
-        """
+        """An unrecognized topic value must fail validation (422), not 500 or a silent 200."""
         response = await client.get(
             f"/api/v1/culture/decks/{culture_deck.id}/questions?topic=sport",
             headers=auth_headers,
@@ -505,11 +489,7 @@ class TestQuestionQueueTopicFilter:
         culture_deck: CultureDeck,
         politics_only_questions: list[CultureQuestion],
     ):
-        """Filtering by a topic absent from the deck returns an empty queue, not a crash.
-
-        RED today: the unrecognized `topic` param is ignored, so all 3
-        politics questions come back instead of an empty queue.
-        """
+        """Filtering by a topic absent from the deck returns an empty queue, not a crash."""
         response = await client.get(
             f"/api/v1/culture/decks/{culture_deck.id}/questions?topic=history",
             headers=auth_headers,

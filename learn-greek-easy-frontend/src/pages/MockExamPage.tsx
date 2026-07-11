@@ -785,7 +785,8 @@ export const MockExamPage: React.FC = () => {
                 disabled={!resolvedDeckId}
                 onClick={() => {
                   if (resolvedDeckId) {
-                    navigate(`/culture/${resolvedDeckId}/practice?topic=${selectedTopic}`);
+                    const params = new URLSearchParams({ topic: selectedTopic });
+                    navigate(`/culture/${resolvedDeckId}/practice?${params.toString()}`);
                   }
                 }}
                 data-testid="topic-practice-launcher"

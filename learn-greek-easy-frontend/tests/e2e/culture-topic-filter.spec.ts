@@ -208,7 +208,6 @@ test.describe('Culture Topic Filter — filtered practice session (WEDGE-03-04)'
     // itself refuses to click a disabled element, so the strongest available proof of
     // "no navigation" is that we stay on the hub with the launcher still disabled.
     const urlBefore = page.url();
-    await page.waitForTimeout(500);
     expect(page.url()).toBe(urlBefore);
     await expect(launcher).toBeDisabled();
     await expect(page.getByTestId('mock-exam-page')).toBeVisible();

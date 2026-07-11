@@ -320,14 +320,7 @@ class TestBrowseQuestionsEndpoint:
 
 
 class TestBrowseQuestionsTopicFilter:
-    """[RED] WEDGE-03-01: `topic` query param on the browse endpoint.
-
-    `browse_deck_questions` (router.py:466) -> `CultureQuestionService.browse_questions`
-    (culture_question_service.py:469) does not accept/validate a `topic`
-    param yet. Today FastAPI silently drops an unrecognized `?topic=...`
-    query string (no 422, no filtering), so `test_browse_topic_filters_and_total`
-    fails at its assertion once the param is wired -- not at collection time.
-    """
+    """WEDGE-03-01: `topic` query param on the browse endpoint."""
 
     @pytest.mark.asyncio
     async def test_browse_topic_filters_and_total(
@@ -337,11 +330,7 @@ class TestBrowseQuestionsTopicFilter:
         culture_deck: CultureDeck,
         mixed_topic_browse_questions: list[CultureQuestion],
     ):
-        """?topic=politics should return only the 3 politics questions, total==3.
-
-        RED today: the unrecognized `topic` param is ignored, so total==5
-        (all mixed-topic questions) instead of 3.
-        """
+        """?topic=politics should return only the 3 politics questions, total==3."""
         politics_ids = {str(q.id) for q in mixed_topic_browse_questions if q.topic == "politics"}
         history_ids = {str(q.id) for q in mixed_topic_browse_questions if q.topic == "history"}
 
