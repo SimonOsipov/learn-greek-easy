@@ -607,5 +607,37 @@ describe('CulturePracticePage', () => {
       const [, calledOptions] = vi.mocked(cultureDeckAPI.getQuestionQueue).mock.calls[0];
       expect((calledOptions as { topic?: string } | undefined)?.topic).toBeUndefined();
     });
+
+    // Adversarial: an unrecognized value must fall through to unscoped, not
+    // be forwarded verbatim as a broken `topic=banana` request -- mirrors the
+    // backend's 422-on-invalid-enum contract by never sending a non-taxonomy
+    // value from the client at all.
+    it('omits topic when the value is not a recognized CultureTopic', async () => {
+      render(<CulturePracticePage />, {
+        initialRoute: '/culture/test-deck-1/practice?topic=banana',
+      });
+
+      await waitFor(() => {
+        expect(cultureDeckAPI.getQuestionQueue).toHaveBeenCalled();
+      });
+
+      const [, calledOptions] = vi.mocked(cultureDeckAPI.getQuestionQueue).mock.calls[0];
+      expect((calledOptions as { topic?: string } | undefined)?.topic).toBeUndefined();
+    });
+
+    // Adversarial: `?topic=` (present but empty) must also fall through to
+    // unscoped -- an empty string is not a member of CULTURE_TOPICS either.
+    it('omits topic when the value is an empty string', async () => {
+      render(<CulturePracticePage />, {
+        initialRoute: '/culture/test-deck-1/practice?topic=',
+      });
+
+      await waitFor(() => {
+        expect(cultureDeckAPI.getQuestionQueue).toHaveBeenCalled();
+      });
+
+      const [, calledOptions] = vi.mocked(cultureDeckAPI.getQuestionQueue).mock.calls[0];
+      expect((calledOptions as { topic?: string } | undefined)?.topic).toBeUndefined();
+    });
   });
 });
