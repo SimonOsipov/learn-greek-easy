@@ -32,6 +32,7 @@
  * - AC2/OOS: chips render the plain label only — no "(count)" suffix
  */
 
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import i18n from '@/i18n';
@@ -387,5 +388,75 @@ describe('MockExamPage — topic chips (WEDGE-03-03)', () => {
       // pattern) would fail this.
       expect(chip.textContent ?? '').not.toMatch(/[(]|\d/);
     }
+  });
+
+  // ---------------------------------------------------------------------
+  // D-6a — genuine tie-break: EQUAL question_count, ascending id wins
+  // ---------------------------------------------------------------------
+  // (QA adversarial coverage, WEDGE-03-03) The pre-existing "greatest
+  // question_count" spec above never exercises a tie (all six culture decks
+  // there have distinct counts), so it can't tell an ascending-id tie-break
+  // apart from "first match wins" or "last match wins". This fixture gives
+  // two `history` decks the SAME question_count with the higher id placed
+  // FIRST in the list — a resolver that just kept the first (or last) match
+  // on a tie, rather than actually comparing ids, would resolve to `h-9`.
+
+  it('tie-breaks equal question_count decks by ascending id (not array order)', async () => {
+    const tiedDecks: CultureDeckResponse[] = [
+      makeDeck({ id: 'h-9', category: 'history', question_count: 40 }),
+      makeDeck({ id: 'h-2', category: 'history', question_count: 40 }),
+    ];
+    mockGetList.mockResolvedValue(
+      makeDeckList([...DEFAULT_DECKS.filter((d) => d.category !== 'history'), ...tiedDecks])
+    );
+
+    await renderSettled();
+    const group = screen.getByTestId('culture-topic-chips');
+
+    within(group).getByTestId('topic-chip-history').click();
+
+    const launcher = await screen.findByTestId('topic-practice-launcher');
+    await waitFor(() => expect(launcher).not.toBeDisabled());
+
+    launcher.click();
+
+    expect(mockNavigate).toHaveBeenCalledWith('/culture/h-2/practice?topic=history');
+  });
+
+  // ---------------------------------------------------------------------
+  // AC2 — single-select + clear via userEvent (the realistic interaction
+  // path), not the raw `.click()` the specs above use.
+  // ---------------------------------------------------------------------
+  // (QA adversarial coverage, WEDGE-03-03) MockExamPage.tsx wraps each chip's
+  // onSelect in `flushSync` specifically so a raw, non-`act()`-wrapped
+  // `.click()` (as used by the specs above) observes a synchronously
+  // committed `aria-pressed`. `userEvent.click` already wraps its dispatched
+  // events in `act()` and awaits microtasks/macrotasks itself, so this test
+  // confirms the single-select + tap-to-clear behavior also holds under the
+  // realistic interaction path — i.e. `flushSync` is filling a real gap for
+  // the raw-click specs, not standing in for a state bug that also affects
+  // normal user interaction.
+
+  it('[userEvent] selecting and re-tapping a chip single-selects and clears', async () => {
+    const user = userEvent.setup();
+    await renderSettled();
+    const group = screen.getByTestId('culture-topic-chips');
+
+    const historyChip = within(group).getByTestId('topic-chip-history');
+    const politicsChip = within(group).getByTestId('topic-chip-politics');
+    const allChip = within(group).getByTestId('topic-chip-all');
+
+    await user.click(historyChip);
+    expect(historyChip).toHaveAttribute('aria-pressed', 'true');
+    expect(politicsChip).toHaveAttribute('aria-pressed', 'false');
+    expect(allChip).toHaveAttribute('aria-pressed', 'false');
+
+    await user.click(politicsChip);
+    expect(historyChip).toHaveAttribute('aria-pressed', 'false');
+    expect(politicsChip).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(politicsChip);
+    expect(politicsChip).toHaveAttribute('aria-pressed', 'false');
+    expect(allChip).toHaveAttribute('aria-pressed', 'true');
   });
 });
