@@ -39,12 +39,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuestionLanguage } from '@/hooks/useQuestionLanguage';
+import { tDynamic } from '@/i18n/tDynamic';
 import { track } from '@/lib/analytics';
 import log from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { useMockExamSessionStore } from '@/stores/mockExamSessionStore';
 import { useXPStore } from '@/stores/xpStore';
 import type { CultureLanguage } from '@/types/culture';
+import type { MockExamTopicBreakdownItem } from '@/types/mockExam';
 import type { MockExamQuestionState } from '@/types/mockExamSession';
 
 /** Option letter mapping */
@@ -70,6 +72,79 @@ function formatDuration(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+}
+
+/**
+ * Tone driven by score % threshold: ≥60 → success, ≥30 → warning, else danger.
+ * Mirrors readinessTone() in MockExamPage — the shared cx-cat-bar tone idiom.
+ */
+function topicTone(pct: number): 'success' | 'warning' | 'danger' {
+  if (pct >= 60) return 'success';
+  if (pct >= 30) return 'warning';
+  return 'danger';
+}
+
+/**
+ * Per-topic breakdown panel (WEDGE-04).
+ *
+ * Renders one horizontal cx-cat bar per topic in the backend's canonical
+ * CultureTopic order. Topic labels resolve from the `deck` namespace
+ * (culture.categories.*) — the same source MockExamPage's category rows use.
+ *
+ * A topic that was NOT tested in this attempt (`percentage === null`) renders an
+ * empty bar track with NO inner fill span (an inner span would get the CSS
+ * default 12px danger-red min-width) and a muted "not in this attempt" note in
+ * place of the score/percentage.
+ */
+function TopicBreakdownPanel({ items }: { items: MockExamTopicBreakdownItem[] }) {
+  const { t } = useTranslation('mockExam');
+  // Category display names live in the `deck` namespace (culture.categories.*).
+  const { t: tDeck } = useTranslation('deck');
+
+  return (
+    <Card className="mt-6" data-testid="topic-breakdown">
+      <CardContent className="p-6">
+        <h2 className="mb-4 text-lg font-semibold text-foreground">{t('breakdown.title')}</h2>
+        <div className="cx-cat-list">
+          {items.map((item) => {
+            const hasScore = item.percentage !== null;
+            return (
+              <div key={item.topic} className="cx-cat-row" data-testid={`topic-bar-${item.topic}`}>
+                <div className="cx-cat-l">
+                  {tDynamic(tDeck, `culture.categories.${item.topic}`)}
+                </div>
+                {hasScore ? (
+                  <div className="cx-cat-bar" data-tone={topicTone(item.percentage as number)}>
+                    <span style={{ width: `${item.percentage}%` }} />
+                  </div>
+                ) : (
+                  // Empty track, no inner span — a zero-asked topic has no fill.
+                  <div className="cx-cat-bar" />
+                )}
+                <div className="cx-cat-meta">
+                  {hasScore ? (
+                    <>
+                      <span className="cx-cat-mastered">
+                        {t('breakdown.count', { correct: item.correct, asked: item.asked })}
+                      </span>
+                      <span className="cx-cat-accuracy">
+                        {t('breakdown.percentage', { pct: item.percentage })}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="cx-cat-accuracy">{t('breakdown.notInAttempt')}</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <p className="mt-4 text-xs text-muted-foreground" data-testid="topic-breakdown-disclaimer">
+          {t('breakdown.disclaimer')}
+        </p>
+      </CardContent>
+    </Card>
+  );
 }
 
 /**
@@ -219,7 +294,10 @@ export function MockExamResultsPage() {
           <Card>
             <CardContent className="flex flex-col items-center p-4">
               <CheckCircle className="mb-2 h-8 w-8 text-[hsl(var(--practice-correct))]" />
-              <p className="font-practice-mono text-2xl font-bold text-foreground">
+              <p
+                className="font-practice-mono text-2xl font-bold text-foreground"
+                data-testid="mock-exam-score"
+              >
                 {summary.score}
               </p>
               <p className="text-center text-sm text-muted-foreground">{t('common:correct')}</p>
@@ -267,6 +345,12 @@ export function MockExamResultsPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Per-topic breakdown (WEDGE-04). Guarded so injected/older summaries
+            without the field (e.g. the E2E-08 partial summary) render nothing. */}
+        {summary.topicBreakdown?.length ? (
+          <TopicBreakdownPanel items={summary.topicBreakdown} />
+        ) : null}
 
         {/* Incorrect Answers Accordion */}
         <Card className="mt-6">

@@ -3,7 +3,7 @@
  * Matches backend API response schemas.
  */
 
-import type { MultilingualText } from './culture';
+import type { CultureTopic, MultilingualText } from './culture';
 
 // Session status
 export type MockExamSessionStatus = 'active' | 'completed' | 'abandoned';
@@ -69,6 +69,14 @@ export interface MockExamAnswerResult {
   was_duplicate: boolean;
 }
 
+// Per-topic breakdown item in submit-all response (matches MockExamTopicBreakdownItem from backend)
+export interface MockExamTopicBreakdownItem {
+  topic: CultureTopic; // canonical CultureTopic value
+  asked: number;
+  correct: number;
+  percentage: number | null; // percent correct over asked; null when asked === 0
+}
+
 // Submit-all response (matches MockExamSubmitAllResponse from backend)
 export interface MockExamSubmitAllResponse {
   session: MockExamSession;
@@ -81,6 +89,7 @@ export interface MockExamSubmitAllResponse {
   total_xp_earned: number;
   new_answers_count: number;
   duplicate_answers_count: number;
+  topic_breakdown: MockExamTopicBreakdownItem[]; // 5 items, canonical CultureTopic order
 }
 
 // Statistics

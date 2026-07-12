@@ -3,7 +3,7 @@
  * Used by mockExamSessionStore and mock exam pages.
  */
 
-import type { MockExamQuestion, MockExamSession } from './mockExam';
+import type { MockExamQuestion, MockExamSession, MockExamTopicBreakdownItem } from './mockExam';
 
 // ============================================================================
 // Constants
@@ -140,6 +140,8 @@ export interface MockExamSessionSummary {
   timeTakenSeconds: number;
   /** Individual question results */
   questionResults: MockExamQuestionState[];
+  /** Per-topic performance breakdown (5 items, canonical CultureTopic order) */
+  topicBreakdown: MockExamTopicBreakdownItem[];
   /** Whether exam was auto-submitted due to timer */
   timerExpired: boolean;
   /** When exam was completed */

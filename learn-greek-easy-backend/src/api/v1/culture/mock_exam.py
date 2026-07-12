@@ -34,6 +34,7 @@ from src.schemas.mock_exam import (
     MockExamStatisticsResponse,
     MockExamSubmitAllRequest,
     MockExamSubmitAllResponse,
+    MockExamTopicBreakdownItem,
 )
 from src.services import MockExamService
 from src.services.s3_service import IMAGE_PRESIGN_EXPIRY_SECONDS
@@ -470,6 +471,15 @@ async def submit_all_mock_exam_answers(
         total_xp_earned=result["total_xp_earned"],
         new_answers_count=result["new_answers_count"],
         duplicate_answers_count=result["duplicate_answers_count"],
+        topic_breakdown=[
+            MockExamTopicBreakdownItem(
+                topic=tb["topic"],
+                asked=tb["asked"],
+                correct=tb["correct"],
+                percentage=tb["percentage"],
+            )
+            for tb in result["topic_breakdown"]
+        ],
     )
 
 

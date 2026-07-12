@@ -135,6 +135,13 @@ describe('mockExamSessionStore', () => {
     total_xp_earned: 20,
     new_answers_count: 2,
     duplicate_answers_count: 0,
+    topic_breakdown: [
+      { topic: 'history', asked: 1, correct: 1, percentage: 100 },
+      { topic: 'geography', asked: 0, correct: 0, percentage: null },
+      { topic: 'politics', asked: 1, correct: 1, percentage: 100 },
+      { topic: 'culture', asked: 0, correct: 0, percentage: null },
+      { topic: 'practical', asked: 0, correct: 0, percentage: null },
+    ],
   };
 
   beforeEach(() => {
@@ -483,6 +490,8 @@ describe('mockExamSessionStore', () => {
       expect(result.current.summary?.percentage).toBe(66.67);
       expect(result.current.summary?.passThreshold).toBe(60);
       expect(result.current.summary?.xpEarned).toBe(20);
+      // WEDGE-04: topic breakdown passes straight through from the response
+      expect(result.current.summary?.topicBreakdown).toEqual(mockSubmitAllResponse.topic_breakdown);
     });
 
     it('should handle network error gracefully', async () => {

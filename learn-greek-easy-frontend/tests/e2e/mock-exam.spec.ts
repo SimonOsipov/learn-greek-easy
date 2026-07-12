@@ -469,3 +469,125 @@ test.describe('Mock Exam Session - Edge Cases', () => {
     }
   });
 });
+
+// ============================================================================
+// Test Suite: Per-topic breakdown on the results screen (WEDGE-04-03)
+// ============================================================================
+
+/**
+ * The five canonical CultureTopic values in the backend's canonical order
+ * (backend `src/core/culture_topic.py`). The results panel (WEDGE-04-02) renders
+ * exactly one `topic-bar-<topic>` row per value, whether or not that topic was
+ * drawn in this attempt.
+ */
+const CULTURE_TOPICS = ['history', 'geography', 'politics', 'culture', 'practical'] as const;
+
+/**
+ * Drive an active session to completion and land on the results screen.
+ *
+ * Completion is AUTO-SUBMIT — there is no explicit "finish" button. Answering the
+ * final question triggers `nextQuestion() → completeExam()` (submitAll) and a
+ * `summary`-watching effect navigates to `/practice/culture-exam/results` (see
+ * `MockExamSessionPage` + `mockExamSessionStore`). We therefore just answer every
+ * question (option 1) until the results breakdown renders.
+ *
+ * Returns the number of questions answered — i.e. the exam length, which the seed
+ * may size below the 25-question max. The loop caps iterations well above that max
+ * so a regression that never completes fails fast instead of hanging.
+ */
+async function answerUntilResults(page: Page): Promise<number> {
+  const MAX_ITERATIONS = 30; // > the 25-question exam ceiling — a runaway guard, not a real bound
+  const breakdown = page.getByTestId('topic-breakdown');
+  const mcq = page.getByTestId('mcq-component');
+  let answered = 0;
+
+  for (let i = 0; i < MAX_ITERATIONS; i++) {
+    // Settle into the next question OR the results before acting. This absorbs the
+    // brief "completing…" spinner window after the final answer, during which
+    // neither the MCQ nor the results are on screen. mcq and breakdown live on
+    // different routes, so at most one is ever in the DOM (no strict-mode clash).
+    await expect(mcq.or(breakdown).first()).toBeVisible({ timeout: 20000 });
+
+    if (await breakdown.isVisible().catch(() => false)) break;
+
+    await answerCurrentQuestion(page, 1);
+    answered++;
+  }
+
+  return answered;
+}
+
+test.describe('Mock Exam Results — per-topic breakdown (WEDGE-04-03)', () => {
+  for (const locale of ['en', 'ru'] as const) {
+    test(`MOCKEXAM-E2E-09: completed mock renders 5 topic bars + disclaimer + Σ-invariant (${locale})`, async ({
+      page,
+    }) => {
+      // 1. Render the app in `locale`: set i18nextLng on the app's OWN origin and
+      //    reload so i18n re-initialises (WEDGE-03 pattern — see
+      //    culture-topic-filter.spec.ts). localStorage persists across the later
+      //    page.goto in startMockExam, so the locale sticks for the whole session.
+      await navigateToMockExamLanding(page);
+      await page.evaluate((lng) => localStorage.setItem('i18nextLng', lng), locale);
+      await page.reload();
+      await expect(page.getByTestId('mock-exam-page')).toBeVisible({ timeout: 15000 });
+
+      // 2. Start a real session. A disabled start button means the seed lacks
+      //    enough questions — a data-availability edge that must SKIP, not fail.
+      try {
+        const started = await startMockExam(page);
+        if (!started) {
+          test.skip(true, 'Mock exam start disabled — not enough seeded questions');
+          return;
+        }
+
+        // 3. Answer every question until the results breakdown renders.
+        const answered = await answerUntilResults(page);
+        expect(answered).toBeGreaterThan(0);
+
+        // 4a. Breakdown panel + disclaimer are present on the results screen.
+        await expect(page.getByTestId('topic-breakdown')).toBeVisible();
+        await expect(page.getByTestId('topic-breakdown-disclaimer')).toBeVisible();
+
+        // 4b. Exactly five topic rows — one per canonical CultureTopic — each with a
+        //     non-empty label, regardless of whether the topic was drawn this attempt.
+        await expect(page.getByTestId(/^topic-bar-/)).toHaveCount(5);
+        for (const topic of CULTURE_TOPICS) {
+          const row = page.getByTestId(`topic-bar-${topic}`);
+          await expect(row).toBeVisible();
+          const label = row.locator('.cx-cat-l');
+          await expect(label).toBeVisible();
+          await expect(label).not.toHaveText('');
+        }
+
+        // 4c. Σ-invariant (locale-independent). Each SCORED row's meta reads
+        //     "<correct> / <asked> …"; a zero-asked topic shows a "not in this
+        //     attempt" note with NO digits, so /(\d+)\s*\/\s*(\d+)/ naturally skips
+        //     it (and never feeds NaN into the sums). Summing the digit-bearing rows
+        //     must reconcile with the two page-level totals:
+        //       Σ asked   == questions answered — every drawn question is topic-tagged
+        //                    in the seed, so none escape the five buckets.
+        //       Σ correct == the score in the "Correct" stat card (summary.score).
+        let sumAsked = 0;
+        let sumCorrect = 0;
+        for (const topic of CULTURE_TOPICS) {
+          const rowText = (await page.getByTestId(`topic-bar-${topic}`).textContent()) ?? '';
+          const m = rowText.match(/(\d+)\s*\/\s*(\d+)/);
+          if (m) {
+            sumCorrect += Number(m[1]);
+            sumAsked += Number(m[2]);
+          }
+        }
+
+        expect(sumAsked).toBe(answered);
+
+        const scoreText = (await page.getByTestId('mock-exam-score').textContent()) ?? '';
+        const score = Number(scoreText.trim());
+        expect(Number.isNaN(score)).toBe(false);
+        expect(sumCorrect).toBe(score);
+      } finally {
+        // 5. Don't leak the locale into sibling specs.
+        await page.evaluate(() => localStorage.removeItem('i18nextLng'));
+      }
+    });
+  }
+});

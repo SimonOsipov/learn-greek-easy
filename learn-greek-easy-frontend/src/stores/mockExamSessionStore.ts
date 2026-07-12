@@ -454,6 +454,7 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
             xpEarned: response.total_xp_earned,
             timeTakenSeconds: totalTimeSeconds,
             questionResults: updatedQuestions,
+            topicBreakdown: response.topic_breakdown ?? [],
             timerExpired,
             completedAt,
           };

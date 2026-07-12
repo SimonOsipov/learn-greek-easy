@@ -352,6 +352,7 @@ describe('MockExamSessionPage', () => {
         xpEarned: 100,
         timeTakenSeconds: 1200,
         questionResults: [],
+        topicBreakdown: [],
         timerExpired: false,
         completedAt: new Date().toISOString(),
       };
