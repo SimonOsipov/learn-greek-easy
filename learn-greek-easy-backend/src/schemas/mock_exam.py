@@ -123,6 +123,22 @@ class MockExamAnswerResult(BaseModel):
     )
 
 
+class MockExamTopicBreakdownItem(BaseModel):
+    """Per-topic performance breakdown for a completed mock exam (WEDGE-04).
+
+    One item per canonical CultureTopic. `percentage` is None when `asked == 0`
+    (the topic was not tested in this attempt) rather than 0.0, which would
+    misleadingly imply a 0% score.
+    """
+
+    topic: str = Field(..., description="Canonical CultureTopic value")
+    asked: int = Field(..., ge=0, description="Questions answered for this topic")
+    correct: int = Field(..., ge=0, description="Correct answers for this topic")
+    percentage: Optional[float] = Field(
+        None, description="Percent correct over asked; None if asked == 0"
+    )
+
+
 class MockExamSubmitAllResponse(BaseModel):
     """Response after submitting all answers at once."""
 
@@ -139,6 +155,10 @@ class MockExamSubmitAllResponse(BaseModel):
     new_answers_count: int = Field(..., ge=0, description="Number of new answers processed")
     duplicate_answers_count: int = Field(
         ..., ge=0, description="Number of duplicate answers skipped"
+    )
+    topic_breakdown: list[MockExamTopicBreakdownItem] = Field(
+        default_factory=list,
+        description="Per-topic performance breakdown (5 items, canonical CultureTopic order)",
     )
 
 
@@ -185,6 +205,7 @@ __all__ = [
     "MockExamAnswerItem",
     "MockExamSubmitAllRequest",
     "MockExamAnswerResult",
+    "MockExamTopicBreakdownItem",
     "MockExamSubmitAllResponse",
     "MockExamHistoryItem",
     "MockExamStatisticsResponse",

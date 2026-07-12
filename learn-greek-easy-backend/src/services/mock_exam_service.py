@@ -35,6 +35,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.culture_topic import CultureTopic
 from src.core.exceptions import MockExamNotFoundException, MockExamSessionExpiredException
 from src.core.logging import get_logger
 from src.core.sm2 import DEFAULT_EASINESS_FACTOR, calculate_next_review_date, calculate_sm2
@@ -348,6 +349,11 @@ class MockExamService:
         all_answers = await self.repository.get_session_answers(session_id)
         final_score = sum(1 for a in all_answers if a.is_correct)
 
+        # WEDGE-04: per-topic breakdown, computed in Python from the answers
+        # already loaded above (their `question` is eager-loaded via the
+        # lazy="selectin" relationship) — adds zero SQL.
+        topic_breakdown = self._compute_topic_breakdown(all_answers)
+
         # Calculate pass/fail
         percentage = (final_score / session.total_questions) * 100
         passed = percentage >= PASS_THRESHOLD_PERCENTAGE
@@ -391,7 +397,54 @@ class MockExamService:
             "total_xp_earned": total_xp_earned,
             "new_answers_count": new_answers_count,
             "duplicate_answers_count": duplicate_answers_count,
+            "topic_breakdown": topic_breakdown,
         }
+
+    @staticmethod
+    def _compute_topic_breakdown(all_answers: list) -> list[dict[str, Any]]:
+        """Tally per-topic performance from already-loaded answers (WEDGE-04).
+
+        Groups `all_answers` by `answer.question.topic`, counting `asked` and
+        `correct` (`answer.is_correct`) per topic. Answers whose topic is None
+        or not one of the five canonical `CultureTopic` values are excluded
+        entirely (no sixth bucket). Emits exactly 5 items in canonical
+        CultureTopic order (history, geography, politics, culture, practical);
+        `percentage = round(correct / asked * 100, 1)` when `asked > 0`, else
+        None (a topic that was never tested reports None, not a misleading 0.0).
+
+        Pure in-memory: reads `answer.question.topic`, which is already
+        eager-loaded via `MockExamAnswer.question`'s lazy="selectin"
+        relationship — issues zero SQL.
+        """
+        valid_topics = {topic.value for topic in CultureTopic}
+        asked: dict[str, int] = {topic.value: 0 for topic in CultureTopic}
+        correct: dict[str, int] = {topic.value: 0 for topic in CultureTopic}
+
+        for answer in all_answers:
+            question = answer.question
+            topic = question.topic if question is not None else None
+            if topic not in valid_topics:
+                continue
+            asked[topic] += 1
+            if answer.is_correct:
+                correct[topic] += 1
+
+        breakdown: list[dict[str, Any]] = []
+        for topic_enum in CultureTopic:
+            topic = topic_enum.value
+            topic_asked = asked[topic]
+            topic_correct = correct[topic]
+            breakdown.append(
+                {
+                    "topic": topic,
+                    "asked": topic_asked,
+                    "correct": topic_correct,
+                    "percentage": (
+                        round(topic_correct / topic_asked * 100, 1) if topic_asked > 0 else None
+                    ),
+                }
+            )
+        return breakdown
 
     async def get_statistics(self, user_id: UUID) -> dict[str, Any]:
         """Get aggregated mock exam statistics with recent exams.
