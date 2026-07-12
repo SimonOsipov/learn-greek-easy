@@ -731,6 +731,12 @@ test.describe('Mock Exam Coverage labels (WEDGE-05-04)', () => {
             page.getByTestId(`topic-bar-${topic}`).getByTestId('thin-coverage-mark')
           ).toHaveCount(thin.has(topic) ? 1 : 0);
         }
+
+        // Sanity: this bank has at least one thin topic, same reasoning as
+        // MOCKEXAM-E2E-10. Without this, a regression that always renders zero
+        // marks on the RESULTS surface specifically would still pass the loop
+        // above vacuously.
+        expect(thin.size).toBeGreaterThan(0);
       } finally {
         // Don't leak the locale into sibling specs.
         await page.evaluate(() => localStorage.removeItem('i18nextLng'));
