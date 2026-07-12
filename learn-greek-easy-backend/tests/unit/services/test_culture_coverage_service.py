@@ -87,3 +87,86 @@ def test_compute_thin_flags_empty_bank_none_thin() -> None:
     result = CultureCoverageService._compute_thin_flags(counts)
 
     assert result == {topic: False for topic in _CANONICAL_TOPICS}
+
+
+# ---------------------------------------------------------------------------
+# QA (Mode B) adversarial additions -- boundary/absence cases the Mode A
+# RED spec didn't cover.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_compute_thin_flags_absent_canonical_topic_is_thin() -> None:
+    """A canonical topic entirely absent from the bank (count 0) while
+    siblings are populated is maximally thin: 0 < 0.5 * best whenever
+    best > 0. This is the real shape `get_coverage` produces for a
+    never-tagged topic -- it seeds `per_topic` with 0 for all 5 canonical
+    topics up front, so an absent topic reaches `_compute_thin_flags` as an
+    explicit 0, not a missing key."""
+    counts = {
+        "history": 0,
+        "geography": 40,
+        "politics": 40,
+        "culture": 40,
+        "practical": 40,
+    }
+
+    result = CultureCoverageService._compute_thin_flags(counts)
+
+    assert result["history"] is True
+    assert result == {
+        "history": True,
+        "geography": False,
+        "politics": False,
+        "culture": False,
+        "practical": False,
+    }
+
+
+@pytest.mark.unit
+def test_compute_thin_flags_single_populated_topic() -> None:
+    """Only one topic has any questions (best = that topic's count, every
+    other canonical topic is 0). The populated topic is best-stocked so it
+    can never be thin; every 0-count topic is strictly below half of a
+    positive best, so all four are thin."""
+    counts = {
+        "history": 0,
+        "geography": 0,
+        "politics": 10,
+        "culture": 0,
+        "practical": 0,
+    }
+
+    result = CultureCoverageService._compute_thin_flags(counts)
+
+    assert result == {
+        "history": True,
+        "geography": True,
+        "politics": False,
+        "culture": True,
+        "practical": True,
+    }
+
+
+@pytest.mark.unit
+def test_compute_thin_flags_one_below_vs_at_threshold() -> None:
+    """best=100 -> threshold 50 (strict <). A topic at 49 is thin (49 < 50);
+    a topic at exactly 50 is NOT thin (50 is not < 50) -- pins the exact
+    off-by-one boundary distinct from the existing exactly-half test, which
+    uses a single count (50) equal to the threshold for every non-best
+    topic. Here the two boundary-adjacent counts are asserted side by side
+    in the same call so a `<=` regression (already caught by the existing
+    boundary test) and an off-by-one on the *other* side (e.g. `< best -
+    50` instead of `< 0.5 * best`) would both be caught."""
+    counts = {
+        "history": 100,
+        "geography": 49,
+        "politics": 50,
+        "culture": 100,
+        "practical": 100,
+    }
+
+    result = CultureCoverageService._compute_thin_flags(counts)
+
+    assert result["geography"] is True  # 49 < 50
+    assert result["politics"] is False  # 50 is not < 50
