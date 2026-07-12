@@ -25,6 +25,7 @@ import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 
+import { CoverageChip, ThinCoverageMark } from '@/components/culture';
 import { CultureMetricStrip } from '@/components/culture/redesign/CultureMetricStrip';
 import type { CultureMetric } from '@/components/culture/redesign/CultureMetricStrip';
 import { Button } from '@/components/ui/button';
@@ -137,9 +138,11 @@ function resolveDeckIdForTopic(
 function TopicChipRow({
   selectedTopic,
   onSelect,
+  thinTopics,
 }: {
   selectedTopic: CultureTopic | null;
   onSelect: (topic: CultureTopic | null) => void;
+  thinTopics: Set<CultureTopic>;
 }) {
   // Two single-namespace hooks (rather than useTranslation(['mockExam','deck']))
   // so this stays a plain string `ns` — matching how the rest of MockExamPage
@@ -175,6 +178,7 @@ function TopicChipRow({
             data-testid={`topic-chip-${topic}`}
           >
             {tDynamic(tDeck, `culture.categories.${topic}`)}
+            <ThinCoverageMark topic={topic} thin={thinTopics.has(topic)} />
           </Button>
         );
       })}
@@ -604,6 +608,21 @@ export const MockExamPage: React.FC = () => {
     retry: false,
   });
 
+  // Bank-coverage chip + thin marks (WEDGE-05-03): additive, like decksQuery —
+  // deliberately NOT part of the `isLoading` gate below, so a slow/failed
+  // coverage fetch never blocks the page (graceful degradation AC).
+  const coverageQuery = useQuery({
+    queryKey: ['mockExamCoverage'],
+    queryFn: () => mockExamAPI.getCoverage(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    retry: false,
+  });
+
+  const thinTopics = new Set<CultureTopic>(
+    (coverageQuery.data?.topics ?? []).filter((x) => x.thin).map((x) => x.topic)
+  );
+
   // Initial-load skeleton only: render content once all three queries have
   // SETTLED (resolved OR errored). A stats/queue/readiness FAILURE must NOT
   // block the page — each section degrades gracefully on its own (AC-6).
@@ -690,6 +709,12 @@ export const MockExamPage: React.FC = () => {
           {t('page.title')}
         </h1>
         <p className="mt-2 text-muted-foreground">{t('page.subtitle')}</p>
+        {coverageQuery.data && (
+          <CoverageChip
+            questionCount={coverageQuery.data.question_count}
+            updatedAt={coverageQuery.data.updated_at}
+          />
+        )}
       </div>
 
       {/* Loading State — initial skeleton until all three queries settle */}
@@ -771,7 +796,11 @@ export const MockExamPage: React.FC = () => {
               an alternative entry point to the full 25-question mock exam
               above. Independent of readiness/stats/queue — always renders. */}
           <div className="dx-action">
-            <TopicChipRow selectedTopic={selectedTopic} onSelect={setSelectedTopic} />
+            <TopicChipRow
+              selectedTopic={selectedTopic}
+              onSelect={setSelectedTopic}
+              thinTopics={thinTopics}
+            />
             {selectedTopic && (
               <button
                 type="button"
