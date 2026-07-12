@@ -533,14 +533,13 @@ test.describe('Mock Exam Results — per-topic breakdown (WEDGE-04-03)', () => {
 
       // 2. Start a real session. A disabled start button means the seed lacks
       //    enough questions — a data-availability edge that must SKIP, not fail.
-      const started = await startMockExam(page);
-      if (!started) {
-        await page.evaluate(() => localStorage.removeItem('i18nextLng'));
-        test.skip(true, 'Mock exam start disabled — not enough seeded questions');
-        return;
-      }
-
       try {
+        const started = await startMockExam(page);
+        if (!started) {
+          test.skip(true, 'Mock exam start disabled — not enough seeded questions');
+          return;
+        }
+
         // 3. Answer every question until the results breakdown renders.
         const answered = await answerUntilResults(page);
         expect(answered).toBeGreaterThan(0);

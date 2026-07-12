@@ -3,7 +3,7 @@
  * Matches backend API response schemas.
  */
 
-import type { MultilingualText } from './culture';
+import type { CultureTopic, MultilingualText } from './culture';
 
 // Session status
 export type MockExamSessionStatus = 'active' | 'completed' | 'abandoned';
@@ -71,7 +71,7 @@ export interface MockExamAnswerResult {
 
 // Per-topic breakdown item in submit-all response (matches MockExamTopicBreakdownItem from backend)
 export interface MockExamTopicBreakdownItem {
-  topic: string; // canonical CultureTopic value
+  topic: CultureTopic; // canonical CultureTopic value
   asked: number;
   correct: number;
   percentage: number | null; // percent correct over asked; null when asked === 0

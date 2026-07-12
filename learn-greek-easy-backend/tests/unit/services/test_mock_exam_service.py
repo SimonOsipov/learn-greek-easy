@@ -1152,7 +1152,7 @@ class TestSubmitAllTopicBreakdown:
         }
         answers = []
         for topic, questions in topic_tagged_questions.items():
-            for question, is_correct in zip(questions, correctness[topic]):
+            for question, is_correct in zip(questions, correctness[topic], strict=True):
                 selected = (
                     question.correct_option if is_correct else (question.correct_option % 4) + 1
                 )
