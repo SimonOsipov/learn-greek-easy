@@ -295,7 +295,7 @@ describe('MockExamResultsPage', () => {
       expect(screen.getByText(/\(5\)/)).toBeInTheDocument();
     });
 
-    it('shows perfect score message when all correct', () => {
+    it('shows perfect score message when all correct', async () => {
       const allCorrectResults: MockExamQuestionState[] = Array.from({ length: 25 }, (_, i) => ({
         question: createMockQuestion(`q-${i + 1}`, i),
         selectedOption: 1,
@@ -319,10 +319,10 @@ describe('MockExamResultsPage', () => {
 
       // Expand the accordion
       const accordionTrigger = screen.getByText(/Review Incorrect Answers/i);
-      user.click(accordionTrigger);
+      await user.click(accordionTrigger);
 
       // Perfect score message should appear
-      waitFor(() => {
+      await waitFor(() => {
         expect(screen.getByText(/Perfect/i)).toBeInTheDocument();
       });
     });
