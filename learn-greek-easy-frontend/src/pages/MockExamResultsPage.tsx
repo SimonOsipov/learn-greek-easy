@@ -294,7 +294,10 @@ export function MockExamResultsPage() {
           <Card>
             <CardContent className="flex flex-col items-center p-4">
               <CheckCircle className="mb-2 h-8 w-8 text-[hsl(var(--practice-correct))]" />
-              <p className="font-practice-mono text-2xl font-bold text-foreground">
+              <p
+                className="font-practice-mono text-2xl font-bold text-foreground"
+                data-testid="mock-exam-score"
+              >
                 {summary.score}
               </p>
               <p className="text-center text-sm text-muted-foreground">{t('common:correct')}</p>
