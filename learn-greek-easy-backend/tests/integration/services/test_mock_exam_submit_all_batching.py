@@ -611,3 +611,98 @@ async def test_submit_all_single_answer_batches_reads(
         f"selectin re-load) for a one-answer payload, found {len(in_selects)}. "
         f"Captured statements ({len(stmts)}):\n" + "\n---\n".join(stmts)
     )
+
+
+# ---------------------------------------------------------------------------
+# WEDGE-04-01 (Test-Spec / RALPH Mode A) — per-topic breakdown adds zero SQL
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+async def culture_questions_with_topics(
+    db_session: AsyncSession, culture_deck: CultureDeck
+) -> list[CultureQuestion]:
+    """25 questions cycling through the 5 CultureTopic values (5 each) --
+    enough for the breakdown-adds-no-query constraint test below, which needs
+    a mix of recognized topics to prove the Python-side grouping never issues
+    its own SQL.
+    """
+    from src.core.culture_topic import CultureTopic
+
+    topics = list(CultureTopic)
+    questions = []
+    for i in range(25):
+        question = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={"en": f"Question {i + 1}?", "el": f"Ερώτηση {i + 1};"},
+            option_a={"en": "Option A", "el": "Επιλογή Α"},
+            option_b={"en": "Option B", "el": "Επιλογή Β"},
+            option_c={"en": "Option C", "el": "Επιλογή Γ"},
+            option_d={"en": "Option D", "el": "Επιλογή Δ"},
+            correct_option=(i % 4) + 1,
+            order_index=i,
+            topic=topics[i % 5].value,
+        )
+        db_session.add(question)
+        questions.append(question)
+
+    await db_session.flush()
+    for q in questions:
+        await db_session.refresh(q)
+    return questions
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_breakdown_adds_no_query(
+    db_session: AsyncSession,
+    db_engine: AsyncEngine,
+    test_user: User,
+    active_mock_exam: MockExamSession,
+    culture_questions_with_topics: list[CultureQuestion],
+    mock_s3_service,
+) -> None:
+    """WEDGE-04-01 constraint (Mode A / RED): the per-topic breakdown is
+    computed in Python from `all_answers` (already loaded via
+    `MockExamAnswer.question`'s `lazy="selectin"` relationship, re-fetched at
+    mock_exam_service.py:348) and must add ZERO new SQL statements -- the
+    `len(in_selects) == 2` invariant locked by PERF-18-04's
+    `test_submit_all_batches_question_reads` above must hold unchanged once
+    `topic_breakdown` is added to the response.
+
+    RED reason: `result["topic_breakdown"]` does not exist yet -- the
+    `"topic_breakdown" in result` assertion below fails with a clean
+    `AssertionError`, not a collection/import error. This test re-uses the
+    file's exact `capture_sql`/`in_selects` harness so that once the feature
+    lands, the same run also proves the new computation is genuinely
+    SQL-free.
+    """
+    service = MockExamService(db_session, s3_service=mock_s3_service)
+
+    answers = [
+        {
+            "question_id": q.id,
+            "selected_option": q.correct_option,
+            "time_taken_seconds": 10,
+        }
+        for q in culture_questions_with_topics
+    ]
+
+    with capture_sql(db_engine) as stmts:
+        result = await service.submit_all_answers(
+            user_id=test_user.id,
+            session_id=active_mock_exam.id,
+            answers=answers,
+            total_time_seconds=250,
+        )
+
+    assert "topic_breakdown" in result
+    assert len(result["topic_breakdown"]) == 5
+
+    in_selects = [s for s in stmts if _is_in_query_question_select(s)]
+    assert len(in_selects) == 2, (
+        "topic_breakdown must be computed in Python from the already-loaded "
+        "all_answers list, adding zero new SQL -- the pre-existing prefetch + "
+        f"selectin-reload invariant must stay at 2, found {len(in_selects)}. "
+        f"Captured statements ({len(stmts)}):\n" + "\n---\n".join(stmts)
+    )

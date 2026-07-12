@@ -655,3 +655,41 @@ class TestMockExamStatisticsResponse:
         )
         assert len(response.recent_exams) == 1
         assert response.recent_exams[0].score == 20
+
+
+# ---------------------------------------------------------------------------
+# WEDGE-04-01 (Test-Spec / RALPH Mode A): MockExamTopicBreakdownItem
+# ---------------------------------------------------------------------------
+
+
+class TestMockExamTopicBreakdownItem:
+    """WEDGE-04-01 Test Spec (Mode A / RED): `MockExamTopicBreakdownItem`
+    does not exist yet in `src/schemas/mock_exam.py`.
+
+    Imported lazily INSIDE the test body (not at module level) so this whole
+    file still collects cleanly; the RED here is an `ImportError` raised at
+    test-run time, not a collection error.
+    """
+
+    def test_topic_breakdown_item_schema(self):
+        """Constraint: percentage accepts float or None; asked/correct are
+        non-negative ints (ge=0)."""
+        from src.schemas.mock_exam import MockExamTopicBreakdownItem
+
+        float_item = MockExamTopicBreakdownItem(
+            topic="history", asked=3, correct=2, percentage=66.7
+        )
+        assert float_item.percentage == 66.7
+        assert float_item.asked == 3
+        assert float_item.correct == 2
+
+        none_item = MockExamTopicBreakdownItem(topic="culture", asked=0, correct=0, percentage=None)
+        assert none_item.percentage is None
+
+        with pytest.raises(ValidationError) as exc_info:
+            MockExamTopicBreakdownItem(topic="history", asked=-1, correct=0, percentage=None)
+        assert "greater than or equal to 0" in str(exc_info.value)
+
+        with pytest.raises(ValidationError) as exc_info:
+            MockExamTopicBreakdownItem(topic="history", asked=1, correct=-1, percentage=None)
+        assert "greater than or equal to 0" in str(exc_info.value)

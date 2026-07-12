@@ -1048,3 +1048,154 @@ class TestMockExamCacheInvalidation:
         assert call_kwargs.get("cache_type") == "progress"
         assert call_kwargs.get("user_id") == test_user.id
         assert call_kwargs.get("entity_id") is None
+
+
+# =============================================================================
+# WEDGE-04-01 (Test-Spec / RALPH Mode A): submit-all topic_breakdown
+# =============================================================================
+
+
+@pytest.fixture
+async def culture_deck_with_topic_seeded_questions(
+    db_session: AsyncSession,
+) -> tuple[CultureDeck, list[CultureQuestion]]:
+    """25 questions (exactly the mock-exam count) cycling through the 5
+    CultureTopic values in canonical order, 5 questions per topic --
+    deterministic regardless of `get_random_questions`' `ORDER BY random()`
+    shuffle since there are exactly 25 rows to draw 25 from (same precedent
+    as `culture_questions_shared_image` in test_mock_exam_service.py).
+
+    Each topic's 5 questions are seeded with an increasing number of
+    designed-correct answers so the test can independently verify each
+    topic's asked/correct/percentage: history 1/5, geography 2/5, politics
+    3/5, culture 4/5, practical 5/5 -- all clean round percentages
+    (20/40/60/80/100), no rounding ambiguity.
+    """
+    from src.core.culture_topic import CultureTopic
+
+    deck = CultureDeck(
+        name_en="Topic Breakdown Deck",
+        name_el="Topic Breakdown Deck",
+        name_ru="Topic Breakdown Deck",
+        description_en="test",
+        description_el="test",
+        description_ru="test",
+        category="history",
+        is_active=True,
+    )
+    db_session.add(deck)
+    await db_session.flush()
+    await db_session.refresh(deck)
+
+    topics = list(CultureTopic)
+    questions = []
+    for i in range(25):
+        question = CultureQuestion(
+            deck_id=deck.id,
+            question_text={
+                "en": f"Question {i + 1}?",
+                "el": f"Ερώτηση {i + 1};",
+                "ru": f"Вопрос {i + 1}?",
+            },
+            option_a={"en": "Option A", "el": "Επιλογή Α", "ru": "Вариант А"},
+            option_b={"en": "Option B", "el": "Επιλογή Β", "ru": "Вариант Б"},
+            option_c={"en": "Option C", "el": "Επιλογή Γ", "ru": "Вариант В"},
+            option_d={"en": "Option D", "el": "Επιλογή Δ", "ru": "Вариант Г"},
+            correct_option=1,
+            order_index=i,
+            topic=topics[i % 5].value,
+        )
+        db_session.add(question)
+        questions.append(question)
+
+    await db_session.flush()
+    for q in questions:
+        await db_session.refresh(q)
+
+    return deck, questions
+
+
+class TestMockExamTopicBreakdownEndpoint:
+    """WEDGE-04-01 Test Spec (Mode A / RED): the submit-all response gains a
+    `topic_breakdown` field.
+
+    RED reason: `data["topic_breakdown"]` doesn't exist yet -- the
+    `"topic_breakdown" in data` assertion below fails with a clean
+    `AssertionError`, not a collection error (nothing in this file touches
+    the not-yet-existing `MockExamTopicBreakdownItem` at import time).
+    """
+
+    @pytest.mark.asyncio
+    async def test_submit_all_response_includes_topic_breakdown(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        culture_deck_with_topic_seeded_questions: tuple,
+    ):
+        """AC-2: submit-all response's topic_breakdown has exactly 5 items
+        and each topic's asked/correct/percentage matches the seeded fixture
+        (history 1/5=20.0, geography 2/5=40.0, politics 3/5=60.0, culture
+        4/5=80.0, practical 5/5=100.0)."""
+        deck, questions = culture_deck_with_topic_seeded_questions
+
+        create_response = await client.post(
+            "/api/v1/culture/mock-exam/sessions",
+            headers=auth_headers,
+        )
+        session_id = create_response.json()["session"]["id"]
+        exam_questions = create_response.json()["questions"]
+        # Exactly 25 seeded -> the full set is drawn regardless of shuffle order.
+        assert len(exam_questions) == 25
+
+        topic_order = ["history", "geography", "politics", "culture", "practical"]
+        expected_correct_by_topic = {
+            "history": 1,
+            "geography": 2,
+            "politics": 3,
+            "culture": 4,
+            "practical": 5,
+        }
+
+        answers = []
+        for question in exam_questions:
+            question_id = question["id"]
+            db_question = next(q for q in questions if str(q.id) == question_id)
+            t = db_question.order_index % 5
+            j = db_question.order_index // 5
+            topic = topic_order[t]
+            is_correct = j < expected_correct_by_topic[topic]
+            selected_option = (
+                db_question.correct_option if is_correct else (db_question.correct_option % 4) + 1
+            )
+            answers.append(
+                {
+                    "question_id": question_id,
+                    "selected_option": selected_option,
+                    "time_taken_seconds": 10,
+                }
+            )
+
+        response = await client.post(
+            f"/api/v1/culture/mock-exam/sessions/{session_id}/submit-all",
+            headers=auth_headers,
+            json={"answers": answers, "total_time_seconds": 500},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert "topic_breakdown" in data
+        assert len(data["topic_breakdown"]) == 5
+        assert [item["topic"] for item in data["topic_breakdown"]] == topic_order
+
+        breakdown = {item["topic"]: item for item in data["topic_breakdown"]}
+        for topic, correct_count in expected_correct_by_topic.items():
+            assert breakdown[topic]["asked"] == 5, f"{topic} asked mismatch"
+            assert breakdown[topic]["correct"] == correct_count, f"{topic} correct mismatch"
+            expected_pct = round(correct_count / 5 * 100, 1)
+            assert breakdown[topic]["percentage"] == expected_pct, f"{topic} percentage mismatch"
+
+        # Overall score sanity: 1+2+3+4+5=15/25=60% -> passes right at the boundary.
+        assert data["score"] == 15
+        assert data["percentage"] == 60.0
+        assert data["passed"] is True

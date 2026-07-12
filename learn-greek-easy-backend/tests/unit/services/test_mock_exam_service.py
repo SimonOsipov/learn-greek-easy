@@ -1064,3 +1064,274 @@ class TestMockExamBatchPresigningEdgeCases:
 
         assert url_map == {}
         assert batched_s3_service.generate_presigned_urls.call_count == 1
+
+
+# =============================================================================
+# WEDGE-04-01: Per-topic breakdown on submit-all (Test-Spec / RALPH Mode A)
+# =============================================================================
+
+
+@pytest.fixture
+async def topic_tagged_questions(
+    db_session: AsyncSession, culture_deck: CultureDeck
+) -> dict[str, list[CultureQuestion]]:
+    """6 questions tagged history(3)/geography(1)/politics(2) -- no
+    culture/practical questions exist in this deck at all, so the
+    topic_breakdown tests below verify those 2 empty buckets are emitted from
+    the CultureTopic enum itself, never from a seeded question row.
+    """
+    specs = ["history", "history", "history", "geography", "politics", "politics"]
+    by_topic: dict[str, list[CultureQuestion]] = {}
+    for i, topic in enumerate(specs):
+        question = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={"en": f"Topic Q{i}?", "el": f"Θέμα Ε{i};"},
+            option_a={"en": "A", "el": "Α"},
+            option_b={"en": "B", "el": "Β"},
+            option_c={"en": "C", "el": "Γ"},
+            option_d={"en": "D", "el": "Δ"},
+            correct_option=1,
+            order_index=i,
+            topic=topic,
+        )
+        db_session.add(question)
+        by_topic.setdefault(topic, []).append(question)
+
+    await db_session.flush()
+    for questions in by_topic.values():
+        for q in questions:
+            await db_session.refresh(q)
+    return by_topic
+
+
+@pytest.fixture
+async def null_topic_question(
+    db_session: AsyncSession, culture_deck: CultureDeck
+) -> CultureQuestion:
+    """A question with topic=None (untagged, e.g. pre-WEDGE-02 backfill)."""
+    question = CultureQuestion(
+        deck_id=culture_deck.id,
+        question_text={"en": "Untagged?", "el": "Χωρίς θέμα;"},
+        option_a={"en": "A", "el": "Α"},
+        option_b={"en": "B", "el": "Β"},
+        correct_option=1,
+        order_index=99,
+        topic=None,
+    )
+    db_session.add(question)
+    await db_session.flush()
+    await db_session.refresh(question)
+    return question
+
+
+class TestSubmitAllTopicBreakdown:
+    """WEDGE-04-01 Test Specs (Mode A / RED): `submit_all_answers` gains a
+    `topic_breakdown` key computed in Python from the already-loaded
+    `all_answers` list (mock_exam_service.py:348), grouped by
+    `answer.question.topic`.
+
+    RED reason: `MockExamService.submit_all_answers` does not compute or
+    return `topic_breakdown` yet. Each test below accesses
+    `result["topic_breakdown"]` at RUNTIME (inside the test body, never at
+    module import time), so the file still collects cleanly -- the RED here
+    is a clean `KeyError` on that missing dict key, not an import/collection
+    error.
+    """
+
+    @pytest.mark.asyncio
+    async def test_topic_breakdown_matches_hand_computed(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        active_mock_exam: MockExamSession,
+        topic_tagged_questions: dict[str, list[CultureQuestion]],
+        mock_s3_service,
+    ):
+        """AC-2: topic_breakdown matches a hand-computed table --
+        history[correct,correct,wrong], geography[correct],
+        politics[wrong,wrong], culture/practical untouched (0 asked)."""
+        service = MockExamService(db_session, s3_service=mock_s3_service)
+
+        correctness = {
+            "history": [True, True, False],
+            "geography": [True],
+            "politics": [False, False],
+        }
+        answers = []
+        for topic, questions in topic_tagged_questions.items():
+            for question, is_correct in zip(questions, correctness[topic]):
+                selected = (
+                    question.correct_option if is_correct else (question.correct_option % 4) + 1
+                )
+                answers.append(
+                    {
+                        "question_id": question.id,
+                        "selected_option": selected,
+                        "time_taken_seconds": 10,
+                    }
+                )
+
+        result = await service.submit_all_answers(
+            user_id=test_user.id,
+            session_id=active_mock_exam.id,
+            answers=answers,
+            total_time_seconds=60,
+        )
+
+        breakdown = {item["topic"]: item for item in result["topic_breakdown"]}
+
+        assert breakdown["history"] == {
+            "topic": "history",
+            "asked": 3,
+            "correct": 2,
+            "percentage": 66.7,
+        }
+        assert breakdown["geography"] == {
+            "topic": "geography",
+            "asked": 1,
+            "correct": 1,
+            "percentage": 100.0,
+        }
+        assert breakdown["politics"] == {
+            "topic": "politics",
+            "asked": 2,
+            "correct": 0,
+            "percentage": 0.0,
+        }
+        assert breakdown["culture"] == {
+            "topic": "culture",
+            "asked": 0,
+            "correct": 0,
+            "percentage": None,
+        }
+        assert breakdown["practical"] == {
+            "topic": "practical",
+            "asked": 0,
+            "correct": 0,
+            "percentage": None,
+        }
+
+    @pytest.mark.asyncio
+    async def test_breakdown_always_five_topics_canonical_order(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        active_mock_exam: MockExamSession,
+        topic_tagged_questions: dict[str, list[CultureQuestion]],
+        mock_s3_service,
+    ):
+        """AC-1: topic_breakdown always has exactly 5 items in canonical
+        CultureTopic order, even when only one topic was actually answered."""
+        service = MockExamService(db_session, s3_service=mock_s3_service)
+
+        politics_questions = topic_tagged_questions["politics"]
+        answers = [
+            {
+                "question_id": q.id,
+                "selected_option": q.correct_option,
+                "time_taken_seconds": 10,
+            }
+            for q in politics_questions
+        ]
+
+        result = await service.submit_all_answers(
+            user_id=test_user.id,
+            session_id=active_mock_exam.id,
+            answers=answers,
+            total_time_seconds=20,
+        )
+
+        breakdown = result["topic_breakdown"]
+        assert len(breakdown) == 5
+        assert [item["topic"] for item in breakdown] == [
+            "history",
+            "geography",
+            "politics",
+            "culture",
+            "practical",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_zero_asked_topic_has_null_percentage(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        active_mock_exam: MockExamSession,
+        topic_tagged_questions: dict[str, list[CultureQuestion]],
+        mock_s3_service,
+    ):
+        """AC-2: a topic with zero answered questions reports asked=0,
+        correct=0, percentage=None -- never 0.0, which would misleadingly
+        imply a 0% score for a topic that was never tested."""
+        service = MockExamService(db_session, s3_service=mock_s3_service)
+
+        history_questions = topic_tagged_questions["history"]
+        answers = [
+            {
+                "question_id": q.id,
+                "selected_option": q.correct_option,
+                "time_taken_seconds": 10,
+            }
+            for q in history_questions
+        ]
+
+        result = await service.submit_all_answers(
+            user_id=test_user.id,
+            session_id=active_mock_exam.id,
+            answers=answers,
+            total_time_seconds=30,
+        )
+
+        breakdown = {item["topic"]: item for item in result["topic_breakdown"]}
+        assert breakdown["culture"] == {
+            "topic": "culture",
+            "asked": 0,
+            "correct": 0,
+            "percentage": None,
+        }
+
+    @pytest.mark.asyncio
+    async def test_null_topic_answer_excluded(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        active_mock_exam: MockExamSession,
+        topic_tagged_questions: dict[str, list[CultureQuestion]],
+        null_topic_question: CultureQuestion,
+        mock_s3_service,
+    ):
+        """AC-1: an answer whose question.topic is NULL is excluded from all
+        5 buckets -- no 6th item -- and the buckets' combined asked total
+        equals exactly the count of answers with a recognized topic."""
+        service = MockExamService(db_session, s3_service=mock_s3_service)
+
+        geography_questions = topic_tagged_questions["geography"]
+        answers = [
+            {
+                "question_id": q.id,
+                "selected_option": q.correct_option,
+                "time_taken_seconds": 10,
+            }
+            for q in geography_questions
+        ] + [
+            {
+                "question_id": null_topic_question.id,
+                "selected_option": null_topic_question.correct_option,
+                "time_taken_seconds": 10,
+            }
+        ]
+
+        result = await service.submit_all_answers(
+            user_id=test_user.id,
+            session_id=active_mock_exam.id,
+            answers=answers,
+            total_time_seconds=20,
+        )
+
+        breakdown = result["topic_breakdown"]
+        assert len(breakdown) == 5, "the NULL-topic answer must not add a 6th bucket"
+        total_asked = sum(item["asked"] for item in breakdown)
+        assert total_asked == 1, (
+            "only the 1 geography answer has a recognized topic -- the "
+            "NULL-topic answer must be excluded from every bucket's asked count"
+        )
