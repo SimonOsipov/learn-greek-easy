@@ -72,14 +72,17 @@ vi.mock('@/lib/logger', () => ({
 }));
 
 // Mock the mock-exam API — MockExamPage's pre-existing statistics + queue
-// queries (App.tsx: /practice/culture-exam).
+// queries (App.tsx: /practice/culture-exam), plus getCoverage (WEDGE-05-03:
+// the bank-coverage chip + thin marks wired onto this page).
 const mockGetStatistics = vi.fn();
 const mockGetQuestionQueue = vi.fn();
+const mockGetCoverage = vi.fn();
 
 vi.mock('@/services/mockExamAPI', () => ({
   mockExamAPI: {
     getStatistics: (...args: unknown[]) => mockGetStatistics(...args),
     getQuestionQueue: (...args: unknown[]) => mockGetQuestionQueue(...args),
+    getCoverage: (...args: unknown[]) => mockGetCoverage(...args),
     createSession: vi.fn(),
     submitAll: vi.fn(),
     abandonSession: vi.fn(),
@@ -182,6 +185,20 @@ describe('MockExamPage — topic chips (WEDGE-03-03)', () => {
     mockGetQuestionQueue.mockResolvedValue(makeQueue());
     mockGetReadiness.mockResolvedValue(makeReadiness());
     mockGetList.mockResolvedValue(makeDeckList(DEFAULT_DECKS));
+    // Default coverage: history + geography thin, the other three not thin —
+    // exercises both the "renders" and "thin-marks-only-on-thin" specs below
+    // off one shared fixture.
+    mockGetCoverage.mockResolvedValue({
+      question_count: 490,
+      updated_at: '2026-07-11T14:22:31Z',
+      topics: [
+        { topic: 'history', thin: true },
+        { topic: 'geography', thin: true },
+        { topic: 'politics', thin: false },
+        { topic: 'culture', thin: false },
+        { topic: 'practical', thin: false },
+      ],
+    });
 
     useMockExamSessionStore.setState({
       session: null,
@@ -557,5 +574,66 @@ describe('MockExamPage — topic chips (WEDGE-03-03)', () => {
     await user.click(politicsChip);
     expect(politicsChip).toHaveAttribute('aria-pressed', 'false');
     expect(allChip).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  // ---------------------------------------------------------------------
+  // WEDGE-05-03 — bank-coverage chip + thin marks wired onto the hub page
+  // ---------------------------------------------------------------------
+  // RED as of this commit: MockExamPage.tsx does not yet fetch
+  // `mockExamAPI.getCoverage()` or render a `coverage-chip` badge / any
+  // `thin-coverage-mark` glyphs next to the topic chips above. These fail on
+  // `getByTestId('coverage-chip')` / `getByTestId('thin-coverage-mark')` not
+  // being found — a clean assertion/query failure, not a render crash or
+  // compile error. They go green once the executor adds:
+  //   - a `mockExamAPI.getCoverage()` fetch (react-query),
+  //   - a `CoverageChip` rendered in the `dx-index-head` block,
+  //   - a `ThinCoverageMark` inside each thin topic's `topic-chip-<topic>`.
+
+  it('hub.chipRenders: renders the bank-coverage chip with the question count', async () => {
+    await renderSettled();
+
+    const chip = await screen.findByTestId('coverage-chip');
+    expect(chip).toHaveTextContent('490');
+  });
+
+  it('hub.thinMarkOnThinChipsOnly: renders a thin-coverage mark only on thin topic chips', async () => {
+    await renderSettled();
+    // Wait for the coverage fetch to settle (marks render off the same data).
+    await screen.findByTestId('coverage-chip');
+
+    expect(
+      within(screen.getByTestId('topic-chip-history')).getByTestId('thin-coverage-mark')
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('topic-chip-geography')).getByTestId('thin-coverage-mark')
+    ).toBeInTheDocument();
+
+    expect(
+      within(screen.getByTestId('topic-chip-politics')).queryByTestId('thin-coverage-mark')
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('topic-chip-culture')).queryByTestId('thin-coverage-mark')
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('topic-chip-practical')).queryByTestId('thin-coverage-mark')
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('topic-chip-all')).queryByTestId('thin-coverage-mark')
+    ).not.toBeInTheDocument();
+  });
+
+  // Guardrail — asserts graceful degradation, not the wiring itself. May pass
+  // even pre-wiring (the page never rendered a chip/mark in the first place);
+  // that's fine, this test exists to catch a REGRESSION where a getCoverage
+  // rejection blocks the launcher or topic chips from rendering at all.
+  it('hub.coverageErrorDegrades: degrades cleanly (no chip/marks, page still renders) when getCoverage rejects', async () => {
+    mockGetCoverage.mockRejectedValue(new Error('boom'));
+
+    await renderSettled();
+    const group = screen.getByTestId('culture-topic-chips');
+    expect(within(group).getByTestId('topic-chip-history')).toBeInTheDocument();
+
+    expect(screen.queryByTestId('coverage-chip')).not.toBeInTheDocument();
+    expect(screen.queryAllByTestId('thin-coverage-mark')).toHaveLength(0);
   });
 });
