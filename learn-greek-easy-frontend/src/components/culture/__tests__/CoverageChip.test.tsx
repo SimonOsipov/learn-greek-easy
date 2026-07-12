@@ -82,4 +82,48 @@ describe('CoverageChip (WEDGE-05-02)', () => {
     expect(chip).toHaveTextContent('0 questions');
     expect(chip.textContent ?? '').not.toMatch(/updated/i);
   });
+
+  // ---- QA adversarial: RU CLDR plural-category spread ----
+  //
+  // The pre-existing `ruDate` test only pins count=490 (the "many" category,
+  // since 490 % 10 === 0). Russian has 4 categories (one/few/many/other) —
+  // pinning only "many" leaves "one" and "few" unverified; a regression that
+  // collapsed the RU resource to `chip_other` for every count (dropping
+  // `chip_one`/`chip_few`) would NOT have been caught by the existing suite.
+  // These pin count=1 (one), count=2 (few), and count=5 (many) explicitly.
+
+  it('ruPluralOne: RU count=1 resolves the CLDR "one" category ("1 вопрос")', async () => {
+    await i18n.changeLanguage('ru');
+    render(<CoverageChip questionCount={1} updatedAt="2026-07-11T14:22:31Z" />);
+
+    const chip = screen.getByTestId('coverage-chip');
+    expect(chip).toHaveTextContent('1 вопрос ');
+    expect(chip.textContent ?? '').not.toMatch(/вопроса|вопросов/);
+  });
+
+  it('ruPluralFew: RU count=2 resolves the CLDR "few" category ("2 вопроса")', async () => {
+    await i18n.changeLanguage('ru');
+    render(<CoverageChip questionCount={2} updatedAt="2026-07-11T14:22:31Z" />);
+
+    const chip = screen.getByTestId('coverage-chip');
+    expect(chip).toHaveTextContent('2 вопроса');
+    expect(chip.textContent ?? '').not.toMatch(/вопросов\b/);
+  });
+
+  it('ruPluralMany: RU count=5 resolves the CLDR "many" category ("5 вопросов")', async () => {
+    await i18n.changeLanguage('ru');
+    render(<CoverageChip questionCount={5} updatedAt="2026-07-11T14:22:31Z" />);
+
+    const chip = screen.getByTestId('coverage-chip');
+    expect(chip).toHaveTextContent('5 вопросов');
+  });
+
+  it('ruNoDatePluralMany: RU chipNoDate count=5 resolves "many" with no date/"обновлено" segment', async () => {
+    await i18n.changeLanguage('ru');
+    render(<CoverageChip questionCount={5} updatedAt={null} />);
+
+    const chip = screen.getByTestId('coverage-chip');
+    expect(chip).toHaveTextContent('5 вопросов');
+    expect(chip.textContent ?? '').not.toMatch(/обновлено/i);
+  });
 });

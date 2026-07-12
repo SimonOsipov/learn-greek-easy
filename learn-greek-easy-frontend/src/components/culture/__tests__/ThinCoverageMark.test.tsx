@@ -24,6 +24,7 @@
  * - hiddenWhenNotThin: thin=false renders nothing
  * - ruLabel: the aria-label is localized under RU
  */
+import { fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 
 import i18n from '@/i18n';
@@ -52,5 +53,44 @@ describe('ThinCoverageMark (WEDGE-05-02)', () => {
 
     expect(screen.getByLabelText('Ограниченный охват')).toBeInTheDocument();
     expect(screen.queryByLabelText('Limited coverage')).not.toBeInTheDocument();
+  });
+
+  // ---- QA adversarial: tooltip content wiring + a11y ----
+  //
+  // The pre-existing tests only assert the trigger's aria-label — they never
+  // exercise `TooltipContent`, so a build that wired the wrong i18n key (or
+  // no key at all) into `TooltipContent` would still pass. Radix's Tooltip
+  // opens synchronously (no delay, no fake timers needed) on focus — this is
+  // its built-in a11y behavior for keyboard/screen-reader users — so
+  // `fireEvent.focus` on the trigger reveals `TooltipContent` in happy-dom
+  // and its copy becomes directly assertable via `getByRole('tooltip')`.
+
+  it('tooltipContentEN: focusing the trigger reveals the localized EN tooltip copy', () => {
+    render(<ThinCoverageMark topic="history" thin={true} />);
+
+    fireEvent.focus(screen.getByTestId('thin-coverage-mark'));
+
+    expect(screen.getByRole('tooltip')).toHaveTextContent(
+      'Fewer questions than other topics — treat this subject as less exam-ready.'
+    );
+  });
+
+  it('tooltipContentRU: focusing the trigger reveals the localized RU tooltip copy', async () => {
+    await i18n.changeLanguage('ru');
+    render(<ThinCoverageMark topic="history" thin={true} />);
+
+    fireEvent.focus(screen.getByTestId('thin-coverage-mark'));
+
+    expect(screen.getByRole('tooltip')).toHaveTextContent(
+      'Вопросов меньше, чем по другим темам — эта тема хуже готовит к экзамену.'
+    );
+  });
+
+  it('iconAriaHidden: the AlertTriangle glyph is aria-hidden (label lives on the wrapping span, not the icon)', () => {
+    render(<ThinCoverageMark topic="history" thin={true} />);
+
+    const icon = screen.getByTestId('thin-coverage-mark').querySelector('svg');
+    expect(icon).not.toBeNull();
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
   });
 });
