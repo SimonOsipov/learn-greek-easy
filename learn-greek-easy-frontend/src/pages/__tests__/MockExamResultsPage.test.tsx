@@ -341,6 +341,81 @@ describe('MockExamResultsPage', () => {
 
       expect(screen.queryByTestId('topic-breakdown')).not.toBeInTheDocument();
     });
+
+    it('sets data-tone success/warning/danger at the exact readinessTone-mirrored thresholds', () => {
+      // Mirrors readinessTone() in MockExamPage.tsx: >=60 success, >=30 warning, else danger.
+      const summary = createMockSummary({
+        topicBreakdown: [
+          { topic: 'history', asked: 10, correct: 10, percentage: 100 }, // success (>=60)
+          { topic: 'geography', asked: 10, correct: 6, percentage: 60 }, // success boundary (==60)
+          { topic: 'politics', asked: 10, correct: 4, percentage: 40 }, // warning (>=30, <60)
+          { topic: 'culture', asked: 10, correct: 3, percentage: 30 }, // warning boundary (==30)
+          { topic: 'practical', asked: 10, correct: 1, percentage: 10 }, // danger (<30)
+        ],
+      });
+      useMockExamSessionStore.setState({ summary });
+
+      render(<MockExamResultsPage />);
+
+      const toneOf = (topic: string) =>
+        screen
+          .getByTestId(`topic-bar-${topic}`)
+          .querySelector('.cx-cat-bar')
+          ?.getAttribute('data-tone');
+
+      expect(toneOf('history')).toBe('success');
+      expect(toneOf('geography')).toBe('success');
+      expect(toneOf('politics')).toBe('warning');
+      expect(toneOf('culture')).toBe('warning');
+      expect(toneOf('practical')).toBe('danger');
+    });
+
+    it('a 0% topic with asked>0 (all wrong) is treated as SCORED, not zero-asked: fill span present, danger tone', () => {
+      const summary = createMockSummary({
+        topicBreakdown: [
+          { topic: 'history', asked: 8, correct: 0, percentage: 0 }, // all wrong, still "asked"
+          { topic: 'geography', asked: 5, correct: 5, percentage: 100 },
+          { topic: 'politics', asked: 5, correct: 3, percentage: 60 },
+          { topic: 'culture', asked: 5, correct: 2, percentage: 40 },
+          { topic: 'practical', asked: 0, correct: 0, percentage: null },
+        ],
+      });
+      useMockExamSessionStore.setState({ summary });
+
+      render(<MockExamResultsPage />);
+
+      const historyRow = screen.getByTestId('topic-bar-history');
+      // A real (0%-width) fill span is present — this is NOT the zero-asked path.
+      const fillSpan = historyRow.querySelector('span[style*="width"]');
+      expect(fillSpan).not.toBeNull();
+      expect(fillSpan).toHaveStyle({ width: '0%' });
+      expect(historyRow.querySelector('.cx-cat-bar')?.getAttribute('data-tone')).toBe('danger');
+      // Must show the real 0/8 count, not the "not in this attempt" note.
+      expect(historyRow).not.toHaveTextContent(/Not in this attempt/i);
+      expect(historyRow).toHaveTextContent('0 / 8');
+    });
+
+    it('all 5 topics zero-asked: 5 "not in attempt" rows, zero fill spans anywhere in the panel', () => {
+      const summary = createMockSummary({
+        topicBreakdown: [
+          { topic: 'history', asked: 0, correct: 0, percentage: null },
+          { topic: 'geography', asked: 0, correct: 0, percentage: null },
+          { topic: 'politics', asked: 0, correct: 0, percentage: null },
+          { topic: 'culture', asked: 0, correct: 0, percentage: null },
+          { topic: 'practical', asked: 0, correct: 0, percentage: null },
+        ],
+      });
+      useMockExamSessionStore.setState({ summary });
+
+      render(<MockExamResultsPage />);
+
+      const panel = screen.getByTestId('topic-breakdown');
+      expect(panel.querySelectorAll('span[style*="width"]')).toHaveLength(0);
+      expect(panel.querySelectorAll('.cx-cat-bar')).toHaveLength(5);
+      // "Not in this attempt" appears once per row.
+      const notInAttemptMatches = panel.textContent?.match(/Not in this attempt/gi) ?? [];
+      expect(notInAttemptMatches).toHaveLength(5);
+    });
   });
 
   describe('Navigation', () => {
