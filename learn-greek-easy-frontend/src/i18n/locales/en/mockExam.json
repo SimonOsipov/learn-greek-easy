@@ -137,6 +137,16 @@
       "practical": "Practical"
     }
   },
+  "coverage": {
+    "chip_one": "{{count}} question · updated {{date}}",
+    "chip_other": "{{count}} questions · updated {{date}}",
+    "chipNoDate_one": "{{count}} question",
+    "chipNoDate_other": "{{count}} questions",
+    "thinMark": {
+      "label": "Limited coverage",
+      "tooltip": "Fewer questions than other topics — treat this subject as less exam-ready."
+    }
+  },
   "states": {
     "loading": "Loading exam data...",
     "error": "Failed to load exam data",
