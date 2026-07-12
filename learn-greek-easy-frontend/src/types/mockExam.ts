@@ -92,6 +92,19 @@ export interface MockExamSubmitAllResponse {
   topic_breakdown: MockExamTopicBreakdownItem[]; // 5 items, canonical CultureTopic order
 }
 
+// Per-topic coverage item in the bank-coverage response (matches backend coverage endpoint)
+export interface MockExamCoverageTopic {
+  topic: CultureTopic;
+  thin: boolean;
+}
+
+// Bank-coverage response (matches backend coverage endpoint)
+export interface MockExamCoverageResponse {
+  question_count: number;
+  updated_at: string | null;
+  topics: MockExamCoverageTopic[];
+}
+
 // Statistics
 export interface MockExamStats {
   total_exams: number;

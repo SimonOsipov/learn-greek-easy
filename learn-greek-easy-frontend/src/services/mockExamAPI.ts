@@ -10,6 +10,7 @@
  */
 
 import type {
+  MockExamCoverageResponse,
   MockExamCreateResponse,
   MockExamQueueResponse,
   MockExamStatisticsResponse,
@@ -28,6 +29,14 @@ export const mockExamAPI = {
    */
   getQuestionQueue: async (): Promise<MockExamQueueResponse> => {
     return api.get<MockExamQueueResponse>(`${MOCK_EXAM_BASE}/queue`);
+  },
+
+  /**
+   * Get bank-wide coverage: total question count, last-updated timestamp,
+   * and per-topic thin-coverage flags (WEDGE-05).
+   */
+  getCoverage: async (): Promise<MockExamCoverageResponse> => {
+    return api.get<MockExamCoverageResponse>(`${MOCK_EXAM_BASE}/coverage`);
   },
 
   /**
