@@ -509,6 +509,64 @@ describe('MockExamResultsPage', () => {
       expect(screen.queryByTestId('coverage-chip')).not.toBeInTheDocument();
       expect(screen.queryAllByTestId('thin-coverage-mark')).toHaveLength(0);
     });
+
+    // QA adversarial (WEDGE-05-03) — exact-count boundary: with exactly 2
+    // thin topics, exactly 2 marks render on the page, each nested inside its
+    // OWN topic-bar-<topic> — not merely "at least 2" (would pass if marks
+    // leaked onto every bar) and not "some mark exists somewhere".
+    it('results.thinMarkCountExactlyMatchesThinTopics: renders exactly one mark per thin topic, none elsewhere', async () => {
+      const summary = createMockSummary({ topicBreakdown: createMockTopicBreakdown() });
+      useMockExamSessionStore.setState({ summary });
+      mockGetCoverage.mockResolvedValue(
+        makeCoverage({
+          topics: [
+            { topic: 'history', thin: true },
+            { topic: 'geography', thin: true },
+            { topic: 'politics', thin: false },
+            { topic: 'culture', thin: false },
+            { topic: 'practical', thin: false },
+          ],
+        })
+      );
+
+      render(<MockExamResultsPage />);
+      await screen.findByTestId('coverage-chip');
+
+      expect(screen.queryAllByTestId('thin-coverage-mark')).toHaveLength(2);
+      expect(
+        within(screen.getByTestId('topic-bar-history')).getAllByTestId('thin-coverage-mark')
+      ).toHaveLength(1);
+      expect(
+        within(screen.getByTestId('topic-bar-geography')).getAllByTestId('thin-coverage-mark')
+      ).toHaveLength(1);
+    });
+
+    // QA adversarial (WEDGE-05-03) — zero-thin boundary: no thin topics at
+    // all means zero marks anywhere on the results breakdown panel.
+    it('results.zeroThinTopicsRendersNoMarks: no thin-coverage marks anywhere when all topics are non-thin', async () => {
+      const summary = createMockSummary({ topicBreakdown: createMockTopicBreakdown() });
+      useMockExamSessionStore.setState({ summary });
+      mockGetCoverage.mockResolvedValue(makeCoverage());
+
+      render(<MockExamResultsPage />);
+      await screen.findByTestId('coverage-chip');
+
+      expect(screen.queryAllByTestId('thin-coverage-mark')).toHaveLength(0);
+    });
+
+    // QA adversarial (WEDGE-05-03) — the chip surfaces the raw question count
+    // text, not just "exists" (guards against a chip that renders but with
+    // the wrong/blank number, e.g. a prop-wiring swap with updatedAt).
+    it('results.chipShowsCountText: coverage chip text includes the question count', async () => {
+      const summary = createMockSummary({ topicBreakdown: createMockTopicBreakdown() });
+      useMockExamSessionStore.setState({ summary });
+      mockGetCoverage.mockResolvedValue(makeCoverage({ question_count: 490 }));
+
+      render(<MockExamResultsPage />);
+
+      const chip = await screen.findByTestId('coverage-chip');
+      expect(chip).toHaveTextContent('490');
+    });
   });
 
   describe('Navigation', () => {

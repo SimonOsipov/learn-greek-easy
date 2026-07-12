@@ -636,4 +636,45 @@ describe('MockExamPage — topic chips (WEDGE-03-03)', () => {
     expect(screen.queryByTestId('coverage-chip')).not.toBeInTheDocument();
     expect(screen.queryAllByTestId('thin-coverage-mark')).toHaveLength(0);
   });
+
+  // QA adversarial (WEDGE-05-03) — the additive-gate AC (D10): a coverage
+  // fetch that is PERPETUALLY PENDING (never resolves within the test) must
+  // NOT block the hub's initial-load skeleton. `renderSettled()` (which
+  // awaits `start-exam-button`, gated only on readiness/stats/queue) proves
+  // the page rendered without coverage ever settling. This is the guard that
+  // would catch a regression where `coverageQuery.isLoading` gets folded into
+  // the page's `isLoading` skeleton condition.
+  it('hub.coverageLoadingNeverBlocksPage: a coverage query stuck pending does not block the hub skeleton or topic chips', async () => {
+    mockGetCoverage.mockReturnValue(new Promise(() => {}));
+
+    await renderSettled();
+    const group = screen.getByTestId('culture-topic-chips');
+    expect(within(group).getByTestId('topic-chip-history')).toBeInTheDocument();
+
+    // Coverage never resolved — chip/marks must be absent, not just delayed.
+    expect(screen.queryByTestId('coverage-chip')).not.toBeInTheDocument();
+    expect(screen.queryAllByTestId('thin-coverage-mark')).toHaveLength(0);
+  });
+
+  // QA adversarial (WEDGE-05-03) — zero-thin-topics boundary: when the server
+  // reports no thin topics at all, NO thin-coverage-mark renders anywhere on
+  // the hub (not even a stray one on a miscategorized/default topic).
+  it('hub.zeroThinTopicsRendersNoMarks: no thin-coverage marks anywhere when all topics are non-thin', async () => {
+    mockGetCoverage.mockResolvedValue({
+      question_count: 490,
+      updated_at: '2026-07-11T14:22:31Z',
+      topics: [
+        { topic: 'history', thin: false },
+        { topic: 'geography', thin: false },
+        { topic: 'politics', thin: false },
+        { topic: 'culture', thin: false },
+        { topic: 'practical', thin: false },
+      ],
+    });
+
+    await renderSettled();
+    await screen.findByTestId('coverage-chip');
+
+    expect(screen.queryAllByTestId('thin-coverage-mark')).toHaveLength(0);
+  });
 });
