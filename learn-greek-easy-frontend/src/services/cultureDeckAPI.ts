@@ -12,6 +12,7 @@ import type {
   CultureCategory,
   CultureQuestionBrowseResponse,
   CultureQuestionDetailResponse,
+  CultureTopic,
 } from '@/types/culture';
 
 import { api } from './api';
@@ -209,6 +210,7 @@ export const cultureDeckAPI = {
       include_new?: boolean;
       new_questions_limit?: number;
       force_practice?: boolean;
+      topic?: CultureTopic;
     }
   ): Promise<CultureQuestionQueue> => {
     const params = new URLSearchParams();
@@ -219,6 +221,7 @@ export const cultureDeckAPI = {
       params.append('new_questions_limit', String(options.new_questions_limit));
     if (options?.force_practice !== undefined)
       params.append('force_practice', String(options.force_practice));
+    if (options?.topic) params.append('topic', options.topic);
 
     const query = params.toString() ? `?${params.toString()}` : '';
     return api.get<CultureQuestionQueue>(`/api/v1/culture/decks/${deckId}/questions${query}`);
@@ -250,11 +253,12 @@ export const cultureDeckAPI = {
    */
   browseQuestions: async (
     deckId: string,
-    options?: { offset?: number; limit?: number }
+    options?: { offset?: number; limit?: number; topic?: CultureTopic }
   ): Promise<CultureQuestionBrowseResponse> => {
     const params = new URLSearchParams();
     if (options?.offset !== undefined) params.set('offset', String(options.offset));
     if (options?.limit !== undefined) params.set('limit', String(options.limit));
+    if (options?.topic) params.set('topic', options.topic);
     const query = params.toString() ? `?${params.toString()}` : '';
     return api.get<CultureQuestionBrowseResponse>(
       `/api/v1/culture/decks/${deckId}/questions/browse${query}`

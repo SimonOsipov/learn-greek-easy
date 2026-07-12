@@ -131,6 +131,69 @@ async def due_question_stats(
     return stats_list
 
 
+@pytest.fixture
+async def mixed_topic_questions(
+    db_session: AsyncSession, culture_deck: CultureDeck
+) -> list[CultureQuestion]:
+    """Create questions split across two topics: 2 history + 3 politics (WEDGE-03-01).
+
+    All questions are new (no CultureQuestionStats), so queue placement is
+    driven purely by the topic filter, not due/new prioritization.
+    """
+    topics = ["history", "history", "politics", "politics", "politics"]
+    questions = []
+    for i, topic in enumerate(topics):
+        question = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={
+                "en": f"Q{i + 1} ({topic})?",
+                "el": f"Ε{i + 1} ({topic});",
+                "ru": f"В{i + 1} ({topic})?",
+            },
+            option_a={"en": "Option A", "el": "Επιλογή Α", "ru": "Вариант А"},
+            option_b={"en": "Option B", "el": "Επιλογή Β", "ru": "Вариант Б"},
+            correct_option=1,
+            order_index=i,
+            topic=topic,
+        )
+        db_session.add(question)
+        questions.append(question)
+
+    await db_session.flush()
+    for q in questions:
+        await db_session.refresh(q)
+    return questions
+
+
+@pytest.fixture
+async def politics_only_questions(
+    db_session: AsyncSession, culture_deck: CultureDeck
+) -> list[CultureQuestion]:
+    """Create a deck with only politics-topic questions (no history at all, WEDGE-03-01)."""
+    questions = []
+    for i in range(3):
+        question = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={
+                "en": f"Politics Q{i + 1}?",
+                "el": f"Πολιτική Ε{i + 1};",
+                "ru": f"Политика В{i + 1}?",
+            },
+            option_a={"en": "Option A", "el": "Επιλογή Α", "ru": "Вариант А"},
+            option_b={"en": "Option B", "el": "Επιλογή Β", "ru": "Вариант Б"},
+            correct_option=1,
+            order_index=i,
+            topic="politics",
+        )
+        db_session.add(question)
+        questions.append(question)
+
+    await db_session.flush()
+    for q in questions:
+        await db_session.refresh(q)
+    return questions
+
+
 # =============================================================================
 # Test Question Queue Endpoint
 # =============================================================================
@@ -343,6 +406,147 @@ class TestGetQuestionQueueEndpoint:
         )
 
         assert response.status_code == 422
+
+
+class TestQuestionQueueTopicFilter:
+    """WEDGE-03-01: `topic` query param on the question-queue endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_queue_topic_filters_to_single_topic(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        culture_deck: CultureDeck,
+        mixed_topic_questions: list[CultureQuestion],
+    ):
+        """?topic=history should return only the 2 history questions."""
+        history_ids = {str(q.id) for q in mixed_topic_questions if q.topic == "history"}
+        politics_ids = {str(q.id) for q in mixed_topic_questions if q.topic == "politics"}
+
+        response = await client.get(
+            f"/api/v1/culture/decks/{culture_deck.id}/questions?topic=history",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        returned_ids = {q["id"] for q in data["questions"]}
+        assert returned_ids, "expected at least one history question in the queue"
+        assert (
+            returned_ids <= history_ids
+        ), f"queue leaked non-history questions: {returned_ids - history_ids}"
+        assert not (returned_ids & politics_ids)
+        assert data["total_in_queue"] == len(history_ids)
+
+    @pytest.mark.asyncio
+    async def test_queue_without_topic_unchanged(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        culture_deck: CultureDeck,
+        mixed_topic_questions: list[CultureQuestion],
+    ):
+        """No topic param should return the full mixed queue, unchanged.
+
+        Regression lock: passes both before and after the executor wires the
+        `topic` param -- omitting it must be a strict no-op.
+        """
+        all_ids = {str(q.id) for q in mixed_topic_questions}
+
+        response = await client.get(
+            f"/api/v1/culture/decks/{culture_deck.id}/questions",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        returned_ids = {q["id"] for q in data["questions"]}
+        assert returned_ids == all_ids
+        assert data["total_in_queue"] == len(mixed_topic_questions)
+
+    @pytest.mark.asyncio
+    async def test_queue_invalid_topic_returns_422(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        culture_deck: CultureDeck,
+    ):
+        """An unrecognized topic value must fail validation (422), not 500 or a silent 200."""
+        response = await client.get(
+            f"/api/v1/culture/decks/{culture_deck.id}/questions?topic=sport",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_queue_topic_no_matches_returns_empty(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        culture_deck: CultureDeck,
+        politics_only_questions: list[CultureQuestion],
+    ):
+        """Filtering by a topic absent from the deck returns an empty queue, not a crash."""
+        response = await client.get(
+            f"/api/v1/culture/decks/{culture_deck.id}/questions?topic=history",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["total_due"] == 0
+        assert data["total_new"] == 0
+        assert data["total_in_queue"] == 0
+        assert data["questions"] == []
+
+    @pytest.mark.asyncio
+    async def test_queue_topic_excludes_untagged_questions(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+        culture_deck: CultureDeck,
+        mixed_topic_questions: list[CultureQuestion],
+    ):
+        """?topic=history must exclude untagged (topic IS NULL) questions.
+
+        `WHERE topic = 'history'` is SQL-NULL-unsafe: an untagged row (topic
+        IS NULL) never satisfies `topic = 'history'`, so it must never appear
+        in a topic-filtered queue. This locks that behavior against a
+        reimplementation using e.g. `topic != 'politics'`, which would leak
+        untagged rows in.
+        """
+        untagged = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={"en": "Untagged Q?", "el": "Ε;", "ru": "В?"},
+            option_a={"en": "Option A", "el": "Επιλογή Α", "ru": "Вариант А"},
+            option_b={"en": "Option B", "el": "Επιλογή Β", "ru": "Вариант Б"},
+            correct_option=1,
+            order_index=99,
+            topic=None,
+        )
+        db_session.add(untagged)
+        await db_session.flush()
+        await db_session.refresh(untagged)
+
+        history_ids = {str(q.id) for q in mixed_topic_questions if q.topic == "history"}
+
+        response = await client.get(
+            f"/api/v1/culture/decks/{culture_deck.id}/questions?topic=history",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        returned_ids = {q["id"] for q in data["questions"]}
+        assert str(untagged.id) not in returned_ids, "untagged question leaked into history filter"
+        assert returned_ids == history_ids
+        assert data["total_in_queue"] == len(history_ids)
 
 
 # =============================================================================

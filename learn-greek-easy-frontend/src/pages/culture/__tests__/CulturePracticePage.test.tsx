@@ -10,9 +10,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@/lib/test-utils';
+import { act, render, screen, waitFor } from '@/lib/test-utils';
 import userEvent from '@testing-library/user-event';
 import posthog from 'posthog-js';
+import { cultureDeckAPI } from '@/services/cultureDeckAPI';
 import { useCultureSessionStore } from '@/stores/cultureSessionStore';
 import type { CultureQuestionResponse } from '@/types/culture';
 import type { CultureQuestionState, CultureSessionState } from '@/types/cultureSession';
@@ -566,6 +567,102 @@ describe('CulturePracticePage', () => {
 
       // Should render question 3 (index 2)
       expect(screen.getByTestId('mcq-component')).toBeInTheDocument();
+    });
+  });
+
+  describe('Topic query param threading (WEDGE-03-02)', () => {
+    afterEach(() => {
+      // Reset location so later tests (or reruns) don't inherit ?topic=...
+      window.history.pushState({}, '', '/');
+    });
+
+    it('forwards ?topic to the queue', async () => {
+      render(<CulturePracticePage />, {
+        initialRoute: '/culture/test-deck-1/practice?topic=history',
+      });
+
+      await waitFor(() => {
+        expect(cultureDeckAPI.getQuestionQueue).toHaveBeenCalled();
+      });
+
+      const [calledDeckId, calledOptions] = vi.mocked(cultureDeckAPI.getQuestionQueue).mock
+        .calls[0];
+      expect(calledDeckId).toBe('test-deck-1');
+      expect(calledOptions).toEqual(expect.objectContaining({ topic: 'history' }));
+    });
+
+    // Regression lock: passes both before and after the executor wires
+    // useSearchParams into initializeSession -- omitting ?topic must stay a
+    // strict no-op, mirroring the backend WEDGE-03-01
+    // test_*_without_topic_unchanged pattern.
+    it('omits topic when absent', async () => {
+      render(<CulturePracticePage />, {
+        initialRoute: '/culture/test-deck-1/practice',
+      });
+
+      await waitFor(() => {
+        expect(cultureDeckAPI.getQuestionQueue).toHaveBeenCalled();
+      });
+
+      const [, calledOptions] = vi.mocked(cultureDeckAPI.getQuestionQueue).mock.calls[0];
+      expect((calledOptions as { topic?: string } | undefined)?.topic).toBeUndefined();
+    });
+
+    // Adversarial: an unrecognized value must fall through to unscoped, not
+    // be forwarded verbatim as a broken `topic=banana` request -- mirrors the
+    // backend's 422-on-invalid-enum contract by never sending a non-taxonomy
+    // value from the client at all.
+    it('omits topic when the value is not a recognized CultureTopic', async () => {
+      render(<CulturePracticePage />, {
+        initialRoute: '/culture/test-deck-1/practice?topic=banana',
+      });
+
+      await waitFor(() => {
+        expect(cultureDeckAPI.getQuestionQueue).toHaveBeenCalled();
+      });
+
+      const [, calledOptions] = vi.mocked(cultureDeckAPI.getQuestionQueue).mock.calls[0];
+      expect((calledOptions as { topic?: string } | undefined)?.topic).toBeUndefined();
+    });
+
+    // Adversarial: `?topic=` (present but empty) must also fall through to
+    // unscoped -- an empty string is not a member of CULTURE_TOPICS either.
+    it('omits topic when the value is an empty string', async () => {
+      render(<CulturePracticePage />, {
+        initialRoute: '/culture/test-deck-1/practice?topic=',
+      });
+
+      await waitFor(() => {
+        expect(cultureDeckAPI.getQuestionQueue).toHaveBeenCalled();
+      });
+
+      const [, calledOptions] = vi.mocked(cultureDeckAPI.getQuestionQueue).mock.calls[0];
+      expect((calledOptions as { topic?: string } | undefined)?.topic).toBeUndefined();
+    });
+
+    // Proves the mount effect's re-init is actually gated on `topic`, not
+    // just `deckId` -- a same-deck topic-only URL change (no remount) must
+    // re-invoke getQuestionQueue with the new topic.
+    it('re-invokes the queue with the new topic on a same-deck ?topic change', async () => {
+      render(<CulturePracticePage />, {
+        initialRoute: '/culture/test-deck-1/practice?topic=history',
+      });
+
+      await waitFor(() => {
+        expect(cultureDeckAPI.getQuestionQueue).toHaveBeenCalledTimes(1);
+      });
+
+      act(() => {
+        window.history.pushState({}, '', '/culture/test-deck-1/practice?topic=politics');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      });
+
+      await waitFor(() => {
+        expect(cultureDeckAPI.getQuestionQueue).toHaveBeenCalledTimes(2);
+      });
+
+      const [, secondCallOptions] = vi.mocked(cultureDeckAPI.getQuestionQueue).mock.calls[1];
+      expect(secondCallOptions).toEqual(expect.objectContaining({ topic: 'politics' }));
     });
   });
 });

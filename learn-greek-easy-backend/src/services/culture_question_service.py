@@ -49,6 +49,7 @@ from src.constants import (
     REINFORCEMENT_MASTERY_THRESHOLD,
     ReadinessConstants,
 )
+from src.core.culture_topic import CultureTopic
 from src.core.exceptions import CultureDeckNotFoundException, CultureQuestionNotFoundException
 from src.core.logging import get_logger
 from src.core.sm2 import DEFAULT_EASINESS_FACTOR, calculate_next_review_date, calculate_sm2
@@ -138,6 +139,7 @@ class CultureQuestionService:
         include_new: bool = True,
         new_questions_limit: int = 5,
         force_practice: bool = False,
+        topic: CultureTopic | None = None,
         locale: str = "en",
     ) -> CultureQuestionQueue:
         """Get questions due for review plus new questions.
@@ -155,6 +157,7 @@ class CultureQuestionService:
             include_new: Whether to include new (unstudied) questions
             new_questions_limit: Maximum new questions if include_new=True
             force_practice: If True and no due/new questions, return weakest studied questions
+            topic: Optional CultureTopic filter, restricting the queue to one topic
 
         Returns:
             CultureQuestionQueue with questions for practice
@@ -176,7 +179,7 @@ class CultureQuestionService:
         )
 
         # Step 2: Get due questions (ordered by next_review_date - oldest first)
-        due_stats = await self._get_due_questions(user_id, deck_id, limit)
+        due_stats = await self._get_due_questions(user_id, deck_id, limit, topic=topic)
 
         logger.debug(
             "Found due questions",
@@ -191,7 +194,9 @@ class CultureQuestionService:
         if include_new and len(due_stats) < limit:
             remaining_slots = min(new_questions_limit, limit - len(due_stats))
             if remaining_slots > 0:
-                new_questions = await self._get_new_questions(user_id, deck_id, remaining_slots)
+                new_questions = await self._get_new_questions(
+                    user_id, deck_id, remaining_slots, topic=topic
+                )
 
                 logger.debug(
                     "Added new questions to queue",
@@ -202,12 +207,12 @@ class CultureQuestionService:
                 )
 
         # Step 3.5: Check if user has studied any questions in this deck
-        has_studied = await self._has_studied_questions(user_id, deck_id)
+        has_studied = await self._has_studied_questions(user_id, deck_id, topic=topic)
 
         # Step 3.6: Get weakest questions if force_practice and no due/new available
         weakest_stats: list[CultureQuestionStats] = []
         if force_practice and len(due_stats) == 0 and len(new_questions) == 0 and has_studied:
-            weakest_stats = await self._get_weakest_questions(user_id, deck_id, limit)
+            weakest_stats = await self._get_weakest_questions(user_id, deck_id, limit, topic=topic)
 
             logger.debug(
                 "Force practice mode: fetched weakest questions",
@@ -467,7 +472,12 @@ class CultureQuestionService:
         )
 
     async def browse_questions(
-        self, user_id: UUID, deck_id: UUID, offset: int = 0, limit: int = 100
+        self,
+        user_id: UUID,
+        deck_id: UUID,
+        offset: int = 0,
+        limit: int = 100,
+        topic: CultureTopic | None = None,
     ) -> CultureQuestionBrowseResponse:
         """Browse all questions in a deck with per-user status."""
         deck = await self._get_active_deck(deck_id)
@@ -476,6 +486,8 @@ class CultureQuestionService:
             CultureQuestion.deck_id == deck_id,
             CultureQuestion.is_pending_review == False,  # noqa: E712
         )
+        if topic is not None:
+            count_query = count_query.where(CultureQuestion.topic == topic.value)
         count_result = await self.db.execute(count_query)
         total = count_result.scalar_one()
 
@@ -496,6 +508,8 @@ class CultureQuestionService:
             .offset(offset)
             .limit(limit)
         )
+        if topic is not None:
+            query = query.where(CultureQuestion.topic == topic.value)
         result = await self.db.execute(query)
         rows = result.all()
 
@@ -1374,6 +1388,7 @@ class CultureQuestionService:
         user_id: UUID,
         deck_id: UUID,
         limit: int,
+        topic: CultureTopic | None = None,
     ) -> list[CultureQuestionStats]:
         """Get questions due for review, ordered by next_review_date.
 
@@ -1381,6 +1396,7 @@ class CultureQuestionService:
             user_id: User ID
             deck_id: Deck to filter by
             limit: Maximum number of questions
+            topic: Optional CultureTopic filter
 
         Returns:
             List of CultureQuestionStats with question eager loaded
@@ -1397,6 +1413,8 @@ class CultureQuestionService:
             .order_by(CultureQuestionStats.next_review_date)
             .limit(limit)
         )
+        if topic is not None:
+            query = query.where(CultureQuestion.topic == topic.value)
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
@@ -1405,6 +1423,7 @@ class CultureQuestionService:
         user_id: UUID,
         deck_id: UUID,
         limit: int,
+        topic: CultureTopic | None = None,
     ) -> list[CultureQuestion]:
         """Get questions user hasn't studied yet.
 
@@ -1412,6 +1431,7 @@ class CultureQuestionService:
             user_id: User ID
             deck_id: Deck to filter by
             limit: Maximum number of questions
+            topic: Optional CultureTopic filter
 
         Returns:
             List of CultureQuestion not yet studied by user
@@ -1432,10 +1452,14 @@ class CultureQuestionService:
             .order_by(CultureQuestion.order_index)
             .limit(limit)
         )
+        if topic is not None:
+            query = query.where(CultureQuestion.topic == topic.value)
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
-    async def _has_studied_questions(self, user_id: UUID, deck_id: UUID) -> bool:
+    async def _has_studied_questions(
+        self, user_id: UUID, deck_id: UUID, topic: CultureTopic | None = None
+    ) -> bool:
         """Check if user has any stats records for questions in this deck.
 
         Used to determine whether to show "Practice Anyway" option when
@@ -1444,6 +1468,7 @@ class CultureQuestionService:
         Args:
             user_id: User ID
             deck_id: Deck to check
+            topic: Optional CultureTopic filter
 
         Returns:
             True if user has studied at least one question in this deck
@@ -1457,6 +1482,8 @@ class CultureQuestionService:
                 CultureQuestion.deck_id == deck_id,
             )
         )
+        if topic is not None:
+            query = query.where(CultureQuestion.topic == topic.value)
         result = await self.db.execute(query)
         count = result.scalar() or 0
         return count > 0
@@ -1466,6 +1493,7 @@ class CultureQuestionService:
         user_id: UUID,
         deck_id: UUID,
         limit: int,
+        topic: CultureTopic | None = None,
     ) -> list[CultureQuestionStats]:
         """Get user's weakest (hardest) questions ordered by ease factor.
 
@@ -1478,6 +1506,7 @@ class CultureQuestionService:
             user_id: User ID
             deck_id: Deck to filter by
             limit: Maximum number of questions
+            topic: Optional CultureTopic filter
 
         Returns:
             List of CultureQuestionStats with question eager loaded, ordered by
@@ -1495,6 +1524,8 @@ class CultureQuestionService:
             .order_by(CultureQuestionStats.easiness_factor.asc())
             .limit(limit)
         )
+        if topic is not None:
+            query = query.where(CultureQuestion.topic == topic.value)
         result = await self.db.execute(query)
         return list(result.scalars().all())
 

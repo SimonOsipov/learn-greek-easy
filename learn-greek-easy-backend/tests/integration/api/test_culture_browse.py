@@ -83,6 +83,40 @@ async def culture_questions(
     return questions
 
 
+@pytest.fixture
+async def mixed_topic_browse_questions(
+    db_session: AsyncSession, culture_deck: CultureDeck
+) -> list[CultureQuestion]:
+    """Create questions split across two topics: 2 history + 3 politics (WEDGE-03-01).
+
+    All questions are non-pending (default `is_pending_review=False`), so
+    they are all eligible for `browse_questions`.
+    """
+    topics = ["history", "history", "politics", "politics", "politics"]
+    questions = []
+    for i, topic in enumerate(topics):
+        question = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={
+                "en": f"Q{i + 1} ({topic})?",
+                "el": f"Ε{i + 1} ({topic});",
+                "ru": f"В{i + 1} ({topic})?",
+            },
+            option_a={"en": "Option A", "el": "Επιλογή Α", "ru": "Вариант А"},
+            option_b={"en": "Option B", "el": "Επιλογή Β", "ru": "Вариант Б"},
+            correct_option=1,
+            order_index=i,
+            topic=topic,
+        )
+        db_session.add(question)
+        questions.append(question)
+
+    await db_session.flush()
+    for q in questions:
+        await db_session.refresh(q)
+    return questions
+
+
 # =============================================================================
 # Test Browse Questions Endpoint
 # =============================================================================
@@ -283,3 +317,144 @@ class TestBrowseQuestionsEndpoint:
 
         order_indices = [q["order_index"] for q in data["questions"]]
         assert order_indices == sorted(order_indices)
+
+
+class TestBrowseQuestionsTopicFilter:
+    """WEDGE-03-01: `topic` query param on the browse endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_browse_topic_filters_and_total(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        culture_deck: CultureDeck,
+        mixed_topic_browse_questions: list[CultureQuestion],
+    ):
+        """?topic=politics should return only the 3 politics questions, total==3."""
+        politics_ids = {str(q.id) for q in mixed_topic_browse_questions if q.topic == "politics"}
+        history_ids = {str(q.id) for q in mixed_topic_browse_questions if q.topic == "history"}
+
+        response = await client.get(
+            f"/api/v1/culture/decks/{culture_deck.id}/questions/browse?topic=politics",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["total"] == 3
+        returned_ids = {q["id"] for q in data["questions"]}
+        assert returned_ids == politics_ids
+        assert not (returned_ids & history_ids)
+
+    @pytest.mark.asyncio
+    async def test_browse_without_topic_unchanged(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        culture_deck: CultureDeck,
+        mixed_topic_browse_questions: list[CultureQuestion],
+    ):
+        """No topic param should return all 5 questions, unchanged.
+
+        Regression lock: passes both before and after the executor wires the
+        `topic` param -- omitting it must be a strict no-op.
+        """
+        all_ids = {str(q.id) for q in mixed_topic_browse_questions}
+
+        response = await client.get(
+            f"/api/v1/culture/decks/{culture_deck.id}/questions/browse",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["total"] == 5
+        returned_ids = {q["id"] for q in data["questions"]}
+        assert returned_ids == all_ids
+
+    @pytest.mark.asyncio
+    async def test_browse_topic_excludes_untagged_questions(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+        culture_deck: CultureDeck,
+        mixed_topic_browse_questions: list[CultureQuestion],
+    ):
+        """?topic=politics must exclude untagged (topic IS NULL) questions.
+
+        `WHERE topic = 'politics'` is SQL-NULL-unsafe: an untagged row (topic
+        IS NULL) never satisfies `topic = 'politics'`, so it must never
+        appear -- and must not be counted in `total` -- for a topic-filtered
+        browse. This locks that behavior against a reimplementation using
+        e.g. `topic != 'history'`, which would leak untagged rows in.
+        """
+        untagged = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={"en": "Untagged Q?", "el": "Ε;", "ru": "В?"},
+            option_a={"en": "Option A", "el": "Επιλογή Α", "ru": "Вариант А"},
+            option_b={"en": "Option B", "el": "Επιλογή Β", "ru": "Вариант Б"},
+            correct_option=1,
+            order_index=99,
+            topic=None,
+        )
+        db_session.add(untagged)
+        await db_session.flush()
+        await db_session.refresh(untagged)
+
+        politics_ids = {str(q.id) for q in mixed_topic_browse_questions if q.topic == "politics"}
+
+        response = await client.get(
+            f"/api/v1/culture/decks/{culture_deck.id}/questions/browse?topic=politics",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["total"] == 3, "untagged question must not be counted in a topic-filtered total"
+        returned_ids = {q["id"] for q in data["questions"]}
+        assert str(untagged.id) not in returned_ids, "untagged question leaked into politics filter"
+        assert returned_ids == politics_ids
+
+    @pytest.mark.asyncio
+    async def test_browse_topic_pagination_slices_filtered_set(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        culture_deck: CultureDeck,
+        mixed_topic_browse_questions: list[CultureQuestion],
+    ):
+        """`total`, `offset`, and `limit` must all apply to the topic-filtered
+        set, not the unfiltered set.
+
+        Guards against a classic bug: the WHERE predicate applied to the main
+        SELECT but not the COUNT (wrong `total`), or the page computed from
+        the unfiltered set and then filtered client-side (wrong slice /
+        wrong count on a page boundary). Fixture: 2 history (order_index
+        0-1) + 3 politics (order_index 2-4). Filtered+ordered politics list
+        is [idx2, idx3, idx4]; offset=1, limit=2 must return exactly
+        [idx3, idx4].
+        """
+        politics_by_index = sorted(
+            (q for q in mixed_topic_browse_questions if q.topic == "politics"),
+            key=lambda q: q.order_index,
+        )
+        expected_page_ids = [str(q.id) for q in politics_by_index[1:3]]
+
+        response = await client.get(
+            f"/api/v1/culture/decks/{culture_deck.id}/questions/browse"
+            "?topic=politics&limit=2&offset=1",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["total"] == 3, "total must reflect the filtered count, not the full deck"
+        returned_ids = [q["id"] for q in data["questions"]]
+        assert (
+            returned_ids == expected_page_ids
+        ), f"expected page slice {expected_page_ids} of the filtered set, got {returned_ids}"

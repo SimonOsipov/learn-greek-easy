@@ -108,6 +108,14 @@ vi.mock('react-i18next', async () => {
               'readiness.heroDesc':
                 'The Cyprus culture & history exam asks 25 questions in 45 minutes and you need 60% to pass.',
               'readiness.ctaPractice': `Practice ${opts?.category}`,
+              // topics.accusative.* — read via tDynamic(t, 'topics.accusative.'
+              // + category) to interpolate readiness.ctaPractice/catCta's
+              // {{category}}. EN accusative == EN nominative, so these mirror
+              // culture.categories.* below (PRACT2-11 i18n-leak follow-up).
+              'topics.accusative.history': 'History',
+              'topics.accusative.geography': 'Geography',
+              'topics.accusative.politics': 'Politics',
+              'topics.accusative.culture': 'Culture',
               'readiness.metricAccuracy': 'Accuracy',
               'readiness.metricAccuracyTrend': 'on attempted questions',
               'readiness.metricLearned': 'Learned',
@@ -176,6 +184,25 @@ vi.mock('react-i18next', async () => {
               );
             }
             return resolved;
+          },
+          i18n: { language: 'en' },
+        };
+      }
+      if (ns === 'deck') {
+        // CategoryPanel resolves its progress-row label via
+        // tDynamic(tDeck, 'culture.categories.' + category) — map the keys
+        // it actually reads (PRACT2-11 i18n-leak follow-up); everything else
+        // in this namespace is untouched by these tests.
+        return {
+          t: (key: string) => {
+            const categoryMap: Record<string, string> = {
+              'culture.categories.history': 'History',
+              'culture.categories.geography': 'Geography',
+              'culture.categories.politics': 'Politics',
+              'culture.categories.culture': 'Culture',
+              'culture.categories.practical': 'Practical',
+            };
+            return categoryMap[key] ?? key;
           },
           i18n: { language: 'en' },
         };
@@ -670,11 +697,17 @@ describe('MockExamPage', () => {
 
       render(<MockExamPage />);
 
-      await screen.findByText('History');
-      // All three category labels render (capitalised from the lowercase API).
-      expect(screen.getByText('History')).toBeInTheDocument();
-      expect(screen.getByText('Politics')).toBeInTheDocument();
-      expect(screen.getByText('Geography')).toBeInTheDocument();
+      // Scope to the category-panel list — the topic filter chips above (WEDGE-03)
+      // render the SAME localized category words as standalone chip labels, so an
+      // unscoped screen.getByText('History') now matches both (multiple-elements
+      // error).
+      const catMasteredHistory = await screen.findByTestId('cat-mastered-history');
+      const catList = catMasteredHistory.closest('.cx-cat-list') as HTMLElement;
+      expect(catList).not.toBeNull();
+      // All three category labels render (localized from the lowercase API key).
+      expect(within(catList).getByText('History')).toBeInTheDocument();
+      expect(within(catList).getByText('Politics')).toBeInTheDocument();
+      expect(within(catList).getByText('Geography')).toBeInTheDocument();
 
       // The weakest category (history, 22%) is the first row, and its panel CTA
       // links to the first deck id. catCta text → "Practice History — 22% ready".
