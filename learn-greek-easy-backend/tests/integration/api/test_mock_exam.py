@@ -1116,14 +1116,8 @@ async def culture_deck_with_topic_seeded_questions(
 
 
 class TestMockExamTopicBreakdownEndpoint:
-    """WEDGE-04-01 Test Spec (Mode A / RED): the submit-all response gains a
-    `topic_breakdown` field.
-
-    RED reason: `data["topic_breakdown"]` doesn't exist yet -- the
-    `"topic_breakdown" in data` assertion below fails with a clean
-    `AssertionError`, not a collection error (nothing in this file touches
-    the not-yet-existing `MockExamTopicBreakdownItem` at import time).
-    """
+    """WEDGE-04-01: the submit-all response includes a `topic_breakdown`
+    field."""
 
     @pytest.mark.asyncio
     async def test_submit_all_response_includes_topic_breakdown(

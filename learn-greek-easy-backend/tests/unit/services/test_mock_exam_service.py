@@ -11,6 +11,7 @@ Tests use real database fixtures and mock S3Service where needed.
 """
 
 from datetime import datetime, timedelta
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -1125,17 +1126,9 @@ async def null_topic_question(
 
 
 class TestSubmitAllTopicBreakdown:
-    """WEDGE-04-01 Test Specs (Mode A / RED): `submit_all_answers` gains a
-    `topic_breakdown` key computed in Python from the already-loaded
-    `all_answers` list (mock_exam_service.py:348), grouped by
-    `answer.question.topic`.
-
-    RED reason: `MockExamService.submit_all_answers` does not compute or
-    return `topic_breakdown` yet. Each test below accesses
-    `result["topic_breakdown"]` at RUNTIME (inside the test body, never at
-    module import time), so the file still collects cleanly -- the RED here
-    is a clean `KeyError` on that missing dict key, not an import/collection
-    error.
+    """WEDGE-04-01: `submit_all_answers` returns a `topic_breakdown` key
+    computed in Python from the already-loaded `all_answers` list
+    (mock_exam_service.py:348), grouped by `answer.question.topic`.
     """
 
     @pytest.mark.asyncio
@@ -1335,3 +1328,115 @@ class TestSubmitAllTopicBreakdown:
             "only the 1 geography answer has a recognized topic -- the "
             "NULL-topic answer must be excluded from every bucket's asked count"
         )
+
+
+# =============================================================================
+# WEDGE-04-01 QA (Mode B): adversarial/edge coverage for
+# `MockExamService._compute_topic_breakdown` -- pure/DB-free, calling the
+# static method directly with lightweight stand-ins (mirroring the
+# SimpleNamespace stub pattern already used in test_news_item_service.py)
+# instead of the full DB-backed submit_all_answers round-trip the Mode-A
+# tests above use. Complements those tests; does not duplicate their
+# assertions.
+# =============================================================================
+
+
+def _stub_answer(topic: str | None, is_correct: bool) -> SimpleNamespace:
+    """Minimal stand-in for a MockExamAnswer ORM row: exposes only the two
+    attributes `_compute_topic_breakdown` reads (`.question.topic`,
+    `.is_correct`)."""
+    return SimpleNamespace(question=SimpleNamespace(topic=topic), is_correct=is_correct)
+
+
+class TestComputeTopicBreakdownPure:
+    def test_empty_answers_yields_five_zero_buckets(self):
+        """An attempt with zero answers at all (e.g. every submitted
+        question_id was invalid/not-found and none pre-existed, so
+        `get_session_answers` returns []) still yields exactly 5 items, each
+        asked=0, correct=0, percentage=None -- never a 4-item or missing
+        response."""
+        breakdown = MockExamService._compute_topic_breakdown([])
+        assert breakdown == [
+            {"topic": "history", "asked": 0, "correct": 0, "percentage": None},
+            {"topic": "geography", "asked": 0, "correct": 0, "percentage": None},
+            {"topic": "politics", "asked": 0, "correct": 0, "percentage": None},
+            {"topic": "culture", "asked": 0, "correct": 0, "percentage": None},
+            {"topic": "practical", "asked": 0, "correct": 0, "percentage": None},
+        ]
+
+    def test_all_null_topic_answers_yields_five_zero_buckets(self):
+        """Every answer's question.topic is None (pre-WEDGE-02 legacy,
+        untagged data) -> excluded from all buckets; still exactly 5
+        zero/None items, not 5 items with a phantom nonzero count."""
+        answers = [_stub_answer(None, True), _stub_answer(None, False)]
+        breakdown = MockExamService._compute_topic_breakdown(answers)
+        assert len(breakdown) == 5
+        assert all(item["asked"] == 0 and item["percentage"] is None for item in breakdown)
+
+    def test_unrecognized_legacy_topic_string_excluded_not_crash(self):
+        """A stray non-canonical topic string (e.g. a future/legacy value
+        that isn't one of the 5 CultureTopic members) must be excluded by
+        membership check, not crash with a KeyError, and must not create a
+        6th bucket."""
+        answers = [
+            _stub_answer("misc", True),
+            _stub_answer("history", True),
+        ]
+        breakdown = MockExamService._compute_topic_breakdown(answers)
+        assert len(breakdown) == 5
+        by_topic = {item["topic"]: item for item in breakdown}
+        assert by_topic["history"] == {
+            "topic": "history",
+            "asked": 1,
+            "correct": 1,
+            "percentage": 100.0,
+        }
+        assert (
+            sum(item["asked"] for item in breakdown) == 1
+        ), "the 'misc' answer must not be tallied into any of the 5 buckets"
+
+    def test_all_correct_topic_percentage_is_float_100_not_bool_or_int(self):
+        answers = [_stub_answer("geography", True) for _ in range(4)]
+        breakdown = MockExamService._compute_topic_breakdown(answers)
+        geography = next(item for item in breakdown if item["topic"] == "geography")
+        assert geography["percentage"] == 100.0
+        assert isinstance(geography["percentage"], float)
+
+    def test_all_wrong_topic_percentage_is_float_zero_not_none(self):
+        """A topic that was asked but answered entirely wrong must report
+        percentage=0.0 (a real, meaningful score) -- distinct from
+        percentage=None, which means the topic was never asked at all."""
+        answers = [_stub_answer("politics", False) for _ in range(3)]
+        breakdown = MockExamService._compute_topic_breakdown(answers)
+        politics = next(item for item in breakdown if item["topic"] == "politics")
+        assert politics["percentage"] == 0.0
+        assert politics["percentage"] is not None
+        assert isinstance(politics["percentage"], float)
+
+    @pytest.mark.parametrize(
+        "correct,asked,expected_pct",
+        [
+            (1, 3, 33.3),
+            (2, 3, 66.7),
+            (1, 8, 12.5),
+            (5, 6, 83.3),
+            (1, 6, 16.7),
+            # Exact round-half-to-even boundary: correct/asked*100 lands on
+            # an exact X.X5 tie at the 2nd decimal. Verified (not assumed):
+            # Python's `round()`, which the impl calls directly, resolves
+            # ties to the nearest EVEN 1st-decimal digit ("banker's
+            # rounding"), NOT round-half-up -- 6.25 -> 6.2 (even), and
+            # 18.75 -> 18.8 (even), not 6.3 / 18.75->18.8-by-half-up-coincidence.
+            (1, 16, 6.2),
+            (3, 16, 18.8),
+        ],
+    )
+    def test_rounding_matches_python_round_builtin(self, correct, asked, expected_pct):
+        answers = [_stub_answer("culture", True) for _ in range(correct)] + [
+            _stub_answer("culture", False) for _ in range(asked - correct)
+        ]
+        breakdown = MockExamService._compute_topic_breakdown(answers)
+        culture = next(item for item in breakdown if item["topic"] == "culture")
+        assert culture["asked"] == asked
+        assert culture["correct"] == correct
+        assert culture["percentage"] == expected_pct

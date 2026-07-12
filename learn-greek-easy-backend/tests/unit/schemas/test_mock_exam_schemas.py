@@ -663,12 +663,11 @@ class TestMockExamStatisticsResponse:
 
 
 class TestMockExamTopicBreakdownItem:
-    """WEDGE-04-01 Test Spec (Mode A / RED): `MockExamTopicBreakdownItem`
-    does not exist yet in `src/schemas/mock_exam.py`.
+    """WEDGE-04-01: `MockExamTopicBreakdownItem` on
+    `src/schemas/mock_exam.py`.
 
-    Imported lazily INSIDE the test body (not at module level) so this whole
-    file still collects cleanly; the RED here is an `ImportError` raised at
-    test-run time, not a collection error.
+    Imported lazily INSIDE the test body (not at module level), matching the
+    original Mode-A/RED authoring convention for this class.
     """
 
     def test_topic_breakdown_item_schema(self):
@@ -693,3 +692,26 @@ class TestMockExamTopicBreakdownItem:
         with pytest.raises(ValidationError) as exc_info:
             MockExamTopicBreakdownItem(topic="history", asked=1, correct=-1, percentage=None)
         assert "greater than or equal to 0" in str(exc_info.value)
+
+    def test_topic_breakdown_item_json_round_trip(self):
+        """QA (Mode B): percentage=None must serialize to JSON `null` (not
+        the Python string "None", and not silently coerced to 0.0), and a
+        float percentage must round-trip as a JSON number -- exercised via
+        `model_dump(mode="json")` rather than asserting on the Python
+        attribute, since that's what the wire format actually delivers to
+        the frontend."""
+        from src.schemas.mock_exam import MockExamTopicBreakdownItem
+
+        null_item = MockExamTopicBreakdownItem(
+            topic="practical", asked=0, correct=0, percentage=None
+        )
+        dumped_null = null_item.model_dump(mode="json")
+        assert dumped_null["percentage"] is None
+        assert dumped_null["asked"] == 0
+
+        float_item = MockExamTopicBreakdownItem(
+            topic="history", asked=6, correct=2, percentage=33.3
+        )
+        dumped_float = float_item.model_dump(mode="json")
+        assert dumped_float["percentage"] == 33.3
+        assert isinstance(dumped_float["percentage"], float)

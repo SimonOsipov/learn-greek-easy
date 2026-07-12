@@ -662,20 +662,12 @@ async def test_breakdown_adds_no_query(
     culture_questions_with_topics: list[CultureQuestion],
     mock_s3_service,
 ) -> None:
-    """WEDGE-04-01 constraint (Mode A / RED): the per-topic breakdown is
-    computed in Python from `all_answers` (already loaded via
-    `MockExamAnswer.question`'s `lazy="selectin"` relationship, re-fetched at
-    mock_exam_service.py:348) and must add ZERO new SQL statements -- the
-    `len(in_selects) == 2` invariant locked by PERF-18-04's
-    `test_submit_all_batches_question_reads` above must hold unchanged once
-    `topic_breakdown` is added to the response.
-
-    RED reason: `result["topic_breakdown"]` does not exist yet -- the
-    `"topic_breakdown" in result` assertion below fails with a clean
-    `AssertionError`, not a collection/import error. This test re-uses the
-    file's exact `capture_sql`/`in_selects` harness so that once the feature
-    lands, the same run also proves the new computation is genuinely
-    SQL-free.
+    """WEDGE-04-01 constraint: the per-topic breakdown is computed in Python
+    from `all_answers` (already loaded via `MockExamAnswer.question`'s
+    `lazy="selectin"` relationship, re-fetched at mock_exam_service.py:348)
+    and must add ZERO new SQL statements -- the `len(in_selects) == 2`
+    invariant locked by PERF-18-04's `test_submit_all_batches_question_reads`
+    above must hold unchanged with `topic_breakdown` added to the response.
     """
     service = MockExamService(db_session, s3_service=mock_s3_service)
 
