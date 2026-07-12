@@ -90,11 +90,6 @@ function verdictLabel(
   return map[verdict] ?? verdict;
 }
 
-/** Capitalise first letter for display (category names are lowercase from API) */
-function capFirst(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 /** dot tone per category label (cycle through accent colours) */
 function catDotTone(index: number): 'amber' | 'primary' | 'green' | undefined {
   const tones: Array<'amber' | 'primary' | 'green'> = ['amber', 'primary', 'green'];
@@ -304,7 +299,7 @@ function ReadinessHero({ readiness }: { readiness: CultureReadinessResponse }) {
             <div className="cx-hero-ctas">
               <Link to={`/culture/decks/${lowestDeckId}`} className="cx-cta-ghost">
                 {t('readiness.ctaPractice', {
-                  category: capFirst(lowestCat.category),
+                  category: tDynamic(t, `topics.accusative.${lowestCat.category}`),
                   defaultValue: 'Practice {{category}}',
                 })}
               </Link>
@@ -319,6 +314,10 @@ function ReadinessHero({ readiness }: { readiness: CultureReadinessResponse }) {
 /** Category bars panel */
 function CategoryPanel({ categories }: { categories: CategoryReadiness[] }) {
   const { t } = useTranslation('mockExam');
+  // Category display names live in the `deck` namespace (culture.categories.*)
+  // — same source the topic chips use — so the progress-row labels below are
+  // localized instead of leaking the raw lowercase API category key.
+  const { t: tDeck } = useTranslation('deck');
   // lowest = categories[0] (API returns ascending)
   const lowest = categories[0];
   const lowestDeckId = lowest?.deck_ids?.[0];
@@ -354,7 +353,7 @@ function CategoryPanel({ categories }: { categories: CategoryReadiness[] }) {
           return (
             <div key={cat.category} className="cx-cat-row">
               <div className="cx-cat-l" data-tone={dotTone}>
-                {capFirst(cat.category)}
+                {tDynamic(tDeck, `culture.categories.${cat.category}`)}
               </div>
               <div className="cx-cat-bar" data-tone={tone}>
                 <span style={{ width: `${Math.max(cat.readiness_percentage, 1)}%` }} />
@@ -407,7 +406,7 @@ function CategoryPanel({ categories }: { categories: CategoryReadiness[] }) {
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}
         >
           {t('readiness.catCta', {
-            category: capFirst(lowest.category),
+            category: tDynamic(t, `topics.accusative.${lowest.category}`),
             pct: Math.round(lowest.readiness_percentage),
             defaultValue: 'Practice {{category}} — {{pct}}% ready',
           })}

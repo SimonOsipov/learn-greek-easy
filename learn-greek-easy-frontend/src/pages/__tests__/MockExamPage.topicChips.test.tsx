@@ -402,6 +402,75 @@ describe('MockExamPage — topic chips (WEDGE-03-03)', () => {
   });
 
   // ---------------------------------------------------------------------
+  // Regression (PRACT2-11 i18n-leak follow-up, bundled into WEDGE-03): the
+  // readiness category-progress label and the two "weakest category" practice
+  // CTAs (ReadinessHero ghost link + CategoryPanel main CTA) used to interpolate
+  // `capFirst(<raw category key>)` — under RU this leaked the raw English key
+  // ("Практиковать Culture", "Culture" in the progress list) instead of the
+  // localized name. This is real i18n (not the hand-mocked stub in
+  // MockExamPage.test.tsx), so it's the one place that can actually catch a
+  // leak: the localized label/CTA must render Cyrillic, never the English word.
+  // ---------------------------------------------------------------------
+
+  it('renders localized (Cyrillic) category-progress labels and practice CTAs under RU — no raw English leak', async () => {
+    mockGetReadiness.mockResolvedValue(
+      makeReadiness({
+        readiness_percentage: 45,
+        verdict: 'getting_there',
+        questions_learned: 220,
+        questions_total: 490,
+        accuracy_percentage: 72,
+        total_answers: 650,
+        categories: [
+          {
+            category: 'history',
+            readiness_percentage: 22,
+            questions_mastered: 25,
+            questions_total: 110,
+            deck_ids: ['deck-history-1'],
+            accuracy_percentage: 65,
+            needs_reinforcement: true,
+          },
+          {
+            category: 'politics',
+            readiness_percentage: 38,
+            questions_mastered: 42,
+            questions_total: 110,
+            deck_ids: ['deck-politics-1'],
+            accuracy_percentage: 70,
+            needs_reinforcement: false,
+          },
+        ],
+      })
+    );
+
+    await i18n.changeLanguage('ru');
+    await renderSettled();
+
+    // (a) Progress-row label: scope via the mastered-count sibling testid
+    // (unique per category) so this doesn't collide with the topic chip that
+    // renders the same localized word elsewhere on the page.
+    const masteredHistory = await screen.findByTestId('cat-mastered-history');
+    const historyRow = masteredHistory.closest('.cx-cat-row');
+    expect(historyRow).not.toBeNull();
+    expect(within(historyRow as HTMLElement).getByText('История')).toBeInTheDocument();
+    expect(within(historyRow as HTMLElement).queryByText(/history/i)).not.toBeInTheDocument();
+
+    // (b) ReadinessHero ghost CTA — accusative "Историю", not nominative
+    // "История" and not the raw English "History".
+    const heroCta = screen.getByRole('link', { name: /^Практиковать Историю$/ });
+    expect(heroCta).toHaveAttribute('href', '/culture/decks/deck-history-1');
+
+    // (c) CategoryPanel main CTA — same accusative form, plus the % suffix.
+    const catCta = screen.getByRole('link', { name: /Практиковать Историю — \d+% готовности/ });
+    expect(catCta).toHaveAttribute('href', '/culture/decks/deck-history-1');
+
+    // Neither CTA leaks the raw English category word.
+    expect(heroCta.textContent).not.toMatch(/history/i);
+    expect(catCta.textContent).not.toMatch(/history/i);
+  });
+
+  // ---------------------------------------------------------------------
   // AC2/OOS — no per-topic count suffix
   // ---------------------------------------------------------------------
 
