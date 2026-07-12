@@ -19,6 +19,8 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
+import type { MockExamCoverageResponse } from '@/types/mockExam';
+
 /**
  * Helper function to navigate to mock exam landing page
  */
@@ -586,6 +588,151 @@ test.describe('Mock Exam Results — per-topic breakdown (WEDGE-04-03)', () => {
         expect(sumCorrect).toBe(score);
       } finally {
         // 5. Don't leak the locale into sibling specs.
+        await page.evaluate(() => localStorage.removeItem('i18nextLng'));
+      }
+    });
+  }
+});
+
+// ============================================================================
+// Test Suite: Bank-coverage chip + thin marks (WEDGE-05-04)
+// ============================================================================
+
+/**
+ * WEDGE-05-04 — cross-locale E2E for the CoverageChip + ThinCoverageMark UI
+ * wired into both mock-exam surfaces in WEDGE-05-03 (hub `topic-chip-*` row,
+ * results `topic-bar-*` breakdown).
+ *
+ * DATA-AGNOSTIC BY DESIGN: the CI/deployed-dev `/seed/all` bank seeds only 50
+ * culture questions (10/deck × 5 decks, `traditions`→`culture`), giving
+ * history 10 · geography 10 · politics 10 · culture 20 · practical 0. Per the
+ * single thin-rule (`CultureCoverageService._compute_thin_flags`: best = 20,
+ * thin(t) = count[t] < 0.5·best, strict `<`), only `practical` is thin in
+ * that seed and the chip reads "50". The story's illustrative "history &
+ * geography thin / 490 questions" is the PRODUCTION bank shape (WEDGE-02
+ * topic backfill) and does NOT hold in CI. Rather than assert either shape,
+ * this spec reads the live `GET /coverage` response and asserts the UI
+ * (chip count + copy, per-topic marks) matches whatever the server actually
+ * reports — verifying the real contract against any bank shape.
+ */
+test.describe('Mock Exam Coverage labels (WEDGE-05-04)', () => {
+  for (const locale of ['en', 'ru'] as const) {
+    test(`MOCKEXAM-E2E-10: hub coverage chip + thin marks match the live /coverage payload (${locale})`, async ({
+      page,
+    }) => {
+      await navigateToMockExamLanding(page);
+      await page.evaluate((lng) => localStorage.setItem('i18nextLng', lng), locale);
+
+      // Arm the response listener BEFORE reloading — the coverage query is
+      // additive (not gated behind the page's loading skeleton, see
+      // MockExamPage.tsx) and can fire and resolve before any DOM signal we
+      // could otherwise wait on, so arming it after the reload risks missing
+      // the response entirely.
+      const covRespPromise = page.waitForResponse(
+        (r) =>
+          r.request().method() === 'GET' &&
+          r.url().includes('/culture/mock-exam/coverage') &&
+          r.status() === 200,
+        { timeout: 15000 }
+      );
+      await page.reload();
+      await expect(page.getByTestId('mock-exam-page')).toBeVisible({ timeout: 15000 });
+
+      try {
+        const covResp = await covRespPromise;
+        const cov = (await covResp.json()) as MockExamCoverageResponse;
+        const thin = new Set(cov.topics.filter((topic) => topic.thin).map((topic) => topic.topic));
+
+        // Chip: visible + shows the LIVE count (never a hardcoded seed/prod number).
+        const chip = page.getByTestId('coverage-chip');
+        await expect(chip).toBeVisible();
+        await expect(chip).toContainText(String(cov.question_count));
+
+        // Locale copy sanity: EN mentions "question", RU mentions "вопрос" — both
+        // the dated and no-date chip variants preserve this substring
+        // (src/i18n/locales/{en,ru}/mockExam.json `coverage.chip*`).
+        await expect(chip).toContainText(locale === 'ru' ? 'вопрос' : 'question');
+
+        // Marks: present iff the server flags the topic thin — scoped under each
+        // topic chip to avoid a strict-mode clash across the five chips.
+        for (const topic of CULTURE_TOPICS) {
+          await expect(
+            page.getByTestId(`topic-chip-${topic}`).getByTestId('thin-coverage-mark')
+          ).toHaveCount(thin.has(topic) ? 1 : 0);
+        }
+
+        // Sanity: this bank has at least one thin topic. Without this, a
+        // regression that always renders zero marks would still pass the loop
+        // above vacuously. Holds in both the CI seed (`practical`) and
+        // production (`history`/`geography`, WEDGE-02).
+        expect(thin.size).toBeGreaterThan(0);
+
+        // "All topics" is never a per-topic bucket — it must never carry a mark.
+        await expect(
+          page.getByTestId('topic-chip-all').getByTestId('thin-coverage-mark')
+        ).toHaveCount(0);
+      } finally {
+        // Don't leak the locale into sibling specs.
+        await page.evaluate(() => localStorage.removeItem('i18nextLng'));
+      }
+    });
+
+    test(`MOCKEXAM-E2E-11: results coverage chip + thin marks match the live /coverage payload (${locale})`, async ({
+      page,
+    }) => {
+      await navigateToMockExamLanding(page);
+      // Locale must be set BEFORE the exam starts — the results page has no
+      // reload path of its own (see answerUntilResults / MOCKEXAM-E2E-09 above),
+      // so it inherits whatever i18next language is already active.
+      await page.evaluate((lng) => localStorage.setItem('i18nextLng', lng), locale);
+
+      // Arm the listener before reloading, same reasoning as MOCKEXAM-E2E-10.
+      // Coverage is bank-wide and identical on both surfaces, and TanStack
+      // Query's 5-minute staleTime means the results-page mount reuses this
+      // SAME cached response instead of refetching — so this is the only
+      // `/coverage` response this test will ever observe, and it is valid for
+      // asserting the results-page marks below too.
+      const covRespPromise = page.waitForResponse(
+        (r) =>
+          r.request().method() === 'GET' &&
+          r.url().includes('/culture/mock-exam/coverage') &&
+          r.status() === 200,
+        { timeout: 15000 }
+      );
+      await page.reload();
+      await expect(page.getByTestId('mock-exam-page')).toBeVisible({ timeout: 15000 });
+
+      try {
+        const covResp = await covRespPromise;
+        const cov = (await covResp.json()) as MockExamCoverageResponse;
+        const thin = new Set(cov.topics.filter((topic) => topic.thin).map((topic) => topic.topic));
+
+        // A disabled start button means the seed lacks enough questions — a
+        // data-availability edge that must SKIP, not fail (matches
+        // MOCKEXAM-E2E-09's try/finally-wrapped skip idiom above).
+        const started = await startMockExam(page);
+        if (!started) {
+          test.skip(true, 'Mock exam start disabled — not enough seeded questions');
+          return;
+        }
+
+        const answered = await answerUntilResults(page);
+        expect(answered).toBeGreaterThan(0);
+
+        await expect(page.getByTestId('topic-breakdown')).toBeVisible();
+
+        const chip = page.getByTestId('coverage-chip');
+        await expect(chip).toBeVisible();
+        await expect(chip).toContainText(String(cov.question_count));
+        await expect(chip).toContainText(locale === 'ru' ? 'вопрос' : 'question');
+
+        for (const topic of CULTURE_TOPICS) {
+          await expect(
+            page.getByTestId(`topic-bar-${topic}`).getByTestId('thin-coverage-mark')
+          ).toHaveCount(thin.has(topic) ? 1 : 0);
+        }
+      } finally {
+        // Don't leak the locale into sibling specs.
         await page.evaluate(() => localStorage.removeItem('i18nextLng'));
       }
     });
