@@ -101,10 +101,23 @@ function createMockSummary(overrides?: Partial<MockExamSessionSummary>): MockExa
     xpEarned: 100,
     timeTakenSeconds: 1200,
     questionResults,
+    topicBreakdown: [],
     timerExpired: false,
     completedAt: new Date().toISOString(),
     ...overrides,
   };
+}
+
+// Helper: 5-item topic breakdown in canonical CultureTopic order, including one
+// zero-asked topic (percentage: null) to exercise the "not in this attempt" path.
+function createMockTopicBreakdown(): MockExamSessionSummary['topicBreakdown'] {
+  return [
+    { topic: 'history', asked: 6, correct: 4, percentage: 66.7 },
+    { topic: 'geography', asked: 5, correct: 5, percentage: 100 },
+    { topic: 'politics', asked: 8, correct: 2, percentage: 25 },
+    { topic: 'culture', asked: 6, correct: 3, percentage: 50 },
+    { topic: 'practical', asked: 0, correct: 0, percentage: null },
+  ];
 }
 
 describe('MockExamResultsPage', () => {
@@ -283,6 +296,50 @@ describe('MockExamResultsPage', () => {
       waitFor(() => {
         expect(screen.getByText(/Perfect/i)).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('Topic Breakdown Panel', () => {
+    it('renders the panel with one row per topic when breakdown is present', () => {
+      const summary = createMockSummary({ topicBreakdown: createMockTopicBreakdown() });
+      useMockExamSessionStore.setState({ summary });
+
+      const { container } = render(<MockExamResultsPage />);
+
+      // Container + disclaimer present
+      expect(screen.getByTestId('topic-breakdown')).toBeInTheDocument();
+      expect(screen.getByTestId('topic-breakdown-disclaimer')).toBeInTheDocument();
+
+      // One row per topic (5)
+      const rows = container.querySelectorAll('[data-testid^="topic-bar-"]');
+      expect(rows).toHaveLength(5);
+    });
+
+    it('scored rows render a width-styled fill span; the zero-asked row does not', () => {
+      const summary = createMockSummary({ topicBreakdown: createMockTopicBreakdown() });
+      useMockExamSessionStore.setState({ summary });
+
+      render(<MockExamResultsPage />);
+
+      // Scored topic (history, 66.7%) has an inline-width fill span
+      const historyRow = screen.getByTestId('topic-bar-history');
+      expect(historyRow.querySelector('span[style*="width"]')).not.toBeNull();
+
+      // Zero-asked topic (practical, percentage null) shows the muted note and
+      // renders NO width-styled fill span (empty bar track only).
+      const practicalRow = screen.getByTestId('topic-bar-practical');
+      expect(practicalRow).toHaveTextContent(/Not in this attempt/i);
+      expect(practicalRow.querySelector('span[style*="width"]')).toBeNull();
+    });
+
+    it('renders nothing when the summary has no topic breakdown (back-compat)', () => {
+      // Default createMockSummary() has topicBreakdown: []
+      const summary = createMockSummary();
+      useMockExamSessionStore.setState({ summary });
+
+      render(<MockExamResultsPage />);
+
+      expect(screen.queryByTestId('topic-breakdown')).not.toBeInTheDocument();
     });
   });
 

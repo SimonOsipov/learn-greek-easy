@@ -52,6 +52,13 @@
     "verdictThoroughlyPrepared": "Thoroughly Prepared",
     "donutLabel": "Ready"
   },
+  "breakdown": {
+    "title": "How you did by topic",
+    "disclaimer": "This breakdown covers our practice mock only — not the official citizenship exam.",
+    "count": "{{correct}} / {{asked}} correct",
+    "percentage": "{{pct}}%",
+    "notInAttempt": "Not in this attempt"
+  },
   "cultureMotivation": {
     "improving": {
       "notReady": {

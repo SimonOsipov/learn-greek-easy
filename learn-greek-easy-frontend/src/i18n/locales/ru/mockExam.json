@@ -52,6 +52,13 @@
     "verdictThoroughlyPrepared": "Отлично подготовлен",
     "donutLabel": "готовности"
   },
+  "breakdown": {
+    "title": "Результаты по темам",
+    "disclaimer": "Эта разбивка относится только к нашему пробному тесту, а не к официальному экзамену на гражданство.",
+    "count": "{{correct}} / {{asked}} верно",
+    "percentage": "{{pct}}%",
+    "notInAttempt": "Не было в этой попытке"
+  },
   "cultureMotivation": {
     "improving": {
       "notReady": {
