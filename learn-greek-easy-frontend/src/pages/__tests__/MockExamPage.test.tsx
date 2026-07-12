@@ -41,11 +41,17 @@ vi.mock('@/lib/logger', () => ({
 // Mock API service
 const mockGetStatistics = vi.fn();
 const mockGetQuestionQueue = vi.fn();
+// WEDGE-05-03: defensive-only addition — no test in this file asserts on
+// coverage. This just keeps getCoverage() from being undefined /
+// unhandled-rejecting once the executor wires the coverage chip + thin marks
+// into MockExamPage, so this file's existing (unrelated) tests keep passing.
+const mockGetCoverage = vi.fn();
 
 vi.mock('@/services/mockExamAPI', () => ({
   mockExamAPI: {
     getStatistics: (...args: unknown[]) => mockGetStatistics(...args),
     getQuestionQueue: (...args: unknown[]) => mockGetQuestionQueue(...args),
+    getCoverage: (...args: unknown[]) => mockGetCoverage(...args),
     createSession: vi.fn(),
     submitAll: vi.fn(),
     abandonSession: vi.fn(),
@@ -321,6 +327,19 @@ describe('MockExamPage', () => {
     // Readiness resolves a valid payload by default so the readiness query
     // succeeds; individual tests that care about readiness can override.
     mockGetReadiness.mockResolvedValue(makeReadiness());
+    // WEDGE-05-03: benign default so getCoverage() resolves instead of
+    // hanging/throwing once wired — no test here asserts on its content.
+    mockGetCoverage.mockResolvedValue({
+      question_count: 490,
+      updated_at: '2026-07-11T14:22:31Z',
+      topics: [
+        { topic: 'history', thin: false },
+        { topic: 'geography', thin: false },
+        { topic: 'politics', thin: false },
+        { topic: 'culture', thin: false },
+        { topic: 'practical', thin: false },
+      ],
+    });
 
     // Reset store to default state between tests
     useMockExamSessionStore.setState({

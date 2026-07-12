@@ -1193,3 +1193,87 @@ class TestMockExamTopicBreakdownEndpoint:
         assert data["score"] == 15
         assert data["percentage"] == 60.0
         assert data["passed"] is True
+
+
+# =============================================================================
+# Test Mock Exam Coverage Endpoint (WEDGE-05-01, Mode A RED)
+# =============================================================================
+
+
+class TestMockExamCoverageEndpoint:
+    """WEDGE-05-01: GET /api/v1/culture/mock-exam/coverage -- whole-bank
+    coverage snapshot, auth-required, FREE (no premium gate on this router).
+
+    RED (Mode A): the router has no /coverage route yet -- WEDGE-05-01 adds
+    only the schemas + a NotImplementedError service skeleton per the
+    Explore-stage infra notes, deliberately leaving the route and repository
+    method unimplemented. Every request below therefore 404s, and both the
+    200-expected and 401-expected assertions fail on that status-code
+    mismatch (AssertionError) -- a clean assertion red, not an
+    import/collection error.
+    """
+
+    @pytest.mark.asyncio
+    async def test_coverage_endpoint_contract_and_auth(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        culture_deck_with_topic_seeded_questions: tuple,
+    ):
+        """AC4/D14: authed default (free) user gets 200 with the full
+        contract. There is no premium fixture in this suite and this router
+        has no subscription gate, so the default `auth_headers` fixture
+        (SubscriptionTier.FREE per test_user) IS the free-access assertion.
+        Unauthenticated request -> 401.
+        """
+        response = await client.get(
+            "/api/v1/culture/mock-exam/coverage",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert set(data.keys()) == {"question_count", "updated_at", "topics"}
+        assert data["question_count"] == 25
+        assert data["updated_at"] is not None
+        assert len(data["topics"]) == 5
+        assert [t["topic"] for t in data["topics"]] == [
+            "history",
+            "geography",
+            "politics",
+            "culture",
+            "practical",
+        ]
+        for item in data["topics"]:
+            assert set(item.keys()) == {"topic", "thin"}
+            assert isinstance(item["thin"], bool)
+
+        unauth_response = await client.get("/api/v1/culture/mock-exam/coverage")
+        assert unauth_response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_coverage_empty_bank_updated_at_null(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """With zero culture_questions rows anywhere -> question_count == 0,
+        updated_at is null, and no topic is thin (best == 0 guards the
+        0.5 * best comparison). This test seeds no questions of its own;
+        the per-test transaction-rollback isolation (tests/fixtures/
+        database.py's db_session fixture -- outer transaction rolled back
+        after every test) guarantees no other test's rows leak into this
+        one, so the whole-bank state really is empty here."""
+        response = await client.get(
+            "/api/v1/culture/mock-exam/coverage",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["question_count"] == 0
+        assert data["updated_at"] is None
+        assert len(data["topics"]) == 5
+        assert all(item["thin"] is False for item in data["topics"])

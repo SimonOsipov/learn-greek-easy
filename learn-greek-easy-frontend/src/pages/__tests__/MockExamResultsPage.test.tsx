@@ -10,10 +10,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@/lib/test-utils';
+import { render, screen, waitFor, within } from '@/lib/test-utils';
 import userEvent from '@testing-library/user-event';
 import { useMockExamSessionStore } from '@/stores/mockExamSessionStore';
-import type { MockExamQuestion } from '@/types/mockExam';
+import type { MockExamCoverageResponse, MockExamQuestion } from '@/types/mockExam';
 import type { MockExamQuestionState, MockExamSessionSummary } from '@/types/mockExamSession';
 
 import { MockExamResultsPage } from '../MockExamResultsPage';
@@ -27,6 +27,16 @@ vi.mock('react-router-dom', async () => {
     useNavigate: () => mockNavigate,
   };
 });
+
+// Mock the mock-exam API — WEDGE-05-03: the bank-coverage chip + thin marks
+// wired into the results-page topic-breakdown panel. This page imports
+// nothing else from mockExamAPI today.
+const mockGetCoverage = vi.fn();
+vi.mock('@/services/mockExamAPI', () => ({
+  mockExamAPI: {
+    getCoverage: (...args: unknown[]) => mockGetCoverage(...args),
+  },
+}));
 
 // Mock hooks
 vi.mock('@/hooks/useQuestionLanguage', () => ({
@@ -120,10 +130,29 @@ function createMockTopicBreakdown(): MockExamSessionSummary['topicBreakdown'] {
   ];
 }
 
+// Bank-coverage fixture (WEDGE-05-03). Defaults to all-topics-not-thin so
+// tests that don't care about coverage get a benign resolve; individual
+// tests override `topics` for the thin-mark mapping.
+function makeCoverage(overrides?: Partial<MockExamCoverageResponse>): MockExamCoverageResponse {
+  return {
+    question_count: 490,
+    updated_at: '2026-07-11T14:22:31Z',
+    topics: [
+      { topic: 'history', thin: false },
+      { topic: 'geography', thin: false },
+      { topic: 'politics', thin: false },
+      { topic: 'culture', thin: false },
+      { topic: 'practical', thin: false },
+    ],
+    ...overrides,
+  };
+}
+
 describe('MockExamResultsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockNavigate.mockClear();
+    mockGetCoverage.mockResolvedValue(makeCoverage());
     // Reset store to default state
     useMockExamSessionStore.setState({
       session: null,
@@ -266,7 +295,7 @@ describe('MockExamResultsPage', () => {
       expect(screen.getByText(/\(5\)/)).toBeInTheDocument();
     });
 
-    it('shows perfect score message when all correct', () => {
+    it('shows perfect score message when all correct', async () => {
       const allCorrectResults: MockExamQuestionState[] = Array.from({ length: 25 }, (_, i) => ({
         question: createMockQuestion(`q-${i + 1}`, i),
         selectedOption: 1,
@@ -290,10 +319,10 @@ describe('MockExamResultsPage', () => {
 
       // Expand the accordion
       const accordionTrigger = screen.getByText(/Review Incorrect Answers/i);
-      user.click(accordionTrigger);
+      await user.click(accordionTrigger);
 
       // Perfect score message should appear
-      waitFor(() => {
+      await waitFor(() => {
         expect(screen.getByText(/Perfect/i)).toBeInTheDocument();
       });
     });
@@ -415,6 +444,128 @@ describe('MockExamResultsPage', () => {
       // "Not in this attempt" appears once per row.
       const notInAttemptMatches = panel.textContent?.match(/Not in this attempt/gi) ?? [];
       expect(notInAttemptMatches).toHaveLength(5);
+    });
+  });
+
+  describe('Bank-coverage chip + thin marks (WEDGE-05-03)', () => {
+    // RED as of this commit: MockExamResultsPage.tsx does not yet fetch
+    // `mockExamAPI.getCoverage()` or render a `coverage-chip` badge / any
+    // `thin-coverage-mark` glyphs in the topic-breakdown panel. These fail on
+    // `getByTestId('coverage-chip')` / `getByTestId('thin-coverage-mark')`
+    // not being found — a clean assertion/query failure, not a render crash
+    // or compile error. They go green once the executor adds:
+    //   - a `mockExamAPI.getCoverage()` fetch (react-query),
+    //   - a `CoverageChip` rendered in the panel's `<h2>` header,
+    //   - a `ThinCoverageMark` inside each thin topic's `topic-bar-<topic>` row.
+
+    it('results.chipAndMarksMapByTopic: renders the coverage chip and maps thin marks by topic', async () => {
+      const summary = createMockSummary({ topicBreakdown: createMockTopicBreakdown() });
+      useMockExamSessionStore.setState({ summary });
+      mockGetCoverage.mockResolvedValue(
+        makeCoverage({
+          topics: [
+            { topic: 'history', thin: true },
+            { topic: 'geography', thin: true },
+            { topic: 'politics', thin: false },
+            { topic: 'culture', thin: false },
+            { topic: 'practical', thin: false },
+          ],
+        })
+      );
+
+      render(<MockExamResultsPage />);
+
+      expect(await screen.findByTestId('coverage-chip')).toBeInTheDocument();
+
+      expect(
+        within(screen.getByTestId('topic-bar-history')).getByTestId('thin-coverage-mark')
+      ).toBeInTheDocument();
+      expect(
+        within(screen.getByTestId('topic-bar-geography')).getByTestId('thin-coverage-mark')
+      ).toBeInTheDocument();
+      expect(
+        within(screen.getByTestId('topic-bar-politics')).queryByTestId('thin-coverage-mark')
+      ).not.toBeInTheDocument();
+      expect(
+        within(screen.getByTestId('topic-bar-culture')).queryByTestId('thin-coverage-mark')
+      ).not.toBeInTheDocument();
+      expect(
+        within(screen.getByTestId('topic-bar-practical')).queryByTestId('thin-coverage-mark')
+      ).not.toBeInTheDocument();
+    });
+
+    // Guardrail — asserts graceful degradation, not the wiring itself. May
+    // pass even pre-wiring (the page never rendered a chip/mark in the first
+    // place); that's fine, this test exists to catch a REGRESSION where a
+    // getCoverage rejection blocks the breakdown panel from rendering.
+    it('results.coverageAbsentDegrades: degrades cleanly (no chip/marks) when getCoverage rejects', async () => {
+      const summary = createMockSummary({ topicBreakdown: createMockTopicBreakdown() });
+      useMockExamSessionStore.setState({ summary });
+      mockGetCoverage.mockRejectedValue(new Error('boom'));
+
+      render(<MockExamResultsPage />);
+
+      expect(screen.getByTestId('topic-bar-history')).toBeInTheDocument();
+      expect(screen.queryByTestId('coverage-chip')).not.toBeInTheDocument();
+      expect(screen.queryAllByTestId('thin-coverage-mark')).toHaveLength(0);
+    });
+
+    // QA adversarial (WEDGE-05-03) — exact-count boundary: with exactly 2
+    // thin topics, exactly 2 marks render on the page, each nested inside its
+    // OWN topic-bar-<topic> — not merely "at least 2" (would pass if marks
+    // leaked onto every bar) and not "some mark exists somewhere".
+    it('results.thinMarkCountExactlyMatchesThinTopics: renders exactly one mark per thin topic, none elsewhere', async () => {
+      const summary = createMockSummary({ topicBreakdown: createMockTopicBreakdown() });
+      useMockExamSessionStore.setState({ summary });
+      mockGetCoverage.mockResolvedValue(
+        makeCoverage({
+          topics: [
+            { topic: 'history', thin: true },
+            { topic: 'geography', thin: true },
+            { topic: 'politics', thin: false },
+            { topic: 'culture', thin: false },
+            { topic: 'practical', thin: false },
+          ],
+        })
+      );
+
+      render(<MockExamResultsPage />);
+      await screen.findByTestId('coverage-chip');
+
+      expect(screen.queryAllByTestId('thin-coverage-mark')).toHaveLength(2);
+      expect(
+        within(screen.getByTestId('topic-bar-history')).getAllByTestId('thin-coverage-mark')
+      ).toHaveLength(1);
+      expect(
+        within(screen.getByTestId('topic-bar-geography')).getAllByTestId('thin-coverage-mark')
+      ).toHaveLength(1);
+    });
+
+    // QA adversarial (WEDGE-05-03) — zero-thin boundary: no thin topics at
+    // all means zero marks anywhere on the results breakdown panel.
+    it('results.zeroThinTopicsRendersNoMarks: no thin-coverage marks anywhere when all topics are non-thin', async () => {
+      const summary = createMockSummary({ topicBreakdown: createMockTopicBreakdown() });
+      useMockExamSessionStore.setState({ summary });
+      mockGetCoverage.mockResolvedValue(makeCoverage());
+
+      render(<MockExamResultsPage />);
+      await screen.findByTestId('coverage-chip');
+
+      expect(screen.queryAllByTestId('thin-coverage-mark')).toHaveLength(0);
+    });
+
+    // QA adversarial (WEDGE-05-03) — the chip surfaces the raw question count
+    // text, not just "exists" (guards against a chip that renders but with
+    // the wrong/blank number, e.g. a prop-wiring swap with updatedAt).
+    it('results.chipShowsCountText: coverage chip text includes the question count', async () => {
+      const summary = createMockSummary({ topicBreakdown: createMockTopicBreakdown() });
+      useMockExamSessionStore.setState({ summary });
+      mockGetCoverage.mockResolvedValue(makeCoverage({ question_count: 490 }));
+
+      render(<MockExamResultsPage />);
+
+      const chip = await screen.findByTestId('coverage-chip');
+      expect(chip).toHaveTextContent('490');
     });
   });
 

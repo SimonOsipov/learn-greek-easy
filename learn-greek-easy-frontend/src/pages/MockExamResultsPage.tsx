@@ -15,6 +15,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
   CheckCircle,
@@ -28,6 +29,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
+import { CoverageChip, ThinCoverageMark } from '@/components/culture';
 import { QuestionLanguageSelector } from '@/components/shared';
 import {
   Accordion,
@@ -43,10 +45,11 @@ import { tDynamic } from '@/i18n/tDynamic';
 import { track } from '@/lib/analytics';
 import log from '@/lib/logger';
 import { cn } from '@/lib/utils';
+import { mockExamAPI } from '@/services/mockExamAPI';
 import { useMockExamSessionStore } from '@/stores/mockExamSessionStore';
 import { useXPStore } from '@/stores/xpStore';
-import type { CultureLanguage } from '@/types/culture';
-import type { MockExamTopicBreakdownItem } from '@/types/mockExam';
+import type { CultureLanguage, CultureTopic } from '@/types/culture';
+import type { MockExamCoverageResponse, MockExamTopicBreakdownItem } from '@/types/mockExam';
 import type { MockExamQuestionState } from '@/types/mockExamSession';
 
 /** Option letter mapping */
@@ -96,7 +99,15 @@ function topicTone(pct: number): 'success' | 'warning' | 'danger' {
  * default 12px danger-red min-width) and a muted "not in this attempt" note in
  * place of the score/percentage.
  */
-function TopicBreakdownPanel({ items }: { items: MockExamTopicBreakdownItem[] }) {
+function TopicBreakdownPanel({
+  items,
+  coverage,
+  thinTopics,
+}: {
+  items: MockExamTopicBreakdownItem[];
+  coverage: MockExamCoverageResponse | undefined;
+  thinTopics: Set<CultureTopic>;
+}) {
   const { t } = useTranslation('mockExam');
   // Category display names live in the `deck` namespace (culture.categories.*).
   const { t: tDeck } = useTranslation('deck');
@@ -104,7 +115,12 @@ function TopicBreakdownPanel({ items }: { items: MockExamTopicBreakdownItem[] })
   return (
     <Card className="mt-6" data-testid="topic-breakdown">
       <CardContent className="p-6">
-        <h2 className="mb-4 text-lg font-semibold text-foreground">{t('breakdown.title')}</h2>
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <h2 className="text-lg font-semibold text-foreground">{t('breakdown.title')}</h2>
+          {coverage && (
+            <CoverageChip questionCount={coverage.question_count} updatedAt={coverage.updated_at} />
+          )}
+        </div>
         <div className="cx-cat-list">
           {items.map((item) => {
             const hasScore = item.percentage !== null;
@@ -112,6 +128,7 @@ function TopicBreakdownPanel({ items }: { items: MockExamTopicBreakdownItem[] })
               <div key={item.topic} className="cx-cat-row" data-testid={`topic-bar-${item.topic}`}>
                 <div className="cx-cat-l">
                   {tDynamic(tDeck, `culture.categories.${item.topic}`)}
+                  <ThinCoverageMark topic={item.topic} thin={thinTopics.has(item.topic)} />
                 </div>
                 {hasScore ? (
                   <div className="cx-cat-bar" data-tone={topicTone(item.percentage as number)}>
@@ -180,6 +197,21 @@ export function MockExamResultsPage() {
 
   // Track accordion open state for analytics
   const [accordionValue, setAccordionValue] = useState<string>('');
+
+  // Bank-coverage chip + thin marks (WEDGE-05-03): must run before the
+  // `!summary` early return below (rules of hooks) — additive, so a slow/
+  // failed coverage fetch just omits the chip/marks (graceful degradation).
+  const coverageQuery = useQuery({
+    queryKey: ['mockExamCoverage'],
+    queryFn: () => mockExamAPI.getCoverage(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    retry: false,
+  });
+
+  const thinTopics = new Set<CultureTopic>(
+    (coverageQuery.data?.topics ?? []).filter((x) => x.thin).map((x) => x.topic)
+  );
 
   // Redirect if no summary available
   useEffect(() => {
@@ -349,7 +381,11 @@ export function MockExamResultsPage() {
         {/* Per-topic breakdown (WEDGE-04). Guarded so injected/older summaries
             without the field (e.g. the E2E-08 partial summary) render nothing. */}
         {summary.topicBreakdown?.length ? (
-          <TopicBreakdownPanel items={summary.topicBreakdown} />
+          <TopicBreakdownPanel
+            items={summary.topicBreakdown}
+            coverage={coverageQuery.data}
+            thinTopics={thinTopics}
+          />
         ) : null}
 
         {/* Incorrect Answers Accordion */}

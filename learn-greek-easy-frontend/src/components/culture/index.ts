@@ -4,6 +4,12 @@ export type { AnswerOptionProps, AnswerOptionState, OptionLetter } from './Answe
 export { CultureBadge, getCategoryColor } from './CultureBadge';
 export type { CultureBadgeProps, CultureCategory } from './CultureBadge';
 
+export { CoverageChip } from './CoverageChip';
+export type { CoverageChipProps } from './CoverageChip';
+
+export { ThinCoverageMark } from './ThinCoverageMark';
+export type { ThinCoverageMarkProps } from './ThinCoverageMark';
+
 export { ExplanationCard } from './ExplanationCard';
 export type { ExplanationCardProps } from './ExplanationCard';
 

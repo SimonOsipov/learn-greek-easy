@@ -139,6 +139,44 @@ class MockExamTopicBreakdownItem(BaseModel):
     )
 
 
+class MockExamCoverageTopicItem(BaseModel):
+    """Per-topic bank-coverage indicator for the coverage endpoint (WEDGE-05).
+
+    Boolean signal only -- no per-topic counts are exposed. `thin` is True
+    when this topic's question count is strictly less than half the
+    best-stocked canonical topic's count.
+    """
+
+    topic: str = Field(..., description="Canonical CultureTopic value")
+    thin: bool = Field(
+        ...,
+        description=(
+            "True if this topic's bank coverage is thin "
+            "(count < 0.5 * best-stocked canonical topic's count)"
+        ),
+    )
+
+
+class MockExamCoverageResponse(BaseModel):
+    """Response for GET /mock-exam/coverage (WEDGE-05): whole-bank snapshot.
+
+    `question_count` and `updated_at` are computed over the ENTIRE
+    culture_questions table (not scoped to any session, deck, or user).
+    `topics` has exactly 5 items in canonical CultureTopic order (history,
+    geography, politics, culture, practical).
+    """
+
+    question_count: int = Field(
+        ..., ge=0, description="Total culture_questions rows across the whole bank"
+    )
+    updated_at: Optional[datetime] = Field(
+        None, description="MAX(updated_at) across the whole bank; None if the bank is empty"
+    )
+    topics: list[MockExamCoverageTopicItem] = Field(
+        ..., description="Per-topic thin flags, 5 items in canonical CultureTopic order"
+    )
+
+
 class MockExamSubmitAllResponse(BaseModel):
     """Response after submitting all answers at once."""
 
@@ -206,6 +244,8 @@ __all__ = [
     "MockExamSubmitAllRequest",
     "MockExamAnswerResult",
     "MockExamTopicBreakdownItem",
+    "MockExamCoverageTopicItem",
+    "MockExamCoverageResponse",
     "MockExamSubmitAllResponse",
     "MockExamHistoryItem",
     "MockExamStatisticsResponse",

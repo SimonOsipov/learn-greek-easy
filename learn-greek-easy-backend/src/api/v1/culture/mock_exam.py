@@ -6,6 +6,7 @@ retrieving statistics.
 
 Endpoints:
 - GET /mock-exam/queue - Preview available questions and check exam availability
+- GET /mock-exam/coverage - Whole-bank coverage snapshot (count, freshness, thin topics)
 - POST /mock-exam/sessions - Create or resume a mock exam session
 - POST /mock-exam/sessions/{session_id}/submit-all - Submit all answers and complete exam
 - GET /mock-exam/statistics - Get user's exam statistics and history
@@ -26,6 +27,7 @@ from src.db.dependencies import get_db
 from src.db.models import User
 from src.schemas.mock_exam import (
     MockExamAnswerResult,
+    MockExamCoverageResponse,
     MockExamCreateResponse,
     MockExamHistoryItem,
     MockExamQuestionResponse,
@@ -37,6 +39,7 @@ from src.schemas.mock_exam import (
     MockExamTopicBreakdownItem,
 )
 from src.services import MockExamService
+from src.services.culture_coverage_service import CultureCoverageService
 from src.services.s3_service import IMAGE_PRESIGN_EXPIRY_SECONDS
 from src.tasks import invalidate_cache_task
 
@@ -146,6 +149,67 @@ async def get_mock_exam_queue(
         can_start_exam=total_available >= 25,
         sample_questions=sample_data,
     )
+
+
+@router.get(
+    "/coverage",
+    response_model=MockExamCoverageResponse,
+    summary="Get whole-bank mock exam coverage snapshot",
+    description="""
+    Get a whole-bank coverage snapshot: total question count, freshest
+    update timestamp, and per-topic "thin" flags.
+
+    **Authentication**: Required (free -- no premium gate)
+
+    **Response includes**:
+    - question_count: live COUNT(*) over the entire culture_questions table
+    - updated_at: live MAX(updated_at) over the entire table (null if empty)
+    - topics: 5 items in canonical CultureTopic order, each with a `thin`
+      flag (true when that topic's count is strictly below half the
+      best-stocked canonical topic's count)
+
+    **Use Case**: Honest coverage disclosure on the mock-exam landing/results
+    surfaces (WEDGE-05)
+    """,
+    responses={
+        200: {
+            "description": "Whole-bank coverage snapshot",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "question_count": 490,
+                        "updated_at": "2026-07-10T12:00:00Z",
+                        "topics": [
+                            {"topic": "history", "thin": True},
+                            {"topic": "geography", "thin": True},
+                            {"topic": "politics", "thin": False},
+                            {"topic": "culture", "thin": False},
+                            {"topic": "practical", "thin": False},
+                        ],
+                    }
+                }
+            },
+        },
+    },
+)
+async def get_mock_exam_coverage(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> MockExamCoverageResponse:
+    """Get the whole-bank culture-question coverage snapshot.
+
+    Args:
+        db: Database session (injected)
+        current_user: Authenticated user (injected)
+
+    Returns:
+        MockExamCoverageResponse with question_count, updated_at, and 5
+        per-topic thin-flag items in canonical CultureTopic order
+
+    Example:
+        GET /api/v1/culture/mock-exam/coverage
+    """
+    return await CultureCoverageService(db).get_coverage()
 
 
 @router.post(

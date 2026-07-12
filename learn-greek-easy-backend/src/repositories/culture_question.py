@@ -1,5 +1,6 @@
 """CultureQuestion repository with deck relationships."""
 
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -136,6 +137,33 @@ class CultureQuestionRepository(BaseRepository[CultureQuestion]):
         )
         result = await self.db.execute(query)
         return result.scalar_one()
+
+    async def get_bank_coverage(self) -> list[tuple[str | None, int, datetime | None]]:
+        """Get whole-bank per-topic coverage: row count and freshest
+        updated_at, grouped by topic (WEDGE-05).
+
+        One row per distinct `topic` value, INCLUDING a NULL-topic group for
+        untagged questions -- callers that need a whole-table COUNT(*) or
+        MAX(updated_at) must sum/max across all returned rows, not just the
+        canonical-topic ones.
+
+        Returns:
+            List of (topic, count, max_updated_at) tuples. Empty list if the
+            table has no rows.
+
+        Use Case:
+            CultureCoverageService.get_coverage() -- pre-exam coverage
+            disclosure endpoint (GET /mock-exam/coverage). Expressing
+            COUNT/MAX/per-topic-GROUP BY as a single grouped aggregate keeps
+            the whole read to exactly one SQL statement.
+        """
+        query = select(
+            CultureQuestion.topic,
+            func.count(),
+            func.max(CultureQuestion.updated_at),
+        ).group_by(CultureQuestion.topic)
+        result = await self.db.execute(query)
+        return [(row[0], int(row[1]), row[2]) for row in result.all()]
 
 
 # ============================================================================

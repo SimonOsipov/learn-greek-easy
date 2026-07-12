@@ -137,6 +137,20 @@
       "practical": "Практику"
     }
   },
+  "coverage": {
+    "chip_one": "{{count}} вопрос · обновлено {{date}}",
+    "chip_few": "{{count}} вопроса · обновлено {{date}}",
+    "chip_many": "{{count}} вопросов · обновлено {{date}}",
+    "chip_other": "{{count}} вопроса · обновлено {{date}}",
+    "chipNoDate_one": "{{count}} вопрос",
+    "chipNoDate_few": "{{count}} вопроса",
+    "chipNoDate_many": "{{count}} вопросов",
+    "chipNoDate_other": "{{count}} вопроса",
+    "thinMark": {
+      "label": "Ограниченный охват",
+      "tooltip": "Вопросов меньше, чем по другим темам — эта тема хуже готовит к экзамену."
+    }
+  },
   "states": {
     "loading": "Загрузка данных экзамена...",
     "error": "Не удалось загрузить данные экзамена",
