@@ -19,6 +19,13 @@ import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import { queryClient } from '@/lib/queryClient';
+// Pre-auth routes are eagerly imported (NOT lazy) so they join the initial
+// module graph → Vite emits <link rel="modulepreload"> and they download during
+// HTML parse, removing the post-mount route-chunk round-trip that dominated
+// pre-auth LCP. Keep every other route lazy. (PERF-25)
+import { Login } from '@/pages/auth/Login';
+import { Register } from '@/pages/auth/Register';
+import LandingPage from '@/pages/LandingPage';
 import { PostHogProvider } from '@/providers';
 import { useAppStore, selectIsReady } from '@/stores/appStore';
 
@@ -33,10 +40,8 @@ import { useAppStore, selectIsReady } from '@/stores/appStore';
 // ============================================================================
 
 // Auth pages (wrapped with AuthRoutesWrapper for Google OAuth)
-const Login = lazyWithRetry(() => import('@/pages/auth/Login').then((m) => ({ default: m.Login })));
-const Register = lazyWithRetry(() =>
-  import('@/pages/auth/Register').then((m) => ({ default: m.Register }))
-);
+// NOTE: Login and Register are eagerly imported at the top of this file (PERF-25);
+// only the less hot auth routes below remain lazy.
 const ForgotPassword = lazyWithRetry(() =>
   import('@/pages/auth/ForgotPassword').then((m) => ({ default: m.ForgotPassword }))
 );
@@ -139,8 +144,7 @@ const Unauthorized = lazyWithRetry(() =>
   import('@/pages/Unauthorized').then((m) => ({ default: m.Unauthorized }))
 );
 
-// Landing page (public)
-const LandingPage = lazyWithRetry(() => import('@/pages/LandingPage'));
+// LandingPage is eagerly imported at the top of this file (public route, PERF-25).
 
 // Word reference page (word entry detail)
 const WordReferencePage = lazyWithRetry(() =>

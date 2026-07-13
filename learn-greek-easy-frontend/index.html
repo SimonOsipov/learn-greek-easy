@@ -13,6 +13,35 @@
         } catch (e) {}
       })();
     </script>
+    <!-- Bounded chunk-error reload guard (PERF-25 / F1 mitigation).
+         Pre-auth route modules are now eagerly imported, so a failed fetch of an
+         app entry asset can no longer be recovered by lazyWithRetry before React
+         boots. This classic (non-module) capture-phase listener does at most 3
+         bounded page reloads (sessionStorage-counted, 60s cooldown) while the
+         #lcp-shell is still up; once React boots it goes inert and defers to
+         ChunkErrorBoundary. Mirrors the discipline in src/lib/versionCheck.ts
+         (distinct sessionStorage key). Must run BEFORE the entry
+         <script type="module"> to catch that graph's own load failure. -->
+    <script>
+      (function () {
+        var CAP = 3, COOLDOWN_MS = 60000, KEY = 'learn-greek-easy:chunk-error-reload';
+        window.addEventListener('error', function (e) {
+          var t = e.target;
+          if (!t || t === window) return;                          // runtime JS error — ignore
+          if (document.getElementById('lcp-shell') === null) return; // React booted — defer to ChunkErrorBoundary
+          var isModule  = t.tagName === 'SCRIPT' && t.src && t.src.indexOf(location.origin) === 0;
+          var isPreload = t.tagName === 'LINK'   && t.rel === 'modulepreload';
+          if (!isModule && !isPreload) return;                     // not an app entry asset
+          try {
+            var s = JSON.parse(sessionStorage.getItem(KEY) || '{"n":0,"t":0}');
+            if (s.n >= CAP) return;                                // cap reached — stop (no infinite loop)
+            if (s.n > 0 && Date.now() - s.t < COOLDOWN_MS) return; // cooldown active
+            sessionStorage.setItem(KEY, JSON.stringify({ n: s.n + 1, t: Date.now() }));
+          } catch (err) { return; }                                // storage blocked — don't reload
+          location.reload();
+        }, true);   // <-- capture phase (resource-load errors don't bubble)
+      })();
+    </script>
     <!-- Preconnect hints for external origins -->
     <link rel="preconnect" href="https://accounts.google.com" crossorigin />
     <link rel="dns-prefetch" href="https://accounts.google.com" />

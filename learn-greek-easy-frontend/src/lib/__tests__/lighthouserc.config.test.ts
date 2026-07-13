@@ -1,29 +1,35 @@
 /**
- * PERF-23-01: Mobile Lighthouse LCP gate shape tests.
+ * PERF-25-03: Mobile Lighthouse LCP gate shape tests.
  *
- * Final state (user decision 2026-07-03): the mobile Lighthouse config
- * (`lighthouserc.mobile.cjs`) uses a single flat `ci.assert.assertions` block
- * — the same shape as desktop — with a flat LCP gate of `error @ 7000ms` on
- * ALL three tested URLs (`/`, `/login`, `/register`). This supersedes the
- * PERF-23-01 per-URL `assertMatrix` (warn on /register, error@4000 elsewhere):
- * Phase 3.5 runs showed `/` and `/login` had ALSO always exceeded the 4000
- * floor on the shared dev box (the "only /register is red" premise was
- * stale), so the per-URL split gated nothing. 7000 is a dev-environment
- * regression TRIPWIRE (observed stable LCP band 5.3-6.3s across all retained
- * runs, Jun 23 - Jul 2 2026), NOT a Web Vitals line — restoring the real
- * `error@4000` Web Vitals floor is tracked in the PERF-24 Obsidian story
- * ("Get Pre-Auth Mobile LCP Under the Web Vitals Poor Line"). GitHub issue
- * #679 (the prior tracker) was deleted; PERF-24 is the sole tracker now.
+ * Root cause (PERF-24, 2026-07-04): mobile LCP was RENDER-TIMING-bound, not
+ * byte-budget-bound. The LHR showed a ~3-4s FCP-to-LCP gap: lazy-route text
+ * elements sat behind (a) a post-mount lazy-chunk waterfall (routes only
+ * started fetching after the initial bundle executed) and (b) the hero/header
+ * entrance animation, which held its final text at `opacity-0` until a
+ * post-mount JS transition fired. Byte-budget cuts landed in PERF-24
+ * (i18n namespace split, deferred posthog import) did NOT move LCP, which is
+ * what confirmed the render-timing diagnosis over a byte-budget one.
  *
- * PERF-24 (2026-07-04) measured post-optimization mobile LCP after landing
- * the i18n namespace split (PERF-24-01) and the deferred posthog import
- * (PERF-24-02): `/` 5891ms, `/login` 5501ms, `/register` 5475ms — unchanged
- * from the pre-optimization band above. The LHR shows a render-timing
- * bottleneck (a ~3-4s FCP-to-LCP gap on lazy-route text elements behind an
- * opacity-0 entrance animation), not a byte-budget one, so the 7000 tripwire
- * asserted below is RETAINED deliberately and the 4000 Web Vitals floor is
- * DEFERRED to follow-up story PERF-25. See `lighthouserc.mobile.cjs`'s
- * assertion comment for the full writeup.
+ * PERF-25 fix (A+B, this story): (A, PERF-25-01) de-gate the hero + header
+ * entrance animation so LCP text paints at its final opacity immediately,
+ * no animation gate; (B, PERF-25-02) eager-load the 3 pre-auth routes
+ * (`/`, `/login`, `/register`) instead of lazy-chunking them, removing the
+ * post-mount waterfall.
+ *
+ * RV#1 (2026-07-12) measured mobile LCP after A+B: `/` 4302ms, `/login`
+ * 3773ms, `/register` 3781ms — a 27-31% improvement from the PERF-24 band
+ * (5891/5501/5475ms). `/login` and `/register` now clear the real Web Vitals
+ * `error@4000` floor; `/` does not (4302 > 4000).
+ *
+ * Per user decision + story Decision #14, the gate is honestly RATCHETED
+ * 7000 -> 4800 (not all the way to 4000): all three URLs clear 4800 with
+ * >=500ms of headroom against RV#1's measured numbers, so 4800 is a real,
+ * currently-passing regression gate rather than an aspirational one that
+ * would immediately flake. `numberOfRuns` is bumped 1 -> 3 (median-of-3) to
+ * reduce single-run lab noise now that the gate is tight enough for noise to
+ * matter. Getting `/` under the true 4000 Web Vitals floor (its remaining
+ * render-timing cost is largely below-fold content deferred to a later
+ * paint) is tracked as follow-up story PERF-26.
  *
  * CJS loading: package.json declares "type": "module", so `require` is not a
  * global. We use `createRequire(import.meta.url)` from Node's built-in
@@ -81,12 +87,12 @@ const mobileConfig = require('../../../lighthouserc.mobile.cjs') as MobileLighth
 const desktopAssertions = desktopConfig.ci.assert.assertions;
 const mobileAssertions = mobileConfig.ci.assert.assertions ?? {};
 
-describe('lighthouserc LCP gate (PERF-23)', () => {
-  describe('mobile flat assertions (user decision 2026-07-03: error@7000 tripwire)', () => {
-    it('mobile LCP is a flat error@7000 tripwire on all URLs', () => {
+describe('lighthouserc LCP gate (PERF-25)', () => {
+  describe('mobile flat assertions (PERF-25-03: ratcheted error@4800 gate)', () => {
+    it('mobile LCP is a flat error@4800 gate on all URLs', () => {
       expect(mobileAssertions['largest-contentful-paint']).toEqual([
         'error',
-        { maxNumericValue: 7000 },
+        { maxNumericValue: 4800 },
       ]);
     });
 
@@ -152,7 +158,7 @@ describe('lighthouserc LCP gate (PERF-23)', () => {
     });
 
     it('collect.settings (mobile formFactor, screen emulation, throttling) is unchanged', () => {
-      expect(mobileConfig.ci.collect.numberOfRuns).toBe(1);
+      expect(mobileConfig.ci.collect.numberOfRuns).toBe(3);
       expect(mobileConfig.ci.collect.settings.formFactor).toBe('mobile');
       expect(mobileConfig.ci.collect.settings.screenEmulation).toEqual({
         mobile: true,

@@ -22,7 +22,7 @@ const Header = () => {
   return (
     <header
       data-testid="landing-header"
-      className="fixed left-0 right-0 top-0 z-50 border-b border-landing-header-bg/15 bg-landing-header-bg/80 shadow-nav backdrop-blur-lg motion-safe:animate-landing-fade-in"
+      className="fixed left-0 right-0 top-0 z-50 border-b border-landing-header-bg/15 bg-landing-header-bg/80 shadow-nav backdrop-blur-lg"
     >
       <div className="relative flex h-16 w-full items-center justify-between px-6">
         <a

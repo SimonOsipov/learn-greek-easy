@@ -115,8 +115,12 @@ test.describe('Landing Page - Unauthenticated', () => {
     test('should scroll to sections via anchor links', async ({ page }) => {
       await page.goto('/');
 
-      // Click on features link in nav
-      const featuresLink = page.getByRole('link', { name: /features/i });
+      // Click on features link in nav. Scope to the nav: the footer also has a
+      // "Features" anchor, so an unscoped role locator matches 2 elements and
+      // .click() throws a strict-mode violation. (Surfaced by the PERF-25
+      // eager-load — the footer now renders on first paint, so both links
+      // coexist at click time rather than the footer arriving after the click.)
+      const featuresLink = page.getByTestId('landing-nav').getByRole('link', { name: /features/i });
       if ((await featuresLink.count()) > 0) {
         await featuresLink.click();
 
@@ -291,12 +295,21 @@ test.describe('Landing Page - Performance', () => {
   test('should load landing page within acceptable time', async ({ page }) => {
     const startTime = Date.now();
 
-    await page.goto('/');
+    // Measure perceived load — time until the hero paints — not the full window
+    // `load` event. PERF-25 eager-loads the pre-auth routes into the entry
+    // modulepreload graph, deliberately trading a later `load` event (more JS
+    // fetched upfront) for a faster LCP/hero paint. Waiting for `load` (the
+    // goto default) mis-penalized that: on firefox `load` consistently sat
+    // ~0.5–3s past the hero paint (fonts, below-fold images, analytics, and the
+    // eager route preloads), tripping the 5s bound while the hero was already
+    // visible. `waitUntil: 'commit'` lets the toBeVisible() poll below measure
+    // time-to-hero, which is what this test's title and assertion target mean.
+    await page.goto('/', { waitUntil: 'commit' });
     await expect(page.getByTestId('hero-section')).toBeVisible();
 
     const loadTime = Date.now() - startTime;
 
-    // Landing page should load within 5 seconds
+    // Hero should paint within 5 seconds (perceived load).
     expect(loadTime).toBeLessThan(5000);
   });
 
