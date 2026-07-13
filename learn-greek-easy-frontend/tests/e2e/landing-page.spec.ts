@@ -115,8 +115,12 @@ test.describe('Landing Page - Unauthenticated', () => {
     test('should scroll to sections via anchor links', async ({ page }) => {
       await page.goto('/');
 
-      // Click on features link in nav
-      const featuresLink = page.getByRole('link', { name: /features/i });
+      // Click on features link in nav. Scope to the nav: the footer also has a
+      // "Features" anchor, so an unscoped role locator matches 2 elements and
+      // .click() throws a strict-mode violation. (Surfaced by the PERF-25
+      // eager-load — the footer now renders on first paint, so both links
+      // coexist at click time rather than the footer arriving after the click.)
+      const featuresLink = page.getByTestId('landing-nav').getByRole('link', { name: /features/i });
       if ((await featuresLink.count()) > 0) {
         await featuresLink.click();
 
