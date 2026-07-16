@@ -738,7 +738,24 @@ async def stripe_live_price() -> stripe.Price:
     Stripe-assigned -- `PriceCreateParams` has no `id` field at all -- which
     is exactly why `lookup_key` exists as the caller-chosen stable handle;
     `prices.list_async` supports filtering by `lookup_keys`.
+
+    Calls `assert_stripe_test_key()` directly, in defence of the outer
+    `stripe_live_guard` autouse fixture rather than in place of it: pytest
+    instantiates higher-scoped fixtures (this one is session-scoped) before
+    function-scoped ones REGARDLESS of autouse, so for the first
+    `stripe_live`-marked test per worker that reaches this fixture (via
+    `stripe_test_subscription`), `stripe_live_guard` has not run yet.
+    Without this call, a misconfigured live `STRIPE_SECRET_KEY` would create
+    a real product/price against the live Stripe account before the guard
+    ever gets a chance to block it -- exactly the blast-radius scenario this
+    lane exists to prevent. A session-scoped fixture cannot itself depend on
+    the function-scoped `stripe_live_guard` (pytest raises `ScopeMismatch`),
+    so calling the guard's underlying check inline is the only fix. It is
+    pure and idempotent (reads `os.getenv` only), so calling it again here
+    is free.
     """
+    assert_stripe_test_key()
+
     client = get_stripe_client()
 
     try:
@@ -793,7 +810,14 @@ async def stripe_test_subscription(
     from the environment anywhere in this fixture chain -- the hardcoded
     identifiers above are the lane's own stable handles, not env-configured
     production values.
+
+    Calls `assert_stripe_test_key()` directly as well, as defence-in-depth
+    alongside `stripe_live_price`'s own call -- see that fixture's docstring
+    for why the session-scoped/function-scoped ordering means the outer
+    `stripe_live_guard` autouse fixture cannot be relied on alone.
     """
+    assert_stripe_test_key()
+
     client = get_stripe_client()
 
     customer = await client.v1.customers.create_async(
