@@ -9,6 +9,7 @@ IMPORTANT: This service orchestrates deletion across multiple systems.
 Supabase deletion failures do NOT rollback local deletion per PRD decision.
 """
 
+import asyncio
 from dataclasses import dataclass
 from typing import Optional
 from uuid import UUID
@@ -24,6 +25,7 @@ from src.core.stripe import get_stripe_client, is_stripe_configured
 from src.core.supabase_admin import get_supabase_admin_client
 from src.db.models import SubscriptionStatus
 from src.repositories import UserRepository
+from src.services.s3_service import get_s3_service
 from src.services.user_progress_reset_service import UserProgressResetService
 
 logger = get_logger(__name__)
@@ -140,6 +142,36 @@ class UserDeletionService:
             )
             raise
 
+    async def _delete_avatar_from_storage(self, avatar_url: Optional[str], user_id: UUID) -> None:
+        """Delete the user's avatar object from S3, if one was captured.
+
+        Post-commit, non-fatal: local deletion is already durable by the
+        time this runs. [post-commit-nonfatal] [avatar-post-commit]
+
+        Mirrors DELETE /auth/avatar (src/api/v1/auth.py:562-566), reusing
+        the same S3Service.delete_object helper. That helper never raises -
+        it only catches BotoCoreError/ClientError internally and self-logs -
+        so no try/except is needed here, just a check on the bool return.
+
+        Args:
+            avatar_url: The S3 key captured before the user row was
+                deleted (NOT read from the user object post-delete).
+            user_id: UUID of the deleted user, for error log context.
+        """
+        if not avatar_url:
+            return
+
+        s3_service = get_s3_service()
+        deleted = await asyncio.to_thread(s3_service.delete_object, avatar_url)
+        if not deleted:
+            # [log-migration-carveout]: kwargs (not extra={...}) so user_id
+            # lands flat at record["extra"] top level per
+            # docs/conventions.md's kwargs-logging convention.
+            logger.error(
+                "Failed to delete user's avatar from S3 after account deletion",
+                user_id=str(user_id),
+            )
+
     async def delete_account(
         self, user_id: UUID, supabase_id: Optional[str] = None
     ) -> DeletionResult:
@@ -157,6 +189,8 @@ class UserDeletionService:
         5. Commit the transaction - local destruction is now durable
         6. Delete user from Supabase (if supabase_id provided and admin
            configured) - post-commit and non-fatal
+        7. Delete the user's avatar from S3 (if an avatar_url was captured
+           in step 1) - post-commit and non-fatal
 
         Note: Supabase deletion failure does NOT rollback local deletion.
         The user is considered deleted locally; orphaned Supabase identity
@@ -307,6 +341,11 @@ class UserDeletionService:
                     "No Supabase ID provided, skipping Supabase deletion",
                     extra={"user_id": str(user_id)},
                 )
+
+            # Step 7: Delete the user's avatar from S3 (if any) - post-commit,
+            # non-fatal: local deletion is already durable by this point.
+            # [post-commit-nonfatal] [avatar-post-commit]
+            await self._delete_avatar_from_storage(avatar_url, user_id)
 
             result.success = True
             logger.info(
