@@ -645,6 +645,176 @@ class TestDeleteAccount:
         mock_db_session.commit.assert_awaited_once()
         mock_supabase_client.delete_user.assert_not_called()
 
+    # ------------------------------------------------------------------
+    # QA adversarial coverage (RALPH Phase 1 Stage 4, PAY-05-01 verify).
+    # Stage 2.5's 8 Test Specs cover the happy-path reorder and the
+    # Supabase-failure branch; these cover destructive-step failures and
+    # the boundaries of the log-migration carve-out that Stage 2.5 didn't
+    # exercise.
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_local_delete_failure_never_commits(self, service, mock_db_session, mock_user):
+        """QA adversarial: if user_repository.delete() itself raises (e.g. a
+        FK constraint violation), the commit boundary must never fire --
+        committing a half-destroyed row would be worse than the pre-PAY-05-01
+        behavior. Guards against a future refactor that widens the try/except
+        around step 3 in a way that lets a failed delete fall through to
+        commit().
+        """
+        user_id = mock_user.id
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock(side_effect=RuntimeError("FK violation"))
+
+        with patch("src.services.user_deletion_service.sentry_sdk") as mock_sentry:
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        assert result.success is False
+        assert result.user_deleted is False
+        mock_db_session.commit.assert_not_awaited()
+        mock_sentry.capture_exception.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_missing_user_row_reset_failure_does_not_crash(
+        self, service, mock_db_session, mock_user
+    ):
+        """QA adversarial: the None-user early-return branch (AC7) also
+        calls reset_all_progress -- if THAT call raises (e.g. Redis down),
+        the exception must be caught by the outer handler like any other
+        mid-flow failure, not propagate uncaught or spuriously commit.
+        Stage 2.5's test_missing_user_row_preserves_today_contract only
+        exercises the happy path through this branch.
+        """
+        user_id = mock_user.id
+
+        service.user_repository.get = AsyncMock(return_value=None)
+        service.reset_service.reset_all_progress = AsyncMock(side_effect=RuntimeError("reset boom"))
+        service.user_repository.delete = AsyncMock()
+
+        with patch("src.services.user_deletion_service.sentry_sdk") as mock_sentry:
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        assert result.success is False
+        assert result.progress_deleted is False
+        assert result.user_deleted is False
+        mock_db_session.commit.assert_not_awaited()
+        service.user_repository.delete.assert_not_awaited()
+        mock_sentry.capture_exception.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_supabase_failure_log_carveout_does_not_leak_to_other_log_lines(
+        self, service, mock_user
+    ):
+        """QA adversarial: `[log-migration-carveout]` says only the
+        Supabase-failure logger.error at :204-209 is migrated to kwargs --
+        every other extra={...} call in the file is deliberately left
+        alone. Prove the carve-out didn't accidentally widen (or
+        accidentally re-nest the one line it was supposed to flatten) by
+        checking a DIFFERENT logger.error call (the outer exception
+        handler's "Account deletion failed") still nests its fields under
+        record['extra']['extra'], i.e. still uses extra={...} style.
+        """
+        from loguru import logger as loguru_logger
+
+        user_id = mock_user.id
+
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.reset_service.reset_all_progress = AsyncMock(side_effect=RuntimeError("boom"))
+        service.user_repository.delete = AsyncMock()
+
+        captured: list[dict] = []
+        sink_id = loguru_logger.add(lambda m: captured.append(m.record), level="ERROR")
+        try:
+            with patch("src.services.user_deletion_service.sentry_sdk"):
+                await service.delete_account(user_id, supabase_id=None)
+        finally:
+            loguru_logger.remove(sink_id)
+
+        error_records = [r for r in captured if "Account deletion failed" in r["message"]]
+        assert error_records, "expected the outer-handler logger.error to fire"
+        record = error_records[0]
+        assert "extra" in record["extra"], (
+            "the outer exception handler's logger.error must remain "
+            "extra={...} style (nested under extra.extra) -- the "
+            "log-migration carve-out is scoped to the Supabase-failure "
+            f"line only; got {record['extra']!r}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_post_commit_cache_invalidation_failure_does_not_report_false_total_failure(
+        self, service, mock_db_session, mock_user
+    ):
+        """QA adversarial -- FAILS today, real gap for the executor.
+
+        [post-commit-nonfatal] (architect decision, this subtask) requires
+        that steps 5-7 (cache invalidate, Supabase delete, S3 delete) "run
+        after the durable commit and must never raise -- each logs and
+        continues." The Supabase-delete call honors this (its own
+        try/except SupabaseAdminError). The cache-invalidation call
+        (`get_cache().invalidate_user_identity(...)`, PERF-16-02) does
+        NOT -- it has no local try/except, so any exception it raises
+        (Redis down, etc.) falls through to the outer `except Exception`
+        handler, which returns `result.success = False` even though
+        `self.db.commit()` already ran and the local deletion is durably
+        committed.
+
+        This is a genuine regression risk introduced by moving the commit
+        earlier: previously (pre-PAY-05-01, no explicit commit), the route
+        raising HTTPException(500) on `not result.success` would propagate
+        out to `get_db`, which rolls back on any exception -- so a
+        cache-invalidation failure rolled back the WHOLE transaction and
+        the misleading 500 was at least consistent with reality (nothing
+        was actually deleted). Now, the local delete is already committed
+        before this call runs, so `get_db`'s rollback-on-500 is a no-op
+        against already-committed data: the client is told "Failed to
+        delete account. Please try again." while the account is, in fact,
+        already gone.
+
+        Expected/desired behavior once fixed: a cache-invalidation failure
+        must not flip `result.success` to False when the destructive steps
+        and commit already succeeded -- it should log and continue, per
+        [post-commit-nonfatal], the same way the Supabase-delete branch
+        already does.
+        """
+        user_id = mock_user.id
+        supabase_id = mock_user.supabase_id
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        mock_cache = AsyncMock()
+        mock_cache.invalidate_user_identity = AsyncMock(
+            side_effect=RuntimeError("redis connection refused")
+        )
+
+        with (
+            patch(
+                "src.services.user_deletion_service.get_cache",
+                return_value=mock_cache,
+                create=True,
+            ),
+            patch("src.services.user_deletion_service.sentry_sdk"),
+        ):
+            result = await service.delete_account(user_id, supabase_id)
+
+        # The local delete already committed -- this must not be reported
+        # as a total failure to the caller (which would 500 the route
+        # despite the account already being durably deleted).
+        mock_db_session.commit.assert_awaited_once()
+        assert result.progress_deleted is True
+        assert result.user_deleted is True
+        assert result.success is True, (
+            "cache-invalidation failure after a durable commit must not "
+            "report total failure -- [post-commit-nonfatal] requires "
+            "steps 5-7 to log and continue, not corrupt an already-"
+            f"successful result; got {result!r}"
+        )
+
 
 @pytest.mark.unit
 class TestDeletionResult:
