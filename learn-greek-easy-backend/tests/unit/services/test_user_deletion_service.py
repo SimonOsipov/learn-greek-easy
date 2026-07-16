@@ -1841,6 +1841,261 @@ class TestDeleteAccount:
         assert result.success is True
         mock_s3_service.delete_object.assert_called_once_with(original_key)
 
+    # ------------------------------------------------------------------
+    # QA adversarial coverage (RALPH Phase 1 Stage 4, PAY-05-03 verify).
+    # Stage 2.5's 5 Test Specs cover the happy path, the no-avatar guard,
+    # the capture-vs-live-read distinction, and a plain delete_object()
+    # returning False. These cover empty-string avatar_url, ordering vs
+    # the Supabase step, both post-commit steps failing together, and the
+    # no-try/except assumption's actual blast radius if it were ever
+    # violated.
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_empty_string_avatar_url_skips_s3(self, service, mock_user):
+        """AC2 edge case: avatar_url="" is falsy but NOT None -- distinct
+        from the fixture default. The guard is `if not avatar_url:`, which
+        is also True for "", so this must skip S3 exactly like the None
+        case. Guards against a future rewrite of the guard to `is None`
+        (which would let an empty string fall through to
+        delete_object("")) -- delete_object itself would short-circuit
+        harmlessly, but AC3/test_no_avatar_skips_s3's contract is "never
+        called", not "called harmlessly".
+        """
+        user_id = mock_user.id
+        mock_user.avatar_url = ""
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        mock_s3_service = MagicMock()
+        mock_s3_service.delete_object = MagicMock(return_value=True)
+
+        with patch(
+            "src.services.user_deletion_service.get_s3_service",
+            return_value=mock_s3_service,
+        ):
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        assert result.success is True
+        mock_s3_service.delete_object.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_avatar_delete_runs_after_supabase_delete_call(self, service, mock_user):
+        """Ordering: the avatar S3 delete (step 7) must run after the
+        Supabase delete attempt (step 6), matching the architect's
+        insertion point (after the Supabase if/else block closes).
+        Same call-order-recorder technique as
+        test_avatar_delete_runs_after_commit / test_commit_precedes_supabase_delete.
+        """
+        user_id = mock_user.id
+        supabase_id = mock_user.supabase_id
+        mock_user.avatar_url = f"avatars/{user_id}/x.jpg"
+        call_order: list[str] = []
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        def _delete_object(*_args, **_kwargs):
+            call_order.append("delete_object")
+            return True
+
+        mock_s3_service = MagicMock()
+        mock_s3_service.delete_object = MagicMock(side_effect=_delete_object)
+
+        with patch(
+            "src.services.user_deletion_service.get_supabase_admin_client"
+        ) as mock_get_client:
+            mock_supabase_client = MagicMock()
+
+            async def _delete_user(*_args, **_kwargs):
+                call_order.append("delete_user")
+                return True
+
+            mock_supabase_client.delete_user = AsyncMock(side_effect=_delete_user)
+            mock_get_client.return_value = mock_supabase_client
+
+            with patch(
+                "src.services.user_deletion_service.get_s3_service",
+                return_value=mock_s3_service,
+            ):
+                result = await service.delete_account(user_id, supabase_id)
+
+        assert result.success is True
+        assert (
+            "delete_user" in call_order and "delete_object" in call_order
+        ), f"expected both Supabase delete and S3 delete to run; got {call_order}"
+        assert call_order.index("delete_user") < call_order.index(
+            "delete_object"
+        ), f"Supabase delete must precede the S3 avatar delete; order was {call_order}"
+
+    @pytest.mark.asyncio
+    async def test_avatar_deletion_runs_when_supabase_delete_already_failed(
+        self, service, mock_user
+    ):
+        """Both post-commit steps failing together: Supabase deletion
+        fails (sets result.supabase_deleted=False and a Supabase-specific
+        error_message) AND the user has an avatar. The avatar S3 delete
+        must still run (steps 6 and 7 are independent, both non-fatal) and
+        its own failure must not clobber or blank out the Supabase
+        error_message already set on the result -- each post-commit step
+        owns its own side effect (log/result field) without one masking
+        the other.
+        """
+        from loguru import logger as loguru_logger
+
+        from src.core.exceptions import SupabaseAdminError
+
+        user_id = mock_user.id
+        supabase_id = mock_user.supabase_id
+        mock_user.avatar_url = f"avatars/{user_id}/x.jpg"
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        mock_supabase_client = MagicMock()
+        mock_supabase_client.delete_user = AsyncMock(
+            side_effect=SupabaseAdminError("Failed to delete user from Supabase")
+        )
+
+        mock_s3_service = MagicMock()
+        mock_s3_service.delete_object = MagicMock(return_value=False)
+
+        captured: list[dict] = []
+        sink_id = loguru_logger.add(lambda m: captured.append(m.record), level="ERROR")
+
+        try:
+            with (
+                patch(
+                    "src.services.user_deletion_service.get_supabase_admin_client",
+                    return_value=mock_supabase_client,
+                ),
+                patch(
+                    "src.services.user_deletion_service.get_s3_service",
+                    return_value=mock_s3_service,
+                ),
+                patch("src.services.user_deletion_service.sentry_sdk"),
+            ):
+                result = await service.delete_account(user_id, supabase_id)
+        finally:
+            loguru_logger.remove(sink_id)
+
+        assert result.success is True
+        assert result.supabase_deleted is False
+        assert result.error_message is not None
+        assert "contact support" in result.error_message.lower(), (
+            "the Supabase-failure error_message must survive the later "
+            f"avatar-delete failure; got {result.error_message!r}"
+        )
+        mock_s3_service.delete_object.assert_called_once_with(mock_user.avatar_url)
+
+        avatar_error_records = [r for r in captured if "avatar" in r["message"].lower()]
+        assert avatar_error_records, (
+            "expected the avatar-deletion failure to still be logged even "
+            "though the Supabase step already failed"
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_s3_service_raising_after_commit_flips_success_false(
+        self, service, mock_db_session, mock_user
+    ):
+        """Defensive-depth gap (not one of the 5 ACs): _delete_avatar_from_storage
+        has no try/except around its body, on the documented assumption
+        that S3Service.delete_object() never raises. That assumption holds
+        for delete_object itself (verified: only catches
+        BotoCoreError/ClientError, and the one uncaught AssertionError
+        path is unreachable given s3_configured's invariants) -- but
+        get_s3_service() is also called with no defensive wrapper. If
+        anything upstream of delete_object ever raised (a future refactor,
+        a monkeypatch, an unexpected import-time error), that exception
+        has nothing to catch it in delete_account and propagates to the
+        OUTER `except Exception` handler -- which reports total failure
+        even though self.db.commit() already ran. This pins TODAY's actual
+        behavior in that scenario: unlike the Supabase branch (its own
+        try/except SupabaseAdminError) and the cache-invalidation branch
+        (its own try/except Exception), the avatar-delete step has no such
+        safety net. Flagging for the executor/architect to consider a
+        defensive try/except here matching the sibling post-commit steps,
+        even though delete_object itself is not currently reachable to
+        raise.
+        """
+        user_id = mock_user.id
+        mock_user.avatar_url = f"avatars/{user_id}/x.jpg"
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        with (
+            patch(
+                "src.services.user_deletion_service.get_s3_service",
+                side_effect=RuntimeError("unexpected S3 service init failure"),
+            ),
+            patch("src.services.user_deletion_service.sentry_sdk"),
+        ):
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        # Documents today's fragility: the commit already ran, but success
+        # is reported False because nothing catches this exception.
+        mock_db_session.commit.assert_awaited_once()
+        assert result.success is False, (
+            "today, an exception from get_s3_service() during the "
+            "post-commit avatar-delete step flips result.success to "
+            "False despite the local deletion already being committed -- "
+            "see this test's docstring for why this is a flagged gap, "
+            "not an AC violation"
+        )
+
+    @pytest.mark.asyncio
+    async def test_delete_object_raising_uncaught_exception_after_commit_flips_success_false(
+        self, service, mock_db_session, mock_user
+    ):
+        """Same defensive-depth gap as
+        test_get_s3_service_raising_after_commit_flips_success_false, but
+        injected at the delete_object call site instead of get_s3_service.
+        delete_object() itself is documented/verified to only ever raise
+        BotoCoreError/ClientError internally (both caught) -- this
+        simulates a class delete_object was never designed to catch (e.g.
+        a ValueError from a future signature change), proving the lack of
+        a local try/except in _delete_avatar_from_storage would let it
+        escape uncaught, exactly like the get_s3_service() injection case.
+        """
+        user_id = mock_user.id
+        mock_user.avatar_url = f"avatars/{user_id}/x.jpg"
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        mock_s3_service = MagicMock()
+        mock_s3_service.delete_object = MagicMock(
+            side_effect=ValueError("unexpected non-BotoCoreError/ClientError failure")
+        )
+
+        with (
+            patch(
+                "src.services.user_deletion_service.get_s3_service",
+                return_value=mock_s3_service,
+            ),
+            patch("src.services.user_deletion_service.sentry_sdk"),
+        ):
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        mock_db_session.commit.assert_awaited_once()
+        assert result.success is False, (
+            "today, a delete_object exception outside the documented "
+            "BotoCoreError/ClientError family flips result.success to "
+            "False despite the local deletion already being committed"
+        )
+
 
 @pytest.mark.unit
 class TestDeletionResult:
