@@ -1608,6 +1608,239 @@ class TestDeleteAccount:
         assert result.success is True
         mock_stripe_client.v1.subscriptions.cancel_async.assert_not_awaited()
 
+    # ------------------------------------------------------------------
+    # PAY-05-03 Test Specs: remove the deleted user's avatar from object
+    # storage (task-1317).
+    #
+    # RALPH Phase 1 Stage 2.5 (Mode A / RED). These transcribe the
+    # architect's 5-row Test Specs table 1:1. Neither `asyncio` nor
+    # `get_s3_service` is imported into user_deletion_service.py today, so
+    # the patch below uses create=True -- this avoids an AttributeError at
+    # test-setup time (the wrong kind of "red"). The patch target
+    # ("src.services.user_deletion_service.get_s3_service") matches the
+    # destination-module convention this file already establishes for
+    # get_cache/is_stripe_configured/get_stripe_client. See story doc
+    # [post-commit-nonfatal], [avatar-post-commit].
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_avatar_deleted_from_storage(self, service, mock_user):
+        """AC6: a user with an avatar_url gets that exact S3 key deleted via
+        s3_service.delete_object, called once.
+
+        RED today: delete_account() never imports/calls get_s3_service or
+        delete_object at all, so delete_object.assert_called_once_with
+        fails with "Expected 'delete_object' to have been called once.
+        Called 0 times."
+        """
+        user_id = mock_user.id
+        mock_user.avatar_url = f"avatars/{user_id}/x.jpg"
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        mock_s3_service = MagicMock()
+        mock_s3_service.delete_object = MagicMock(return_value=True)
+
+        with patch(
+            "src.services.user_deletion_service.get_s3_service",
+            return_value=mock_s3_service,
+            create=True,
+        ):
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        assert result.success is True
+        mock_s3_service.delete_object.assert_called_once_with(mock_user.avatar_url)
+
+    @pytest.mark.asyncio
+    async def test_avatar_delete_runs_after_commit(self, service, mock_db_session, mock_user):
+        """AC6: the S3 avatar delete must run after the commit that makes
+        local deletion durable -- same call-order-recorder technique as
+        test_commit_precedes_supabase_delete.
+
+        RED today: delete_object is never called at all, so "delete_object"
+        never appears in call_order and the membership assertion fails
+        first ("expected both commit and delete_object to run").
+        """
+        user_id = mock_user.id
+        mock_user.avatar_url = f"avatars/{user_id}/x.jpg"
+        call_order: list[str] = []
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        async def _commit(*_args, **_kwargs):
+            call_order.append("commit")
+
+        mock_db_session.commit = AsyncMock(side_effect=_commit)
+
+        def _delete_object(*_args, **_kwargs):
+            call_order.append("delete_object")
+            return True
+
+        mock_s3_service = MagicMock()
+        mock_s3_service.delete_object = MagicMock(side_effect=_delete_object)
+
+        with patch(
+            "src.services.user_deletion_service.get_s3_service",
+            return_value=mock_s3_service,
+            create=True,
+        ):
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        assert result.success is True
+        assert (
+            "commit" in call_order and "delete_object" in call_order
+        ), f"expected both commit and delete_object to run; got {call_order}"
+        assert call_order.index("commit") < call_order.index(
+            "delete_object"
+        ), f"commit must precede the S3 avatar delete; order was {call_order}"
+
+    @pytest.mark.asyncio
+    async def test_no_avatar_skips_s3(self, service, mock_user):
+        """AC2: avatar_url=None (the mock_user fixture default) -> no S3
+        call at all, deletion still succeeds. Asserts delete_object is
+        NEVER called (not merely that it returned harmlessly), per the
+        architect's explicit-`if avatar_url:` guard requirement -- relying
+        on delete_object's internal falsy-key short-circuit would still
+        pass an "assert returned True" check but fail this one.
+
+        Expected GREEN on arrival: nothing calls S3 in delete_account today
+        either, so "never called" is trivially true. This pins the guard's
+        behavior once the executor adds the call -- it becomes the
+        regression net against a future change that drops the `if
+        avatar_url:` check and calls delete_object("") unconditionally.
+        """
+        user_id = mock_user.id
+        # mock_user fixture default already satisfies this: avatar_url=None.
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        mock_s3_service = MagicMock()
+        mock_s3_service.delete_object = MagicMock(return_value=True)
+
+        with patch(
+            "src.services.user_deletion_service.get_s3_service",
+            return_value=mock_s3_service,
+            create=True,
+        ):
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        assert result.success is True
+        mock_s3_service.delete_object.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_s3_failure_does_not_fail_deletion(self, service, mock_user):
+        """AC6: delete_object returning False (it never raises -- only
+        catches BotoCoreError/ClientError internally and self-logs) must
+        not fail the overall deletion: result.success stays True, and a
+        kwargs-style logger.error carries user_id so the failure is
+        queryable. Uses the real-loguru-sink pattern (not a mocked logger)
+        established by test_supabase_failure_logs_error_with_flat_fields.
+
+        RED today: delete_object is never called, so no matching error
+        record is captured and `assert error_records` fails with "expected
+        a logger.error call for the avatar deletion failure".
+        """
+        from loguru import logger as loguru_logger
+
+        user_id = mock_user.id
+        mock_user.avatar_url = f"avatars/{user_id}/x.jpg"
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        mock_s3_service = MagicMock()
+        mock_s3_service.delete_object = MagicMock(return_value=False)
+
+        captured: list[dict] = []
+        sink_id = loguru_logger.add(lambda m: captured.append(m.record), level="ERROR")
+
+        try:
+            with patch(
+                "src.services.user_deletion_service.get_s3_service",
+                return_value=mock_s3_service,
+                create=True,
+            ):
+                result = await service.delete_account(user_id, supabase_id=None)
+        finally:
+            loguru_logger.remove(sink_id)
+
+        assert result.success is True
+
+        error_records = [r for r in captured if "avatar" in r["message"].lower()]
+        assert (
+            error_records
+        ), f"expected a logger.error call for the avatar deletion failure; captured: {captured!r}"
+        record = error_records[0]
+        assert (
+            "user_id" in record["extra"]
+        ), f"user_id must be a flat kwarg field on record['extra'], got {record['extra']!r}"
+        assert record["extra"]["user_id"] == str(user_id)
+        assert "extra" not in record["extra"], (
+            "user_id must not be nested under extra.extra (extra={...} was "
+            f"used instead of kwargs); got {record['extra']!r}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_avatar_key_captured_before_row_deleted(self, service, mock_user):
+        """AC6: delete_object must receive the key from the local captured
+        BEFORE user_repository.delete() ran, not from the (already-deleted)
+        `user` object -- proves the step-1 capture is what's actually
+        consumed, not a live attribute read that would break the moment
+        the user row/ORM object is invalidated post-delete.
+
+        Constructed so it would genuinely fail if the executor tried to
+        read `user.avatar_url` after delete: the delete side_effect mutates
+        avatar_url on the mock to a different (garbage) value, simulating
+        what a real ORM-expired/deleted instance would look like. If
+        production code read from `user.avatar_url` post-delete instead of
+        the pre-captured local, delete_object would be called with the
+        post-delete garbage value instead of the original key.
+
+        RED today: delete_object is never called at all, so
+        assert_called_once_with fails with "Called 0 times", not a
+        wrong-argument mismatch -- still a genuine RED for the right
+        reason (the capture-and-use behavior doesn't exist yet).
+        """
+        user_id = mock_user.id
+        original_key = f"avatars/{user_id}/x.jpg"
+        mock_user.avatar_url = original_key
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+
+        async def _delete(*_args, **_kwargs):
+            # Simulate the row being destroyed: if production code read
+            # user.avatar_url AFTER this point, it would see this garbage
+            # value instead of the captured original.
+            mock_user.avatar_url = "GARBAGE-POST-DELETE-VALUE"
+
+        service.user_repository.delete = AsyncMock(side_effect=_delete)
+
+        mock_s3_service = MagicMock()
+        mock_s3_service.delete_object = MagicMock(return_value=True)
+
+        with patch(
+            "src.services.user_deletion_service.get_s3_service",
+            return_value=mock_s3_service,
+            create=True,
+        ):
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        assert result.success is True
+        mock_s3_service.delete_object.assert_called_once_with(original_key)
+
 
 @pytest.mark.unit
 class TestDeletionResult:
