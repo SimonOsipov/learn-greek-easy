@@ -39,6 +39,8 @@ RED today for two different reasons -- see the per-test docstrings:
     RED via genuine assertion failure against the current repo state.
 """
 
+import subprocess
+import sys
 import tomllib
 from pathlib import Path
 from typing import Callable
@@ -227,4 +229,101 @@ def test_stripe_live_marker_is_registered() -> None:
         "stripe_live marker is not registered in pyproject.toml "
         "[tool.pytest.ini_options].markers -- any @pytest.mark.stripe_live usage will "
         "abort collection for the ENTIRE test run under --strict-markers"
+    )
+
+
+@pytest.mark.unit
+def test_pyproject_addopts_deselects_stripe_live_by_default() -> None:
+    """Pins the addopts-level default added in PAY-05-05's second commit
+    (`fix(PAY-05-05): default-deselect stripe_live in pyproject addopts, not
+    just CI`): `-m "not stripe_live"` must be present in
+    `[tool.pytest.ini_options].addopts` as two adjacent list entries (`-m`,
+    then `not stripe_live`), so a bare/path-scoped local invocation (no `-m`
+    flag at all -- the shape of every documented dev command in
+    CLAUDE.md/docs/testing.md) never reaches the stripe_live_guard's
+    hard-fail just because a developer has no STRIPE_SECRET_KEY configured.
+
+    Cheap, non-subprocess regression pin, complementary to
+    test_cli_marker_expression_replaces_addopts_default below (which proves
+    the runtime *behavior* this config enables; this one guards the config
+    itself from silently drifting, e.g. someone reordering or removing the
+    two-entry pair while editing addopts for an unrelated reason).
+    """
+    pyproject_path = _BACKEND_ROOT / "pyproject.toml"
+    with pyproject_path.open("rb") as fh:
+        config = tomllib.load(fh)
+
+    addopts = config["tool"]["pytest"]["ini_options"]["addopts"]
+
+    pairs = list(zip(addopts, addopts[1:]))
+    assert ("-m", "not stripe_live") in pairs, (
+        "expected addopts to contain '-m' immediately followed by "
+        "'not stripe_live' -- got addopts=" + repr(addopts)
+    )
+
+
+@pytest.mark.unit
+def test_cli_marker_expression_replaces_addopts_default() -> None:
+    """Empirically pins the single most fracture-prone assumption in the
+    whole stripe_live lane: an explicit CLI `-m` expression REPLACES
+    pyproject.toml's addopts `-m "not stripe_live"` default -- it does NOT
+    AND with it.
+
+    Why this matters: PAY-05-06's CI job runs `pytest -m stripe_live
+    --no-cov -v`. If a future pytest version (or some other addopts change)
+    made a CLI `-m` combine with the addopts default instead of replacing
+    it, that invocation would silently evaluate to
+    `stripe_live AND not stripe_live` -- always false -- and collect ZERO
+    tests. Pytest's own "no tests collected" is exit code 5, which --
+    unless a CI step explicitly greps for it -- reads as a green, vacuous
+    PASS: exactly the silent-pass failure mode the stripe_live lane exists
+    to prevent (verified during PAY-05-05 QA Stage 4 by actually invoking
+    pytest as a subprocess, not just reading config, against the one real
+    stripe_live-marked test in the repo, in both directions).
+
+    Subprocess, not in-process pytest.main(), so this file's own pytest
+    config/plugins/coverage instrumentation can't leak into the child
+    invocation being measured.
+    """
+    target = "tests/integration/test_stripe_integration.py"
+    common_args = [
+        sys.executable,
+        "-m",
+        "pytest",
+        target,
+        "--collect-only",
+        "-q",
+        "--no-cov",
+    ]
+
+    bare = subprocess.run(
+        common_args,
+        cwd=_BACKEND_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    assert "no tests collected (1 deselected)" in bare.stdout, (
+        "expected the addopts default alone (no -m flag at all) to deselect "
+        f"the one stripe_live test in {target}; got stdout tail:\n{bare.stdout[-1500:]}"
+    )
+
+    explicit = subprocess.run(
+        [*common_args[:4], "-m", "stripe_live", *common_args[4:]],
+        cwd=_BACKEND_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    assert "1 test collected" in explicit.stdout, (
+        "expected explicit CLI `-m stripe_live` to REPLACE (not AND with) the "
+        "addopts default and select the test. If this now shows 0 selected / "
+        "no tests collected, PAY-05-06's CI job would collect zero tests and "
+        f"pass vacuously -- got stdout tail:\n{explicit.stdout[-1500:]}"
+    )
+    assert "no tests collected" not in explicit.stdout, (
+        "the explicit -m stripe_live invocation must NOT report 'no tests "
+        f"collected' -- got stdout tail:\n{explicit.stdout[-1500:]}"
     )
