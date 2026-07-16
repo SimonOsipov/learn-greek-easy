@@ -14,6 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
+import stripe
 
 from src.db.models import SubscriptionStatus
 from src.services.user_deletion_service import DeletionResult, UserDeletionService
@@ -814,6 +815,539 @@ class TestDeleteAccount:
             "steps 5-7 to log and continue, not corrupt an already-"
             f"successful result; got {result!r}"
         )
+
+    # ------------------------------------------------------------------
+    # PAY-05-02 Test Specs: cancel the Stripe subscription before anything
+    # is destroyed (task-1316).
+    #
+    # RALPH Phase 1 Stage 2.5 (Mode A / RED). These transcribe the
+    # architect's 11-row Test Specs table 1:1. `get_stripe_client` and
+    # `is_stripe_configured` are not yet imported into
+    # user_deletion_service.py, so patches below use create=True -- this
+    # avoids an AttributeError at test-setup time (the wrong kind of
+    # "red"). The patch target already matches the destination-module
+    # convention ("src.services.user_deletion_service.<name>") that the
+    # executor's own import is expected to land at, per this file's own
+    # precedent (get_cache is patched the same way), so no test rewrite
+    # is needed once the guard exists. See story doc [stripe-guard],
+    # [no-refund-params], [sequence-order], [idempotency].
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_active_sub_canceled_immediately(self, service, mock_user):
+        """AC1: a user with an active Stripe subscription gets it canceled
+        immediately via cancel_async, called bare (no params -- no
+        refund/proration per [no-refund-params]; the installed SDK's
+        prorate/invoice_now both default False).
+
+        RED today: user_deletion_service.py has no Stripe import and never
+        calls cancel_async at all.
+        """
+        user_id = mock_user.id
+        mock_user.stripe_subscription_id = "sub_123"
+        mock_user.subscription_status = SubscriptionStatus.ACTIVE
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        mock_stripe_client = MagicMock()
+        mock_stripe_client.v1.subscriptions.cancel_async = AsyncMock()
+
+        with (
+            patch(
+                "src.services.user_deletion_service.is_stripe_configured",
+                return_value=True,
+                create=True,
+            ),
+            patch(
+                "src.services.user_deletion_service.get_stripe_client",
+                return_value=mock_stripe_client,
+                create=True,
+            ),
+        ):
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        assert result.success is True
+        mock_stripe_client.v1.subscriptions.cancel_async.assert_awaited_once_with("sub_123")
+
+    @pytest.mark.asyncio
+    async def test_cancel_precedes_local_deletion(self, service, mock_db_session, mock_user):
+        """AC3: the Stripe cancel call must precede every local mutation --
+        reset_all_progress, user_repository.delete, and db.commit.
+
+        RED today: cancel_async is never called, so it never appears in
+        call_order at all. Asserted via explicit membership first (not
+        call_order.index(), which would raise ValueError -- the wrong
+        kind of red -- if the entry were simply absent).
+        """
+        user_id = mock_user.id
+        mock_user.stripe_subscription_id = "sub_123"
+        mock_user.subscription_status = SubscriptionStatus.ACTIVE
+        call_order: list[str] = []
+
+        mock_reset_result = MagicMock()
+
+        async def _cancel_async(*_args, **_kwargs):
+            call_order.append("cancel_async")
+
+        async def _reset_all_progress(*_args, **_kwargs):
+            call_order.append("reset_all_progress")
+            return mock_reset_result
+
+        async def _delete(*_args, **_kwargs):
+            call_order.append("delete")
+
+        async def _commit(*_args, **_kwargs):
+            call_order.append("commit")
+
+        service.reset_service.reset_all_progress = AsyncMock(side_effect=_reset_all_progress)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock(side_effect=_delete)
+        mock_db_session.commit = AsyncMock(side_effect=_commit)
+
+        mock_stripe_client = MagicMock()
+        mock_stripe_client.v1.subscriptions.cancel_async = AsyncMock(side_effect=_cancel_async)
+
+        with (
+            patch(
+                "src.services.user_deletion_service.is_stripe_configured",
+                return_value=True,
+                create=True,
+            ),
+            patch(
+                "src.services.user_deletion_service.get_stripe_client",
+                return_value=mock_stripe_client,
+                create=True,
+            ),
+        ):
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        assert result.success is True
+        assert "cancel_async" in call_order, f"expected cancel_async to run; got {call_order}"
+        assert call_order.index("cancel_async") < call_order.index(
+            "reset_all_progress"
+        ), f"cancel must precede progress reset; order was {call_order}"
+        assert call_order.index("cancel_async") < call_order.index(
+            "delete"
+        ), f"cancel must precede local delete; order was {call_order}"
+        assert call_order.index("cancel_async") < call_order.index(
+            "commit"
+        ), f"cancel must precede commit; order was {call_order}"
+
+    @pytest.mark.asyncio
+    async def test_no_sub_id_skips_stripe(self, service, mock_user):
+        """AC2: no stripe_subscription_id (status NONE, the fixture
+        defaults) -> no Stripe call at all, deletion still succeeds.
+
+        Expected GREEN on arrival: nothing calls Stripe today either, so
+        "never called" is trivially true. This pins the guard's behavior
+        once the executor adds the call -- it becomes the regression net.
+        """
+        user_id = mock_user.id
+        # mock_user fixture defaults already satisfy this: stripe_subscription_id=None,
+        # subscription_status=SubscriptionStatus.NONE.
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        mock_stripe_client = MagicMock()
+        mock_stripe_client.v1.subscriptions.cancel_async = AsyncMock()
+
+        with (
+            patch(
+                "src.services.user_deletion_service.is_stripe_configured",
+                return_value=True,
+                create=True,
+            ),
+            patch(
+                "src.services.user_deletion_service.get_stripe_client",
+                return_value=mock_stripe_client,
+                create=True,
+            ),
+        ):
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        assert result.success is True
+        mock_stripe_client.v1.subscriptions.cancel_async.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_app_managed_trialing_skips_stripe(self, service, mock_user):
+        """AC2/[trial-is-app-managed]: TRIALING with no stripe_subscription_id
+        (the real shape for app-managed trials, per src/core/dependencies.py
+        :217-226) skips Stripe entirely.
+
+        Expected GREEN on arrival: nothing calls Stripe today either, so
+        "never called" is trivially true.
+        """
+        user_id = mock_user.id
+        mock_user.subscription_status = SubscriptionStatus.TRIALING
+        mock_user.stripe_subscription_id = None
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        mock_stripe_client = MagicMock()
+        mock_stripe_client.v1.subscriptions.cancel_async = AsyncMock()
+
+        with (
+            patch(
+                "src.services.user_deletion_service.is_stripe_configured",
+                return_value=True,
+                create=True,
+            ),
+            patch(
+                "src.services.user_deletion_service.get_stripe_client",
+                return_value=mock_stripe_client,
+                create=True,
+            ),
+        ):
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        assert result.success is True
+        mock_stripe_client.v1.subscriptions.cancel_async.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_canceled_status_skips_stripe(self, service, mock_user):
+        """AC2: subscription_status CANCELED, even with a stripe_subscription_id
+        still on the row, skips the Stripe call (already canceled server-side).
+
+        Expected GREEN on arrival: nothing calls Stripe today either, so
+        "never called" is trivially true.
+        """
+        user_id = mock_user.id
+        mock_user.subscription_status = SubscriptionStatus.CANCELED
+        mock_user.stripe_subscription_id = "sub_123"
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        mock_stripe_client = MagicMock()
+        mock_stripe_client.v1.subscriptions.cancel_async = AsyncMock()
+
+        with (
+            patch(
+                "src.services.user_deletion_service.is_stripe_configured",
+                return_value=True,
+                create=True,
+            ),
+            patch(
+                "src.services.user_deletion_service.get_stripe_client",
+                return_value=mock_stripe_client,
+                create=True,
+            ),
+        ):
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        assert result.success is True
+        mock_stripe_client.v1.subscriptions.cancel_async.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_trialing_with_stripe_sub_is_still_canceled(self, service, mock_user):
+        """AC1/AC2: TRIALING status WITH a stripe_subscription_id present
+        (a future Stripe-side trial, not today's app-managed shape) must
+        still be canceled -- this proves the guard is pointer-driven
+        (keyed on stripe_subscription_id is not None), not a status
+        allowlist. A status-allowlist implementation (e.g. only
+        ACTIVE/PAST_DUE) would wrongly skip this case and fail here.
+
+        RED today: cancel_async is never called regardless of status.
+        """
+        user_id = mock_user.id
+        mock_user.subscription_status = SubscriptionStatus.TRIALING
+        mock_user.stripe_subscription_id = "sub_123"
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        mock_stripe_client = MagicMock()
+        mock_stripe_client.v1.subscriptions.cancel_async = AsyncMock()
+
+        with (
+            patch(
+                "src.services.user_deletion_service.is_stripe_configured",
+                return_value=True,
+                create=True,
+            ),
+            patch(
+                "src.services.user_deletion_service.get_stripe_client",
+                return_value=mock_stripe_client,
+                create=True,
+            ),
+        ):
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        assert result.success is True
+        mock_stripe_client.v1.subscriptions.cancel_async.assert_awaited_once_with("sub_123")
+
+    @pytest.mark.asyncio
+    async def test_stripe_not_configured_skips_and_deletes(self, service, mock_user):
+        """AC2: is_stripe_configured() is False -> get_stripe_client is
+        NEVER called (not just that cancel_async wasn't invoked) --
+        calling get_stripe_client() while unconfigured raises RuntimeError
+        per src/core/stripe.py:32-38. Deletion still succeeds.
+
+        Expected GREEN on arrival: nothing calls get_stripe_client today
+        either, so "never called" is trivially true.
+        """
+        user_id = mock_user.id
+        mock_user.stripe_subscription_id = "sub_123"
+        mock_user.subscription_status = SubscriptionStatus.ACTIVE
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        with (
+            patch(
+                "src.services.user_deletion_service.is_stripe_configured",
+                return_value=False,
+                create=True,
+            ),
+            patch(
+                "src.services.user_deletion_service.get_stripe_client",
+                create=True,
+            ) as mock_get_client,
+        ):
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        assert result.success is True
+        mock_get_client.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_invalid_request_error_does_not_block_deletion(
+        self, service, mock_db_session, mock_user
+    ):
+        """AC2/[idempotency]: stripe.InvalidRequestError (e.g. subscription
+        already canceled server-side, code="resource_missing") must NOT
+        block deletion -- branch on exception class, never a message
+        string.
+
+        RED today: checking only the outcome (success/delete/commit) would
+        be vacuously true today since nothing calls Stripe at all -- "does
+        not block" presupposes an attempt happened and was classified as
+        non-fatal, so the cancel_async assertion (which fails today, 0
+        calls) is what genuinely pins this red.
+        """
+        user_id = mock_user.id
+        mock_user.stripe_subscription_id = "sub_123"
+        mock_user.subscription_status = SubscriptionStatus.ACTIVE
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        mock_stripe_client = MagicMock()
+        mock_stripe_client.v1.subscriptions.cancel_async = AsyncMock(
+            side_effect=stripe.InvalidRequestError(
+                "Subscription already canceled", param=None, code="resource_missing"
+            )
+        )
+
+        with (
+            patch(
+                "src.services.user_deletion_service.is_stripe_configured",
+                return_value=True,
+                create=True,
+            ),
+            patch(
+                "src.services.user_deletion_service.get_stripe_client",
+                return_value=mock_stripe_client,
+                create=True,
+            ),
+        ):
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        mock_stripe_client.v1.subscriptions.cancel_async.assert_awaited_once_with("sub_123")
+        assert result.success is True
+        service.user_repository.delete.assert_awaited_once_with(mock_user)
+        mock_db_session.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_stripe_api_failure_deletes_nothing(self, service, mock_db_session, mock_user):
+        """AC3/[idempotency]: any StripeError other than InvalidRequestError
+        (e.g. APIConnectionError) fails closed -- nothing local is
+        destroyed. Because the cancel precedes every mutation, the outer
+        handler's re-raise -> success=False leaves the (never-started)
+        rollback a genuine no-op.
+
+        RED today: nothing calls Stripe, so delete_account proceeds
+        normally and succeeds -- result.success is True today, not False.
+        """
+        user_id = mock_user.id
+        mock_user.stripe_subscription_id = "sub_123"
+        mock_user.subscription_status = SubscriptionStatus.ACTIVE
+
+        mock_reset_result = MagicMock()
+        service.reset_service.reset_all_progress = AsyncMock(return_value=mock_reset_result)
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        mock_stripe_client = MagicMock()
+        mock_stripe_client.v1.subscriptions.cancel_async = AsyncMock(
+            side_effect=stripe.APIConnectionError("Connection to Stripe failed")
+        )
+
+        with (
+            patch(
+                "src.services.user_deletion_service.is_stripe_configured",
+                return_value=True,
+                create=True,
+            ),
+            patch(
+                "src.services.user_deletion_service.get_stripe_client",
+                return_value=mock_stripe_client,
+                create=True,
+            ),
+            patch("src.services.user_deletion_service.sentry_sdk"),
+        ):
+            result = await service.delete_account(user_id, supabase_id=None)
+
+        assert result.success is False
+        service.reset_service.reset_all_progress.assert_not_awaited()
+        service.user_repository.delete.assert_not_awaited()
+        mock_db_session.commit.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_failed_cancel_logs_ids_flat(self, service, mock_user):
+        """AC4: the fail-closed logger.error must carry stripe_subscription_id
+        and stripe_customer_id as flat, queryable fields at record["extra"]
+        top level -- kwargs style, not nested under extra.extra. Reuses the
+        real-loguru-sink pattern from
+        test_supabase_failure_logs_error_with_flat_fields rather than
+        mocking the logger. Matches on field presence (not exact message
+        text, which isn't pinned by the architect's spec) to avoid
+        coupling to wording the executor hasn't written yet.
+
+        RED today: no such logger.error call exists at all (the failure
+        classification/log line don't exist yet), so no captured record
+        ever exposes these fields.
+        """
+        from loguru import logger as loguru_logger
+
+        user_id = mock_user.id
+        mock_user.stripe_subscription_id = "sub_123"
+        mock_user.stripe_customer_id = "cus_456"
+        mock_user.subscription_status = SubscriptionStatus.ACTIVE
+
+        service.reset_service.reset_all_progress = AsyncMock(return_value=MagicMock())
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        mock_stripe_client = MagicMock()
+        mock_stripe_client.v1.subscriptions.cancel_async = AsyncMock(
+            side_effect=stripe.APIConnectionError("Connection to Stripe failed")
+        )
+
+        captured: list[dict] = []
+        sink_id = loguru_logger.add(lambda m: captured.append(m.record), level="ERROR")
+
+        try:
+            with (
+                patch(
+                    "src.services.user_deletion_service.is_stripe_configured",
+                    return_value=True,
+                    create=True,
+                ),
+                patch(
+                    "src.services.user_deletion_service.get_stripe_client",
+                    return_value=mock_stripe_client,
+                    create=True,
+                ),
+                patch("src.services.user_deletion_service.sentry_sdk"),
+            ):
+                await service.delete_account(user_id, supabase_id=None)
+        finally:
+            loguru_logger.remove(sink_id)
+
+        stripe_error_records = [
+            r
+            for r in captured
+            if "stripe_subscription_id" in r["extra"] or "stripe_customer_id" in r["extra"]
+        ]
+        assert stripe_error_records, (
+            "expected a logger.error call exposing stripe_subscription_id/"
+            f"stripe_customer_id; captured extras were {[r['extra'] for r in captured]!r}"
+        )
+        record = stripe_error_records[0]
+        assert record["extra"].get("stripe_subscription_id") == "sub_123"
+        assert record["extra"].get("stripe_customer_id") == "cus_456"
+        assert "extra" not in record["extra"], (
+            "sub_*/cus_* fields must be flat kwargs, not nested under "
+            f"extra.extra; got {record['extra']!r}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_failed_cancel_logs_no_pii(self, service, mock_user):
+        """AC4: the fail-closed logger.error must contain no PII (email,
+        tokens, keys) alongside the Stripe ids.
+
+        RED today: same as above -- no such log line exists yet, so the
+        assertion that finds it fails first.
+        """
+        from loguru import logger as loguru_logger
+
+        user_id = mock_user.id
+        mock_user.stripe_subscription_id = "sub_123"
+        mock_user.stripe_customer_id = "cus_456"
+        mock_user.subscription_status = SubscriptionStatus.ACTIVE
+        mock_user.email = "should-not-be-logged@example.com"
+
+        service.reset_service.reset_all_progress = AsyncMock(return_value=MagicMock())
+        service.user_repository.get = AsyncMock(return_value=mock_user)
+        service.user_repository.delete = AsyncMock()
+
+        mock_stripe_client = MagicMock()
+        mock_stripe_client.v1.subscriptions.cancel_async = AsyncMock(
+            side_effect=stripe.APIConnectionError("Connection to Stripe failed")
+        )
+
+        captured: list[dict] = []
+        sink_id = loguru_logger.add(lambda m: captured.append(m.record), level="ERROR")
+
+        try:
+            with (
+                patch(
+                    "src.services.user_deletion_service.is_stripe_configured",
+                    return_value=True,
+                    create=True,
+                ),
+                patch(
+                    "src.services.user_deletion_service.get_stripe_client",
+                    return_value=mock_stripe_client,
+                    create=True,
+                ),
+                patch("src.services.user_deletion_service.sentry_sdk"),
+            ):
+                await service.delete_account(user_id, supabase_id=None)
+        finally:
+            loguru_logger.remove(sink_id)
+
+        stripe_error_records = [
+            r
+            for r in captured
+            if "stripe_subscription_id" in r["extra"] or "stripe_customer_id" in r["extra"]
+        ]
+        assert stripe_error_records, (
+            "expected a logger.error call exposing stripe_subscription_id/"
+            f"stripe_customer_id; captured extras were {[r['extra'] for r in captured]!r}"
+        )
+        record = stripe_error_records[0]
+        forbidden_keys = {"email", "token", "password", "jwt", "api_key", "secret"}
+        leaked = forbidden_keys & set(record["extra"].keys())
+        assert not leaked, f"PII/secret fields leaked into log extra: {leaked}"
+        assert "should-not-be-logged@example.com" not in str(record["extra"].values())
 
 
 @pytest.mark.unit
