@@ -267,8 +267,15 @@ class TestDeleteAccount:
         assert result.user_deleted is False
         assert result.error_message is not None
 
-        # User deletion should not be attempted since reset failed
-        service.user_repository.get.assert_not_awaited()
+        # PAY-05-01 [sequence-order]: the user fetch now happens BEFORE
+        # reset_all_progress, so `get` IS awaited here (reset is what fails).
+        # The protective intent of this test -- no destructive step fires
+        # once reset has failed -- is preserved by asserting `delete` never
+        # runs, and (the new invariant this subtask introduces) that the
+        # commit boundary never fires on a failed deletion either.
+        service.user_repository.get.assert_awaited_once_with(user_id)
+        service.user_repository.delete.assert_not_awaited()
+        service.db.commit.assert_not_awaited()
 
         # Sentry should capture the exception
         mock_sentry.capture_exception.assert_called_once()

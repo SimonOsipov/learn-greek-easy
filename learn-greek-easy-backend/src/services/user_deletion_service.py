@@ -54,7 +54,8 @@ class UserDeletionService:
     3. Supabase identity (if admin configured)
 
     Important notes:
-    - Does NOT commit the transaction - caller must commit
+    - Commits the transaction internally once local deletion succeeds,
+      before any external Supabase call - callers must NOT commit again
     - Supabase failures are logged but do not fail the operation
     - Local deletion proceeds even if Supabase deletion fails (per PRD)
 
@@ -62,8 +63,7 @@ class UserDeletionService:
         async with async_session() as db:
             service = UserDeletionService(db)
             result = await service.delete_account(user_id, supabase_id)
-            if result.success:
-                await db.commit()  # Caller commits the transaction
+            # db.commit() already called internally by delete_account()
     """
 
     def __init__(self, db: AsyncSession):
@@ -82,9 +82,14 @@ class UserDeletionService:
         """Delete user account completely.
 
         Order of operations (per PRD):
-        1. Delete all progress data via UserProgressResetService (includes cache)
-        2. Delete user record from database
-        3. Delete user from Supabase (if supabase_id provided and admin configured)
+        1. Fetch the user row and capture ids needed downstream (Supabase
+           identity here; Stripe ids in PAY-05-02, avatar_url in PAY-05-03)
+           before anything is destroyed
+        2. Delete all progress data via UserProgressResetService (includes cache)
+        3. Delete user record from database
+        4. Commit the transaction - local destruction is now durable
+        5. Delete user from Supabase (if supabase_id provided and admin
+           configured) - post-commit and non-fatal
 
         Note: Supabase deletion failure does NOT rollback local deletion.
         The user is considered deleted locally; orphaned Supabase identity
@@ -105,13 +110,34 @@ class UserDeletionService:
         )
 
         try:
-            # Step 1: Delete all progress data (reuses reset service)
-            # This also clears Redis cache for the user
             logger.info(
                 "Starting account deletion",
                 extra={"user_id": str(user_id), "has_supabase_id": supabase_id is not None},
             )
 
+            # Step 1: Fetch the user row first, before any destructive step,
+            # so ids still needed downstream (Supabase identity here; Stripe
+            # ids in PAY-05-02, avatar_url in PAY-05-03) are captured while
+            # the row still exists. [sequence-order]
+            user = await self.user_repository.get(user_id)
+            if user is None:
+                # User already deleted - this is an edge case but not an
+                # error. Nothing to destroy, but progress data may still be
+                # orphaned, so the reset still runs before returning.
+                logger.warning(
+                    "User not found during deletion (may already be deleted)",
+                    extra={"user_id": str(user_id)},
+                )
+                await self.reset_service.reset_all_progress(user_id)
+                result.progress_deleted = True
+                result.user_deleted = True
+                result.success = True
+                return result
+
+            avatar_url = user.avatar_url
+
+            # Step 2: Delete all progress data (reuses reset service)
+            # This also clears Redis cache for the user
             await self.reset_service.reset_all_progress(user_id)
             result.progress_deleted = True
             logger.debug(
@@ -119,24 +145,18 @@ class UserDeletionService:
                 extra={"user_id": str(user_id)},
             )
 
-            # Step 2: Delete user from database
-            user = await self.user_repository.get(user_id)
-            if user is None:
-                # User already deleted - this is an edge case but not an error
-                logger.warning(
-                    "User not found during deletion (may already be deleted)",
-                    extra={"user_id": str(user_id)},
-                )
-                result.user_deleted = True
-                result.success = True
-                return result
-
+            # Step 3: Delete user from database
             await self.user_repository.delete(user)
             result.user_deleted = True
             logger.info(
                 "User record deleted from database",
-                extra={"user_id": str(user_id)},
+                extra={"user_id": str(user_id), "has_avatar_url": avatar_url is not None},
             )
+
+            # Step 4: commit local destruction before any external side
+            # effect. The Supabase delete below cannot run before this
+            # commit lands. [commit-ownership]
+            await self.db.commit()
 
             # PERF-16-02: bust the identity cache for the deleted user. Without
             # this, a stale identity projection could let get_or_create_user's
@@ -144,7 +164,9 @@ class UserDeletionService:
             # supabase_id before the (now 900s) TTL expires.
             await get_cache().invalidate_user_identity(supabase_id, user_id)
 
-            # Step 3: Delete from Supabase (if applicable)
+            # Step 5: Delete from Supabase (if applicable) - post-commit,
+            # non-fatal: local deletion is already durable by this point.
+            # [post-commit-nonfatal]
             if supabase_id:
                 supabase_client = get_supabase_admin_client()
                 if supabase_client is None:
@@ -168,19 +190,22 @@ class UserDeletionService:
                             },
                         )
                     except SupabaseAdminError as e:
-                        # Log but don't fail - per PRD decision
+                        # Log but don't fail - per PRD decision. Local
+                        # deletion has already committed above.
                         result.supabase_deleted = False
                         result.error_message = (
                             "Account deleted locally but Supabase deletion failed. "
                             "Please contact support if you experience login issues."
                         )
+                        # [log-migration-carveout]: kwargs (not extra={...})
+                        # so supabase_id_prefix lands flat at record["extra"]
+                        # top level per docs/conventions.md's kwargs-logging
+                        # convention. Only this call site is migrated here.
                         logger.error(
                             "Supabase deletion failed after local deletion",
-                            extra={
-                                "user_id": str(user_id),
-                                "supabase_id_prefix": supabase_id[:8],
-                                "error": str(e),
-                            },
+                            user_id=str(user_id),
+                            supabase_id_prefix=supabase_id[:8],
+                            error=str(e),
                         )
                         sentry_sdk.capture_exception(e)
             else:
