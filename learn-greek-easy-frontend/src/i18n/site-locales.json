@@ -1,0 +1,7 @@
+{
+  "SITE_URL": "https://greeklish.eu",
+  "locales": [
+    { "locale": "en", "path": "/", "hreflang": "en", "ogLocale": "en_US", "xDefault": true },
+    { "locale": "ru", "path": "/ru/", "hreflang": "ru", "ogLocale": "ru_RU", "xDefault": false }
+  ]
+}
