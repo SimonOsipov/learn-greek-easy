@@ -148,3 +148,32 @@ describe('WEDGE-13-03 (AC-1): /ru SPA route', () => {
     expect(screen.queryByTestId('landing-page')).not.toBeInTheDocument();
   });
 });
+
+// -----------------------------------------------------------------------------
+// QA adversarial coverage (post-implementation) — the App-level counterpart to
+// `detectRouteLocale('/rutabaga') === null` (already unit-pinned in
+// siteLocales.test.ts:41). That test only proves the pure locale-detection
+// function rejects a string that merely STARTS WITH "ru" — it says nothing
+// about react-router's OWN, separate path-matching mechanism at the
+// `<Route path="/ru">` declaration in App.tsx. This closes that gap: a naive
+// route declaration (e.g. `path="/ru*"` or a future regression to prefix
+// matching) would make `/rutabaga` wrongly render the landing page instead of
+// NotFound, even though detectRouteLocale itself stayed correct.
+// -----------------------------------------------------------------------------
+describe('WEDGE-13-03 (QA): /ru route match is exact, not a string prefix', () => {
+  beforeEach(() => {
+    window.history.pushState({}, '', '/');
+    setUnauthenticated();
+    vi.clearAllMocks();
+  });
+
+  it('ru_route_does_not_prefix_match_rutabaga', async () => {
+    window.history.pushState({}, '', '/rutabaga');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('not-found-page')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('landing-page')).not.toBeInTheDocument();
+  });
+});

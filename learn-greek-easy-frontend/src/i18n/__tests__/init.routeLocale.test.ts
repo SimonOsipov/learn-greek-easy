@@ -249,4 +249,72 @@ describe('WEDGE-13-03: URL-locale precedence + route-scoped critical await', () 
 
     expect(localStorage.getItem('i18nextLng')).toBe('ru');
   });
+
+  // ---------------------------------------------------------------------------
+  // QA adversarial coverage (post-implementation) — scrutinizes the executor's
+  // deviation: the pre-existing `languageChanged` handler (Step 4) was wrapped
+  // in try/catch, which the brief described as unchanged. The executor's
+  // justification: i18next's `emit()` drops the promise an async listener
+  // returns, so a rejecting `loadLanguageBundle` inside this handler escapes as
+  // an UNHANDLED rejection — reachable in production via the real
+  // LanguageSwitcher (`src/contexts/LanguageContext.tsx:150`,
+  // `i18n.changeLanguage(lang)`): a user on `/ru/` whose critical bundle
+  // already failed (Step 3a) has `!hasResourceBundle('ru','common')` still
+  // true, so manually retrying via the header switcher hits this exact path.
+  //
+  // This spec reproduces that scenario directly (not just via manual mutation
+  // during review) and pins it as a permanent regression guard: a
+  // process-level `unhandledRejection` listener proves nothing escapes, and
+  // `warnSpy` proves the failure is still visible (logged), not silently
+  // dropped.
+  // ---------------------------------------------------------------------------
+  it('languageChanged_retry_after_critical_failure_does_not_unhandled_reject', async () => {
+    window.history.pushState({}, '', '/ru/');
+    vi.resetModules();
+
+    const warnSpy = vi.fn();
+    vi.doMock('@/lib/logger', () => ({
+      default: { warn: warnSpy, error: vi.fn(), info: vi.fn(), debug: vi.fn() },
+    }));
+    vi.doMock('@/i18n/bundle-loader', () => ({
+      loadLanguageBundle: () => Promise.reject(new Error('Simulated RU bundle network failure')),
+    }));
+
+    const freshInit = await import('../init');
+    freshInit.resetI18nInit();
+    const { default: freshI18n } = await import('i18next');
+
+    // The initial critical-bundle load (Step 3a) also fails here — 'common' is
+    // never populated, matching the precondition the executor's comment names.
+    await freshInit.initI18n();
+    expect(freshI18n.hasResourceBundle('ru', 'common')).toBe(false);
+
+    const unhandled: unknown[] = [];
+    const onUnhandledRejection = (reason: unknown) => unhandled.push(reason);
+    process.on('unhandledRejection', onUnhandledRejection);
+
+    try {
+      // Simulate the real caller: LanguageSwitcher -> useLanguage().changeLanguage
+      // -> i18n.changeLanguage('ru'), retrying while 'common' is still absent.
+      // This is what actually fires 'languageChanged' and re-enters the Step 4
+      // handler under test — awaited here only to let the retry's OWN promise
+      // settle; the handler's internal promise is what i18next's emit() drops.
+      await freshI18n.changeLanguage('ru').catch(() => {
+        // i18next's own changeLanguage() promise may itself reject/resolve
+        // independent of the listener; either way is fine here — the only
+        // thing this spec cares about is the listener's OWN internal rejection
+        // never escaping as unhandled.
+      });
+
+      await vi.waitFor(() => {
+        expect(warnSpy.mock.calls.some((call) => String(call[0]).includes('language change'))).toBe(
+          true
+        );
+      });
+    } finally {
+      process.off('unhandledRejection', onUnhandledRejection);
+    }
+
+    expect(unhandled).toEqual([]);
+  });
 });
