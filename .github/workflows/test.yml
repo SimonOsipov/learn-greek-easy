@@ -842,6 +842,7 @@ jobs:
           # Run tests in parallel with pytest-xdist
           # pytest-cov automatically combines coverage from all workers into .coverage
           poetry run pytest tests/ \
+            -m "not stripe_live" \
             -n auto \
             --dist loadscope \
             --cov=src \

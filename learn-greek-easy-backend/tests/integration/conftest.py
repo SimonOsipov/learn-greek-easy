@@ -24,14 +24,17 @@ from collections.abc import AsyncGenerator, Generator
 
 import pytest
 import pytest_asyncio
+import stripe
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
+from src.core.stripe import get_stripe_client
 from src.db.models import CultureDeck, Deck, DeckLevel, SubscriptionStatus, SubscriptionTier, User
 from src.main import app as fastapi_app
 from tests.factories.auth import UserFactory
 from tests.factories.base import set_factory_session
+from tests.integration.stripe_lane.guard import assert_stripe_test_key
 
 # =============================================================================
 # Factory Session Binding
@@ -673,6 +676,150 @@ async def localized_culture_deck(db_session: AsyncSession) -> CultureDeck:
 
 
 # =============================================================================
+# Stripe `stripe_live` Lane -- Guard + Hermetic Provisioning Fixtures (PAY-05-05)
+# =============================================================================
+#
+# These fixtures back the `stripe_live` marker's CI lane: tests that run
+# against a REAL Stripe test-mode account instead of a mock --
+# tests/integration/test_stripe_integration.py today, and PAY-05-06's
+# tests/integration/test_stripe_live_lane.py next. They live in THIS shared
+# conftest -- not a stripe_lane/-local one -- because both of those test
+# files are direct children of tests/integration/, not of a stripe_lane/
+# subdirectory: a directory-scoped conftest under stripe_lane/ would never
+# be discovered for them (pytest's fixture/autouse discovery only walks a
+# test file's own directory and its ancestors, never a sibling
+# subdirectory). Only tests/integration/stripe_lane/guard.py -- the pure,
+# fixture-independent credential check -- lives in that package; see its
+# docstring for the Mode-A-specified import path.
+#
+# Safety for the ~700 OTHER integration tests in this directory that carry
+# no `stripe_live` marker: the guard fixture below is marker-gated (a no-op
+# unless the test is marked `stripe_live`), and `stripe_live` tests are
+# additionally deselected from the main suite entirely via
+# `-m "not stripe_live"` in .github/workflows/test.yml. The hermetic
+# provisioning fixtures are not autouse at all -- session/function-scoped,
+# requested by name -- so they carry no risk to tests that don't request
+# them.
+
+
+@pytest.fixture(autouse=True)
+def stripe_live_guard(request: pytest.FixtureRequest) -> None:
+    """Hard-fail (never skip) `stripe_live` tests missing a valid test-mode key.
+
+    Marker-gated: a no-op for every test in this directory that isn't marked
+    `stripe_live`, so it cannot regress the existing integration suite,
+    which runs with no STRIPE_SECRET_KEY configured.
+    """
+    if request.node.get_closest_marker("stripe_live") is None:
+        return
+    assert_stripe_test_key()
+
+
+_STRIPE_LIVE_PRODUCT_ID = "pay05_ci_test_product"
+_STRIPE_LIVE_PRICE_LOOKUP_KEY = "pay05_ci_monthly_eur"
+
+
+@pytest_asyncio.fixture(scope="session")
+async def stripe_live_price() -> stripe.Price:
+    """Retrieve-or-create the stripe_live lane's product + price.
+
+    Both are addressed by stable, hardcoded identifiers (a fixed product id;
+    a fixed price `lookup_key`) rather than created fresh each run, so the
+    lane's footprint on the Stripe test-mode account is bounded at exactly
+    one product and one price across unlimited CI runs. This is the only
+    hygiene-respecting option, not an optimization: a price can never be
+    deleted via the Stripe API (only archived), and a product with an
+    attached price can't be deleted either -- confirmed against the
+    installed stripe==15.3.0 SDK (`PriceService` has no `delete`/
+    `delete_async`) and Stripe's own pricing docs.
+
+    A product's id IS settable at creation (`ProductCreateParams.id`), so it
+    can be fetched directly by that fixed id. A price's id is always
+    Stripe-assigned -- `PriceCreateParams` has no `id` field at all -- which
+    is exactly why `lookup_key` exists as the caller-chosen stable handle;
+    `prices.list_async` supports filtering by `lookup_keys`.
+    """
+    client = get_stripe_client()
+
+    try:
+        product = await client.v1.products.retrieve_async(_STRIPE_LIVE_PRODUCT_ID)
+    except stripe.InvalidRequestError:
+        product = await client.v1.products.create_async(
+            params={
+                "id": _STRIPE_LIVE_PRODUCT_ID,
+                "name": "PAY-05 CI Test Product",
+            }
+        )
+
+    existing_prices = await client.v1.prices.list_async(
+        params={"lookup_keys": [_STRIPE_LIVE_PRICE_LOOKUP_KEY]}
+    )
+    if existing_prices.data:
+        return existing_prices.data[0]
+
+    return await client.v1.prices.create_async(
+        params={
+            "product": product.id,
+            "currency": "eur",
+            "unit_amount": 999,
+            "recurring": {"interval": "month"},
+            "lookup_key": _STRIPE_LIVE_PRICE_LOOKUP_KEY,
+        }
+    )
+
+
+@pytest_asyncio.fixture
+async def stripe_test_subscription(
+    stripe_live_price: stripe.Price,
+) -> AsyncGenerator[stripe.Subscription, None]:
+    """Create a real, `active` Stripe test-mode subscription for a lane test.
+
+    Deliberately omits `payment_behavior` from `subscriptions.create_async`:
+    with `pm_card_visa` (an always-succeeding Stripe test card) already set
+    as the customer's default payment method, Stripe creates the
+    subscription directly in `active` status. Passing
+    `payment_behavior="default_incomplete"` would instead leave it
+    `incomplete`, silently invalidating any test that asserts against
+    `active` (confirmed against Stripe's own billing-testing docs during
+    PAY-05-05 Stage 1 validation).
+
+    Cleans up in `finally` by deleting the customer -- `CustomerService`'s
+    own (OpenAPI-generated) docstring confirms that deleting a customer
+    "immediately cancels any active subscriptions" on it, so no separate
+    subscription-cancel call is needed. This runs even if the test fails
+    mid-way, so a failure strands no subscription.
+
+    No `STRIPE_PRICE_ID`, product id, or `STRIPE_WEBHOOK_SECRET` is read
+    from the environment anywhere in this fixture chain -- the hardcoded
+    identifiers above are the lane's own stable handles, not env-configured
+    production values.
+    """
+    client = get_stripe_client()
+
+    customer = await client.v1.customers.create_async(
+        params={"description": "PAY-05 stripe_live lane test customer"}
+    )
+    try:
+        await client.v1.payment_methods.attach_async(
+            "pm_card_visa", params={"customer": customer.id}
+        )
+        await client.v1.customers.update_async(
+            customer.id,
+            params={"invoice_settings": {"default_payment_method": "pm_card_visa"}},
+        )
+
+        subscription = await client.v1.subscriptions.create_async(
+            params={
+                "customer": customer.id,
+                "items": [{"price": stripe_live_price.id}],
+            }
+        )
+        yield subscription
+    finally:
+        await client.v1.customers.delete_async(customer.id)
+
+
+# =============================================================================
 # Module Exports
 # =============================================================================
 
@@ -683,6 +830,10 @@ __all__ = [
     "real_commit_session",
     "real_commit_client",
     "real_commit_authed_client",
+    # stripe_live lane guard + hermetic provisioning fixtures (PAY-05-05)
+    "stripe_live_guard",
+    "stripe_live_price",
+    "stripe_test_subscription",
     # FastAPI app
     "app",
     # URL fixtures
