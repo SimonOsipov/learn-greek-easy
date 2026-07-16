@@ -302,7 +302,7 @@ handle @dotfileProbes {
 # SPA fallback - serve index.html for all other routes
 handle {
 	header /index.html Cache-Control "no-cache, must-revalidate"
-	try_files {path} /index.html
+	try_files {path} {path}/index.html /index.html
 	file_server
 }
 
