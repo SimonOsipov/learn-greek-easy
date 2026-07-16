@@ -2002,28 +2002,27 @@ class TestDeleteAccount:
         )
 
     @pytest.mark.asyncio
-    async def test_get_s3_service_raising_after_commit_flips_success_false(
+    async def test_get_s3_service_raising_after_commit_is_caught_and_success_stays_true(
         self, service, mock_db_session, mock_user
     ):
-        """Defensive-depth gap (not one of the 5 ACs): _delete_avatar_from_storage
-        has no try/except around its body, on the documented assumption
-        that S3Service.delete_object() never raises. That assumption holds
-        for delete_object itself (verified: only catches
-        BotoCoreError/ClientError, and the one uncaught AssertionError
-        path is unreachable given s3_configured's invariants) -- but
-        get_s3_service() is also called with no defensive wrapper. If
-        anything upstream of delete_object ever raised (a future refactor,
-        a monkeypatch, an unexpected import-time error), that exception
-        has nothing to catch it in delete_account and propagates to the
-        OUTER `except Exception` handler -- which reports total failure
-        even though self.db.commit() already ran. This pins TODAY's actual
-        behavior in that scenario: unlike the Supabase branch (its own
+        """PAY-05-03 fix: _delete_avatar_from_storage now wraps its body in
+        a try/except Exception, mirroring the Supabase branch (its own
         try/except SupabaseAdminError) and the cache-invalidation branch
-        (its own try/except Exception), the avatar-delete step has no such
-        safety net. Flagging for the executor/architect to consider a
-        defensive try/except here matching the sibling post-commit steps,
-        even though delete_object itself is not currently reachable to
-        raise.
+        (its own try/except Exception) -- the story's
+        [post-commit-nonfatal] decision requires steps 5-7 to never raise.
+        get_s3_service() has no guarantee against raising, so this
+        simulates an exception from it (a future refactor, a monkeypatch,
+        an unexpected import-time error) and asserts it is now caught and
+        logged rather than propagating to delete_account's outer
+        `except Exception`, which would otherwise report total failure
+        even though self.db.commit() already ran.
+
+        This is defense in depth, not a live bug: every relevant botocore
+        exception is already caught inside delete_object, and the
+        assert-not-None path in _get_client() is unreachable given
+        s3_configured's invariants -- get_s3_service() itself is not
+        currently reachable to raise either. This test pins the intended
+        behavior should that ever change.
         """
         user_id = mock_user.id
         mock_user.avatar_url = f"avatars/{user_id}/x.jpg"
@@ -2042,30 +2041,30 @@ class TestDeleteAccount:
         ):
             result = await service.delete_account(user_id, supabase_id=None)
 
-        # Documents today's fragility: the commit already ran, but success
-        # is reported False because nothing catches this exception.
+        # The commit already ran, and success stays True: the avatar-delete
+        # failure is logged, not fatal, per [post-commit-nonfatal].
         mock_db_session.commit.assert_awaited_once()
-        assert result.success is False, (
-            "today, an exception from get_s3_service() during the "
-            "post-commit avatar-delete step flips result.success to "
-            "False despite the local deletion already being committed -- "
-            "see this test's docstring for why this is a flagged gap, "
-            "not an AC violation"
+        assert result.success is True, (
+            "an exception from get_s3_service() during the post-commit "
+            "avatar-delete step must be caught and logged, not flip "
+            "result.success to False, since the local deletion is already "
+            "committed -- see this test's docstring"
         )
 
     @pytest.mark.asyncio
-    async def test_delete_object_raising_uncaught_exception_after_commit_flips_success_false(
+    async def test_delete_object_raising_uncaught_exception_after_commit_is_caught_and_success_stays_true(
         self, service, mock_db_session, mock_user
     ):
-        """Same defensive-depth gap as
-        test_get_s3_service_raising_after_commit_flips_success_false, but
-        injected at the delete_object call site instead of get_s3_service.
-        delete_object() itself is documented/verified to only ever raise
-        BotoCoreError/ClientError internally (both caught) -- this
-        simulates a class delete_object was never designed to catch (e.g.
-        a ValueError from a future signature change), proving the lack of
-        a local try/except in _delete_avatar_from_storage would let it
-        escape uncaught, exactly like the get_s3_service() injection case.
+        """Same fix as
+        test_get_s3_service_raising_after_commit_is_caught_and_success_stays_true,
+        but injected at the delete_object call site instead of
+        get_s3_service. delete_object() itself is documented/verified to
+        only ever raise BotoCoreError/ClientError internally (both
+        caught) -- this simulates a class delete_object was never
+        designed to catch (e.g. a ValueError from a future signature
+        change), proving the try/except added to
+        _delete_avatar_from_storage now catches it too, exactly like the
+        get_s3_service() injection case.
         """
         user_id = mock_user.id
         mock_user.avatar_url = f"avatars/{user_id}/x.jpg"
@@ -2090,10 +2089,11 @@ class TestDeleteAccount:
             result = await service.delete_account(user_id, supabase_id=None)
 
         mock_db_session.commit.assert_awaited_once()
-        assert result.success is False, (
-            "today, a delete_object exception outside the documented "
-            "BotoCoreError/ClientError family flips result.success to "
-            "False despite the local deletion already being committed"
+        assert result.success is True, (
+            "a delete_object exception outside the documented "
+            "BotoCoreError/ClientError family must be caught and logged, "
+            "not flip result.success to False, since the local deletion "
+            "is already committed"
         )
 
 

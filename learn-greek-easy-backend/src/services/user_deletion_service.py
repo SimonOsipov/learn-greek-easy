@@ -151,7 +151,12 @@ class UserDeletionService:
         Mirrors DELETE /auth/avatar (src/api/v1/auth.py:562-566), reusing
         the same S3Service.delete_object helper. That helper never raises -
         it only catches BotoCoreError/ClientError internally and self-logs -
-        so no try/except is needed here, just a check on the bool return.
+        but get_s3_service() itself has no such guarantee. The outer
+        try/except below is defense in depth against anything upstream of
+        delete_object raising (a future refactor, an unexpected init
+        error): it must never flip result.success for an already-committed
+        delete, matching the Supabase and cache-invalidation siblings in
+        delete_account(). [post-commit-nonfatal]
 
         Args:
             avatar_url: The S3 key captured before the user row was
@@ -161,16 +166,29 @@ class UserDeletionService:
         if not avatar_url:
             return
 
-        s3_service = get_s3_service()
-        deleted = await asyncio.to_thread(s3_service.delete_object, avatar_url)
-        if not deleted:
+        try:
+            s3_service = get_s3_service()
+            deleted = await asyncio.to_thread(s3_service.delete_object, avatar_url)
+            if not deleted:
+                # [log-migration-carveout]: kwargs (not extra={...}) so user_id
+                # lands flat at record["extra"] top level per
+                # docs/conventions.md's kwargs-logging convention.
+                logger.error(
+                    "Failed to delete user's avatar from S3 after account deletion",
+                    user_id=str(user_id),
+                )
+        except Exception as e:
             # [log-migration-carveout]: kwargs (not extra={...}) so user_id
             # lands flat at record["extra"] top level per
-            # docs/conventions.md's kwargs-logging convention.
-            logger.error(
-                "Failed to delete user's avatar from S3 after account deletion",
+            # docs/conventions.md's kwargs-logging convention. Mirrors the
+            # cache-invalidation branch above (:281-292): log + capture,
+            # never re-raise, since local deletion is already committed.
+            logger.warning(
+                "Avatar deletion from S3 failed after local deletion",
                 user_id=str(user_id),
+                error=str(e),
             )
+            sentry_sdk.capture_exception(e)
 
     async def delete_account(
         self, user_id: UUID, supabase_id: Optional[str] = None
