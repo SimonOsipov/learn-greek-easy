@@ -11,15 +11,13 @@ All other layers (routing, service, repositories, DB) are real.
 
 import json
 import time
-from collections.abc import AsyncGenerator
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
-import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import (
     SubscriptionStatus,
@@ -34,95 +32,16 @@ WEBHOOK_URL = "/api/v1/webhooks/stripe"
 
 
 # =============================================================================
-# Real get_db Commit/Rollback Boundary Fixtures (OPS-04-03)
+# real_commit_session / real_commit_client (OPS-04-03)
 # =============================================================================
 #
-# The shared `client` fixture (tests/conftest.py:376-401) overrides get_db
-# with a bare `yield db_session` -- it never calls commit()/rollback(), so it
-# cannot exercise the production get_db boundary (src/db/dependencies.py)
-# where a matched-handler failure must roll back BOTH the user mutation and
-# the webhook_events row. Both `db_session` and `db_session_with_savepoint`
-# (tests/fixtures/database.py) use a single `connection.begin_nested()` with
-# no restart mechanism, so a REAL `session.rollback()` inside a request would
-# roll back the seeded fixture data too (or leave the savepoint consumed).
-#
-# The fixtures below implement the SQLAlchemy 2.0 canonical recipe for
-# "Joining a Session into an External Transaction" (verified against
-# Context7 / docs.sqlalchemy.org/en/20/orm/session_transaction.html): bind a
-# Session/AsyncSession to a connection that already has an open,
-# never-committed outer transaction, using
-# join_transaction_mode="create_savepoint". This supersedes the older
-# pre-1.4 recipe of a manual
-# `@event.listens_for(session.sync_session, "after_transaction_end")`
-# listener that re-opens a SAVEPOINT by hand -- join_transaction_mode builds
-# the same "restart savepoint on every autobegin" behavior directly into the
-# Session (confirmed via `AsyncSession.__init__`'s `**kw` passthrough to the
-# sync `Session.__init__`, which exposes `join_transaction_mode` in
-# SQLAlchemy 2.0.51, the version pinned in this repo), so code under test
-# can call commit()/rollback() any number of times while the connection's
-# outer transaction still isolates everything from the real database.
-
-
-@pytest_asyncio.fixture
-async def real_commit_session(db_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
-    """AsyncSession bound to a connection with join_transaction_mode="create_savepoint".
-
-    Unlike db_session/db_session_with_savepoint (single begin_nested(), no
-    restart), every session.commit()/rollback() here only ends the CURRENT
-    SAVEPOINT -- the next operation on the session autobegins a FRESH
-    SAVEPOINT nested under the same still-open, still-uncommitted outer
-    transaction. Rolling back that outer transaction at teardown discards
-    everything (no durable writes; xdist/NullPool-safe, same guarantee as
-    db_session).
-
-    Callers that seed data with this session and then drive an HTTP request
-    through it (see real_commit_client) MUST commit() after seeding --
-    otherwise the seed insert shares the SAME savepoint as the request's own
-    mutations, and a real rollback() inside the request would undo the seed
-    too (exactly the trap this fixture exists to avoid).
-    """
-    connection = await db_engine.connect()
-    transaction = await connection.begin()  # outer transaction, NEVER committed
-
-    session = AsyncSession(
-        bind=connection,
-        expire_on_commit=False,
-        join_transaction_mode="create_savepoint",
-    )
-
-    try:
-        yield session
-    finally:
-        await session.close()
-        await transaction.rollback()
-        await connection.close()
-
-
-@pytest_asyncio.fixture
-async def real_commit_client(
-    real_commit_session: AsyncSession,
-) -> AsyncGenerator[AsyncClient, None]:
-    """AsyncClient wired to a get_db override that mirrors production
-    src/db/dependencies.py::get_db EXACTLY: commit() on success, rollback()
-    on any exception. This is what lets the failure-path test below observe
-    the real commit/rollback boundary -- the shared `client` fixture's bare
-    `yield db_session` override never calls either.
-    """
-    from src.db.dependencies import get_db
-    from src.main import app
-
-    async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
-        try:
-            yield real_commit_session
-            await real_commit_session.commit()
-        except Exception:
-            await real_commit_session.rollback()
-            raise
-
-    app.dependency_overrides[get_db] = override_get_db
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        yield ac
-    app.dependency_overrides.clear()
+# PAY-05-04: these two fixtures used to be defined here. They now live in
+# tests/integration/conftest.py (alongside real_commit_authed_client, which
+# builds on top of them) so other integration test modules can use them too
+# -- see that file for the full docstrings and the SQLAlchemy
+# join_transaction_mode rationale. Fixture resolution is name-based, so the
+# tests below need no changes: pytest finds real_commit_client/
+# real_commit_session in conftest.py automatically.
 
 
 @pytest.mark.integration
