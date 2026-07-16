@@ -1,15 +1,34 @@
 /**
  * Async i18n initialization module.
  *
- * English resources are bundled synchronously — i18n.init() resolves without
- * waiting for any non-English bundle, so React mounts and first paint happen
- * immediately for all users.
+ * English resources are bundled synchronously. There are two initialization
+ * paths, and which one runs is decided by the URL:
  *
- * For non-English (RU) users, the locale bundle is loaded fire-and-forget
- * AFTER i18n.init() resolves. Once the bundle arrives, addResourceBundle()
- * injects it into the live i18next store; react-i18next's bindI18nStore:'added
- * removed' triggers a re-render so RU strings swap in post-paint with no flash
- * of untranslated content beyond the initial EN render.
+ * 1. NO locale prefix (`/`, `/login`, …) — unchanged. i18n.init() resolves
+ *    without waiting for any non-English bundle, so React mounts and first
+ *    paint happen immediately. For a non-English (RU) user the locale bundle
+ *    is loaded fire-and-forget AFTER i18n.init() resolves; once it arrives,
+ *    addResourceBundle() injects it into the live i18next store and
+ *    react-i18next's bindI18nStore:'added removed' triggers a re-render, so RU
+ *    strings swap in post-paint with no flash of untranslated content beyond
+ *    the initial EN render.
+ *
+ * 2. A locale-prefixed URL (`/ru/`) — the language comes from the URL itself,
+ *    which outranks localStorage and navigator. Here an EN first paint would
+ *    be a visible defect: the statically-served /ru/ document already carries
+ *    an RU <html lang> and RU <head>, so the booted SPA must agree with it.
+ *    The await is therefore scoped on TWO axes:
+ *      - route: only this URL-prefix path awaits anything; `/` never does.
+ *      - namespace: only the CRITICAL trio (common/auth/landing) — the same
+ *        trio PERF-24-01 established for English — is awaited. The other 14 RU
+ *        namespaces stay fire-and-forget post-resolution.
+ *    Both axes are load-bearing: RU's 17 namespaces total 278,139 B
+ *    (admin.json alone 104,418 B), and await initI18n() gates
+ *    createRoot().render() in main.tsx — so awaiting the full bundle would
+ *    block first paint on ~210 KB the landing page never reads, which is the
+ *    PERF-24/25 anti-pattern this path exists to avoid. The RU trio is
+ *    68,321 B vs EN's 47,388 B: +44% from Cyrillic UTF-8 expansion — the same
+ *    tier, not the same byte count.
  *
  * @module i18n/init
  */
@@ -19,6 +38,7 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 import { initReactI18next } from 'react-i18next';
 
 import log from '@/lib/logger';
+import { detectRouteLocale } from '@/lib/siteLocales';
 
 import { loadLanguageBundle } from './bundle-loader';
 import {
@@ -53,13 +73,25 @@ const englishResources = {
 };
 
 /**
- * Detect the initial language from localStorage or navigator.
+ * Detect the initial language from the URL, localStorage, or navigator.
  * This runs BEFORE i18n.init() to pre-load resources.
+ *
+ * The URL locale prefix wins over BOTH localStorage and navigator: a Russian
+ * searcher arriving on /ru/ from a RU SERP with a stale i18nextLng='en' must
+ * still get RU. Otherwise /ru/ would serve EN to that user while Googlebot
+ * (which has no localStorage) sees RU — invalidating the hreflang pair.
  *
  * @returns The detected language code, normalized to supported languages
  */
 function detectInitialLanguage(): SupportedLanguage {
-  // Check localStorage first (user's saved preference)
+  // Check the URL locale prefix first — it describes the document being
+  // requested, so it outranks any stored or browser preference.
+  const routeLang = detectRouteLocale(window.location.pathname);
+  if (routeLang) {
+    return routeLang;
+  }
+
+  // Check localStorage next (user's saved preference)
   const storedLang = localStorage.getItem(I18N_STORAGE_KEY);
   if (storedLang && SUPPORTED_LANGUAGES.includes(storedLang as SupportedLanguage)) {
     return storedLang as SupportedLanguage;
@@ -76,22 +108,55 @@ function detectInitialLanguage(): SupportedLanguage {
 }
 
 /**
+ * Inject a loaded locale bundle into the live i18next store.
+ *
+ * bindI18nStore:'added removed' (see init config) makes react-i18next re-render
+ * once the namespaces land, so strings swap in with no user action.
+ */
+function addBundleNamespaces(
+  lang: SupportedLanguage,
+  bundle: Record<string, Record<string, unknown>> | undefined
+): void {
+  const langBundle = bundle?.[lang];
+  if (!langBundle) {
+    return;
+  }
+  Object.entries(langBundle).forEach(([ns, translations]) => {
+    i18n.addResourceBundle(lang, ns, translations, true, true);
+  });
+}
+
+/**
  * Track initialization state to prevent double-init.
  */
 let initialized = false;
 
 /**
- * Initialize i18n with fire-and-forget non-English locale loading.
+ * Initialize i18n, awaiting a non-English bundle only on a locale-prefixed URL.
  *
  * This function:
- * 1. Detects the initial language from localStorage/navigator BEFORE init
+ * 1. Detects the initial language from the URL prefix / localStorage /
+ *    navigator BEFORE init (the URL wins — see detectInitialLanguage)
  * 2. Initializes i18n immediately with synchronous English resources only
- * 3. If non-English detected, fires the bundle load post-init (fire-and-forget)
- *    so first paint is never blocked; RU strings swap in after the bundle arrives
+ * 3. Loads the detected non-English bundle by one of two paths:
+ *    - NO locale prefix (`/`): fire-and-forget post-init, so first paint is
+ *      never blocked; RU strings swap in after the bundle arrives. UNCHANGED.
+ *    - locale prefix (`/ru/`): AWAITS the critical trio (common/auth/landing)
+ *      so the SPA never paints EN over the statically-served RU document, then
+ *      fires the other 14 namespaces post-resolution. A failure here is
+ *      swallowed (log.warn) and init still resolves onto the EN fallback —
+ *      main.tsx gates createRoot().render() on this promise, so a throw would
+ *      mean a blank page.
  * 4. Sets up languageChanged event handler for runtime language switches
  *
- * @returns Promise that resolves when i18n is fully initialized (NOT when non-EN
- *          bundle has loaded — that happens asynchronously after this resolves)
+ * Note this reads window.location.pathname internally rather than taking it as
+ * an argument, so no caller changes.
+ *
+ * @returns Promise that resolves when i18n is fully initialized. On `/` this is
+ *          NOT when the non-EN bundle has loaded (that happens asynchronously
+ *          after this resolves); on a locale-prefixed URL the critical trio IS
+ *          in the store by the time it resolves, but the other 14 namespaces
+ *          are still in flight.
  */
 export async function initI18n(): Promise<typeof i18n> {
   if (initialized) {
@@ -100,6 +165,12 @@ export async function initI18n(): Promise<typeof i18n> {
 
   // Step 1: Detect initial language BEFORE i18n.init()
   const detectedLang = detectInitialLanguage();
+
+  // Did the language come from the URL locale prefix? detectRouteLocale is a
+  // pure function of the pathname, so asking it again here is free — and it
+  // keeps detectInitialLanguage()'s SupportedLanguage return type intact.
+  // Only this path awaits a bundle below.
+  const routeLocale = detectRouteLocale(window.location.pathname);
 
   // Step 2: Initialize i18n with synchronous English resources only.
   // Non-English bundles are NOT awaited here — they are loaded fire-and-forget
@@ -156,12 +227,37 @@ export async function initI18n(): Promise<typeof i18n> {
       missingKeyHandler: makeMissingKeyHandler(import.meta.env.PROD ? 'report' : 'warn'),
     });
 
-  // Step 3: Fire-and-forget non-English bundle load.
-  // i18next does NOT emit 'languageChanged' for the initial lng passed to
-  // init(), so we must populate the bundle explicitly here.
-  // bindI18nStore:'added removed' (above) ensures react-i18next re-renders
-  // components when the bundle arrives via addResourceBundle().
-  if (detectedLang !== DEFAULT_LANGUAGE) {
+  // Step 3: Load the non-English bundle. i18next does NOT emit
+  // 'languageChanged' for the initial lng passed to init(), so we must populate
+  // the bundle explicitly here. bindI18nStore:'added removed' (above) ensures
+  // react-i18next re-renders components when it arrives via addResourceBundle().
+  //
+  // Step 3a: URL-locale path (`/ru/`) — await ONLY the critical trio, so the
+  // SPA agrees with the statically-served RU document at first paint without
+  // blocking on the 14 namespaces the landing page never reads.
+  if (routeLocale && detectedLang !== DEFAULT_LANGUAGE) {
+    try {
+      addBundleNamespaces(detectedLang, await loadLanguageBundle(detectedLang, 'critical'));
+    } catch (err: unknown) {
+      // Critical bundle failed — fall back to the synchronous EN resources.
+      // main.tsx gates createRoot().render() on this promise, so this MUST NOT
+      // rethrow: a rejection here is a blank page, not a language regression.
+      log.warn('[i18n] Failed to load critical route-locale bundle, falling back to EN:', err);
+    }
+
+    // The other 14 namespaces: fire-and-forget post-resolution, never
+    // paint-blocking — mirroring loadDeferredEnglishNamespaces() below.
+    void loadLanguageBundle(detectedLang, 'deferred')
+      .then((bundle) => {
+        addBundleNamespaces(detectedLang, bundle);
+      })
+      .catch((err: unknown) => {
+        // Post-auth namespaces fall back to the raw key path until a reload
+        // retries. Graceful degradation; do NOT let the rejection propagate.
+        log.warn('[i18n] Failed to load deferred route-locale namespaces:', err);
+      });
+  } else if (detectedLang !== DEFAULT_LANGUAGE) {
+    // Step 3b: no locale prefix (`/`) — fire-and-forget, unchanged.
     void loadLanguageBundle(detectedLang)
       .then((bundle) => {
         if (bundle) {
@@ -186,14 +282,24 @@ export async function initI18n(): Promise<typeof i18n> {
   // that initial load is handled by the fire-and-forget in Step 3.
   i18n.on('languageChanged', async (lng: string) => {
     if (lng === 'ru' && !i18n.hasResourceBundle(lng, 'common')) {
-      const bundle = await loadLanguageBundle(lng as SupportedLanguage);
-      if (bundle) {
-        const langBundle = bundle[lng];
-        if (langBundle) {
-          Object.entries(langBundle).forEach(([ns, translations]) => {
-            i18n.addResourceBundle(lng, ns, translations, true, true);
-          });
+      // AC-6: i18next's emit() drops the promise this async handler returns, so
+      // a rejecting loadLanguageBundle here escapes as an UNHANDLED rejection.
+      // Reachable on the /ru/ entry: if the critical bundle already failed
+      // (Step 3a logged and fell back to EN), the guard above is true, and any
+      // later changeLanguage('ru') retries the still-broken load. Swallow it —
+      // the user simply stays on the EN fallback.
+      try {
+        const bundle = await loadLanguageBundle(lng as SupportedLanguage);
+        if (bundle) {
+          const langBundle = bundle[lng];
+          if (langBundle) {
+            Object.entries(langBundle).forEach(([ns, translations]) => {
+              i18n.addResourceBundle(lng, ns, translations, true, true);
+            });
+          }
         }
+      } catch (err: unknown) {
+        log.warn('[i18n] Failed to load non-English bundle on language change:', err);
       }
     }
   });
