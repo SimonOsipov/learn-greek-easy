@@ -162,7 +162,24 @@ class UserDeletionService:
             # this, a stale identity projection could let get_or_create_user's
             # cache-hit path re-provision a new user row for the same
             # supabase_id before the (now 900s) TTL expires.
-            await get_cache().invalidate_user_identity(supabase_id, user_id)
+            #
+            # Post-commit, non-fatal per [post-commit-nonfatal]: local
+            # deletion is already durable by this point, so a cache failure
+            # (e.g. Redis down) must be logged and swallowed here rather than
+            # falling through to the outer except and flipping
+            # result.success to False for an already-committed delete.
+            try:
+                await get_cache().invalidate_user_identity(supabase_id, user_id)
+            except Exception as e:
+                # [log-migration-carveout]: kwargs (not extra={...}) so
+                # user_id lands flat at record["extra"] top level per
+                # docs/conventions.md's kwargs-logging convention.
+                logger.warning(
+                    "Cache invalidation failed after local deletion",
+                    user_id=str(user_id),
+                    error=str(e),
+                )
+                sentry_sdk.capture_exception(e)
 
             # Step 5: Delete from Supabase (if applicable) - post-commit,
             # non-fatal: local deletion is already durable by this point.
