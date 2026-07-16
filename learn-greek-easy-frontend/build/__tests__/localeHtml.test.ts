@@ -527,3 +527,135 @@ describe('robots.txt', () => {
     expect(content).not.toContain('Disallow: /');
   });
 });
+
+// =========================================================================================
+// QA adversarial / edge / negative coverage (RALPH Mode B — post-implementation).
+// Added by QA, NOT part of the executor's original 16 AC specs above. Each test here is
+// verified to (a) pass against the current build/localeHtml.ts and (b) fail against a
+// concrete, plausible regression — see the QA verification report for the mutation used.
+// =========================================================================================
+
+// --- assertAttrSafe is live, untested code (executor's own escalation) -------------------
+//
+// build/localeHtml.ts deliberately does NOT escape attribute values on write (escaping
+// would double-escape the twitter:image mirror of og:image on re-application and break
+// idempotency for any URL carrying a query string — see the docblock on assertAttrSafe).
+// Instead it throws loudly if a value routed through upsertMeta/upsertCanonical/
+// upsertHreflang contains a `"`, which would otherwise produce a malformed attribute
+// (e.g. `content="foo"bar"` — silently truncating the attribute and leaking `bar"` as raw
+// markup into <head>). seo copy is translator-editable JSON, so this is a real input.
+
+describe('buildLocaleHtml — assertAttrSafe guard on quote-bearing values (untested by the original 16 specs)', () => {
+  it('upsertMeta_throws_on_quote_in_name_attr_value', () => {
+    // Exercises the upsertMeta('name', ...) path (meta[name=description]).
+    const seoWithQuote: SeoCopy = {
+      ...RU_SEO,
+      description: 'Плохое значение с " кавычкой',
+    };
+    expect(() => buildLocaleHtml(BUILT_INDEX_HTML, 'ru', REGISTRY, seoWithQuote)).toThrow(
+      /contains a double quote/
+    );
+  });
+
+  it('upsertMeta_throws_on_quote_in_property_attr_value', () => {
+    // Exercises the upsertMeta('property', ...) path (og:title / og:description / og:url /
+    // og:locale all share the same guard — og:title is the first property-attr call site).
+    const seoWithQuote: SeoCopy = {
+      ...RU_SEO,
+      ogTitle: 'Плохой " заголовок',
+    };
+    expect(() => buildLocaleHtml(BUILT_INDEX_HTML, 'ru', REGISTRY, seoWithQuote)).toThrow(
+      /contains a double quote/
+    );
+  });
+
+  it('upsertCanonical_and_upsertHreflang_throw_on_quote_in_registry_site_url', () => {
+    // A corrupted registry SITE_URL flows into og:url/twitter:url/canonical/every hreflang
+    // href — the guard fires on the very first one it reaches, before any malformed
+    // attribute is ever written to the document.
+    const badRegistry: SiteRegistry = { ...REGISTRY, SITE_URL: 'https://greeklish".eu' };
+    expect(() => buildLocaleHtml(BUILT_INDEX_HTML, 'en', badRegistry, EN_SEO)).toThrow(
+      /contains a double quote/
+    );
+  });
+});
+
+// --- Unknown registry locale (untested by the original 16 specs) -------------------------
+
+describe('buildLocaleHtml — unknown locale (untested by the original 16 specs)', () => {
+  it('buildLocaleHtml_throws_on_unknown_locale', () => {
+    expect(() => buildLocaleHtml(BUILT_INDEX_HTML, 'fr', REGISTRY, EN_SEO)).toThrow(
+      /not in the registry/
+    );
+  });
+});
+
+// --- Missing expected tag: does buildLocaleHtml fail loudly or emit a broken doc? --------
+
+describe('buildLocaleHtml — html missing an expected <title> tag (untested edge case)', () => {
+  it('buildLocaleHtml_title_missing_is_a_silent_no_op_not_a_throw', () => {
+    // Documents ACTUAL behavior, not a claim that it is ideal: `<title>` is rewritten via a
+    // plain regex replace, NOT routed through the upsertTag/insert-if-absent helper that
+    // every other tag uses. If the built HTML is ever missing a <title> (e.g. a future
+    // index.html refactor), buildLocaleHtml does NOT throw and does NOT insert one — the
+    // derived document silently ships with no <title> at all. This is an open finding (see
+    // QA report), not fixed here — QA does not implement fixes. Pinning current behavior so
+    // any future change to it (silent insert, or a throw) is a deliberate, visible decision.
+    const htmlWithoutTitle = BUILT_INDEX_HTML.replace(/<title>[\s\S]*?<\/title>\n\s*/, '');
+    expect(htmlWithoutTitle).not.toContain('<title>');
+
+    expect(() => buildLocaleHtml(htmlWithoutTitle, 'ru', REGISTRY, RU_SEO)).not.toThrow();
+
+    const out = buildLocaleHtml(htmlWithoutTitle, 'ru', REGISTRY, RU_SEO);
+    expect(out).not.toContain('<title>');
+    expect(out).not.toContain(RU_SEO.title);
+  });
+});
+
+// --- SeoCopy missing a key at runtime: buildLocaleHtml trusts the TS interface, but the ---
+// --- real caller (vite.config.ts) JSON.parse's untyped landing.json content with no ------
+// --- runtime validation -------------------------------------------------------------------
+
+describe('buildLocaleHtml — seo copy missing a key at runtime (untested edge case)', () => {
+  it('buildLocaleHtml_missing_seo_title_key_emits_literal_undefined_no_throw', () => {
+    // Documents a real, unguarded footgun: vite.config.ts reads SeoCopy via
+    // `JSON.parse(readFileSync(...))` with no runtime schema check — the TS interface only
+    // protects call sites that construct the object in TS, not JSON content. If a
+    // translator/content edit ever drops or misspells `seo.title` in
+    // src/i18n/locales/<locale>/landing.json, this silently emits the literal string
+    // "undefined" into <title> at build time instead of failing loudly. Open finding (see
+    // QA report) — not fixed here.
+    const brokenSeo = { ...RU_SEO, title: undefined } as unknown as SeoCopy;
+    const out = buildLocaleHtml(BUILT_INDEX_HTML, 'ru', REGISTRY, brokenSeo);
+    expect(out).toContain('<title>undefined</title>');
+  });
+});
+
+// --- buildSitemap genericity: does it truly scale with the registry, or is 2 hardcoded? ---
+
+describe('buildSitemap — genericity across N locales (untested by the original 16 specs)', () => {
+  it('buildSitemap_handles_three_locales_generically', () => {
+    const threeLocaleRegistry: SiteRegistry = {
+      SITE_URL: 'https://greeklish.eu',
+      locales: [
+        { locale: 'en', path: '/', hreflang: 'en', ogLocale: 'en_US', xDefault: true },
+        { locale: 'ru', path: '/ru/', hreflang: 'ru', ogLocale: 'ru_RU', xDefault: false },
+        { locale: 'el', path: '/el/', hreflang: 'el', ogLocale: 'el_GR', xDefault: false },
+      ],
+    };
+
+    const xml = buildSitemap(threeLocaleRegistry);
+
+    const locMatches = xml.match(/<loc>([^<]*)<\/loc>/g) ?? [];
+    expect(locMatches).toHaveLength(3);
+    expect(xml).toContain('<loc>https://greeklish.eu/el/</loc>');
+
+    const urlBlocks = xml.match(/<url>[\s\S]*?<\/url>/g) ?? [];
+    expect(urlBlocks).toHaveLength(3);
+    for (const block of urlBlocks) {
+      const hreflangMap = extractHreflangMap(block);
+      expect(Object.keys(hreflangMap).sort()).toEqual(['el', 'en', 'ru', 'x-default']);
+      expect(hreflangMap.el).toEqual(['https://greeklish.eu/el/']);
+    }
+  });
+});
