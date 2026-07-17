@@ -20,16 +20,21 @@ Usage:
         assert response.status_code == 200
 """
 
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 
 import pytest
 import pytest_asyncio
+import stripe
 from fastapi import FastAPI
-from sqlalchemy.ext.asyncio import AsyncSession
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
-from src.db.models import CultureDeck, Deck, DeckLevel
+from src.core.stripe import get_stripe_client
+from src.db.models import CultureDeck, Deck, DeckLevel, SubscriptionStatus, SubscriptionTier, User
 from src.main import app as fastapi_app
+from tests.factories.auth import UserFactory
 from tests.factories.base import set_factory_session
+from tests.integration.stripe_lane.guard import assert_stripe_test_key
 
 # =============================================================================
 # Factory Session Binding
@@ -54,6 +59,170 @@ def bind_factory_session(db_session: AsyncSession) -> Generator[None, None, None
     set_factory_session(db_session)
     yield
     set_factory_session(None)
+
+
+# =============================================================================
+# Real get_db Commit/Rollback Boundary Fixtures (OPS-04-03, promoted from
+# test_webhook_integration.py by PAY-05-04 so other integration modules --
+# starting with test_user_deletion_integration.py -- can share them)
+# =============================================================================
+#
+# The shared `client` fixture (tests/conftest.py:376-401) overrides get_db
+# with a bare `yield db_session` -- it never calls commit()/rollback(), so it
+# cannot exercise the production get_db boundary (src/db/dependencies.py)
+# where a matched-handler failure must roll back BOTH the user mutation and
+# the webhook_events row. Both `db_session` and `db_session_with_savepoint`
+# (tests/fixtures/database.py) use a single `connection.begin_nested()` with
+# no restart mechanism, so a REAL `session.rollback()` inside a request would
+# roll back the seeded fixture data too (or leave the savepoint consumed).
+#
+# The fixtures below implement the SQLAlchemy 2.0 canonical recipe for
+# "Joining a Session into an External Transaction" (verified against
+# Context7 / docs.sqlalchemy.org/en/20/orm/session_transaction.html): bind a
+# Session/AsyncSession to a connection that already has an open,
+# never-committed outer transaction, using
+# join_transaction_mode="create_savepoint". This supersedes the older
+# pre-1.4 recipe of a manual
+# `@event.listens_for(session.sync_session, "after_transaction_end")`
+# listener that re-opens a SAVEPOINT by hand -- join_transaction_mode builds
+# the same "restart savepoint on every autobegin" behavior directly into the
+# Session (confirmed via `AsyncSession.__init__`'s `**kw` passthrough to the
+# sync `Session.__init__`, which exposes `join_transaction_mode` in
+# SQLAlchemy 2.0.51, the version pinned in this repo), so code under test
+# can call commit()/rollback() any number of times while the connection's
+# outer transaction still isolates everything from the real database.
+
+
+@pytest_asyncio.fixture
+async def real_commit_session(db_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
+    """AsyncSession bound to a connection with join_transaction_mode="create_savepoint".
+
+    Unlike db_session/db_session_with_savepoint (single begin_nested(), no
+    restart), every session.commit()/rollback() here only ends the CURRENT
+    SAVEPOINT -- the next operation on the session autobegins a FRESH
+    SAVEPOINT nested under the same still-open, still-uncommitted outer
+    transaction. Rolling back that outer transaction at teardown discards
+    everything (no durable writes; xdist/NullPool-safe, same guarantee as
+    db_session).
+
+    Callers that seed data with this session and then drive an HTTP request
+    through it (see real_commit_client) MUST commit() after seeding --
+    otherwise the seed insert shares the SAME savepoint as the request's own
+    mutations, and a real rollback() inside the request would undo the seed
+    too (exactly the trap this fixture exists to avoid).
+    """
+    connection = await db_engine.connect()
+    transaction = await connection.begin()  # outer transaction, NEVER committed
+
+    session = AsyncSession(
+        bind=connection,
+        expire_on_commit=False,
+        join_transaction_mode="create_savepoint",
+    )
+
+    try:
+        yield session
+    finally:
+        await session.close()
+        await transaction.rollback()
+        await connection.close()
+
+
+@pytest_asyncio.fixture
+async def real_commit_client(
+    real_commit_session: AsyncSession,
+) -> AsyncGenerator[AsyncClient, None]:
+    """AsyncClient wired to a get_db override that mirrors production
+    src/db/dependencies.py::get_db EXACTLY: commit() on success, rollback()
+    on any exception. This is what lets failure-path tests observe the real
+    commit/rollback boundary -- the shared `client` fixture's bare
+    `yield db_session` override never calls either.
+    """
+    from src.db.dependencies import get_db
+    from src.main import app
+
+    async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
+        try:
+            yield real_commit_session
+            await real_commit_session.commit()
+        except Exception:
+            await real_commit_session.rollback()
+            raise
+
+    app.dependency_overrides[get_db] = override_get_db
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        yield ac
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def real_commit_authed_client(
+    real_commit_client: AsyncClient,
+    real_commit_session: AsyncSession,
+) -> AsyncGenerator[tuple[AsyncClient, User], None]:
+    """(client, user) pair wired to the real commit/rollback boundary AND a
+    real, DB-backed authenticated user -- for endpoints (like
+    DELETE /api/v1/users/me) whose durability guarantees can only be
+    proven by reading committed state back from the database. [PAY-05-04]
+    [real-commit-auth-override]
+
+    Seeds one User directly on real_commit_session (default shape: FREE
+    tier, TRIALING status, no Stripe ids -- the inert "free user" case) and
+    commits that seed immediately, so a request driven through
+    real_commit_client -- which reads via the SAME connection once its
+    get_db override is live -- can see the row. Then overrides
+    get_current_user to return that exact object. Both overrides land on
+    the SAME app.dependency_overrides dict that real_commit_client's
+    teardown clears wholesale (`.clear()`, not a single-key pop), so
+    registering get_current_user here -- on top of the get_db override
+    real_commit_client already registered -- is sufficient; no separate
+    get_db override or AsyncClient construction is needed in this fixture.
+    Overriding get_current_user replaces the WHOLE callable (FastAPI swaps
+    the entire dependency, not just its body), so the request needs no
+    Authorization header at all -- none of JWKS verification, the identity
+    cache, or Sentry/logging context from the real get_current_user runs.
+
+    Tests that need a different subscription/Stripe shape than the default
+    (e.g. an ACTIVE subscription with stripe_subscription_id/
+    stripe_customer_id set) mutate attributes on the yielded `user` and
+    call `await real_commit_session.commit()` again before driving the
+    request -- real_commit_session's join_transaction_mode
+    ("create_savepoint") lets it commit any number of times, and
+    expire_on_commit=False means the mutated attributes stay readable on
+    the same Python object afterwards.
+
+    Do NOT use auth_headers/test_user/bare `UserFactory.create()` (no
+    `session=` kwarg) here or in tests that consume this fixture -- those
+    all bind to `db_session` (tests/fixtures/database.py), a DIFFERENT
+    connection than real_commit_session (both draw from the same
+    `db_engine`/`session_db_engine` pool, but are never the same connection
+    object). A request routed through real_commit_client reads via
+    real_commit_session's connection, so it cannot see a row seeded on
+    db_session's connection -- not even after a commit there, since
+    Postgres transaction isolation does not share (even committed) state
+    across separate connections. `UserFactory.create(session=
+    real_commit_session, ...)` (used below, and already proven at
+    test_webhook_integration.py:361-367/446-452) sidesteps this correctly;
+    the ban is on the *default-bound* session, not on factories generally.
+    """
+    from src.core.dependencies import get_current_user
+    from src.main import app
+
+    user = await UserFactory.create(
+        session=real_commit_session,
+        subscription_tier=SubscriptionTier.FREE,
+        subscription_status=SubscriptionStatus.TRIALING,
+        stripe_customer_id=None,
+        stripe_subscription_id=None,
+    )
+    await real_commit_session.commit()
+
+    async def override_get_current_user() -> User:
+        return user
+
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
+    yield real_commit_client, user
 
 
 # =============================================================================
@@ -507,12 +676,195 @@ async def localized_culture_deck(db_session: AsyncSession) -> CultureDeck:
 
 
 # =============================================================================
+# Stripe `stripe_live` Lane -- Guard + Hermetic Provisioning Fixtures (PAY-05-05)
+# =============================================================================
+#
+# These fixtures back the `stripe_live` marker's CI lane: tests that run
+# against a REAL Stripe test-mode account instead of a mock --
+# tests/integration/test_stripe_integration.py today, and PAY-05-06's
+# tests/integration/test_stripe_live_lane.py next. They live in THIS shared
+# conftest -- not a stripe_lane/-local one -- because both of those test
+# files are direct children of tests/integration/, not of a stripe_lane/
+# subdirectory: a directory-scoped conftest under stripe_lane/ would never
+# be discovered for them (pytest's fixture/autouse discovery only walks a
+# test file's own directory and its ancestors, never a sibling
+# subdirectory). Only tests/integration/stripe_lane/guard.py -- the pure,
+# fixture-independent credential check -- lives in that package; see its
+# docstring for the Mode-A-specified import path.
+#
+# Safety for the ~700 OTHER integration tests in this directory that carry
+# no `stripe_live` marker: the guard fixture below is marker-gated (a no-op
+# unless the test is marked `stripe_live`), and `stripe_live` tests are
+# additionally deselected from the main suite entirely via
+# `-m "not stripe_live"` in .github/workflows/test.yml. The hermetic
+# provisioning fixtures are not autouse at all -- session/function-scoped,
+# requested by name -- so they carry no risk to tests that don't request
+# them.
+
+
+@pytest.fixture(autouse=True)
+def stripe_live_guard(request: pytest.FixtureRequest) -> None:
+    """Hard-fail (never skip) `stripe_live` tests missing a valid test-mode key.
+
+    Marker-gated: a no-op for every test in this directory that isn't marked
+    `stripe_live`, so it cannot regress the existing integration suite,
+    which runs with no STRIPE_SECRET_KEY configured.
+    """
+    if request.node.get_closest_marker("stripe_live") is None:
+        return
+    assert_stripe_test_key()
+
+
+_STRIPE_LIVE_PRODUCT_ID = "pay05_ci_test_product"
+_STRIPE_LIVE_PRICE_LOOKUP_KEY = "pay05_ci_monthly_eur"
+
+
+@pytest_asyncio.fixture(scope="session")
+async def stripe_live_price() -> stripe.Price:
+    """Retrieve-or-create the stripe_live lane's product + price.
+
+    Both are addressed by stable, hardcoded identifiers (a fixed product id;
+    a fixed price `lookup_key`) rather than created fresh each run, so the
+    lane's footprint on the Stripe test-mode account is bounded at exactly
+    one product and one price across unlimited CI runs. This is the only
+    hygiene-respecting option, not an optimization: a price can never be
+    deleted via the Stripe API (only archived), and a product with an
+    attached price can't be deleted either -- confirmed against the
+    installed stripe==15.3.0 SDK (`PriceService` has no `delete`/
+    `delete_async`) and Stripe's own pricing docs.
+
+    A product's id IS settable at creation (`ProductCreateParams.id`), so it
+    can be fetched directly by that fixed id. A price's id is always
+    Stripe-assigned -- `PriceCreateParams` has no `id` field at all -- which
+    is exactly why `lookup_key` exists as the caller-chosen stable handle;
+    `prices.list_async` supports filtering by `lookup_keys`.
+
+    Calls `assert_stripe_test_key()` directly, in defence of the outer
+    `stripe_live_guard` autouse fixture rather than in place of it: pytest
+    instantiates higher-scoped fixtures (this one is session-scoped) before
+    function-scoped ones REGARDLESS of autouse, so for the first
+    `stripe_live`-marked test per worker that reaches this fixture (via
+    `stripe_test_subscription`), `stripe_live_guard` has not run yet.
+    Without this call, a misconfigured live `STRIPE_SECRET_KEY` would create
+    a real product/price against the live Stripe account before the guard
+    ever gets a chance to block it -- exactly the blast-radius scenario this
+    lane exists to prevent. A session-scoped fixture cannot itself depend on
+    the function-scoped `stripe_live_guard` (pytest raises `ScopeMismatch`),
+    so calling the guard's underlying check inline is the only fix. It is
+    pure and idempotent (reads `os.getenv` only), so calling it again here
+    is free.
+    """
+    assert_stripe_test_key()
+
+    client = get_stripe_client()
+
+    try:
+        product = await client.v1.products.retrieve_async(_STRIPE_LIVE_PRODUCT_ID)
+    except stripe.InvalidRequestError:
+        product = await client.v1.products.create_async(
+            params={
+                "id": _STRIPE_LIVE_PRODUCT_ID,
+                "name": "PAY-05 CI Test Product",
+            }
+        )
+
+    existing_prices = await client.v1.prices.list_async(
+        params={"lookup_keys": [_STRIPE_LIVE_PRICE_LOOKUP_KEY]}
+    )
+    if existing_prices.data:
+        return existing_prices.data[0]
+
+    return await client.v1.prices.create_async(
+        params={
+            "product": product.id,
+            "currency": "eur",
+            "unit_amount": 999,
+            "recurring": {"interval": "month"},
+            "lookup_key": _STRIPE_LIVE_PRICE_LOOKUP_KEY,
+        }
+    )
+
+
+@pytest_asyncio.fixture
+async def stripe_test_subscription(
+    stripe_live_price: stripe.Price,
+) -> AsyncGenerator[stripe.Subscription, None]:
+    """Create a real, `active` Stripe test-mode subscription for a lane test.
+
+    Deliberately omits `payment_behavior` from `subscriptions.create_async`:
+    with `pm_card_visa` (an always-succeeding Stripe test card) already set
+    as the customer's default payment method, Stripe creates the
+    subscription directly in `active` status. Passing
+    `payment_behavior="default_incomplete"` would instead leave it
+    `incomplete`, silently invalidating any test that asserts against
+    `active` (confirmed against Stripe's own billing-testing docs during
+    PAY-05-05 Stage 1 validation).
+
+    Cleans up in `finally` by deleting the customer -- `CustomerService`'s
+    own (OpenAPI-generated) docstring confirms that deleting a customer
+    "immediately cancels any active subscriptions" on it, so no separate
+    subscription-cancel call is needed. This runs even if the test fails
+    mid-way, so a failure strands no subscription.
+
+    No `STRIPE_PRICE_ID`, product id, or `STRIPE_WEBHOOK_SECRET` is read
+    from the environment anywhere in this fixture chain -- the hardcoded
+    identifiers above are the lane's own stable handles, not env-configured
+    production values.
+
+    Calls `assert_stripe_test_key()` directly as well, as defence-in-depth
+    alongside `stripe_live_price`'s own call -- see that fixture's docstring
+    for why the session-scoped/function-scoped ordering means the outer
+    `stripe_live_guard` autouse fixture cannot be relied on alone.
+    """
+    assert_stripe_test_key()
+
+    client = get_stripe_client()
+
+    customer = await client.v1.customers.create_async(
+        params={"description": "PAY-05 stripe_live lane test customer"}
+    )
+    try:
+        payment_method = await client.v1.payment_methods.attach_async(
+            "pm_card_visa", params={"customer": customer.id}
+        )
+        # `pm_card_visa` is a shared test-mode token, not a real PaymentMethod
+        # id: attaching it clones a fresh, customer-scoped PaymentMethod and
+        # returns THAT object. Re-passing the literal token as
+        # default_payment_method resolves to a SECOND, different clone that
+        # was never attached, so it must be the attach response's own `.id`
+        # (per PaymentMethodService.attach_async's docstring) -- confirmed
+        # against the installed stripe==15.3.0 SDK.
+        await client.v1.customers.update_async(
+            customer.id,
+            params={"invoice_settings": {"default_payment_method": payment_method.id}},
+        )
+
+        subscription = await client.v1.subscriptions.create_async(
+            params={
+                "customer": customer.id,
+                "items": [{"price": stripe_live_price.id}],
+            }
+        )
+        yield subscription
+    finally:
+        await client.v1.customers.delete_async(customer.id)
+
+
+# =============================================================================
 # Module Exports
 # =============================================================================
 
 __all__ = [
     # Factory session binding
     "bind_factory_session",
+    # Real get_db commit/rollback boundary fixtures (OPS-04-03, PAY-05-04)
+    "real_commit_session",
+    "real_commit_client",
+    "real_commit_authed_client",
+    # stripe_live lane guard + hermetic provisioning fixtures (PAY-05-05)
+    "stripe_live_guard",
+    "stripe_live_price",
+    "stripe_test_subscription",
     # FastAPI app
     "app",
     # URL fixtures

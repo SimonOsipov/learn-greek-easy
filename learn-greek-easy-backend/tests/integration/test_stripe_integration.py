@@ -3,11 +3,12 @@
 Tests verify that Stripe client can reach the Stripe API and retrieve
 account information, confirming proper SDK configuration and network access.
 
-These tests require STRIPE_SECRET_KEY to be set in the environment.
-They will be skipped in CI unless Stripe test credentials are configured.
+These tests run in the `stripe_live` lane against a REAL Stripe test-mode
+account (never mocked). The lane's autouse guard fixture
+(`tests/integration/conftest.py`) hard-fails -- rather than skipping -- if
+`STRIPE_SECRET_KEY` is missing or not a test-mode key, so this file no
+longer needs its own conditional skip.
 """
-
-import os
 
 import pytest
 
@@ -22,20 +23,16 @@ def cleanup_stripe():
 
 
 @pytest.mark.integration
-@pytest.mark.stripe
+@pytest.mark.stripe_live
 @pytest.mark.asyncio
-@pytest.mark.skipif(
-    not os.getenv("STRIPE_SECRET_KEY"),
-    reason="STRIPE_SECRET_KEY environment variable not set",
-)
 class TestStripeIntegration:
     """Integration tests for Stripe API connectivity."""
 
     async def test_stripe_api_connectivity(self):
         """Integration test: verify Stripe API is reachable.
 
-        This test requires STRIPE_SECRET_KEY to be set in the environment.
-        It will be skipped in CI unless Stripe test credentials are configured.
+        Runs in the stripe_live lane; the lane's guard fixture ensures this
+        only executes with a configured Stripe test-mode key.
         """
         client = get_stripe_client()
 

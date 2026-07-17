@@ -163,7 +163,11 @@ async def delete_user_account(
                 detail="Failed to delete account. Please try again.",
             )
 
-        # Check for Supabase partial failure (per PRD: return 500 if Supabase fails)
+        # Supabase partial failure (per PRD): local deletion is already
+        # committed by this point (UserDeletionService commits before the
+        # Supabase call [commit-ownership]), so a Supabase-side failure does
+        # NOT fail the request -- log it and still return 204.
+        # [supabase-failure-status]
         if result.supabase_deleted is False:  # False = tried but failed, None = not attempted
             logger.warning(
                 "Account deleted but Supabase cleanup failed",
@@ -171,10 +175,6 @@ async def delete_user_account(
                     "user_id": str(current_user.id),
                     "supabase_error": result.error_message,
                 },
-            )
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Account deleted but authentication cleanup failed. Please contact support.",
             )
 
         logger.info(

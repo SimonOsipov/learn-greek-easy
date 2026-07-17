@@ -842,6 +842,7 @@ jobs:
           # Run tests in parallel with pytest-xdist
           # pytest-cov automatically combines coverage from all workers into .coverage
           poetry run pytest tests/ \
+            -m "not stripe_live" \
             -n auto \
             --dist loadscope \
             --cov=src \
@@ -878,6 +879,149 @@ jobs:
             learn-greek-easy-backend/pytest.xml
             learn-greek-easy-backend/pytest-coverage.txt
           retention-days: 7
+
+  # Job 6b: Stripe Live-Mode Tests (PAY-05-06) — real Stripe test-mode account,
+  # never mocked. Modeled on `backend-tests` (Job 6), NOT `unit-tests` (Job 4):
+  # `unit-tests` never runs pytest at all (it boots a live uvicorn server for
+  # frontend tests), whereas `backend-tests` is the actual pytest job whose
+  # postgres-service block and env shape this job copies. No Alembic migration
+  # step is needed — schema comes from Base.metadata.create_all inside the
+  # pytest session itself (tests/fixtures/database.py's session_db_engine
+  # fixture), exactly like `backend-tests`. The spaCy download step is also
+  # omitted: nothing in the stripe_live lane instantiates MorphologyService.
+  stripe-live-tests:
+    name: Stripe Live-Mode Tests
+    runs-on: ubuntu-latest
+    needs: [frontend-lint, backend-lint, alembic-check]
+    # [stripe-lane-fork-guard]: fork PRs never receive repo secrets, so this
+    # job would fail-red on every fork PR if it ran there. Skip it instead —
+    # STRIPE_SECRET_KEY simply isn't available to fork code, by GitHub Actions
+    # design. Confirmed the only caller of this reusable workflow is
+    # preview.yml (pull_request-triggered only), so `pull_request` is always
+    # populated here.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    # Serializes this job across every concurrent invocation repo-wide (queues
+    # rather than cancels) so two open PRs can never race the shared Stripe
+    # test-mode sandbox account's fixed product/price identifiers
+    # (_STRIPE_LIVE_PRODUCT_ID / _STRIPE_LIVE_PRICE_LOOKUP_KEY in
+    # tests/integration/conftest.py's stripe_live_price fixture). Closes the
+    # cross-job race flagged as a carryover from PAY-05-05.
+    concurrency:
+      group: stripe-live-tests
+      cancel-in-progress: false
+    env:
+      VITE_ENVIRONMENT: test
+      ENVIRONMENT: test
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_learn_greek
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 2.0.0
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v6
+        with:
+          path: learn-greek-easy-backend/.venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        working-directory: learn-greek-easy-backend
+        run: poetry install --no-interaction --no-root
+
+      - name: Install project
+        working-directory: learn-greek-easy-backend
+        run: poetry install --no-interaction
+
+      - name: Create test database extensions
+        run: |
+          PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d test_learn_greek -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+
+      - name: Silence Postgres ERROR/STATEMENT log noise
+        # Constraint-validation tests use pytest.raises(IntegrityError) which produces
+        # ERROR + STATEMENT lines in the postgres container log. These are unavoidable
+        # by-products of constraint coverage. Silencing them at the server level keeps
+        # the CI log readable. Python receives the IntegrityError exception via the
+        # PG wire protocol independently. Do NOT replicate this config in production.
+        run: |
+          PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d test_learn_greek -v ON_ERROR_STOP=1 <<'SQL'
+          ALTER SYSTEM SET log_min_messages = 'FATAL';
+          ALTER SYSTEM SET log_min_error_statement = 'FATAL';
+          SELECT pg_reload_conf();
+          SQL
+
+      # [stripe-lane-guard] layer 2, belt-and-braces: the stripe_live lane's
+      # own autouse fixture (tests/integration/conftest.py::stripe_live_guard)
+      # already hard-fails any stripe_live test if STRIPE_SECRET_KEY is
+      # missing/empty/wrong-shaped — but that guard only runs once pytest has
+      # already started. This step fails the job before pytest even launches,
+      # so a misconfigured secret is visible as an obvious, named CI step
+      # rather than buried in a test failure.
+      - name: Verify STRIPE_SECRET_KEY is configured
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+        run: |
+          if [ -z "$STRIPE_SECRET_KEY" ]; then
+            echo "::error::STRIPE_SECRET_KEY is not set — the stripe_live lane cannot run without a Stripe test-mode secret key."
+            exit 1
+          fi
+
+      - name: Run Stripe live-mode tests
+        working-directory: learn-greek-easy-backend
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek
+          REDIS_URL: redis://localhost:6379/0
+          TEST_SEED_ENABLED: "true"
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+        run: |
+          # -m stripe_live REPLACES (not ANDs with) pyproject.toml's addopts
+          # default of `-m "not stripe_live"` — verified empirically by
+          # test_cli_marker_expression_replaces_addopts_default
+          # (tests/unit/test_stripe_lane_guard.py). --no-cov is mandatory:
+          # --cov-fail-under=80 lives in the SAME global addopts, and this
+          # lane's ~5 tests cover nowhere near 80% of src/ on their own —
+          # without --no-cov the job would fail on coverage, not Stripe.
+          # Single-worker (no -n auto): stripe_live_price is session-scoped
+          # (= once per xdist worker), so multiple workers would race the
+          # shared sandbox account's fixed product/price identifiers.
+          poetry run pytest -m stripe_live --no-cov -v
 
   # Job 7: E2E API Tests
   e2e-api-tests:

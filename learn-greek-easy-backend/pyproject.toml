@@ -206,6 +206,18 @@ addopts = [
 
     # Context for coverage tracking
     "--cov-context=test",
+
+    # stripe_live lane (PAY-05-05): excluded by default so a bare/path-scoped
+    # invocation (e.g. the documented `pytest -n auto`, `pytest tests/integration/`)
+    # never hits the lane's hard-fail credential guard just because a developer
+    # has no STRIPE_SECRET_KEY configured locally. A CLI `-m` always REPLACES
+    # this default outright rather than ANDing with it (verified empirically),
+    # so PAY-05-06's CI job selects the lane with its own explicit `-m stripe_live`.
+    # Note: an explicit `-m` expression that still happens to match this file's
+    # test (e.g. `-m integration`, `-m "not slow"`) is NOT protected by this
+    # default -- that is an accepted, narrower edge case of the anti-silent-skip
+    # design, not something this addopts entry can close.
+    "-m", "not stripe_live",
 ]
 
 # Test markers
@@ -221,6 +233,7 @@ markers = [
     "posthog: PostHog analytics integration tests",
     "sentry: Sentry error tracking integration tests",
     "stripe: Stripe billing integration tests",
+    "stripe_live: Stripe billing tests against a REAL Stripe test-mode account (never mocked; deselected from the main suite, runs only in the stripe-live-tests CI job)",
     "progress: Progress API service tests",
     "achievements: Achievement system tests",
     "no_parallel: Tests that cannot run in parallel (sequential only)",
