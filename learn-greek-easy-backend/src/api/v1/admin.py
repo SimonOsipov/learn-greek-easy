@@ -2845,8 +2845,7 @@ async def _word_audio_set_examples_generating(
     for example in examples_data:
         ex_patch = json.dumps({"audio_status": "generating", "audio_generating_since": gen_since})
         await session.execute(
-            text(
-                """
+            text("""
                 UPDATE word_entries
                 SET examples = (
                     SELECT coalesce(json_agg(
@@ -2861,8 +2860,7 @@ async def _word_audio_set_examples_generating(
                         WITH ORDINALITY AS arr(elem, ordinality)
                 ), updated_at = NOW()
                 WHERE id = :word_entry_id AND examples IS NOT NULL
-            """
-            ),
+            """),
             {
                 "example_id": example["id"],
                 "patch": ex_patch,
@@ -2882,23 +2880,20 @@ async def _word_audio_persist_ready(
     async with factory.begin() as session:
         if part_name == "lemma":
             await session.execute(
-                text(
-                    """
+                text("""
                     UPDATE word_entries
                     SET audio_key = :s3_key,
                         audio_status = 'READY'::audiostatus,
                         audio_generating_since = NULL,
                         updated_at = NOW()
                     WHERE id = :word_entry_id
-                """
-                ),
+                """),
                 {"s3_key": s3_key, "word_entry_id": str(word_entry_id)},
             )
         else:
             ex_patch = json.dumps({"audio_key": s3_key, "audio_status": "ready"})
             await session.execute(
-                text(
-                    """
+                text("""
                     UPDATE word_entries
                     SET examples = (
                         SELECT coalesce(json_agg(
@@ -2913,8 +2908,7 @@ async def _word_audio_persist_ready(
                             WITH ORDINALITY AS arr(elem, ordinality)
                     ), updated_at = NOW()
                     WHERE id = :word_entry_id AND examples IS NOT NULL
-                """
-                ),
+                """),
                 {
                     "example_id": example_id,
                     "patch": ex_patch,
@@ -2933,22 +2927,19 @@ async def _word_audio_persist_failed(
     async with factory.begin() as session:
         if part_name == "lemma":
             await session.execute(
-                text(
-                    """
+                text("""
                     UPDATE word_entries
                     SET audio_status = 'FAILED'::audiostatus,
                         audio_generating_since = NULL,
                         updated_at = NOW()
                     WHERE id = :word_entry_id
-                """
-                ),
+                """),
                 {"word_entry_id": str(word_entry_id)},
             )
         else:
             ex_patch = json.dumps({"audio_status": "failed"})
             await session.execute(
-                text(
-                    """
+                text("""
                     UPDATE word_entries
                     SET examples = (
                         SELECT coalesce(json_agg(
@@ -2963,8 +2954,7 @@ async def _word_audio_persist_failed(
                             WITH ORDINALITY AS arr(elem, ordinality)
                     ), updated_at = NOW()
                     WHERE id = :word_entry_id AND examples IS NOT NULL
-                """
-                ),
+                """),
                 {
                     "example_id": example_id,
                     "patch": ex_patch,

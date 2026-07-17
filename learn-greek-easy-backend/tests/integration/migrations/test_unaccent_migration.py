@@ -85,17 +85,13 @@ class TestImmutableUnaccentSearchPath:
         RED today: current fixture sets proconfig = NULL (no SET search_path).
         GREEN after: executor updates the fixture to include SET search_path = ''.
         """
-        result = await db_session.execute(
-            text(
-                """
+        result = await db_session.execute(text("""
                 SELECT p.proconfig
                 FROM pg_proc p
                 JOIN pg_namespace n ON n.oid = p.pronamespace
                 WHERE p.proname = 'immutable_unaccent'
                   AND n.nspname = 'public'
-                """
-            )
-        )
+                """))
         row = result.fetchone()
         assert row is not None, (
             "immutable_unaccent function does not exist in public schema — "
@@ -126,17 +122,13 @@ class TestImmutableUnaccentSearchPath:
         GREEN after: proconfig contains an empty search_path entry
         (PostgreSQL serialises SET search_path = '' as 'search_path=""').
         """
-        result = await db_session.execute(
-            text(
-                """
+        result = await db_session.execute(text("""
                 SELECT p.proconfig
                 FROM pg_proc p
                 JOIN pg_namespace n ON n.oid = p.pronamespace
                 WHERE p.proname = 'immutable_unaccent'
                   AND n.nspname = 'public'
-                """
-            )
-        )
+                """))
         row = result.fetchone()
         assert row is not None, "immutable_unaccent function not found in public schema"
 
@@ -184,29 +176,21 @@ class TestImmutableUnaccentDowngrade:
         downgrade SQL, confirms proconfig goes back to NULL.
         """
         # Apply the downgrade SQL (old function definition, no SET search_path)
-        await db_session.execute(
-            text(
-                """
+        await db_session.execute(text("""
                 CREATE OR REPLACE FUNCTION public.immutable_unaccent(text)
                 RETURNS text LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE AS
                 $$ SELECT public.unaccent('public.unaccent', $1) $$
-                """
-            )
-        )
+                """))
         # No commit needed — we're inside the test transaction that will be rolled back
 
         # Now verify proconfig is NULL (function has no search_path override)
-        result = await db_session.execute(
-            text(
-                """
+        result = await db_session.execute(text("""
                 SELECT p.proconfig
                 FROM pg_proc p
                 JOIN pg_namespace n ON n.oid = p.pronamespace
                 WHERE p.proname = 'immutable_unaccent'
                   AND n.nspname = 'public'
-                """
-            )
-        )
+                """))
         row = result.fetchone()
         assert row is not None, "immutable_unaccent not found after downgrade SQL"
         assert row[0] is None, (
@@ -286,17 +270,13 @@ class TestImmutableUnaccentFunctionProperties:
         IMMUTABLE, the expression index on word_entries would silently stop
         using the index (Postgres refuses STABLE/VOLATILE functions in indexes).
         """
-        result = await db_session.execute(
-            text(
-                """
+        result = await db_session.execute(text("""
                 SELECT p.provolatile
                 FROM pg_proc p
                 JOIN pg_namespace n ON n.oid = p.pronamespace
                 WHERE p.proname = 'immutable_unaccent'
                   AND n.nspname = 'public'
-                """
-            )
-        )
+                """))
         row = result.fetchone()
         assert row is not None, "immutable_unaccent not found in public schema"
         # provolatile is a Postgres "char" column — the driver may return it as
@@ -315,17 +295,13 @@ class TestImmutableUnaccentFunctionProperties:
         ADVERSARIAL-GUARD: dropping STRICT would change NULL-handling semantics
         and break any caller that relies on NULL propagation.
         """
-        result = await db_session.execute(
-            text(
-                """
+        result = await db_session.execute(text("""
                 SELECT p.proisstrict
                 FROM pg_proc p
                 JOIN pg_namespace n ON n.oid = p.pronamespace
                 WHERE p.proname = 'immutable_unaccent'
                   AND n.nspname = 'public'
-                """
-            )
-        )
+                """))
         row = result.fetchone()
         assert row is not None, "immutable_unaccent not found in public schema"
         assert row[0] is True, (
@@ -389,16 +365,12 @@ class TestFuzzystrmatchSchema:
             )
 
         # Check whether fuzzystrmatch is installed at all
-        result = await db_session.execute(
-            text(
-                """
+        result = await db_session.execute(text("""
                 SELECT n.nspname
                 FROM pg_extension e
                 JOIN pg_namespace n ON n.oid = e.extnamespace
                 WHERE e.extname = 'fuzzystrmatch'
-                """
-            )
-        )
+                """))
         row = result.fetchone()
         if row is None:
             pytest.skip(

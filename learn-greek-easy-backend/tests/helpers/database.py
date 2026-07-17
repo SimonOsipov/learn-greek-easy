@@ -77,15 +77,13 @@ async def table_exists(session: AsyncSession, table_name: str) -> bool:
         bool: True if table exists, False otherwise.
     """
     result = await session.execute(
-        text(
-            """
+        text("""
             SELECT EXISTS (
                 SELECT FROM information_schema.tables
                 WHERE table_schema = 'public'
                 AND table_name = :table_name
             )
-            """
-        ),
+            """),
         {"table_name": table_name},
     )
     return result.scalar() or False
@@ -115,16 +113,12 @@ async def get_table_names(engine: AsyncEngine) -> list[str]:
         list[str]: List of table names.
     """
     async with engine.connect() as conn:
-        result = await conn.execute(
-            text(
-                """
+        result = await conn.execute(text("""
                 SELECT table_name FROM information_schema.tables
                 WHERE table_schema = 'public'
                 AND table_type = 'BASE TABLE'
                 ORDER BY table_name
-                """
-            )
-        )
+                """))
         return [row[0] for row in result.fetchall()]
 
 
@@ -165,13 +159,11 @@ async def verify_extensions(engine: AsyncEngine) -> dict[str, bool]:
     async with engine.connect() as conn:
         for ext in extensions_to_check:
             result = await conn.execute(
-                text(
-                    """
+                text("""
                     SELECT EXISTS (
                         SELECT 1 FROM pg_extension WHERE extname = :ext
                     )
-                    """
-                ),
+                    """),
                 {"ext": ext},
             )
             results[ext] = result.scalar() or False
@@ -261,14 +253,10 @@ async def reset_sequences(session: AsyncSession, table_name: str) -> None:
         session: Database session.
         table_name: Name of the table.
     """
-    await session.execute(
-        text(
-            f"""
+    await session.execute(text(f"""
             SELECT setval(pg_get_serial_sequence('{table_name}', 'id'), 1, false)
             WHERE pg_get_serial_sequence('{table_name}', 'id') IS NOT NULL
-            """
-        )
-    )
+            """))
 
 
 async def get_enum_values(session: AsyncSession, enum_name: str) -> list[str]:
@@ -282,15 +270,13 @@ async def get_enum_values(session: AsyncSession, enum_name: str) -> list[str]:
         list[str]: List of enum values.
     """
     result = await session.execute(
-        text(
-            """
+        text("""
             SELECT enumlabel FROM pg_enum
             WHERE enumtypid = (
                 SELECT oid FROM pg_type WHERE typname = :enum_name
             )
             ORDER BY enumsortorder
-            """
-        ),
+            """),
         {"enum_name": enum_name},
     )
     return [row[0] for row in result.fetchall()]

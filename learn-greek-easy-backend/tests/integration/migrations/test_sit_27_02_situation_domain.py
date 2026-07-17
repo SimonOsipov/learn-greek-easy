@@ -204,13 +204,11 @@ def _teardown_migration_db(db_name: str) -> None:
     admin_engine = _sync_engine(_ADMIN_DB_URL)
     with admin_engine.connect() as conn:
         conn.execute(
-            text(
-                """
+            text("""
                 SELECT pg_terminate_backend(pid)
                 FROM pg_stat_activity
                 WHERE datname = :db AND pid <> pg_backend_pid()
-                """
-            ),
+                """),
             {"db": db_name},
         )
         conn.execute(text(f'DROP DATABASE IF EXISTS "{db_name}"'))
@@ -221,15 +219,13 @@ def _column_exists(engine: Engine, schema: str, table: str, column: str) -> bool
     """Return True if schema.table.column exists in information_schema.columns."""
     with engine.connect() as conn:
         row = conn.execute(
-            text(
-                """
+            text("""
                 SELECT 1
                 FROM information_schema.columns
                 WHERE table_schema = :schema
                   AND table_name   = :table
                   AND column_name  = :column
-                """
-            ),
+                """),
             {"schema": schema, "table": table, "column": column},
         ).fetchone()
     return row is not None
@@ -239,15 +235,13 @@ def _column_is_nullable(engine: Engine, schema: str, table: str, column: str) ->
     """Return True if the column allows NULLs (is_nullable = 'YES')."""
     with engine.connect() as conn:
         row = conn.execute(
-            text(
-                """
+            text("""
                 SELECT is_nullable
                 FROM information_schema.columns
                 WHERE table_schema = :schema
                   AND table_name   = :table
                   AND column_name  = :column
-                """
-            ),
+                """),
             {"schema": schema, "table": table, "column": column},
         ).fetchone()
     if row is None:

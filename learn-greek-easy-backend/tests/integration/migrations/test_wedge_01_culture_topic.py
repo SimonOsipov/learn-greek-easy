@@ -252,13 +252,11 @@ def _teardown_migration_db(db_name: str) -> None:
     with admin_engine.connect() as conn:
         # Terminate any remaining connections before DROP
         conn.execute(
-            text(
-                """
+            text("""
                 SELECT pg_terminate_backend(pid)
                 FROM pg_stat_activity
                 WHERE datname = :db AND pid <> pg_backend_pid()
-                """
-            ),
+                """),
             {"db": db_name},
         )
         conn.execute(text(f'DROP DATABASE IF EXISTS "{db_name}"'))
@@ -269,15 +267,13 @@ def _column_exists(engine: Engine, schema: str, table: str, column: str) -> bool
     """Return True if schema.table.column exists in information_schema.columns."""
     with engine.connect() as conn:
         row = conn.execute(
-            text(
-                """
+            text("""
                 SELECT 1
                 FROM information_schema.columns
                 WHERE table_schema = :schema
                   AND table_name   = :table
                   AND column_name  = :column
-                """
-            ),
+                """),
             {"schema": schema, "table": table, "column": column},
         ).fetchone()
     return row is not None
@@ -287,15 +283,13 @@ def _column_is_nullable(engine: Engine, schema: str, table: str, column: str) ->
     """Return True if the column allows NULLs (is_nullable = 'YES')."""
     with engine.connect() as conn:
         row = conn.execute(
-            text(
-                """
+            text("""
                 SELECT is_nullable
                 FROM information_schema.columns
                 WHERE table_schema = :schema
                   AND table_name   = :table
                   AND column_name  = :column
-                """
-            ),
+                """),
             {"schema": schema, "table": table, "column": column},
         ).fetchone()
     if row is None:
@@ -307,8 +301,7 @@ def _get_index_columns(engine: Engine, schema: str, table: str, index_name: str)
     """Return ordered column names for *index_name* on schema.table, or [] if absent."""
     with engine.connect() as conn:
         rows = conn.execute(
-            text(
-                """
+            text("""
                 SELECT a.attname AS col_name
                 FROM
                     pg_class t
@@ -325,8 +318,7 @@ def _get_index_columns(engine: Engine, schema: str, table: str, index_name: str)
                     AND n.nspname = :schema
                     AND i.relname = :index_name
                 ORDER BY k.col_order
-                """
-            ),
+                """),
             {"table": table, "schema": schema, "index_name": index_name},
         ).fetchall()
     return [row[0] for row in rows]
@@ -336,16 +328,14 @@ def _index_is_unique(engine: Engine, schema: str, index_name: str) -> bool | Non
     """Return whether *index_name* is unique, or None if it does not exist."""
     with engine.connect() as conn:
         row = conn.execute(
-            text(
-                """
+            text("""
                 SELECT ix.indisunique
                 FROM pg_class i
                 JOIN pg_namespace n ON n.oid = i.relnamespace
                 JOIN pg_index ix    ON ix.indexrelid = i.oid
                 WHERE i.relname = :index_name
                   AND n.nspname = :schema
-                """
-            ),
+                """),
             {"index_name": index_name, "schema": schema},
         ).fetchone()
     return None if row is None else bool(row[0])
@@ -363,14 +353,12 @@ def _insert_minimal_culture_question(engine: Engine) -> None:
     """
     with engine.connect() as conn:
         conn.execute(
-            text(
-                """
+            text("""
                 INSERT INTO culture_questions
                     (deck_id, question_text, option_a, option_b, correct_option, order_index)
                 VALUES
                     (NULL, :question_text, :option_a, :option_b, 1, 0)
-                """
-            ),
+                """),
             {
                 "question_text": '{"en": "Q?", "el": "\\u0395;", "ru": "\\u0412?"}',
                 "option_a": '{"en": "A", "el": "\\u0391", "ru": "\\u0410"}',

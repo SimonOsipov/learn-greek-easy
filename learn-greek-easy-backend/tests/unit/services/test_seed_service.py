@@ -1311,7 +1311,7 @@ class TestSeedServiceNewsFeedPage:
             assert item.title_el is not None and len(item.title_el) > 0
             # Greek Unicode range: \u0370-\u03FF (basic) or \u1F00-\u1FFF (extended)
             assert any(
-                "\u0370" <= char <= "\u03FF" or "\u1F00" <= char <= "\u1FFF"
+                "\u0370" <= char <= "\u03ff" or "\u1f00" <= char <= "\u1fff"
                 for char in item.title_el
             )
 

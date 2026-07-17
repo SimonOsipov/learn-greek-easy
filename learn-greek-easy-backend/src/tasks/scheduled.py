@@ -59,16 +59,14 @@ async def streak_reset_task() -> None:
             #
             # Note: We look for users whose last review was 2+ days ago
             # (i.e., before yesterday), which means they missed yesterday
-            query = text(
-                """
+            query = text("""
                 SELECT
                     user_id,
                     MAX(DATE(reviewed_at)) as last_review_date
                 FROM card_record_reviews
                 GROUP BY user_id
                 HAVING MAX(DATE(reviewed_at)) < :yesterday
-            """
-            )
+            """)
 
             result = await session.execute(query, {"yesterday": yesterday})
             users_with_broken_streak = result.fetchall()
@@ -298,8 +296,7 @@ async def stats_aggregate_task() -> None:
             yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
 
             # Aggregate review statistics by user for yesterday
-            review_stats_query = text(
-                """
+            review_stats_query = text("""
                 SELECT
                     r.user_id,
                     COUNT(*) as review_count,
@@ -310,16 +307,14 @@ async def stats_aggregate_task() -> None:
                 WHERE DATE(r.reviewed_at) = :target_date
                 GROUP BY r.user_id
                 ORDER BY review_count DESC
-            """
-            )
+            """)
 
             result = await session.execute(review_stats_query, {"target_date": yesterday})
             daily_review_stats = result.fetchall()
 
             # Aggregate mastery statistics (cards that became mastered yesterday)
             # Note: PostgreSQL enum values are uppercase (MASTERED, not mastered)
-            mastery_stats_query = text(
-                """
+            mastery_stats_query = text("""
                 SELECT
                     cs.user_id,
                     COUNT(*) as cards_mastered
@@ -327,8 +322,7 @@ async def stats_aggregate_task() -> None:
                 WHERE cs.status = 'MASTERED'
                   AND DATE(cs.updated_at) = :target_date
                 GROUP BY cs.user_id
-            """
-            )
+            """)
 
             mastery_result = await session.execute(mastery_stats_query, {"target_date": yesterday})
             mastery_stats = {row[0]: row[1] for row in mastery_result.fetchall()}
@@ -413,15 +407,13 @@ async def trial_expiration_task() -> None:
     try:
         async with get_session_factory()() as session:
             # Phase 1: Find expired auto-trial users
-            select_query = text(
-                """
+            select_query = text("""
                 SELECT id, email, trial_start_date, trial_end_date
                 FROM users
                 WHERE subscription_status = 'TRIALING'
                   AND trial_end_date < NOW()
                   AND stripe_subscription_id IS NULL
-                """
-            )
+                """)
             result = await session.execute(select_query)
             expired_users = result.fetchall()
 
@@ -429,16 +421,14 @@ async def trial_expiration_task() -> None:
 
             if expired_count > 0:
                 # Phase 2: Batch update all expired users
-                update_query = text(
-                    """
+                update_query = text("""
                     UPDATE users
                     SET subscription_status = 'NONE',
                         updated_at = NOW()
                     WHERE subscription_status = 'TRIALING'
                       AND trial_end_date < NOW()
                       AND stripe_subscription_id IS NULL
-                    """
-                )
+                    """)
                 await session.execute(update_query)
 
                 # Phase 3: Fire PostHog events per expired user

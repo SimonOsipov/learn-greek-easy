@@ -239,13 +239,11 @@ def _teardown_migration_db(db_name: str) -> None:
     with admin_engine.connect() as conn:
         # Terminate any remaining connections before DROP
         conn.execute(
-            text(
-                """
+            text("""
                 SELECT pg_terminate_backend(pid)
                 FROM pg_stat_activity
                 WHERE datname = :db AND pid <> pg_backend_pid()
-                """
-            ),
+                """),
             {"db": db_name},
         )
         conn.execute(text(f'DROP DATABASE IF EXISTS "{db_name}"'))
@@ -256,8 +254,7 @@ def _get_unique_indexes(engine: Engine, schema: str, table: str) -> dict[str, li
     """Return {index_name: [col, ...]} for all unique indexes on schema.table."""
     with engine.connect() as conn:
         rows = conn.execute(
-            text(
-                """
+            text("""
                 SELECT
                     i.relname               AS idx_name,
                     a.attname               AS col_name,
@@ -277,8 +274,7 @@ def _get_unique_indexes(engine: Engine, schema: str, table: str) -> dict[str, li
                     AND n.nspname = :schema
                     AND ix.indisunique = TRUE
                 ORDER BY i.relname, k.col_order
-                """
-            ),
+                """),
             {"table": table, "schema": schema},
         ).fetchall()
 
@@ -293,15 +289,13 @@ def _column_exists(engine: Engine, schema: str, table: str, column: str) -> bool
     """Return True if column exists in schema.table."""
     with engine.connect() as conn:
         row = conn.execute(
-            text(
-                """
+            text("""
                 SELECT 1
                 FROM information_schema.columns
                 WHERE table_schema = :schema
                   AND table_name   = :table
                   AND column_name  = :column
-                """
-            ),
+                """),
             {"schema": schema, "table": table, "column": column},
         ).fetchone()
     return row is not None
@@ -509,13 +503,11 @@ def _seed_morphology_row(
     present after the fixture DDL upgrade.
     """
     conn.execute(
-        text(
-            """
+        text("""
             INSERT INTO reference.wiktionary_morphology (id, lemma, gender, forms)
             VALUES (:id, :lemma, :gender, CAST(:forms AS jsonb))
             ON CONFLICT DO NOTHING
-            """
-        ),
+            """),
         {
             "id": row_id,
             "lemma": lemma,
@@ -1089,14 +1081,10 @@ class TestLexgen0302BackfillFlatToBundles:
                 )
                 conn.commit()
 
-                bad_pos_count = conn.execute(
-                    text(
-                        """
+                bad_pos_count = conn.execute(text("""
                         SELECT COUNT(*) FROM reference.wiktionary_morphology
                         WHERE pos IS NULL OR pos != 'noun'
-                        """
-                    )
-                ).scalar()
+                        """)).scalar()
 
             assert bad_pos_count == 0, (
                 f"Found {bad_pos_count} row(s) where pos != 'noun' after upgrade. "
@@ -1678,14 +1666,12 @@ class TestLexgen0305RoundTripAndInvariants:
                 with engine.connect() as conn:
                     for r in seed_rows:
                         conn.execute(
-                            text(
-                                """
+                            text("""
                                 INSERT INTO reference.wiktionary_morphology
                                     (id, lemma, gender, forms)
                                 VALUES (:id, :lemma, :gender, CAST(:forms AS jsonb))
                                 ON CONFLICT DO NOTHING
-                                """
-                            ),
+                                """),
                             {
                                 "id": r["id"],
                                 "lemma": r["lemma"],
