@@ -332,6 +332,22 @@ function AppContent() {
                 </Route>
               </Route>
 
+              {/* Russian landing page - the SPA half of the statically-served
+                  /ru/ document. Eager (not lazyWithRetry) like `/` above: this
+                  is a pre-auth LCP surface, and a lazy chunk would cost the RU
+                  entry an extra round trip before first paint (PERF-25).
+                  LandingRoute keeps the authenticated -> /dashboard redirect
+                  identical to `/`. Landing-only by design: there is no
+                  /ru/login or /ru/register. Matches both /ru and /ru/. */}
+              <Route
+                path="/ru"
+                element={
+                  <LandingRoute>
+                    <LandingPage />
+                  </LandingRoute>
+                }
+              />
+
               {/* Error Pages */}
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route path="*" element={<NotFound />} />

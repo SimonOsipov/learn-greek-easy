@@ -261,5 +261,10 @@
     "language": "English",
     "languageCode": "EN",
     "copyright": "{{year}} Greeklish. Made with care and souvlaki for Greek learners in Cyprus, Greece and all around the world"
+  },
+  "seo": {
+    "title": "Greeklish - Learn and Practice all aspects of the Greek language",
+    "description": "Learn and practice Greek Language on interactive platform with spaced repetition, exercises and exam preparation.",
+    "ogTitle": "Greeklish - Your Learning Greek Companion"
   }
 }

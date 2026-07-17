@@ -2,7 +2,10 @@ import { defineConfig, loadEnv, type Plugin, type HtmlTagDescriptor } from 'vite
 import type { OutputBundle, OutputChunk } from 'rollup';
 import react from '@vitejs/plugin-react';
 import { imagetools } from 'vite-imagetools';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { buildLocaleHtml, buildSitemap } from './build/localeHtml';
+import type { SeoCopy, SiteRegistry } from './build/localeHtml';
 
 /**
  * Extract the AVIF srcset string for the hero image from the built JS chunks.
@@ -89,13 +92,66 @@ const heroPreloadPlugin: Plugin = {
   },
 };
 
+function readJson<T>(relativePath: string): T {
+  return JSON.parse(readFileSync(path.resolve(__dirname, relativePath), 'utf8')) as T;
+}
+
+/**
+ * Emit a distinct, indexable HTML document per registered locale, plus sitemap.xml (WEDGE-13-02).
+ *
+ * Uses `generateBundle`, not `transformIndexHtml`, because it must emit an entirely NEW file
+ * (dist/ru/index.html) rather than transform the single index.html Vite already builds.
+ *
+ * `enforce: 'post'` is load-bearing. transformIndexHtml is NOT an earlier stage: Vite runs it
+ * INSIDE its core vite:build-html plugin's own generateBundle, and resolvePlugins places that
+ * plugin before user post-plugins (generateBundle is a sequential hook). So by the time this
+ * hook runs, bundle['index.html'].source already carries heroPreloadPlugin's injected LCP
+ * preload link and the real hashed entry script — which is exactly why each locale document is
+ * derived from the BUILT string rather than from the source index.html. Reverse the order and
+ * the derived documents silently ship without the LCP preload.
+ */
+const localeHtmlPlugin: Plugin = {
+  name: 'locale-html',
+  enforce: 'post',
+  generateBundle(_options, bundle) {
+    const indexHtml = bundle['index.html'];
+    if (!indexHtml || indexHtml.type !== 'asset') {
+      throw new Error('[wedge-13 locale-html] index.html was not found in the bundle.');
+    }
+
+    const registry = readJson<SiteRegistry>('src/i18n/site-locales.json');
+    const builtHtml =
+      typeof indexHtml.source === 'string'
+        ? indexHtml.source
+        : Buffer.from(indexHtml.source).toString('utf8');
+
+    for (const entry of registry.locales) {
+      const { seo } = readJson<{ seo: SeoCopy }>(`src/i18n/locales/${entry.locale}/landing.json`);
+      const html = buildLocaleHtml(builtHtml, entry.locale, registry, seo);
+
+      const dir = entry.path.replace(/^\/+|\/+$/g, '');
+      if (dir === '') {
+        // Root locale: mutating the existing bundle entry's source propagates to the written
+        // dist/index.html exactly once.
+        indexHtml.source = html;
+      } else {
+        // Rollup does NOT sanitize the "/" in an emitted asset's fileName — this lands
+        // verbatim at dist/<dir>/index.html.
+        this.emitFile({ type: 'asset', fileName: `${dir}/index.html`, source: html });
+      }
+    }
+
+    this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: buildSitemap(registry) });
+  },
+};
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current working directory.
   const env = loadEnv(mode, process.cwd(), '');
 
   return {
-    plugins: [react(), imagetools({ removeMetadata: true }), heroPreloadPlugin],
+    plugins: [react(), imagetools({ removeMetadata: true }), heroPreloadPlugin, localeHtmlPlugin],
 
     // Define global constants that are replaced at build time
     define: {
