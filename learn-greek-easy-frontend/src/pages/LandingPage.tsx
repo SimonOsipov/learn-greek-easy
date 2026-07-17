@@ -2,23 +2,26 @@ import { Helmet } from '@dr.pogodin/react-helmet';
 
 import { Header, Hero, Features, FAQ, FinalCTA, Footer } from '@/components/landing';
 
-// Site configuration
-const SITE_URL = 'https://greeklish.eu';
-const OG_IMAGE_URL = `${SITE_URL}/og-image.png`;
-
 /**
  * LandingPage Component
  *
  * Public-facing landing page for unauthenticated users.
  * Composes all landing page sections in the correct order.
  *
- * Route: /
+ * Routes: / (English) and /ru/ (Russian)
  *
  * Features:
  * - Full landing page composition
  * - Theme-aware background (light/dark mode)
  * - Responsive layout
- * - SEO meta tags with Open Graph and Twitter Card support
+ *
+ * SEO: this component does NOT own the landing head. The build emits one
+ * static HTML document per locale (see build/localeHtml.ts), and each carries
+ * its own <html lang>, <title>, description, canonical, hreflang pair and
+ * Open Graph / Twitter tags — already correct for crawlers with no JS. Re-emitting
+ * them here would overwrite the RU document's head with EN values at boot and
+ * put a second, conflicting canonical in the DOM (Google discards both when
+ * they disagree). Only the two locale-INVARIANT tags stay below.
  *
  * Note: Authentication-aware redirects are handled by
  * LandingRoute wrapper, not this component.
@@ -27,43 +30,10 @@ export default function LandingPage() {
   return (
     <>
       <Helmet>
-        {/* Primary Meta Tags */}
-        <title>Greeklish - Learn and Practice all aspects of the Greek language</title>
-        <meta
-          name="description"
-          content="Learn and practice Greek Language on interactive platform with spaced repetition, exercises and exam preparation."
-        />
-        <meta
-          name="keywords"
-          content="Greek language, Cypriot Citizenship Exam, Greek language learning, Ellinomatheia"
-        />
-        <link rel="canonical" href={SITE_URL} />
-
-        {/* Open Graph / Facebook */}
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content={SITE_URL} />
-        <meta property="og:title" content="Greeklish - Your Learning Greek Companion" />
-        <meta
-          property="og:description"
-          content="Learn and practice Greek Language on interactive platform with spaced repetition, exercises and exam preparation."
-        />
-        <meta property="og:image" content={OG_IMAGE_URL} />
-        <meta property="og:site_name" content="Greeklish" />
-        <meta property="og:locale" content="en_US" />
-
-        {/* Twitter Card */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content={SITE_URL} />
-        <meta name="twitter:title" content="Greeklish - Your Learning Greek Companion" />
-        <meta
-          name="twitter:description"
-          content="Learn and practice Greek Language on interactive platform with spaced repetition, exercises and exam preparation."
-        />
-        <meta name="twitter:image" content={OG_IMAGE_URL} />
-
-        {/* Additional SEO */}
+        {/* Locale-invariant only — every locale-BEARING tag is owned by the
+            static per-locale document (see the SEO note above). meta[name=robots]
+            has no counterpart in index.html, so this Helmet is its only source. */}
         <meta name="robots" content="index, follow" />
-        <meta name="language" content="English" />
         <meta name="author" content="Greeklish" />
       </Helmet>
 

@@ -33,6 +33,118 @@ const SEED_PASSWORD = 'TestPassword123!';
 const REPORTS_DIR = path.join(process.cwd(), 'web-verify-reports');
 
 // ============================================================================
+// Locale Serving Checks (WEDGE-13-04, AC-4/AC-5)
+// ============================================================================
+//
+// Verifies Caddy's ACTUAL serving behavior for the /ru locale variant and the
+// build-time sitemap.xml / robots.txt (WEDGE-13-02/03). This is the ONLY
+// layer that can prove it: the CI E2E lane (tests/e2e/) runs the Vite dev
+// server, never Caddy and never a built `dist/` (task-1313 §0) — a green CI
+// E2E run there is NOT evidence Caddy serves /ru/ correctly.
+//
+// Runs BEFORE the authenticated flow below, in its own JS-disabled context,
+// so it cannot disturb the existing login state. Never asserts status alone:
+// a bare 200 is exactly what BOTH failure modes (EN-shell SPA fallback for a
+// missing locale doc, SPA-fallback HTML for a missing sitemap/robots file)
+// return too — every check below inspects content.
+
+const RU_TITLE_FRAGMENT = 'Изучайте';
+const SITEMAP_LOCS = ['<loc>https://greeklish.eu/</loc>', '<loc>https://greeklish.eu/ru/</loc>'];
+const ROBOTS_SITEMAP_LINE = 'Sitemap: https://greeklish.eu/sitemap.xml';
+
+/**
+ * Navigates (JS-disabled context) to `path` and asserts the served document's
+ * `<html lang>` matches `expectedLang`. For the RU case, also asserts the
+ * document actually carries RU copy (not just the lang attribute) — guards
+ * against a partial fix that flips lang but still serves EN-templated markup.
+ */
+async function assertLocaleDocument(context, path, expectedLang) {
+  const page = await context.newPage();
+  try {
+    await page.goto(`${FRONTEND_URL}${path}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    const html = await page.content();
+    const expectedTag = `<html lang="${expectedLang}"`;
+    if (!html.includes(expectedTag)) {
+      throw new Error(
+        `${path}: expected served document to contain ${expectedTag}, but it did not (wrong locale variant served)`
+      );
+    }
+    if (expectedLang === 'ru' && !html.includes(RU_TITLE_FRAGMENT)) {
+      throw new Error(
+        `${path}: served an <html lang="ru"> document, but its title is missing the expected RU fragment "${RU_TITLE_FRAGMENT}"`
+      );
+    }
+  } finally {
+    await page.close();
+  }
+}
+
+async function runLocaleServingChecks(browser) {
+  console.log('Locale check: RU/EN document serving + sitemap.xml/robots.txt (JS disabled) ...');
+  const context = await browser.newContext({ javaScriptEnabled: false });
+
+  try {
+    // RU document — both the trailing-slash and bare-path forms. `/ru` (no
+    // trailing slash) is the one that actually proves the Caddyfile fix
+    // (AC-1/AC-10): Caddy's try_files file matcher does not resolve directory
+    // indexes on its own, so under the OLD try_files, `/ru` fell through to
+    // the EN root document instead of `/ru/index.html`.
+    await assertLocaleDocument(context, '/ru/', 'ru');
+    await assertLocaleDocument(context, '/ru', 'ru');
+
+    // EN negative control — proves the RU/EN documents are genuinely
+    // distinct (no accidental /ru-prefix capture of unrelated routes) and
+    // that the fix's new try_files alternative never fires for a real,
+    // non-locale path. /rutabaga is the try_files regression guard: an
+    // unknown route must still fall through to the EN SPA document, exactly
+    // as before the fix.
+    await assertLocaleDocument(context, '/', 'en');
+    await assertLocaleDocument(context, '/login', 'en');
+    await assertLocaleDocument(context, '/rutabaga', 'en');
+
+    // sitemap.xml — must be the real static file (content-type + body), not
+    // the SPA fallback document, which would also return 200.
+    const sitemapResponse = await context.request.get(`${FRONTEND_URL}/sitemap.xml`);
+    const sitemapContentType = sitemapResponse.headers()['content-type'] || '';
+    if (!/xml/.test(sitemapContentType)) {
+      throw new Error(
+        `/sitemap.xml: expected content-type matching /xml/, got "${sitemapContentType}" (served the SPA fallback?)`
+      );
+    }
+    const sitemapBody = await sitemapResponse.text();
+    if (!sitemapBody.startsWith('<?xml')) {
+      throw new Error(
+        '/sitemap.xml: body does not start with "<?xml" — served the SPA fallback document?'
+      );
+    }
+    for (const loc of SITEMAP_LOCS) {
+      if (!sitemapBody.includes(loc)) {
+        throw new Error(`/sitemap.xml: missing expected "${loc}"`);
+      }
+    }
+
+    // robots.txt — same shape of check: content-type + the Sitemap directive.
+    const robotsResponse = await context.request.get(`${FRONTEND_URL}/robots.txt`);
+    const robotsContentType = robotsResponse.headers()['content-type'] || '';
+    if (!robotsContentType.includes('text/plain')) {
+      throw new Error(
+        `/robots.txt: expected content-type "text/plain", got "${robotsContentType}" (served the SPA fallback?)`
+      );
+    }
+    const robotsBody = await robotsResponse.text();
+    if (!robotsBody.includes(ROBOTS_SITEMAP_LINE)) {
+      throw new Error(`/robots.txt: missing "${ROBOTS_SITEMAP_LINE}"`);
+    }
+
+    console.log(
+      '  Locale check passed: /ru/ + /ru -> RU; /, /login, /rutabaga -> EN; sitemap.xml + robots.txt are real files'
+    );
+  } finally {
+    await context.close();
+  }
+}
+
+// ============================================================================
 // Main Function
 // ============================================================================
 
@@ -51,6 +163,11 @@ async function runWebVerify() {
   let failed = false;
 
   try {
+    // Locale serving checks (WEDGE-13-04) — no auth needed, own JS-disabled
+    // context, run first so a failure here can never be masked by (or
+    // disturb) the authenticated flow below.
+    await runLocaleServingChecks(browser);
+
     const context = await browser.newContext({
       viewport: { width: 1280, height: 720 },
     });
