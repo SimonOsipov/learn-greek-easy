@@ -16,8 +16,7 @@ from sqlalchemy.dialects import postgresql
 class TestLemmaSqlCompilation:
     def test_lemma_update_sql_compiles(self):
         """Lemma UPDATE SQL compiles without errors using asyncpg dialect."""
-        sql = sa_text(
-            """
+        sql = sa_text("""
             UPDATE word_entries
             SET
                 audio_key = CASE WHEN :success THEN :s3_key ELSE audio_key END,
@@ -25,8 +24,7 @@ class TestLemmaSqlCompilation:
                 audio_generating_since = NULL,
                 updated_at = NOW()
             WHERE id = :word_entry_id
-        """
-        )
+        """)
         compiled = sql.bindparams(
             success=True,
             s3_key="word-audio/test.mp3",
@@ -36,8 +34,7 @@ class TestLemmaSqlCompilation:
 
     def test_lemma_update_has_expected_params(self):
         """Lemma UPDATE SQL references exactly the expected named parameters."""
-        sql = sa_text(
-            """
+        sql = sa_text("""
             UPDATE word_entries
             SET
                 audio_key = CASE WHEN :success THEN :s3_key ELSE audio_key END,
@@ -45,8 +42,7 @@ class TestLemmaSqlCompilation:
                 audio_generating_since = NULL,
                 updated_at = NOW()
             WHERE id = :word_entry_id
-        """
-        )
+        """)
         compiled = sql.bindparams(
             success=False,
             s3_key="word-audio/test.mp3",
@@ -61,8 +57,7 @@ class TestLemmaSqlCompilation:
 class TestExampleSqlCompilation:
     def test_example_update_sql_compiles(self):
         """Example UPDATE SQL with CAST(:patch AS jsonb) compiles without errors."""
-        sql = sa_text(
-            """
+        sql = sa_text("""
             UPDATE word_entries
             SET
                 examples = (
@@ -80,8 +75,7 @@ class TestExampleSqlCompilation:
                 updated_at = NOW()
             WHERE id = :word_entry_id
               AND examples IS NOT NULL
-        """
-        )
+        """)
         compiled = sql.bindparams(
             example_id="ex_1",
             patch='{"audio_key": "word-audio/test/ex_1.mp3", "audio_status": "ready"}',

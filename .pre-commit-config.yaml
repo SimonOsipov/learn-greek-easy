@@ -62,8 +62,10 @@ repos:
   # Backend Hooks (Python/FastAPI)
   # =============================================================================
 
+  # Keep rev in sync with black in learn-greek-easy-backend/poetry.lock: an older
+  # hook silently reformats to the old style and CI's `black --check` then fails.
   - repo: https://github.com/psf/black
-    rev: 24.8.0
+    rev: 26.5.1
     hooks:
       - id: black
         args: [--config=learn-greek-easy-backend/pyproject.toml]

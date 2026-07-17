@@ -222,13 +222,11 @@ def _teardown_migration_db(db_name: str) -> None:
     with admin_engine.connect() as conn:
         # Terminate any remaining connections before DROP
         conn.execute(
-            text(
-                """
+            text("""
                 SELECT pg_terminate_backend(pid)
                 FROM pg_stat_activity
                 WHERE datname = :db AND pid <> pg_backend_pid()
-                """
-            ),
+                """),
             {"db": db_name},
         )
         conn.execute(text(f'DROP DATABASE IF EXISTS "{db_name}"'))
@@ -239,8 +237,7 @@ def _get_unique_indexes(engine: Engine, schema: str, table: str) -> dict[str, li
     """Return {index_name: [col, ...]} for all unique indexes on schema.table."""
     with engine.connect() as conn:
         rows = conn.execute(
-            text(
-                """
+            text("""
                 SELECT
                     i.relname               AS idx_name,
                     a.attname               AS col_name,
@@ -260,8 +257,7 @@ def _get_unique_indexes(engine: Engine, schema: str, table: str) -> dict[str, li
                     AND n.nspname = :schema
                     AND ix.indisunique = TRUE
                 ORDER BY i.relname, k.col_order
-                """
-            ),
+                """),
             {"table": table, "schema": schema},
         ).fetchall()
 
@@ -276,14 +272,12 @@ def _table_exists(engine: Engine, schema: str, table: str) -> bool:
     """Return True if schema.table exists."""
     with engine.connect() as conn:
         row = conn.execute(
-            text(
-                """
+            text("""
                 SELECT 1
                 FROM information_schema.tables
                 WHERE table_schema = :schema
                   AND table_name   = :table
-                """
-            ),
+                """),
             {"schema": schema, "table": table},
         ).fetchone()
     return row is not None
@@ -295,8 +289,7 @@ def _get_non_unique_indexes_for_column(
     """Return index names of non-unique indexes on schema.table that cover column."""
     with engine.connect() as conn:
         rows = conn.execute(
-            text(
-                """
+            text("""
                 SELECT i.relname AS idx_name
                 FROM pg_class t
                 JOIN pg_namespace n  ON n.oid = t.relnamespace
@@ -309,8 +302,7 @@ def _get_non_unique_indexes_for_column(
                   AND ix.indisunique = FALSE
                   AND a.attname   = :column
                 ORDER BY i.relname
-                """
-            ),
+                """),
             {"table": table, "schema": schema, "column": column},
         ).fetchall()
     return [row[0] for row in rows]

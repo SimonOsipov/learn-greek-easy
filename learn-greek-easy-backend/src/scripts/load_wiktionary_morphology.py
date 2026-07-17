@@ -193,14 +193,12 @@ def _parse_entries(path: Path, pos: str = "noun") -> tuple[list[dict], int, int]
 
 
 def _log_mismatch_report(cursor: psycopg2.extensions.cursor) -> None:
-    cursor.execute(
-        """
+    cursor.execute("""
         SELECT COUNT(DISTINCT w.lemma) AS unmatched
         FROM reference.wiktionary_morphology w
         LEFT JOIN reference.greek_lexicon l ON w.lemma = l.lemma
         WHERE l.lemma IS NULL
-        """
-    )
+        """)
     row = cursor.fetchone()
     unmatched = row[0] if row else 0
     logger.info(

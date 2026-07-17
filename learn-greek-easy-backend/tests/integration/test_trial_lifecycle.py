@@ -223,18 +223,14 @@ class TestTrialExpirationTaskIntegration:
         original_trial_end = user.trial_end_date
 
         # Execute the same SQL the task uses, directly via test session
-        await db_session.execute(
-            text(
-                """
+        await db_session.execute(text("""
                 UPDATE users
                 SET subscription_status = 'NONE',
                     updated_at = NOW()
                 WHERE subscription_status = 'TRIALING'
                   AND trial_end_date < NOW()
                   AND stripe_subscription_id IS NULL
-            """
-            )
-        )
+            """))
 
         await db_session.refresh(user)
         assert user.subscription_status == SubscriptionStatus.NONE
@@ -302,18 +298,14 @@ class TestTrialExpirationTaskIntegration:
             users.append(u)
 
         # Same SQL as trial_expiration_task UPDATE phase
-        await db_session.execute(
-            text(
-                """
+        await db_session.execute(text("""
                 UPDATE users
                 SET subscription_status = 'NONE',
                     updated_at = NOW()
                 WHERE subscription_status = 'TRIALING'
                   AND trial_end_date < NOW()
                   AND stripe_subscription_id IS NULL
-            """
-            )
-        )
+            """))
 
         for u in users:
             await db_session.refresh(u)
@@ -410,18 +402,14 @@ class TestGetOrCreateUserTrialActivation:
         assert get_effective_access_level(user) == SubscriptionTier.FREE
 
         # Step 3: Run the expiry SQL (same as trial_expiration_task UPDATE phase)
-        await db_session.execute(
-            text(
-                """
+        await db_session.execute(text("""
                 UPDATE users
                 SET subscription_status = 'NONE',
                     updated_at = NOW()
                 WHERE subscription_status = 'TRIALING'
                   AND trial_end_date < NOW()
                   AND stripe_subscription_id IS NULL
-            """
-            )
-        )
+            """))
 
         await db_session.refresh(user)
         assert user.subscription_status == SubscriptionStatus.NONE

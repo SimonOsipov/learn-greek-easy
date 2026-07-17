@@ -197,15 +197,11 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:  # noqa: C901
 
     # Check uuid-ossp extension (required for uuid_generate_v4)
     async with engine.connect() as conn:
-        result = await conn.execute(
-            text(
-                """
+        result = await conn.execute(text("""
                 SELECT EXISTS (
                     SELECT 1 FROM pg_extension WHERE extname = 'uuid-ossp'
                 )
-                """
-            )
-        )
+                """))
         has_uuid_extension = result.scalar()
 
         if not has_uuid_extension:
@@ -222,15 +218,11 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:  # noqa: C901
                 ) from err
 
         # Check vector extension (required for pgvector embeddings)
-        result = await conn.execute(
-            text(
-                """
+        result = await conn.execute(text("""
                 SELECT EXISTS (
                     SELECT 1 FROM pg_extension WHERE extname = 'vector'
                 )
-                """
-            )
-        )
+                """))
         has_vector_extension = result.scalar()
 
         if not has_vector_extension:
@@ -247,15 +239,11 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:  # noqa: C901
                 ) from err
 
         # Check unaccent extension (required for accent-insensitive Greek matching)
-        result = await conn.execute(
-            text(
-                """
+        result = await conn.execute(text("""
                 SELECT EXISTS (
                     SELECT 1 FROM pg_extension WHERE extname = 'unaccent'
                 )
-                """
-            )
-        )
+                """))
         has_unaccent_extension = result.scalar()
 
         if not has_unaccent_extension:
@@ -272,16 +260,12 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:  # noqa: C901
                 ) from err
 
         # Create immutable_unaccent wrapper (required for expression index on word_entries)
-        await conn.execute(
-            text(
-                """
+        await conn.execute(text("""
                 CREATE OR REPLACE FUNCTION immutable_unaccent(text)
                 RETURNS text LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
                 SET search_path = ''
                 AS $$ SELECT public.unaccent('public.unaccent', $1) $$
-                """
-            )
-        )
+                """))
         await conn.commit()
 
         # Create reference schema (required for GreekLexicon model)

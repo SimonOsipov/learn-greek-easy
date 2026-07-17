@@ -86,14 +86,12 @@ def build_en_ru_dict(data_file: Path) -> dict[str, list[tuple[str, str]]]:
 
 def _get_max_sense_indices(cursor: psycopg2.extensions.cursor) -> dict[str, int]:
     """Get max sense_index per lemma for existing Russian translations."""
-    cursor.execute(
-        """
+    cursor.execute("""
         SELECT lemma, COALESCE(MAX(sense_index), -1) AS max_idx
         FROM reference.translations
         WHERE language = 'ru'
         GROUP BY lemma
-        """
-    )
+        """)
     return {row[0]: row[1] for row in cursor.fetchall()}
 
 
@@ -113,14 +111,12 @@ def generate_pivots(
     cursor = conn.cursor()
 
     # Get existing English kaikki translations
-    cursor.execute(
-        """
+    cursor.execute("""
         SELECT DISTINCT lemma, translation, part_of_speech
         FROM reference.translations
         WHERE language = 'en' AND source = 'kaikki'
         ORDER BY lemma
-        """
-    )
+        """)
     en_rows = cursor.fetchall()
 
     if not en_rows:

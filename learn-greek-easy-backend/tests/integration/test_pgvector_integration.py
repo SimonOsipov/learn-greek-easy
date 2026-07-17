@@ -211,18 +211,14 @@ class TestCosineSimilarityQuery:
 
         # Query for nearest to base_vec using string interpolation (safe for vectors)
         base_vec_str = str(base_vec.tolist())
-        result = await db_session.execute(
-            text(
-                f"""
+        result = await db_session.execute(text(f"""
                 SELECT question_text->>'en' as question,
                        embedding <=> '{base_vec_str}'::vector(1024) as distance
                 FROM culture_questions
                 WHERE embedding IS NOT NULL
                 ORDER BY embedding <=> '{base_vec_str}'::vector(1024)
                 LIMIT 2
-            """
-            )
-        )
+            """))
         rows = result.fetchall()
 
         assert len(rows) >= 2, "Expected at least 2 results"
@@ -253,17 +249,13 @@ class TestCosineSimilarityQuery:
 
         # Query for top 3 nearest using string interpolation (safe for vectors)
         query_vec_str = str(embeddings[0])
-        result = await db_session.execute(
-            text(
-                f"""
+        result = await db_session.execute(text(f"""
                 SELECT question_text->>'en'
                 FROM culture_questions
                 WHERE embedding IS NOT NULL
                 ORDER BY embedding <=> '{query_vec_str}'::vector(1024)
                 LIMIT 3
-            """
-            )
-        )
+            """))
         rows = result.fetchall()
 
         assert len(rows) == 3, "Should return exactly 3 results"
@@ -292,15 +284,11 @@ class TestCosineSimilarityQuery:
 
         # Query for distance using string interpolation (safe for vectors)
         query_vec_str = str(embeddings[1])
-        result = await db_session.execute(
-            text(
-                f"""
+        result = await db_session.execute(text(f"""
                 SELECT embedding <=> '{query_vec_str}'::vector(1024) as distance
                 FROM culture_questions
                 WHERE embedding IS NOT NULL
-            """
-            )
-        )
+            """))
         row = result.fetchone()
 
         assert row is not None
@@ -326,42 +314,30 @@ class TestIndexUsage:
         the index is created by the Alembic migration.
         """
         # Check if index exists
-        result = await db_session.execute(
-            text(
-                """
+        result = await db_session.execute(text("""
                 SELECT 1 FROM pg_indexes
                 WHERE indexname = 'idx_culture_questions_embedding'
-            """
-            )
-        )
+            """))
         if result.fetchone() is None:
             # Create the index (same as migration)
-            await db_session.execute(
-                text(
-                    """
+            await db_session.execute(text("""
                     CREATE INDEX IF NOT EXISTS idx_culture_questions_embedding
                     ON culture_questions
                     USING ivfflat (embedding vector_cosine_ops)
                     WITH (lists = 50)
                     WHERE embedding IS NOT NULL
-                """
-                )
-            )
+                """))
             await db_session.commit()
         yield
 
     async def test_ivfflat_index_exists(self, db_session: AsyncSession):
         """Verify the IVFFlat index exists on culture_questions.embedding."""
-        result = await db_session.execute(
-            text(
-                """
+        result = await db_session.execute(text("""
                 SELECT indexname, indexdef
                 FROM pg_indexes
                 WHERE tablename = 'culture_questions'
                 AND indexname = 'idx_culture_questions_embedding'
-            """
-            )
-        )
+            """))
         row = result.fetchone()
         assert row is not None, "IVFFlat index does not exist"
 
@@ -371,15 +347,11 @@ class TestIndexUsage:
 
     async def test_index_is_partial(self, db_session: AsyncSession):
         """Verify the index is partial (only on non-null embeddings)."""
-        result = await db_session.execute(
-            text(
-                """
+        result = await db_session.execute(text("""
                 SELECT indexdef
                 FROM pg_indexes
                 WHERE indexname = 'idx_culture_questions_embedding'
-            """
-            )
-        )
+            """))
         row = result.fetchone()
         assert row is not None
 
@@ -389,15 +361,11 @@ class TestIndexUsage:
 
     async def test_index_lists_parameter(self, db_session: AsyncSession):
         """Verify the index is configured with lists=50."""
-        result = await db_session.execute(
-            text(
-                """
+        result = await db_session.execute(text("""
                 SELECT indexdef
                 FROM pg_indexes
                 WHERE indexname = 'idx_culture_questions_embedding'
-            """
-            )
-        )
+            """))
         row = result.fetchone()
         assert row is not None
 
@@ -413,16 +381,12 @@ class TestIndexUsage:
 
     async def test_embedding_column_exists(self, db_session: AsyncSession):
         """Verify the embedding column has the correct type."""
-        result = await db_session.execute(
-            text(
-                """
+        result = await db_session.execute(text("""
                 SELECT column_name, udt_name, is_nullable
                 FROM information_schema.columns
                 WHERE table_name = 'culture_questions'
                 AND column_name = 'embedding'
-            """
-            )
-        )
+            """))
         row = result.fetchone()
         assert row is not None, "Embedding column does not exist"
         assert row[1] == "vector", "Embedding column should be of type vector"
@@ -430,16 +394,12 @@ class TestIndexUsage:
 
     async def test_embedding_model_column_exists(self, db_session: AsyncSession):
         """Verify the embedding_model column exists."""
-        result = await db_session.execute(
-            text(
-                """
+        result = await db_session.execute(text("""
                 SELECT column_name, data_type, character_maximum_length
                 FROM information_schema.columns
                 WHERE table_name = 'culture_questions'
                 AND column_name = 'embedding_model'
-            """
-            )
-        )
+            """))
         row = result.fetchone()
         assert row is not None, "Embedding model column does not exist"
         assert row[1] == "character varying", "Embedding model should be varchar"
@@ -447,16 +407,12 @@ class TestIndexUsage:
 
     async def test_embedding_updated_at_column_exists(self, db_session: AsyncSession):
         """Verify the embedding_updated_at column exists."""
-        result = await db_session.execute(
-            text(
-                """
+        result = await db_session.execute(text("""
                 SELECT column_name, data_type
                 FROM information_schema.columns
                 WHERE table_name = 'culture_questions'
                 AND column_name = 'embedding_updated_at'
-            """
-            )
-        )
+            """))
         row = result.fetchone()
         assert row is not None, "Embedding updated_at column does not exist"
         assert "timestamp" in row[1], "Embedding updated_at should be timestamp type"

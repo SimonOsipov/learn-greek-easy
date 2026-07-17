@@ -11,7 +11,7 @@ packages = [{include = "src"}]
 python = "^3.13"
 fastapi = ">=0.137,<0.140"
 starlette = ">=1.3.1"
-uvicorn = {extras = ["standard"], version = ">=0.30,<0.51"}
+uvicorn = {extras = ["standard"], version = ">=0.30,<0.52"}
 python-multipart = ">=0.0.27,<0.0.33"
 pydantic = "^2.9.0"
 pydantic-settings = "^2.5.0"
@@ -36,8 +36,8 @@ Pillow = ">=11.0.0"
 sentry-sdk = { version = "^2.48", extras = ["fastapi", "sqlalchemy"] }
 loguru = "^0.7.3"
 authlib = "^1.6.12"
-pgvector = "^0.4.0"
-anthropic = ">=0.76,<0.117"
+pgvector = ">=0.4,<0.6"
+anthropic = ">=0.76,<0.118"
 mutagen = "^1.47"
 stripe = ">=14,<16"
 wordfreq = "^3.1.1"
@@ -51,14 +51,14 @@ blis = {version = "^1.3.3", python = ">=3.13,<3.15"}
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.3,<10.0"
 pytest-asyncio = ">=1.0,<2.0"
-pytest-cov = "^5.0.0"
+pytest-cov = ">=5,<8"
 pytest-mock = "^3.14.0"
 faker = ">=26,<41"
-black = "^24.8.0"
+black = ">=24.8,<27.0"
 isort = ">=5.13.2,<7.0.0"
 flake8 = "^7.1.0"
 mypy = ">=1.11,<3.0"
-pylint = "^3.2.0"
+pylint = ">=3.2,<5.0"
 types-python-dateutil = "^2.9.0"
 types-pytz = ">=2024.1,<2027.0"
 types-redis = "^4.6.0"
@@ -271,8 +271,9 @@ branch = true
 # Parallel mode for concurrent test runs (pytest-xdist)
 parallel = true
 
-# Dynamic context for per-test coverage tracking
-dynamic_context = "test_function"
+# Per-test coverage contexts come from pytest-cov's --cov-context=test (see addopts).
+# Do NOT set dynamic_context here: pytest-cov >=7 hard-fails under xdist if coverage
+# manages contexts itself (DistCovError, pytest-cov#604).
 
 # Files/patterns to exclude from coverage
 omit = [
