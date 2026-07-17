@@ -824,12 +824,19 @@ async def stripe_test_subscription(
         params={"description": "PAY-05 stripe_live lane test customer"}
     )
     try:
-        await client.v1.payment_methods.attach_async(
+        payment_method = await client.v1.payment_methods.attach_async(
             "pm_card_visa", params={"customer": customer.id}
         )
+        # `pm_card_visa` is a shared test-mode token, not a real PaymentMethod
+        # id: attaching it clones a fresh, customer-scoped PaymentMethod and
+        # returns THAT object. Re-passing the literal token as
+        # default_payment_method resolves to a SECOND, different clone that
+        # was never attached, so it must be the attach response's own `.id`
+        # (per PaymentMethodService.attach_async's docstring) -- confirmed
+        # against the installed stripe==15.3.0 SDK.
         await client.v1.customers.update_async(
             customer.id,
-            params={"invoice_settings": {"default_payment_method": "pm_card_visa"}},
+            params={"invoice_settings": {"default_payment_method": payment_method.id}},
         )
 
         subscription = await client.v1.subscriptions.create_async(
