@@ -2,9 +2,9 @@
 
 ## Overview
 
-Automated execution of a single user story's Backlog subtasks through per-subtask quality gates (Architecture → Explore → Test-Spec* → Execution → QA Verify; *Test-Spec runs only for logic-bearing `Test-first: yes` subtasks), followed by a story-level visual QA gate (Phase 3.5) that checks the assembled feature against the original objective via the locked `release-verify.yml` run (web verification + artifacts) and the local-sim Maestro gate (mobile). Runs in an isolated git worktree so multiple stories can be worked in parallel from separate terminals without colliding.
+Automated execution of a single user story's subtasks through per-subtask quality gates (Architecture → Explore → Test-Spec* → Execution → QA Verify; *Test-Spec runs only for logic-bearing `Test-first: yes` subtasks), followed by a story-level visual QA gate (Phase 3.5) that checks the assembled feature against the original objective via the locked `release-verify.yml` run (web verification + artifacts) and the local-sim Maestro gate (mobile). Runs in an isolated git worktree so multiple stories can be worked in parallel from separate terminals without colliding.
 
-Stories arrive in one of two states: **basic** (intent-only — Objective, Core ACs, Out of Scope; produced by `/pm-review` basic mode; zero Backlog subtasks) or **pre-planned** (Backlog subtasks already exist). Basic stories are first planned **in-run** by Phase 0.6 (architecture finalization → unattended QA-verify debate → subtask generation); pre-planned stories skip Phase 0.6 entirely — legacy behavior unchanged.
+Stories arrive in one of two states: **basic** (intent-only — Objective, Core ACs, Out of Scope; produced by `/pm-review` basic mode; zero subtasks in `hm subtask list`) or **pre-planned** (the subtasks already exist in `hm subtask list`). Basic stories are first planned **in-run** by Phase 0.6 (architecture finalization → unattended QA-verify debate → subtask generation); pre-planned stories skip Phase 0.6 entirely — legacy behavior unchanged.
 
 **Invocation**: `/ralph <STORY-ID>` (e.g., `/ralph SIT-07`). One story per invocation. To run multiple stories in parallel, open another terminal and invoke `/ralph SIT-09` — each invocation creates its own worktree, branch, and PR.
 
@@ -24,7 +24,7 @@ Stories arrive in one of two states: **basic** (intent-only — Objective, Core 
 | Edit code | `Edit(file_path=..., old_string=...)` | `Task(subagent_type=product-executor, prompt="Implement...")` |
 | Research | Multiple Grep/Read calls | `Task(subagent_type=Explore, prompt="Research how X works...")` |
 
-**Exception:** MCP tools (Backlog, git, gh) can be called directly.
+**Exception:** MCP tools and the `git`, `gh` and `hm subtask` commands can be called directly.
 
 ### 2. NO Assumptions, NO Feature Cuts
 Never guess, assume, or reduce functionality. If unclear, ask the user.
@@ -54,7 +54,6 @@ All subtasks of a single user story share one feature branch and one draft PR, a
 ## Available MCP Servers
 | Server | Purpose | Usage |
 |--------|---------|-------|
-| **Backlog** | Task tracking (MCP) | `mcp__backlog__*` |
 | **Context7** | Library docs | `mcp__context7__*` - ALWAYS check before writing library code |
 | **Playwright** | Visual verification, E2E, bug research | `mcp__playwright__*` - Use for QA verification |
 | **Sentry** | Error tracking, issue investigation | `mcp__sentry__*` - Check for production errors |
@@ -79,15 +78,9 @@ Reference before making changes to related areas:
 2. **Read the Obsidian user story file**:
    - `mcp__obsidian-mcp-tools__get_vault_file` with filename matching `Simon Vault/Projects/Greekly/User Stories/<STORY-ID>*.md` (use `mcp__obsidian-mcp-tools__list_vault_files` against `Simon Vault/Projects/Greekly/User Stories/` to disambiguate the exact filename if needed)
    - Extract the **branch slug** from the `## Branch Strategy` section (e.g., `feature/sit-07-description-audio`)
-3. **Query Backlog for subtasks**:
-   ```
-   mcp__backlog__task_list({
-     labels: ["story:<lowercase-story-id>"],   # e.g. "story:sit-07"
-     status: "To Do"
-   })
-   ```
+3. **Read the story's subtasks**: `hm subtask list <STORY-ID>`. "has no subtasks" means zero subtasks.
 4. **Classify the story state**:
-   - **Zero subtasks returned** → the story is **BASIC** (intent-only, from `/pm-review` basic mode). Verify it has an `## Objective` and `## Core Acceptance Criteria` section — if it has neither subtasks in Backlog NOR the basic-story sections, error: "story <ID> is neither basic (no Objective/Core ACs) nor pre-planned (no Backlog subtasks) — run /pm-review first". Set `PLANNING_REQUIRED=true`; topo-sort and plan-logging happen at the end of Phase 0.6 instead.
+   - **Zero subtasks returned** → the story is **BASIC** (intent-only, from `/pm-review` basic mode). Verify it has an `## Objective` and `## Core Acceptance Criteria` section — if it has neither subtasks in `hm subtask list` NOR the basic-story sections, error: "story <ID> is neither basic (no Objective/Core ACs) nor pre-planned (no subtasks) — run /pm-review first". Set `PLANNING_REQUIRED=true`; topo-sort and plan-logging happen at the end of Phase 0.6 instead.
    - **Subtasks returned** → the story is **PRE-PLANNED**. Topo-sort by `dependencies` → linear execution order, log the plan (story title, branch slug, ordered subtask list), and skip Phase 0.6.
 
 ### Phase 0.5: Worktree Bootstrap
@@ -124,15 +117,9 @@ Reference before making changes to related areas:
 
 5. **All subsequent shell commands run inside `$WORKTREE_PATH`.** Pass it as the CWD to subagents that need to read/edit/test files.
 
-6. **Move all subtasks to "In Progress"** (skip if `PLANNING_REQUIRED` — no subtasks exist yet; Phase 0.6c does this after creating them):
-   ```
-   For each subtask ID:
-     mcp__backlog__task_edit(id=task_id, status="In Progress")
-   ```
-
 ### Phase 0.6: Planning (basic stories only)
 
-Runs ONLY when Phase 0 set `PLANNING_REQUIRED=true` — i.e. the story is in **basic state** (Objective, 3–7 Core ACs, Out of Scope, Constraints, Decisions; no Backlog subtasks). Pre-planned stories skip this phase entirely.
+Runs ONLY when Phase 0 set `PLANNING_REQUIRED=true` — i.e. the story is in **basic state** (Objective, 3–7 Core ACs, Out of Scope, Constraints, Decisions; no subtasks). Pre-planned stories skip this phase entirely.
 
 All planning runs **inside the worktree** so every file reference is written against the code that will actually be modified — specs cannot rot because nothing waits.
 
@@ -148,9 +135,8 @@ All planning runs **inside the worktree** so every file reference is written aga
 - Append the run to the story's `… QA Debate Log.md` as the standalone skill does, marking each disposition `auto-applied | conservative-default (reason)`.
 - **Checkpoint:** `PLAN_VERIFIED`
 
-#### c. Subtask generation — Backlog tasks
-- Execute the `subtask-generator` logic (`~/.claude/skills/subtask-generator/SKILL.md`) for the finalized story, passing the story explicitly (no context detection): spawn parallel `product-architecture-spec` agents → one Backlog task per subtask (description, acceptance_criteria, implementation_plan, references, labels `["story:<slug>", ...]`), then wire dependencies between the created task IDs.
-- Move all created subtasks to "In Progress" (this replaces the Phase 0.5 step that was skipped).
+#### c. Subtask generation
+- Run `hm subtask import "<story file>"` on the finalized story. It reads the `## Implementation Subtasks` section. It names each subtask that a re-plan dropped; remove it with `hm subtask rm <ID>`.
 - Topo-sort by dependencies → linear execution order. **Log the plan**: story title, branch slug, ordered subtask list, and the count of Decisions + conservative-default dispositions.
 - **Checkpoint:** `SUBTASKS_READY`
 
@@ -180,22 +166,23 @@ For each subtask, in dependency order, execute the 4 stages below. Delegate to s
 - **No web preview deploy** — the mobile Phase 3.5 gate runs locally on an iOS simulator (and, when the Android SDK/emulator is set up, an Android emulator) and diffs against the design export, not a preview URL. Two complementary local checks: the **`.maestro/*.yaml` flows** (the same `onboarding.yaml` + `smoke.yaml` + `reset-onboarding` endpoint as the CI `mobile-e2e` job — the repeatable E2E gate, **unchanged**) and the **cross-platform `mobile-mcp` visual-fidelity capture** (launch + navigate + screenshot each screen on iOS + Android — the capture mechanism, replacing `xcrun simctl … screenshot`). See the Mobile variant in Phase 3.5.
 
 #### If Subagent Spawning Fails: retry, then HALT — NEVER perform the stage yourself
-Retry the Task call up to **twice** (fresh spawns; transient API/credit errors often clear). If the third attempt fails: **HALT the run** — leave the subtask "In Progress", report which stage's spawn failed and the error, and surface to the user. Do NOT execute the stage in-context as the orchestrator, under any framing. Architecture, execution, and QA merging into one context defeats the fresh-context generator/critic separation that the whole pipeline exists to enforce — a same-context QA pass of your own work is worthless evidence, and this fallback has silently fired before (executor spawn failed on credits; the orchestrator edited files directly until the user noticed). A halted run costs an hour; a self-certified defect costs a rework round. **Sole exception:** the Explore stage (read-only Glob/Grep/Read verification) may be performed in-context — it produces no work product to self-grade.
+Retry the Task call up to **twice** (fresh spawns; transient API/credit errors often clear). If the third attempt fails: **HALT the run** — leave the subtask `doing`, report which stage's spawn failed and the error, and surface to the user. Do NOT execute the stage in-context as the orchestrator, under any framing. Architecture, execution, and QA merging into one context defeats the fresh-context generator/critic separation that the whole pipeline exists to enforce — a same-context QA pass of your own work is worthless evidence, and this fallback has silently fired before (executor spawn failed on credits; the orchestrator edited files directly until the user noticed). A halted run costs an hour; a self-certified defect costs a rework round. **Sole exception:** the Explore stage (read-only Glob/Grep/Read verification) may be performed in-context — it produces no work product to self-grade.
 
 #### Stage 1: Architecture
+- Run `hm subtask status <ID> doing`
 - Spawn a `product-architecture-spec` subagent via Task tool
-- Pass it the FULL subtask details from Backlog (description, acceptance criteria, implementation plan, references)
+- Pass it the output of `hm subtask show <ID>` and the story file's path
 - If the subtask already has a detailed implementation plan, the architect validates it and identifies file paths
 - If thin, the architect enhances it with data models, API contracts, file paths, edge cases, error handling
 - The architect self-validates the plan (acceptance criteria coverage, edge cases, test strategy)
-- **Update the Backlog task** via `mcp__backlog__task_edit` to populate the implementation_plan field
+- **Record the plan** with `hm subtask edit <ID> "section:Implementation Plan"`, the plan on stdin
 - **Checkpoint:** `ARCHITECTURE_DONE`
 
 #### Stage 2: Explore Verification
 - Spawn an `Explore` subagent via Task tool, passing `$WORKTREE_PATH` as CWD so it greps the right tree
 - Verify all referenced files exist; patterns, imports, and placement locations match; references are accessible
 - For any UI-touching subtask: grep `tests/e2e/` for the changed testids/routes/visible labels and enumerate every matching spec as a required-update deliverable of the owning subtask (prefer restoring a stable testid over editing N specs); a redesign story budgets its final subtask for E2E realignment (ref: `feedback_ralph_explore_e2e_specs.md`)
-- If gaps found, update the Backlog task's implementation_notes via `mcp__backlog__task_edit`
+- If gaps found, record each with `hm subtask note <ID> "<the gap in one line>"`
 - **Checkpoint:** `EXPLORE_DONE`
 
 #### Stage 2.5: Test-Spec (`Test-first: yes` subtasks only)
@@ -207,7 +194,7 @@ Retry the Task call up to **twice** (fresh spawns; transient API/credit errors o
 
 #### Stage 3: Execution
 - Spawn a `product-executor` subagent via Task tool, passing `$WORKTREE_PATH` as CWD
-- Pass it the COMPLETE Backlog subtask details: acceptance criteria, implementation plan, references, implementation notes
+- Pass it the output of `hm subtask show <ID>` (acceptance criteria, implementation plan, notes) and the story file's path
 - For `Test-first: yes` subtasks, instruct it to **drive the Stage 2.5 red tests to green** — implement until they pass, without weakening, skipping, or deleting any red test (if a test itself is wrong, it flags it rather than editing around it). It authors no *new* tests (QA adds those in Stage 4).
 - If the subtask authors an Alembic migration: the executor sets `down_revision` from a fresh `alembic heads` run in the worktree — never from the plan (plans go stale as parallel stories merge; a wrong base crash-loops the shared dev backend).
 - The executor handles all file reads, edits, and creation **inside the worktree**
@@ -226,7 +213,8 @@ Retry the Task call up to **twice** (fresh spawns; transient API/credit errors o
 - Backend-only: verify tests pass, model/schema correctness
 - Frontend: use Playwright MCP for visual verification (against the PR's preview deploy URL once available)
 - If issues found: spawn product-executor to fix, then re-verify
-- Update Backlog task's implementation_notes with QA findings
+- Record each QA finding with `hm subtask note <ID> "<the finding in one line>"`
+- When QA Verify passes, run `hm subtask status <ID> done`
 - **Checkpoint:** `QA_VERIFIED`
 
 After each subtask, pick the next one (next in dependency order) and repeat stages 1–4.
@@ -255,7 +243,7 @@ After the FINAL subtask's Stage 4 completes:
    - Agree with comment → fix in code (inside worktree), commit, push
    - Disagree or N/A → skip
 3. After CodeRabbit fixes pushed, monitor CI again until green.
-4. **Proceed to Phase 3.5** below — do NOT move subtasks to "Done" or emit completion until the story-level visual QA gate passes.
+4. **Proceed to Phase 3.5** below — do NOT emit completion until the story-level visual QA gate passes.
 
 ### Phase 3.5: Story-Level Visual QA Gate
 
@@ -303,9 +291,9 @@ This is a **release handshake**, not agent-driven browsing: RALPH triggers the l
 7. **Fix loop (cap 2 cycles):** batch ALL fails (failed ACs + real `deltas.md` deltas) into one report → spawn `product-executor` to fix inside the worktree → push → **re-trigger the release** (add `ready-to-verify` again if removed, or re-dispatch with `--ref "$BRANCH"`) → **wait** for the new run → **re-consume** its artifacts → **re-run step 5's capture for the fixed surfaces** (SHA-pinned to the new deploy) → re-verify only the failed ACs and unresolved deltas. Every bounce must cite an AC id, a design-system rule, or a prototype CSS rule. After **2** cycles, stop and **escalate remaining fails to the user** — each release run holds the dev lease and is expensive, do not grind.
 8. **Log** to the story's `… QA Debate Log.md` (the same file `/qa-verify` writes, next to the story) under a `## Post-Deploy Visual QA — <date>` section: per-AC verdict, screenshot reference (artifact + filename), the fidelity delta table reference (`deltas.md` path + resolved/unresolved counts, for rendered-UI stories), fix cycles used, the release run id(s), and any design-system citations / advisory style notes.
 9. **On PASS** (all original ACs pass on a green release run, no unresolved bounces, and — for rendered-UI stories — step-5 fidelity evidence exists with no unresolved real deltas):
-   - Move all subtasks to "Done": `For each subtask ID: mcp__backlog__task_edit(id=task_id, status="Done")`
+   - `hm subtask list <STORY-ID>` shows every subtask `done`.
    - Output `<promise>ALL_TASKS_COMPLETE</promise>`.
-   **On unresolved fails after 2 cycles (or a red release run that fix-loops can't green):** leave subtasks "In Progress", do NOT emit completion, and surface the escalation to the user.
+   **On unresolved fails after 2 cycles (or a red release run that fix-loops can't green):** do NOT emit completion, and surface the escalation to the user.
 
 #### Phase 3.5 — Mobile variant (`learn-greek-easy-mobile` UI stories)
 
@@ -426,10 +414,10 @@ gh run list --branch "$BRANCH" --limit 1 --json databaseId,status -q '.[0]'
 1. **Local tests green ≠ done** — all CI test checks must pass (see CI Monitoring Protocol)
 2. **A green `release-verify.yml` run IS a blocker** — task completion requires the locked release (Deploy → Seed → Health/Smoke → web-verify / mobile-e2e → A11y/K6/Lighthouse) to pass inside the `dev-release-lease` window. CodeRabbit review may start as soon as per-push test checks pass, but completion is gated on the release run.
 3. **Subtask status transitions**:
-   - Start: "To Do" → "In Progress" (during Phase 0.5)
-   - Complete: "In Progress" → "Done" (ONLY after Phase 3.5 passes — the locked `release-verify.yml` run is green; see Phase 3 step 4 and Phase 3.5 "On PASS")
+   - Start: `todo` → `doing` (Stage 1 of the subtask starts)
+   - Complete: `doing` → `done` (Stage 4 QA Verify passes; a fix on a `done` subtask sets it back to `doing`)
 4. **Story-Level Visual QA Gate (Phase 3.5) must pass** before completion — all original acceptance criteria verified via the locked `release-verify.yml` run's artifacts plus, for rendered-UI stories, the SHA-pinned step-5 fidelity captures (web) / the local-sim Maestro gate (mobile), no unresolved bounces
-5. Output `<promise>ALL_TASKS_COMPLETE</promise>` ONLY after Phase 3.5 passes AND subtasks are moved to "Done"
+5. Output `<promise>ALL_TASKS_COMPLETE</promise>` ONLY after Phase 3.5 passes AND every subtask is `done` in `hm subtask list`
 
 ---
 
@@ -444,14 +432,12 @@ gh run list --branch "$BRANCH" --limit 1 --json databaseId,status -q '.[0]'
 | Executor authoring its own test coverage | Executor only drives the architect's pre-authored reds to green; QA owns new test coverage (Stage 4) |
 | Working in main checkout | Always work in `$WORKTREE_PATH`; main is the user's space |
 | Mixing subtasks from different stories on one branch | One story per branch, always |
-| Title-parsing Backlog tasks to find a story's subtasks | Use the `story:<slug>` label set by Phase 0.6c / /subtask-generator |
-| Erroring out on a story with zero Backlog subtasks | Zero subtasks + Objective/Core ACs present = BASIC story → run Phase 0.6 Planning |
+| Erroring out on a story with zero subtasks | Zero subtasks + Objective/Core ACs present = BASIC story → run Phase 0.6 Planning |
 | Blocking on the user during Phase 0.6 (interview, judgment escalation) | Unattended disposition: defaults + conservative options, recorded in ## Decisions / QA Debate Log; user reviews via PR description |
 | Architect inventing scope while expanding a basic story | Every derived AC/subtask traces to Objective/Core AC; Out-of-scope leakage = mechanical fail (intent drift) |
-| Creating a Backlog parent task for the user story | The user story lives in Obsidian only |
 | Orchestrator running `git checkout -b` | Use `git worktree add -b`; the executor handles push and PR |
 | Auto-discovering To Do tasks across stories | `/ralph` runs one story at a time; user names which |
-| Skipping subtask status transitions | Move: To Do → In Progress → Done |
+| Skipping subtask status transitions | `hm subtask status`: todo → doing → done |
 | Not updating handoff during long runs | Update every 2–3 subtasks |
 | Hiding/disabling features to "fix" bugs | Actually fix the bug; add missing data |
 | Outputting ALL_TASKS_COMPLETE before CI test checks pass | Wait for all test checks to pass |

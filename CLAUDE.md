@@ -26,7 +26,6 @@ cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && /User
 
 | Server | Purpose |
 |--------|---------|
-| Backlog | Task tracking (MCP) |
 | Context7 | Library docs - **always check before writing code** |
 | Playwright | Visual verification, E2E testing, bug research |
 | Railway | Deployment (no destructive actions - use dashboard for deletes) |
@@ -161,12 +160,12 @@ When context is compacted (automatically or via `/compact`), a PreCompact hook s
 ### After Compaction
 If `.claude/handoff.yaml` exists with a recent timestamp:
 1. **READ IT FIRST** to restore context
-2. Check Backlog for current task details
+2. Run `hm subtask list <STORY-ID>` for the current subtask details
 3. Continue from where you left off
 
 ### During Long Sessions
 Periodically update `.claude/handoff.yaml` with:
-- `current_task`: Task ID from Backlog being worked on
+- `current_task`: the subtask ID from `hm subtask` being worked on
 - `progress`: What's done, what's in progress
 - `decisions`: Key choices made
 - `blockers`: Any issues encountered

@@ -60,8 +60,8 @@ stage: null  # architecture|explore|execution|qa-verify
 completed_tasks: []
 
 progress: |
-  Session was compacted. Check Backlog for task details
-  via mcp__backlog__task_list / mcp__backlog__task_view.
+  Session was compacted. Read the subtask details
+  with hm subtask list / hm subtask show.
 
 decisions: []
 blockers: []
@@ -69,7 +69,7 @@ blockers: []
 branch: null
 pr_number: null
 
-# IMPORTANT: After reading this file, query Backlog for full task context.
+# IMPORTANT: After reading this file, run hm subtask show for full task context.
 EOF
   echo "PreCompact: Created new $HANDOFF_FILE"
 fi
@@ -130,7 +130,7 @@ cat .claude/handoff.yaml
 1. **PreCompact hook** runs before compaction (automatic or manual `/compact`)
 2. Hook creates/updates `.claude/handoff.yaml` (relative to CWD — per-worktree when ralph runs in a worktree). If the file already exists, only the timestamp + trigger lines are refreshed; any state Claude wrote during work (current_task, stage, completed_tasks, decisions, blockers, etc.) is preserved.
 3. After compaction, Claude reads `CLAUDE.md` which instructs to check handoff
-4. Claude reads handoff and queries Backlog for full context
+4. Claude reads handoff and runs `hm subtask show` for full context
 5. Session continues with restored context
 6. **On completion**, Ralph deletes handoff to prevent stale context in next session
 
